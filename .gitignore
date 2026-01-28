@@ -1,0 +1,16 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+node_modules/
+.eslintcache
+.next
+out
+dist
+.DS_Store
+.vscode/
+*~
+logs
+*.log
