@@ -65,14 +65,25 @@ async function convert() {
   // Convert notes to MIDI events
   const ticksPerBeat = 480;
   const bpm = 125; // BPM as input variable
-  const tempo = 60000000 / bpm; // microseconds per beat
-  const secondsPerTick = tempo / 1000000 / ticksPerBeat;
+  const tempo = 60_000_000 / bpm; // microseconds per beat
+  const secondsPerTick = tempo / 1_000_000 / ticksPerBeat;
 
   // Sort notes by start time
   const sortedNotes = [...notes].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
+  const sixteenthNoteLength = ticksPerBeat / 4;
+  const offset = sortedNotes[0]?.startTimeSeconds ?? 0;
+  const roundedNotes = sortedNotes.map(({ pitchBends: _, amplitude: __, ...note }) => ({
+    ...note,
+    startTimeSeconds: note.startTimeSeconds - offset,
+  }))
+  .map((note) => ({
+    ...note,
+    startTimeSeconds: Math.round(note.startTimeSeconds * 1000 / sixteenthNoteLength) * sixteenthNoteLength / 1000,
+    durationSeconds: Math.round(note.durationSeconds * 1000 / sixteenthNoteLength) * sixteenthNoteLength / 1000,
+  }))
 
   // Write notes to JSON file
-  await writeFile("./data/notes.json", JSON.stringify(sortedNotes, null, 2));
+  await writeFile("./data/notes.json", JSON.stringify(roundedNotes, null, 2));
 
   // Create MIDI events from notes
   const trackEvents: Array<{
@@ -82,16 +93,15 @@ async function convert() {
     velocity: number;
   }> = [];
 
-  for (const note of sortedNotes) {
+  for (const note of roundedNotes) {
     const startTick = Math.round(note.startTimeSeconds / secondsPerTick);
     const endTick = Math.round((note.startTimeSeconds + note.durationSeconds) / secondsPerTick);
-    const velocity = Math.round((note.amplitude ?? 0.8) * 127);
 
     trackEvents.push({
       time: startTick,
       type: "noteOn",
       noteNumber: note.pitchMidi,
-      velocity,
+      velocity: 64,
     });
     trackEvents.push({
       time: endTick,
