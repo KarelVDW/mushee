@@ -71,6 +71,9 @@ async function convert() {
   // Sort notes by start time
   const sortedNotes = [...notes].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
 
+  // Write notes to JSON file
+  await writeFile("./data/notes.json", JSON.stringify(sortedNotes, null, 2));
+
   // Create MIDI events from notes
   const trackEvents: Array<{
     time: number;
