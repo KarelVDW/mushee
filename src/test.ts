@@ -64,7 +64,8 @@ async function convert() {
 
   // Convert notes to MIDI events
   const ticksPerBeat = 480;
-  const tempo = 500000; // microseconds per beat (120 BPM)
+  const bpm = 125; // BPM as input variable
+  const tempo = 60000000 / bpm; // microseconds per beat
   const secondsPerTick = tempo / 1000000 / ticksPerBeat;
 
   // Sort notes by start time
