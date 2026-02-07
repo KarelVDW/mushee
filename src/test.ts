@@ -1,162 +1,78 @@
-import { BasicPitch } from "@spotify/basic-pitch";
-import {
-  addPitchBendsToNoteEvents,
-  noteFramesToTime,
-  outputToNotesPoly,
-} from "@spotify/basic-pitch";
-import { readFile } from "fs/promises";
-import { AudioContext, AudioBuffer } from "web-audio-api";
-import { writeMidi, MidiData } from "midi-file";
-import { writeFile } from "fs/promises";
+import { NoteEventTime } from '@spotify/basic-pitch'
+import { readFile, writeFile } from 'fs/promises'
+import { sortBy } from 'lodash-es'
+
+import { decodeAudio } from './utils/decodeAudio'
+import { notesToMidi } from './utils/notesToMidi'
 
 async function convert() {
-  const buffer = await readFile("./data/test.mp3");
-  const modelBuffer = await readFile("./data/model.json");
-  const modelJson = JSON.parse(modelBuffer.toString());
-  const basicPitch = new BasicPitch(
-    "https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json",
-  );
-  const audioCtx = new AudioContext({ numberOfChannels: 1 });
-  let audioBuffer: AudioBuffer | undefined = undefined;
+    const buffer = await readFile('./data/test.mp3')
+    const notes = await decodeAudio(buffer)
 
-  // Decode audio data
-  await new Promise<void>((resolve, reject) => {
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength,
-    ) as ArrayBuffer;
-    audioCtx.decodeAudioData(
-      arrayBuffer,
-      (_audioBuffer: AudioBuffer) => {
-        audioBuffer = _audioBuffer;
-        resolve();
-      },
-      (error: any) => {
-        reject(new Error(`Failed to decode audio: ${error}`));
-      },
-    );
-  });
+    const ticksPerBeat = 480
+    const bpm = 125
 
-  if (!audioBuffer) throw new Error("Failed to decode audio buffer");
+    // Sort notes by start time
+    const sortedNotes = sortBy(
+        notes,
+        (note) => note.startTimeSeconds,
+        (note) => note.pitchMidi,
+    )
 
-  const frames: number[][] = [];
-  const onsets: number[][] = [];
-  const contours: number[][] = [];
-  let progress = 0;
+    const sixteenthNoteLength = ticksPerBeat / 4
 
-  await basicPitch.evaluateModel(
-    audioBuffer,
-    (f: number[][], o: number[][], c: number[][]) => {
-      frames.push(...f);
-      onsets.push(...o);
-      contours.push(...c);
-    },
-    (p: number) => {
-      progress = p;
-      console.log(`Processing: ${Math.round(p * 100)}%`);
-    },
-  );
+    let activeNote: NoteEventTime | null = null
+    const resultNotes: NoteEventTime[] = []
+    for (const note of sortedNotes) {
+        if (!activeNote) activeNote = note
+        if (note.startTimeSeconds === activeNote.startTimeSeconds) {
+            if (note.pitchMidi === activeNote.pitchMidi) {
+                activeNote.durationSeconds = Math.max(activeNote.durationSeconds, note.durationSeconds)
+            }
+            continue
+        }
+        if (note.pitchMidi === activeNote.pitchMidi) {
+            if (note.startTimeSeconds < activeNote.startTimeSeconds + activeNote.durationSeconds) {
+                activeNote.durationSeconds = note.durationSeconds - activeNote.startTimeSeconds + note.startTimeSeconds
+                continue
+            }
+        }
+        if (Math.abs(note.pitchMidi - activeNote.pitchMidi) > 12 /* ignore jump of more than an octave */) {
+            continue
+        }
+        resultNotes.push(activeNote)
+        activeNote = note
+    }
 
-  // Convert to notes
-  const rawNotes = outputToNotesPoly(frames, onsets, 0.25, 0.25, 5);
-  const notesWithPitchBends = addPitchBendsToNoteEvents(contours, rawNotes);
-  const notes = noteFramesToTime(notesWithPitchBends);
+    const offset = resultNotes[0]?.startTimeSeconds ?? 0
+    const roundedNotes = resultNotes
+        .map(({ pitchBends: _, amplitude: __, ...note }) => ({
+            ...note,
+            startTimeSeconds: note.startTimeSeconds - offset,
+        }))
+        .map((note) => {
+            const roundedStart = (Math.round((note.startTimeSeconds * 1000) / sixteenthNoteLength) * sixteenthNoteLength) / 1000
+            const roundedEnd = (Math.round((note.durationSeconds * 1000) / sixteenthNoteLength) * sixteenthNoteLength) / 1000
+            return {
+                ...note,
+                startTimeSeconds: roundedStart,
+                startDiff: note.startTimeSeconds - roundedStart,
+                durationSeconds: roundedEnd,
+                endDiff: note.durationSeconds - roundedEnd,
+            }
+        })
 
-  // Convert notes to MIDI events
-  const ticksPerBeat = 480;
-  const bpm = 125; // BPM as input variable
-  const tempo = 60_000_000 / bpm; // microseconds per beat
-  const secondsPerTick = tempo / 1_000_000 / ticksPerBeat;
+    // Write notes to JSON file
+    await writeFile('./data/notes.json', JSON.stringify(roundedNotes, null, 2))
 
-  // Sort notes by start time
-  const sortedNotes = [...notes].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
-  const sixteenthNoteLength = ticksPerBeat / 4;
-  const offset = sortedNotes[0]?.startTimeSeconds ?? 0;
-  const roundedNotes = sortedNotes.map(({ pitchBends: _, amplitude: __, ...note }) => ({
-    ...note,
-    startTimeSeconds: note.startTimeSeconds - offset,
-  }))
-  .map((note) => ({
-    ...note,
-    startTimeSeconds: Math.round(note.startTimeSeconds * 1000 / sixteenthNoteLength) * sixteenthNoteLength / 1000,
-    durationSeconds: Math.round(note.durationSeconds * 1000 / sixteenthNoteLength) * sixteenthNoteLength / 1000,
-  }))
-
-  // Write notes to JSON file
-  await writeFile("./data/notes.json", JSON.stringify(roundedNotes, null, 2));
-
-  // Create MIDI events from notes
-  const trackEvents: Array<{
-    time: number;
-    type: "noteOn" | "noteOff";
-    noteNumber: number;
-    velocity: number;
-  }> = [];
-
-  for (const note of roundedNotes) {
-    const startTick = Math.round(note.startTimeSeconds / secondsPerTick);
-    const endTick = Math.round((note.startTimeSeconds + note.durationSeconds) / secondsPerTick);
-
-    trackEvents.push({
-      time: startTick,
-      type: "noteOn",
-      noteNumber: note.pitchMidi,
-      velocity: 64,
-    });
-    trackEvents.push({
-      time: endTick,
-      type: "noteOff",
-      noteNumber: note.pitchMidi,
-      velocity: 0,
-    });
-  }
-
-  // Sort events by time
-  trackEvents.sort((a, b) => a.time - b.time);
-
-  // Convert to delta times
-  let lastTime = 0;
-  const midiTrackEvents: any[] = [
-    { deltaTime: 0, meta: true, type: "setTempo", microsecondsPerBeat: tempo },
-  ];
-
-  for (const event of trackEvents) {
-    const deltaTime = event.time - lastTime;
-    lastTime = event.time;
-
-    midiTrackEvents.push({
-      deltaTime,
-      channel: 0,
-      type: event.type,
-      noteNumber: event.noteNumber,
-      velocity: event.velocity,
-    });
-  }
-
-  midiTrackEvents.push({ deltaTime: 0, meta: true, type: "endOfTrack" });
-
-  const midiData: MidiData = {
-    header: {
-      format: 0,
-      numTracks: 1,
-      ticksPerBeat,
-    },
-    tracks: [midiTrackEvents],
-  };
-
-  console.log("Conversion result:", {
-    noteCount: notes.length,
-    duration: (audioBuffer as any).duration,
-  });
-
-  const midiBytes = writeMidi(midiData);
-  await writeFile("./data/output.mid", Buffer.from(midiBytes));
+    const midiBuffer = notesToMidi(resultNotes, { ticksPerBeat, bpm })
+    await writeFile('./data/output.mid', midiBuffer)
 }
 
 convert()
-  .then((result) => {
-    console.log("Conversion complete", result);
-  })
-  .catch((error) => {
-    console.error("Error during conversion:", error);
-  });
+    .then((result) => {
+        console.log('Conversion complete', result)
+    })
+    .catch((error) => {
+        console.error('Error during conversion:', error)
+    })
