@@ -1,3 +1,7 @@
 dist
 node_modules
 pnpm-lock.yaml
+.next
+out
+build
+apps/api/data

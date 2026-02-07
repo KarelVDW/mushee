@@ -59,7 +59,7 @@ fastify.post('/convert', async (request, reply) => {
         }
 
         const buffer = await data.toBuffer()
-        const tempDir = path.join(__dirname, '../temp')
+        const tempDir = path.join(import.meta.dirname, '../temp')
 
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true })

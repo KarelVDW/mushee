@@ -4,11 +4,8 @@ dist/
 build/
 .next/
 out/
-node_modules/
 .eslintcache
-.next
-out
-dist
+*.tsbuildinfo
 .DS_Store
 .vscode/
 *~

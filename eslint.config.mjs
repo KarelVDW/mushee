@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
     // Global ignores (must be standalone config object)
     {
-        ignores: ['eslint.config.mjs', 'dist/**', 'node_modules/**'],
+        ignores: ['eslint.config.mjs', '**/dist/**', '**/node_modules/**', '**/build/**', '**/.next/**', '**/out/**'],
     },
     {
         linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -50,6 +50,14 @@ export default tseslint.config(
                     caughtErrorsIgnorePattern: '^_',
                 },
             ],
+        },
+    },
+
+    // Browser globals for web workspace
+    {
+        files: ['apps/web/**/*.ts', 'apps/web/**/*.tsx'],
+        languageOptions: {
+            globals: { ...globals.browser },
         },
     },
 
