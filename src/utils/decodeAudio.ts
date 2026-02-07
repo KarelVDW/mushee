@@ -1,11 +1,18 @@
-import { BasicPitch } from '@spotify/basic-pitch'
-import { addPitchBendsToNoteEvents, noteFramesToTime, outputToNotesPoly } from '@spotify/basic-pitch'
+import { addPitchBendsToNoteEvents, BasicPitch, noteFramesToTime, outputToNotesPoly } from '@spotify/basic-pitch'
+import { io, loadGraphModel } from '@tensorflow/tfjs'
+import { readFile } from 'fs/promises'
+import { join } from 'path'
 import { AudioBuffer, AudioContext } from 'web-audio-api'
 
+async function getModel() {
+    const modelBuffer = await readFile('./data/model.json')
+    const modelJson = JSON.parse(modelBuffer.toString()) as io.ModelJSON
+    const weightData = await readFile(join('./data', modelJson.weightsManifest[0].paths[0]))
+    return loadGraphModel(io.fromMemory(modelJson.modelTopology, modelJson.weightsManifest[0].weights, weightData.buffer))
+}
+
 export async function decodeAudio(buffer: Buffer) {
-    // const modelBuffer = await readFile('./data/model.json')
-    // const modelJson = JSON.parse(modelBuffer.toString())
-    const basicPitch = new BasicPitch('https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json')
+    const basicPitch = new BasicPitch(getModel())
     const audioCtx = new AudioContext({ numberOfChannels: 1 })
     let audioBuffer: AudioBuffer | undefined = undefined
 

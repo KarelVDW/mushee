@@ -17,6 +17,9 @@ importers:
       '@spotify/basic-pitch':
         specifier: ^1.0.1
         version: 1.0.1(seedrandom@3.0.5)
+      '@tensorflow/tfjs':
+        specifier: ^3.21.0
+        version: 3.21.0(seedrandom@3.0.5)
       audio-loader:
         specifier: ^1.0.3
         version: 1.0.3
