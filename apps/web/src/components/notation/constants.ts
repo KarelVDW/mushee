@@ -37,3 +37,15 @@ export const TIME_SIG_NOTE_PADDING = 15;
 
 /** Padding after last note before stave right edge */
 export const STAVE_RIGHT_PADDING = 10;
+
+/** Beam line thickness in pixels */
+export const BEAM_WIDTH = 5;
+
+/** Maximum allowed beam slope */
+export const BEAM_MAX_SLOPE = 0.25;
+
+/** Vertical stride between stacked beam levels (thickness * 1.5) */
+export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5;
+
+/** Length of partial (orphaned) secondary beams */
+export const PARTIAL_BEAM_LENGTH = 10;

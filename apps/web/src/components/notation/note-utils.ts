@@ -113,6 +113,28 @@ export function flagGlyphName(duration: Duration, stemDirection: 'up' | 'down'):
 }
 
 /**
+ * Get the number of beams for a duration.
+ * 8th = 1, 16th = 2. Returns 0 for unbeamable durations.
+ */
+export function beamCount(duration: Duration): number {
+    switch (duration) {
+        case '8':
+            return 1
+        case '16':
+            return 2
+        default:
+            return 0
+    }
+}
+
+/**
+ * Whether a duration is beamable (shorter than a quarter note).
+ */
+export function isBeamable(duration: Duration): boolean {
+    return beamCount(duration) > 0
+}
+
+/**
  * Convert a duration to the number of quarter-note beats.
  */
 export function durationToBeats(duration: Duration): number {

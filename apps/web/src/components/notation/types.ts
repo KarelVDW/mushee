@@ -54,6 +54,15 @@ export interface LayoutTimeSignature {
   bottom: LayoutGlyph[];
 }
 
+/** A single beam line (filled parallelogram) */
+export interface LayoutBeamSegment {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  thickness: number;
+}
+
 export interface LayoutStave {
   x: number;
   y: number;
@@ -62,6 +71,7 @@ export interface LayoutStave {
   clef?: LayoutGlyph;
   timeSignature?: LayoutTimeSignature;
   notes: LayoutNote[];
+  beams: LayoutBeamSegment[][];
 }
 
 export interface LayoutResult {

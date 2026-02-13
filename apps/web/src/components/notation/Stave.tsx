@@ -1,10 +1,11 @@
+import { BeamGroup } from './BeamGroup';
 import { Glyph } from './Glyph';
+import { NoteGroup } from './NoteGroup';
 import { StaffLines } from './StaffLines';
 import { TimeSignature } from './TimeSignature';
-import { NoteGroup } from './NoteGroup';
 import type { LayoutStave } from './types';
 
-interface StaveProps {
+interface StaveProps { 
   layout: LayoutStave;
 }
 
@@ -27,6 +28,10 @@ export function Stave({ layout }: StaveProps) {
 
       {layout.notes.map((note, i) => (
         <NoteGroup key={i} note={note} />
+      ))}
+
+      {layout.beams.map((segments, i) => (
+        <BeamGroup key={i} segments={segments} />
       ))}
     </g>
   );
