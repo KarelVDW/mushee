@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 
+import { BravuraFont } from '../../origin/fonts/bravura_glyphs';
 import { GLYPH_SCALE } from './constants';
 import { outlineToSvgPath } from './glyph-utils';
-import { GLYPHS } from './glyphs';
 
 interface GlyphProps {
   name: string;
@@ -22,7 +22,7 @@ export function Glyph({
   fill = '#000',
 }: GlyphProps) {
   const d = useMemo(() => {
-    const glyph = GLYPHS[name];
+    const glyph = BravuraFont.glyphs[name as keyof typeof BravuraFont.glyphs];
     if (!glyph) return '';
     return outlineToSvgPath(glyph.o, scale);
   }, [name, scale]);

@@ -1,23 +1,5 @@
-/**
- * Bravura glyph outline data extracted from VexFlow.
- * Each glyph has bounding box info and an outline string `o` using VexFlow's compact format:
- *   m x y       — moveTo
- *   l x y       — lineTo
- *   q eX eY cX cY          — quadratic bezier (endpoint before control point)
- *   b eX eY c1X c1Y c2X c2Y — cubic bezier (endpoint before control points)
- *   z           — closePath
- */
-
-export interface GlyphData {
-  x_min: number;
-  x_max: number;
-  y_min: number;
-  y_max: number;
-  ha: number;
-  o: string;
-}
-
-export const GLYPHS: Record<string, GlyphData> = {
+export const BravuraFont = {
+  glyphs: {
     bracketTop: {
       x_min: 0,
       x_max: 469,
@@ -3578,5 +3560,8 @@ export const GLYPHS: Record<string, GlyphData> = {
       ha: 372,
       o: 'm 0 112 l 405 -268 l 405 -112 l 0 268 z',
     },
-  
+  },
+  fontFamily: 'Bravura',
+  resolution: 1000,
+  generatedOn: '2025-03-05T17:44:21.299Z',
 };

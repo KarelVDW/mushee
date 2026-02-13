@@ -1,5 +1,5 @@
+import { BravuraFont } from '../../origin/fonts/bravura_glyphs'
 import { GLYPH_SCALE } from './constants'
-import { type GlyphData, GLYPHS } from './glyphs'
 
 /**
  * Convert a VexFlow compact outline string to an SVG path `d` attribute.
@@ -71,6 +71,6 @@ export function outlineToSvgPath(outline: string, scale: number): string {
 
 /** Get the rendered width of a glyph in pixels */
 export function getGlyphWidth(name: string, scale: number = GLYPH_SCALE): number {
-    const glyph: GlyphData = GLYPHS[name]
+    const glyph = BravuraFont.glyphs[name as keyof typeof BravuraFont.glyphs]
     return (glyph.x_max - glyph.x_min) * scale
 }
