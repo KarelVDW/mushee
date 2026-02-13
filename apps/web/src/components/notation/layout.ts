@@ -273,11 +273,28 @@ function computeMeasureLayout(
         beatToX.set(sortedBeats[i], x)
     }
 
-    // 4. Layout notes (first pass — default stems, flags)
+    // 4. Pre-compute beam group stem directions (so beamable notes get a uniform direction)
+    const beamStemDirs = new Map<string, 'up' | 'down'>() // key: "voiceIdx:noteIdx"
+    for (let vi = 0; vi < input.voices.length; vi++) {
+        const voice = input.voices[vi]
+        if ((voice.stem ?? 'auto') !== 'auto') continue // skip if voice has explicit stem pref
+        const tupletMap = buildTupletMap(voice.tuplets)
+        const groups = identifyPotentialBeamGroups(voice.notes, tupletMap, input.clef)
+        for (const group of groups) {
+            const avgLine = group.noteLines.reduce((a, b) => a + b, 0) / group.noteLines.length
+            const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
+            for (const ni of group.noteIndices) {
+                beamStemDirs.set(`${vi}:${ni}`, groupDir)
+            }
+        }
+    }
+
+    // 5. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
     const allNoteLayouts: NoteLayout[] = []
 
-    for (const voice of input.voices) {
+    for (let vi = 0; vi < input.voices.length; vi++) {
+        const voice = input.voices[vi]
         const voiceStemPref = voice.stem ?? 'auto'
         const tupletMap = buildTupletMap(voice.tuplets)
         let beat = 0
@@ -293,7 +310,11 @@ function computeMeasureLayout(
                 const noteLine = pitchToLine(key, input.clef)
                 const noteY = getYForNote(noteLine, staveY)
                 const glyphName = noteheadForDuration(noteInput.duration)
-                const dir: 'up' | 'down' = voiceStemPref === 'auto' ? (noteLine >= 3 ? 'down' : 'up') : voiceStemPref
+                // Use beam group stem direction if available, otherwise fall back to per-note logic
+                const beamDir = beamStemDirs.get(`${vi}:${ni}`)
+                const dir: 'up' | 'down' = voiceStemPref !== 'auto'
+                    ? voiceStemPref
+                    : beamDir ?? (noteLine >= 3 ? 'down' : 'up')
 
                 // Accidental
                 let accidentalLayout: LayoutGlyph | undefined
@@ -347,18 +368,18 @@ function computeMeasureLayout(
         }
     }
 
-    // 5. Auto-beam: group consecutive beamable notes within each beat
+    // 6. Auto-beam: group consecutive beamable notes within each beat
     //    (tuplet notes stay grouped together — no beat-boundary breaks within a tuplet)
     const beamGroups = computeBeamGroups(allNoteLayouts)
 
-    // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
+    // 7. For each beam group: compute slope, adjust stems, generate segments, suppress flags
     const beams: LayoutBeamSegment[][] = []
     for (const group of beamGroups) {
         const segments = layoutBeamGroup(group)
         beams.push(segments)
     }
 
-    // 7. Compute tuplet bracket layouts
+    // 8. Compute tuplet bracket layouts
     const tuplets = computeTupletLayouts(input, allNoteLayouts, noteheadWidth)
 
     return {
@@ -370,6 +391,78 @@ function computeMeasureLayout(
         beams,
         tuplets,
     }
+}
+
+interface PotentialBeamGroup {
+    noteIndices: number[]
+    noteLines: number[]
+}
+
+/**
+ * Identify groups of consecutive beamable notes that could form beams,
+ * ignoring stem direction. Used to pre-compute a uniform stem direction
+ * based on average pitch so that beams aren't broken by mixed stem directions.
+ */
+function identifyPotentialBeamGroups(
+    notes: NoteInput[],
+    tupletMap: Map<number, { tupletIndex: number; tuplet: TupletInput }>,
+    clef: string | undefined,
+): PotentialBeamGroup[] {
+    const groups: PotentialBeamGroup[] = []
+    let currentIndices: number[] = []
+    let currentLines: number[] = []
+    let beat = 0
+
+    for (let ni = 0; ni < notes.length; ni++) {
+        const note = notes[ni]
+        const tupletInfo = tupletMap.get(ni)
+
+        if (!isBeamable(note.duration)) {
+            if (currentIndices.length >= 2) {
+                groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+            }
+            currentIndices = []
+            currentLines = []
+            beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
+            continue
+        }
+
+        // Check beat boundary (same logic as computeBeamGroups, minus stem direction check)
+        if (currentIndices.length > 0) {
+            const prevNi = currentIndices[currentIndices.length - 1]
+            const prevTupletInfo = tupletMap.get(prevNi)
+            const sameTuplet = prevTupletInfo?.tupletIndex !== undefined
+                && prevTupletInfo.tupletIndex === tupletInfo?.tupletIndex
+
+            if (!sameTuplet) {
+                const prevNote = notes[prevNi]
+                const prevBeat = beat - effectiveBeats(prevNote.duration, prevTupletInfo?.tuplet)
+                const prevBeatBoundary = Math.floor(prevBeat)
+                const nextBeatBoundary = Math.floor(beat)
+
+                if (nextBeatBoundary > prevBeatBoundary) {
+                    if (currentIndices.length >= 2) {
+                        groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+                    }
+                    currentIndices = []
+                    currentLines = []
+                }
+            }
+        }
+
+        currentIndices.push(ni)
+        // Average the note lines for chords (multiple keys)
+        const avgLine = note.keys.reduce((sum, key) => sum + pitchToLine(key, clef), 0) / note.keys.length
+        currentLines.push(avgLine)
+
+        beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
+    }
+
+    if (currentIndices.length >= 2) {
+        groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+    }
+
+    return groups
 }
 
 /**
