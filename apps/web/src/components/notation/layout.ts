@@ -420,7 +420,7 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
     const thickness = BEAM_WIDTH * dirSign
 
     for (let level = 0; level < maxBeams; level++) {
-        const beamY = beamFirstY + level * BEAM_LEVEL_STRIDE * dirSign
+        const beamY = beamFirstY - level * BEAM_LEVEL_STRIDE * dirSign
 
         if (level === 0) {
             // Primary beam: always spans full group
