@@ -24,6 +24,9 @@ export function NoteGroup({ note }: NoteGroupProps) {
             {note.stem && (
                 <line x1={note.stem.x} y1={note.stem.y1} x2={note.stem.x} y2={note.stem.y2} stroke="#000" strokeWidth={STEM_WIDTH} />
             )}
+
+            {/* Flag (8th, 16th notes) */}
+            {note.flag && <Glyph name={note.flag.glyphName} x={note.flag.x} y={note.flag.y} />}
         </g>
     )
 }

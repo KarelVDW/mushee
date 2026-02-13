@@ -1,24 +1,25 @@
 import {
-  CLEF_TIME_SIG_PADDING,
-  LEDGER_LINE_EXTENSION,
-  NUM_STAFF_LINES,
-  SPACE_ABOVE_STAFF,
-  STAVE_LEFT_PADDING,
-  STAVE_LINE_DISTANCE,
-  STAVE_RIGHT_PADDING,
-  STEM_HEIGHT,
-  TIME_SIG_NOTE_PADDING,
+    CLEF_TIME_SIG_PADDING,
+    LEDGER_LINE_EXTENSION,
+    NUM_STAFF_LINES,
+    SPACE_ABOVE_STAFF,
+    STAVE_LEFT_PADDING,
+    STAVE_LINE_DISTANCE,
+    STAVE_RIGHT_PADDING,
+    STEM_HEIGHT,
+    TIME_SIG_NOTE_PADDING,
 } from './constants'
 import { getGlyphWidth } from './glyph-utils'
 import {
-  accidentalGlyphName,
-  durationToBeats,
-  getLedgerLinePositions,
-  getYForLine,
-  getYForNote,
-  noteheadForDuration,
-  parseKey,
-  pitchToLine,
+    accidentalGlyphName,
+    durationToBeats,
+    flagGlyphName,
+    getLedgerLinePositions,
+    getYForLine,
+    getYForNote,
+    noteheadForDuration,
+    parseKey,
+    pitchToLine,
 } from './note-utils'
 import type { LayoutGlyph, LayoutLine, LayoutNote, LayoutResult, LayoutStave, LayoutTimeSignature, ScoreInput, StaveInput } from './types'
 
@@ -151,24 +152,33 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
                     }
                 }
 
-                // Stem
+                // Stem + flag
                 let stem: LayoutNote['stem']
-                if (noteInput.duration !== 'w') {
-                    const dir = stemDir === 'auto' ? (noteLine >= 3 ?  'down' : 'up') : stemDir
+                let flag: LayoutGlyph | undefined
+                const dir = stemDir === 'auto' ? (noteLine >= 3 ? 'down' : 'up') : stemDir
 
+                if (noteInput.duration !== 'w') {
                     if (dir === 'up') {
-                        // Stem on right side of notehead, going up
                         stem = {
                             x: x + noteheadWidth,
                             y1: noteY,
                             y2: noteY - STEM_HEIGHT,
                         }
                     } else {
-                        // Stem on left side of notehead, going down
                         stem = {
                             x: x,
                             y1: noteY,
                             y2: noteY + STEM_HEIGHT,
+                        }
+                    }
+
+                    // Flag (8th, 16th notes)
+                    const flagName = flagGlyphName(noteInput.duration, dir)
+                    if (flagName && stem) {
+                        flag = {
+                            glyphName: flagName,
+                            x: stem.x,
+                            y: stem.y2,
                         }
                     }
                 }
@@ -188,6 +198,7 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
                     glyphName,
                     accidental: accidentalLayout,
                     stem,
+                    flag,
                     ledgerLines,
                 })
             }

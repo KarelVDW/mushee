@@ -98,6 +98,21 @@ export function accidentalGlyphName(acc: string): string | undefined {
 }
 
 /**
+ * Get the flag glyph name for a duration and stem direction.
+ * Returns undefined for durations that don't have flags (whole, half, quarter).
+ */
+export function flagGlyphName(duration: Duration, stemDirection: 'up' | 'down'): string | undefined {
+    switch (duration) {
+        case '8':
+            return stemDirection === 'up' ? 'flag8thUp' : 'flag8thDown'
+        case '16':
+            return stemDirection === 'up' ? 'flag16thUp' : 'flag16thDown'
+        default:
+            return undefined
+    }
+}
+
+/**
  * Convert a duration to the number of quarter-note beats.
  */
 export function durationToBeats(duration: Duration): number {

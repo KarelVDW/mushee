@@ -8,13 +8,13 @@ const scoreData: ScoreInput = {
       voices: [
         {
           notes: [
-            { keys: ['C#/5'], duration: 'q' },
-            { keys: ['B/4'], duration: 'q' },
+            { keys: ['C#/5'], duration: 'w' },
+            { keys: ['B/4'], duration: 'h' },
             { keys: ['A/4'], duration: 'q' },
             { keys: ['G#/4'], duration: 'q' },
-            { keys: ['G#/4'], duration: 'w' },
-            { keys: ['G#/4'], duration: 'q' },
-            { keys: ['G#/4'], duration: 'q' },
+            { keys: ['G#/4'], duration: '8' },
+            { keys: ['G#/4'], duration: '16' },
+            { keys: ['G#/4'], duration: '16' },
           ],
         },
       ],

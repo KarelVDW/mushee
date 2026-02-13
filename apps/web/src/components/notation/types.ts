@@ -45,6 +45,7 @@ export interface LayoutNote {
   glyphName: string;
   accidental?: LayoutGlyph;
   stem?: { x: number; y1: number; y2: number };
+  flag?: LayoutGlyph;
   ledgerLines: LayoutLine[];
 }
 
