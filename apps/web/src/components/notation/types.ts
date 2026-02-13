@@ -3,6 +3,7 @@
 export type Clef = 'treble' | 'bass';
 export type Duration = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
+export type BarlineType = 'single' | 'double' | 'end' | 'none';
 
 export interface NoteInput {
   keys: string[]; // e.g. ['C#/5'], ['B/4']
@@ -14,14 +15,15 @@ export interface VoiceInput {
   stem?: StemDirection;
 }
 
-export interface StaveInput {
+export interface MeasureInput {
   clef?: Clef;
   timeSignature?: string; // e.g. '4/4', '3/4'
   voices: VoiceInput[];
+  endBarline?: BarlineType; // default: 'single'
 }
 
 export interface ScoreInput {
-  staves: StaveInput[];
+  measures: MeasureInput[];
 }
 
 // --- Layout output types (pre-computed positions for rendering) ---
@@ -63,11 +65,16 @@ export interface LayoutBeamSegment {
   thickness: number;
 }
 
-export interface LayoutStave {
+export interface LayoutBarline {
   x: number;
   y: number;
+  height: number;
+  type: BarlineType;
+}
+
+export interface LayoutMeasure {
+  x: number;
   width: number;
-  staffLines: LayoutLine[];
   clef?: LayoutGlyph;
   timeSignature?: LayoutTimeSignature;
   notes: LayoutNote[];
@@ -77,5 +84,7 @@ export interface LayoutStave {
 export interface LayoutResult {
   width: number;
   height: number;
-  staves: LayoutStave[];
+  staffLines: LayoutLine[];
+  measures: LayoutMeasure[];
+  barlines: LayoutBarline[];
 }

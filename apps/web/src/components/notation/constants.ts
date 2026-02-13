@@ -49,3 +49,12 @@ export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5;
 
 /** Length of partial (orphaned) secondary beams */
 export const PARTIAL_BEAM_LENGTH = 10;
+
+/** Thin barline width in pixels */
+export const BARLINE_THIN_WIDTH = 1;
+
+/** Thick barline width in pixels (end barline) */
+export const BARLINE_THICK_WIDTH = 3;
+
+/** Gap between double/end barline strokes */
+export const BARLINE_GAP = 3;

@@ -1,19 +1,16 @@
 import { BeamGroup } from './BeamGroup';
 import { Glyph } from './Glyph';
 import { NoteGroup } from './NoteGroup';
-import { StaffLines } from './StaffLines';
 import { TimeSignature } from './TimeSignature';
-import type { LayoutStave } from './types';
+import type { LayoutMeasure } from './types';
 
-interface StaveProps { 
-  layout: LayoutStave;
+interface MeasureProps {
+  layout: LayoutMeasure;
 }
 
-export function Stave({ layout }: StaveProps) {
+export function Measure({ layout }: MeasureProps) {
   return (
     <g>
-      <StaffLines lines={layout.staffLines} />
-
       {layout.clef && (
         <Glyph
           name={layout.clef.glyphName}

@@ -1,4 +1,7 @@
 import {
+    BARLINE_GAP,
+    BARLINE_THICK_WIDTH,
+    BARLINE_THIN_WIDTH,
     BEAM_LEVEL_STRIDE,
     BEAM_MAX_SLOPE,
     BEAM_WIDTH,
@@ -28,16 +31,18 @@ import {
     pitchToLine,
 } from './note-utils'
 import type {
+    BarlineType,
+    LayoutBarline,
     LayoutBeamSegment,
     LayoutGlyph,
     LayoutLine,
+    LayoutMeasure,
     LayoutNote,
     LayoutResult,
-    LayoutStave,
     LayoutTimeSignature,
+    MeasureInput,
     NoteInput,
     ScoreInput,
-    StaveInput,
 } from './types'
 
 /** Clef glyph placement: which staff line the glyph anchors to */
@@ -53,25 +58,128 @@ interface NoteLayout {
     beat: number
 }
 
-export function computeLayout(input: ScoreInput, width: number = 600, height: number = 160): LayoutResult {
-    const staves = input.staves.map((staveInput, idx) => computeStaveLayout(staveInput, width, idx))
-    return { width, height, staves }
+/** Width of a barline type in pixels */
+function barlineWidth(type: BarlineType): number {
+    switch (type) {
+        case 'none':
+            return 0
+        case 'single':
+            return BARLINE_THIN_WIDTH
+        case 'double':
+            return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH
+        case 'end':
+            return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH
+    }
 }
 
-function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: number): LayoutStave {
-    const staveX = 0
+export function computeLayout(input: ScoreInput, width: number = 600, height: number = 160): LayoutResult {
     const staveY = 0
-    const staveWidth = totalWidth
+    const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
 
-    // 1. Staff lines
+    // 1. Continuous staff lines across full width
     const staffLines: LayoutLine[] = []
     for (let i = 0; i < NUM_STAFF_LINES; i++) {
-        const y = staveY + SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + i * STAVE_LINE_DISTANCE
-        staffLines.push({ x1: staveX, y1: y, x2: staveX + staveWidth, y2: y })
+        const y = staveY + headroom + i * STAVE_LINE_DISTANCE
+        staffLines.push({ x1: 0, y1: y, x2: width, y2: y })
     }
 
-    // 2. Clef
-    let cursorX = staveX + STAVE_LEFT_PADDING
+    const staffTopY = staveY + headroom
+    const staffHeight = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
+
+    // 2. Compute overhead width for each measure (clef + time sig + padding)
+    const measureOverheads: number[] = []
+    const measureBeats: number[] = []
+
+    for (const measure of input.measures) {
+        let overhead = STAVE_LEFT_PADDING
+
+        if (measure.clef) {
+            const config = CLEF_CONFIG[measure.clef]
+            if (config) {
+                overhead += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
+            }
+        }
+
+        if (measure.timeSignature) {
+            const [topStr, bottomStr] = measure.timeSignature.split('/')
+            const topWidth = topStr.split('').reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
+            const bottomWidth = bottomStr.split('').reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
+            overhead += Math.max(topWidth, bottomWidth) + TIME_SIG_NOTE_PADDING
+        }
+
+        overhead += STAVE_RIGHT_PADDING
+        measureOverheads.push(overhead)
+
+        // Total beats in this measure
+        let maxBeats = 0
+        for (const voice of measure.voices) {
+            let beats = 0
+            for (const note of voice.notes) {
+                beats += durationToBeats(note.duration)
+            }
+            maxBeats = Math.max(maxBeats, beats)
+        }
+        measureBeats.push(Math.max(maxBeats, 1))
+    }
+
+    // 3. Compute barline widths
+    const barlineTypes: BarlineType[] = input.measures.map((m) => m.endBarline ?? 'single')
+    // Opening barline (thin) + closing barlines between/after measures
+    const openingBarlineW = BARLINE_THIN_WIDTH
+    const barlineWidths = barlineTypes.map(barlineWidth)
+
+    // 4. Distribute remaining width proportionally by beats
+    const totalOverhead = measureOverheads.reduce((a, b) => a + b, 0)
+    const totalBarlineWidth = openingBarlineW + barlineWidths.reduce((a, b) => a + b, 0)
+    const totalBeats = measureBeats.reduce((a, b) => a + b, 0)
+    const availableNoteWidth = Math.max(0, width - totalOverhead - totalBarlineWidth)
+
+    // 5. Layout each measure
+    let cursorX = 0
+    const measures: LayoutMeasure[] = []
+    const barlines: LayoutBarline[] = []
+
+    // Opening barline
+    barlines.push({
+        x: cursorX,
+        y: staffTopY,
+        height: staffHeight,
+        type: 'single',
+    })
+    cursorX += openingBarlineW
+
+    for (let mi = 0; mi < input.measures.length; mi++) {
+        const measureInput = input.measures[mi]
+        const noteWidth = (measureBeats[mi] / totalBeats) * availableNoteWidth
+        const measureWidth = measureOverheads[mi] + noteWidth
+        const measureX = cursorX
+
+        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY)
+        measures.push(measureLayout)
+
+        cursorX += measureWidth
+
+        // End barline
+        barlines.push({
+            x: cursorX,
+            y: staffTopY,
+            height: staffHeight,
+            type: barlineTypes[mi],
+        })
+        cursorX += barlineWidths[mi]
+    }
+
+    return { width, height, staffLines, measures, barlines }
+}
+
+function computeMeasureLayout(
+    input: MeasureInput,
+    measureX: number,
+    measureWidth: number,
+    staveY: number,
+): LayoutMeasure {
+    // 1. Clef
+    let cursorX = measureX + STAVE_LEFT_PADDING
     let clef: LayoutGlyph | undefined
     if (input.clef) {
         const config = CLEF_CONFIG[input.clef]
@@ -81,7 +189,7 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
         }
     }
 
-    // 3. Time signature
+    // 2. Time signature
     let timeSignature: LayoutTimeSignature | undefined
     if (input.timeSignature) {
         const [topStr, bottomStr] = input.timeSignature.split('/')
@@ -107,9 +215,9 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
         cursorX += Math.max(topWidth, bottomWidth) + TIME_SIG_NOTE_PADDING
     }
 
-    // 4. Beat → x mapping
+    // 3. Beat → x mapping within this measure
     const notesStartX = cursorX
-    const notesEndX = staveX + staveWidth - STAVE_RIGHT_PADDING
+    const notesEndX = measureX + measureWidth - STAVE_RIGHT_PADDING
     const availableWidth = notesEndX - notesStartX
 
     const beatPositions = new Set<number>()
@@ -128,7 +236,7 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
         beatToX.set(sortedBeats[i], x)
     }
 
-    // 5. Layout notes (first pass — default stems, flags)
+    // 4. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
     const allNoteLayouts: NoteLayout[] = []
 
@@ -192,10 +300,10 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
         }
     }
 
-    // 6. Auto-beam: group consecutive beamable notes within each beat
+    // 5. Auto-beam: group consecutive beamable notes within each beat
     const beamGroups = computeBeamGroups(allNoteLayouts)
 
-    // 7. For each beam group: compute slope, adjust stems, generate segments, suppress flags
+    // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
     const beams: LayoutBeamSegment[][] = []
     for (const group of beamGroups) {
         const segments = layoutBeamGroup(group)
@@ -203,10 +311,8 @@ function computeStaveLayout(input: StaveInput, totalWidth: number, _staveIndex: 
     }
 
     return {
-        x: staveX,
-        y: staveY,
-        width: staveWidth,
-        staffLines,
+        x: measureX,
+        width: measureWidth,
         clef,
         timeSignature,
         notes: allNoteLayouts.map((nl) => nl.note),

@@ -1,23 +1,36 @@
 import { Score, type ScoreInput } from '@/components/notation';
 
 const scoreData: ScoreInput = {
-  staves: [
+  measures: [
     {
       clef: 'treble',
       timeSignature: '4/4',
       voices: [
         {
           notes: [
-            { keys: ['C#/5'], duration: 'w' },
-            { keys: ['B/4'], duration: 'h' },
-            { keys: ['A/4'], duration: 'q' },
-            { keys: ['G#/4'], duration: 'q' },
+            { keys: ['C#/5'], duration: 'q' },
+            { keys: ['B/4'], duration: 'q' },
+            { keys: ['A/4'], duration: '8' },
             { keys: ['G#/4'], duration: '8' },
-            { keys: ['G#/4'], duration: '16' },
-            { keys: ['G#/4'], duration: '16' },
+            { keys: ['G#/4'], duration: '8' },
+            { keys: ['G#/4'], duration: '8' },
           ],
         },
       ],
+    },
+    {
+      voices: [
+        {
+          notes: [
+            { keys: ['D/5'], duration: 'h' },
+            { keys: ['E/5'], duration: 'q' },
+            { keys: ['B/4'], duration: '8' },
+            { keys: ['F/5'], duration: '16' },
+            { keys: ['F/5'], duration: '16' },
+          ],
+        },
+      ],
+      endBarline: 'end',
     },
   ],
 };
