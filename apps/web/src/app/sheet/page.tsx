@@ -8,13 +8,14 @@ const scoreData: ScoreInput = {
       voices: [
         {
           notes: [
-            { keys: ['C#/5'], duration: 'q' },
-            { keys: ['B/4'], duration: 'q' },
+            { keys: ['C#/5'], duration: '8' },
+            { keys: ['B/4'], duration: '8' },
             { keys: ['A/4'], duration: '8' },
-            { keys: ['G#/4'], duration: '8' },
+            { keys: ['G#/4'], duration: 'q' },
             { keys: ['G#/4'], duration: '8' },
             { keys: ['G#/4'], duration: '8' },
           ],
+          tuplets: [{ startIndex: 0, count: 3, notesOccupied: 2 }],
         },
       ],
     },

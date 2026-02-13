@@ -15,6 +15,8 @@ import {
     STAVE_RIGHT_PADDING,
     STEM_HEIGHT,
     TIME_SIG_NOTE_PADDING,
+    TUPLET_NUMBER_SCALE,
+    TUPLET_OFFSET,
 } from './constants'
 import { getGlyphWidth } from './glyph-utils'
 import {
@@ -40,9 +42,11 @@ import type {
     LayoutNote,
     LayoutResult,
     LayoutTimeSignature,
+    LayoutTuplet,
     MeasureInput,
     NoteInput,
     ScoreInput,
+    TupletInput,
 } from './types'
 
 /** Clef glyph placement: which staff line the glyph anchors to */
@@ -56,6 +60,8 @@ interface NoteLayout {
     input: NoteInput
     stemDir: 'up' | 'down'
     beat: number
+    noteIndex: number // index in voice.notes
+    tupletIndex: number | undefined // index in voice.tuplets (if part of a tuplet)
 }
 
 /** Width of a barline type in pixels */
@@ -70,6 +76,32 @@ function barlineWidth(type: BarlineType): number {
         case 'end':
             return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH
     }
+}
+
+/**
+ * Build a map from note index → tuplet info for a voice.
+ * Returns a Map<noteIndex, { tupletIndex, tuplet }>.
+ */
+function buildTupletMap(tuplets: TupletInput[] | undefined): Map<number, { tupletIndex: number; tuplet: TupletInput }> {
+    const map = new Map<number, { tupletIndex: number; tuplet: TupletInput }>()
+    if (!tuplets) return map
+    for (let ti = 0; ti < tuplets.length; ti++) {
+        const t = tuplets[ti]
+        for (let ni = t.startIndex; ni < t.startIndex + t.count; ni++) {
+            map.set(ni, { tupletIndex: ti, tuplet: t })
+        }
+    }
+    return map
+}
+
+/**
+ * Get the effective beats for a note, applying tuplet multiplier if applicable.
+ */
+function effectiveBeats(duration: NoteInput['duration'], tuplet: TupletInput | undefined): number {
+    const beats = durationToBeats(duration)
+    if (!tuplet) return beats
+    const notesOccupied = tuplet.notesOccupied ?? 2
+    return beats * notesOccupied / tuplet.count
 }
 
 export function computeLayout(input: ScoreInput, width: number = 600, height: number = 160): LayoutResult {
@@ -110,12 +142,15 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         overhead += STAVE_RIGHT_PADDING
         measureOverheads.push(overhead)
 
-        // Total beats in this measure
+        // Total beats in this measure (applying tuplet multipliers)
         let maxBeats = 0
         for (const voice of measure.voices) {
+            const tupletMap = buildTupletMap(voice.tuplets)
             let beats = 0
-            for (const note of voice.notes) {
-                beats += durationToBeats(note.duration)
+            for (let ni = 0; ni < voice.notes.length; ni++) {
+                const note = voice.notes[ni]
+                const tupletInfo = tupletMap.get(ni)
+                beats += effectiveBeats(note.duration, tupletInfo?.tuplet)
             }
             maxBeats = Math.max(maxBeats, beats)
         }
@@ -124,7 +159,6 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
 
     // 3. Compute barline widths
     const barlineTypes: BarlineType[] = input.measures.map((m) => m.endBarline ?? 'single')
-    // Opening barline (thin) + closing barlines between/after measures
     const openingBarlineW = BARLINE_THIN_WIDTH
     const barlineWidths = barlineTypes.map(barlineWidth)
 
@@ -215,17 +249,20 @@ function computeMeasureLayout(
         cursorX += Math.max(topWidth, bottomWidth) + TIME_SIG_NOTE_PADDING
     }
 
-    // 3. Beat → x mapping within this measure
+    // 3. Beat → x mapping within this measure (with tuplet-adjusted beats)
     const notesStartX = cursorX
     const notesEndX = measureX + measureWidth - STAVE_RIGHT_PADDING
     const availableWidth = notesEndX - notesStartX
 
     const beatPositions = new Set<number>()
     for (const voice of input.voices) {
+        const tupletMap = buildTupletMap(voice.tuplets)
         let beat = 0
-        for (const note of voice.notes) {
+        for (let ni = 0; ni < voice.notes.length; ni++) {
+            const note = voice.notes[ni]
             beatPositions.add(beat)
-            beat += durationToBeats(note.duration)
+            const tupletInfo = tupletMap.get(ni)
+            beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
         }
     }
     const sortedBeats = Array.from(beatPositions).sort((a, b) => a - b)
@@ -242,9 +279,12 @@ function computeMeasureLayout(
 
     for (const voice of input.voices) {
         const voiceStemPref = voice.stem ?? 'auto'
+        const tupletMap = buildTupletMap(voice.tuplets)
         let beat = 0
 
-        for (const noteInput of voice.notes) {
+        for (let ni = 0; ni < voice.notes.length; ni++) {
+            const noteInput = voice.notes[ni]
+            const tupletInfo = tupletMap.get(ni)
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const x = beatToX.get(beat)!
 
@@ -293,14 +333,22 @@ function computeMeasureLayout(
                 }))
 
                 const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, ledgerLines }
-                allNoteLayouts.push({ note: layoutNote, input: noteInput, stemDir: dir, beat })
+                allNoteLayouts.push({
+                    note: layoutNote,
+                    input: noteInput,
+                    stemDir: dir,
+                    beat,
+                    noteIndex: ni,
+                    tupletIndex: tupletInfo?.tupletIndex,
+                })
             }
 
-            beat += durationToBeats(noteInput.duration)
+            beat += effectiveBeats(noteInput.duration, tupletInfo?.tuplet)
         }
     }
 
     // 5. Auto-beam: group consecutive beamable notes within each beat
+    //    (tuplet notes stay grouped together — no beat-boundary breaks within a tuplet)
     const beamGroups = computeBeamGroups(allNoteLayouts)
 
     // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
@@ -310,6 +358,9 @@ function computeMeasureLayout(
         beams.push(segments)
     }
 
+    // 7. Compute tuplet bracket layouts
+    const tuplets = computeTupletLayouts(input, allNoteLayouts, noteheadWidth)
+
     return {
         x: measureX,
         width: measureWidth,
@@ -317,12 +368,14 @@ function computeMeasureLayout(
         timeSignature,
         notes: allNoteLayouts.map((nl) => nl.note),
         beams,
+        tuplets,
     }
 }
 
 /**
  * Group consecutive beamable notes (8th, 16th) that fall within the same beat.
- * A beat boundary (integer beat position) breaks the group.
+ * A beat boundary (integer beat position) breaks the group,
+ * UNLESS both notes belong to the same tuplet.
  */
 function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
     const groups: NoteLayout[][] = []
@@ -339,15 +392,18 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
         // Check if this note crosses a beat boundary from the previous
         if (current.length > 0) {
             const prev = current[current.length - 1]
-            const prevBeatEnd = prev.beat + durationToBeats(prev.input.duration)
-            const prevBeatBoundary = Math.floor(prev.beat)
-            const nextBeatBoundary = Math.floor(nl.beat)
+            const sameTuplet = prev.tupletIndex !== undefined && prev.tupletIndex === nl.tupletIndex
 
-            // Break at beat boundaries: if the prev note's beat and this note's beat
-            // are in different integer-beat groups
-            if (nextBeatBoundary > prevBeatBoundary && prevBeatEnd <= nl.beat) {
-                if (current.length >= 2) groups.push(current)
-                current = []
+            if (!sameTuplet) {
+                const prevBeatEnd = prev.beat + durationToBeats(prev.input.duration)
+                const prevBeatBoundary = Math.floor(prev.beat)
+                const nextBeatBoundary = Math.floor(nl.beat)
+
+                // Break at beat boundaries
+                if (nextBeatBoundary > prevBeatBoundary && prevBeatEnd <= nl.beat) {
+                    if (current.length >= 2) groups.push(current)
+                    current = []
+                }
             }
 
             // Break if stem direction changes
@@ -362,6 +418,123 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
 
     if (current.length >= 2) groups.push(current)
     return groups
+}
+
+/**
+ * Compute tuplet bracket layouts for all voices in a measure.
+ */
+function computeTupletLayouts(
+    input: MeasureInput,
+    allNoteLayouts: NoteLayout[],
+    noteheadWidth: number,
+): LayoutTuplet[] {
+    const layouts: LayoutTuplet[] = []
+
+    for (const voice of input.voices) {
+        if (!voice.tuplets) continue
+
+        for (let ti = 0; ti < voice.tuplets.length; ti++) {
+            const tuplet = voice.tuplets[ti]
+            const numNotes = tuplet.count
+            const notesOccupied = tuplet.notesOccupied ?? 2
+
+            // Find all NoteLayouts belonging to this tuplet
+            const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletIndex === ti)
+            if (tupletNotes.length === 0) continue
+
+            // Determine stem direction (majority vote)
+            const upCount = tupletNotes.filter((nl) => nl.stemDir === 'up').length
+            const stemDir: 'up' | 'down' = upCount >= tupletNotes.length / 2 ? 'up' : 'down'
+            const location: 1 | -1 = stemDir === 'up' ? 1 : -1
+
+            // x bounds
+            const x1 = tupletNotes[0].note.x
+            const x2 = tupletNotes[tupletNotes.length - 1].note.x + noteheadWidth
+
+            // Check if all tuplet notes are beamed (have no flags and have stems adjusted by beam)
+            const allBeamed = tupletNotes.every((nl) => nl.note.flag === undefined && isBeamable(nl.input.duration))
+
+            // Y position: based on stem tips or note positions
+            let y: number
+            if (stemDir === 'up') {
+                // Bracket above: find the highest stem tip (lowest Y)
+                const stemTips = tupletNotes
+                    .map((nl) => nl.note.stem?.y2 ?? nl.note.y)
+                y = Math.min(...stemTips) - TUPLET_OFFSET
+            } else {
+                // Bracket below: find the lowest stem tip (highest Y)
+                const stemTips = tupletNotes
+                    .map((nl) => nl.note.stem?.y2 ?? nl.note.y)
+                y = Math.max(...stemTips) + TUPLET_OFFSET
+            }
+
+            // Number glyphs: "3" or "3:2"
+            const centerX = (x1 + x2) / 2
+            const numberGlyphs = buildTupletNumberGlyphs(numNotes, notesOccupied, tuplet.showRatio, centerX, y)
+
+            layouts.push({
+                x1,
+                x2,
+                y,
+                location,
+                numberGlyphs,
+                bracketed: !allBeamed,
+            })
+        }
+    }
+
+    return layouts
+}
+
+/**
+ * Build the glyph array for the tuplet number (e.g., "3" or "3:2").
+ * Uses timeSig glyphs at TUPLET_NUMBER_SCALE.
+ */
+function buildTupletNumberGlyphs(
+    numNotes: number,
+    notesOccupied: number,
+    showRatio: boolean | undefined,
+    centerX: number,
+    y: number,
+): LayoutGlyph[] {
+    const digits = String(numNotes).split('')
+    const glyphs: LayoutGlyph[] = []
+
+    // Calculate total width of all glyphs to center them
+    const glyphNames = digits.map((d) => `timeSig${d}`)
+
+    let ratioGlyphNames: string[] = []
+    if (showRatio) {
+        const denomDigits = String(notesOccupied).split('')
+        ratioGlyphNames = denomDigits.map((d) => `timeSig${d}`)
+    }
+
+    // Total width at tuplet scale
+    const scale = TUPLET_NUMBER_SCALE
+    let totalWidth = glyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
+    if (showRatio && ratioGlyphNames.length > 0) {
+        totalWidth += 4 // colon spacing
+        totalWidth += ratioGlyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
+    }
+
+    let x = centerX - totalWidth / 2
+
+    // Numerator digits
+    for (const name of glyphNames) {
+        glyphs.push({ glyphName: name, x, y })
+        x += getGlyphWidth(name, scale)
+    }
+
+    // Ratio ":N" if requested
+    if (showRatio && ratioGlyphNames.length > 0) {
+        x += 4 // colon spacing
+        for (const name of ratioGlyphNames) {
+            glyphs.push({ glyphName: name, x, y })
+            x += getGlyphWidth(name, scale)
+        }
+    }
+
+    return glyphs
 }
 
 /**

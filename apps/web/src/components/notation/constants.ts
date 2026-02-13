@@ -58,3 +58,15 @@ export const BARLINE_THICK_WIDTH = 3;
 
 /** Gap between double/end barline strokes */
 export const BARLINE_GAP = 3;
+
+/** Tuplet bracket vertical tick height in pixels */
+export const TUPLET_BRACKET_HEIGHT = 10;
+
+/** Horizontal gap between bracket lines and the number */
+export const TUPLET_NUMBER_GAP = 5;
+
+/** Vertical offset from stem tips / noteheads to bracket */
+export const TUPLET_OFFSET = 15;
+
+/** Scale for tuplet number glyphs (3/5 of normal notation scale) */
+export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5);

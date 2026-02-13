@@ -2,6 +2,7 @@ import { BeamGroup } from './BeamGroup';
 import { Glyph } from './Glyph';
 import { NoteGroup } from './NoteGroup';
 import { TimeSignature } from './TimeSignature';
+import { TupletBracket } from './TupletBracket';
 import type { LayoutMeasure } from './types';
 
 interface MeasureProps {
@@ -29,6 +30,10 @@ export function Measure({ layout }: MeasureProps) {
 
       {layout.beams.map((segments, i) => (
         <BeamGroup key={i} segments={segments} />
+      ))}
+
+      {layout.tuplets.map((tuplet, i) => (
+        <TupletBracket key={i} layout={tuplet} />
       ))}
     </g>
   );

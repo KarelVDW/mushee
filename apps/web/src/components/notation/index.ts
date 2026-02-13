@@ -1,2 +1,2 @@
 export { Score } from './Score'
-export type { MeasureInput, NoteInput, ScoreInput, VoiceInput } from './types'
+export type { MeasureInput, NoteInput, ScoreInput, TupletInput, VoiceInput } from './types'

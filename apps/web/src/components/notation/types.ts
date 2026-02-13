@@ -10,9 +10,17 @@ export interface NoteInput {
   duration: Duration;
 }
 
+export interface TupletInput {
+  startIndex: number; // first note index in voice.notes
+  count: number; // number of notes in the tuplet
+  notesOccupied?: number; // time denominator, defaults to 2
+  showRatio?: boolean; // show "3:2" instead of just "3"
+}
+
 export interface VoiceInput {
   notes: NoteInput[];
   stem?: StemDirection;
+  tuplets?: TupletInput[];
 }
 
 export interface MeasureInput {
@@ -72,6 +80,15 @@ export interface LayoutBarline {
   type: BarlineType;
 }
 
+export interface LayoutTuplet {
+  x1: number;
+  x2: number;
+  y: number;
+  location: 1 | -1; // 1 = above, -1 = below
+  numberGlyphs: LayoutGlyph[];
+  bracketed: boolean;
+}
+
 export interface LayoutMeasure {
   x: number;
   width: number;
@@ -79,6 +96,7 @@ export interface LayoutMeasure {
   timeSignature?: LayoutTimeSignature;
   notes: LayoutNote[];
   beams: LayoutBeamSegment[][];
+  tuplets: LayoutTuplet[];
 }
 
 export interface LayoutResult {
