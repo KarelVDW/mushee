@@ -12,18 +12,22 @@ const NOTE_INDEX: Record<string, number> = {
 }
 
 /**
- * Parse a key string like "C#/5" into its components.
+ * Parse a key string like "C#/5" or "C#/5/r" into its components.
+ * The optional "/r" suffix marks the note as a rest.
  */
 export function parseKey(key: string): {
     noteName: string
     accidental: string | undefined
     octave: number
+    isRest: boolean
 } {
-    const [pitch, octaveStr] = key.split('/')
+    const parts = key.split('/')
+    const pitch = parts[0]
     const noteName = pitch[0].toUpperCase()
     const accidental = pitch.length > 1 ? pitch.slice(1) : undefined
-    const octave = parseInt(octaveStr, 10)
-    return { noteName, accidental, octave }
+    const octave = parseInt(parts[1], 10)
+    const isRest = parts[2] === 'r'
+    return { noteName, accidental, octave, isRest }
 }
 
 /**
@@ -61,6 +65,29 @@ export function getYForNote(line: number, staveY: number): number {
 export function getYForLine(lineIndex: number, staveY: number): number {
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
     return staveY + headroom + lineIndex * STAVE_LINE_DISTANCE
+}
+
+/**
+ * Get the rest glyph name for a given duration.
+ */
+export function restGlyphForDuration(duration: Duration): string {
+    switch (duration) {
+        case 'w':
+            return 'restWhole'
+        case 'h':
+            return 'restHalf'
+        case 'q':
+            return 'restQuarter'
+        case '8':
+            return 'rest8th'
+        case '16':
+            return 'rest16th'
+    }
+}
+
+/** Default note line for rest positioning (whole rest on line 4, others on line 3). */
+export function restLine(duration: Duration): number {
+    return duration === 'w' ? 4 : 3
 }
 
 /**

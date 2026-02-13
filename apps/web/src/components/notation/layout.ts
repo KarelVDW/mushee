@@ -31,6 +31,8 @@ import {
     noteheadForDuration,
     parseKey,
     pitchToLine,
+    restGlyphForDuration,
+    restLine,
 } from './note-utils'
 import type {
     BarlineType,
@@ -62,6 +64,7 @@ interface NoteLayout {
     beat: number
     noteIndex: number // index in voice.notes
     tupletIndex: number | undefined // index in voice.tuplets (if part of a tuplet)
+    isRest: boolean
 }
 
 /** Width of a barline type in pixels */
@@ -305,63 +308,84 @@ function computeMeasureLayout(
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const x = beatToX.get(beat)!
 
-            for (const key of noteInput.keys) {
-                const { accidental } = parseKey(key)
-                const noteLine = pitchToLine(key, input.clef)
-                const noteY = getYForNote(noteLine, staveY)
-                const glyphName = noteheadForDuration(noteInput.duration)
-                // Use beam group stem direction if available, otherwise fall back to per-note logic
-                const beamDir = beamStemDirs.get(`${vi}:${ni}`)
-                const dir: 'up' | 'down' = voiceStemPref !== 'auto'
-                    ? voiceStemPref
-                    : beamDir ?? (noteLine >= 3 ? 'down' : 'up')
+            // Check if this note is a rest (first key has /r suffix)
+            const { isRest: noteIsRest } = parseKey(noteInput.keys[0])
 
-                // Accidental
-                let accidentalLayout: LayoutGlyph | undefined
-                if (accidental) {
-                    const accGlyph = accidentalGlyphName(accidental)
-                    if (accGlyph) {
-                        accidentalLayout = {
-                            glyphName: accGlyph,
-                            x: x - getGlyphWidth(accGlyph) - 2,
-                            y: noteY,
-                        }
-                    }
-                }
-
-                // Stem
-                let stem: LayoutNote['stem']
-                if (noteInput.duration !== 'w') {
-                    stem = dir === 'up'
-                        ? { x: x + noteheadWidth, y1: noteY, y2: noteY - STEM_HEIGHT }
-                        : { x: x, y1: noteY, y2: noteY + STEM_HEIGHT }
-                }
-
-                // Flag (will be suppressed for beamed notes in pass 2)
-                let flag: LayoutGlyph | undefined
-                const flagName = flagGlyphName(noteInput.duration, dir)
-                if (flagName && stem) {
-                    flag = { glyphName: flagName, x: stem.x, y: stem.y2 }
-                }
-
-                // Ledger lines
-                const ledgerLineYs = getLedgerLinePositions(noteLine, staveY)
-                const ledgerLines: LayoutLine[] = ledgerLineYs.map((ly) => ({
-                    x1: x - LEDGER_LINE_EXTENSION,
-                    y1: ly,
-                    x2: x + noteheadWidth + LEDGER_LINE_EXTENSION,
-                    y2: ly,
-                }))
-
-                const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, ledgerLines }
+            if (noteIsRest) {
+                // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
+                const rLine = restLine(noteInput.duration)
+                const noteY = getYForNote(rLine, staveY)
+                const glyphName = restGlyphForDuration(noteInput.duration)
+                const layoutNote: LayoutNote = { x, y: noteY, glyphName, ledgerLines: [] }
                 allNoteLayouts.push({
                     note: layoutNote,
                     input: noteInput,
-                    stemDir: dir,
+                    stemDir: 'up',
                     beat,
                     noteIndex: ni,
                     tupletIndex: tupletInfo?.tupletIndex,
+                    isRest: true,
                 })
+            } else {
+                for (const key of noteInput.keys) {
+                    const { accidental } = parseKey(key)
+                    const noteLine = pitchToLine(key, input.clef)
+                    const noteY = getYForNote(noteLine, staveY)
+                    const glyphName = noteheadForDuration(noteInput.duration)
+                    // Use beam group stem direction if available, otherwise fall back to per-note logic
+                    const beamDir = beamStemDirs.get(`${vi}:${ni}`)
+                    const dir: 'up' | 'down' = voiceStemPref !== 'auto'
+                        ? voiceStemPref
+                        : beamDir ?? (noteLine >= 3 ? 'down' : 'up')
+
+                    // Accidental
+                    let accidentalLayout: LayoutGlyph | undefined
+                    if (accidental) {
+                        const accGlyph = accidentalGlyphName(accidental)
+                        if (accGlyph) {
+                            accidentalLayout = {
+                                glyphName: accGlyph,
+                                x: x - getGlyphWidth(accGlyph) - 2,
+                                y: noteY,
+                            }
+                        }
+                    }
+
+                    // Stem
+                    let stem: LayoutNote['stem']
+                    if (noteInput.duration !== 'w') {
+                        stem = dir === 'up'
+                            ? { x: x + noteheadWidth, y1: noteY, y2: noteY - STEM_HEIGHT }
+                            : { x: x, y1: noteY, y2: noteY + STEM_HEIGHT }
+                    }
+
+                    // Flag (will be suppressed for beamed notes in pass 2)
+                    let flag: LayoutGlyph | undefined
+                    const flagName = flagGlyphName(noteInput.duration, dir)
+                    if (flagName && stem) {
+                        flag = { glyphName: flagName, x: stem.x, y: stem.y2 }
+                    }
+
+                    // Ledger lines
+                    const ledgerLineYs = getLedgerLinePositions(noteLine, staveY)
+                    const ledgerLines: LayoutLine[] = ledgerLineYs.map((ly) => ({
+                        x1: x - LEDGER_LINE_EXTENSION,
+                        y1: ly,
+                        x2: x + noteheadWidth + LEDGER_LINE_EXTENSION,
+                        y2: ly,
+                    }))
+
+                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, ledgerLines }
+                    allNoteLayouts.push({
+                        note: layoutNote,
+                        input: noteInput,
+                        stemDir: dir,
+                        beat,
+                        noteIndex: ni,
+                        tupletIndex: tupletInfo?.tupletIndex,
+                        isRest: false,
+                    })
+                }
             }
 
             beat += effectiveBeats(noteInput.duration, tupletInfo?.tuplet)
@@ -417,7 +441,8 @@ function identifyPotentialBeamGroups(
         const note = notes[ni]
         const tupletInfo = tupletMap.get(ni)
 
-        if (!isBeamable(note.duration)) {
+        const { isRest: noteIsRest } = parseKey(note.keys[0])
+        if (!isBeamable(note.duration) || noteIsRest) {
             if (currentIndices.length >= 2) {
                 groups.push({ noteIndices: currentIndices, noteLines: currentLines })
             }
@@ -475,8 +500,8 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
     let current: NoteLayout[] = []
 
     for (const nl of noteLayouts) {
-        if (!isBeamable(nl.input.duration)) {
-            // Non-beamable note: flush current group
+        if (!isBeamable(nl.input.duration) || nl.isRest) {
+            // Non-beamable note or rest: flush current group
             if (current.length >= 2) groups.push(current)
             current = []
             continue

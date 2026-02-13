@@ -11,7 +11,7 @@ const scoreData: ScoreInput = {
             { keys: ['C#/5'], duration: '8' },
             { keys: ['B/4'], duration: '8' },
             { keys: ['E/4'], duration: '8' },
-            { keys: ['G#/4'], duration: 'q' },
+            { keys: ['C/5/r'], duration: '16' },
             { keys: ['G#/4'], duration: 'q' },
             { keys: ['G#/4'], duration: 'q' },
             { keys: ['G#/4'], duration: '8' },
