@@ -1,4 +1,4 @@
-import { STEM_WIDTH } from './constants'
+import { DOT_RADIUS, STEM_WIDTH } from './constants'
 import { Glyph } from './Glyph'
 import type { LayoutNote } from './types'
 
@@ -27,6 +27,11 @@ export function NoteGroup({ note }: NoteGroupProps) {
 
             {/* Flag (8th, 16th notes) */}
             {note.flag && <Glyph name={note.flag.glyphName} x={note.flag.x} y={note.flag.y} />}
+
+            {/* Augmentation dots */}
+            {note.dots?.map((dot, i) => (
+                <circle key={`dot-${i}`} cx={dot.x} cy={dot.y} r={DOT_RADIUS} fill="#000" />
+            ))}
         </g>
     )
 }

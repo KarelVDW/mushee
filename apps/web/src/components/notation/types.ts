@@ -8,6 +8,7 @@ export type BarlineType = 'single' | 'double' | 'end' | 'none';
 export interface NoteInput {
   keys: string[]; // e.g. ['C#/5'], ['B/4']
   duration: Duration;
+  dots?: number; // 1 = dotted, 2 = double-dotted
 }
 
 export interface TupletInput {
@@ -56,6 +57,7 @@ export interface LayoutNote {
   accidental?: LayoutGlyph;
   stem?: { x: number; y1: number; y2: number };
   flag?: LayoutGlyph;
+  dots?: { x: number; y: number }[];
   ledgerLines: LayoutLine[];
 }
 

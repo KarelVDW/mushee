@@ -70,3 +70,12 @@ export const TUPLET_OFFSET = 15;
 
 /** Scale for tuplet number glyphs (3/5 of normal notation scale) */
 export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5);
+
+/** Augmentation dot radius in pixels */
+export const DOT_RADIUS = 2;
+
+/** Horizontal offset from notehead right edge to first dot center */
+export const DOT_NOTEHEAD_OFFSET = 5;
+
+/** Horizontal spacing between multiple dots (center to center) */
+export const DOT_SPACING = 5;

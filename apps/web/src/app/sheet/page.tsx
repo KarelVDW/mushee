@@ -25,7 +25,8 @@ const scoreData: ScoreInput = {
       voices: [
         {
           notes: [
-            { keys: ['D/5'], duration: 'h' },
+            { keys: ['D/5'], duration: 'q', dots: 1 },
+            { keys: ['C/5'], duration: '8' },
             { keys: ['E/5'], duration: 'q' },
             { keys: ['B/4'], duration: '8' },
             { keys: ['F/5'], duration: '16' },

@@ -6,6 +6,8 @@ import {
     BEAM_MAX_SLOPE,
     BEAM_WIDTH,
     CLEF_TIME_SIG_PADDING,
+    DOT_NOTEHEAD_OFFSET,
+    DOT_SPACING,
     LEDGER_LINE_EXTENSION,
     NUM_STAFF_LINES,
     PARTIAL_BEAM_LENGTH,
@@ -21,6 +23,7 @@ import {
 import { getGlyphWidth } from './glyph-utils'
 import {
     accidentalGlyphName,
+    applyDots,
     beamCount,
     durationToBeats,
     flagGlyphName,
@@ -98,10 +101,11 @@ function buildTupletMap(tuplets: TupletInput[] | undefined): Map<number, { tuple
 }
 
 /**
- * Get the effective beats for a note, applying tuplet multiplier if applicable.
+ * Get the effective beats for a note, applying dot multiplier and tuplet multiplier.
  */
-function effectiveBeats(duration: NoteInput['duration'], tuplet: TupletInput | undefined): number {
-    const beats = durationToBeats(duration)
+function effectiveBeats(duration: NoteInput['duration'], dots: number | undefined, tuplet: TupletInput | undefined): number {
+    let beats = durationToBeats(duration)
+    if (dots) beats = applyDots(beats, dots)
     if (!tuplet) return beats
     const notesOccupied = tuplet.notesOccupied ?? 2
     return beats * notesOccupied / tuplet.count
@@ -153,7 +157,7 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
             for (let ni = 0; ni < voice.notes.length; ni++) {
                 const note = voice.notes[ni]
                 const tupletInfo = tupletMap.get(ni)
-                beats += effectiveBeats(note.duration, tupletInfo?.tuplet)
+                beats += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
             }
             maxBeats = Math.max(maxBeats, beats)
         }
@@ -207,6 +211,34 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
     }
 
     return { width, height, staffLines, measures, barlines }
+}
+
+/**
+ * Compute dot positions for a note or rest.
+ * Dots are placed to the right of the notehead, shifted up by half a line
+ * distance if the note sits on a staff line (to avoid dots landing on lines).
+ */
+function computeDotPositions(
+    numDots: number | undefined,
+    noteRightX: number,
+    noteY: number,
+    noteLine: number,
+): { x: number; y: number }[] | undefined {
+    if (!numDots || numDots <= 0) return undefined
+    const dots: { x: number; y: number }[] = []
+
+    // If the note sits on a line (integer noteLine), shift dots up by half a space
+    const onLine = Number.isInteger(noteLine)
+    const dotY = onLine ? noteY - STAVE_LINE_DISTANCE / 2 : noteY
+
+    for (let i = 0; i < numDots; i++) {
+        dots.push({
+            x: noteRightX + DOT_NOTEHEAD_OFFSET + i * DOT_SPACING,
+            y: dotY,
+        })
+    }
+
+    return dots
 }
 
 function computeMeasureLayout(
@@ -265,7 +297,7 @@ function computeMeasureLayout(
             const note = voice.notes[ni]
             beatPositions.add(beat)
             const tupletInfo = tupletMap.get(ni)
-            beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
+            beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
         }
     }
     const sortedBeats = Array.from(beatPositions).sort((a, b) => a - b)
@@ -316,7 +348,8 @@ function computeMeasureLayout(
                 const rLine = restLine(noteInput.duration)
                 const noteY = getYForNote(rLine, staveY)
                 const glyphName = restGlyphForDuration(noteInput.duration)
-                const layoutNote: LayoutNote = { x, y: noteY, glyphName, ledgerLines: [] }
+                const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, rLine)
+                const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [] }
                 allNoteLayouts.push({
                     note: layoutNote,
                     input: noteInput,
@@ -375,7 +408,10 @@ function computeMeasureLayout(
                         y2: ly,
                     }))
 
-                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, ledgerLines }
+                    // Dots
+                    const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, noteLine)
+
+                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, dots, ledgerLines }
                     allNoteLayouts.push({
                         note: layoutNote,
                         input: noteInput,
@@ -388,7 +424,7 @@ function computeMeasureLayout(
                 }
             }
 
-            beat += effectiveBeats(noteInput.duration, tupletInfo?.tuplet)
+            beat += effectiveBeats(noteInput.duration, noteInput.dots, tupletInfo?.tuplet)
         }
     }
 
@@ -448,7 +484,7 @@ function identifyPotentialBeamGroups(
             }
             currentIndices = []
             currentLines = []
-            beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
+            beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
             continue
         }
 
@@ -461,7 +497,7 @@ function identifyPotentialBeamGroups(
 
             if (!sameTuplet) {
                 const prevNote = notes[prevNi]
-                const prevBeat = beat - effectiveBeats(prevNote.duration, prevTupletInfo?.tuplet)
+                const prevBeat = beat - effectiveBeats(prevNote.duration, prevNote.dots, prevTupletInfo?.tuplet)
                 const prevBeatBoundary = Math.floor(prevBeat)
                 const nextBeatBoundary = Math.floor(beat)
 
@@ -480,7 +516,7 @@ function identifyPotentialBeamGroups(
         const avgLine = note.keys.reduce((sum, key) => sum + pitchToLine(key, clef), 0) / note.keys.length
         currentLines.push(avgLine)
 
-        beat += effectiveBeats(note.duration, tupletInfo?.tuplet)
+        beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
     }
 
     if (currentIndices.length >= 2) {

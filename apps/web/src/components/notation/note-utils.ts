@@ -162,6 +162,15 @@ export function isBeamable(duration: Duration): boolean {
 }
 
 /**
+ * Apply dot multiplier to a beat count.
+ * 1 dot = 1.5x, 2 dots = 1.75x, formula: beats * (2 - 1/(2^dots))
+ */
+export function applyDots(beats: number, dots: number): number {
+    if (dots <= 0) return beats
+    return beats * (2 - 1 / Math.pow(2, dots))
+}
+
+/**
  * Convert a duration to the number of quarter-note beats.
  */
 export function durationToBeats(duration: Duration): number {
