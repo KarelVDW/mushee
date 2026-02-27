@@ -137,6 +137,36 @@ export default function Sheet() {
     [scoreData, cursorIndex, handleNoteChange],
   );
 
+  const handleAddMeasure = useCallback(() => {
+    setScoreData((prev) => {
+      const next = structuredClone(prev);
+      const lastIdx = next.measures.length - 1;
+      const lastBarline = next.measures[lastIdx].endBarline;
+      // Remove end barline from current last measure
+      delete next.measures[lastIdx].endBarline;
+      // Add new measure with a whole rest
+      next.measures.push({
+        voices: [{ notes: [{ keys: ['C/5/r'], duration: 'w' }] }],
+        endBarline: lastBarline,
+      });
+      return next;
+    });
+  }, []);
+
+  const handleRemoveMeasure = useCallback(() => {
+    setScoreData((prev) => {
+      if (prev.measures.length <= 1) return prev;
+      const next = structuredClone(prev);
+      const removed = next.measures.pop();
+      // Transfer end barline to new last measure
+      const newLastIdx = next.measures.length - 1;
+      if (removed) next.measures[newLastIdx].endBarline = removed.endBarline;
+      return next;
+    });
+    // Clamp cursor if it's now out of bounds
+    setCursorIndex((i) => Math.min(i, countNoteEvents(scoreData) - 2));
+  }, [scoreData]);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -156,6 +186,28 @@ export default function Sheet() {
         disabled={selectedNoteInfo.isRest}
         onAccidentalChange={handleAccidentalChange}
       />
+      <div className="flex flex-1 items-center justify-center gap-3">
+        <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} onNoteChange={handleNoteChange} />
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={handleAddMeasure}
+            className="w-8 h-8 rounded border border-gray-300 bg-white text-gray-700 text-lg font-medium hover:bg-gray-100 cursor-pointer"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={handleRemoveMeasure}
+            disabled={scoreData.measures.length <= 1}
+            className={`w-8 h-8 rounded border border-gray-300 bg-white text-gray-700 text-lg font-medium ${
+              scoreData.measures.length <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'
+            }`}
+          >
+            -
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
