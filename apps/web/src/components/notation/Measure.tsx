@@ -5,11 +5,14 @@ import { TimeSignature } from './TimeSignature';
 import { TupletBracket } from './TupletBracket';
 import type { LayoutMeasure } from './types';
 
+const CURSOR_COLOR = '#1e90ff'
+
 interface MeasureProps {
   layout: LayoutMeasure;
+  selectedNoteIndex?: number;
 }
 
-export function Measure({ layout }: MeasureProps) {
+export function Measure({ layout, selectedNoteIndex }: MeasureProps) {
   return (
     <g>
       {layout.clef && (
@@ -25,7 +28,7 @@ export function Measure({ layout }: MeasureProps) {
       )}
 
       {layout.notes.map((note, i) => (
-        <NoteGroup key={i} note={note} />
+        <NoteGroup key={i} note={note} color={note.noteEventIndex === selectedNoteIndex ? CURSOR_COLOR : undefined} />
       ))}
 
       {layout.beams.map((segments, i) => (

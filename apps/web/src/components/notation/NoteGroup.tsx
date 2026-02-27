@@ -4,9 +4,10 @@ import type { LayoutNote } from './types'
 
 interface NoteGroupProps {
     note: LayoutNote
+    color?: string
 }
 
-export function NoteGroup({ note }: NoteGroupProps) {
+export function NoteGroup({ note, color }: NoteGroupProps) {
     return (
         <g>
             {/* Ledger lines (behind everything) */}
@@ -16,9 +17,6 @@ export function NoteGroup({ note }: NoteGroupProps) {
 
             {/* Accidental */}
             {note.accidental && <Glyph name={note.accidental.glyphName} x={note.accidental.x} y={note.accidental.y} />}
-
-            {/* Notehead */}
-            <Glyph name={note.glyphName} x={note.x} y={note.y} />
 
             {/* Stem */}
             {note.stem && (
@@ -32,6 +30,10 @@ export function NoteGroup({ note }: NoteGroupProps) {
             {note.dots?.map((dot, i) => (
                 <circle key={`dot-${i}`} cx={dot.x} cy={dot.y} r={DOT_RADIUS} fill="#000" />
             ))}
+
+            {/* Notehead */}
+            <Glyph name={note.glyphName} x={note.x} y={note.y} fill={color} />
+
         </g>
     )
 }

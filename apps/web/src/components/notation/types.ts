@@ -59,6 +59,8 @@ export interface LayoutNote {
   flag?: LayoutGlyph;
   dots?: { x: number; y: number }[];
   ledgerLines: LayoutLine[];
+  /** Sequential index per NoteInput across the entire score (chord notes share the same index) */
+  noteEventIndex: number;
 }
 
 export interface LayoutTimeSignature {
@@ -107,4 +109,6 @@ export interface LayoutResult {
   staffLines: LayoutLine[];
   measures: LayoutMeasure[];
   barlines: LayoutBarline[];
+  /** Total number of note events (for cursor bounds) */
+  totalNoteEvents: number;
 }

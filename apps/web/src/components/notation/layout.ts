@@ -177,6 +177,7 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
 
     // 5. Layout each measure
     let cursorX = 0
+    let noteEventCounter = 0
     const measures: LayoutMeasure[] = []
     const barlines: LayoutBarline[] = []
 
@@ -195,7 +196,8 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         const measureWidth = measureOverheads[mi] + noteWidth
         const measureX = cursorX
 
-        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY)
+        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter)
+        noteEventCounter = measureLayout.nextNoteEventIndex
         measures.push(measureLayout)
 
         cursorX += measureWidth
@@ -210,7 +212,7 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         cursorX += barlineWidths[mi]
     }
 
-    return { width, height, staffLines, measures, barlines }
+    return { width, height, staffLines, measures, barlines, totalNoteEvents: noteEventCounter }
 }
 
 /**
@@ -246,7 +248,8 @@ function computeMeasureLayout(
     measureX: number,
     measureWidth: number,
     staveY: number,
-): LayoutMeasure {
+    noteEventIndex: number,
+): LayoutMeasure & { nextNoteEventIndex: number } {
     // 1. Clef
     let cursorX = measureX + STAVE_LEFT_PADDING
     let clef: LayoutGlyph | undefined
@@ -349,7 +352,7 @@ function computeMeasureLayout(
                 const noteY = getYForNote(rLine, staveY)
                 const glyphName = restGlyphForDuration(noteInput.duration)
                 const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, rLine)
-                const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [] }
+                const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [], noteEventIndex }
                 allNoteLayouts.push({
                     note: layoutNote,
                     input: noteInput,
@@ -411,7 +414,7 @@ function computeMeasureLayout(
                     // Dots
                     const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, noteLine)
 
-                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, dots, ledgerLines }
+                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, dots, ledgerLines, noteEventIndex }
                     allNoteLayouts.push({
                         note: layoutNote,
                         input: noteInput,
@@ -424,6 +427,7 @@ function computeMeasureLayout(
                 }
             }
 
+            noteEventIndex++
             beat += effectiveBeats(noteInput.duration, noteInput.dots, tupletInfo?.tuplet)
         }
     }
@@ -450,6 +454,7 @@ function computeMeasureLayout(
         notes: allNoteLayouts.map((nl) => nl.note),
         beams,
         tuplets,
+        nextNoteEventIndex: noteEventIndex,
     }
 }
 

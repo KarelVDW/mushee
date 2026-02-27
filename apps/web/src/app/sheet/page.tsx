@@ -1,3 +1,7 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { Score, type ScoreInput } from '@/components/notation';
 
 const scoreData: ScoreInput = {
@@ -39,10 +43,46 @@ const scoreData: ScoreInput = {
   ],
 };
 
+function countNoteEvents(input: ScoreInput): number {
+  return input.measures.reduce(
+    (sum, m) => sum + m.voices.reduce((vSum, v) => vSum + v.notes.length, 0),
+    0,
+  );
+}
+
 export default function Sheet() {
+  const [cursorIndex, setCursorIndex] = useState(0);
+  const totalNotes = useMemo(() => countNoteEvents(scoreData), []);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCursorIndex((i) => Math.min(i + 1, totalNotes - 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCursorIndex((i) => Math.max(i - 1, 0));
+      }
+    },
+    [totalNotes],
+  );
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('keydown', handleKeyDown);
+    el.focus();
+    return () => el.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Score input={scoreData} width={600} height={160} />
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      className="flex items-center justify-center min-h-screen outline-none"
+    >
+      <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} />
     </div>
   );
 }
