@@ -104,6 +104,14 @@ export default function Sheet() {
         const currentLine = pitchToLine(note.keys[0]);
         const newKey = lineToKey(currentLine + step);
         handleNoteChange(cursorIndex, newKey);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        const pos = findNotePosition(scoreData, cursorIndex);
+        if (!pos) return;
+        const note = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni];
+        const { isRest } = parseKey(note.keys[0]);
+        if (isRest) return;
+        handleNoteChange(cursorIndex, 'C/5/r');
       }
     },
     [totalNotes, scoreData, cursorIndex, handleNoteChange],
