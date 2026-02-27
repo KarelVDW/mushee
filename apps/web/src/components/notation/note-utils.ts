@@ -188,6 +188,33 @@ export function durationToBeats(duration: Duration): number {
     }
 }
 
+const INDEX_TO_NOTE = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+
+/**
+ * Convert a Y pixel coordinate to a note line, snapped to the nearest half-line.
+ * Reverse of getYForNote (with staveY = 0).
+ */
+export function yToLine(y: number): number {
+    const raw = SPACE_ABOVE_STAFF + 5 - y / STAVE_LINE_DISTANCE
+    return Math.round(raw * 2) / 2
+}
+
+/**
+ * Convert a note line value back to a key string like "C/5".
+ * Reverse of pitchToLine (treble clef).
+ */
+export function lineToKey(line: number, clef: string = 'treble'): string {
+    // Undo clef shift
+    const adjustedLine = clef === 'bass' ? line + 6 : line
+    // pitchToLine: line = (octave * 7 - 28 + noteIndex) / 2
+    // So: octave * 7 + noteIndex = line * 2 + 28
+    const raw = adjustedLine * 2 + 28
+    const octave = Math.floor(raw / 7)
+    const noteIndex = Math.round(raw - octave * 7)
+    const noteName = INDEX_TO_NOTE[noteIndex] ?? 'C'
+    return `${noteName}/${octave}`
+}
+
 /**
  * Determine which ledger lines are needed for a note at a given line.
  * Returns an array of staff-line Y values where ledger lines should be drawn.

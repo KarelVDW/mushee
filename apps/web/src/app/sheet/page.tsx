@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Score, type ScoreInput } from '@/components/notation';
 
-const scoreData: ScoreInput = {
+const initialScoreData: ScoreInput = {
   measures: [
     {
       clef: 'treble',
@@ -50,9 +50,26 @@ function countNoteEvents(input: ScoreInput): number {
   );
 }
 
+/**
+ * Map a noteEventIndex back to (measureIdx, voiceIdx, noteIdx) in the ScoreInput.
+ */
+function findNotePosition(input: ScoreInput, targetIndex: number): { mi: number; vi: number; ni: number } | null {
+  let idx = 0;
+  for (let mi = 0; mi < input.measures.length; mi++) {
+    for (let vi = 0; vi < input.measures[mi].voices.length; vi++) {
+      for (let ni = 0; ni < input.measures[mi].voices[vi].notes.length; ni++) {
+        if (idx === targetIndex) return { mi, vi, ni };
+        idx++;
+      }
+    }
+  }
+  return null;
+}
+
 export default function Sheet() {
+  const [scoreData, setScoreData] = useState<ScoreInput>(initialScoreData);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const totalNotes = useMemo(() => countNoteEvents(scoreData), []);
+  const totalNotes = useMemo(() => countNoteEvents(scoreData), [scoreData]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -66,6 +83,19 @@ export default function Sheet() {
       }
     },
     [totalNotes],
+  );
+
+  const handleNoteChange = useCallback(
+    (noteEventIndex: number, newKey: string) => {
+      const pos = findNotePosition(scoreData, noteEventIndex);
+      if (!pos) return;
+      setScoreData((prev) => {
+        const next = structuredClone(prev);
+        next.measures[pos.mi].voices[pos.vi].notes[pos.ni].keys = [newKey];
+        return next;
+      });
+    },
+    [scoreData],
   );
 
   useEffect(() => {
@@ -82,7 +112,7 @@ export default function Sheet() {
       tabIndex={0}
       className="flex items-center justify-center min-h-screen outline-none"
     >
-      <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} />
+      <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} onNoteChange={handleNoteChange} />
     </div>
   );
 }
