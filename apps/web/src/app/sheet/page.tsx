@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { lineToKey, parseKey, pitchToLine, Score, type ScoreInput } from '@/components/notation';
+import { lineToKey, parseKey, pitchToLine, Score, type ScoreInput, setKeyAccidental } from '@/components/notation';
+
+import { ControlBar } from './ControlBar';
 
 const initialScoreData: ScoreInput = {
   measures: [
@@ -72,6 +74,14 @@ export default function Sheet() {
   const totalNotes = useMemo(() => countNoteEvents(scoreData), [scoreData]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const selectedNoteInfo = useMemo(() => {
+    const pos = findNotePosition(scoreData, cursorIndex);
+    if (!pos) return { isRest: true, accidental: undefined };
+    const key = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni].keys[0];
+    const parsed = parseKey(key);
+    return { isRest: parsed.isRest, accidental: parsed.accidental };
+  }, [scoreData, cursorIndex]);
+
   const handleNoteChange = useCallback(
     (noteEventIndex: number, newKey: string) => {
       const pos = findNotePosition(scoreData, noteEventIndex);
@@ -117,6 +127,16 @@ export default function Sheet() {
     [totalNotes, scoreData, cursorIndex, handleNoteChange],
   );
 
+  const handleAccidentalChange = useCallback(
+    (acc: string | undefined) => {
+      const pos = findNotePosition(scoreData, cursorIndex);
+      if (!pos) return;
+      const key = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni].keys[0];
+      handleNoteChange(cursorIndex, setKeyAccidental(key, acc));
+    },
+    [scoreData, cursorIndex, handleNoteChange],
+  );
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -129,9 +149,13 @@ export default function Sheet() {
     <div
       ref={containerRef}
       tabIndex={0}
-      className="flex items-center justify-center min-h-screen outline-none"
+      className="flex flex-col min-h-screen outline-none"
     >
-      <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} onNoteChange={handleNoteChange} />
+      <ControlBar
+        accidental={selectedNoteInfo.accidental}
+        disabled={selectedNoteInfo.isRest}
+        onAccidentalChange={handleAccidentalChange}
+      />
     </div>
   );
 }

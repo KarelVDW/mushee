@@ -216,6 +216,15 @@ export function lineToKey(line: number, clef: string = 'treble'): string {
 }
 
 /**
+ * Return a new key string with the accidental changed.
+ * Pass `undefined` to remove the accidental (natural).
+ */
+export function setKeyAccidental(key: string, accidental: string | undefined): string {
+    const { noteName, octave, isRest } = parseKey(key)
+    return `${noteName}${accidental ?? ''}/${octave}${isRest ? '/r' : ''}`
+}
+
+/**
  * Determine which ledger lines are needed for a note at a given line.
  * Returns an array of staff-line Y values where ledger lines should be drawn.
  * Line 0 = top staff line, line 4 = bottom staff line.
