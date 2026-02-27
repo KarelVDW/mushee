@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Score, type ScoreInput } from '@/components/notation';
+import { lineToKey, parseKey, pitchToLine, Score, type ScoreInput } from '@/components/notation';
 
 const initialScoreData: ScoreInput = {
   measures: [
@@ -72,19 +72,6 @@ export default function Sheet() {
   const totalNotes = useMemo(() => countNoteEvents(scoreData), [scoreData]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        setCursorIndex((i) => Math.min(i + 1, totalNotes - 1));
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        setCursorIndex((i) => Math.max(i - 1, 0));
-      }
-    },
-    [totalNotes],
-  );
-
   const handleNoteChange = useCallback(
     (noteEventIndex: number, newKey: string) => {
       const pos = findNotePosition(scoreData, noteEventIndex);
@@ -96,6 +83,30 @@ export default function Sheet() {
       });
     },
     [scoreData],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCursorIndex((i) => Math.min(i + 1, totalNotes - 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCursorIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const pos = findNotePosition(scoreData, cursorIndex);
+        if (!pos) return;
+        const note = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni];
+        const { isRest } = parseKey(note.keys[0]);
+        if (isRest) return;
+        const step = e.key === 'ArrowUp' ? 0.5 : -0.5;
+        const currentLine = pitchToLine(note.keys[0]);
+        const newKey = lineToKey(currentLine + step);
+        handleNoteChange(cursorIndex, newKey);
+      }
+    },
+    [totalNotes, scoreData, cursorIndex, handleNoteChange],
   );
 
   useEffect(() => {
