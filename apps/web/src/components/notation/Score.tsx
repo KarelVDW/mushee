@@ -16,16 +16,26 @@ import type { LayoutNote, ScoreInput } from './types'
 /** Vertical offset from the reference Y to the teardrop tip */
 const CURSOR_Y_OFFSET = 15
 
+/** Extra width reserved for add/remove measure buttons */
+const MEASURE_BUTTONS_WIDTH = 30
+const MEASURE_BUTTON_SIZE = 18
+const MEASURE_BUTTON_GAP = 3
+
 interface ScoreProps {
     input: ScoreInput
     width?: number
     height?: number
     selectedNoteIndex?: number
     onNoteChange?: (noteEventIndex: number, newKey: string) => void
+    onAddMeasure?: () => void
+    onRemoveMeasure?: () => void
+    canRemoveMeasure?: boolean
 }
 
-export function Score({ input, width = 600, height = 160, selectedNoteIndex, onNoteChange }: ScoreProps) {
+export function Score({ input, width = 600, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
+    const hasMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
     const layout = useMemo(() => computeLayout(input, width, height), [input, width, height])
+    const viewBoxWidth = hasMeasureButtons ? layout.width + MEASURE_BUTTONS_WIDTH : layout.width
     const svgRef = useRef<SVGSVGElement>(null)
     const [hoverY, setHoverY] = useState<number | null>(null)
 
@@ -109,12 +119,23 @@ export function Score({ input, width = 600, height = 160, selectedNoteIndex, onN
         onNoteChange(selectedNoteIndex, newKey)
     }, [ghostInfo, selectedNoteIndex, onNoteChange, selectedClef])
 
+    // Position measure buttons after the last barline, centered on the staff
+    const measureButtonPos = useMemo(() => {
+        if (!hasMeasureButtons) return null
+        const lastBarline = layout.barlines[layout.barlines.length - 1]
+        const staffCenterY = lastBarline.y + lastBarline.height / 2
+        const x = lastBarline.x + 10
+        const totalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
+        const topY = staffCenterY - totalHeight / 2
+        return { x, topY }
+    }, [hasMeasureButtons, layout.barlines])
+
     return (
         <svg
             ref={svgRef}
-            width={width}
+            width={width + (hasMeasureButtons ? MEASURE_BUTTONS_WIDTH : 0)}
             height={height}
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
+            viewBox={`0 0 ${viewBoxWidth} ${layout.height}`}
             xmlns="http://www.w3.org/2000/svg"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -135,6 +156,67 @@ export function Score({ input, width = 600, height = 160, selectedNoteIndex, onN
             {ghostInfo && hoverY !== null && (
                 <GhostNote x={ghostInfo.x} hoverY={hoverY} glyphName={ghostInfo.glyphName} />
             )}
+
+            {measureButtonPos && onAddMeasure && (
+                <MeasureButton
+                    x={measureButtonPos.x}
+                    y={measureButtonPos.topY}
+                    size={MEASURE_BUTTON_SIZE}
+                    label="+"
+                    onClick={onAddMeasure}
+                />
+            )}
+            {measureButtonPos && onRemoveMeasure && (
+                <MeasureButton
+                    x={measureButtonPos.x}
+                    y={measureButtonPos.topY + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP}
+                    size={MEASURE_BUTTON_SIZE}
+                    label="-"
+                    onClick={onRemoveMeasure}
+                    disabled={!canRemoveMeasure}
+                />
+            )}
         </svg>
+    )
+}
+
+function MeasureButton({ x, y, size, label, onClick, disabled }: {
+    x: number
+    y: number
+    size: number
+    label: string
+    onClick: () => void
+    disabled?: boolean
+}) {
+    return (
+        <g
+            onClick={(e) => { e.stopPropagation(); if (!disabled) onClick() }}
+            style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+            opacity={disabled ? 0.3 : 1}
+        >
+            <rect
+                x={x}
+                y={y}
+                width={size}
+                height={size}
+                rx={2}
+                fill="white"
+                stroke="#d1d5db"
+                strokeWidth={0.75}
+            />
+            <text
+                x={x + size / 2}
+                y={y + size / 2}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={size * 0.7}
+                fontFamily="system-ui, sans-serif"
+                fontWeight={500}
+                fill="#374151"
+                style={{ userSelect: 'none' }}
+            >
+                {label}
+            </text>
+        </g>
     )
 }

@@ -186,27 +186,17 @@ export default function Sheet() {
         disabled={selectedNoteInfo.isRest}
         onAccidentalChange={handleAccidentalChange}
       />
-      <div className="flex flex-1 items-center justify-center gap-3">
-        <Score input={scoreData} width={600} height={160} selectedNoteIndex={cursorIndex} onNoteChange={handleNoteChange} />
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            onClick={handleAddMeasure}
-            className="w-8 h-8 rounded border border-gray-300 bg-white text-gray-700 text-lg font-medium hover:bg-gray-100 cursor-pointer"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={handleRemoveMeasure}
-            disabled={scoreData.measures.length <= 1}
-            className={`w-8 h-8 rounded border border-gray-300 bg-white text-gray-700 text-lg font-medium ${
-              scoreData.measures.length <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'
-            }`}
-          >
-            -
-          </button>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <Score
+          input={scoreData}
+          width={600}
+          height={160}
+          selectedNoteIndex={cursorIndex}
+          onNoteChange={handleNoteChange}
+          onAddMeasure={handleAddMeasure}
+          onRemoveMeasure={handleRemoveMeasure}
+          canRemoveMeasure={scoreData.measures.length > 1}
+        />
       </div>
     </div>
   );
