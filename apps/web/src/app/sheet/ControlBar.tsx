@@ -12,7 +12,7 @@ interface ControlBarProps {
 
 export function ControlBar({ accidental, disabled, onAccidentalChange }: ControlBarProps) {
   return (
-    <div className="flex items-center gap-6 px-4 py-2 border-b border-gray-200">
+    <div className="flex items-center gap-6 px-4 py-2 border-b border-gray-200 bg-white">
       {/* Accidentals */}
       <div className="flex">
         {ACCIDENTALS.map(({ label, value }) => {

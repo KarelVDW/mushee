@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Barline } from './Barline'
 import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
@@ -11,7 +11,7 @@ import { computeLayout } from './layout'
 import { Measure } from './Measure'
 import { lineToKey, pitchToLine, yToLine } from './note-utils'
 import { StaffLines } from './StaffLines'
-import type { LayoutNote, ScoreInput } from './types'
+import type { Clef, LayoutNote, ScoreInput } from './types'
 
 /** Vertical offset from the reference Y to the teardrop tip */
 const CURSOR_Y_OFFSET = 15
@@ -21,9 +21,10 @@ const MEASURE_BUTTONS_WIDTH = 30
 const MEASURE_BUTTON_SIZE = 18
 const MEASURE_BUTTON_GAP = 3
 
+const MAX_MEASURES_PER_ROW = 4
+
 interface ScoreProps {
     input: ScoreInput
-    width?: number
     height?: number
     selectedNoteIndex?: number
     onNoteChange?: (noteEventIndex: number, newKey: string) => void
@@ -32,10 +33,104 @@ interface ScoreProps {
     canRemoveMeasure?: boolean
 }
 
-export function Score({ input, width = 600, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
+export function Score({ input, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [containerWidth, setContainerWidth] = useState(0)
+
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0]
+            if (entry) setContainerWidth(entry.contentRect.width)
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+
+    // Split measures into rows of max 4, injecting inherited clef on each new row
+    const rowInputs = useMemo(() => {
+        const rows: ScoreInput[] = []
+        let lastClef: Clef | undefined
+        for (let i = 0; i < input.measures.length; i += MAX_MEASURES_PER_ROW) {
+            const slice = input.measures.slice(i, i + MAX_MEASURES_PER_ROW)
+            const measures = slice.map((m, idx) => {
+                if (idx === 0 && !m.clef && lastClef) {
+                    return { ...m, clef: lastClef }
+                }
+                return m
+            })
+            for (const m of slice) {
+                if (m.clef) lastClef = m.clef
+            }
+            rows.push({ measures })
+        }
+        return rows
+    }, [input.measures])
+
+    // Cumulative note event offsets per row
+    const rowOffsets = useMemo(() => {
+        const offsets: number[] = [0]
+        for (const row of rowInputs) {
+            const count = row.measures.reduce(
+                (sum, m) => sum + m.voices.reduce((vSum, v) => vSum + v.notes.length, 0),
+                0,
+            )
+            offsets.push(offsets[offsets.length - 1] + count)
+        }
+        return offsets
+    }, [rowInputs])
+
+    return (
+        <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {containerWidth > 0 && rowInputs.map((rowInput, ri) => {
+                const rowOffset = rowOffsets[ri]
+                const nextOffset = rowOffsets[ri + 1]
+                const isLastRow = ri === rowInputs.length - 1
+                const cursorInRow = selectedNoteIndex !== undefined
+                    && selectedNoteIndex >= rowOffset
+                    && selectedNoteIndex < nextOffset
+                const rowWidth = Math.round(containerWidth * (rowInput.measures.length / MAX_MEASURES_PER_ROW))
+
+                return (
+                    <ScoreRow
+                        key={ri}
+                        input={rowInput}
+                        width={rowWidth}
+                        height={height}
+                        selectedNoteIndex={cursorInRow ? selectedNoteIndex - rowOffset : undefined}
+                        onNoteChange={onNoteChange
+                            ? (localIndex, newKey) => onNoteChange(localIndex + rowOffset, newKey)
+                            : undefined}
+                        onAddMeasure={isLastRow ? onAddMeasure : undefined}
+                        onRemoveMeasure={isLastRow ? onRemoveMeasure : undefined}
+                        canRemoveMeasure={isLastRow ? canRemoveMeasure : undefined}
+                    />
+                )
+            })}
+        </div>
+    )
+}
+
+// ---------------------------------------------------------------------------
+// ScoreRow — renders a single staff line (SVG) for one row of measures
+// ---------------------------------------------------------------------------
+
+interface ScoreRowProps {
+    input: ScoreInput
+    width: number
+    height?: number
+    selectedNoteIndex?: number
+    onNoteChange?: (noteEventIndex: number, newKey: string) => void
+    onAddMeasure?: () => void
+    onRemoveMeasure?: () => void
+    canRemoveMeasure?: boolean
+}
+
+function ScoreRow({ input, width, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreRowProps) {
     const hasMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
-    const layout = useMemo(() => computeLayout(input, width, height), [input, width, height])
-    const viewBoxWidth = hasMeasureButtons ? layout.width + MEASURE_BUTTONS_WIDTH : layout.width
+    const layoutWidth = hasMeasureButtons ? width - MEASURE_BUTTONS_WIDTH : width
+    const layout = useMemo(() => computeLayout(input, layoutWidth, height), [input, layoutWidth, height])
     const svgRef = useRef<SVGSVGElement>(null)
     const [hoverY, setHoverY] = useState<number | null>(null)
 
@@ -133,9 +228,9 @@ export function Score({ input, width = 600, height = 160, selectedNoteIndex, onN
     return (
         <svg
             ref={svgRef}
-            width={width + (hasMeasureButtons ? MEASURE_BUTTONS_WIDTH : 0)}
+            width={width}
             height={height}
-            viewBox={`0 0 ${viewBoxWidth} ${layout.height}`}
+            viewBox={`0 0 ${width} ${layout.height}`}
             xmlns="http://www.w3.org/2000/svg"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}

@@ -179,24 +179,24 @@ export default function Sheet() {
     <div
       ref={containerRef}
       tabIndex={0}
-      className="flex flex-col min-h-screen outline-none"
+      className="flex flex-col min-h-screen max-h-screen bg-gray-100 outline-none"
     >
       <ControlBar
         accidental={selectedNoteInfo.accidental}
         disabled={selectedNoteInfo.isRest}
         onAccidentalChange={handleAccidentalChange}
       />
-      <div className="flex flex-1 items-center justify-center">
-        <Score
-          input={scoreData}
-          width={600}
-          height={160}
-          selectedNoteIndex={cursorIndex}
-          onNoteChange={handleNoteChange}
-          onAddMeasure={handleAddMeasure}
-          onRemoveMeasure={handleRemoveMeasure}
-          canRemoveMeasure={scoreData.measures.length > 1}
-        />
+      <div className="flex-1 overflow-y-auto min-h-full px-8">
+        <div className="mx-auto max-w-4xl min-h-full bg-white shadow p-6">
+          <Score
+            input={scoreData}
+            selectedNoteIndex={cursorIndex}
+            onNoteChange={handleNoteChange}
+            onAddMeasure={handleAddMeasure}
+            onRemoveMeasure={handleRemoveMeasure}
+            canRemoveMeasure={scoreData.measures.length > 1}
+          />
+        </div>
       </div>
     </div>
   );
