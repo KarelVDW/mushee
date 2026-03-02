@@ -11,6 +11,7 @@ import { computeLayout } from './layout'
 import { Measure } from './Measure'
 import { lineToKey, pitchToLine, yToLine } from './note-utils'
 import { StaffLines } from './StaffLines'
+import { Tie } from './Tie'
 import type { Clef, LayoutNote, ScoreInput } from './types'
 
 /** Vertical offset from the reference Y to the teardrop tip */
@@ -274,6 +275,10 @@ function ScoreRow({ input, width, height = 160, selectedNoteIndex, onNoteSelect,
 
             {layout.barlines.map((barline, i) => (
                 <Barline key={i} layout={barline} />
+            ))}
+
+            {layout.ties.map((tie, i) => (
+                <Tie key={i} layout={tie} />
             ))}
 
             {cursorPos && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}

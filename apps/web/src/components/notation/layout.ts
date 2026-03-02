@@ -46,6 +46,7 @@ import type {
     LayoutMeasure,
     LayoutNote,
     LayoutResult,
+    LayoutTie,
     LayoutTimeSignature,
     LayoutTuplet,
     MeasureInput,
@@ -212,7 +213,9 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         cursorX += barlineWidths[mi]
     }
 
-    return { width, height, staffLines, measures, barlines, totalNoteEvents: noteEventCounter }
+    const ties = computeTies(input, measures)
+
+    return { width, height, staffLines, measures, barlines, ties, totalNoteEvents: noteEventCounter }
 }
 
 /**
@@ -800,4 +803,56 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
     }
 
     return segments
+}
+
+/** Vertical offset from notehead center to tie endpoint */
+const TIE_Y_SHIFT = 7
+
+/**
+ * Compute tie curves for notes with `tie: true`.
+ * Each tie connects a note to the next note event.
+ */
+function computeTies(input: ScoreInput, measures: LayoutMeasure[]): LayoutTie[] {
+    const ties: LayoutTie[] = []
+    const noteheadWidth = getGlyphWidth('noteheadBlack')
+
+    // Build a map of noteEventIndex → first LayoutNote for that event
+    const noteMap = new Map<number, LayoutNote>()
+    for (const measure of measures) {
+        for (const note of measure.notes) {
+            if (!noteMap.has(note.noteEventIndex)) {
+                noteMap.set(note.noteEventIndex, note)
+            }
+        }
+    }
+
+    // Scan input for tied notes
+    let noteEventIdx = 0
+    for (const measure of input.measures) {
+        for (const voice of measure.voices) {
+            for (const note of voice.notes) {
+                if (note.tie) {
+                    const startNote = noteMap.get(noteEventIdx)
+                    const endNote = noteMap.get(noteEventIdx + 1)
+                    if (startNote && endNote) {
+                        // Direction: opposite of stem. Stem up → tie below (1), stem down → tie above (-1)
+                        const stemUp = startNote.stem ? startNote.stem.y2 < startNote.stem.y1 : true
+                        const direction: 1 | -1 = stemUp ? 1 : -1
+                        const yShift = TIE_Y_SHIFT * direction
+
+                        ties.push({
+                            startX: startNote.x + noteheadWidth,
+                            startY: startNote.y + yShift,
+                            endX: endNote.x,
+                            endY: endNote.y + yShift,
+                            direction,
+                        })
+                    }
+                }
+                noteEventIdx++
+            }
+        }
+    }
+
+    return ties
 }

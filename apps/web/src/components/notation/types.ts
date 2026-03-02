@@ -9,6 +9,7 @@ export interface NoteInput {
   keys: string[]; // e.g. ['C#/5'], ['B/4']
   duration: Duration;
   dots?: number; // 1 = dotted, 2 = double-dotted
+  tie?: boolean; // tie this note to the next note event
 }
 
 export interface TupletInput {
@@ -103,12 +104,21 @@ export interface LayoutMeasure {
   tuplets: LayoutTuplet[];
 }
 
+export interface LayoutTie {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  direction: 1 | -1; // 1 = below noteheads, -1 = above noteheads
+}
+
 export interface LayoutResult {
   width: number;
   height: number;
   staffLines: LayoutLine[];
   measures: LayoutMeasure[];
   barlines: LayoutBarline[];
+  ties: LayoutTie[];
   /** Total number of note events (for cursor bounds) */
   totalNoteEvents: number;
 }
