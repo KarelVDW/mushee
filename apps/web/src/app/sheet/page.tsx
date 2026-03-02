@@ -191,6 +191,7 @@ export default function Sheet() {
           <Score
             input={scoreData}
             selectedNoteIndex={cursorIndex}
+            onNoteSelect={setCursorIndex}
             onNoteChange={handleNoteChange}
             onAddMeasure={handleAddMeasure}
             onRemoveMeasure={handleRemoveMeasure}

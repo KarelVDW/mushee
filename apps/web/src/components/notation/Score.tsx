@@ -27,13 +27,14 @@ interface ScoreProps {
     input: ScoreInput
     height?: number
     selectedNoteIndex?: number
+    onNoteSelect?: (noteEventIndex: number) => void
     onNoteChange?: (noteEventIndex: number, newKey: string) => void
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
 }
 
-export function Score({ input, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
+export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
 
@@ -99,6 +100,9 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteChange, on
                         width={rowWidth}
                         height={height}
                         selectedNoteIndex={cursorInRow ? selectedNoteIndex - rowOffset : undefined}
+                        onNoteSelect={onNoteSelect
+                            ? (localIndex) => onNoteSelect(localIndex + rowOffset)
+                            : undefined}
                         onNoteChange={onNoteChange
                             ? (localIndex, newKey) => onNoteChange(localIndex + rowOffset, newKey)
                             : undefined}
@@ -121,13 +125,14 @@ interface ScoreRowProps {
     width: number
     height?: number
     selectedNoteIndex?: number
+    onNoteSelect?: (noteEventIndex: number) => void
     onNoteChange?: (noteEventIndex: number, newKey: string) => void
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
 }
 
-function ScoreRow({ input, width, height = 160, selectedNoteIndex, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreRowProps) {
+function ScoreRow({ input, width, height = 160, selectedNoteIndex, onNoteSelect, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreRowProps) {
     const hasMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
     const layoutWidth = hasMeasureButtons ? width - MEASURE_BUTTONS_WIDTH : width
     const layout = useMemo(() => computeLayout(input, layoutWidth, height), [input, layoutWidth, height])
@@ -191,28 +196,53 @@ function ScoreRow({ input, width, height = 160, selectedNoteIndex, onNoteChange,
         return { line: hoverLine, x: selectedNotes[0].x, glyphName }
     }, [hoverY, selectedNotes, selectedClef])
 
-    const clientToSvgY = useCallback((clientY: number): number | null => {
+    const clientToSvg = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
         const svg = svgRef.current
         if (!svg) return null
         const rect = svg.getBoundingClientRect()
-        // Map client Y to viewBox Y
-        return ((clientY - rect.top) / rect.height) * layout.height
-    }, [layout.height])
+        return {
+            x: ((clientX - rect.left) / rect.width) * width,
+            y: ((clientY - rect.top) / rect.height) * layout.height,
+        }
+    }, [width, layout.height])
 
     const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-        const y = clientToSvgY(e.clientY)
-        setHoverY(y)
-    }, [clientToSvgY])
+        const pt = clientToSvg(e.clientX, e.clientY)
+        setHoverY(pt?.y ?? null)
+    }, [clientToSvg])
 
     const handleMouseLeave = useCallback(() => {
         setHoverY(null)
     }, [])
 
-    const handleClick = useCallback(() => {
+    const handleClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+        const pt = clientToSvg(e.clientX, e.clientY)
+        if (!pt) return
+
+        // Find the closest note to the click position
+        const allNotes = layout.measures.flatMap((m) => m.notes)
+        const noteheadWidth = getGlyphWidth('noteheadBlack')
+        let closestNote: LayoutNote | null = null
+        let closestDist = Infinity
+        for (const note of allNotes) {
+            const dist = Math.abs(pt.x - (note.x + noteheadWidth / 2))
+            if (dist < closestDist) {
+                closestDist = dist
+                closestNote = note
+            }
+        }
+
+        // If we clicked near a note that's not currently selected, select it
+        if (closestNote && closestDist < 20 && closestNote.noteEventIndex !== selectedNoteIndex) {
+            onNoteSelect?.(closestNote.noteEventIndex)
+            return
+        }
+
+        // Otherwise, handle ghost note pitch change
         if (!ghostInfo || selectedNoteIndex === undefined || !onNoteChange) return
         const newKey = lineToKey(ghostInfo.line, selectedClef)
         onNoteChange(selectedNoteIndex, newKey)
-    }, [ghostInfo, selectedNoteIndex, onNoteChange, selectedClef])
+    }, [clientToSvg, layout.measures, selectedNoteIndex, onNoteSelect, ghostInfo, onNoteChange, selectedClef])
 
     // Position measure buttons after the last barline, centered on the staff
     const measureButtonPos = useMemo(() => {
