@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { lineToKey, parseKey, pitchToLine, Score, type ScoreInput, setKeyAccidental } from '@/components/notation'
+import { beatsToDurations, type Duration, durationToBeats, effectiveBeats, lineToKey, type NoteInput, parseKey, pitchToLine, Score, type ScoreInput, setKeyAccidental } from '@/components/notation'
 
 import { ControlBar } from './ControlBar'
 
@@ -17,11 +17,12 @@ const initialScoreData: ScoreInput = {
                         { keys: ['C#/5'], duration: '8' },
                         { keys: ['B/4'], duration: '8' },
                         { keys: ['E/4'], duration: '8' },
-                        { keys: ['C/5/r'], duration: '16' },
-                        { keys: ['G#/4'], duration: 'q', tie: true },
+                        { keys: ['C/5'], duration: '16' },
+                        { keys: ['C/5'], duration: '16' },
+                        { keys: ['C/5'], duration: '16' },
+                        { keys: ['C/5'], duration: '16' },
                         { keys: ['G#/4'], duration: 'q' },
-                        { keys: ['G#/4'], duration: '8' },
-                        { keys: ['G#/4'], duration: '8' },
+                        { keys: ['G#/4'], duration: 'q' },
                     ],
                     tuplets: [{ startIndex: 0, count: 3, notesOccupied: 2 }],
                 },
@@ -79,6 +80,29 @@ function findNotePosition(input: ScoreInput, targetIndex: number): { mi: number;
     return null
 }
 
+/**
+ * Get the max beats for a measure by resolving the active time signature.
+ */
+function getMeasureMaxBeats(input: ScoreInput, mi: number): number {
+    for (let i = mi; i >= 0; i--) {
+        const ts = input.measures[i].timeSignature
+        if (ts) {
+            const [num, den] = ts.split('/').map(Number)
+            return num * (4 / den)
+        }
+    }
+    return 4 // default 4/4
+}
+
+/**
+ * Check if a note is part of a tuplet.
+ */
+function isNoteInTuplet(input: ScoreInput, mi: number, vi: number, ni: number): boolean {
+    const tuplets = input.measures[mi].voices[vi].tuplets
+    if (!tuplets) return false
+    return tuplets.some((t) => ni >= t.startIndex && ni < t.startIndex + t.count)
+}
+
 export default function Sheet() {
     const [scoreData, setScoreData] = useState<ScoreInput>(initialScoreData)
     const [cursorIndex, setCursorIndex] = useState(0)
@@ -87,10 +111,15 @@ export default function Sheet() {
 
     const selectedNoteInfo = useMemo(() => {
         const pos = findNotePosition(scoreData, cursorIndex)
-        if (!pos) return { isRest: true, accidental: undefined }
-        const key = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni].keys[0]
-        const parsed = parseKey(key)
-        return { isRest: parsed.isRest, accidental: parsed.accidental }
+        if (!pos) return { isRest: true, accidental: undefined, duration: undefined, inTuplet: false }
+        const note = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni]
+        const parsed = parseKey(note.keys[0])
+        return {
+            isRest: parsed.isRest,
+            accidental: parsed.accidental,
+            duration: note.duration,
+            inTuplet: isNoteInTuplet(scoreData, pos.mi, pos.vi, pos.ni),
+        }
     }, [scoreData, cursorIndex])
 
     const handleNoteChange = useCallback(
@@ -148,6 +177,133 @@ export default function Sheet() {
         [scoreData, cursorIndex, handleNoteChange],
     )
 
+    const handleDurationChange = useCallback(
+        (newDuration: Duration) => {
+            const pos = findNotePosition(scoreData, cursorIndex)
+            if (!pos) return
+            if (isNoteInTuplet(scoreData, pos.mi, pos.vi, pos.ni)) return
+
+            const voice = scoreData.measures[pos.mi].voices[pos.vi]
+            const note = voice.notes[pos.ni]
+            const oldBeats = effectiveBeats(note.duration, note.dots, undefined)
+            const newBeats = durationToBeats(newDuration)
+            if (Math.abs(newBeats - oldBeats) < 0.001) return
+
+            const measureMaxBeats = getMeasureMaxBeats(scoreData, pos.mi)
+
+            // Compute beats before the selected note
+            let beatsBeforeNote = 0
+            for (let i = 0; i < pos.ni; i++) {
+                beatsBeforeNote += effectiveBeats(voice.notes[i].duration, voice.notes[i].dots, undefined)
+            }
+            const beatsAvailable = measureMaxBeats - beatsBeforeNote
+
+            setScoreData((prev) => {
+                const next = structuredClone(prev)
+                const v = next.measures[pos.mi].voices[pos.vi]
+
+                if (newBeats < oldBeats) {
+                    // Shortening: change duration, insert rests for the gap
+                    v.notes[pos.ni] = { ...v.notes[pos.ni], duration: newDuration, dots: undefined, tie: undefined }
+                    const gapBeats = oldBeats - newBeats
+                    const rests = beatsToDurations(gapBeats).map(
+                        (d): NoteInput => ({ keys: ['C/5/r'], duration: d.duration, dots: d.dots }),
+                    )
+                    v.notes.splice(pos.ni + 1, 0, ...rests)
+                } else if (newBeats <= beatsAvailable) {
+                    // Lengthening, fits in measure: consume consecutive notes
+                    const extraNeeded = newBeats - oldBeats
+                    let consumed = 0
+                    let removeCount = 0
+                    for (let i = pos.ni + 1; i < v.notes.length && consumed < extraNeeded - 0.001; i++) {
+                        consumed += effectiveBeats(v.notes[i].duration, v.notes[i].dots, undefined)
+                        removeCount++
+                    }
+                    v.notes.splice(pos.ni + 1, removeCount)
+                    v.notes[pos.ni] = { ...v.notes[pos.ni], duration: newDuration, dots: undefined }
+                    // If we over-consumed, insert rests for the excess
+                    const excess = consumed - extraNeeded
+                    if (excess > 0.001) {
+                        const rests = beatsToDurations(excess).map(
+                            (d): NoteInput => ({ keys: ['C/5/r'], duration: d.duration, dots: d.dots }),
+                        )
+                        v.notes.splice(pos.ni + 1, 0, ...rests)
+                    }
+                } else {
+                    // Lengthening, overflows into next measure
+                    // Consume all remaining notes after selected in this measure
+                    v.notes.splice(pos.ni + 1)
+                    // Set this note to fill the remaining space, with a tie
+                    const fillDurations = beatsToDurations(beatsAvailable)
+                    v.notes[pos.ni] = {
+                        ...v.notes[pos.ni],
+                        duration: fillDurations[0].duration,
+                        dots: fillDurations[0].dots,
+                        tie: true,
+                    }
+                    // Insert additional fill notes if beatsAvailable needs multiple durations
+                    for (let i = 1; i < fillDurations.length; i++) {
+                        const fd = fillDurations[i]
+                        const tieNote: NoteInput = {
+                            keys: [...note.keys],
+                            duration: fd.duration,
+                            dots: fd.dots,
+                            tie: i < fillDurations.length - 1 ? true : true, // all tied to next
+                        }
+                        v.notes.push(tieNote)
+                    }
+
+                    // Handle next measure
+                    const overflowBeats = newBeats - beatsAvailable
+                    const overflowDurations = beatsToDurations(overflowBeats)
+                    const nextMi = pos.mi + 1
+
+                    // Create next measure if it doesn't exist
+                    if (nextMi >= next.measures.length) {
+                        const lastIdx = next.measures.length - 1
+                        const lastBarline = next.measures[lastIdx].endBarline
+                        delete next.measures[lastIdx].endBarline
+                        next.measures.push({
+                            voices: [{ notes: [{ keys: ['C/5/r'], duration: 'w' }] }],
+                            endBarline: lastBarline,
+                        })
+                    }
+
+                    const nextVoice = next.measures[nextMi].voices[pos.vi] ?? next.measures[nextMi].voices[0]
+                    // Consume notes in next measure to make room for overflow
+                    let nextConsumed = 0
+                    let nextRemoveCount = 0
+                    for (let i = 0; i < nextVoice.notes.length && nextConsumed < overflowBeats - 0.001; i++) {
+                        nextConsumed += effectiveBeats(nextVoice.notes[i].duration, nextVoice.notes[i].dots, undefined)
+                        nextRemoveCount++
+                    }
+                    nextVoice.notes.splice(0, nextRemoveCount)
+
+                    // Insert overflow notes at the start
+                    const overflowNotes: NoteInput[] = overflowDurations.map((d, i) => ({
+                        keys: [...note.keys],
+                        duration: d.duration,
+                        dots: d.dots,
+                        tie: i < overflowDurations.length - 1 ? true : undefined,
+                    }))
+                    nextVoice.notes.unshift(...overflowNotes)
+
+                    // If we over-consumed in next measure, add rests
+                    const nextExcess = nextConsumed - overflowBeats
+                    if (nextExcess > 0.001) {
+                        const rests = beatsToDurations(nextExcess).map(
+                            (d): NoteInput => ({ keys: ['C/5/r'], duration: d.duration, dots: d.dots }),
+                        )
+                        nextVoice.notes.splice(overflowNotes.length, 0, ...rests)
+                    }
+                }
+
+                return next
+            })
+        },
+        [scoreData, cursorIndex],
+    )
+
     const handleAddMeasure = useCallback(() => {
         setScoreData((prev) => {
             const next = structuredClone(prev)
@@ -190,8 +346,10 @@ export default function Sheet() {
         <div ref={containerRef} tabIndex={0} className="flex flex-col min-h-screen max-h-screen bg-gray-100 outline-none">
             <ControlBar
                 accidental={selectedNoteInfo.accidental}
-                disabled={selectedNoteInfo.isRest}
+                duration={selectedNoteInfo.duration}
+                accidentalDisabled={selectedNoteInfo.isRest}
                 onAccidentalChange={handleAccidentalChange}
+                onDurationChange={handleDurationChange}
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8">
                 <div className="mx-auto max-w-4xl min-h-full bg-white shadow p-6">

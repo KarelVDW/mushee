@@ -23,9 +23,9 @@ import {
 import { getGlyphWidth } from './glyph-utils'
 import {
     accidentalGlyphName,
-    applyDots,
     beamCount,
     durationToBeats,
+    effectiveBeats,
     flagGlyphName,
     getLedgerLinePositions,
     getYForLine,
@@ -99,17 +99,6 @@ function buildTupletMap(tuplets: TupletInput[] | undefined): Map<number, { tuple
         }
     }
     return map
-}
-
-/**
- * Get the effective beats for a note, applying dot multiplier and tuplet multiplier.
- */
-function effectiveBeats(duration: NoteInput['duration'], dots: number | undefined, tuplet: TupletInput | undefined): number {
-    let beats = durationToBeats(duration)
-    if (dots) beats = applyDots(beats, dots)
-    if (!tuplet) return beats
-    const notesOccupied = tuplet.notesOccupied ?? 2
-    return beats * notesOccupied / tuplet.count
 }
 
 export function computeLayout(input: ScoreInput, width: number = 600, height: number = 160): LayoutResult {

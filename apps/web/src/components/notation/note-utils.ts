@@ -1,5 +1,5 @@
 import { SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
-import type { Duration } from './types'
+import type { Duration, TupletInput } from './types'
 
 const NOTE_INDEX: Record<string, number> = {
     C: 0,
@@ -222,6 +222,51 @@ export function lineToKey(line: number, clef: string = 'treble'): string {
 export function setKeyAccidental(key: string, accidental: string | undefined): string {
     const { noteName, octave, isRest } = parseKey(key)
     return `${noteName}${accidental ?? ''}/${octave}${isRest ? '/r' : ''}`
+}
+
+/**
+ * Get the effective beats for a note, applying dot multiplier and tuplet multiplier.
+ */
+export function effectiveBeats(duration: Duration, dots: number | undefined, tuplet: TupletInput | undefined): number {
+    let beats = durationToBeats(duration)
+    if (dots) beats = applyDots(beats, dots)
+    if (!tuplet) return beats
+    const notesOccupied = tuplet.notesOccupied ?? 2
+    return beats * notesOccupied / tuplet.count
+}
+
+/** Ordered list of duration values for greedy decomposition (largest first) */
+const DURATION_VALUES: Array<{ duration: Duration; dots?: number; beats: number }> = [
+    { duration: 'w', beats: 4 },
+    { duration: 'h', dots: 1, beats: 3 },
+    { duration: 'h', beats: 2 },
+    { duration: 'q', dots: 1, beats: 1.5 },
+    { duration: 'q', beats: 1 },
+    { duration: '8', dots: 1, beats: 0.75 },
+    { duration: '8', beats: 0.5 },
+    { duration: '16', beats: 0.25 },
+]
+
+/**
+ * Decompose a beat count into a list of note/rest durations (largest first).
+ * Uses dotted values where appropriate.
+ */
+export function beatsToDurations(beats: number): Array<{ duration: Duration; dots?: number }> {
+    const result: Array<{ duration: Duration; dots?: number }> = []
+    let remaining = beats
+    while (remaining > 0.001) {
+        let matched = false
+        for (const v of DURATION_VALUES) {
+            if (v.beats <= remaining + 0.001) {
+                result.push(v.dots ? { duration: v.duration, dots: v.dots } : { duration: v.duration })
+                remaining -= v.beats
+                matched = true
+                break
+            }
+        }
+        if (!matched) break
+    }
+    return result
 }
 
 /**

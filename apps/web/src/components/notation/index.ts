@@ -1,3 +1,6 @@
-export { lineToKey, parseKey, pitchToLine, setKeyAccidental } from './note-utils'
+export { GLYPH_SCALE } from './constants'
+export { Glyph } from './Glyph'
+export { getGlyphWidth } from './glyph-utils'
+export { applyDots, beatsToDurations, durationToBeats, effectiveBeats, lineToKey, parseKey, pitchToLine, setKeyAccidental } from './note-utils'
 export { Score } from './Score'
-export type { MeasureInput, NoteInput, ScoreInput, TupletInput, VoiceInput } from './types'
+export type { Duration, MeasureInput, NoteInput, ScoreInput, TupletInput, VoiceInput } from './types'
