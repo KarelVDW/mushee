@@ -16,6 +16,7 @@ import {
     STAVE_LINE_DISTANCE,
     STAVE_RIGHT_PADDING,
     STEM_HEIGHT,
+    TEMPO_MARKING_Y,
     TIME_SIG_NOTE_PADDING,
     TUPLET_NUMBER_SCALE,
     TUPLET_OFFSET,
@@ -46,6 +47,7 @@ import type {
     LayoutMeasure,
     LayoutNote,
     LayoutResult,
+    LayoutTempoMarking,
     LayoutTie,
     LayoutTimeSignature,
     LayoutTuplet,
@@ -203,8 +205,9 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
     }
 
     const ties = computeTies(input, measures)
+    const tempoMarkings = computeTempoMarkings(input, measures)
 
-    return { width, height, staffLines, measures, barlines, ties, totalNoteEvents: noteEventCounter }
+    return { width, height, staffLines, measures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
 }
 
 /**
@@ -844,4 +847,44 @@ function computeTies(input: ScoreInput, measures: LayoutMeasure[]): LayoutTie[] 
     }
 
     return ties
+}
+
+/**
+ * Compute tempo marking positions for notes with `tempo` set.
+ * Follows the same scan pattern as `computeTies`.
+ */
+function computeTempoMarkings(input: ScoreInput, measures: LayoutMeasure[]): LayoutTempoMarking[] {
+    const markings: LayoutTempoMarking[] = []
+
+    // Build a map of noteEventIndex → LayoutNote.x
+    const noteXMap = new Map<number, number>()
+    for (const measure of measures) {
+        for (const note of measure.notes) {
+            if (!noteXMap.has(note.noteEventIndex)) {
+                noteXMap.set(note.noteEventIndex, note.x)
+            }
+        }
+    }
+
+    let noteEventIdx = 0
+    for (const measure of input.measures) {
+        for (const voice of measure.voices) {
+            for (const note of voice.notes) {
+                if (note.tempo !== undefined) {
+                    const x = noteXMap.get(noteEventIdx)
+                    if (x !== undefined) {
+                        markings.push({
+                            noteEventIndex: noteEventIdx,
+                            x,
+                            y: TEMPO_MARKING_Y,
+                            bpm: note.tempo,
+                        })
+                    }
+                }
+                noteEventIdx++
+            }
+        }
+    }
+
+    return markings
 }

@@ -10,6 +10,7 @@ export interface NoteInput {
   duration: Duration;
   dots?: number; // 1 = dotted, 2 = double-dotted
   tie?: boolean; // tie this note to the next note event
+  tempo?: number; // BPM value; if present, a tempo marking is shown above this note
 }
 
 export interface TupletInput {
@@ -112,6 +113,17 @@ export interface LayoutTie {
   direction: 1 | -1; // 1 = below noteheads, -1 = above noteheads
 }
 
+export interface LayoutTempoMarking {
+  /** Global note event index this marking belongs to */
+  noteEventIndex: number;
+  /** SVG X coordinate (aligned to the note's x) */
+  x: number;
+  /** SVG Y coordinate (row-local, within headroom above staff) */
+  y: number;
+  /** The BPM value to display */
+  bpm: number;
+}
+
 export interface LayoutResult {
   width: number;
   height: number;
@@ -119,6 +131,7 @@ export interface LayoutResult {
   measures: LayoutMeasure[];
   barlines: LayoutBarline[];
   ties: LayoutTie[];
+  tempoMarkings: LayoutTempoMarking[];
   /** Total number of note events (for cursor bounds) */
   totalNoteEvents: number;
 }

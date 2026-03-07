@@ -11,6 +11,8 @@ import { computeLayout } from './layout'
 import { Measure } from './Measure'
 import { lineToKey, pitchToLine, yToLine } from './note-utils'
 import { StaffLines } from './StaffLines'
+import { TempoMarking } from './TempoMarking'
+import { TempoPopover } from './TempoPopover'
 import { Tie } from './Tie'
 import type { Clef, LayoutNote, ScoreInput } from './types'
 
@@ -34,13 +36,15 @@ interface ScoreProps {
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
+    onTempoChange?: (noteEventIndex: number, bpm: number) => void
 }
 
-export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true }: ScoreProps) {
+export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, onNoteChange, onAddMeasure, onRemoveMeasure, canRemoveMeasure = true, onTempoChange }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; y: number } | null>(null)
+    const [openPopover, setOpenPopover] = useState<{ noteEventIndex: number; bpm: number; x: number; y: number } | null>(null)
 
     useEffect(() => {
         const el = containerRef.current
@@ -194,6 +198,27 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
         }
     }, [containerWidth, totalHeight])
 
+    // SVG coordinate to container-relative pixel position (inverse of clientToSvg)
+    const svgToContainer = useCallback((svgX: number, svgY: number): { x: number; y: number } | null => {
+        const svg = svgRef.current
+        const container = containerRef.current
+        if (!svg || !container) return null
+        const svgRect = svg.getBoundingClientRect()
+        const containerRect = container.getBoundingClientRect()
+        const scaleX = svgRect.width / containerWidth
+        const scaleY = svgRect.height / totalHeight
+        return {
+            x: svgRect.left + svgX * scaleX - containerRect.left,
+            y: svgRect.top + svgY * scaleY - containerRect.top,
+        }
+    }, [containerWidth, totalHeight])
+
+    const handleTempoClick = useCallback((globalNoteEventIndex: number, bpm: number, svgX: number, svgY: number) => {
+        const pos = svgToContainer(svgX, svgY)
+        if (!pos) return
+        setOpenPopover({ noteEventIndex: globalNoteEventIndex, bpm, x: pos.x, y: pos.y })
+    }, [svgToContainer])
+
     const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
         const pt = clientToSvg(e.clientX, e.clientY)
         if (!pt) { setHoverInfo(null); return }
@@ -207,6 +232,10 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
     }, [])
 
     const handleClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+        if (openPopover) {
+            setOpenPopover(null)
+            return
+        }
         const pt = clientToSvg(e.clientX, e.clientY)
         if (!pt) return
         const rowInfo = yToRow(pt.y)
@@ -244,7 +273,7 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
         if (ghostInfo.rowIndex !== rowInfo.rowIndex) return
         const newKey = lineToKey(ghostInfo.line, selectedClef)
         onNoteChange(selectedNoteIndex, newKey)
-    }, [clientToSvg, yToRow, rowData, rowOffsets, selectedNoteIndex, onNoteSelect, ghostInfo, onNoteChange, selectedClef])
+    }, [openPopover, clientToSvg, yToRow, rowData, rowOffsets, selectedNoteIndex, onNoteSelect, ghostInfo, onNoteChange, selectedClef])
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
@@ -262,7 +291,7 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
     const lastRowIndex = rowData.length - 1
 
     return (
-        <div ref={containerRef}>
+        <div ref={containerRef} style={{ position: 'relative' }}>
             {containerWidth > 0 && totalHeight > 0 && (
                 <svg
                     ref={svgRef}
@@ -294,6 +323,19 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
                                 <Tie key={ti} layout={tie} />
                             ))}
 
+                            {row.layout.tempoMarkings.map((tm, ti) => {
+                                const globalIndex = tm.noteEventIndex + rowOffsets[ri]
+                                return (
+                                    <TempoMarking
+                                        key={ti}
+                                        x={tm.x}
+                                        y={tm.y}
+                                        bpm={tm.bpm}
+                                        onClick={() => handleTempoClick(globalIndex, tm.bpm, tm.x, rowYOffset(ri) + tm.y)}
+                                    />
+                                )
+                            })}
+
                             {cursorPos && cursorPos.rowIndex === ri && (
                                 <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
                             )}
@@ -324,6 +366,18 @@ export function Score({ input, height = 160, selectedNoteIndex, onNoteSelect, on
                         </g>
                     ))}
                 </svg>
+            )}
+            {openPopover && (
+                <TempoPopover
+                    x={openPopover.x}
+                    y={openPopover.y - 30}
+                    initialBpm={openPopover.bpm}
+                    onSubmit={(bpm) => {
+                        onTempoChange?.(openPopover.noteEventIndex, bpm)
+                        setOpenPopover(null)
+                    }}
+                    onDismiss={() => setOpenPopover(null)}
+                />
             )}
         </div>
     )

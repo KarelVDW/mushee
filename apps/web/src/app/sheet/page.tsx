@@ -111,7 +111,7 @@ export default function Sheet() {
 
     const selectedNoteInfo = useMemo(() => {
         const pos = findNotePosition(scoreData, cursorIndex)
-        if (!pos) return { isRest: true, accidental: undefined, duration: undefined, inTuplet: false }
+        if (!pos) return { isRest: true, accidental: undefined, duration: undefined, inTuplet: false, tempo: undefined }
         const note = scoreData.measures[pos.mi].voices[pos.vi].notes[pos.ni]
         const parsed = parseKey(note.keys[0])
         return {
@@ -119,6 +119,7 @@ export default function Sheet() {
             accidental: parsed.accidental,
             duration: note.duration,
             inTuplet: isNoteInTuplet(scoreData, pos.mi, pos.vi, pos.ni),
+            tempo: note.tempo,
         }
     }, [scoreData, cursorIndex])
 
@@ -304,6 +305,31 @@ export default function Sheet() {
         [scoreData, cursorIndex],
     )
 
+    const handleTempoToggle = useCallback(() => {
+        const pos = findNotePosition(scoreData, cursorIndex)
+        if (!pos) return
+        setScoreData((prev) => {
+            const next = structuredClone(prev)
+            const note = next.measures[pos.mi].voices[pos.vi].notes[pos.ni]
+            if (note.tempo !== undefined) {
+                delete note.tempo
+            } else {
+                note.tempo = 120
+            }
+            return next
+        })
+    }, [scoreData, cursorIndex])
+
+    const handleTempoChange = useCallback((noteEventIndex: number, bpm: number) => {
+        const pos = findNotePosition(scoreData, noteEventIndex)
+        if (!pos) return
+        setScoreData((prev) => {
+            const next = structuredClone(prev)
+            next.measures[pos.mi].voices[pos.vi].notes[pos.ni].tempo = bpm
+            return next
+        })
+    }, [scoreData])
+
     const handleAddMeasure = useCallback(() => {
         setScoreData((prev) => {
             const next = structuredClone(prev)
@@ -350,6 +376,8 @@ export default function Sheet() {
                 accidentalDisabled={selectedNoteInfo.isRest}
                 onAccidentalChange={handleAccidentalChange}
                 onDurationChange={handleDurationChange}
+                tempo={selectedNoteInfo.tempo}
+                onTempoToggle={handleTempoToggle}
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8">
                 <div className="mx-auto max-w-4xl min-h-full bg-white shadow p-6">
@@ -361,6 +389,7 @@ export default function Sheet() {
                         onAddMeasure={handleAddMeasure}
                         onRemoveMeasure={handleRemoveMeasure}
                         canRemoveMeasure={scoreData.measures.length > 1}
+                        onTempoChange={handleTempoChange}
                     />
                 </div>
             </div>

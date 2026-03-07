@@ -41,9 +41,11 @@ interface ControlBarProps {
   accidentalDisabled: boolean
   onAccidentalChange: (accidental: string | undefined) => void
   onDurationChange: (duration: Duration) => void
+  tempo: number | undefined
+  onTempoToggle: () => void
 }
 
-export function ControlBar({ accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange }: ControlBarProps) {
+export function ControlBar({ accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange, tempo, onTempoToggle }: ControlBarProps) {
   return (
     <div className="flex items-center gap-6 px-4 py-2 border-b border-gray-200 bg-white">
       {/* Accidentals */}
@@ -88,6 +90,19 @@ export function ControlBar({ accidental, duration, accidentalDisabled, onAcciden
           );
         })}
       </div>
+
+      {/* Tempo */}
+      <button
+        type="button"
+        onClick={onTempoToggle}
+        className={`px-3 py-1.5 text-sm font-medium rounded border border-gray-300 transition-colors cursor-pointer ${
+          tempo !== undefined
+            ? 'bg-blue-500 text-white border-blue-500'
+            : 'bg-white text-gray-700 hover:bg-gray-100'
+        }`}
+      >
+        Tempo
+      </button>
     </div>
   );
 }

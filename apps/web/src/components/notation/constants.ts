@@ -71,6 +71,9 @@ export const TUPLET_OFFSET = 15;
 /** Scale for tuplet number glyphs (3/5 of normal notation scale) */
 export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5);
 
+/** Y position of tempo markings within headroom above staff */
+export const TEMPO_MARKING_Y = 15;
+
 /** Augmentation dot radius in pixels */
 export const DOT_RADIUS = 2;
 
