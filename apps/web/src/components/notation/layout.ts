@@ -496,17 +496,27 @@ function identifyPotentialBeamGroups(
                 && prevTupletInfo.tupletIndex === tupletInfo?.tupletIndex
 
             if (!sameTuplet) {
-                const prevNote = notes[prevNi]
-                const prevBeat = beat - effectiveBeats(prevNote.duration, prevNote.dots, prevTupletInfo?.tuplet)
-                const prevBeatBoundary = Math.floor(prevBeat)
-                const nextBeatBoundary = Math.floor(beat)
-
-                if (nextBeatBoundary > prevBeatBoundary) {
+                const eitherInTuplet = prevTupletInfo?.tupletIndex !== undefined || tupletInfo?.tupletIndex !== undefined
+                if (eitherInTuplet) {
+                    // Tuplet boundary: always break
                     if (currentIndices.length >= 2) {
                         groups.push({ noteIndices: currentIndices, noteLines: currentLines })
                     }
                     currentIndices = []
                     currentLines = []
+                } else {
+                    const prevNote = notes[prevNi]
+                    const prevBeat = beat - effectiveBeats(prevNote.duration, prevNote.dots, prevTupletInfo?.tuplet)
+                    const prevBeatBoundary = Math.floor(prevBeat)
+                    const nextBeatBoundary = Math.floor(beat)
+
+                    if (nextBeatBoundary > prevBeatBoundary) {
+                        if (currentIndices.length >= 2) {
+                            groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+                        }
+                        currentIndices = []
+                        currentLines = []
+                    }
                 }
             }
         }
@@ -549,14 +559,21 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
             const sameTuplet = prev.tupletIndex !== undefined && prev.tupletIndex === nl.tupletIndex
 
             if (!sameTuplet) {
-                const prevBeatEnd = prev.beat + durationToBeats(prev.input.duration)
-                const prevBeatBoundary = Math.floor(prev.beat)
-                const nextBeatBoundary = Math.floor(nl.beat)
-
-                // Break at beat boundaries
-                if (nextBeatBoundary > prevBeatBoundary && prevBeatEnd <= nl.beat) {
+                const eitherInTuplet = prev.tupletIndex !== undefined || nl.tupletIndex !== undefined
+                if (eitherInTuplet) {
+                    // Tuplet boundary: always break
                     if (current.length >= 2) groups.push(current)
                     current = []
+                } else {
+                    const prevBeatEnd = prev.beat + durationToBeats(prev.input.duration)
+                    const prevBeatBoundary = Math.floor(prev.beat)
+                    const nextBeatBoundary = Math.floor(nl.beat)
+
+                    // Break at beat boundaries
+                    if (nextBeatBoundary > prevBeatBoundary && prevBeatEnd <= nl.beat) {
+                        if (current.length >= 2) groups.push(current)
+                        current = []
+                    }
                 }
             }
 
