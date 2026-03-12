@@ -1,13 +1,13 @@
 // --- Input types (declarative score description) ---
 
 export type Clef = 'treble' | 'bass';
-export type Duration = 'w' | 'h' | 'q' | '8' | '16';
+export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
 export type BarlineType = 'single' | 'double' | 'end' | 'none';
 
 export interface NoteInput {
-  keys: string[]; // e.g. ['C#/5'], ['B/4']
-  duration: Duration;
+  keys: Array<{ name: string; accidental?: string | undefined; octave: number }>; // e.g. ['C#/5'], ['B/4']
+  duration: DurationType;
   dots?: number; // 1 = dotted, 2 = double-dotted
   tie?: boolean; // tie this note to the next note event
   tempo?: number; // BPM value; if present, a tempo marking is shown above this note
@@ -63,6 +63,8 @@ export interface LayoutNote {
   ledgerLines: LayoutLine[];
   /** Sequential index per NoteInput across the entire score (chord notes share the same index) */
   noteEventIndex: number;
+  /** Structural note id: "m{measureIndex}:v{voiceIndex}:n{noteIndex}" */
+  noteId: string;
 }
 
 export interface LayoutTimeSignature {
@@ -116,6 +118,8 @@ export interface LayoutTie {
 export interface LayoutTempoMarking {
   /** Global note event index this marking belongs to */
   noteEventIndex: number;
+  /** Structural note id */
+  noteId: string;
   /** SVG X coordinate (aligned to the note's x) */
   x: number;
   /** SVG Y coordinate (row-local, within headroom above staff) */

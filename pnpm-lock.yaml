@@ -78,6 +78,9 @@ importers:
 
   apps/web:
     dependencies:
+      lodash-es:
+        specifier: ^4.17.23
+        version: 4.17.23
       next:
         specifier: 16.1.6
         version: 16.1.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -91,6 +94,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.18
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
       '@types/node':
         specifier: ^20
         version: 20.19.32

@@ -1,4 +1,4 @@
-import { type Duration, getGlyphWidth, Glyph, GLYPH_SCALE } from '@/components/notation'
+import { type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@/components/notation';
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
   { label: '\u266e', value: undefined },  // ♮
@@ -6,12 +6,12 @@ const ACCIDENTALS: { label: string; value: string | undefined }[] = [
   { label: '\u266f', value: '#' },        // ♯
 ]
 
-const DURATIONS: Duration[] = ['w', 'h', 'q', '8', '16']
+const DURATIONS: DurationType[] = ['w', 'h', 'q', '8', '16']
 
 /** Stem height used in the duration icon (shorter than full score stems) */
 const ICON_STEM_HEIGHT = 22
 
-function DurationIcon({ dur, color }: { dur: Duration; color: string }) {
+function DurationIcon({ dur, color }: { dur: DurationType; color: string }) {
   const noteGlyph = dur === 'w' ? 'noteheadWhole' : dur === 'h' ? 'noteheadHalf' : 'noteheadBlack'
   const flagName = dur === '8' ? 'flag8thUp' : dur === '16' ? 'flag16thUp' : undefined
   const hasStem = dur !== 'w'
@@ -37,10 +37,10 @@ function DurationIcon({ dur, color }: { dur: Duration; color: string }) {
 
 interface ControlBarProps {
   accidental: string | undefined
-  duration: Duration | undefined
+  duration: DurationType | undefined
   accidentalDisabled: boolean
   onAccidentalChange: (accidental: string | undefined) => void
-  onDurationChange: (duration: Duration) => void
+  onDurationChange: (duration: DurationType) => void
   tempo: number | undefined
   onTempoToggle: () => void
 }

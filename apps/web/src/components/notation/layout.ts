@@ -1,3 +1,7 @@
+import { sum, sumBy } from 'lodash-es'
+
+import { Measure, Note, Score } from '@/model'
+
 import {
     BARLINE_GAP,
     BARLINE_THICK_WIDTH,
@@ -22,22 +26,7 @@ import {
     TUPLET_OFFSET,
 } from './constants'
 import { getGlyphWidth } from './glyph-utils'
-import {
-    accidentalGlyphName,
-    beamCount,
-    durationToBeats,
-    effectiveBeats,
-    flagGlyphName,
-    getLedgerLinePositions,
-    getYForLine,
-    getYForNote,
-    isBeamable,
-    noteheadForDuration,
-    parseKey,
-    pitchToLine,
-    restGlyphForDuration,
-    restLine,
-} from './note-utils'
+import { getLedgerLinePositions, getYForLine, getYForNote } from './note-utils'
 import type {
     BarlineType,
     LayoutBarline,
@@ -51,10 +40,6 @@ import type {
     LayoutTie,
     LayoutTimeSignature,
     LayoutTuplet,
-    MeasureInput,
-    NoteInput,
-    ScoreInput,
-    TupletInput,
 } from './types'
 
 /** Clef glyph placement: which staff line the glyph anchors to */
@@ -65,12 +50,37 @@ const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {
 /** Internal note with layout info, used during beam computation */
 interface NoteLayout {
     note: LayoutNote
-    input: NoteInput
+    input: Note
     stemDir: 'up' | 'down'
     beat: number
     noteIndex: number // index in voice.notes
-    tupletIndex: number | undefined // index in voice.tuplets (if part of a tuplet)
+    tupletIndex: number | undefined // index within this measure's tuplet groups
     isRest: boolean
+}
+
+/** Compute tuplet group indices for a list of notes. Consecutive notes with the same non-trivial ratio share an index. */
+function computeTupletIndices(notes: Note[]): Map<number, number> {
+    const indices = new Map<number, number>()
+    let tupletIdx = 0
+    let i = 0
+    while (i < notes.length) {
+        const note = notes[i]
+        if (note.inTuplet) {
+            const { numerator, denominator } = note.duration.ratio
+            while (
+                i < notes.length &&
+                notes[i].duration.ratio.numerator === numerator &&
+                notes[i].duration.ratio.denominator === denominator
+            ) {
+                indices.set(i, tupletIdx)
+                i++
+            }
+            tupletIdx++
+        } else {
+            i++
+        }
+    }
+    return indices
 }
 
 /** Width of a barline type in pixels */
@@ -87,23 +97,7 @@ function barlineWidth(type: BarlineType): number {
     }
 }
 
-/**
- * Build a map from note index → tuplet info for a voice.
- * Returns a Map<noteIndex, { tupletIndex, tuplet }>.
- */
-function buildTupletMap(tuplets: TupletInput[] | undefined): Map<number, { tupletIndex: number; tuplet: TupletInput }> {
-    const map = new Map<number, { tupletIndex: number; tuplet: TupletInput }>()
-    if (!tuplets) return map
-    for (let ti = 0; ti < tuplets.length; ti++) {
-        const t = tuplets[ti]
-        for (let ni = t.startIndex; ni < t.startIndex + t.count; ni++) {
-            map.set(ni, { tupletIndex: ti, tuplet: t })
-        }
-    }
-    return map
-}
-
-export function computeLayout(input: ScoreInput, width: number = 600, height: number = 160): LayoutResult {
+export function computeLayout(score: Score, width: number = 600, height: number = 160, measureIndexOffset: number = 0): LayoutResult {
     const staveY = 0
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
 
@@ -121,7 +115,7 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
     const measureOverheads: number[] = []
     const measureBeats: number[] = []
 
-    for (const measure of input.measures) {
+    for (const measure of score.measures) {
         let overhead = STAVE_LEFT_PADDING
 
         if (measure.clef) {
@@ -141,30 +135,23 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         overhead += STAVE_RIGHT_PADDING
         measureOverheads.push(overhead)
 
-        // Total beats in this measure (applying tuplet multipliers)
-        let maxBeats = 0
-        for (const voice of measure.voices) {
-            const tupletMap = buildTupletMap(voice.tuplets)
-            let beats = 0
-            for (let ni = 0; ni < voice.notes.length; ni++) {
-                const note = voice.notes[ni]
-                const tupletInfo = tupletMap.get(ni)
-                beats += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
-            }
-            maxBeats = Math.max(maxBeats, beats)
-        }
-        measureBeats.push(Math.max(maxBeats, 1))
+        measureBeats.push(
+            Math.max(
+                sumBy(measure.notes, (n) => n.duration.effectiveBeats),
+                1,
+            ),
+        )
     }
 
     // 3. Compute barline widths
-    const barlineTypes: BarlineType[] = input.measures.map((m) => m.endBarline ?? 'single')
+    const barlineTypes: BarlineType[] = score.measures.map((m) => m.endBarline ?? 'single')
     const openingBarlineW = BARLINE_THIN_WIDTH
     const barlineWidths = barlineTypes.map(barlineWidth)
 
     // 4. Distribute remaining width proportionally by beats
     const totalOverhead = measureOverheads.reduce((a, b) => a + b, 0)
     const totalBarlineWidth = openingBarlineW + barlineWidths.reduce((a, b) => a + b, 0)
-    const totalBeats = measureBeats.reduce((a, b) => a + b, 0)
+    const totalBeats = sum(measureBeats)
     const availableNoteWidth = Math.max(0, width - totalOverhead - totalBarlineWidth)
 
     // 5. Layout each measure
@@ -182,13 +169,13 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
     })
     cursorX += openingBarlineW
 
-    for (let mi = 0; mi < input.measures.length; mi++) {
-        const measureInput = input.measures[mi]
+    for (let mi = 0; mi < score.measures.length; mi++) {
+        const measureInput = score.measures[mi]
         const noteWidth = (measureBeats[mi] / totalBeats) * availableNoteWidth
         const measureWidth = measureOverheads[mi] + noteWidth
         const measureX = cursorX
 
-        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter)
+        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter, measureIndexOffset + mi)
         noteEventCounter = measureLayout.nextNoteEventIndex
         measures.push(measureLayout)
 
@@ -204,8 +191,8 @@ export function computeLayout(input: ScoreInput, width: number = 600, height: nu
         cursorX += barlineWidths[mi]
     }
 
-    const ties = computeTies(input, measures)
-    const tempoMarkings = computeTempoMarkings(input, measures)
+    const ties = computeTies(score, measures)
+    const tempoMarkings = computeTempoMarkings(score, measures, measureIndexOffset)
 
     return { width, height, staffLines, measures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
 }
@@ -239,17 +226,18 @@ function computeDotPositions(
 }
 
 function computeMeasureLayout(
-    input: MeasureInput,
+    measure: Measure,
     measureX: number,
     measureWidth: number,
     staveY: number,
     noteEventIndex: number,
+    globalMeasureIndex: number,
 ): LayoutMeasure & { nextNoteEventIndex: number } {
     // 1. Clef
     let cursorX = measureX + STAVE_LEFT_PADDING
     let clef: LayoutGlyph | undefined
-    if (input.clef) {
-        const config = CLEF_CONFIG[input.clef]
+    if (measure.clef) {
+        const config = CLEF_CONFIG[measure.clef]
         if (config) {
             clef = { glyphName: config.glyphName, x: cursorX, y: getYForLine(config.lineIndex, staveY) }
             cursorX += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
@@ -258,8 +246,8 @@ function computeMeasureLayout(
 
     // 2. Time signature
     let timeSignature: LayoutTimeSignature | undefined
-    if (input.timeSignature) {
-        const [topStr, bottomStr] = input.timeSignature.split('/')
+    if (measure.timeSignature) {
+        const [topStr, bottomStr] = measure.timeSignature.split('/')
         const tsX = cursorX
         const topY = getYForLine(1, staveY)
         const bottomY = getYForLine(3, staveY)
@@ -288,15 +276,11 @@ function computeMeasureLayout(
     const availableWidth = notesEndX - notesStartX
 
     const beatPositions = new Set<number>()
-    for (const voice of input.voices) {
-        const tupletMap = buildTupletMap(voice.tuplets)
-        let beat = 0
-        for (let ni = 0; ni < voice.notes.length; ni++) {
-            const note = voice.notes[ni]
-            beatPositions.add(beat)
-            const tupletInfo = tupletMap.get(ni)
-            beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
-        }
+    let beat = 0
+    for (let ni = 0; ni < measure.notes.length; ni++) {
+        const note = measure.notes[ni]
+        beatPositions.add(beat)
+        beat += note.duration.effectiveBeats
     }
     const sortedBeats = Array.from(beatPositions).sort((a, b) => a - b)
     const numPositions = sortedBeats.length
@@ -308,123 +292,119 @@ function computeMeasureLayout(
 
     // 4. Pre-compute beam group stem directions (so beamable notes get a uniform direction)
     const beamStemDirs = new Map<string, 'up' | 'down'>() // key: "voiceIdx:noteIdx"
-    for (let vi = 0; vi < input.voices.length; vi++) {
-        const voice = input.voices[vi]
-        if ((voice.stem ?? 'auto') !== 'auto') continue // skip if voice has explicit stem pref
-        const tupletMap = buildTupletMap(voice.tuplets)
-        const groups = identifyPotentialBeamGroups(voice.notes, tupletMap, input.clef)
-        for (const group of groups) {
-            const avgLine = group.noteLines.reduce((a, b) => a + b, 0) / group.noteLines.length
-            const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-            for (const ni of group.noteIndices) {
-                beamStemDirs.set(`${vi}:${ni}`, groupDir)
-            }
+    const groups = identifyPotentialBeamGroups(measure.notes, measure.clef)
+    for (const group of groups) {
+        const avgLine = group.noteLines.reduce((a, b) => a + b, 0) / group.noteLines.length
+        const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
+        for (const ni of group.noteIndices) {
+            beamStemDirs.set(measure.notes[ni].id, groupDir)
         }
     }
 
     // 5. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
     const allNoteLayouts: NoteLayout[] = []
+    const tupletIndices = computeTupletIndices(measure.notes)
 
-    for (let vi = 0; vi < input.voices.length; vi++) {
-        const voice = input.voices[vi]
-        const voiceStemPref = voice.stem ?? 'auto'
-        const tupletMap = buildTupletMap(voice.tuplets)
-        let beat = 0
+    beat = 0
 
-        for (let ni = 0; ni < voice.notes.length; ni++) {
-            const noteInput = voice.notes[ni]
-            const tupletInfo = tupletMap.get(ni)
+    for (let ni = 0; ni < measure.notes.length; ni++) {
+        const note = measure.notes[ni]
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const x = beatToX.get(beat)!
+
+        if (note.isRest) {
+            // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
+            const rLine = note.duration.restLine
+            const noteY = getYForNote(rLine, staveY)
+            const glyphName = note.duration.restGlyph
+            const dots = computeDotPositions(note.duration.dots, x + noteheadWidth, noteY, rLine)
+            const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [], noteEventIndex, noteId: note.id }
+            allNoteLayouts.push({
+                note: layoutNote,
+                input: note,
+                stemDir: 'up',
+                beat,
+                noteIndex: ni,
+                tupletIndex: tupletIndices.get(ni),
+                isRest: true,
+            })
+        } else {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const x = beatToX.get(beat)!
+            const pitch = note.pitch!
+            const noteLine = pitch.line
+            const noteY = getYForNote(noteLine, staveY)
+            const glyphName = note.duration.noteheadGlyph
+            // Use beam group stem direction if available, otherwise fall back to per-note logic
+            const beamDir = beamStemDirs.get(note.id)
+            const dir: 'up' | 'down' = beamDir ?? (noteLine >= 3 ? 'down' : 'up')
 
-            // Check if this note is a rest (first key has /r suffix)
-            const { isRest: noteIsRest } = parseKey(noteInput.keys[0])
-
-            if (noteIsRest) {
-                // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
-                const rLine = restLine(noteInput.duration)
-                const noteY = getYForNote(rLine, staveY)
-                const glyphName = restGlyphForDuration(noteInput.duration)
-                const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, rLine)
-                const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [], noteEventIndex }
-                allNoteLayouts.push({
-                    note: layoutNote,
-                    input: noteInput,
-                    stemDir: 'up',
-                    beat,
-                    noteIndex: ni,
-                    tupletIndex: tupletInfo?.tupletIndex,
-                    isRest: true,
-                })
-            } else {
-                for (const key of noteInput.keys) {
-                    const { accidental } = parseKey(key)
-                    const noteLine = pitchToLine(key, input.clef)
-                    const noteY = getYForNote(noteLine, staveY)
-                    const glyphName = noteheadForDuration(noteInput.duration)
-                    // Use beam group stem direction if available, otherwise fall back to per-note logic
-                    const beamDir = beamStemDirs.get(`${vi}:${ni}`)
-                    const dir: 'up' | 'down' = voiceStemPref !== 'auto'
-                        ? voiceStemPref
-                        : beamDir ?? (noteLine >= 3 ? 'down' : 'up')
-
-                    // Accidental
-                    let accidentalLayout: LayoutGlyph | undefined
-                    if (accidental) {
-                        const accGlyph = accidentalGlyphName(accidental)
-                        if (accGlyph) {
-                            accidentalLayout = {
-                                glyphName: accGlyph,
-                                x: x - getGlyphWidth(accGlyph) - 2,
-                                y: noteY,
-                            }
-                        }
+            // Accidental
+            let accidentalLayout: LayoutGlyph | undefined
+            if (pitch.accidental) {
+                const accGlyph = pitch.accidentalGlyph
+                if (accGlyph) {
+                    accidentalLayout = {
+                        glyphName: accGlyph,
+                        x: x - getGlyphWidth(accGlyph) - 2,
+                        y: noteY,
                     }
-
-                    // Stem
-                    let stem: LayoutNote['stem']
-                    if (noteInput.duration !== 'w') {
-                        stem = dir === 'up'
-                            ? { x: x + noteheadWidth, y1: noteY, y2: noteY - STEM_HEIGHT }
-                            : { x: x, y1: noteY, y2: noteY + STEM_HEIGHT }
-                    }
-
-                    // Flag (will be suppressed for beamed notes in pass 2)
-                    let flag: LayoutGlyph | undefined
-                    const flagName = flagGlyphName(noteInput.duration, dir)
-                    if (flagName && stem) {
-                        flag = { glyphName: flagName, x: stem.x, y: stem.y2 }
-                    }
-
-                    // Ledger lines
-                    const ledgerLineYs = getLedgerLinePositions(noteLine, staveY)
-                    const ledgerLines: LayoutLine[] = ledgerLineYs.map((ly) => ({
-                        x1: x - LEDGER_LINE_EXTENSION,
-                        y1: ly,
-                        x2: x + noteheadWidth + LEDGER_LINE_EXTENSION,
-                        y2: ly,
-                    }))
-
-                    // Dots
-                    const dots = computeDotPositions(noteInput.dots, x + noteheadWidth, noteY, noteLine)
-
-                    const layoutNote: LayoutNote = { x, y: noteY, glyphName, accidental: accidentalLayout, stem, flag, dots, ledgerLines, noteEventIndex }
-                    allNoteLayouts.push({
-                        note: layoutNote,
-                        input: noteInput,
-                        stemDir: dir,
-                        beat,
-                        noteIndex: ni,
-                        tupletIndex: tupletInfo?.tupletIndex,
-                        isRest: false,
-                    })
                 }
             }
 
-            noteEventIndex++
-            beat += effectiveBeats(noteInput.duration, noteInput.dots, tupletInfo?.tuplet)
+            // Stem
+            let stem: LayoutNote['stem']
+            if (note.duration.type !== 'w') {
+                stem =
+                    dir === 'up'
+                        ? { x: x + noteheadWidth, y1: noteY, y2: noteY - STEM_HEIGHT }
+                        : { x: x, y1: noteY, y2: noteY + STEM_HEIGHT }
+            }
+
+            // Flag (will be suppressed for beamed notes in pass 2)
+            let flag: LayoutGlyph | undefined
+            const flagName = note.duration.flagGlyph(dir)
+            if (flagName && stem) {
+                flag = { glyphName: flagName, x: stem.x, y: stem.y2 }
+            }
+
+            // Ledger lines
+            const ledgerLineYs = getLedgerLinePositions(noteLine, staveY)
+            const ledgerLines: LayoutLine[] = ledgerLineYs.map((ly) => ({
+                x1: x - LEDGER_LINE_EXTENSION,
+                y1: ly,
+                x2: x + noteheadWidth + LEDGER_LINE_EXTENSION,
+                y2: ly,
+            }))
+
+            // Dots
+            const dots = computeDotPositions(note.duration.dots, x + noteheadWidth, noteY, noteLine)
+
+            const layoutNote: LayoutNote = {
+                x,
+                y: noteY,
+                glyphName,
+                accidental: accidentalLayout,
+                stem,
+                flag,
+                dots,
+                ledgerLines,
+                noteEventIndex,
+                noteId: note.id,
+            }
+            allNoteLayouts.push({
+                note: layoutNote,
+                input: note,
+                stemDir: dir,
+                beat,
+                noteIndex: ni,
+                tupletIndex: tupletIndices.get(ni),
+                isRest: false,
+            })
         }
+
+        noteEventIndex++
+        beat += note.duration.effectiveBeats
     }
 
     // 6. Auto-beam: group consecutive beamable notes within each beat
@@ -439,7 +419,7 @@ function computeMeasureLayout(
     }
 
     // 8. Compute tuplet bracket layouts
-    const tuplets = computeTupletLayouts(input, allNoteLayouts, noteheadWidth)
+    const tuplets = computeTupletLayouts(measure, allNoteLayouts, noteheadWidth)
 
     return {
         x: measureX,
@@ -463,40 +443,37 @@ interface PotentialBeamGroup {
  * ignoring stem direction. Used to pre-compute a uniform stem direction
  * based on average pitch so that beams aren't broken by mixed stem directions.
  */
-function identifyPotentialBeamGroups(
-    notes: NoteInput[],
-    tupletMap: Map<number, { tupletIndex: number; tuplet: TupletInput }>,
-    clef: string | undefined,
-): PotentialBeamGroup[] {
+function identifyPotentialBeamGroups(notes: Note[], _clef: string | undefined): PotentialBeamGroup[] {
     const groups: PotentialBeamGroup[] = []
     let currentIndices: number[] = []
     let currentLines: number[] = []
     let beat = 0
 
+    const tupletIdxMap = computeTupletIndices(notes)
+
     for (let ni = 0; ni < notes.length; ni++) {
         const note = notes[ni]
-        const tupletInfo = tupletMap.get(ni)
 
-        const { isRest: noteIsRest } = parseKey(note.keys[0])
-        if (!isBeamable(note.duration) || noteIsRest) {
+        if (!note.duration.isBeamable || note.isRest) {
             if (currentIndices.length >= 2) {
                 groups.push({ noteIndices: currentIndices, noteLines: currentLines })
             }
             currentIndices = []
             currentLines = []
-            beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
+            beat += note.duration.effectiveBeats
+
             continue
         }
 
         // Check beat boundary (same logic as computeBeamGroups, minus stem direction check)
         if (currentIndices.length > 0) {
             const prevNi = currentIndices[currentIndices.length - 1]
-            const prevTupletInfo = tupletMap.get(prevNi)
-            const sameTuplet = prevTupletInfo?.tupletIndex !== undefined
-                && prevTupletInfo.tupletIndex === tupletInfo?.tupletIndex
+            const prevTupletIdx = tupletIdxMap.get(prevNi)
+            const curTupletIdx = tupletIdxMap.get(ni)
+            const sameTuplet = prevTupletIdx !== undefined && prevTupletIdx === curTupletIdx
 
             if (!sameTuplet) {
-                const eitherInTuplet = prevTupletInfo?.tupletIndex !== undefined || tupletInfo?.tupletIndex !== undefined
+                const eitherInTuplet = prevTupletIdx !== undefined || curTupletIdx !== undefined
                 if (eitherInTuplet) {
                     // Tuplet boundary: always break
                     if (currentIndices.length >= 2) {
@@ -506,7 +483,7 @@ function identifyPotentialBeamGroups(
                     currentLines = []
                 } else {
                     const prevNote = notes[prevNi]
-                    const prevBeat = beat - effectiveBeats(prevNote.duration, prevNote.dots, prevTupletInfo?.tuplet)
+                    const prevBeat = beat - prevNote.duration.effectiveBeats
                     const prevBeatBoundary = Math.floor(prevBeat)
                     const nextBeatBoundary = Math.floor(beat)
 
@@ -522,11 +499,9 @@ function identifyPotentialBeamGroups(
         }
 
         currentIndices.push(ni)
-        // Average the note lines for chords (multiple keys)
-        const avgLine = note.keys.reduce((sum, key) => sum + pitchToLine(key, clef), 0) / note.keys.length
-        currentLines.push(avgLine)
+        currentLines.push(note.pitch?.line ?? 0)
 
-        beat += effectiveBeats(note.duration, note.dots, tupletInfo?.tuplet)
+        beat += note.duration.effectiveBeats
     }
 
     if (currentIndices.length >= 2) {
@@ -546,7 +521,7 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
     let current: NoteLayout[] = []
 
     for (const nl of noteLayouts) {
-        if (!isBeamable(nl.input.duration) || nl.isRest) {
+        if (!nl.input.duration.isBeamable || nl.isRest) {
             // Non-beamable note or rest: flush current group
             if (current.length >= 2) groups.push(current)
             current = []
@@ -565,7 +540,7 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
                     if (current.length >= 2) groups.push(current)
                     current = []
                 } else {
-                    const prevBeatEnd = prev.beat + durationToBeats(prev.input.duration)
+                    const prevBeatEnd = prev.beat + prev.input.duration.beats
                     const prevBeatBoundary = Math.floor(prev.beat)
                     const nextBeatBoundary = Math.floor(nl.beat)
 
@@ -594,64 +569,74 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
 /**
  * Compute tuplet bracket layouts for all voices in a measure.
  */
-function computeTupletLayouts(
-    input: MeasureInput,
-    allNoteLayouts: NoteLayout[],
-    noteheadWidth: number,
-): LayoutTuplet[] {
+function computeTupletLayouts(measure: Measure, allNoteLayouts: NoteLayout[], noteheadWidth: number): LayoutTuplet[] {
     const layouts: LayoutTuplet[] = []
 
-    for (const voice of input.voices) {
-        if (!voice.tuplets) continue
-
-        for (let ti = 0; ti < voice.tuplets.length; ti++) {
-            const tuplet = voice.tuplets[ti]
-            const numNotes = tuplet.count
-            const notesOccupied = tuplet.notesOccupied ?? 2
-
-            // Find all NoteLayouts belonging to this tuplet
-            const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletIndex === ti)
-            if (tupletNotes.length === 0) continue
-
-            // Determine stem direction (majority vote)
-            const upCount = tupletNotes.filter((nl) => nl.stemDir === 'up').length
-            const stemDir: 'up' | 'down' = upCount >= tupletNotes.length / 2 ? 'up' : 'down'
-            const location: 1 | -1 = stemDir === 'up' ? 1 : -1
-
-            // x bounds
-            const x1 = tupletNotes[0].note.x
-            const x2 = tupletNotes[tupletNotes.length - 1].note.x + noteheadWidth
-
-            // Check if all tuplet notes are beamed (have no flags and have stems adjusted by beam)
-            const allBeamed = tupletNotes.every((nl) => nl.note.flag === undefined && isBeamable(nl.input.duration))
-
-            // Y position: based on stem tips or note positions
-            let y: number
-            if (stemDir === 'up') {
-                // Bracket above: find the highest stem tip (lowest Y)
-                const stemTips = tupletNotes
-                    .map((nl) => nl.note.stem?.y2 ?? nl.note.y)
-                y = Math.min(...stemTips) - TUPLET_OFFSET
-            } else {
-                // Bracket below: find the lowest stem tip (highest Y)
-                const stemTips = tupletNotes
-                    .map((nl) => nl.note.stem?.y2 ?? nl.note.y)
-                y = Math.max(...stemTips) + TUPLET_OFFSET
+    // Identify tuplet groups from consecutive notes with the same ratio
+    const tupletGroups: { denominator: number; numerator: number }[] = []
+    let i = 0
+    while (i < measure.notes.length) {
+        const note = measure.notes[i]
+        if (note.inTuplet) {
+            const { numerator, denominator } = note.duration.ratio
+            while (
+                i < measure.notes.length &&
+                measure.notes[i].duration.ratio.numerator === numerator &&
+                measure.notes[i].duration.ratio.denominator === denominator
+            ) {
+                i++
             }
-
-            // Number glyphs: "3" or "3:2"
-            const centerX = (x1 + x2) / 2
-            const numberGlyphs = buildTupletNumberGlyphs(numNotes, notesOccupied, tuplet.showRatio, centerX, y)
-
-            layouts.push({
-                x1,
-                x2,
-                y,
-                location,
-                numberGlyphs,
-                bracketed: !allBeamed,
-            })
+            tupletGroups.push({ denominator, numerator })
+        } else {
+            i++
         }
+    }
+
+    for (let ti = 0; ti < tupletGroups.length; ti++) {
+        const group = tupletGroups[ti]
+        const numNotes = group.denominator
+        const notesOccupied = group.numerator
+
+        // Find all NoteLayouts belonging to this tuplet
+        const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletIndex === ti)
+        if (tupletNotes.length === 0) continue
+
+        // Determine stem direction (majority vote)
+        const upCount = tupletNotes.filter((nl) => nl.stemDir === 'up').length
+        const stemDir: 'up' | 'down' = upCount >= tupletNotes.length / 2 ? 'up' : 'down'
+        const location: 1 | -1 = stemDir === 'up' ? 1 : -1
+
+        // x bounds
+        const x1 = tupletNotes[0].note.x
+        const x2 = tupletNotes[tupletNotes.length - 1].note.x + noteheadWidth
+
+        // Check if all tuplet notes are beamed (have no flags and have stems adjusted by beam)
+        const allBeamed = tupletNotes.every((nl) => nl.note.flag === undefined && nl.input.duration.isBeamable)
+
+        // Y position: based on stem tips or note positions
+        let y: number
+        if (stemDir === 'up') {
+            // Bracket above: find the highest stem tip (lowest Y)
+            const stemTips = tupletNotes.map((nl) => nl.note.stem?.y2 ?? nl.note.y)
+            y = Math.min(...stemTips) - TUPLET_OFFSET
+        } else {
+            // Bracket below: find the lowest stem tip (highest Y)
+            const stemTips = tupletNotes.map((nl) => nl.note.stem?.y2 ?? nl.note.y)
+            y = Math.max(...stemTips) + TUPLET_OFFSET
+        }
+
+        // Number glyphs: "3" or "3:2"
+        const centerX = (x1 + x2) / 2
+        const numberGlyphs = buildTupletNumberGlyphs(numNotes, notesOccupied, false, centerX, y)
+
+        layouts.push({
+            x1,
+            x2,
+            y,
+            location,
+            numberGlyphs,
+            bracketed: !allBeamed,
+        })
     }
 
     return layouts
@@ -759,7 +744,7 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
     }
 
     // 4. Generate beam segments for each level
-    const maxBeams = Math.max(...group.map((nl) => beamCount(nl.input.duration)))
+    const maxBeams = Math.max(...group.map((nl) => nl.input.duration.beamCount))
     const segments: LayoutBeamSegment[] = []
     const thickness = BEAM_WIDTH * dirSign
 
@@ -779,7 +764,7 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
 
             for (let i = 0; i < group.length; i++) {
                 const nl = group[i]
-                const noteBeams = beamCount(nl.input.duration)
+                const noteBeams = nl.input.duration.beamCount
                 const stemX = nl.note.stem!.x
                 const yAtNote = beamY + (stemX - firstStemX) * slope
 
@@ -790,7 +775,8 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
                     }
 
                     // Check if next note also qualifies — if not, close segment
-                    const nextQualifies = i + 1 < group.length && beamCount(group[i + 1].input.duration) >= minBeamsForLevel
+                    const nextQualifies =
+                        i + 1 < group.length && group[i + 1].input.duration.beamCount >= minBeamsForLevel
                     if (!nextQualifies) {
                         if (segStart === stemX) {
                             // Single note with secondary beam — draw partial beam
@@ -821,7 +807,7 @@ const TIE_Y_SHIFT = 7
  * Compute tie curves for notes with `tie: true`.
  * Each tie connects a note to the next note event.
  */
-function computeTies(input: ScoreInput, measures: LayoutMeasure[]): LayoutTie[] {
+function computeTies(score: Score, measures: LayoutMeasure[]): LayoutTie[] {
     const ties: LayoutTie[] = []
     const noteheadWidth = getGlyphWidth('noteheadBlack')
 
@@ -835,31 +821,29 @@ function computeTies(input: ScoreInput, measures: LayoutMeasure[]): LayoutTie[] 
         }
     }
 
-    // Scan input for tied notes
+    // Scan score for tied notes
     let noteEventIdx = 0
-    for (const measure of input.measures) {
-        for (const voice of measure.voices) {
-            for (const note of voice.notes) {
-                if (note.tie) {
-                    const startNote = noteMap.get(noteEventIdx)
-                    const endNote = noteMap.get(noteEventIdx + 1)
-                    if (startNote && endNote) {
-                        // Direction: opposite of stem. Stem up → tie below (1), stem down → tie above (-1)
-                        const stemUp = startNote.stem ? startNote.stem.y2 < startNote.stem.y1 : true
-                        const direction: 1 | -1 = stemUp ? 1 : -1
-                        const yShift = TIE_Y_SHIFT * direction
+    for (const measure of score.measures) {
+        for (const note of measure.notes) {
+            if (note.tie) {
+                const startNote = noteMap.get(noteEventIdx)
+                const endNote = noteMap.get(noteEventIdx + 1)
+                if (startNote && endNote) {
+                    // Direction: opposite of stem. Stem up → tie below (1), stem down → tie above (-1)
+                    const stemUp = startNote.stem ? startNote.stem.y2 < startNote.stem.y1 : true
+                    const direction: 1 | -1 = stemUp ? 1 : -1
+                    const yShift = TIE_Y_SHIFT * direction
 
-                        ties.push({
-                            startX: startNote.x + noteheadWidth,
-                            startY: startNote.y + yShift,
-                            endX: endNote.x,
-                            endY: endNote.y + yShift,
-                            direction,
-                        })
-                    }
+                    ties.push({
+                        startX: startNote.x + noteheadWidth,
+                        startY: startNote.y + yShift,
+                        endX: endNote.x,
+                        endY: endNote.y + yShift,
+                        direction,
+                    })
                 }
-                noteEventIdx++
             }
+            noteEventIdx++
         }
     }
 
@@ -870,7 +854,7 @@ function computeTies(input: ScoreInput, measures: LayoutMeasure[]): LayoutTie[] 
  * Compute tempo marking positions for notes with `tempo` set.
  * Follows the same scan pattern as `computeTies`.
  */
-function computeTempoMarkings(input: ScoreInput, measures: LayoutMeasure[]): LayoutTempoMarking[] {
+function computeTempoMarkings(score: Score, measures: LayoutMeasure[], measureIndexOffset: number): LayoutTempoMarking[] {
     const markings: LayoutTempoMarking[] = []
 
     // Build a map of noteEventIndex → LayoutNote.x
@@ -884,22 +868,23 @@ function computeTempoMarkings(input: ScoreInput, measures: LayoutMeasure[]): Lay
     }
 
     let noteEventIdx = 0
-    for (const measure of input.measures) {
-        for (const voice of measure.voices) {
-            for (const note of voice.notes) {
-                if (note.tempo !== undefined) {
-                    const x = noteXMap.get(noteEventIdx)
-                    if (x !== undefined) {
-                        markings.push({
-                            noteEventIndex: noteEventIdx,
-                            x,
-                            y: TEMPO_MARKING_Y,
-                            bpm: note.tempo,
-                        })
-                    }
+    for (let mi = 0; mi < score.measures.length; mi++) {
+        const measure = score.measures[mi]
+        for (let ni = 0; ni < measure.notes.length; ni++) {
+            const note = measure.notes[ni]
+            if (note.tempo !== undefined) {
+                const x = noteXMap.get(noteEventIdx)
+                if (x !== undefined) {
+                    markings.push({
+                        noteEventIndex: noteEventIdx,
+                        noteId: `m${measureIndexOffset + mi}:v0:n${ni}`,
+                        x,
+                        y: TEMPO_MARKING_Y,
+                        bpm: note.tempo,
+                    })
                 }
-                noteEventIdx++
             }
+            noteEventIdx++
         }
     }
 

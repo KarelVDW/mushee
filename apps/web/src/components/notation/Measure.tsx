@@ -9,10 +9,10 @@ const CURSOR_COLOR = '#1e90ff'
 
 interface MeasureProps {
   layout: LayoutMeasure;
-  selectedNoteIndex?: number;
+  selectedNoteId?: string;
 }
 
-export function Measure({ layout, selectedNoteIndex }: MeasureProps) {
+export function Measure({ layout, selectedNoteId }: MeasureProps) {
   return (
     <g>
       {layout.clef && (
@@ -28,7 +28,7 @@ export function Measure({ layout, selectedNoteIndex }: MeasureProps) {
       )}
 
       {layout.notes.map((note, i) => (
-        <NoteGroup key={i} note={note} color={note.noteEventIndex === selectedNoteIndex ? CURSOR_COLOR : undefined} />
+        <NoteGroup key={i} note={note} color={note.noteId === selectedNoteId ? CURSOR_COLOR : undefined} />
       ))}
 
       {layout.beams.map((segments, i) => (
