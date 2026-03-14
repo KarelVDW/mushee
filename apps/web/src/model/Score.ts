@@ -8,9 +8,25 @@ import { Note } from './Note'
 import { Pitch } from './Pitch'
 
 export class Score {
+    private _touchedAt: number
     readonly measures: Measure[] = []
+    private onChange: () => void
 
-    constructor(private onChange?: () => void) {}
+    constructor(onChange?: () => void) {
+        this.onChange = () => {
+            this.touch()
+            onChange?.()
+        }
+        this._touchedAt = Date.now()
+    }
+
+    get touchedAt() {
+        return this._touchedAt
+    }
+
+    touch() {
+        this._touchedAt = Date.now()
+    }
 
     get totalNotes(): number {
         return this.measures.reduce((sum, m) => sum + m.notes.length, 0)
@@ -51,14 +67,14 @@ export class Score {
         last(this.measures)?.setEndBarline('single')
         measure.setEndBarline('end')
         this.measures.splice(this.measures.length, 0, measure)
-        this.onChange?.()
+        this.onChange()
         return measure
     }
 
     removeLastMeasure() {
         this.measures.splice(this.measures.length - 1, 1)
         last(this.measures)?.setEndBarline('end')
-        this.onChange?.()
+        this.onChange()
     }
 
     replace(targets: Note[], values: Note[]) {
@@ -112,7 +128,7 @@ export class Score {
             measure.replaceNotes(notes, newNotes)
             replaceValues = [...remainderNotes, ...replaceValues]
         }
-        this.onChange?.()
+        this.onChange()
     }
 
     static fromInput(input: ScoreInput, onChange?: () => void): Score {

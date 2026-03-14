@@ -26,9 +26,6 @@ const MEASURE_BUTTONS_WIDTH = 30
 const MEASURE_BUTTON_SIZE = 18
 const MEASURE_BUTTON_GAP = 3
 
-const MAX_MEASURES_PER_ROW = 4
-const ROW_GAP = 16
-
 interface ScoreProps {
     score: ScoreModel
     height?: number
@@ -72,26 +69,23 @@ export function Score({
     // Compute layouts for all rows
     const showMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
 
-    const isLastRow = true
-    const hasMeasureButtons = isLastRow && showMeasureButtons
-    const rowWidth = Math.round(containerWidth * (score.measures.length / MAX_MEASURES_PER_ROW))
-    const layoutWidth = hasMeasureButtons ? rowWidth - MEASURE_BUTTONS_WIDTH : rowWidth
-    const measureIndexOffset = 0 // ri * MAX_MEASURES_PER_ROW
-    const rowData =
-        containerWidth <= 0 ? [] : [{ layout: computeLayout(score, layoutWidth, height, measureIndexOffset), rowWidth, hasMeasureButtons }]
+    const scoreLayout = useMemo(() => {
+        if (containerWidth <= 0) return null
+        return computeLayout(score, containerWidth, height, {
+            reserveLastRowWidth: showMeasureButtons ? MEASURE_BUTTONS_WIDTH : 0,
+        })
+    }, [containerWidth, score.touchedAt, height, showMeasureButtons])
 
-    // Total SVG height
-    const totalHeight = useMemo(() => {
-        if (rowData.length === 0) return 0
-        return rowData.length * height + (rowData.length - 1) * ROW_GAP
-    }, [rowData.length, height])
+    const rows = scoreLayout?.rows ?? []
+    const totalHeight = scoreLayout?.totalHeight ?? 0
+    const rowGap = scoreLayout?.rowGap ?? 0
 
-    const rowYOffset = useCallback((ri: number) => ri * (height + ROW_GAP), [height])
+    const rowYOffset = useCallback((ri: number) => ri * (height + rowGap), [height, rowGap])
 
     // Determine which row a Y coordinate falls in
     const yToRow = useCallback(
         (svgY: number): { rowIndex: number; localY: number } | null => {
-            for (let ri = 0; ri < rowData.length; ri++) {
+            for (let ri = 0; ri < rows.length; ri++) {
                 const y0 = rowYOffset(ri)
                 if (svgY >= y0 && svgY < y0 + height) {
                     return { rowIndex: ri, localY: svgY - y0 }
@@ -99,14 +93,14 @@ export function Score({
             }
             return null
         },
-        [rowData.length, height, rowYOffset],
+        [rows.length, height, rowYOffset],
     )
 
     // Which row contains the cursor (find by noteId)
     const cursorRowInfo = useMemo(() => {
         if (!selectedNoteId) return null
-        for (let ri = 0; ri < rowData.length; ri++) {
-            const layout = rowData[ri].layout
+        for (let ri = 0; ri < rows.length; ri++) {
+            const layout = rows[ri]
             for (const measure of layout.measures) {
                 if (measure.notes.some((n) => n.noteId === selectedNoteId)) {
                     return { rowIndex: ri }
@@ -114,16 +108,16 @@ export function Score({
             }
         }
         return null
-    }, [selectedNoteId, rowData])
+    }, [selectedNoteId, rows])
 
     // Selected notes in the cursor's row
     const selectedNotes = useMemo(() => {
         if (!cursorRowInfo || !selectedNoteId) return null
-        const layout = rowData[cursorRowInfo.rowIndex].layout
+        const layout = rows[cursorRowInfo.rowIndex]
         const allNotes: LayoutNote[] = layout.measures.flatMap((m) => m.notes)
         const selected = allNotes.filter((n) => n.noteId === selectedNoteId)
         return selected.length > 0 ? selected : null
-    }, [cursorRowInfo, selectedNoteId, rowData])
+    }, [cursorRowInfo, selectedNoteId, rows])
 
     // Cursor indicator position (row-local coordinates)
     const cursorPos = useMemo(() => {
@@ -240,11 +234,11 @@ export function Score({
             const rowInfo = yToRow(pt.y)
             if (!rowInfo) return
 
-            const row = rowData[rowInfo.rowIndex]
+            const row = rows[rowInfo.rowIndex]
             if (!row) return
 
             // Find closest note in this row
-            const allNotes = row.layout.measures.flatMap((m) => m.notes)
+            const allNotes = row.measures.flatMap((m) => m.notes)
             const noteheadWidth = getGlyphWidth('noteheadBlack')
             let closestNote: LayoutNote | null = null
             let closestDist = Infinity
@@ -270,23 +264,22 @@ export function Score({
             const newKey = Pitch.fromLine(ghostInfo.line /* , selectedClef */)
             onNoteChange(selectedNoteId, newKey)
         },
-        [openPopover, clientToSvg, yToRow, rowData, selectedNoteId, onNoteSelect, ghostInfo, onNoteChange, selectedClef],
+        [openPopover, clientToSvg, yToRow, rows, selectedNoteId, onNoteSelect, ghostInfo, onNoteChange, selectedClef],
     )
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
-        if (rowData.length === 0) return null
-        const lastRow = rowData[rowData.length - 1]
-        if (!lastRow.hasMeasureButtons) return null
-        const lastBarline = lastRow.layout.barlines[lastRow.layout.barlines.length - 1]
+        if (rows.length === 0 || !showMeasureButtons) return null
+        const lastRow = rows[rows.length - 1]
+        const lastBarline = lastRow.barlines[lastRow.barlines.length - 1]
         const staffCenterY = lastBarline.y + lastBarline.height / 2
         const x = lastBarline.x + 10
         const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
         const topY = staffCenterY - btnTotalHeight / 2
         return { x, topY }
-    }, [rowData])
+    }, [rows, showMeasureButtons])
 
-    const lastRowIndex = rowData.length - 1
+    const lastRowIndex = rows.length - 1
     return (
         <div ref={containerRef} style={{ position: 'relative' }}>
             {containerWidth > 0 && totalHeight > 0 && (
@@ -299,23 +292,23 @@ export function Score({
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
-                    {rowData.map((row, ri) => (
+                    {rows.map((row, ri) => (
                         <g key={ri + crypto.randomUUID()} transform={`translate(0, ${rowYOffset(ri)})`}>
-                            <StaffLines lines={row.layout.staffLines} />
+                            <StaffLines lines={row.staffLines} />
 
-                            {row.layout.measures.map((measure, mi) => (
+                            {row.measures.map((measure, mi) => (
                                 <Measure key={mi} layout={measure} selectedNoteId={selectedNoteId} />
                             ))}
 
-                            {row.layout.barlines.map((barline, bi) => (
+                            {row.barlines.map((barline, bi) => (
                                 <Barline key={bi} layout={barline} />
                             ))}
 
-                            {row.layout.ties.map((tie, ti) => (
+                            {row.ties.map((tie, ti) => (
                                 <Tie key={ti} layout={tie} />
                             ))}
 
-                            {row.layout.tempoMarkings.map((tm, ti) => (
+                            {row.tempoMarkings.map((tm, ti) => (
                                 <TempoMarking
                                     key={ti}
                                     x={tm.x}

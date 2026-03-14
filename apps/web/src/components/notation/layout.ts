@@ -40,6 +40,7 @@ import type {
     LayoutTie,
     LayoutTimeSignature,
     LayoutTuplet,
+    ScoreLayout,
 } from './types'
 
 /** Clef glyph placement: which staff line the glyph anchors to */
@@ -97,7 +98,58 @@ function barlineWidth(type: BarlineType): number {
     }
 }
 
-export function computeLayout(score: Score, width: number = 600, height: number = 160, measureIndexOffset: number = 0): LayoutResult {
+export interface ScoreLayoutOptions {
+    maxMeasuresPerRow?: number
+    rowGap?: number
+    reserveLastRowWidth?: number
+}
+
+export function computeLayout(
+    score: Score,
+    containerWidth: number,
+    rowHeight: number = 160,
+    options?: ScoreLayoutOptions,
+): ScoreLayout {
+    const maxPerRow = options?.maxMeasuresPerRow ?? 4
+    const rowGap = options?.rowGap ?? 16
+    const reserveWidth = options?.reserveLastRowWidth ?? 0
+
+    if (score.measures.length === 0 || containerWidth <= 0) {
+        return { rows: [], totalHeight: 0, rowHeight, rowGap }
+    }
+
+    const rows: LayoutResult[] = []
+    let lastClef: string | undefined
+
+    for (let i = 0; i < score.measures.length; i += maxPerRow) {
+        const rowMeasures = score.measures.slice(i, i + maxPerRow)
+        const isLastRow = i + maxPerRow >= score.measures.length
+
+        const rowWidth = Math.round(containerWidth * (rowMeasures.length / maxPerRow))
+        const layoutWidth = isLastRow && reserveWidth > 0 ? rowWidth - reserveWidth : rowWidth
+
+        const inheritedClef = i > 0 && !rowMeasures[0].clef ? lastClef : undefined
+
+        const layout = computeRowLayout(rowMeasures, layoutWidth, rowHeight, i, inheritedClef)
+        rows.push(layout)
+
+        for (const m of rowMeasures) {
+            if (m.clef) lastClef = m.clef
+        }
+    }
+
+    const totalHeight = rows.length * rowHeight + Math.max(0, rows.length - 1) * rowGap
+
+    return { rows, totalHeight, rowHeight, rowGap }
+}
+
+function computeRowLayout(
+    measures: Measure[],
+    width: number = 600,
+    height: number = 160,
+    measureIndexOffset: number = 0,
+    inheritedClef?: string,
+): LayoutResult {
     const staveY = 0
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
 
@@ -115,11 +167,13 @@ export function computeLayout(score: Score, width: number = 600, height: number 
     const measureOverheads: number[] = []
     const measureBeats: number[] = []
 
-    for (const measure of score.measures) {
+    for (let mi = 0; mi < measures.length; mi++) {
+        const measure = measures[mi]
         let overhead = STAVE_LEFT_PADDING
 
-        if (measure.clef) {
-            const config = CLEF_CONFIG[measure.clef]
+        const effectiveClef = mi === 0 && inheritedClef && !measure.clef ? inheritedClef : measure.clef
+        if (effectiveClef) {
+            const config = CLEF_CONFIG[effectiveClef]
             if (config) {
                 overhead += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
             }
@@ -144,7 +198,7 @@ export function computeLayout(score: Score, width: number = 600, height: number 
     }
 
     // 3. Compute barline widths
-    const barlineTypes: BarlineType[] = score.measures.map((m) => m.endBarline ?? 'single')
+    const barlineTypes: BarlineType[] = measures.map((m) => m.endBarline ?? 'single')
     const openingBarlineW = BARLINE_THIN_WIDTH
     const barlineWidths = barlineTypes.map(barlineWidth)
 
@@ -157,7 +211,7 @@ export function computeLayout(score: Score, width: number = 600, height: number 
     // 5. Layout each measure
     let cursorX = 0
     let noteEventCounter = 0
-    const measures: LayoutMeasure[] = []
+    const layoutMeasures: LayoutMeasure[] = []
     const barlines: LayoutBarline[] = []
 
     // Opening barline
@@ -169,15 +223,16 @@ export function computeLayout(score: Score, width: number = 600, height: number 
     })
     cursorX += openingBarlineW
 
-    for (let mi = 0; mi < score.measures.length; mi++) {
-        const measureInput = score.measures[mi]
+    for (let mi = 0; mi < measures.length; mi++) {
+        const measureInput = measures[mi]
         const noteWidth = (measureBeats[mi] / totalBeats) * availableNoteWidth
         const measureWidth = measureOverheads[mi] + noteWidth
         const measureX = cursorX
 
-        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter, measureIndexOffset + mi)
+        const clefOverride = mi === 0 && inheritedClef && !measureInput.clef ? inheritedClef : undefined
+        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter, measureIndexOffset + mi, clefOverride)
         noteEventCounter = measureLayout.nextNoteEventIndex
-        measures.push(measureLayout)
+        layoutMeasures.push(measureLayout)
 
         cursorX += measureWidth
 
@@ -191,10 +246,10 @@ export function computeLayout(score: Score, width: number = 600, height: number 
         cursorX += barlineWidths[mi]
     }
 
-    const ties = computeTies(score, measures)
-    const tempoMarkings = computeTempoMarkings(score, measures, measureIndexOffset)
+    const ties = computeTies(measures, layoutMeasures)
+    const tempoMarkings = computeTempoMarkings(measures, layoutMeasures, measureIndexOffset)
 
-    return { width, height, staffLines, measures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
+    return { width, height, staffLines, measures: layoutMeasures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
 }
 
 /**
@@ -232,12 +287,14 @@ function computeMeasureLayout(
     staveY: number,
     noteEventIndex: number,
     globalMeasureIndex: number,
+    clefOverride?: string,
 ): LayoutMeasure & { nextNoteEventIndex: number } {
     // 1. Clef
     let cursorX = measureX + STAVE_LEFT_PADDING
     let clef: LayoutGlyph | undefined
-    if (measure.clef) {
-        const config = CLEF_CONFIG[measure.clef]
+    const effectiveClef = clefOverride ?? measure.clef
+    if (effectiveClef) {
+        const config = CLEF_CONFIG[effectiveClef]
         if (config) {
             clef = { glyphName: config.glyphName, x: cursorX, y: getYForLine(config.lineIndex, staveY) }
             cursorX += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
@@ -807,13 +864,13 @@ const TIE_Y_SHIFT = 7
  * Compute tie curves for notes with `tie: true`.
  * Each tie connects a note to the next note event.
  */
-function computeTies(score: Score, measures: LayoutMeasure[]): LayoutTie[] {
+function computeTies(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[]): LayoutTie[] {
     const ties: LayoutTie[] = []
     const noteheadWidth = getGlyphWidth('noteheadBlack')
 
     // Build a map of noteEventIndex → first LayoutNote for that event
     const noteMap = new Map<number, LayoutNote>()
-    for (const measure of measures) {
+    for (const measure of layoutMeasures) {
         for (const note of measure.notes) {
             if (!noteMap.has(note.noteEventIndex)) {
                 noteMap.set(note.noteEventIndex, note)
@@ -823,7 +880,7 @@ function computeTies(score: Score, measures: LayoutMeasure[]): LayoutTie[] {
 
     // Scan score for tied notes
     let noteEventIdx = 0
-    for (const measure of score.measures) {
+    for (const measure of inputMeasures) {
         for (const note of measure.notes) {
             if (note.tie) {
                 const startNote = noteMap.get(noteEventIdx)
@@ -854,12 +911,12 @@ function computeTies(score: Score, measures: LayoutMeasure[]): LayoutTie[] {
  * Compute tempo marking positions for notes with `tempo` set.
  * Follows the same scan pattern as `computeTies`.
  */
-function computeTempoMarkings(score: Score, measures: LayoutMeasure[], measureIndexOffset: number): LayoutTempoMarking[] {
+function computeTempoMarkings(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[], measureIndexOffset: number): LayoutTempoMarking[] {
     const markings: LayoutTempoMarking[] = []
 
     // Build a map of noteEventIndex → LayoutNote.x
     const noteXMap = new Map<number, number>()
-    for (const measure of measures) {
+    for (const measure of layoutMeasures) {
         for (const note of measure.notes) {
             if (!noteXMap.has(note.noteEventIndex)) {
                 noteXMap.set(note.noteEventIndex, note.x)
@@ -868,8 +925,8 @@ function computeTempoMarkings(score: Score, measures: LayoutMeasure[], measureIn
     }
 
     let noteEventIdx = 0
-    for (let mi = 0; mi < score.measures.length; mi++) {
-        const measure = score.measures[mi]
+    for (let mi = 0; mi < inputMeasures.length; mi++) {
+        const measure = inputMeasures[mi]
         for (let ni = 0; ni < measure.notes.length; ni++) {
             const note = measure.notes[ni]
             if (note.tempo !== undefined) {

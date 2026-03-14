@@ -139,3 +139,10 @@ export interface LayoutResult {
   /** Total number of note events (for cursor bounds) */
   totalNoteEvents: number;
 }
+
+export interface ScoreLayout {
+  rows: LayoutResult[];
+  totalHeight: number;
+  rowHeight: number;
+  rowGap: number;
+}

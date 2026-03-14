@@ -59,6 +59,6 @@ const initialScoreData: ScoreInput = {
 
 export function useScore() {
     const [, setUpdatedAt] = useState(Date.now())
-    const scoreRef = useRef(Score.fromInput(initialScoreData, () => setUpdatedAt(Date.now())))
+    const scoreRef = useRef(Score.fromInput(initialScoreData, () => setUpdatedAt(scoreRef.current.touchedAt)))
     return scoreRef.current
 }
