@@ -1,6 +1,5 @@
 import { sum, sumBy } from 'lodash-es'
 
-import type { BeamGroup } from '@/model'
 import { Measure, Note, Score } from '@/model'
 
 import {
@@ -308,10 +307,8 @@ function computeMeasureLayout(
     const availableWidth = notesEndX - notesStartX
 
     const beatPositions = new Set<number>()
-    let beat = 0
     for (const note of measure.notes) {
-        beatPositions.add(beat)
-        beat += note.duration.effectiveBeats
+        beatPositions.add(measure.beatOffsetOf(note))
     }
     const sortedBeats = Array.from(beatPositions).sort((a, b) => a - b)
     const numPositions = sortedBeats.length
@@ -321,24 +318,15 @@ function computeMeasureLayout(
         beatToX.set(sortedBeats[i], x)
     }
 
-    // 4. Beam groups and stem directions (pre-computed by the model)
-    const beamGroups = measure.beamGroups
-    const beamGroupByNote = new Map<Note, BeamGroup>()
-    for (const group of beamGroups) {
-        for (const note of group.notes) {
-            beamGroupByNote.set(note, group)
-        }
-    }
-
-    // 5. Layout notes (first pass — default stems, flags)
+    // 4. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
     const allNoteLayouts: NoteLayout[] = []
-    beat = 0
 
     for (const note of measure.notes) {
+        const beat = measure.beatOffsetOf(note)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const x = beatToX.get(beat)!
-        const tupletGroup = measure.tuplets.find((s) => s.has(note))
+        const tupletGroup = measure.tupletGroupOf(note)
 
         if (note.isRest) {
             // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
@@ -362,7 +350,7 @@ function computeMeasureLayout(
             const noteY = getYForNote(noteLine, staveY)
             const glyphName = note.duration.noteheadGlyph
             // Use beam group stem direction if available, otherwise fall back to per-note logic
-            const dir: 'up' | 'down' = beamGroupByNote.get(note)?.stemDir ?? (noteLine >= 3 ? 'down' : 'up')
+            const dir: 'up' | 'down' = measure.beamGroupOf(note)?.stemDir ?? (noteLine >= 3 ? 'down' : 'up')
 
             // Accidental
             let accidentalLayout: LayoutGlyph | undefined
@@ -428,7 +416,6 @@ function computeMeasureLayout(
         }
 
         noteEventIndex++
-        beat += note.duration.effectiveBeats
     }
 
     // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
@@ -437,7 +424,7 @@ function computeMeasureLayout(
         noteLayoutByNote.set(nl.input, nl)
     }
     const beams: LayoutBeamSegment[][] = []
-    for (const group of beamGroups) {
+    for (const group of measure.beamGroups) {
         const groupLayouts: NoteLayout[] = []
         for (const note of group.notes) {
             const nl = noteLayoutByNote.get(note)

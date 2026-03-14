@@ -19,6 +19,9 @@ export class Measure {
     private _endBarline?: BarlineType // default: 'single'
     private _tuplets: Array<Set<Note>> = []
     private _beamGroups: BeamGroup[] = []
+    private _beatOffsets = new Map<Note, number>()
+    private _tupletByNote = new Map<Note, Set<Note>>()
+    private _beamGroupByNote = new Map<Note, BeamGroup>()
 
     constructor(
         readonly score: Score,
@@ -40,6 +43,20 @@ export class Measure {
 
     get beamGroups() {
         return this._beamGroups
+    }
+
+    beatOffsetOf(note: Note): number {
+        const offset = this._beatOffsets.get(note)
+        if (offset === undefined) throw new Error('Note does not belong to this measure')
+        return offset
+    }
+
+    tupletGroupOf(note: Note): Set<Note> | undefined {
+        return this._tupletByNote.get(note)
+    }
+
+    beamGroupOf(note: Note): BeamGroup | undefined {
+        return this._beamGroupByNote.get(note)
     }
 
     get notes() {
@@ -117,16 +134,14 @@ export class Measure {
     removeNotes(notes: Note[]) {
         this._notes = difference(this._notes, notes)
         notes.forEach((n) => n.setMeasure(undefined))
-        this.findTuplets()
-        this.findBeamGroups()
+        this.recompute()
         return this
     }
 
     addNotes(notes: Note[], position: 'start' | 'end' = 'end') {
         this._notes = position === 'end' ? [...this._notes, ...notes] : [...notes, ...this._notes]
         notes.forEach((n) => n.setMeasure(this))
-        this.findTuplets()
-        this.findBeamGroups()
+        this.recompute()
         return this
     }
 
@@ -140,8 +155,7 @@ export class Measure {
         this._notes = [...diff.slice(0, startIndex), ...values, ...diff.slice(startIndex)]
         targets.forEach((n) => n.setMeasure(undefined))
         values.forEach((n) => n.setMeasure(this))
-        this.findTuplets()
-        this.findBeamGroups()
+        this.recompute()
         return this
     }
 
@@ -151,8 +165,24 @@ export class Measure {
         return this
     }
 
+    private recompute() {
+        this.findBeatOffsets()
+        this.findTuplets()
+        this.findBeamGroups()
+    }
+
+    private findBeatOffsets() {
+        this._beatOffsets = new Map()
+        let beat = 0
+        for (const note of this._notes) {
+            this._beatOffsets.set(note, beat)
+            beat += note.duration.effectiveBeats
+        }
+    }
+
     private findTuplets() {
         this._tuplets = []
+        this._tupletByNote = new Map()
         let currentSet = new Set<Note>()
         let currentRatio: { numerator: number; denominator: number } | null = null
         let totalDuration = 0
@@ -197,6 +227,13 @@ export class Measure {
         if (currentSet.size > 0) {
             this._tuplets.push(currentSet)
         }
+
+        // Build reverse lookup
+        for (const set of this._tuplets) {
+            for (const note of set) {
+                this._tupletByNote.set(note, set)
+            }
+        }
     }
 
     /**
@@ -206,6 +243,7 @@ export class Measure {
      */
     private findBeamGroups() {
         this._beamGroups = []
+        this._beamGroupByNote = new Map()
         let currentNotes: Note[] = []
         let beat = 0
 
@@ -213,7 +251,11 @@ export class Measure {
             if (currentNotes.length >= 2) {
                 const avgLine = currentNotes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / currentNotes.length
                 const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-                this._beamGroups.push({ notes: new Set(currentNotes), stemDir })
+                const group: BeamGroup = { notes: new Set(currentNotes), stemDir }
+                this._beamGroups.push(group)
+                for (const n of currentNotes) {
+                    this._beamGroupByNote.set(n, group)
+                }
             }
             currentNotes = []
         }
@@ -227,8 +269,8 @@ export class Measure {
 
             if (currentNotes.length > 0) {
                 const prevNote = currentNotes[currentNotes.length - 1]
-                const sameTuplet = prevNote.inTuplet && note.inTuplet &&
-                    this._tuplets.some((s) => s.has(prevNote) && s.has(note))
+                const prevTuplet = this._tupletByNote.get(prevNote)
+                const sameTuplet = prevTuplet !== undefined && prevTuplet === this._tupletByNote.get(note)
 
                 if (!sameTuplet) {
                     const eitherInTuplet = prevNote.inTuplet || note.inTuplet
