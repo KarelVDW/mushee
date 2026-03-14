@@ -54,14 +54,13 @@ interface NoteLayout {
     input: Note
     stemDir: 'up' | 'down'
     beat: number
-    noteIndex: number // index in voice.notes
     tupletIndex: number | undefined // index within this measure's tuplet groups
     isRest: boolean
 }
 
 /** Compute tuplet group indices for a list of notes. Consecutive notes with the same non-trivial ratio share an index. */
-function computeTupletIndices(notes: Note[]): Map<number, number> {
-    const indices = new Map<number, number>()
+function computeTupletIndices(notes: Note[]): Map<string, number> {
+    const indices = new Map<string, number>()
     let tupletIdx = 0
     let i = 0
     while (i < notes.length) {
@@ -73,7 +72,7 @@ function computeTupletIndices(notes: Note[]): Map<number, number> {
                 notes[i].duration.ratio.numerator === numerator &&
                 notes[i].duration.ratio.denominator === denominator
             ) {
-                indices.set(i, tupletIdx)
+                indices.set(notes[i].id, tupletIdx)
                 i++
             }
             tupletIdx++
@@ -247,7 +246,7 @@ function computeRowLayout(
     }
 
     const ties = computeTies(measures, layoutMeasures)
-    const tempoMarkings = computeTempoMarkings(measures, layoutMeasures, measureIndexOffset)
+    const tempoMarkings = computeTempoMarkings(measures, layoutMeasures)
 
     return { width, height, staffLines, measures: layoutMeasures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
 }
@@ -334,8 +333,7 @@ function computeMeasureLayout(
 
     const beatPositions = new Set<number>()
     let beat = 0
-    for (let ni = 0; ni < measure.notes.length; ni++) {
-        const note = measure.notes[ni]
+    for (const note of measure.notes) {
         beatPositions.add(beat)
         beat += note.duration.effectiveBeats
     }
@@ -348,13 +346,13 @@ function computeMeasureLayout(
     }
 
     // 4. Pre-compute beam group stem directions (so beamable notes get a uniform direction)
-    const beamStemDirs = new Map<string, 'up' | 'down'>() // key: "voiceIdx:noteIdx"
+    const beamStemDirs = new Map<string, 'up' | 'down'>() // key: note.id
     const groups = identifyPotentialBeamGroups(measure.notes, measure.clef)
     for (const group of groups) {
-        const avgLine = group.noteLines.reduce((a, b) => a + b, 0) / group.noteLines.length
+        const avgLine = group.notes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / group.notes.length
         const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-        for (const ni of group.noteIndices) {
-            beamStemDirs.set(measure.notes[ni].id, groupDir)
+        for (const note of group.notes) {
+            beamStemDirs.set(note.id, groupDir)
         }
     }
 
@@ -365,8 +363,7 @@ function computeMeasureLayout(
 
     beat = 0
 
-    for (let ni = 0; ni < measure.notes.length; ni++) {
-        const note = measure.notes[ni]
+    for (const note of measure.notes) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const x = beatToX.get(beat)!
 
@@ -382,8 +379,7 @@ function computeMeasureLayout(
                 input: note,
                 stemDir: 'up',
                 beat,
-                noteIndex: ni,
-                tupletIndex: tupletIndices.get(ni),
+                tupletIndex: tupletIndices.get(note.id),
                 isRest: true,
             })
         } else {
@@ -454,8 +450,7 @@ function computeMeasureLayout(
                 input: note,
                 stemDir: dir,
                 beat,
-                noteIndex: ni,
-                tupletIndex: tupletIndices.get(ni),
+                tupletIndex: tupletIndices.get(note.id),
                 isRest: false,
             })
         }
@@ -491,8 +486,7 @@ function computeMeasureLayout(
 }
 
 interface PotentialBeamGroup {
-    noteIndices: number[]
-    noteLines: number[]
+    notes: Note[]
 }
 
 /**
@@ -502,67 +496,59 @@ interface PotentialBeamGroup {
  */
 function identifyPotentialBeamGroups(notes: Note[], _clef: string | undefined): PotentialBeamGroup[] {
     const groups: PotentialBeamGroup[] = []
-    let currentIndices: number[] = []
-    let currentLines: number[] = []
+    let currentNotes: Note[] = []
     let beat = 0
 
     const tupletIdxMap = computeTupletIndices(notes)
 
-    for (let ni = 0; ni < notes.length; ni++) {
-        const note = notes[ni]
-
+    for (const note of notes) {
         if (!note.duration.isBeamable || note.isRest) {
-            if (currentIndices.length >= 2) {
-                groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+            if (currentNotes.length >= 2) {
+                groups.push({ notes: currentNotes })
             }
-            currentIndices = []
-            currentLines = []
+            currentNotes = []
             beat += note.duration.effectiveBeats
 
             continue
         }
 
         // Check beat boundary (same logic as computeBeamGroups, minus stem direction check)
-        if (currentIndices.length > 0) {
-            const prevNi = currentIndices[currentIndices.length - 1]
-            const prevTupletIdx = tupletIdxMap.get(prevNi)
-            const curTupletIdx = tupletIdxMap.get(ni)
+        if (currentNotes.length > 0) {
+            const prevNote = currentNotes[currentNotes.length - 1]
+            const prevTupletIdx = tupletIdxMap.get(prevNote.id)
+            const curTupletIdx = tupletIdxMap.get(note.id)
             const sameTuplet = prevTupletIdx !== undefined && prevTupletIdx === curTupletIdx
 
             if (!sameTuplet) {
                 const eitherInTuplet = prevTupletIdx !== undefined || curTupletIdx !== undefined
                 if (eitherInTuplet) {
                     // Tuplet boundary: always break
-                    if (currentIndices.length >= 2) {
-                        groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+                    if (currentNotes.length >= 2) {
+                        groups.push({ notes: currentNotes })
                     }
-                    currentIndices = []
-                    currentLines = []
+                    currentNotes = []
                 } else {
-                    const prevNote = notes[prevNi]
                     const prevBeat = beat - prevNote.duration.effectiveBeats
                     const prevBeatBoundary = Math.floor(prevBeat)
                     const nextBeatBoundary = Math.floor(beat)
 
                     if (nextBeatBoundary > prevBeatBoundary) {
-                        if (currentIndices.length >= 2) {
-                            groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+                        if (currentNotes.length >= 2) {
+                            groups.push({ notes: currentNotes })
                         }
-                        currentIndices = []
-                        currentLines = []
+                        currentNotes = []
                     }
                 }
             }
         }
 
-        currentIndices.push(ni)
-        currentLines.push(note.pitch?.line ?? 0)
+        currentNotes.push(note)
 
         beat += note.duration.effectiveBeats
     }
 
-    if (currentIndices.length >= 2) {
-        groups.push({ noteIndices: currentIndices, noteLines: currentLines })
+    if (currentNotes.length >= 2) {
+        groups.push({ notes: currentNotes })
     }
 
     return groups
@@ -626,31 +612,21 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
 /**
  * Compute tuplet bracket layouts for all voices in a measure.
  */
-function computeTupletLayouts(measure: Measure, allNoteLayouts: NoteLayout[], noteheadWidth: number): LayoutTuplet[] {
+function computeTupletLayouts(_measure: Measure, allNoteLayouts: NoteLayout[], noteheadWidth: number): LayoutTuplet[] {
     const layouts: LayoutTuplet[] = []
 
-    // Identify tuplet groups from consecutive notes with the same ratio
-    const tupletGroups: { denominator: number; numerator: number }[] = []
-    let i = 0
-    while (i < measure.notes.length) {
-        const note = measure.notes[i]
-        if (note.inTuplet) {
-            const { numerator, denominator } = note.duration.ratio
-            while (
-                i < measure.notes.length &&
-                measure.notes[i].duration.ratio.numerator === numerator &&
-                measure.notes[i].duration.ratio.denominator === denominator
-            ) {
-                i++
-            }
-            tupletGroups.push({ denominator, numerator })
-        } else {
-            i++
+    // Collect unique tuplet groups from the note layouts (already computed via computeTupletIndices)
+    const tupletGroups = new Map<number, { numerator: number; denominator: number }>()
+    for (const nl of allNoteLayouts) {
+        if (nl.tupletIndex !== undefined && !tupletGroups.has(nl.tupletIndex)) {
+            tupletGroups.set(nl.tupletIndex, {
+                numerator: nl.input.duration.ratio.numerator,
+                denominator: nl.input.duration.ratio.denominator,
+            })
         }
     }
 
-    for (let ti = 0; ti < tupletGroups.length; ti++) {
-        const group = tupletGroups[ti]
+    for (const [ti, group] of tupletGroups) {
         const numNotes = group.denominator
         const notesOccupied = group.numerator
 
@@ -868,23 +844,21 @@ function computeTies(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[]):
     const ties: LayoutTie[] = []
     const noteheadWidth = getGlyphWidth('noteheadBlack')
 
-    // Build a map of noteEventIndex → first LayoutNote for that event
-    const noteMap = new Map<number, LayoutNote>()
+    // Build a map of noteId → LayoutNote
+    const noteLayoutMap = new Map<string, LayoutNote>()
     for (const measure of layoutMeasures) {
         for (const note of measure.notes) {
-            if (!noteMap.has(note.noteEventIndex)) {
-                noteMap.set(note.noteEventIndex, note)
-            }
+            noteLayoutMap.set(note.noteId, note)
         }
     }
 
     // Scan score for tied notes
-    let noteEventIdx = 0
     for (const measure of inputMeasures) {
         for (const note of measure.notes) {
             if (note.tie) {
-                const startNote = noteMap.get(noteEventIdx)
-                const endNote = noteMap.get(noteEventIdx + 1)
+                const startNote = noteLayoutMap.get(note.id)
+                const nextNote = note.getNext()
+                const endNote = nextNote ? noteLayoutMap.get(nextNote.id) : undefined
                 if (startNote && endNote) {
                     // Direction: opposite of stem. Stem up → tie below (1), stem down → tie above (-1)
                     const stemUp = startNote.stem ? startNote.stem.y2 < startNote.stem.y1 : true
@@ -900,7 +874,6 @@ function computeTies(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[]):
                     })
                 }
             }
-            noteEventIdx++
         }
     }
 
@@ -909,39 +882,32 @@ function computeTies(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[]):
 
 /**
  * Compute tempo marking positions for notes with `tempo` set.
- * Follows the same scan pattern as `computeTies`.
  */
-function computeTempoMarkings(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[], measureIndexOffset: number): LayoutTempoMarking[] {
+function computeTempoMarkings(inputMeasures: Measure[], layoutMeasures: LayoutMeasure[]): LayoutTempoMarking[] {
     const markings: LayoutTempoMarking[] = []
 
-    // Build a map of noteEventIndex → LayoutNote.x
-    const noteXMap = new Map<number, number>()
+    // Build a map of noteId → LayoutNote
+    const noteLayoutMap = new Map<string, LayoutNote>()
     for (const measure of layoutMeasures) {
         for (const note of measure.notes) {
-            if (!noteXMap.has(note.noteEventIndex)) {
-                noteXMap.set(note.noteEventIndex, note.x)
-            }
+            noteLayoutMap.set(note.noteId, note)
         }
     }
 
-    let noteEventIdx = 0
-    for (let mi = 0; mi < inputMeasures.length; mi++) {
-        const measure = inputMeasures[mi]
-        for (let ni = 0; ni < measure.notes.length; ni++) {
-            const note = measure.notes[ni]
+    for (const measure of inputMeasures) {
+        for (const note of measure.notes) {
             if (note.tempo !== undefined) {
-                const x = noteXMap.get(noteEventIdx)
-                if (x !== undefined) {
+                const layoutNote = noteLayoutMap.get(note.id)
+                if (layoutNote) {
                     markings.push({
-                        noteEventIndex: noteEventIdx,
-                        noteId: `m${measureIndexOffset + mi}:v0:n${ni}`,
-                        x,
+                        noteEventIndex: layoutNote.noteEventIndex,
+                        noteId: note.id,
+                        x: layoutNote.x,
                         y: TEMPO_MARKING_Y,
                         bpm: note.tempo,
                     })
                 }
             }
-            noteEventIdx++
         }
     }
 
