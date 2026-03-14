@@ -31,6 +31,16 @@ export function yToLine(y: number): number {
 }
 
 /**
+ * Convert an X pixel coordinate to a continuous beat value within a measure.
+ * Simple linear mapping: position within measure → beat within total beats.
+ * Inverse of the beat→x mapping produced during layout.
+ */
+export function xToBeat(x: number, measureX: number, measureWidth: number, totalBeats: number): number {
+    const t = Math.max(0, Math.min(1, (x - measureX) / measureWidth))
+    return t * totalBeats
+}
+
+/**
  * Determine which ledger lines are needed for a note at a given line.
  * Returns an array of staff-line Y values where ledger lines should be drawn.
  * Line 0 = top staff line, line 4 = bottom staff line.

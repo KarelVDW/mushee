@@ -14,9 +14,7 @@ export default function Sheet() {
     const containerRef = useRef<HTMLDivElement>(null)
 
     const handleNoteChange = useCallback(
-        (noteId: string, newPitch: Pitch) => {
-            const note = score.noteById(noteId)
-            if (!note) return
+        (note: Note, newPitch: Pitch) => {
             const newNote = note.clone({ pitch: newPitch })
             score.replace([note], [newNote])
             setActiveNote(newNote)
@@ -95,10 +93,7 @@ export default function Sheet() {
     )
 
     const handleNoteSelect = useCallback(
-        (noteId: string) => {
-            const note = score.noteById(noteId)
-            if (note) setActiveNote(note)
-        },
+        (note: Note) => setActiveNote(note),
         [score],
     )
 

@@ -306,17 +306,8 @@ function computeMeasureLayout(
     const notesEndX = measureX + measureWidth - STAVE_RIGHT_PADDING
     const availableWidth = notesEndX - notesStartX
 
-    const beatPositions = new Set<number>()
-    for (const note of measure.notes) {
-        beatPositions.add(measure.beatOffsetOf(note))
-    }
-    const sortedBeats = Array.from(beatPositions).sort((a, b) => a - b)
-    const numPositions = sortedBeats.length
-    const beatToX = new Map<number, number>()
-    for (let i = 0; i < numPositions; i++) {
-        const x = notesStartX + (i / Math.max(numPositions - 1, 1)) * availableWidth * 0.85 + availableWidth * 0.05
-        beatToX.set(sortedBeats[i], x)
-    }
+    const totalBeats = Math.max(measure.beats, 1)
+    const beatToX = (beat: number) => notesStartX + (beat / totalBeats) * availableWidth
 
     // 4. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
@@ -324,8 +315,7 @@ function computeMeasureLayout(
 
     for (const note of measure.notes) {
         const beat = measure.beatOffsetOf(note)
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const x = beatToX.get(beat)!
+        const x = beatToX(beat)
         const tupletGroup = measure.tupletGroupOf(note)
 
         if (note.isRest) {
@@ -437,6 +427,7 @@ function computeMeasureLayout(
     const tuplets = computeTupletLayouts(measure, allNoteLayouts, noteheadWidth)
 
     return {
+        measure: measure,
         x: measureX,
         width: measureWidth,
         clef,

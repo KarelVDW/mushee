@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Pitch, Score as ScoreModel } from '@/model'
+import { Note, Pitch, Score as ScoreModel } from '@/model'
 
 import { Barline } from './Barline'
 import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
@@ -11,7 +11,7 @@ import { GhostNote } from './GhostNote'
 import { getGlyphWidth } from './glyph-utils'
 import { computeLayout } from './layout'
 import { Measure } from './Measure'
-import { yToLine } from './note-utils'
+import { xToBeat, yToLine } from './note-utils'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
 import { TempoPopover } from './TempoPopover'
@@ -30,8 +30,8 @@ interface ScoreProps {
     score: ScoreModel
     height?: number
     selectedNoteId?: string
-    onNoteSelect?: (noteId: string) => void
-    onNoteChange?: (noteId: string, newPitch: Pitch) => void
+    onNoteSelect?: (note: Note) => void
+    onNoteChange?: (note: Note, newPitch: Pitch) => void
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
@@ -52,7 +52,7 @@ export function Score({
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
-    const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; y: number } | null>(null)
+    const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; x: number; y: number } | null>(null)
     const [openPopover, setOpenPopover] = useState<{ noteId: string; bpm: number; x: number; y: number } | null>(null)
 
     useEffect(() => {
@@ -147,10 +147,32 @@ export function Score({
         return lastClef
     }, [cursorRowInfo])
 
-    // Ghost note info (row-local coordinates)
+    // Hovered note: X → measure → beat → noteAtBeat
+    const hoveredNoteId = useMemo(() => {
+        if (!hoverInfo) return null
+        const row = rows[hoverInfo.rowIndex]
+        if (!row) return null
+
+        // Find which layout measure contains the hover X
+        const layoutMeasure = row.measures.find(
+            (m) => hoverInfo.x >= m.x && hoverInfo.x < m.x + m.width,
+        )
+        if (!layoutMeasure || layoutMeasure.notes.length === 0) return null
+
+        // Use actual note X range (excludes clef/time sig overhead)
+        const firstNoteX = layoutMeasure.notes[0].x
+        const lastNoteX = layoutMeasure.notes[layoutMeasure.notes.length - 1].x
+        const noteheadWidth = getGlyphWidth('noteheadBlack')
+        const beat = xToBeat(hoverInfo.x, firstNoteX, lastNoteX - firstNoteX + noteheadWidth, layoutMeasure.measure.beats)
+        const note = layoutMeasure.measure.noteAtBeat(beat)
+        return note?.id ?? null
+    }, [hoverInfo, rows])
+
+    // Ghost note info (row-local coordinates) — only when hovering the active note
     const ghostInfo = useMemo(() => {
         if (!hoverInfo || !selectedNotes || !cursorRowInfo) return null
         if (hoverInfo.rowIndex !== cursorRowInfo.rowIndex) return null
+        if (hoveredNoteId !== selectedNoteId) return null
         const isRest = selectedNotes[0].glyphName.startsWith('rest')
         const hoverLine = yToLine(hoverInfo.y)
         if (!isRest) {
@@ -159,7 +181,7 @@ export function Score({
         }
         const glyphName = isRest ? 'noteheadBlack' : selectedNotes[0].glyphName
         return { line: hoverLine, x: selectedNotes[0].x, glyphName, rowIndex: cursorRowInfo.rowIndex }
-    }, [hoverInfo, selectedNotes, cursorRowInfo, selectedClef])
+    }, [hoverInfo, selectedNotes, cursorRowInfo, selectedClef, hoveredNoteId, selectedNoteId])
 
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(
@@ -214,7 +236,7 @@ export function Score({
                 setHoverInfo(null)
                 return
             }
-            setHoverInfo({ rowIndex: rowInfo.rowIndex, y: rowInfo.localY })
+            setHoverInfo({ rowIndex: rowInfo.rowIndex, x: pt.x, y: rowInfo.localY })
         },
         [clientToSvg, yToRow],
     )
@@ -237,32 +259,29 @@ export function Score({
             const row = rows[rowInfo.rowIndex]
             if (!row) return
 
-            // Find closest note in this row
-            const allNotes = row.measures.flatMap((m) => m.notes)
-            const noteheadWidth = getGlyphWidth('noteheadBlack')
-            let closestNote: LayoutNote | null = null
-            let closestDist = Infinity
-            for (const note of allNotes) {
-                const dist = Math.abs(pt.x - (note.x + noteheadWidth / 2))
-                if (dist < closestDist) {
-                    closestDist = dist
-                    closestNote = note
-                }
-            }
+            // Find clicked note via beat mapping
+            const layoutMeasure = row.measures.find(
+                (m) => pt.x >= m.x && pt.x < m.x + m.width,
+            )
+            if (!layoutMeasure || layoutMeasure.notes.length === 0) return
 
-            // Select note if clicked near one
-            if (closestNote && closestDist < 20) {
-                if (closestNote.noteId !== selectedNoteId) {
-                    // onNoteSelect?.(closestNote)
-                    return
-                }
+            const firstNoteX = layoutMeasure.notes[0].x
+            const lastNoteX = layoutMeasure.notes[layoutMeasure.notes.length - 1].x
+            const noteheadWidth = getGlyphWidth('noteheadBlack')
+            const beat = xToBeat(pt.x, firstNoteX, lastNoteX - firstNoteX + noteheadWidth, layoutMeasure.measure.beats)
+            const clickedNote = layoutMeasure.measure.noteAtBeat(beat)
+            if (!clickedNote) return
+
+            if (clickedNote.id !== selectedNoteId) {
+                onNoteSelect?.(clickedNote)
+                return
             }
 
             // Ghost note pitch change
-            if (!ghostInfo || !selectedNoteId || !onNoteChange) return
+            if (!ghostInfo || !onNoteChange) return
             if (ghostInfo.rowIndex !== rowInfo.rowIndex) return
             const newKey = Pitch.fromLine(ghostInfo.line /* , selectedClef */)
-            onNoteChange(selectedNoteId, newKey)
+            onNoteChange(clickedNote, newKey)
         },
         [openPopover, clientToSvg, yToRow, rows, selectedNoteId, onNoteSelect, ghostInfo, onNoteChange, selectedClef],
     )
@@ -297,7 +316,7 @@ export function Score({
                             <StaffLines lines={row.staffLines} />
 
                             {row.measures.map((measure, mi) => (
-                                <Measure key={mi} layout={measure} selectedNoteId={selectedNoteId} />
+                                <Measure key={mi} layout={measure} selectedNoteId={selectedNoteId} hoveredNoteId={hoveredNoteId} />
                             ))}
 
                             {row.barlines.map((barline, bi) => (

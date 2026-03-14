@@ -59,6 +59,16 @@ export class Measure {
         return this._beamGroupByNote.get(note)
     }
 
+    /** Find the note whose beat range contains the given (continuous) beat value. */
+    noteAtBeat(beat: number): Note | null {
+        for (let i = this._notes.length - 1; i >= 0; i--) {
+            const note = this._notes[i]
+            const offset = this._beatOffsets.get(note)
+            if (offset !== undefined && offset <= beat) return note
+        }
+        return null
+    }
+
     get notes() {
         return this._notes
     }

@@ -1,5 +1,7 @@
 // --- Input types (declarative score description) ---
 
+import { Measure } from "@/model";
+
 export type Clef = 'treble' | 'bass';
 export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
@@ -98,6 +100,7 @@ export interface LayoutTuplet {
 }
 
 export interface LayoutMeasure {
+  measure: Measure;
   x: number;
   width: number;
   clef?: LayoutGlyph;
