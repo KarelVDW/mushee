@@ -1,5 +1,6 @@
 import { sum, sumBy } from 'lodash-es'
 
+import type { BeamGroup } from '@/model'
 import { Measure, Note, Score } from '@/model'
 
 import {
@@ -320,14 +321,12 @@ function computeMeasureLayout(
         beatToX.set(sortedBeats[i], x)
     }
 
-    // 4. Pre-compute beam group stem directions (so beamable notes get a uniform direction)
-    const beamStemDirs = new Map<string, 'up' | 'down'>() // key: note.id
-    const groups = identifyPotentialBeamGroups(measure)
-    for (const group of groups) {
-        const avgLine = group.notes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / group.notes.length
-        const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
+    // 4. Beam groups and stem directions (pre-computed by the model)
+    const beamGroups = measure.beamGroups
+    const beamGroupByNote = new Map<Note, BeamGroup>()
+    for (const group of beamGroups) {
         for (const note of group.notes) {
-            beamStemDirs.set(note.id, groupDir)
+            beamGroupByNote.set(note, group)
         }
     }
 
@@ -363,8 +362,7 @@ function computeMeasureLayout(
             const noteY = getYForNote(noteLine, staveY)
             const glyphName = note.duration.noteheadGlyph
             // Use beam group stem direction if available, otherwise fall back to per-note logic
-            const beamDir = beamStemDirs.get(note.id)
-            const dir: 'up' | 'down' = beamDir ?? (noteLine >= 3 ? 'down' : 'up')
+            const dir: 'up' | 'down' = beamGroupByNote.get(note)?.stemDir ?? (noteLine >= 3 ? 'down' : 'up')
 
             // Accidental
             let accidentalLayout: LayoutGlyph | undefined
@@ -433,18 +431,22 @@ function computeMeasureLayout(
         beat += note.duration.effectiveBeats
     }
 
-    // 6. Auto-beam: group consecutive beamable notes within each beat
-    //    (tuplet notes stay grouped together — no beat-boundary breaks within a tuplet)
-    const beamGroups = computeBeamGroups(allNoteLayouts)
-
-    // 7. For each beam group: compute slope, adjust stems, generate segments, suppress flags
+    // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
+    const noteLayoutByNote = new Map<Note, NoteLayout>()
+    for (const nl of allNoteLayouts) {
+        noteLayoutByNote.set(nl.input, nl)
+    }
     const beams: LayoutBeamSegment[][] = []
     for (const group of beamGroups) {
-        const segments = layoutBeamGroup(group)
-        beams.push(segments)
+        const groupLayouts: NoteLayout[] = []
+        for (const note of group.notes) {
+            const nl = noteLayoutByNote.get(note)
+            if (nl) groupLayouts.push(nl)
+        }
+        beams.push(layoutBeamGroup(groupLayouts))
     }
 
-    // 8. Compute tuplet bracket layouts
+    // 7. Compute tuplet bracket layouts
     const tuplets = computeTupletLayouts(measure, allNoteLayouts, noteheadWidth)
 
     return {
@@ -457,127 +459,6 @@ function computeMeasureLayout(
         tuplets,
         nextNoteEventIndex: noteEventIndex,
     }
-}
-
-interface PotentialBeamGroup {
-    notes: Note[]
-}
-
-/**
- * Identify groups of consecutive beamable notes that could form beams,
- * ignoring stem direction. Used to pre-compute a uniform stem direction
- * based on average pitch so that beams aren't broken by mixed stem directions.
- */
-function identifyPotentialBeamGroups(measure: Measure): PotentialBeamGroup[] {
-    const groups: PotentialBeamGroup[] = []
-    let currentNotes: Note[] = []
-    let beat = 0
-
-    for (const note of measure.notes) {
-        if (!note.duration.isBeamable || note.isRest) {
-            if (currentNotes.length >= 2) {
-                groups.push({ notes: currentNotes })
-            }
-            currentNotes = []
-            beat += note.duration.effectiveBeats
-
-            continue
-        }
-
-        // Check beat boundary (same logic as computeBeamGroups, minus stem direction check)
-        if (currentNotes.length > 0) {
-            const prevNote = currentNotes[currentNotes.length - 1]
-            const sameTuplet = prevNote.inTuplet && note.inTuplet &&
-                measure.tuplets.some((s) => s.has(prevNote) && s.has(note))
-
-            if (!sameTuplet) {
-                const eitherInTuplet = prevNote.inTuplet || note.inTuplet
-                if (eitherInTuplet) {
-                    // Tuplet boundary: always break
-                    if (currentNotes.length >= 2) {
-                        groups.push({ notes: currentNotes })
-                    }
-                    currentNotes = []
-                } else {
-                    const prevBeat = beat - prevNote.duration.effectiveBeats
-                    const prevBeatBoundary = Math.floor(prevBeat)
-                    const nextBeatBoundary = Math.floor(beat)
-
-                    if (nextBeatBoundary > prevBeatBoundary) {
-                        if (currentNotes.length >= 2) {
-                            groups.push({ notes: currentNotes })
-                        }
-                        currentNotes = []
-                    }
-                }
-            }
-        }
-
-        currentNotes.push(note)
-
-        beat += note.duration.effectiveBeats
-    }
-
-    if (currentNotes.length >= 2) {
-        groups.push({ notes: currentNotes })
-    }
-
-    return groups
-}
-
-/**
- * Group consecutive beamable notes (8th, 16th) that fall within the same beat.
- * A beat boundary (integer beat position) breaks the group,
- * UNLESS both notes belong to the same tuplet.
- */
-function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
-    const groups: NoteLayout[][] = []
-    let current: NoteLayout[] = []
-
-    for (const nl of noteLayouts) {
-        if (!nl.input.duration.isBeamable || nl.isRest) {
-            // Non-beamable note or rest: flush current group
-            if (current.length >= 2) groups.push(current)
-            current = []
-            continue
-        }
-
-        // Check if this note crosses a beat boundary from the previous
-        if (current.length > 0) {
-            const prev = current[current.length - 1]
-            const sameTuplet = prev.tupletGroup !== undefined && prev.tupletGroup === nl.tupletGroup
-
-            if (!sameTuplet) {
-                const eitherInTuplet = prev.tupletGroup !== undefined || nl.tupletGroup !== undefined
-                if (eitherInTuplet) {
-                    // Tuplet boundary: always break
-                    if (current.length >= 2) groups.push(current)
-                    current = []
-                } else {
-                    const prevBeatEnd = prev.beat + prev.input.duration.beats
-                    const prevBeatBoundary = Math.floor(prev.beat)
-                    const nextBeatBoundary = Math.floor(nl.beat)
-
-                    // Break at beat boundaries
-                    if (nextBeatBoundary > prevBeatBoundary && prevBeatEnd <= nl.beat) {
-                        if (current.length >= 2) groups.push(current)
-                        current = []
-                    }
-                }
-            }
-
-            // Break if stem direction changes
-            if (current.length > 0 && current[0].stemDir !== nl.stemDir) {
-                if (current.length >= 2) groups.push(current)
-                current = []
-            }
-        }
-
-        current.push(nl)
-    }
-
-    if (current.length >= 2) groups.push(current)
-    return groups
 }
 
 /**

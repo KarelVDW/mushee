@@ -1,4 +1,5 @@
 export { Duration } from './Duration'
+export type { BeamGroup } from './Measure'
 export { Measure } from './Measure'
 export { Note } from './Note'
 export { Pitch } from './Pitch'

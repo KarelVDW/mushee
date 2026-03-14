@@ -6,6 +6,11 @@ import { Duration } from './Duration'
 import { Note } from './Note'
 import type { Score } from './Score'
 
+export interface BeamGroup {
+    notes: Set<Note>
+    stemDir: 'up' | 'down'
+}
+
 export class Measure {
     readonly id: string
     private _notes: Note[] = []
@@ -13,6 +18,7 @@ export class Measure {
     private _timeSignature?: string // e.g. '4/4', '3/4'
     private _endBarline?: BarlineType // default: 'single'
     private _tuplets: Array<Set<Note>> = []
+    private _beamGroups: BeamGroup[] = []
 
     constructor(
         readonly score: Score,
@@ -30,6 +36,10 @@ export class Measure {
 
     get tuplets() {
         return this._tuplets
+    }
+
+    get beamGroups() {
+        return this._beamGroups
     }
 
     get notes() {
@@ -108,6 +118,7 @@ export class Measure {
         this._notes = difference(this._notes, notes)
         notes.forEach((n) => n.setMeasure(undefined))
         this.findTuplets()
+        this.findBeamGroups()
         return this
     }
 
@@ -115,6 +126,7 @@ export class Measure {
         this._notes = position === 'end' ? [...this._notes, ...notes] : [...notes, ...this._notes]
         notes.forEach((n) => n.setMeasure(this))
         this.findTuplets()
+        this.findBeamGroups()
         return this
     }
 
@@ -129,6 +141,7 @@ export class Measure {
         targets.forEach((n) => n.setMeasure(undefined))
         values.forEach((n) => n.setMeasure(this))
         this.findTuplets()
+        this.findBeamGroups()
         return this
     }
 
@@ -184,5 +197,59 @@ export class Measure {
         if (currentSet.size > 0) {
             this._tuplets.push(currentSet)
         }
+    }
+
+    /**
+     * Group consecutive beamable notes (8th, 16th) that fall within the same beat,
+     * and compute a uniform stem direction per group based on average pitch.
+     * Beat boundaries break groups, unless both notes belong to the same tuplet.
+     */
+    private findBeamGroups() {
+        this._beamGroups = []
+        let currentNotes: Note[] = []
+        let beat = 0
+
+        const flushGroup = () => {
+            if (currentNotes.length >= 2) {
+                const avgLine = currentNotes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / currentNotes.length
+                const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
+                this._beamGroups.push({ notes: new Set(currentNotes), stemDir })
+            }
+            currentNotes = []
+        }
+
+        for (const note of this._notes) {
+            if (!note.duration.isBeamable || note.isRest) {
+                flushGroup()
+                beat += note.duration.effectiveBeats
+                continue
+            }
+
+            if (currentNotes.length > 0) {
+                const prevNote = currentNotes[currentNotes.length - 1]
+                const sameTuplet = prevNote.inTuplet && note.inTuplet &&
+                    this._tuplets.some((s) => s.has(prevNote) && s.has(note))
+
+                if (!sameTuplet) {
+                    const eitherInTuplet = prevNote.inTuplet || note.inTuplet
+                    if (eitherInTuplet) {
+                        flushGroup()
+                    } else {
+                        const prevBeat = beat - prevNote.duration.effectiveBeats
+                        const prevBeatBoundary = Math.floor(prevBeat)
+                        const nextBeatBoundary = Math.floor(beat)
+
+                        if (nextBeatBoundary > prevBeatBoundary) {
+                            flushGroup()
+                        }
+                    }
+                }
+            }
+
+            currentNotes.push(note)
+            beat += note.duration.effectiveBeats
+        }
+
+        flushGroup()
     }
 }
