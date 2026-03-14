@@ -12,6 +12,7 @@ export class Measure {
     private _clef?: Clef
     private _timeSignature?: string // e.g. '4/4', '3/4'
     private _endBarline?: BarlineType // default: 'single'
+    private _tuplets: Array<Set<Note>> = []
 
     constructor(
         readonly score: Score,
@@ -25,6 +26,10 @@ export class Measure {
         this._clef = value?.clef
         this._timeSignature = value?.timeSignature
         this._endBarline = value?.endBarline
+    }
+
+    get tuplets() {
+        return this._tuplets
     }
 
     get notes() {
@@ -102,12 +107,14 @@ export class Measure {
     removeNotes(notes: Note[]) {
         this._notes = difference(this._notes, notes)
         notes.forEach((n) => n.setMeasure(undefined))
+        this.findTuplets()
         return this
     }
 
     addNotes(notes: Note[], position: 'start' | 'end' = 'end') {
         this._notes = position === 'end' ? [...this._notes, ...notes] : [...notes, ...this._notes]
         notes.forEach((n) => n.setMeasure(this))
+        this.findTuplets()
         return this
     }
 
@@ -121,6 +128,7 @@ export class Measure {
         this._notes = [...diff.slice(0, startIndex), ...values, ...diff.slice(startIndex)]
         targets.forEach((n) => n.setMeasure(undefined))
         values.forEach((n) => n.setMeasure(this))
+        this.findTuplets()
         return this
     }
 
@@ -128,5 +136,53 @@ export class Measure {
         if (this.beats >= this.maxBeats) return
         this.addNotes(Duration.fromBeats(this.maxBeats - this.beats).map((d) => new Note({ duration: d })))
         return this
+    }
+
+    private findTuplets() {
+        this._tuplets = []
+        let currentSet = new Set<Note>()
+        let currentRatio: { numerator: number; denominator: number } | null = null
+        let totalDuration = 0
+
+        for (const note of this._notes) {
+            const { numerator, denominator } = note.duration.ratio
+
+            // Ignore non-tuplet notes (ratio 1/1)
+            if (numerator === 1 && denominator === 1) {
+                if (currentSet.size > 0) {
+                    this._tuplets.push(currentSet)
+                    currentSet = new Set()
+                    currentRatio = null
+                    totalDuration = 0
+                }
+                continue
+            }
+
+            // Ratio changed — save current set and start fresh
+            if (currentRatio && (currentRatio.numerator !== numerator || currentRatio.denominator !== denominator)) {
+                if (currentSet.size > 0) {
+                    this._tuplets.push(currentSet)
+                }
+                currentSet = new Set()
+                totalDuration = 0
+            }
+
+            currentRatio = { numerator, denominator }
+            currentSet.add(note)
+            totalDuration += note.duration.effectiveBeats
+
+            // Set is complete when total duration reaches the numerator
+            if (totalDuration >= numerator - 0.001) {
+                this._tuplets.push(currentSet)
+                currentSet = new Set()
+                currentRatio = null
+                totalDuration = 0
+            }
+        }
+
+        // Push any remaining incomplete set
+        if (currentSet.size > 0) {
+            this._tuplets.push(currentSet)
+        }
     }
 }

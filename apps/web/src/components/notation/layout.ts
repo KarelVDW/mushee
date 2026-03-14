@@ -54,33 +54,8 @@ interface NoteLayout {
     input: Note
     stemDir: 'up' | 'down'
     beat: number
-    tupletIndex: number | undefined // index within this measure's tuplet groups
+    tupletGroup: Set<Note> | undefined // reference to the measure's tuplet set this note belongs to
     isRest: boolean
-}
-
-/** Compute tuplet group indices for a list of notes. Consecutive notes with the same non-trivial ratio share an index. */
-function computeTupletIndices(notes: Note[]): Map<string, number> {
-    const indices = new Map<string, number>()
-    let tupletIdx = 0
-    let i = 0
-    while (i < notes.length) {
-        const note = notes[i]
-        if (note.inTuplet) {
-            const { numerator, denominator } = note.duration.ratio
-            while (
-                i < notes.length &&
-                notes[i].duration.ratio.numerator === numerator &&
-                notes[i].duration.ratio.denominator === denominator
-            ) {
-                indices.set(notes[i].id, tupletIdx)
-                i++
-            }
-            tupletIdx++
-        } else {
-            i++
-        }
-    }
-    return indices
 }
 
 /** Width of a barline type in pixels */
@@ -347,7 +322,7 @@ function computeMeasureLayout(
 
     // 4. Pre-compute beam group stem directions (so beamable notes get a uniform direction)
     const beamStemDirs = new Map<string, 'up' | 'down'>() // key: note.id
-    const groups = identifyPotentialBeamGroups(measure.notes, measure.clef)
+    const groups = identifyPotentialBeamGroups(measure)
     for (const group of groups) {
         const avgLine = group.notes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / group.notes.length
         const groupDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
@@ -359,13 +334,12 @@ function computeMeasureLayout(
     // 5. Layout notes (first pass — default stems, flags)
     const noteheadWidth = getGlyphWidth('noteheadBlack')
     const allNoteLayouts: NoteLayout[] = []
-    const tupletIndices = computeTupletIndices(measure.notes)
-
     beat = 0
 
     for (const note of measure.notes) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const x = beatToX.get(beat)!
+        const tupletGroup = measure.tuplets.find((s) => s.has(note))
 
         if (note.isRest) {
             // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
@@ -379,7 +353,7 @@ function computeMeasureLayout(
                 input: note,
                 stemDir: 'up',
                 beat,
-                tupletIndex: tupletIndices.get(note.id),
+                tupletGroup,
                 isRest: true,
             })
         } else {
@@ -450,7 +424,7 @@ function computeMeasureLayout(
                 input: note,
                 stemDir: dir,
                 beat,
-                tupletIndex: tupletIndices.get(note.id),
+                tupletGroup,
                 isRest: false,
             })
         }
@@ -494,14 +468,12 @@ interface PotentialBeamGroup {
  * ignoring stem direction. Used to pre-compute a uniform stem direction
  * based on average pitch so that beams aren't broken by mixed stem directions.
  */
-function identifyPotentialBeamGroups(notes: Note[], _clef: string | undefined): PotentialBeamGroup[] {
+function identifyPotentialBeamGroups(measure: Measure): PotentialBeamGroup[] {
     const groups: PotentialBeamGroup[] = []
     let currentNotes: Note[] = []
     let beat = 0
 
-    const tupletIdxMap = computeTupletIndices(notes)
-
-    for (const note of notes) {
+    for (const note of measure.notes) {
         if (!note.duration.isBeamable || note.isRest) {
             if (currentNotes.length >= 2) {
                 groups.push({ notes: currentNotes })
@@ -515,12 +487,11 @@ function identifyPotentialBeamGroups(notes: Note[], _clef: string | undefined): 
         // Check beat boundary (same logic as computeBeamGroups, minus stem direction check)
         if (currentNotes.length > 0) {
             const prevNote = currentNotes[currentNotes.length - 1]
-            const prevTupletIdx = tupletIdxMap.get(prevNote.id)
-            const curTupletIdx = tupletIdxMap.get(note.id)
-            const sameTuplet = prevTupletIdx !== undefined && prevTupletIdx === curTupletIdx
+            const sameTuplet = prevNote.inTuplet && note.inTuplet &&
+                measure.tuplets.some((s) => s.has(prevNote) && s.has(note))
 
             if (!sameTuplet) {
-                const eitherInTuplet = prevTupletIdx !== undefined || curTupletIdx !== undefined
+                const eitherInTuplet = prevNote.inTuplet || note.inTuplet
                 if (eitherInTuplet) {
                     // Tuplet boundary: always break
                     if (currentNotes.length >= 2) {
@@ -574,10 +545,10 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
         // Check if this note crosses a beat boundary from the previous
         if (current.length > 0) {
             const prev = current[current.length - 1]
-            const sameTuplet = prev.tupletIndex !== undefined && prev.tupletIndex === nl.tupletIndex
+            const sameTuplet = prev.tupletGroup !== undefined && prev.tupletGroup === nl.tupletGroup
 
             if (!sameTuplet) {
-                const eitherInTuplet = prev.tupletIndex !== undefined || nl.tupletIndex !== undefined
+                const eitherInTuplet = prev.tupletGroup !== undefined || nl.tupletGroup !== undefined
                 if (eitherInTuplet) {
                     // Tuplet boundary: always break
                     if (current.length >= 2) groups.push(current)
@@ -612,26 +583,16 @@ function computeBeamGroups(noteLayouts: NoteLayout[]): NoteLayout[][] {
 /**
  * Compute tuplet bracket layouts for all voices in a measure.
  */
-function computeTupletLayouts(_measure: Measure, allNoteLayouts: NoteLayout[], noteheadWidth: number): LayoutTuplet[] {
+function computeTupletLayouts(measure: Measure, allNoteLayouts: NoteLayout[], noteheadWidth: number): LayoutTuplet[] {
     const layouts: LayoutTuplet[] = []
 
-    // Collect unique tuplet groups from the note layouts (already computed via computeTupletIndices)
-    const tupletGroups = new Map<number, { numerator: number; denominator: number }>()
-    for (const nl of allNoteLayouts) {
-        if (nl.tupletIndex !== undefined && !tupletGroups.has(nl.tupletIndex)) {
-            tupletGroups.set(nl.tupletIndex, {
-                numerator: nl.input.duration.ratio.numerator,
-                denominator: nl.input.duration.ratio.denominator,
-            })
-        }
-    }
-
-    for (const [ti, group] of tupletGroups) {
-        const numNotes = group.denominator
-        const notesOccupied = group.numerator
+    for (const tupletSet of measure.tuplets) {
+        const firstTupletNote = tupletSet.values().next().value
+        if (!firstTupletNote) continue
+        const { numerator: notesOccupied, denominator: numNotes } = firstTupletNote.duration.ratio
 
         // Find all NoteLayouts belonging to this tuplet
-        const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletIndex === ti)
+        const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletGroup === tupletSet)
         if (tupletNotes.length === 0) continue
 
         // Determine stem direction (majority vote)
