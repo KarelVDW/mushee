@@ -43,6 +43,24 @@ export class Note {
         return this.duration.ratio.numerator !== 1
     }
 
+    get beatOffset() {
+        return this.measure.beatOffsetOf(this)
+    }
+
+    get tupletGroup() {
+        return this.measure.tupletGroupOf(this)
+    }
+
+    get beamGroup() {
+        return this.measure.beamGroupOf(this)
+    }
+
+    get stemDir(): 'up' | 'down' {
+        if (this.isRest) return 'up'
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return this.beamGroup?.stemDir ?? (this.pitch!.line >= 3 ? 'down' : 'up')
+    }
+
     // --- Navigation ---
 
     getNext(): Note | null {

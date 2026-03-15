@@ -52,10 +52,6 @@ const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {
 interface NoteLayout {
     note: LayoutNote
     input: Note
-    stemDir: 'up' | 'down'
-    beat: number
-    tupletGroup: Set<Note> | undefined // reference to the measure's tuplet set this note belongs to
-    isRest: boolean
 }
 
 /** Width of a barline type in pixels */
@@ -78,12 +74,7 @@ export interface ScoreLayoutOptions {
     reserveLastRowWidth?: number
 }
 
-export function computeLayout(
-    score: Score,
-    containerWidth: number,
-    rowHeight: number = 160,
-    options?: ScoreLayoutOptions,
-): ScoreLayout {
+export function computeLayout(score: Score, containerWidth: number, rowHeight: number = 160, options?: ScoreLayoutOptions): ScoreLayout {
     const maxPerRow = options?.maxMeasuresPerRow ?? 4
     const rowGap = options?.rowGap ?? 16
     const reserveWidth = options?.reserveLastRowWidth ?? 0
@@ -104,7 +95,7 @@ export function computeLayout(
 
         const inheritedClef = i > 0 && !rowMeasures[0].clef ? lastClef : undefined
 
-        const layout = computeRowLayout(rowMeasures, layoutWidth, rowHeight, i, inheritedClef)
+        const layout = computeRowLayout(rowMeasures, layoutWidth, rowHeight, inheritedClef)
         rows.push(layout)
 
         for (const m of rowMeasures) {
@@ -121,7 +112,6 @@ function computeRowLayout(
     measures: Measure[],
     width: number = 600,
     height: number = 160,
-    measureIndexOffset: number = 0,
     inheritedClef?: string,
 ): LayoutResult {
     const staveY = 0
@@ -184,7 +174,6 @@ function computeRowLayout(
 
     // 5. Layout each measure
     let cursorX = 0
-    let noteEventCounter = 0
     const layoutMeasures: LayoutMeasure[] = []
     const barlines: LayoutBarline[] = []
 
@@ -204,8 +193,13 @@ function computeRowLayout(
         const measureX = cursorX
 
         const clefOverride = mi === 0 && inheritedClef && !measureInput.clef ? inheritedClef : undefined
-        const measureLayout = computeMeasureLayout(measureInput, measureX, measureWidth, staveY, noteEventCounter, measureIndexOffset + mi, clefOverride)
-        noteEventCounter = measureLayout.nextNoteEventIndex
+        const measureLayout = computeMeasureLayout(
+            measureInput,
+            measureX,
+            measureWidth,
+            staveY,
+            clefOverride,
+        )
         layoutMeasures.push(measureLayout)
 
         cursorX += measureWidth
@@ -223,7 +217,7 @@ function computeRowLayout(
     const ties = computeTies(measures, layoutMeasures)
     const tempoMarkings = computeTempoMarkings(measures, layoutMeasures)
 
-    return { width, height, staffLines, measures: layoutMeasures, barlines, ties, tempoMarkings, totalNoteEvents: noteEventCounter }
+    return { width, height, staffLines, measures: layoutMeasures, barlines, ties, tempoMarkings }
 }
 
 /**
@@ -259,10 +253,8 @@ function computeMeasureLayout(
     measureX: number,
     measureWidth: number,
     staveY: number,
-    noteEventIndex: number,
-    globalMeasureIndex: number,
     clefOverride?: string,
-): LayoutMeasure & { nextNoteEventIndex: number } {
+): LayoutMeasure {
     // 1. Clef
     let cursorX = measureX + STAVE_LEFT_PADDING
     let clef: LayoutGlyph | undefined
@@ -314,9 +306,8 @@ function computeMeasureLayout(
     const allNoteLayouts: NoteLayout[] = []
 
     for (const note of measure.notes) {
-        const beat = measure.beatOffsetOf(note)
+        const beat = note.beatOffset
         const x = beatToX(beat)
-        const tupletGroup = measure.tupletGroupOf(note)
 
         if (note.isRest) {
             // Rest: use rest glyph, default line, no stem/flag/accidental/ledger
@@ -324,14 +315,10 @@ function computeMeasureLayout(
             const noteY = getYForNote(rLine, staveY)
             const glyphName = note.duration.restGlyph
             const dots = computeDotPositions(note.duration.dots, x + noteheadWidth, noteY, rLine)
-            const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [], noteEventIndex, noteId: note.id }
+            const layoutNote: LayoutNote = { x, y: noteY, glyphName, dots, ledgerLines: [], noteId: note.id }
             allNoteLayouts.push({
                 note: layoutNote,
                 input: note,
-                stemDir: 'up',
-                beat,
-                tupletGroup,
-                isRest: true,
             })
         } else {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -339,8 +326,7 @@ function computeMeasureLayout(
             const noteLine = pitch.line
             const noteY = getYForNote(noteLine, staveY)
             const glyphName = note.duration.noteheadGlyph
-            // Use beam group stem direction if available, otherwise fall back to per-note logic
-            const dir: 'up' | 'down' = measure.beamGroupOf(note)?.stemDir ?? (noteLine >= 3 ? 'down' : 'up')
+            const dir = note.stemDir
 
             // Accidental
             let accidentalLayout: LayoutGlyph | undefined
@@ -392,20 +378,13 @@ function computeMeasureLayout(
                 flag,
                 dots,
                 ledgerLines,
-                noteEventIndex,
                 noteId: note.id,
             }
             allNoteLayouts.push({
                 note: layoutNote,
                 input: note,
-                stemDir: dir,
-                beat,
-                tupletGroup,
-                isRest: false,
             })
         }
-
-        noteEventIndex++
     }
 
     // 6. For each beam group: compute slope, adjust stems, generate segments, suppress flags
@@ -435,7 +414,6 @@ function computeMeasureLayout(
         notes: allNoteLayouts.map((nl) => nl.note),
         beams,
         tuplets,
-        nextNoteEventIndex: noteEventIndex,
     }
 }
 
@@ -451,11 +429,11 @@ function computeTupletLayouts(measure: Measure, allNoteLayouts: NoteLayout[], no
         const { numerator: notesOccupied, denominator: numNotes } = firstTupletNote.duration.ratio
 
         // Find all NoteLayouts belonging to this tuplet
-        const tupletNotes = allNoteLayouts.filter((nl) => nl.tupletGroup === tupletSet)
+        const tupletNotes = allNoteLayouts.filter((nl) => nl.input.tupletGroup === tupletSet)
         if (tupletNotes.length === 0) continue
 
         // Determine stem direction (majority vote)
-        const upCount = tupletNotes.filter((nl) => nl.stemDir === 'up').length
+        const upCount = tupletNotes.filter((nl) => nl.input.stemDir === 'up').length
         const stemDir: 'up' | 'down' = upCount >= tupletNotes.length / 2 ? 'up' : 'down'
         const location: 1 | -1 = stemDir === 'up' ? 1 : -1
 
@@ -552,7 +530,7 @@ function buildTupletNumberGlyphs(
  */
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- beamed notes always have stems */
 function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
-    const stemDir = group[0].stemDir
+    const stemDir = group[0].input.stemDir
     const dirSign = stemDir === 'up' ? -1 : 1 // up = negative Y direction
 
     // 1. Compute slope
@@ -628,8 +606,7 @@ function layoutBeamGroup(group: NoteLayout[]): LayoutBeamSegment[] {
                     }
 
                     // Check if next note also qualifies — if not, close segment
-                    const nextQualifies =
-                        i + 1 < group.length && group[i + 1].input.duration.beamCount >= minBeamsForLevel
+                    const nextQualifies = i + 1 < group.length && group[i + 1].input.duration.beamCount >= minBeamsForLevel
                     if (!nextQualifies) {
                         if (segStart === stemX) {
                             // Single note with secondary beam — draw partial beam
@@ -720,7 +697,6 @@ function computeTempoMarkings(inputMeasures: Measure[], layoutMeasures: LayoutMe
                 const layoutNote = noteLayoutMap.get(note.id)
                 if (layoutNote) {
                     markings.push({
-                        noteEventIndex: layoutNote.noteEventIndex,
                         noteId: note.id,
                         x: layoutNote.x,
                         y: TEMPO_MARKING_Y,

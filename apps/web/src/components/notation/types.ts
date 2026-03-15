@@ -63,8 +63,6 @@ export interface LayoutNote {
   flag?: LayoutGlyph;
   dots?: { x: number; y: number }[];
   ledgerLines: LayoutLine[];
-  /** Sequential index per NoteInput across the entire score (chord notes share the same index) */
-  noteEventIndex: number;
   /** Structural note id: "m{measureIndex}:v{voiceIndex}:n{noteIndex}" */
   noteId: string;
 }
@@ -119,8 +117,6 @@ export interface LayoutTie {
 }
 
 export interface LayoutTempoMarking {
-  /** Global note event index this marking belongs to */
-  noteEventIndex: number;
   /** Structural note id */
   noteId: string;
   /** SVG X coordinate (aligned to the note's x) */
@@ -139,8 +135,6 @@ export interface LayoutResult {
   barlines: LayoutBarline[];
   ties: LayoutTie[];
   tempoMarkings: LayoutTempoMarking[];
-  /** Total number of note events (for cursor bounds) */
-  totalNoteEvents: number;
 }
 
 export interface ScoreLayout {
