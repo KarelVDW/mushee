@@ -78,6 +78,30 @@ export default function Sheet() {
         [activeNote],
     )
 
+    const handleDotToggle = useCallback(() => {
+        if (!activeNote) return
+        const newDots = activeNote.duration.dots > 0 ? 0 : 1
+        const newNote = activeNote.clone({ duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }) })
+        score.replace([activeNote], [newNote])
+        setActiveNote(newNote)
+    }, [activeNote, score])
+
+    const handleTieToggle = useCallback(() => {
+        if (!activeNote) return
+        const newTie = activeNote.tiesForward ? undefined : 'start' as const
+        const newNote = activeNote.clone({ tie: newTie })
+        score.replace([activeNote], [newNote])
+        setActiveNote(newNote)
+    }, [activeNote, score])
+
+    const handleRestToggle = useCallback(() => {
+        if (!activeNote) return
+        const newPitch = activeNote.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined
+        const newNote = activeNote.clone({ pitch: newPitch })
+        score.replace([activeNote], [newNote])
+        setActiveNote(newNote)
+    }, [activeNote, score])
+
     const handleTempoToggle = useCallback(() => {
         if (!activeNote) return
         const measure = activeNote.measure
@@ -131,6 +155,12 @@ export default function Sheet() {
                 accidentalDisabled={activeNote?.isRest ?? true}
                 onAccidentalChange={handleAccidentalChange}
                 onDurationChange={handleDurationChange}
+                dotted={(activeNote?.duration.dots ?? 0) > 0}
+                onDotToggle={handleDotToggle}
+                tie={activeNote?.tiesForward ?? false}
+                onTieToggle={handleTieToggle}
+                rest={activeNote?.isRest ?? false}
+                onRestToggle={handleRestToggle}
                 tempo={activeNote ? activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote)) : undefined}
                 onTempoToggle={handleTempoToggle}
             />

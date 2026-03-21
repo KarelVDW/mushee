@@ -1,5 +1,7 @@
 import { type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@/components/notation';
 
+// --- Data ---
+
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
   { label: '\u266e', value: undefined },  // ♮
   { label: '\u266d', value: 'b' },        // ♭
@@ -8,7 +10,22 @@ const ACCIDENTALS: { label: string; value: string | undefined }[] = [
 
 const DURATIONS: DurationType[] = ['w', 'h', 'q', '8', '16']
 
-/** Stem height used in the duration icon (shorter than full score stems) */
+// --- Shared button styles ---
+
+const BTN = 'flex items-center justify-center border transition-colors cursor-pointer'
+const GROUP_BTN = `${BTN} border-gray-300 -ml-px first:ml-0 first:rounded-l last:rounded-r`
+const TOGGLE_BTN = `${BTN} rounded border-gray-300`
+
+function groupBtnClass(active: boolean, disabled?: boolean) {
+  return `${GROUP_BTN} ${active ? 'bg-blue-500 text-white border-blue-500 z-10' : 'bg-white text-gray-700 hover:bg-gray-100'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`
+}
+
+function toggleBtnClass(active: boolean) {
+  return `${TOGGLE_BTN} ${active ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 hover:bg-gray-100'}`
+}
+
+// --- Duration icon ---
+
 const ICON_STEM_HEIGHT = 22
 
 function DurationIcon({ dur, color }: { dur: DurationType; color: string }) {
@@ -35,20 +52,59 @@ function DurationIcon({ dur, color }: { dur: DurationType; color: string }) {
   )
 }
 
+// --- Separator ---
+
+function Sep() {
+  return <div className="w-px h-6 bg-gray-200" />
+}
+
+// --- ControlBar ---
+
 interface ControlBarProps {
   accidental: string | undefined
   duration: DurationType | undefined
   accidentalDisabled: boolean
   onAccidentalChange: (accidental: string | undefined) => void
   onDurationChange: (duration: DurationType) => void
+  dotted: boolean
+  onDotToggle: () => void
+  tie: boolean
+  onTieToggle: () => void
+  rest: boolean
+  onRestToggle: () => void
   tempo: unknown
   onTempoToggle: () => void
 }
 
-export function ControlBar({ accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange, tempo, onTempoToggle }: ControlBarProps) {
+export function ControlBar({
+  accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
+  dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
+}: ControlBarProps) {
   return (
-    <div className="flex items-center gap-6 px-4 py-2 border-b border-gray-200 bg-white">
-      {/* Accidentals */}
+    <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
+      {/* Note type: durations + dot + rest */}
+      <div className="flex">
+        {DURATIONS.map((dur) => {
+          const isActive = duration === dur;
+          return (
+            <button key={dur} type="button" onClick={() => onDurationChange(dur)} className={`${groupBtnClass(isActive)} px-2 py-1`}>
+              <DurationIcon dur={dur} color={isActive ? '#fff' : '#374151'} />
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" onClick={onDotToggle} className={`${toggleBtnClass(dotted)} px-2.5 py-1 text-base font-bold`}>
+        .
+      </button>
+      <button type="button" onClick={onRestToggle} className={`${toggleBtnClass(rest)} px-2 py-1`}>
+        <svg width={8} height={15} viewBox="0 0 16 30">
+          <Glyph name="restQuarter" x={1} y={20} fill={rest ? '#fff' : '#374151'} />
+        </svg>
+      </button>
+
+      <Sep />
+
+      {/* Pitch: accidentals */}
       <div className="flex">
         {ACCIDENTALS.map(({ label, value }) => {
           const isActive = accidental === value;
@@ -58,11 +114,7 @@ export function ControlBar({ accidental, duration, accidentalDisabled, onAcciden
               type="button"
               disabled={accidentalDisabled}
               onClick={() => onAccidentalChange(value)}
-              className={`px-3 py-1.5 text-lg font-medium first:rounded-l last:rounded-r border border-gray-300 -ml-px first:ml-0 transition-colors ${
-                isActive
-                  ? 'bg-blue-500 text-white border-blue-500 z-10'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              } ${accidentalDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              className={`${groupBtnClass(isActive, accidentalDisabled)} px-3 py-1.5 text-lg font-medium`}
             >
               {label}
             </button>
@@ -70,37 +122,13 @@ export function ControlBar({ accidental, duration, accidentalDisabled, onAcciden
         })}
       </div>
 
-      {/* Durations */}
-      <div className="flex">
-        {DURATIONS.map((dur) => {
-          const isActive = duration === dur;
-          return (
-            <button
-              key={dur}
-              type="button"
-              onClick={() => onDurationChange(dur)}
-              className={`px-2 py-1 first:rounded-l last:rounded-r border border-gray-300 -ml-px first:ml-0 transition-colors cursor-pointer flex items-center justify-center ${
-                isActive
-                  ? 'bg-blue-500 border-blue-500 z-10'
-                  : 'bg-white hover:bg-gray-100'
-              }`}
-            >
-              <DurationIcon dur={dur} color={isActive ? '#fff' : '#374151'} />
-            </button>
-          );
-        })}
-      </div>
+      <Sep />
 
-      {/* Tempo */}
-      <button
-        type="button"
-        onClick={onTempoToggle}
-        className={`px-3 py-1.5 text-sm font-medium rounded border border-gray-300 transition-colors cursor-pointer ${
-          tempo !== undefined
-            ? 'bg-blue-500 text-white border-blue-500'
-            : 'bg-white text-gray-700 hover:bg-gray-100'
-        }`}
-      >
+      {/* Modifiers: tie + tempo */}
+      <button type="button" onClick={onTieToggle} className={`${toggleBtnClass(tie)} px-2.5 py-1 text-sm font-medium`}>
+        Tie
+      </button>
+      <button type="button" onClick={onTempoToggle} className={`${toggleBtnClass(tempo !== undefined)} px-2.5 py-1 text-sm font-medium`}>
         Tempo
       </button>
     </div>
