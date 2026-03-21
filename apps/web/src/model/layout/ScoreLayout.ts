@@ -76,9 +76,9 @@ export class ScoreLayout {
                     if (config) overhead += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
                 }
                 if (m.timeSignature) {
-                    const [topStr, bottomStr] = m.timeSignature.split('/')
-                    const topW = topStr.split('').reduce((s, d) => s + getGlyphWidth(`timeSig${d}`), 0)
-                    const botW = bottomStr.split('').reduce((s, d) => s + getGlyphWidth(`timeSig${d}`), 0)
+                    const ts = m.timeSignature
+                    const topW = ts.beatsDigits.reduce((s, d) => s + getGlyphWidth(`timeSig${d}`), 0)
+                    const botW = ts.beatTypeDigits.reduce((s, d) => s + getGlyphWidth(`timeSig${d}`), 0)
                     overhead += Math.max(topW, botW) + TIME_SIG_NOTE_PADDING
                 }
                 overhead += STAVE_RIGHT_PADDING

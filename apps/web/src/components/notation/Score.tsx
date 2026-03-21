@@ -33,7 +33,7 @@ interface ScoreProps {
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
-    onTempoChange?: (noteId: string, bpm: number) => void
+    onTempoChange?: (measureIndex: number, beatPosition: number, bpm: number) => void
 }
 
 export function Score({
@@ -51,7 +51,7 @@ export function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; x: number; y: number } | null>(null)
-    const [openPopover, setOpenPopover] = useState<{ noteId: string; bpm: number; x: number; y: number } | null>(null)
+    const [openPopover, setOpenPopover] = useState<{ measureIndex: number; beatPosition: number; bpm: number; x: number; y: number } | null>(null)
 
     useEffect(() => {
         const el = containerRef.current
@@ -211,10 +211,10 @@ export function Score({
     )
 
     const handleTempoClick = useCallback(
-        (noteId: string, bpm: number, svgX: number, svgY: number) => {
+        (measureIndex: number, beatPosition: number, bpm: number, svgX: number, svgY: number) => {
             const pos = svgToContainer(svgX, svgY)
             if (!pos) return
-            setOpenPopover({ noteId, bpm, x: pos.x, y: pos.y })
+            setOpenPopover({ measureIndex, beatPosition, bpm, x: pos.x, y: pos.y })
         },
         [svgToContainer],
     )
@@ -327,17 +327,13 @@ export function Score({
                                 return <Tie key={note.id} tie={tie} />
                             })}
 
-                            {row.measures.flatMap((m) => m.notes).map((note) => {
-                                const tempo = note.tempo
-                                if (!tempo) return null
-                                return (
-                                    <TempoMarking
-                                        key={note.id}
-                                        tempo={tempo}
-                                        onClick={() => handleTempoClick(note.id, tempo.bpm, tempo.layout.x, rowYOffset(ri) + tempo.layout.y)}
-                                    />
-                                )
-                            })}
+                            {row.measures.flatMap((m) => m.tempos).map((tempo, ti) => (
+                                <TempoMarking
+                                    key={`tempo-${ti}`}
+                                    tempo={tempo}
+                                    onClick={() => handleTempoClick(tempo.measure.index, tempo.beatPosition, tempo.bpm, tempo.layout.x, rowYOffset(ri) + tempo.layout.y)}
+                                />
+                            ))}
 
                             {cursorPos && cursorPos.rowIndex === ri && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}
 
@@ -374,7 +370,7 @@ export function Score({
                     y={openPopover.y - 30}
                     initialBpm={openPopover.bpm}
                     onSubmit={(bpm) => {
-                        onTempoChange?.(openPopover.noteId, bpm)
+                        onTempoChange?.(openPopover.measureIndex, openPopover.beatPosition, bpm)
                         setOpenPopover(null)
                     }}
                     onDismiss={() => setOpenPopover(null)}

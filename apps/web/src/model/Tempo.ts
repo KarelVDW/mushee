@@ -1,11 +1,12 @@
 import { TempoLayout } from './layout/TempoLayout'
-import type { Note } from './Note'
+import type { Measure } from './Measure'
 
 export class Tempo {
     private _layout: TempoLayout | undefined
 
     constructor(
-        readonly note: Note,
+        readonly measure: Measure,
+        readonly beatPosition: number,
         readonly bpm: number,
     ) {}
 

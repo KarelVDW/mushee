@@ -4,16 +4,21 @@ import type { BarlineType, Clef } from '@/components/notation/types'
 
 import { Beam } from './Beam'
 import { Duration } from './Duration'
+import type { KeySignature } from './KeySignature'
 import { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
 import type { Score } from './Score'
+import { Tempo } from './Tempo'
+import type { TimeSignature } from './TimeSignature'
 import { Tuplet } from './Tuplet'
 
 export class Measure {
     private _notes: Note[] = []
     private _clef?: Clef
-    private _timeSignature?: string // e.g. '4/4', '3/4'
-    private _endBarline?: BarlineType // default: 'single'
+    private _timeSignature?: TimeSignature
+    private _keySignature?: KeySignature
+    private _endBarline?: BarlineType
+    private _tempos: Tempo[] = []
     private _tuplets: Tuplet[] = []
     private _beams: Beam[] = []
     private _beatOffsets = new Map<Note, number>()
@@ -26,12 +31,14 @@ export class Measure {
         readonly index: number,
         value?: {
             clef?: Clef
-            timeSignature?: string // e.g. '4/4', '3/4'
-            endBarline?: BarlineType // default: 'single'
+            timeSignature?: TimeSignature
+            keySignature?: KeySignature
+            endBarline?: BarlineType
         },
     ) {
         this._clef = value?.clef
         this._timeSignature = value?.timeSignature
+        this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
     }
 
@@ -84,6 +91,10 @@ export class Measure {
         return this._timeSignature
     }
 
+    get keySignature() {
+        return this._keySignature
+    }
+
     get endBarline() {
         return this._endBarline
     }
@@ -101,26 +112,44 @@ export class Measure {
     }
 
     get maxBeats(): number {
-        // for (let i = this.index; i >= 0; i--) {
-        //     const ts = this.score.measures[i].timeSignature
-        //     if (ts) {
-        //         const [num, den] = ts.split('/').map(Number)
-        //         return num * (4 / den)
-        //     }
-        // }
-        return 4
+        return this.score.getActiveTimeSignature(this.index)?.maxBeats ?? 4
     }
 
     setClef(clef: Clef | undefined) {
         this._clef = clef
     }
 
-    setTimeSignature(timeSignature: string | undefined) {
+    setTimeSignature(timeSignature: TimeSignature | undefined) {
         this._timeSignature = timeSignature
+    }
+
+    setKeySignature(keySignature: KeySignature | undefined) {
+        this._keySignature = keySignature
     }
 
     setEndBarline(barLine: BarlineType | undefined) {
         this._endBarline = barLine
+    }
+
+    get tempos(): Tempo[] {
+        return this._tempos
+    }
+
+    addTempo(beatPosition: number, bpm: number) {
+        this._tempos.push(new Tempo(this, beatPosition, bpm))
+    }
+
+    removeTempo(beatPosition: number) {
+        this._tempos = this._tempos.filter((t) => t.beatPosition !== beatPosition)
+    }
+
+    setTempo(beatPosition: number, bpm: number) {
+        this.removeTempo(beatPosition)
+        this.addTempo(beatPosition, bpm)
+    }
+
+    tempoAtBeat(beatPosition: number): Tempo | undefined {
+        return this._tempos.find((t) => t.beatPosition === beatPosition)
     }
 
     getNextNote(note?: Note): Note | null {
@@ -197,14 +226,14 @@ export class Measure {
         this._tuplets = []
         this._tupletByNote = new Map()
         let currentNotes: Note[] = []
-        let currentRatio: { numerator: number; denominator: number } | null = null
+        let currentRatio: { actualNotes: number; normalNotes: number } | null = null
         let totalDuration = 0
 
         for (const note of this._notes) {
-            const { numerator, denominator } = note.duration.ratio
+            const { actualNotes, normalNotes } = note.duration.ratio
 
             // Ignore non-tuplet notes (ratio 1/1)
-            if (numerator === 1 && denominator === 1) {
+            if (actualNotes === 1 && normalNotes === 1) {
                 if (currentNotes.length > 0) {
                     this._tuplets.push(new Tuplet(this, currentNotes))
                     currentNotes = []
@@ -215,7 +244,7 @@ export class Measure {
             }
 
             // Ratio changed — save current set and start fresh
-            if (currentRatio && (currentRatio.numerator !== numerator || currentRatio.denominator !== denominator)) {
+            if (currentRatio && (currentRatio.actualNotes !== actualNotes || currentRatio.normalNotes !== normalNotes)) {
                 if (currentNotes.length > 0) {
                     this._tuplets.push(new Tuplet(this, currentNotes))
                 }
@@ -223,12 +252,12 @@ export class Measure {
                 totalDuration = 0
             }
 
-            currentRatio = { numerator, denominator }
+            currentRatio = { actualNotes, normalNotes }
             currentNotes.push(note)
             totalDuration += note.duration.effectiveBeats
 
-            // Set is complete when total duration reaches the numerator
-            if (totalDuration >= numerator - 0.001) {
+            // Set is complete when total duration reaches the normalNotes
+            if (totalDuration >= normalNotes - 0.001) {
                 this._tuplets.push(new Tuplet(this, currentNotes))
                 currentNotes = []
                 currentRatio = null

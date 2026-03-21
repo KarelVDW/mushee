@@ -10,15 +10,18 @@ import type {
     MxmlNoteType,
     MxmlStep,
     ScorePartwise,
+    TieType,
 } from '@/components/notation/types'
 
 const DIVISIONS = 12 // divisions per quarter note
 
 import { Duration } from './Duration'
+import { KeySignature } from './KeySignature'
 import { ScoreLayout, ScoreLayoutOptions } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { Pitch } from './Pitch'
+import { TimeSignature } from './TimeSignature'
 
 export class Score {
     private _touchedAt: number
@@ -62,6 +65,15 @@ export class Score {
 
     get lastMeasure(): Measure | null {
         return this.measures[this.measures.length - 1] ?? null
+    }
+
+    /** Resolve the active time signature at a given measure index by walking backwards. */
+    getActiveTimeSignature(measureIndex: number): TimeSignature | undefined {
+        for (let i = measureIndex; i >= 0; i--) {
+            const ts = this.measures[i].timeSignature
+            if (ts) return ts
+        }
+        return undefined
     }
 
     noteById(id: string): Note | null {
@@ -143,10 +155,10 @@ export class Score {
                     newNotes.push(note)
                     freeBeats -= noteBeats
                 } else {
-                    newNotes.push(...Duration.fromBeats(freeBeats).map((d) => new Note({ duration: d, pitch: note.pitch, tie: true })))
+                    newNotes.push(...Duration.fromBeats(freeBeats).map((d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' })))
                     freeBeats = 0
                     remainderNotes = Duration.fromBeats(note.duration.effectiveBeats - freeBeats).map(
-                        (d) => new Note({ duration: d, pitch: note.pitch, tie: true }),
+                        (d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' }),
                     )
                 }
             }
@@ -164,10 +176,12 @@ export class Score {
         for (let mi = 0; mi < part.measures.length; mi++) {
             const mxmlMeasure = part.measures[mi]
             let clef: Clef | undefined
-            let timeSignature: string | undefined
+            let timeSignature: TimeSignature | undefined
+            let keySignature: KeySignature | undefined
             let endBarline: BarlineType | undefined
-            let tempo: number | undefined
+            let pendingTempo: number | undefined
             const notes: Note[] = []
+            const tempos: Array<{ noteIndex: number; bpm: number }> = []
 
             for (const entry of mxmlMeasure.entries) {
                 switch (entry._type) {
@@ -175,7 +189,9 @@ export class Score {
                         const c = entry.clef?.[0]
                         if (c) clef = Score.mxmlClefToClef(c.sign, c.line)
                         const t = entry.time?.[0]
-                        if (t) timeSignature = `${t.beats}/${t.beatType}`
+                        if (t) timeSignature = new TimeSignature(Number(t.beats), Number(t.beatType))
+                        const k = entry.key?.[0]
+                        if (k) keySignature = new KeySignature(k.fifths, k.mode)
                         break
                     }
                     case 'barline': {
@@ -183,21 +199,26 @@ export class Score {
                         break
                     }
                     case 'direction': {
-                        if (entry.sound?.tempo !== undefined) tempo = entry.sound.tempo
+                        if (entry.sound?.tempo !== undefined) pendingTempo = entry.sound.tempo
                         break
                     }
                     case 'note': {
+                        if (pendingTempo !== undefined) {
+                            tempos.push({ noteIndex: notes.length, bpm: pendingTempo })
+                            pendingTempo = undefined
+                        }
                         const pitch = entry.pitch
                             ? new Pitch({
                                   name: entry.pitch.step,
+                                  alter: entry.pitch.alter ?? 0,
                                   accidental: Score.alterToAccidental(entry.pitch.alter),
                                   octave: entry.pitch.octave,
                               })
                             : undefined
                         const ratio = entry.timeModification
-                            ? { numerator: entry.timeModification.normalNotes, denominator: entry.timeModification.actualNotes }
+                            ? { actualNotes: entry.timeModification.actualNotes, normalNotes: entry.timeModification.normalNotes }
                             : undefined
-                        const hasTieStart = entry.tie?.some((t) => t.type === 'start') ?? false
+                        const tie = Score.mxmlTieToTieType(entry.tie)
                         notes.push(
                             new Note({
                                 duration: new Duration({
@@ -206,18 +227,20 @@ export class Score {
                                     ratio,
                                 }),
                                 pitch,
-                                tie: hasTieStart,
-                                tempo,
+                                tie,
                             }),
                         )
-                        tempo = undefined
                         break
                     }
                 }
             }
 
-            const measure = new Measure(score, mi, { clef, timeSignature, endBarline })
+            const measure = new Measure(score, mi, { clef, timeSignature, keySignature, endBarline })
             if (notes.length > 0) measure.addNotes(notes)
+            for (const { noteIndex, bpm } of tempos) {
+                const note = notes[noteIndex]
+                if (note) measure.addTempo(measure.beatOffsetOf(note), bpm)
+            }
             score.measures.push(measure)
         }
         return score
@@ -227,18 +250,22 @@ export class Score {
         const measures = this.measures.map((measure, mi) => {
             const entries: MxmlMeasureEntry[] = []
 
-            if (measure.clef || measure.timeSignature) {
+            if (measure.clef || measure.timeSignature || measure.keySignature) {
                 entries.push({
                     _type: 'attributes' as const,
                     divisions: DIVISIONS,
                     ...(measure.clef && { clef: [Score.clefToMxmlClef(measure.clef)] }),
                     ...(measure.timeSignature && { time: [Score.timeSignatureToMxmlTime(measure.timeSignature)] }),
+                    ...(measure.keySignature && {
+                        key: [{ fifths: measure.keySignature.fifths, ...(measure.keySignature.mode && { mode: measure.keySignature.mode }) }],
+                    }),
                 })
             }
 
             for (const note of measure.notes) {
-                if (note.tempo !== undefined) {
-                    entries.push({ _type: 'direction' as const, sound: { tempo: note.tempo.bpm } })
+                const tempoAtBeat = measure.tempoAtBeat(measure.beatOffsetOf(note))
+                if (tempoAtBeat) {
+                    entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
                 }
                 entries.push({
                     _type: 'note' as const,
@@ -246,7 +273,7 @@ export class Score {
                         ? {
                               pitch: {
                                   step: note.pitch.name as MxmlStep,
-                                  ...(note.pitch.accidental && { alter: Score.accidentalToAlter(note.pitch.accidental) }),
+                                  ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
                                   octave: note.pitch.octave,
                               },
                           }
@@ -255,11 +282,11 @@ export class Score {
                     voice: '1',
                     type: Score.durationTypeToMxmlNoteType(note.duration.type),
                     ...(note.duration.dots > 0 && { dot: note.duration.dots }),
-                    ...(note.tie && { tie: [{ type: 'start' as const }] }),
+                    ...(note.tie && { tie: Score.tieTypeToMxmlTie(note.tie) }),
                     ...(note.inTuplet && {
                         timeModification: {
-                            actualNotes: note.duration.ratio.denominator,
-                            normalNotes: note.duration.ratio.numerator,
+                            actualNotes: note.duration.ratio.actualNotes,
+                            normalNotes: note.duration.ratio.normalNotes,
                         },
                     }),
                 })
@@ -323,23 +350,6 @@ export class Score {
         }
     }
 
-    private static accidentalToAlter(accidental: string): number {
-        switch (accidental) {
-            case '#':
-                return 1
-            case 'b':
-                return -1
-            case '##':
-                return 2
-            case 'bb':
-                return -2
-            case 'n':
-                return 0
-            default:
-                return 0
-        }
-    }
-
     private static mxmlClefToClef(sign: string, line?: number): Clef {
         if (sign === 'F' && (line === 4 || line === undefined)) return 'bass'
         return 'treble'
@@ -375,16 +385,36 @@ export class Score {
         }
     }
 
-    private static timeSignatureToMxmlTime(ts: string): { beats: string; beatType: string } {
-        const [beats, beatType] = ts.split('/')
-        return { beats, beatType }
+    private static timeSignatureToMxmlTime(ts: TimeSignature): { beats: string; beatType: string } {
+        return { beats: String(ts.beats), beatType: String(ts.beatType) }
+    }
+
+    private static mxmlTieToTieType(ties: Array<{ type: 'start' | 'stop' }> | undefined): TieType | undefined {
+        if (!ties?.length) return undefined
+        const hasStart = ties.some((t) => t.type === 'start')
+        const hasStop = ties.some((t) => t.type === 'stop')
+        if (hasStart && hasStop) return 'start-stop'
+        if (hasStart) return 'start'
+        if (hasStop) return 'stop'
+        return undefined
+    }
+
+    private static tieTypeToMxmlTie(tie: TieType): Array<{ type: 'start' | 'stop' }> {
+        switch (tie) {
+            case 'start':
+                return [{ type: 'start' }]
+            case 'stop':
+                return [{ type: 'stop' }]
+            case 'start-stop':
+                return [{ type: 'stop' }, { type: 'start' }]
+        }
     }
 
     private static computeDivisions(note: Note): number {
         const base: Record<DurationType, number> = { w: 48, h: 24, q: 12, '8': 6, '16': 3 }
         let dur = base[note.duration.type]
         if (note.duration.dots > 0) dur = dur * (2 - 1 / Math.pow(2, note.duration.dots))
-        if (note.inTuplet) dur = dur * (note.duration.ratio.numerator / note.duration.ratio.denominator)
+        if (note.inTuplet) dur = dur * (note.duration.ratio.normalNotes / note.duration.ratio.actualNotes)
         return Math.round(dur)
     }
 }

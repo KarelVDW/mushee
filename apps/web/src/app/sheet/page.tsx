@@ -80,15 +80,22 @@ export default function Sheet() {
 
     const handleTempoToggle = useCallback(() => {
         if (!activeNote) return
-        activeNote.setTempo(activeNote.tempo ? undefined : 120)
+        const measure = activeNote.measure
+        const beat = measure.beatOffsetOf(activeNote)
+        const existing = measure.tempoAtBeat(beat)
+        if (existing) {
+            measure.removeTempo(beat)
+        } else {
+            measure.addTempo(beat, 120)
+        }
         score.touch()
     }, [activeNote, score])
 
     const handleTempoChange = useCallback(
-        (noteId: string, bpm: number) => {
-            const note = score.noteById(noteId)
-            if (!note) return
-            note.setTempo(bpm)
+        (measureIndex: number, beatPosition: number, bpm: number) => {
+            const measure = score.measures[measureIndex]
+            if (!measure) return
+            measure.setTempo(beatPosition, bpm)
         },
         [score],
     )
@@ -124,7 +131,7 @@ export default function Sheet() {
                 accidentalDisabled={activeNote?.isRest ?? true}
                 onAccidentalChange={handleAccidentalChange}
                 onDurationChange={handleDurationChange}
-                tempo={activeNote?.tempo}
+                tempo={activeNote ? activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote)) : undefined}
                 onTempoToggle={handleTempoToggle}
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8">

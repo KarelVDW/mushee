@@ -12,11 +12,13 @@ const INDEX_TO_NOTE = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
 export class Pitch {
     readonly name: string
+    readonly alter: number
     readonly accidental: string | undefined
     readonly octave: number
 
-    constructor(value: { name: string; accidental?: string | undefined; octave: number }) {
+    constructor(value: { name: string; alter?: number; accidental?: string | undefined; octave: number }) {
         this.name = value.name
+        this.alter = value.alter ?? 0
         this.accidental = value.accidental
         this.octave = value.octave
     }
@@ -38,7 +40,24 @@ export class Pitch {
     }
 
     withAccidental(accidental: string | undefined): Pitch {
-        return new Pitch({ name: this.name, accidental, octave: this.octave })
+        return new Pitch({ name: this.name, alter: Pitch.accidentalToAlter(accidental), accidental, octave: this.octave })
+    }
+
+    static accidentalToAlter(accidental: string | undefined): number {
+        switch (accidental) {
+            case '#':
+                return 1
+            case 'b':
+                return -1
+            case '##':
+                return 2
+            case 'bb':
+                return -2
+            case 'n':
+                return 0
+            default:
+                return 0
+        }
     }
 
     get accidentalGlyph(): string | undefined {

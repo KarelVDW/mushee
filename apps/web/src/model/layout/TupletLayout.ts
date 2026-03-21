@@ -48,7 +48,7 @@ export class TupletLayout {
 
         const centerX = (this.x1 + this.x2) / 2
 
-        const { numerator: notesOccupied, denominator: numNotes } = this.tuplet.notes[0].duration.ratio
+        const { normalNotes: notesOccupied, actualNotes: numNotes } = this.tuplet.notes[0].duration.ratio
 
         const digits = String(numNotes).split('')
         const glyphs: LayoutGlyph[] = []

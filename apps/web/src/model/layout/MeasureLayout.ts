@@ -35,9 +35,9 @@ export class MeasureLayout {
         }
 
         if (this.measure.timeSignature) {
-            const [topStr, bottomStr] = this.measure.timeSignature.split('/')
-            const topWidth = topStr.split('').reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
-            const bottomWidth = bottomStr.split('').reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
+            const ts = this.measure.timeSignature
+            const topWidth = ts.beatsDigits.reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
+            const bottomWidth = ts.beatTypeDigits.reduce((sum, d) => sum + getGlyphWidth(`timeSig${d}`), 0)
             overhead += Math.max(topWidth, bottomWidth) + TIME_SIG_NOTE_PADDING
         }
 
@@ -68,17 +68,17 @@ export class MeasureLayout {
             if (config) cursorX += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
         }
 
-        const [topStr, bottomStr] = this.measure.timeSignature.split('/')
+        const ts = this.measure.timeSignature
         const tsX = cursorX
         const topY = getYForLine(1)
         const bottomY = getYForLine(3)
 
-        const topDigits = topStr.split('').map((digit, i) => ({
+        const topDigits = ts.beatsDigits.map((digit, i) => ({
             glyphName: `timeSig${digit}`,
             x: tsX + i * getGlyphWidth(`timeSig${digit}`),
             y: topY,
         }))
-        const bottomDigits = bottomStr.split('').map((digit, i) => ({
+        const bottomDigits = ts.beatTypeDigits.map((digit, i) => ({
             glyphName: `timeSig${digit}`,
             x: tsX + i * getGlyphWidth(`timeSig${digit}`),
             y: bottomY,

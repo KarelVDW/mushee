@@ -1,8 +1,9 @@
+import type { TieType } from '@/components/notation/types'
+
 import { Duration } from './Duration'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
-import { Tempo } from './Tempo'
 import { Tie } from './Tie'
 
 export class Note {
@@ -10,16 +11,14 @@ export class Note {
     private _measure: Measure | undefined
     readonly duration: Duration
     readonly pitch: Pitch | undefined
-    readonly tie: boolean
-    private _tempo: Tempo | undefined
+    readonly tie: TieType | undefined
     readonly layout: NoteLayout
 
-    constructor(value: { duration: Duration; pitch?: Pitch; tie?: boolean; tempo?: number }) {
+    constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
         this.id = crypto.randomUUID()
         this.duration = value.duration
         this.pitch = value.pitch
-        this.tie = value.tie ?? false
-        this._tempo = value.tempo !== undefined ? new Tempo(this, value.tempo) : undefined
+        this.tie = value.tie
         this.layout = new NoteLayout(this)
     }
 
@@ -32,20 +31,12 @@ export class Note {
         this._measure = measure
     }
 
-    get tempo(): Tempo | undefined {
-        return this._tempo
-    }
-
-    setTempo(bpm: number | undefined) {
-        this._tempo = bpm !== undefined ? new Tempo(this, bpm) : undefined
-    }
-
     get isRest(): boolean {
         return !this.pitch
     }
 
     get inTuplet(): boolean {
-        return this.duration.ratio.numerator !== 1
+        return this.duration.ratio.actualNotes !== 1
     }
 
     get beatOffset() {
@@ -60,8 +51,16 @@ export class Note {
         return this.measure.beamOf(this)
     }
 
+    get tiesForward(): boolean {
+        return this.tie === 'start' || this.tie === 'start-stop'
+    }
+
+    get tiesBack(): boolean {
+        return this.tie === 'stop' || this.tie === 'start-stop'
+    }
+
     get tieToNext(): Tie | undefined {
-        if (!this.tie) return undefined
+        if (!this.tiesForward) return undefined
         const next = this.getNext()
         if (!next) return undefined
         return new Tie(this, next)
@@ -89,7 +88,7 @@ export class Note {
         return prevMeasure?.lastNote ?? null
     }
 
-    clone(overrides: { duration?: Duration; pitch?: Pitch; tie?: boolean }) {
+    clone(overrides: { duration?: Duration; pitch?: Pitch; tie?: TieType }) {
         return new Note({
             duration: overrides.duration || this.duration,
             pitch: 'pitch' in overrides ? overrides.pitch : this.pitch,

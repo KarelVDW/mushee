@@ -4,6 +4,7 @@ export type Clef = 'treble' | 'bass';
 export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
 export type BarlineType = 'single' | 'double' | 'end' | 'none';
+export type TieType = 'start' | 'stop' | 'start-stop';
 
 // --- MusicXML JSON types (input/output format, mirrors MusicXML 4.0) ---
 

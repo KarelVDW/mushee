@@ -6,7 +6,7 @@ export class TempoLayout {
     constructor(private tempo: Tempo) {}
 
     get x() {
-        return this.tempo.note.layout.x
+        return this.tempo.measure.layout.getX(this.tempo.beatPosition)
     }
 
     get y() {

@@ -15,12 +15,12 @@ const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: num
 export class Duration {
     readonly type: DurationType
     readonly dots: number
-    readonly ratio: { numerator: number; denominator: number } // used for tuplets
+    readonly ratio: { actualNotes: number; normalNotes: number } // used for tuplets
 
-    constructor(value?: { type?: DurationType; dots?: number; ratio?: { numerator: number; denominator: number } }) {
+    constructor(value?: { type?: DurationType; dots?: number; ratio?: { actualNotes: number; normalNotes: number } }) {
         this.type = value?.type || 'q'
         this.dots = value?.dots || 0
-        this.ratio = value?.ratio || { numerator: 1, denominator: 1 }
+        this.ratio = value?.ratio || { actualNotes: 1, normalNotes: 1 }
     }
 
     get baseBeats(): number {
@@ -44,7 +44,7 @@ export class Duration {
     }
 
     get effectiveBeats(): number {
-        return this.beats * (this.ratio.numerator / this.ratio.denominator)
+        return this.beats * (this.ratio.normalNotes / this.ratio.actualNotes)
     }
 
     get isBeamable(): boolean {
