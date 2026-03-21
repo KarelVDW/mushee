@@ -1,15 +1,15 @@
 {
-    "name": "@sheez/root",
+    "name": "@mushee/root",
     "version": "0.0.0",
     "private": true,
     "type": "module",
     "scripts": {
         "dev": "pnpm -r --parallel dev",
-        "dev:api": "pnpm --filter @sheez/api dev",
-        "dev:web": "pnpm --filter @sheez/web dev",
+        "dev:api": "pnpm --filter @mushee/api dev",
+        "dev:web": "pnpm --filter @mushee/web dev",
         "build": "pnpm -r build",
-        "build:api": "pnpm --filter @sheez/api build",
-        "build:web": "pnpm --filter @sheez/web build",
+        "build:api": "pnpm --filter @mushee/api build",
+        "build:web": "pnpm --filter @mushee/web build",
         "lint": "eslint --fix",
         "format": "prettier --write .",
         "type-check": "pnpm -r type-check"
