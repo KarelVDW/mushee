@@ -3,6 +3,7 @@ import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 import type { ScoreInput, TupletInput } from '@/components/notation'
 
 import { Duration } from './Duration'
+import { ScoreLayout, ScoreLayoutOptions } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { Pitch } from './Pitch'
@@ -10,6 +11,7 @@ import { Pitch } from './Pitch'
 export class Score {
     private _touchedAt: number
     readonly measures: Measure[] = []
+    private _layout: ScoreLayout | undefined
     private onChange: () => void
 
     constructor(onChange?: () => void) {
@@ -18,6 +20,16 @@ export class Score {
             onChange?.()
         }
         this._touchedAt = Date.now()
+        // this.layout = new ScoreLayout(this)
+    }
+
+    get layout() {
+        if (!this._layout) throw new Error('ScoreLayout has not yet been initialized')
+        return this._layout
+    }
+
+    initializeLayout(options: ScoreLayoutOptions) {
+        this._layout = new ScoreLayout(this, options)
     }
 
     get touchedAt() {
@@ -51,19 +63,20 @@ export class Score {
 
     getNextMeasure(measure?: Measure): Measure | null {
         if (!measure) return this.firstMeasure
-        const measureIndex = this.measures.findIndex((m) => m.id === measure.id)
+        const measureIndex = this.measures.findIndex((m) => m.index === measure.index)
         if (measureIndex < 0) return null
         const idx = measureIndex + 1
         return idx < this.measures.length ? (this.measures[idx] ?? null) : null
     }
 
     getPreviousMeasure(measure: Measure): Measure | null {
-        const measureIndex = this.measures.findIndex((m) => m.id === measure.id)
+        const measureIndex = this.measures.findIndex((m) => m.index === measure.index)
         if (measureIndex < 1) return null
         return this.measures[measureIndex - 1] ?? null
     }
 
-    addMeasure(measure = new Measure(this)) {
+    addMeasure() {
+        const measure = new Measure(this, this.measures.length)
         last(this.measures)?.setEndBarline('single')
         measure.setEndBarline('end')
         this.measures.splice(this.measures.length, 0, measure)
@@ -101,9 +114,9 @@ export class Score {
 
         const measuresById = keyBy(
             targets.map((n) => n.measure),
-            (m) => m.id,
+            (m) => m.index,
         )
-        const targetsByMeasure = groupBy(targets, (n) => n.measure.id)
+        const targetsByMeasure = groupBy(targets, (n) => n.measure.index)
         let replaceValues = [...values]
         for (const [measureId, notes] of Object.entries(targetsByMeasure)) {
             const measure = measuresById[measureId]
@@ -133,8 +146,9 @@ export class Score {
 
     static fromInput(input: ScoreInput, onChange?: () => void): Score {
         const score = new Score(onChange)
-        for (const measureInput of input.measures) {
-            const measure = new Measure(score, {
+        for (let mi = 0; mi < input.measures.length; mi++) {
+            const measureInput = input.measures[mi]
+            const measure = new Measure(score, mi, {
                 clef: measureInput.clef,
                 timeSignature: measureInput.timeSignature,
                 endBarline: measureInput.endBarline,
@@ -184,7 +198,7 @@ export class Score {
                             duration: note.duration.type,
                             ...(note.duration.dots > 0 && { dots: note.duration.dots }),
                             ...(note.tie && { tie: true }),
-                            ...(note.tempo !== undefined && { tempo: note.tempo }),
+                            ...(note.tempo !== undefined && { tempo: note.tempo.bpm }),
                         })),
                         tuplets: this.extractTuplets(measure.notes),
                     },

@@ -1,4 +1,4 @@
-import type { DurationType } from '@/components/notation/types'
+import type { DurationType } from '@/components/notation/types';
 
 /** Ordered list of duration values for greedy decomposition (largest first) */
 const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: number }> = [
@@ -47,19 +47,12 @@ export class Duration {
         return this.beats * (this.ratio.numerator / this.ratio.denominator)
     }
 
-    get beamCount(): number {
-        switch (this.type) {
-            case '8':
-                return 1
-            case '16':
-                return 2
-            default:
-                return 0
-        }
+    get isBeamable(): boolean {
+        return this.type === '8' ||  this.type === '16'
     }
 
-    get isBeamable(): boolean {
-        return this.beamCount > 0
+    get hasSecondaryBeam(): boolean {
+        return this.type === '16'
     }
 
     get restGlyph(): string {

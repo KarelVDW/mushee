@@ -1,3 +1,5 @@
+import type { Tempo } from '@/model/Tempo'
+
 import { GLYPH_SCALE } from './constants'
 import { Glyph } from './Glyph'
 import { getGlyphWidth } from './glyph-utils'
@@ -7,13 +9,13 @@ const TEMPO_FONT_SIZE = 10
 const TEMPO_TEXT_GAP = 3
 
 interface TempoMarkingProps {
-    x: number
-    y: number
-    bpm: number
+    tempo: Tempo
     onClick: (e: React.MouseEvent<SVGGElement>) => void
 }
 
-export function TempoMarking({ x, y, bpm, onClick }: TempoMarkingProps) {
+export function TempoMarking({ tempo, onClick }: TempoMarkingProps) {
+    const { x, y } = tempo.layout
+    const { bpm } = tempo
     const nhWidth = getGlyphWidth('noteheadBlack', GLYPH_SCALE)
     const stemX = x + nhWidth
     const stemY2 = y - TEMPO_NOTE_STEM_HEIGHT

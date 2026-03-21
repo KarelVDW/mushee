@@ -41,7 +41,7 @@ interface ControlBarProps {
   accidentalDisabled: boolean
   onAccidentalChange: (accidental: string | undefined) => void
   onDurationChange: (duration: DurationType) => void
-  tempo: number | undefined
+  tempo: unknown
   onTempoToggle: () => void
 }
 

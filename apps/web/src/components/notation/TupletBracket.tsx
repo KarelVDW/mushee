@@ -1,18 +1,19 @@
+import type { Tuplet } from '@/model'
+
 import { TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP, TUPLET_NUMBER_SCALE } from './constants'
 import { Glyph } from './Glyph'
-import type { LayoutTuplet } from './types'
 
 interface TupletBracketProps {
-    layout: LayoutTuplet
+    tuplet: Tuplet
 }
 
-export function TupletBracket({ layout }: TupletBracketProps) {
-    const { x1, x2, y, location, numberGlyphs, bracketed } = layout
+export function TupletBracket({ tuplet }: TupletBracketProps) {
+    const { x1, x2, y, location, numberGlyphs, bracketed } = tuplet.layout
     const centerX = (x1 + x2) / 2
     const numberHalfWidth = TUPLET_NUMBER_GAP
 
     return (
-        <g> 
+        <g>
             {bracketed && (
                 <>
                     {/* Left vertical tick */}

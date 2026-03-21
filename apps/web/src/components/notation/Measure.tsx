@@ -1,46 +1,41 @@
-import { BeamGroup } from './BeamGroup';
-import { Glyph } from './Glyph';
-import { NoteGroup } from './NoteGroup';
-import { TimeSignature } from './TimeSignature';
-import { TupletBracket } from './TupletBracket';
-import type { LayoutMeasure } from './types';
+import type { Measure as MeasureModel } from '@/model'
+
+import { BeamGroup } from './BeamGroup'
+import { Glyph } from './Glyph'
+import { NoteGroup } from './NoteGroup'
+import { TimeSignature } from './TimeSignature'
+import { TupletBracket } from './TupletBracket'
 
 const CURSOR_COLOR = '#1e90ff'
 
 interface MeasureProps {
-  layout: LayoutMeasure;
-  selectedNoteId?: string;
-  hoveredNoteId?: string | null;
+    measure: MeasureModel
+    selectedNoteId?: string
+    hoveredNoteId?: string | null
 }
 
-export function Measure({ layout, selectedNoteId, hoveredNoteId }: MeasureProps) {
-  return (
-    <g>
-      {layout.clef && (
-        <Glyph
-          name={layout.clef.glyphName}
-          x={layout.clef.x}
-          y={layout.clef.y}
-        />
-      )}
+export function Measure({ measure, selectedNoteId, hoveredNoteId }: MeasureProps) {
+    const { clef, timeSignature } = measure.layout
 
-      {layout.timeSignature && (
-        <TimeSignature layout={layout.timeSignature} />
-      )}
+    return (
+        <g>
+            {clef && <Glyph name={clef.glyphName} x={clef.x} y={clef.y} />}
 
-      {layout.notes.map((note, i) => {
-        const isSelected = note.noteId === selectedNoteId
-        const isHovered = !isSelected && note.noteId === hoveredNoteId
-        return <NoteGroup key={i} note={note} color={isSelected || isHovered ? CURSOR_COLOR : undefined} />
-      })}
+            {timeSignature && <TimeSignature layout={timeSignature} />}
 
-      {layout.beams.map((segments, i) => (
-        <BeamGroup key={i} segments={segments} />
-      ))}
+            {measure.notes.map((note) => {
+                const isSelected = note.id === selectedNoteId
+                const isHovered = !isSelected && note.id === hoveredNoteId
+                return <NoteGroup key={note.id} note={note} color={isSelected || isHovered ? CURSOR_COLOR : undefined} />
+            })}
 
-      {layout.tuplets.map((tuplet, i) => (
-        <TupletBracket key={i} layout={tuplet} />
-      ))}
-    </g>
-  );
+            {measure.beams.map((beam, i) => (
+                <BeamGroup key={i} beam={beam} />
+            ))}
+
+            {measure.tuplets.map((tuplet, i) => (
+                <TupletBracket key={i} tuplet={tuplet} />
+            ))}
+        </g>
+    )
 }

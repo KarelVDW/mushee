@@ -80,8 +80,9 @@ export default function Sheet() {
 
     const handleTempoToggle = useCallback(() => {
         if (!activeNote) return
-        // activeNote.toggleTempo()
-    }, [activeNote])
+        activeNote.setTempo(activeNote.tempo ? undefined : 120)
+        score.touch()
+    }, [activeNote, score])
 
     const handleTempoChange = useCallback(
         (noteId: string, bpm: number) => {

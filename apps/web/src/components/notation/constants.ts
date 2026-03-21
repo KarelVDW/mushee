@@ -82,3 +82,6 @@ export const DOT_NOTEHEAD_OFFSET = 5;
 
 /** Horizontal spacing between multiple dots (center to center) */
 export const DOT_SPACING = 5;
+
+/** Vertical offset from notehead center to tie endpoint */
+export const TIE_Y_SHIFT = 7

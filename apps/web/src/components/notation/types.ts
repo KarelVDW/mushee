@@ -1,7 +1,5 @@
 // --- Input types (declarative score description) ---
 
-import { Measure } from "@/model";
-
 export type Clef = 'treble' | 'bass';
 export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
@@ -54,32 +52,11 @@ export interface LayoutGlyph {
   y: number;
 }
 
-export interface LayoutNote {
-  x: number;
-  y: number;
-  glyphName: string;
-  accidental?: LayoutGlyph;
-  stem?: { x: number; y1: number; y2: number };
-  flag?: LayoutGlyph;
-  dots?: { x: number; y: number }[];
-  ledgerLines: LayoutLine[];
-  /** Structural note id: "m{measureIndex}:v{voiceIndex}:n{noteIndex}" */
-  noteId: string;
-}
-
 export interface LayoutTimeSignature {
   top: LayoutGlyph[];
   bottom: LayoutGlyph[];
 }
 
-/** A single beam line (filled parallelogram) */
-export interface LayoutBeamSegment {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  thickness: number;
-}
 
 export interface LayoutBarline {
   x: number;
@@ -88,58 +65,3 @@ export interface LayoutBarline {
   type: BarlineType;
 }
 
-export interface LayoutTuplet {
-  x1: number;
-  x2: number;
-  y: number;
-  location: 1 | -1; // 1 = above, -1 = below
-  numberGlyphs: LayoutGlyph[];
-  bracketed: boolean;
-}
-
-export interface LayoutMeasure {
-  measure: Measure;
-  x: number;
-  width: number;
-  clef?: LayoutGlyph;
-  timeSignature?: LayoutTimeSignature;
-  notes: LayoutNote[];
-  beams: LayoutBeamSegment[][];
-  tuplets: LayoutTuplet[];
-}
-
-export interface LayoutTie {
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
-  direction: 1 | -1; // 1 = below noteheads, -1 = above noteheads
-}
-
-export interface LayoutTempoMarking {
-  /** Structural note id */
-  noteId: string;
-  /** SVG X coordinate (aligned to the note's x) */
-  x: number;
-  /** SVG Y coordinate (row-local, within headroom above staff) */
-  y: number;
-  /** The BPM value to display */
-  bpm: number;
-}
-
-export interface LayoutResult {
-  width: number;
-  height: number;
-  staffLines: LayoutLine[];
-  measures: LayoutMeasure[];
-  barlines: LayoutBarline[];
-  ties: LayoutTie[];
-  tempoMarkings: LayoutTempoMarking[];
-}
-
-export interface ScoreLayout {
-  rows: LayoutResult[];
-  totalHeight: number;
-  rowHeight: number;
-  rowGap: number;
-}

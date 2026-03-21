@@ -16,10 +16,10 @@ const GHOST_OPACITY = 0.35
 
 export function GhostNote({ x, hoverY, glyphName }: GhostNoteProps) {
     const line = yToLine(hoverY)
-    const snappedY = getYForNote(line, 0)
+    const snappedY = getYForNote(line)
     const noteheadWidth = getGlyphWidth(glyphName)
 
-    const ledgerLineYs = getLedgerLinePositions(line, 0)
+    const ledgerLineYs = getLedgerLinePositions(line)
 
     return (
         <g opacity={GHOST_OPACITY}>

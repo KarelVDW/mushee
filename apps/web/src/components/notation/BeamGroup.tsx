@@ -1,10 +1,12 @@
-import type { LayoutBeamSegment } from './types'
+import type { Beam } from '@/model'
 
 interface BeamGroupProps {
-    segments: LayoutBeamSegment[]
+    beam: Beam
 }
 
-export function BeamGroup({ segments }: BeamGroupProps) {
+export function BeamGroup({ beam }: BeamGroupProps) {
+    const segments = [beam.layout.primary, ...beam.layout.secondaries]
+
     return (
         <g>
             {segments.map((seg, i) => (

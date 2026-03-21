@@ -6,24 +6,23 @@ import { SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
  * The stave top (line 5, F5 area) has the smallest Y.
  *
  * @param line - The note line value from Pitch.toLine()
- * @param staveY - The Y coordinate of the stave top (before headroom)
  */
-export function getYForNote(line: number, staveY: number): number {
+export function getYForNote(line: number): number {
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
-    return staveY + headroom + 5 * STAVE_LINE_DISTANCE - line * STAVE_LINE_DISTANCE
+    return  headroom + 5 * STAVE_LINE_DISTANCE - line * STAVE_LINE_DISTANCE
 }
 
 /**
  * Convert a staff line index (0-4, top to bottom) to a Y coordinate.
  */
-export function getYForLine(lineIndex: number, staveY: number): number {
+export function getYForLine(lineIndex: number): number {
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
-    return staveY + headroom + lineIndex * STAVE_LINE_DISTANCE
+    return  headroom + lineIndex * STAVE_LINE_DISTANCE
 }
 
 /**
  * Convert a Y pixel coordinate to a note line, snapped to the nearest half-line.
- * Reverse of getYForNote (with staveY = 0).
+ * Reverse of getYForNote.
  */
 export function yToLine(y: number): number {
     const raw = SPACE_ABOVE_STAFF + 5 - y / STAVE_LINE_DISTANCE
@@ -46,7 +45,7 @@ export function xToBeat(x: number, measureX: number, measureWidth: number, total
  * Line 0 = top staff line, line 4 = bottom staff line.
  * Notes above the staff (line < 0) or below (line > 4) need ledger lines.
  */
-export function getLedgerLinePositions(noteLine: number, staveY: number): number[] {
+export function getLedgerLinePositions(noteLine: number): number[] {
     const positions: number[] = []
 
     // Notes below the staff (noteLine < 1, i.e., below line index 4)
@@ -58,7 +57,7 @@ export function getLedgerLinePositions(noteLine: number, staveY: number): number
         for (let l = 0; l >= noteLine; l--) {
             if (l % 1 === 0) {
                 // Only draw ledger lines at integer positions (on the line, not in space)
-                positions.push(getYForNote(l, staveY))
+                positions.push(getYForNote(l))
             }
         }
     }
@@ -68,7 +67,7 @@ export function getLedgerLinePositions(noteLine: number, staveY: number): number
     if (noteLine > 5) {
         for (let l = 6; l <= noteLine; l++) {
             if (l % 1 === 0) {
-                positions.push(getYForNote(l, staveY))
+                positions.push(getYForNote(l))
             }
         }
     }

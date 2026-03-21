@@ -1,6 +1,9 @@
 import { Duration } from './Duration'
+import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
+import { Tempo } from './Tempo'
+import { Tie } from './Tie'
 
 export class Note {
     readonly id: string
@@ -8,14 +11,16 @@ export class Note {
     readonly duration: Duration
     readonly pitch: Pitch | undefined
     readonly tie: boolean
-    private _tempo: number | undefined
+    private _tempo: Tempo | undefined
+    readonly layout: NoteLayout
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: boolean; tempo?: number }) {
         this.id = crypto.randomUUID()
         this.duration = value.duration
         this.pitch = value.pitch
         this.tie = value.tie ?? false
-        this._tempo = value.tempo
+        this._tempo = value.tempo !== undefined ? new Tempo(this, value.tempo) : undefined
+        this.layout = new NoteLayout(this)
     }
 
     get measure() {
@@ -27,12 +32,12 @@ export class Note {
         this._measure = measure
     }
 
-    get tempo(): number | undefined {
+    get tempo(): Tempo | undefined {
         return this._tempo
     }
 
-    setTempo(value: number | undefined) {
-        this._tempo = value
+    setTempo(bpm: number | undefined) {
+        this._tempo = bpm !== undefined ? new Tempo(this, bpm) : undefined
     }
 
     get isRest(): boolean {
@@ -51,14 +56,21 @@ export class Note {
         return this.measure.tupletGroupOf(this)
     }
 
-    get beamGroup() {
-        return this.measure.beamGroupOf(this)
+    get beam() {
+        return this.measure.beamOf(this)
+    }
+
+    get tieToNext(): Tie | undefined {
+        if (!this.tie) return undefined
+        const next = this.getNext()
+        if (!next) return undefined
+        return new Tie(this, next)
     }
 
     get stemDir(): 'up' | 'down' {
         if (this.isRest) return 'up'
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.beamGroup?.stemDir ?? (this.pitch!.line >= 3 ? 'down' : 'up')
+        return this.beam?.stemDir ?? (this.pitch!.line >= 3 ? 'down' : 'up')
     }
 
     // --- Navigation ---

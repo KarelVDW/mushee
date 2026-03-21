@@ -1,4 +1,4 @@
-import type { LayoutTie } from './types'
+import type { Tie as TieModel } from '@/model/Tie'
 
 /** Outer bezier control point Y offset (thinner edge of tie) */
 const TIE_CP1 = 8
@@ -6,11 +6,11 @@ const TIE_CP1 = 8
 const TIE_CP2 = 12
 
 interface TieProps {
-    layout: LayoutTie
+    tie: TieModel
 }
 
-export function Tie({ layout }: TieProps) {
-    const { startX, startY, endX, endY, direction } = layout
+export function Tie({ tie }: TieProps) {
+    const { startX, startY, endX, endY, direction } = tie.layout
 
     // Reduce curvature for very close notes
     let cp1 = TIE_CP1

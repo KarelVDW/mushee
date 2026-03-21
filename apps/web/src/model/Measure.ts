@@ -2,47 +2,50 @@ import { difference, sumBy } from 'lodash-es'
 
 import type { BarlineType, Clef } from '@/components/notation/types'
 
+import { Beam } from './Beam'
 import { Duration } from './Duration'
+import { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
 import type { Score } from './Score'
-
-export interface BeamGroup {
-    notes: Set<Note>
-    stemDir: 'up' | 'down'
-}
+import { Tuplet } from './Tuplet'
 
 export class Measure {
-    readonly id: string
     private _notes: Note[] = []
     private _clef?: Clef
     private _timeSignature?: string // e.g. '4/4', '3/4'
     private _endBarline?: BarlineType // default: 'single'
-    private _tuplets: Array<Set<Note>> = []
-    private _beamGroups: BeamGroup[] = []
+    private _tuplets: Tuplet[] = []
+    private _beams: Beam[] = []
     private _beatOffsets = new Map<Note, number>()
-    private _tupletByNote = new Map<Note, Set<Note>>()
-    private _beamGroupByNote = new Map<Note, BeamGroup>()
+    private _tupletByNote = new Map<Note, Tuplet>()
+    private _beamByNote = new Map<Note, Beam>()
+    private _layout: MeasureLayout | undefined
 
     constructor(
         readonly score: Score,
+        readonly index: number,
         value?: {
             clef?: Clef
             timeSignature?: string // e.g. '4/4', '3/4'
             endBarline?: BarlineType // default: 'single'
         },
     ) {
-        this.id = crypto.randomUUID()
         this._clef = value?.clef
         this._timeSignature = value?.timeSignature
         this._endBarline = value?.endBarline
+    }
+
+    get layout() {
+        this._layout ||= new MeasureLayout(this)
+        return this._layout
     }
 
     get tuplets() {
         return this._tuplets
     }
 
-    get beamGroups() {
-        return this._beamGroups
+    get beams() {
+        return this._beams
     }
 
     beatOffsetOf(note: Note): number {
@@ -51,12 +54,12 @@ export class Measure {
         return offset
     }
 
-    tupletGroupOf(note: Note): Set<Note> | undefined {
+    tupletGroupOf(note: Note): Tuplet | undefined {
         return this._tupletByNote.get(note)
     }
 
-    beamGroupOf(note: Note): BeamGroup | undefined {
-        return this._beamGroupByNote.get(note)
+    beamOf(note: Note): Beam | undefined {
+        return this._beamByNote.get(note)
     }
 
     /** Find the note whose beat range contains the given (continuous) beat value. */
@@ -158,7 +161,7 @@ export class Measure {
     replaceNotes(targets: Note[], values: Note[]) {
         console.log('replaceNotes', { targets, values })
         if (!targets.length) throw new Error('Replace targets can not be empty')
-        if (targets.some((n) => n.measure.id !== this.id)) throw new Error('Cannot replace notes not belonging to this measure')
+        if (targets.some((n) => n.measure.index !== this.index)) throw new Error('Cannot replace notes not belonging to this measure')
         const startIndex = this.notes.findIndex((n) => n.id === targets[0].id)
         if (startIndex < 0) throw new Error('Cannot find startIndex for replace')
         const diff = difference(this._notes, targets)
@@ -193,7 +196,7 @@ export class Measure {
     private findTuplets() {
         this._tuplets = []
         this._tupletByNote = new Map()
-        let currentSet = new Set<Note>()
+        let currentNotes: Note[] = []
         let currentRatio: { numerator: number; denominator: number } | null = null
         let totalDuration = 0
 
@@ -202,9 +205,9 @@ export class Measure {
 
             // Ignore non-tuplet notes (ratio 1/1)
             if (numerator === 1 && denominator === 1) {
-                if (currentSet.size > 0) {
-                    this._tuplets.push(currentSet)
-                    currentSet = new Set()
+                if (currentNotes.length > 0) {
+                    this._tuplets.push(new Tuplet(this, currentNotes))
+                    currentNotes = []
                     currentRatio = null
                     totalDuration = 0
                 }
@@ -213,35 +216,33 @@ export class Measure {
 
             // Ratio changed — save current set and start fresh
             if (currentRatio && (currentRatio.numerator !== numerator || currentRatio.denominator !== denominator)) {
-                if (currentSet.size > 0) {
-                    this._tuplets.push(currentSet)
+                if (currentNotes.length > 0) {
+                    this._tuplets.push(new Tuplet(this, currentNotes))
                 }
-                currentSet = new Set()
+                currentNotes = []
                 totalDuration = 0
             }
 
             currentRatio = { numerator, denominator }
-            currentSet.add(note)
+            currentNotes.push(note)
             totalDuration += note.duration.effectiveBeats
 
             // Set is complete when total duration reaches the numerator
             if (totalDuration >= numerator - 0.001) {
-                this._tuplets.push(currentSet)
-                currentSet = new Set()
+                this._tuplets.push(new Tuplet(this, currentNotes))
+                currentNotes = []
                 currentRatio = null
                 totalDuration = 0
             }
         }
 
         // Push any remaining incomplete set
-        if (currentSet.size > 0) {
-            this._tuplets.push(currentSet)
-        }
+        if (currentNotes.length > 0) this._tuplets.push(new Tuplet(this, currentNotes))
 
         // Build reverse lookup
-        for (const set of this._tuplets) {
-            for (const note of set) {
-                this._tupletByNote.set(note, set)
+        for (const tuplet of this._tuplets) {
+            for (const note of tuplet.notes) {
+                this._tupletByNote.set(note, tuplet)
             }
         }
     }
@@ -252,8 +253,8 @@ export class Measure {
      * Beat boundaries break groups, unless both notes belong to the same tuplet.
      */
     private findBeamGroups() {
-        this._beamGroups = []
-        this._beamGroupByNote = new Map()
+        this._beams = []
+        this._beamByNote = new Map()
         let currentNotes: Note[] = []
         let beat = 0
 
@@ -261,10 +262,10 @@ export class Measure {
             if (currentNotes.length >= 2) {
                 const avgLine = currentNotes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / currentNotes.length
                 const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-                const group: BeamGroup = { notes: new Set(currentNotes), stemDir }
-                this._beamGroups.push(group)
+                const beam = new Beam(this, currentNotes, stemDir)
+                this._beams.push(beam)
                 for (const n of currentNotes) {
-                    this._beamGroupByNote.set(n, group)
+                    this._beamByNote.set(n, beam)
                 }
             }
             currentNotes = []
