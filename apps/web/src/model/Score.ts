@@ -28,6 +28,8 @@ export class Score {
     readonly measures: Measure[] = []
     private _layout: ScoreLayout | undefined
     private onChange: () => void
+    private _dirtyMeasures = new Set<number>()
+    private _structureChanged = false
 
     constructor(onChange?: () => void) {
         this.onChange = () => {
@@ -36,6 +38,23 @@ export class Score {
         }
         this._touchedAt = Date.now()
         // this.layout = new ScoreLayout(this)
+    }
+
+    markMeasureDirty(index: number) {
+        this._dirtyMeasures.add(index)
+    }
+
+    markStructureChanged() {
+        this._structureChanged = true
+    }
+
+    get dirtyMeasureIndices(): number[] {
+        return [...this._dirtyMeasures]
+    }
+
+    clearDirty() {
+        this._dirtyMeasures.clear()
+        this._structureChanged = false
     }
 
     get layout() {
@@ -104,6 +123,7 @@ export class Score {
         last(this.measures)?.setEndBarline('single')
         measure.setEndBarline('end')
         this.measures.splice(this.measures.length, 0, measure)
+        this.markStructureChanged()
         this.onChange()
         return measure
     }
@@ -111,6 +131,7 @@ export class Score {
     removeLastMeasure() {
         this.measures.splice(this.measures.length - 1, 1)
         last(this.measures)?.setEndBarline('end')
+        this.markStructureChanged()
         this.onChange()
     }
 
@@ -163,6 +184,7 @@ export class Score {
                 }
             }
             measure.replaceNotes(notes, newNotes)
+            this.markMeasureDirty(measure.index)
             replaceValues = [...remainderNotes, ...replaceValues]
         }
         this.onChange()
@@ -246,67 +268,92 @@ export class Score {
         return score
     }
 
+    private serializeMeasure(measure: Measure, mi: number) {
+        const entries: MxmlMeasureEntry[] = []
+
+        if (measure.clef || measure.timeSignature || measure.keySignature) {
+            entries.push({
+                _type: 'attributes' as const,
+                divisions: DIVISIONS,
+                ...(measure.clef && { clef: [Score.clefToMxmlClef(measure.clef)] }),
+                ...(measure.timeSignature && { time: [Score.timeSignatureToMxmlTime(measure.timeSignature)] }),
+                ...(measure.keySignature && {
+                    key: [{ fifths: measure.keySignature.fifths, ...(measure.keySignature.mode && { mode: measure.keySignature.mode }) }],
+                }),
+            })
+        }
+
+        for (const note of measure.notes) {
+            const tempoAtBeat = measure.tempoAtBeat(measure.beatOffsetOf(note))
+            if (tempoAtBeat) {
+                entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
+            }
+            entries.push({
+                _type: 'note' as const,
+                ...(note.pitch
+                    ? {
+                          pitch: {
+                              step: note.pitch.name as MxmlStep,
+                              ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
+                              octave: note.pitch.octave,
+                          },
+                      }
+                    : { rest: {} }),
+                duration: Score.computeDivisions(note),
+                voice: '1',
+                type: Score.durationTypeToMxmlNoteType(note.duration.type),
+                ...(note.duration.dots > 0 && { dot: note.duration.dots }),
+                ...(note.tie && { tie: Score.tieTypeToMxmlTie(note.tie) }),
+                ...(note.inTuplet && {
+                    timeModification: {
+                        actualNotes: note.duration.ratio.actualNotes,
+                        normalNotes: note.duration.ratio.normalNotes,
+                    },
+                }),
+            })
+        }
+
+        if (measure.endBarline && measure.endBarline !== 'single') {
+            entries.push({
+                _type: 'barline' as const,
+                location: 'right' as const,
+                barStyle: Score.barlineTypeToMxmlBarStyle(measure.endBarline),
+            })
+        }
+
+        return { number: String(mi + 1), entries }
+    }
+
     toInput(): ScorePartwise {
-        const measures = this.measures.map((measure, mi) => {
-            const entries: MxmlMeasureEntry[] = []
-
-            if (measure.clef || measure.timeSignature || measure.keySignature) {
-                entries.push({
-                    _type: 'attributes' as const,
-                    divisions: DIVISIONS,
-                    ...(measure.clef && { clef: [Score.clefToMxmlClef(measure.clef)] }),
-                    ...(measure.timeSignature && { time: [Score.timeSignatureToMxmlTime(measure.timeSignature)] }),
-                    ...(measure.keySignature && {
-                        key: [{ fifths: measure.keySignature.fifths, ...(measure.keySignature.mode && { mode: measure.keySignature.mode }) }],
-                    }),
-                })
-            }
-
-            for (const note of measure.notes) {
-                const tempoAtBeat = measure.tempoAtBeat(measure.beatOffsetOf(note))
-                if (tempoAtBeat) {
-                    entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
-                }
-                entries.push({
-                    _type: 'note' as const,
-                    ...(note.pitch
-                        ? {
-                              pitch: {
-                                  step: note.pitch.name as MxmlStep,
-                                  ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
-                                  octave: note.pitch.octave,
-                              },
-                          }
-                        : { rest: {} }),
-                    duration: Score.computeDivisions(note),
-                    voice: '1',
-                    type: Score.durationTypeToMxmlNoteType(note.duration.type),
-                    ...(note.duration.dots > 0 && { dot: note.duration.dots }),
-                    ...(note.tie && { tie: Score.tieTypeToMxmlTie(note.tie) }),
-                    ...(note.inTuplet && {
-                        timeModification: {
-                            actualNotes: note.duration.ratio.actualNotes,
-                            normalNotes: note.duration.ratio.normalNotes,
-                        },
-                    }),
-                })
-            }
-
-            if (measure.endBarline && measure.endBarline !== 'single') {
-                entries.push({
-                    _type: 'barline' as const,
-                    location: 'right' as const,
-                    barStyle: Score.barlineTypeToMxmlBarStyle(measure.endBarline),
-                })
-            }
-
-            return { number: String(mi + 1), entries }
-        })
-
+        const measures = this.measures.map((measure, mi) => this.serializeMeasure(measure, mi))
         return {
             partList: { scoreParts: [{ id: 'P1', partName: 'Part 1' }] },
             parts: [{ id: 'P1', measures }],
         }
+    }
+
+    /** Serialize dirty state, then clear it. Returns null if nothing changed. */
+    flushDirty(): { measures?: Record<string, unknown>; allMeasures?: unknown[] } | null {
+        if (!this._structureChanged && this._dirtyMeasures.size === 0) return null
+
+        if (this._structureChanged) {
+            // Structure changed (add/remove measure) — send all measures
+            const allMeasures = this.measures.map((m, mi) => this.serializeMeasure(m, mi))
+            this.clearDirty()
+            return { allMeasures }
+        }
+
+        // Only specific measures changed — send partial update
+        const measures: Record<string, unknown> = {}
+        for (const idx of this._dirtyMeasures) {
+            const measure = this.measures.find((m) => m.index === idx)
+            if (measure) {
+                const mi = this.measures.indexOf(measure)
+                measures[String(mi)] = this.serializeMeasure(measure, mi)
+            }
+        }
+        this.clearDirty()
+        return { measures }
     }
 
     // --- MusicXML ↔ Internal type conversions ---

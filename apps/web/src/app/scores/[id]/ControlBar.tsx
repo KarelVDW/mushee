@@ -74,14 +74,24 @@ interface ControlBarProps {
   onRestToggle: () => void
   tempo: unknown
   onTempoToggle: () => void
+  onBack?: () => void
 }
 
 export function ControlBar({
   accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
   dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
+  onBack,
 }: ControlBarProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
+      {onBack && (
+        <>
+          <button type="button" onClick={onBack} className={`${TOGGLE_BTN} border-gray-300 bg-white text-gray-700 hover:bg-gray-100 px-2.5 py-1 text-sm font-medium`}>
+            &larr; Back
+          </button>
+          <Sep />
+        </>
+      )}
       {/* Note type: durations + dot + rest */}
       <div className="flex">
         {DURATIONS.map((dur) => {

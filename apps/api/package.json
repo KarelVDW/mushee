@@ -1,0 +1,36 @@
+{
+  "name": "@mushee/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "start:prod": "node dist/main",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/mongoose": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.0.0",
+    "@nestjs/schedule": "^5.0.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "better-auth": "^1.2.0",
+    "execa": "^9.5.0",
+    "fastify": "^5.0.0",
+    "mongoose": "^8.0.0",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.0",
+    "tmp-promise": "^3.0.3",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.19.0"
+  }
+}

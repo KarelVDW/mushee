@@ -4,6 +4,7 @@ declare module 'web-audio-api' {
         decodeAudioData(
             audioData: ArrayBuffer,
             successCallback: (audioBuffer: AudioBuffer) => void,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             errorCallback?: (error: any) => void,
         ): void
     }
