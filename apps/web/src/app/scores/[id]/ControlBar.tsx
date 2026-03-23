@@ -74,13 +74,15 @@ interface ControlBarProps {
   onRestToggle: () => void
   tempo: unknown
   onTempoToggle: () => void
+  isPlaying: boolean
+  onPlayToggle: () => void
   onBack?: () => void
 }
 
 export function ControlBar({
   accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
   dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
-  onBack,
+  isPlaying, onPlayToggle, onBack,
 }: ControlBarProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
@@ -140,6 +142,22 @@ export function ControlBar({
       </button>
       <button type="button" onClick={onTempoToggle} className={`${toggleBtnClass(tempo !== undefined)} px-2.5 py-1 text-sm font-medium`}>
         Tempo
+      </button>
+
+      <Sep />
+
+      {/* Playback */}
+      <button type="button" onClick={onPlayToggle} className={`${toggleBtnClass(isPlaying)} px-2.5 py-1`}>
+        {isPlaying ? (
+          <svg width={12} height={14} viewBox="0 0 12 14">
+            <rect x={1} y={1} width={3.5} height={12} rx={0.5} fill={isPlaying ? '#fff' : '#374151'} />
+            <rect x={7.5} y={1} width={3.5} height={12} rx={0.5} fill={isPlaying ? '#fff' : '#374151'} />
+          </svg>
+        ) : (
+          <svg width={12} height={14} viewBox="0 0 12 14">
+            <path d="M1 1.5v11l10-5.5z" fill="#374151" />
+          </svg>
+        )}
       </button>
     </div>
   );

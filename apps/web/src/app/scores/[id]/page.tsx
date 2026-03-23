@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { loadScore, updateScore } from '@/lib/api'
+import { PlaybackEngine, type PlaybackPosition } from '@/lib/playback'
 import { Duration, type Note, Pitch, Score } from '@/model'
 
 import { ControlBar } from './ControlBar'
@@ -20,6 +21,9 @@ export default function ScoreEditorPage() {
     const [activeNote, setActiveNote] = useState<Note | undefined>()
     const containerRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+    const playbackRef = useRef<PlaybackEngine | null>(null)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [playbackPosition, setPlaybackPosition] = useState<PlaybackPosition | null>(null)
 
     useEffect(() => {
         async function load() {
@@ -37,19 +41,22 @@ export default function ScoreEditorPage() {
         load()
     }, [id])
 
-    const saveToApi = useCallback((changes: { title?: string; score?: Score }) => {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(() => {
-            const body: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[] } = {}
-            if (changes.title !== undefined) body.title = changes.title
-            if (changes.score) {
-                const dirty = changes.score.flushDirty()
-                if (dirty?.measures) body.measures = dirty.measures
-                if (dirty?.allMeasures) body.allMeasures = dirty.allMeasures
-            }
-            if (body.title !== undefined || body.measures || body.allMeasures) void updateScore(id, body)
-        }, 2000)
-    }, [id])
+    const saveToApi = useCallback(
+        (changes: { title?: string; score?: Score }) => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+            saveTimeoutRef.current = setTimeout(() => {
+                const body: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[] } = {}
+                if (changes.title !== undefined) body.title = changes.title
+                if (changes.score) {
+                    const dirty = changes.score.flushDirty()
+                    if (dirty?.measures) body.measures = dirty.measures
+                    if (dirty?.allMeasures) body.allMeasures = dirty.allMeasures
+                }
+                if (body.title !== undefined || body.measures || body.allMeasures) void updateScore(id, body)
+            }, 2000)
+        },
+        [id],
+    )
 
     const handleNoteChange = useCallback(
         (note: Note, newPitch: Pitch) => {
@@ -127,7 +134,9 @@ export default function ScoreEditorPage() {
     const handleDotToggle = useCallback(() => {
         if (!activeNote || !score) return
         const newDots = activeNote.duration.dots > 0 ? 0 : 1
-        const newNote = activeNote.clone({ duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }) })
+        const newNote = activeNote.clone({
+            duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }),
+        })
         score.replace([activeNote], [newNote])
         setActiveNote(newNote)
         saveToApi({ score })
@@ -135,7 +144,7 @@ export default function ScoreEditorPage() {
 
     const handleTieToggle = useCallback(() => {
         if (!activeNote || !score) return
-        const newTie = activeNote.tiesForward ? undefined : 'start' as const
+        const newTie = activeNote.tiesForward ? undefined : ('start' as const)
         const newNote = activeNote.clone({ tie: newTie })
         score.replace([activeNote], [newNote])
         setActiveNote(newNote)
@@ -176,10 +185,7 @@ export default function ScoreEditorPage() {
         [score, saveToApi],
     )
 
-    const handleNoteSelect = useCallback(
-        (note: Note) => setActiveNote(note),
-        [],
-    )
+    const handleNoteSelect = useCallback((note: Note) => setActiveNote(note), [])
 
     const handleAddMeasure = useCallback(() => {
         if (!score) return
@@ -193,6 +199,41 @@ export default function ScoreEditorPage() {
         setActiveNote(score.lastMeasure?.lastNote || undefined)
         saveToApi({ score })
     }, [score, saveToApi])
+
+    // Initialize playback engine and preload samples
+    useEffect(() => {
+        const engine = new PlaybackEngine()
+        playbackRef.current = engine
+        engine.loadSamples().catch(() => {
+            // Samples failed to load — will fall back to oscillator synthesis
+        })
+        return () => engine.stop()
+    }, [])
+
+    const handlePlayToggle = useCallback(() => {
+        if (!score) return
+        const engine = playbackRef.current
+        if (!engine) return
+
+        if (engine.isPlaying) {
+            engine.stop()
+            setIsPlaying(false)
+            setPlaybackPosition(null)
+        } else {
+            engine.play(
+                score,
+                (pos) => {
+                    console.log('setPlaybackPosition', pos)
+                    setPlaybackPosition(pos)
+                },
+                () => {
+                    setIsPlaying(false)
+                    setPlaybackPosition(null)
+                },
+            )
+            setIsPlaying(true)
+        }
+    }, [score])
 
     useEffect(() => {
         const el = containerRef.current
@@ -215,11 +256,7 @@ export default function ScoreEditorPage() {
             <div className="flex min-h-screen items-center justify-center bg-gray-100">
                 <div className="text-center">
                     <p className="text-red-600">{error ?? 'Score not found'}</p>
-                    <button
-                        type="button"
-                        onClick={() => router.push('/scores')}
-                        className="mt-4 text-sm text-blue-600 hover:underline"
-                    >
+                    <button type="button" onClick={() => router.push('/scores')} className="mt-4 text-sm text-blue-600 hover:underline">
                         Back to scores
                     </button>
                 </div>
@@ -243,6 +280,8 @@ export default function ScoreEditorPage() {
                 onRestToggle={handleRestToggle}
                 tempo={activeNote ? activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote)) : undefined}
                 onTempoToggle={handleTempoToggle}
+                isPlaying={isPlaying}
+                onPlayToggle={handlePlayToggle}
                 onBack={() => router.push('/scores')}
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8">
@@ -250,6 +289,7 @@ export default function ScoreEditorPage() {
                     <ScoreView
                         score={score}
                         selectedNoteId={activeNote?.id}
+                        playbackPosition={playbackPosition}
                         onNoteSelect={handleNoteSelect}
                         onNoteChange={handleNoteChange}
                         onAddMeasure={handleAddMeasure}

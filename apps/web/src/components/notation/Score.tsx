@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { PlaybackPosition } from '@/lib/playback'
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 
 import { Barline } from './Barline'
@@ -28,6 +29,7 @@ interface ScoreProps {
     score: ScoreModel
     height?: number
     selectedNoteId?: string
+    playbackPosition?: PlaybackPosition | null
     onNoteSelect?: (note: Note) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void
     onAddMeasure?: () => void
@@ -40,6 +42,7 @@ export function Score({
     score,
     height = 160,
     selectedNoteId,
+    playbackPosition,
     onNoteSelect,
     onNoteChange,
     onAddMeasure,
@@ -282,6 +285,18 @@ export function Score({
         [openPopover, clientToSvg, yToRow, rows, selectedNoteId, onNoteSelect, ghostInfo, onNoteChange, selectedClef],
     )
 
+    // Playback cursor position
+    const playbackCursor = useMemo(() => {
+        if (!playbackPosition) return null
+        for (let ri = 0; ri < rows.length; ri++) {
+            const measure = rows[ri].measures.find((m) => m.index === playbackPosition.measureIndex)
+            if (measure) {
+                return { rowIndex: ri, x: measure.layout.getX(playbackPosition.beat) }
+            }
+        }
+        return null
+    }, [playbackPosition, rows])
+
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
         if (rows.length === 0 || !showMeasureButtons || !scoreLayout) return null
@@ -336,6 +351,17 @@ export function Score({
                             ))}
 
                             {cursorPos && cursorPos.rowIndex === ri && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}
+
+                            {playbackCursor && playbackCursor.rowIndex === ri && (
+                                <rect
+                                    x={playbackCursor.x - 1.5}
+                                    y={SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 5}
+                                    width={3}
+                                    height={(NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 10}
+                                    fill="#3b82f6"
+                                    rx={1.5}
+                                />
+                            )}
 
                             {ghostInfo && ghostInfo.rowIndex === ri && hoverInfo !== null && (
                                 <GhostNote x={ghostInfo.x} hoverY={hoverInfo.y} glyphName={ghostInfo.glyphName} />
