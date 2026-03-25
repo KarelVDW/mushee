@@ -57,7 +57,8 @@ export class PlaybackEngine {
     private timeline: TimelineEntry[] = []
     private _isPlaying = false
     private animationId = 0
-    private onPositionChange: ((pos: PlaybackPosition | null) => void) | null = null
+    private cursorEl: SVGRectElement | null = null
+    private resolvePosition: ((pos: PlaybackPosition) => { x: number; rowY: number } | null) | null = null
     private onFinish: (() => void) | null = null
     private samples: LoadedSample[] = []
     private samplesLoaded = false
@@ -85,9 +86,15 @@ export class PlaybackEngine {
         }
     }
 
-    play(score: Score, onPositionChange: (pos: PlaybackPosition | null) => void, onFinish: () => void) {
+    play(
+        score: Score,
+        cursorEl: SVGRectElement,
+        resolvePosition: (pos: PlaybackPosition) => { x: number; rowY: number } | null,
+        onFinish: () => void,
+    ) {
         this.stop()
-        this.onPositionChange = onPositionChange
+        this.cursorEl = cursorEl
+        this.resolvePosition = resolvePosition
         this.onFinish = onFinish
 
         this.audioCtx = new AudioContext()
@@ -132,7 +139,9 @@ export class PlaybackEngine {
             this.audioCtx = null
         }
 
-        this.onPositionChange?.(null)
+        if (this.cursorEl) this.cursorEl.setAttribute('display', 'none')
+        this.cursorEl = null
+        this.resolvePosition = null
     }
 
     // --- Audio scheduling ---
@@ -216,7 +225,7 @@ export class PlaybackEngine {
             this._isPlaying = false
             cancelAnimationFrame(this.animationId)
             this.animationId = 0
-            this.onPositionChange?.(null)
+            if (this.cursorEl) this.cursorEl.setAttribute('display', 'none')
 
             // Clean up audio nodes
             for (const src of this.sourceNodes) {
@@ -233,7 +242,14 @@ export class PlaybackEngine {
         }
 
         const pos = this.getPositionAtTime(elapsed)
-        this.onPositionChange?.(pos)
+        if (pos && this.cursorEl && this.resolvePosition) {
+            const resolved = this.resolvePosition(pos)
+            if (resolved) {
+                this.cursorEl.setAttribute('x', String(resolved.x - 1.5))
+                this.cursorEl.setAttribute('transform', `translate(0, ${resolved.rowY})`)
+                this.cursorEl.setAttribute('display', '')
+            }
+        }
 
         this.animationId = requestAnimationFrame(this.tick)
     }

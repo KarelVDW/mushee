@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { loadScore, updateScore } from '@/lib/api'
-import { PlaybackEngine, type PlaybackPosition } from '@/lib/playback'
+import { PlaybackEngine } from '@/lib/playback'
 import { Duration, type Note, Pitch, Score } from '@/model'
 
 import { ControlBar } from './ControlBar'
@@ -22,8 +22,8 @@ export default function ScoreEditorPage() {
     const containerRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const playbackRef = useRef<PlaybackEngine | null>(null)
+    const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
-    const [playbackPosition, setPlaybackPosition] = useState<PlaybackPosition | null>(null)
 
     useEffect(() => {
         async function load() {
@@ -218,19 +218,28 @@ export default function ScoreEditorPage() {
         if (engine.isPlaying) {
             engine.stop()
             setIsPlaying(false)
-            setPlaybackPosition(null)
         } else {
-            engine.play(
-                score,
-                (pos) => {
-                    console.log('setPlaybackPosition', pos)
-                    setPlaybackPosition(pos)
-                },
-                () => {
-                    setIsPlaying(false)
-                    setPlaybackPosition(null)
-                },
-            )
+            const cursorEl = playbackCursorRef.current
+            if (!cursorEl) return
+
+            const layout = score.layout
+            if (!layout) return
+
+            const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
+                for (let ri = 0; ri < layout.rows.length; ri++) {
+                    const measure = layout.rows[ri].measures.find((m) => m.index === pos.measureIndex)
+                    if (measure) {
+                        const x = measure.layout.getX(pos.beat)
+                        const rowY = ri * (layout.rowHeight + layout.rowGap)
+                        return { x, rowY }
+                    }
+                }
+                return null
+            }
+
+            engine.play(score, cursorEl, resolvePosition, () => {
+                setIsPlaying(false)
+            })
             setIsPlaying(true)
         }
     }, [score])
@@ -289,7 +298,7 @@ export default function ScoreEditorPage() {
                     <ScoreView
                         score={score}
                         selectedNoteId={activeNote?.id}
-                        playbackPosition={playbackPosition}
+                        playbackCursorRef={playbackCursorRef}
                         onNoteSelect={handleNoteSelect}
                         onNoteChange={handleNoteChange}
                         onAddMeasure={handleAddMeasure}
