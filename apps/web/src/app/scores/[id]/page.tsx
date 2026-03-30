@@ -9,6 +9,7 @@ import { loadScore, updateScore } from '@/lib/api'
 import { PlaybackEngine } from '@/lib/playback'
 import { Duration, type Note, Pitch, Score } from '@/model'
 
+import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 import { ControlBar } from './ControlBar'
 
 export default function ScoreEditorPage() {
@@ -29,7 +30,8 @@ export default function ScoreEditorPage() {
         async function load() {
             try {
                 const data = await loadScore(id)
-                const s = Score.fromInput(data as unknown as ScorePartwise, () => setUpdatedAt(s.touchedAt))
+                const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
+                const s = deserializer.toScore()
                 setScore(s)
                 setActiveNote(s.firstMeasure?.firstNote ?? undefined)
             } catch {
