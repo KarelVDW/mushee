@@ -208,130 +208,22 @@ export class Measure {
     }
 
     private recompute() {
-        this.findBeatOffsets()
-        this.findTuplets()
-        this.findBeamGroups()
-    }
-
-    private findBeatOffsets() {
+        // find beat offsets
         this._beatOffsets = new Map()
         let beat = 0
         for (const note of this._notes) {
             this._beatOffsets.set(note, beat)
             beat += note.duration.effectiveBeats
         }
-    }
-
-    private findTuplets() {
-        this._tuplets = []
-        this._tupletByNote = new Map()
-        let currentNotes: Note[] = []
-        let currentRatio: { actualNotes: number; normalNotes: number } | null = null
-        let totalDuration = 0
-
-        for (const note of this._notes) {
-            const { actualNotes, normalNotes } = note.duration.ratio
-
-            // Ignore non-tuplet notes (ratio 1/1)
-            if (actualNotes === 1 && normalNotes === 1) {
-                if (currentNotes.length > 0) {
-                    this._tuplets.push(new Tuplet(this, currentNotes))
-                    currentNotes = []
-                    currentRatio = null
-                    totalDuration = 0
-                }
-                continue
-            }
-
-            // Ratio changed — save current set and start fresh
-            if (currentRatio && (currentRatio.actualNotes !== actualNotes || currentRatio.normalNotes !== normalNotes)) {
-                if (currentNotes.length > 0) {
-                    this._tuplets.push(new Tuplet(this, currentNotes))
-                }
-                currentNotes = []
-                totalDuration = 0
-            }
-
-            currentRatio = { actualNotes, normalNotes }
-            currentNotes.push(note)
-            totalDuration += note.duration.effectiveBeats
-
-            // Set is complete when total duration reaches the normalNotes
-            if (totalDuration >= normalNotes - 0.001) {
-                this._tuplets.push(new Tuplet(this, currentNotes))
-                currentNotes = []
-                currentRatio = null
-                totalDuration = 0
-            }
-        }
-
-        // Push any remaining incomplete set
-        if (currentNotes.length > 0) this._tuplets.push(new Tuplet(this, currentNotes))
-
-        // Build reverse lookup
-        for (const tuplet of this._tuplets) {
-            for (const note of tuplet.notes) {
-                this._tupletByNote.set(note, tuplet)
-            }
-        }
-    }
-
-    /**
-     * Group consecutive beamable notes (8th, 16th) that fall within the same beat,
-     * and compute a uniform stem direction per group based on average pitch.
-     * Beat boundaries break groups, unless both notes belong to the same tuplet.
-     */
-    private findBeamGroups() {
-        this._beams = []
-        this._beamByNote = new Map()
-        let currentNotes: Note[] = []
-        let beat = 0
-
-        const flushGroup = () => {
-            if (currentNotes.length >= 2) {
-                const avgLine = currentNotes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / currentNotes.length
-                const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-                const beam = new Beam(this, currentNotes, stemDir)
-                this._beams.push(beam)
-                for (const n of currentNotes) {
-                    this._beamByNote.set(n, beam)
-                }
-            }
-            currentNotes = []
-        }
-
-        for (const note of this._notes) {
-            if (!note.duration.isBeamable || note.isRest) {
-                flushGroup()
-                beat += note.duration.effectiveBeats
-                continue
-            }
-
-            if (currentNotes.length > 0) {
-                const prevNote = currentNotes[currentNotes.length - 1]
-                const prevTuplet = this._tupletByNote.get(prevNote)
-                const sameTuplet = prevTuplet !== undefined && prevTuplet === this._tupletByNote.get(note)
-
-                if (!sameTuplet) {
-                    const eitherInTuplet = prevNote.inTuplet || note.inTuplet
-                    if (eitherInTuplet) {
-                        flushGroup()
-                    } else {
-                        const prevBeat = beat - prevNote.duration.effectiveBeats
-                        const prevBeatBoundary = Math.floor(prevBeat)
-                        const nextBeatBoundary = Math.floor(beat)
-
-                        if (nextBeatBoundary > prevBeatBoundary) {
-                            flushGroup()
-                        }
-                    }
-                }
-            }
-
-            currentNotes.push(note)
-            beat += note.duration.effectiveBeats
-        }
-
-        flushGroup()
+        // find tuplets
+        const tupletFinder = new TupletFinder(this)
+        this._tuplets = tupletFinder.tuplets
+        this._tupletByNote = tupletFinder.tupletByNote
+        // find beams
+        const beamFinder = new BeamFinder(this)
+        this._beams = beamFinder.beams
+        this._beamByNote = beamFinder.beamByNote
+        // invalidate layout
+        this._layout = null
     }
 }
