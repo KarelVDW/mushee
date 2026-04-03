@@ -1,8 +1,9 @@
 import { difference, sumBy } from 'lodash-es'
 
-import type { BarlineType, Clef } from '@/components/notation/types'
+import type { BarlineType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
+import { Clef } from './Clef'
 import { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { MeasureLayout } from './layout/MeasureLayout'
@@ -32,16 +33,19 @@ export class Measure {
         readonly score: Score,
         readonly index: number,
         value?: {
-            clef?: Clef
             timeSignature?: TimeSignature
             keySignature?: KeySignature
             endBarline?: BarlineType
         },
     ) {
-        this._clef = value?.clef
         this._timeSignature = value?.timeSignature
         this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
+    }
+
+    setClef(clef: Clef | undefined) {
+        this._clef = clef
+        this._clef?.setMeasure(this)
     }
 
     get layout() {
@@ -115,10 +119,6 @@ export class Measure {
 
     get maxBeats(): number {
         return this.score.getActiveTimeSignature(this.index)?.maxBeats ?? 4
-    }
-
-    setClef(clef: Clef | undefined) {
-        this._clef = clef
     }
 
     setTimeSignature(timeSignature: TimeSignature | undefined) {

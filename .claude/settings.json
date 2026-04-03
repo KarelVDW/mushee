@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//Users/karelvandewinkel/Projecten/Smoosic/**)"
+      "Read(//Users/karelvandewinkel/Projecten/Smoosic/**)",
+      "Bash(npx turbo:*)"
     ]
   }
 }

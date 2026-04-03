@@ -138,7 +138,7 @@ export function Score({
         if (!cursorRowInfo) return 'treble'
         let lastClef = 'treble'
         for (const measure of score.measures) {
-            if (measure.clef) lastClef = measure.clef
+            if (measure.clef) lastClef = measure.clef.type
         }
         return lastClef
     }, [cursorRowInfo])

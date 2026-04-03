@@ -1,12 +1,14 @@
 import { getGlyphWidth, getYForLine } from '@/components/notation'
-import { CLEF_TIME_SIG_PADDING, STAVE_LEFT_PADDING, STAVE_RIGHT_PADDING, TIME_SIG_NOTE_PADDING } from '@/components/notation/constants'
-import type { LayoutGlyph, LayoutTimeSignature } from '@/components/notation/types'
+import {
+    CLEF_CONFIG,
+    CLEF_TIME_SIG_PADDING,
+    STAVE_LEFT_PADDING,
+    STAVE_RIGHT_PADDING,
+    TIME_SIG_NOTE_PADDING,
+} from '@/components/notation/constants'
+import type { LayoutTimeSignature } from '@/components/notation/types'
 
 import type { Measure } from '../Measure'
-
-const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {
-    treble: { glyphName: 'gClef', lineIndex: 3 },
-}
 
 export class MeasureLayout {
     constructor(readonly measure: Measure) {}
@@ -26,7 +28,7 @@ export class MeasureLayout {
     get xOverhead() {
         let overhead = STAVE_LEFT_PADDING
 
-        const effectiveClef = this.clefOverride || this.measure.clef
+        const effectiveClef = this.clefOverride || this.measure.clef?.type
         if (effectiveClef) {
             const config = CLEF_CONFIG[effectiveClef]
             if (config) {
@@ -49,20 +51,12 @@ export class MeasureLayout {
     private get notesStartX(): number {
         return this.measureX + this.xOverhead - STAVE_RIGHT_PADDING
     }
-
-    get clef(): LayoutGlyph | undefined {
-        const effectiveClef = this.clefOverride ?? this.measure.clef
-        if (!effectiveClef) return
-        const config = CLEF_CONFIG[effectiveClef]
-        if (!config) return
-        return { glyphName: config.glyphName, x: this.measureX + STAVE_LEFT_PADDING, y: getYForLine(config.lineIndex) }
-    }
-
+    
     get timeSignature(): LayoutTimeSignature | undefined {
         if (!this.measure.timeSignature) return
 
         let cursorX = this.measureX + STAVE_LEFT_PADDING
-        const effectiveClef = this.clefOverride ?? this.measure.clef
+        const effectiveClef = this.clefOverride ?? this.measure.clef?.type
         if (effectiveClef) {
             const config = CLEF_CONFIG[effectiveClef]
             if (config) cursorX += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING

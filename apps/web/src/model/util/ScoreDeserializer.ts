@@ -1,7 +1,7 @@
 
 import type {
     BarlineType,
-    Clef,
+    ClefType,
     DurationType,
     MxmlBarStyle,
     MxmlNoteType,
@@ -9,6 +9,7 @@ import type {
     TieType
 } from '@/components/notation/types'
 
+import { Clef } from '../Clef'
 import { Duration } from '../Duration'
 import { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
@@ -87,7 +88,8 @@ export class ScoreDeserializer {
                 }
             }
 
-            const measure = new Measure(score, mi, { clef, timeSignature, keySignature, endBarline })
+            const measure = new Measure(score, mi, { timeSignature, keySignature, endBarline })
+            measure.setClef(clef)
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
                 const note = notes[noteIndex]
@@ -136,8 +138,8 @@ export class ScoreDeserializer {
     }
 
     private static mxmlClefToClef(sign: string, line?: number): Clef {
-        if (sign === 'F' && (line === 4 || line === undefined)) return 'bass'
-        return 'treble'
+        const type: ClefType = sign === 'F' && (line === 4 || line === undefined) ? 'bass' : 'treble'
+        return new Clef(type)
     }
     
     private static mxmlBarStyleToBarlineType(style: MxmlBarStyle): BarlineType {

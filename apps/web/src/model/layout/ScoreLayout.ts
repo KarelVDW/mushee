@@ -2,6 +2,7 @@ import {
     BARLINE_GAP,
     BARLINE_THICK_WIDTH,
     BARLINE_THIN_WIDTH,
+    CLEF_CONFIG,
     CLEF_TIME_SIG_PADDING,
     STAVE_LEFT_PADDING,
     STAVE_RIGHT_PADDING,
@@ -20,10 +21,6 @@ export interface ScoreLayoutOptions {
     rowGap?: number
     reserveLastRowWidth?: number
     rowHeight?: number
-}
-
-const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {
-    treble: { glyphName: 'gClef', lineIndex: 3 },
 }
 
 interface MeasurePosition {
@@ -70,7 +67,7 @@ export class ScoreLayout {
 
             const overheads = rowMeasures.map((m, mi) => {
                 let overhead = STAVE_LEFT_PADDING
-                const effectiveClef = clefOverrides[mi] || m.clef
+                const effectiveClef = clefOverrides[mi] || m.clef?.type
                 if (effectiveClef) {
                     const config = CLEF_CONFIG[effectiveClef]
                     if (config) overhead += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
@@ -111,7 +108,7 @@ export class ScoreLayout {
             this._rows.push(new RowLayout(rowMeasures, layoutWidth, this._positions))
 
             for (const m of rowMeasures) {
-                if (m.clef) lastClef = m.clef
+                if (m.clef) lastClef = m.clef.type
             }
         }
     }

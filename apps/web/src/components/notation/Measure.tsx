@@ -1,7 +1,7 @@
 import type { Measure as MeasureModel } from '@/model'
 
 import { BeamGroup } from './BeamGroup'
-import { Glyph } from './Glyph'
+import { Clef } from './Clef'
 import { NoteGroup } from './NoteGroup'
 import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
@@ -15,11 +15,11 @@ interface MeasureProps {
 }
 
 export function Measure({ measure, selectedNoteId, hoveredNoteId }: MeasureProps) {
-    const { clef, timeSignature } = measure.layout
+    const { timeSignature } = measure.layout
 
     return (
         <g>
-            {clef && <Glyph name={clef.glyphName} x={clef.x} y={clef.y} />}
+            {measure.clef && <Clef clef={measure.clef} />}
 
             {timeSignature && <TimeSignature layout={timeSignature} />}
 

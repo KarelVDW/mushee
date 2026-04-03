@@ -1,4 +1,5 @@
 export { Beam } from './Beam'
+export { Clef } from './Clef'
 export { Duration } from './Duration'
 export { KeySignature } from './KeySignature'
 export { Measure } from './Measure'

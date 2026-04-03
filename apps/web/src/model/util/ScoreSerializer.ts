@@ -1,7 +1,7 @@
 
 import type {
     BarlineType,
-    Clef,
+    ClefType,
     DurationType,
     MxmlBarStyle,
     MxmlClefSign,
@@ -30,7 +30,7 @@ export class MeasureSerializer {
             entries.push({
                 _type: 'attributes' as const,
                 divisions: DIVISIONS,
-                ...(this.measure.clef && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef)] }),
+                ...(this.measure.clef && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
                 ...(this.measure.timeSignature && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
                 ...(this.measure.keySignature && {
                     key: [{ fifths: this.measure.keySignature.fifths, ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }) }],
@@ -91,7 +91,7 @@ export class MeasureSerializer {
         return MeasureSerializer.DURATION_TYPE_MAP[type]
     }
 
-    private static clefToMxmlClef(clef: Clef): { sign: MxmlClefSign; line: number } {
+    private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number } {
         return clef === 'bass' ? { sign: 'F', line: 4 } : { sign: 'G', line: 2 }
     }
 

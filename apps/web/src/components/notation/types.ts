@@ -1,6 +1,6 @@
 // --- Internal types (used by the model and layout) ---
 
-export type Clef = 'treble' | 'bass';
+export type ClefType = 'treble' | 'bass';
 export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
 export type StemDirection = 'up' | 'down' | 'auto';
 export type BarlineType = 'single' | 'double' | 'end' | 'none';
