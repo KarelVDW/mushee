@@ -7,7 +7,8 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "migrate": "npx auth@latest migrate"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
