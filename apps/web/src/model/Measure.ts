@@ -11,6 +11,8 @@ import type { Score } from './Score'
 import { Tempo } from './Tempo'
 import type { TimeSignature } from './TimeSignature'
 import { Tuplet } from './Tuplet'
+import { BeamFinder } from './util/BeamFinder'
+import { TupletFinder } from './util/TupletFinder'
 
 export class Measure {
     private _notes: Note[] = []
@@ -24,7 +26,7 @@ export class Measure {
     private _beatOffsets = new Map<Note, number>()
     private _tupletByNote = new Map<Note, Tuplet>()
     private _beamByNote = new Map<Note, Beam>()
-    private _layout: MeasureLayout | undefined
+    private _layout: MeasureLayout | null = null
 
     constructor(
         readonly score: Score,

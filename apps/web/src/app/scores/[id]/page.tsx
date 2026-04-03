@@ -31,10 +31,14 @@ export default function ScoreEditorPage() {
             try {
                 const data = await loadScore(id)
                 const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
+                                console.log('Karel here', data)
+
                 const s = deserializer.toScore()
                 setScore(s)
+                console.log('Karel here', s)
                 setActiveNote(s.firstMeasure?.firstNote ?? undefined)
-            } catch {
+            } catch (err) {
+                console.log(err)
                 setError('Failed to load score')
             } finally {
                 setLoading(false)

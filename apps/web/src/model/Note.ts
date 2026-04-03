@@ -43,7 +43,7 @@ export class Note {
         return this.measure.beatOffsetOf(this)
     }
 
-    get tupletGroup() {
+    get tuplet() {
         return this.measure.tupletGroupOf(this)
     }
 

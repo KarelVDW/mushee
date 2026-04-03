@@ -1,27 +1,14 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
-import type {
-    BarlineType,
-    Clef,
-    DurationType,
-    MxmlBarStyle,
-    MxmlClefSign,
-    MxmlMeasureEntry,
-    MxmlNoteType,
-    MxmlStep,
-    ScorePartwise,
-    TieType,
-} from '@/components/notation/types'
 
 const DIVISIONS = 12 // divisions per quarter note
 
 import { Duration } from './Duration'
-import { KeySignature } from './KeySignature'
 import { ScoreLayout, ScoreLayoutOptions } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
-import { Pitch } from './Pitch'
 import { TimeSignature } from './TimeSignature'
+import { MeasureSerializer } from './util/ScoreSerializer'
 
 export class Score {
     private _touchedAt: number
@@ -196,7 +183,7 @@ export class Score {
 
         if (this._structureChanged) {
             // Structure changed (add/remove measure) — send all measures
-            const allMeasures = this.measures.map((m, mi) => new MeasureSerializer(m).serialize(mi))
+            const allMeasures = this.measures.map((m, mi) => new MeasureSerializer(m).serialize())
             this.clearDirty()
             return { allMeasures }
         }
