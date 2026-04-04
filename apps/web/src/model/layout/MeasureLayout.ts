@@ -1,4 +1,4 @@
-import { getGlyphWidth, getYForLine } from '@/components/notation'
+import { getGlyphWidth } from '@/components/notation'
 import {
     CLEF_CONFIG,
     CLEF_TIME_SIG_PADDING,
@@ -6,7 +6,6 @@ import {
     STAVE_RIGHT_PADDING,
     TIME_SIG_NOTE_PADDING,
 } from '@/components/notation/constants'
-import type { LayoutTimeSignature } from '@/components/notation/types'
 
 import type { Measure } from '../Measure'
 
@@ -52,33 +51,14 @@ export class MeasureLayout {
         return this.measureX + this.xOverhead - STAVE_RIGHT_PADDING
     }
     
-    get timeSignature(): LayoutTimeSignature | undefined {
-        if (!this.measure.timeSignature) return
-
-        let cursorX = this.measureX + STAVE_LEFT_PADDING
+    get timeSignatureX(): number {
+        let cx = this.measureX + STAVE_LEFT_PADDING
         const effectiveClef = this.clefOverride ?? this.measure.clef?.type
         if (effectiveClef) {
             const config = CLEF_CONFIG[effectiveClef]
-            if (config) cursorX += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
+            if (config) cx += getGlyphWidth(config.glyphName) + CLEF_TIME_SIG_PADDING
         }
-
-        const ts = this.measure.timeSignature
-        const tsX = cursorX
-        const topY = getYForLine(1)
-        const bottomY = getYForLine(3)
-
-        const topDigits = ts.beatsDigits.map((digit, i) => ({
-            glyphName: `timeSig${digit}`,
-            x: tsX + i * getGlyphWidth(`timeSig${digit}`),
-            y: topY,
-        }))
-        const bottomDigits = ts.beatTypeDigits.map((digit, i) => ({
-            glyphName: `timeSig${digit}`,
-            x: tsX + i * getGlyphWidth(`timeSig${digit}`),
-            y: bottomY,
-        }))
-
-        return { top: topDigits, bottom: bottomDigits }
+        return cx
     }
 
     getX(beat: number) {

@@ -1,19 +1,21 @@
-import { Glyph } from './Glyph';
-import type { LayoutTimeSignature } from './types';
+import { memo } from 'react'
 
-interface TimeSignatureProps {
-  layout: LayoutTimeSignature;
-}
+import type { TimeSignature as TimeSignatureModel } from '@/model'
 
-export function TimeSignature({ layout }: TimeSignatureProps) {
-  return (
-    <g>
-      {layout.top.map((g, i) => (
-        <Glyph key={`top-${i}`} name={g.glyphName} x={g.x} y={g.y} />
-      ))}
-      {layout.bottom.map((g, i) => (
-        <Glyph key={`bot-${i}`} name={g.glyphName} x={g.x} y={g.y} />
-      ))}
-    </g>
-  );
-}
+import { Glyph } from './Glyph'
+
+export const TimeSignature = memo(
+    function TimeSignature({ timeSignature }: { timeSignature: TimeSignatureModel }) {
+        const { topDigits, bottomDigits } = timeSignature.layout
+        return (
+            <g>
+                {topDigits.map((g, i) => (
+                    <Glyph key={`top-${i}`} name={g.glyphName} x={g.x} y={g.y} />
+                ))}
+                {bottomDigits.map((g, i) => (
+                    <Glyph key={`bot-${i}`} name={g.glyphName} x={g.x} y={g.y} />
+                ))}
+            </g>
+        )
+    },
+)

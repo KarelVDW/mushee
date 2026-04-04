@@ -33,12 +33,10 @@ export class Measure {
         readonly score: Score,
         readonly index: number,
         value?: {
-            timeSignature?: TimeSignature
             keySignature?: KeySignature
             endBarline?: BarlineType
         },
     ) {
-        this._timeSignature = value?.timeSignature
         this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
     }
@@ -123,6 +121,7 @@ export class Measure {
 
     setTimeSignature(timeSignature: TimeSignature | undefined) {
         this._timeSignature = timeSignature
+        this._timeSignature?.setMeasure(this)
     }
 
     setKeySignature(keySignature: KeySignature | undefined) {

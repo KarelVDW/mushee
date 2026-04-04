@@ -88,8 +88,9 @@ export class ScoreDeserializer {
                 }
             }
 
-            const measure = new Measure(score, mi, { timeSignature, keySignature, endBarline })
+            const measure = new Measure(score, mi, { keySignature, endBarline })
             measure.setClef(clef)
+            measure.setTimeSignature(timeSignature)
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
                 const note = notes[noteIndex]

@@ -15,13 +15,11 @@ interface MeasureProps {
 }
 
 export function Measure({ measure, selectedNoteId, hoveredNoteId }: MeasureProps) {
-    const { timeSignature } = measure.layout
-
     return (
         <g>
             {measure.clef && <Clef clef={measure.clef} />}
 
-            {timeSignature && <TimeSignature layout={timeSignature} />}
+            {measure.timeSignature && <TimeSignature timeSignature={measure.timeSignature} />}
 
             {measure.notes.map((note) => {
                 const isSelected = note.id === selectedNoteId
