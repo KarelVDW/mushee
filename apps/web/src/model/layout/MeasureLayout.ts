@@ -10,6 +10,7 @@ import {
 import type { Measure } from '../Measure'
 
 export class MeasureLayout {
+    readonly id = crypto.randomUUID()
     constructor(readonly measure: Measure) {}
 
     get measureX() {

@@ -12,14 +12,22 @@ export class Note {
     readonly duration: Duration
     readonly pitch: Pitch | undefined
     readonly tie: TieType | undefined
-    readonly layout: NoteLayout
+    private _layout: NoteLayout | null = null
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
         this.id = crypto.randomUUID()
         this.duration = value.duration
         this.pitch = value.pitch
         this.tie = value.tie
-        this.layout = new NoteLayout(this)
+    }
+
+    get layout() {
+        if (!this._layout) this._layout = new NoteLayout(this)
+        return this._layout
+    }
+
+    invalidateLayout() {
+        this._layout = null
     }
 
     get measure() {

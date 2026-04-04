@@ -22,4 +22,8 @@ export class Clef {
     setMeasure(measure: Measure | undefined) {
         this._measure = measure
     }
+
+    invalidateLayout() {
+        this._layout = null
+    }
 }

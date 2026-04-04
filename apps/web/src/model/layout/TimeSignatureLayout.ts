@@ -3,6 +3,7 @@ import { getGlyphWidth, getYForLine } from '@/components/notation'
 import type { TimeSignature } from '../TimeSignature'
 
 export class TimeSignatureLayout {
+    readonly id = crypto.randomUUID()
     readonly width: number
 
     private _topDigits: { glyphName: string; x: number; y: number }[] | null = null

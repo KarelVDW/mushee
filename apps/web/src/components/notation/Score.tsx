@@ -144,7 +144,7 @@ export function Score({
     }, [cursorRowInfo])
 
     // Hovered note: X → measure → beat → noteAtBeat
-    const hoveredNoteId = useMemo(() => {
+    const hoveredNote = useMemo(() => {
         if (!hoverInfo) return null
         const row = rows[hoverInfo.rowIndex]
         if (!row) return null
@@ -161,15 +161,14 @@ export function Score({
         const lastNoteX = measure.notes[measure.notes.length - 1].layout.x
         const noteheadWidth = getGlyphWidth('noteheadBlack')
         const beat = xToBeat(hoverInfo.x, firstNoteX, lastNoteX - firstNoteX + noteheadWidth, measure.beats)
-        const note = measure.noteAtBeat(beat)
-        return note?.id ?? null
+        return measure.noteAtBeat(beat)
     }, [hoverInfo, rows])
 
     // Ghost note info (row-local coordinates) — only when hovering the active note
     const ghostInfo = useMemo(() => {
         if (!hoverInfo || !selectedNote || !cursorRowInfo) return null
         if (hoverInfo.rowIndex !== cursorRowInfo.rowIndex) return null
-        if (hoveredNoteId !== selectedNoteId) return null
+        if (hoveredNote !== selectedNote) return null
         const isRest = selectedNote.isRest
         const hoverLine = yToLine(hoverInfo.y)
         if (!isRest) {
@@ -178,7 +177,7 @@ export function Score({
         }
         const glyphName = isRest ? 'noteheadBlack' : selectedNote.layout.glyphName
         return { line: hoverLine, x: selectedNote.layout.x, glyphName, rowIndex: cursorRowInfo.rowIndex }
-    }, [hoverInfo, selectedNote, cursorRowInfo, selectedClef, hoveredNoteId, selectedNoteId])
+    }, [hoverInfo, selectedNote, cursorRowInfo, selectedClef, hoveredNote])
 
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(
@@ -327,7 +326,7 @@ export function Score({
                             <StaffLines lines={row.staffLines} />
 
                             {row.measures.map((measure) => (
-                                <Measure key={measure.index} measure={measure} selectedNoteId={selectedNoteId} hoveredNoteId={hoveredNoteId} />
+                                <Measure key={measure.index} measure={measure} selectedNote={selectedNote ?? undefined} hoveredNote={hoveredNote} />
                             ))}
 
                             {row.barlines.map((barline, bi) => (

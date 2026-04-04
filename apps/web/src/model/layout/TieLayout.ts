@@ -6,6 +6,7 @@ import type { Tie } from '../Tie'
 const NOTEHEAD_WIDTH = getGlyphWidth('noteheadBlack')
 
 export class TieLayout {
+    readonly id = crypto.randomUUID()
     constructor(private tie: Tie) {}
 
     get startX() {

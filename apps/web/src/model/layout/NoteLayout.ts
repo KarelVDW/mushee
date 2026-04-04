@@ -6,6 +6,7 @@ import type { Note } from '../Note'
 const NOTEHEAD_WIDTH = getGlyphWidth('noteheadBlack')
 
 export class NoteLayout {
+    readonly id = crypto.randomUUID()
     constructor(private note: Note) {}
 
     get x() {

@@ -4,7 +4,10 @@ import type { Clef as ClefModel } from '@/model/Clef'
 
 import { Glyph } from './Glyph'
 
-export const Clef = memo(function Clef({ clef }: { clef: ClefModel }) {
-    const { glyphName, x, y } = clef.layout
-    return <Glyph name={glyphName} x={x} y={y} />
-})
+export const Clef = memo(
+    function Clef({ clef }: { clef: ClefModel }) {
+        const { glyphName, x, y } = clef.layout
+        return <Glyph name={glyphName} x={x} y={y} />
+    },
+    (prev, next) => prev.clef.layout.id === next.clef.layout.id,
+)

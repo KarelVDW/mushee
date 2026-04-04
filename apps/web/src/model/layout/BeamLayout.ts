@@ -11,6 +11,7 @@ interface LayoutBeamSegment {
 }
 
 export class BeamLayout {
+    readonly id = crypto.randomUUID()
     constructor(private beam: Beam) {}
 
     get firstStemX() {

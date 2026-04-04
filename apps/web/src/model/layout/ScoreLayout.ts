@@ -30,6 +30,7 @@ interface MeasurePosition {
 }
 
 export class ScoreLayout {
+    readonly id = crypto.randomUUID()
     readonly rowGap: number
     readonly rowHeight: number
     private _positions?: Map<number, MeasurePosition>

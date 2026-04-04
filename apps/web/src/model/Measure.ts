@@ -27,6 +27,7 @@ export class Measure {
     private _beatOffsets = new Map<Note, number>()
     private _tupletByNote = new Map<Note, Tuplet>()
     private _beamByNote = new Map<Note, Beam>()
+    private _noteSet = new Set<Note>()
     private _layout: MeasureLayout | null = null
 
     constructor(
@@ -49,6 +50,10 @@ export class Measure {
     get layout() {
         this._layout ||= new MeasureLayout(this)
         return this._layout
+    }
+
+    invalidateLayout() {
+        this._layout = null
     }
 
     get tuplets() {
@@ -85,6 +90,10 @@ export class Measure {
 
     get notes() {
         return this._notes
+    }
+
+    hasNote(note: Note | undefined | null): boolean {
+        return note != null && this._noteSet.has(note)
     }
 
     get clef() {
@@ -209,7 +218,8 @@ export class Measure {
     }
 
     private recompute() {
-        // find beat offsets
+        // rebuild note set and beat offsets
+        this._noteSet = new Set(this._notes)
         this._beatOffsets = new Map()
         let beat = 0
         for (const note of this._notes) {

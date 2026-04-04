@@ -14,4 +14,8 @@ export class Tempo {
         this._layout ||= new TempoLayout(this)
         return this._layout
     }
+
+    invalidateLayout() {
+        this._layout = undefined
+    }
 }

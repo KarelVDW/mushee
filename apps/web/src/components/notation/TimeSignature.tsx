@@ -18,4 +18,5 @@ export const TimeSignature = memo(
             </g>
         )
     },
+    (prev, next) => prev.timeSignature.layout.id === next.timeSignature.layout.id,
 )

@@ -17,6 +17,10 @@ export class TimeSignature {
         return this._layout
     }
 
+    invalidateLayout() {
+        this._layout = null
+    }
+
     get measure() {
         if (!this._measure) throw new Error('TimeSignature is not assigned to a measure')
         return this._measure
@@ -24,10 +28,6 @@ export class TimeSignature {
 
     setMeasure(measure: Measure | undefined) {
         this._measure = measure
-    }
-
-    invalidateLayout() {
-        this._layout = null
     }
 
     /** Total beats per measure in quarter-note units */

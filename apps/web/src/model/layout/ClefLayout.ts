@@ -4,6 +4,7 @@ import { CLEF_CONFIG, STAVE_LEFT_PADDING } from '@/components/notation/constants
 import { Clef } from '../Clef'
 
 export class ClefLayout {
+    readonly id = crypto.randomUUID()
     readonly glyphName: string
     readonly width: number
     readonly x: number

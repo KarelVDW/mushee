@@ -3,6 +3,7 @@ import { TEMPO_MARKING_Y } from '@/components/notation/constants'
 import type { Tempo } from '../Tempo'
 
 export class TempoLayout {
+    readonly id = crypto.randomUUID()
     constructor(private tempo: Tempo) {}
 
     get x() {

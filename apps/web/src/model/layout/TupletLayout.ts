@@ -7,6 +7,7 @@ import type { Tuplet } from '../Tuplet'
 const NOTEHEAD_WIDTH = getGlyphWidth('noteheadBlack')
 
 export class TupletLayout {
+    readonly id = crypto.randomUUID()
     private stemDir: 'up' | 'down'
     constructor(private tuplet: Tuplet) {
         const upCount = this.tuplet.notes.filter((n) => n.stemDir === 'up').length

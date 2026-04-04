@@ -13,4 +13,8 @@ export class Tie {
         this._layout ||= new TieLayout(this)
         return this._layout
     }
+
+    invalidateLayout() {
+        this._layout = undefined
+    }
 }

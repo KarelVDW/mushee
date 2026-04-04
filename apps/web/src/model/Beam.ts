@@ -35,4 +35,8 @@ export class Beam {
     hasNote(note: Note) {
         return this._noteSet.has(note)
     }
+
+    invalidateLayout() {
+        this._layout = undefined
+    }
 }

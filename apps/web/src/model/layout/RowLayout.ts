@@ -4,6 +4,7 @@ import type { LayoutBarline, LayoutLine } from '@/components/notation/types'
 import type { Measure } from '../Measure'
 
 export class RowLayout {
+    readonly id = crypto.randomUUID()
     constructor(
         readonly measures: Measure[],
         readonly width: number,
