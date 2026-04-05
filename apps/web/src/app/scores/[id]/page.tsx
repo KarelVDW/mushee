@@ -173,7 +173,6 @@ export default function ScoreEditorPage() {
         } else {
             measure.addTempo(beat, 120)
         }
-        score.touch()
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
 
