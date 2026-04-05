@@ -1,5 +1,5 @@
 import { getGlyphWidth, getLedgerLinePositions, getYForNote } from '@/components/notation'
-import { DOT_NOTEHEAD_OFFSET, DOT_SPACING, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT } from '@/components/notation/constants'
+import { DOT_NOTEHEAD_OFFSET, DOT_SPACING, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT, STEM_WIDTH } from '@/components/notation/constants'
 
 import type { Note } from '../Note'
 
@@ -29,7 +29,7 @@ export class NoteLayout {
     /** Stem X position — no beam dependency, safe for BeamLayout to call */
     get stemX(): number | undefined {
         if (!this.hasStem) return
-        return this.note.stemDir === 'up' ? this.x + NOTEHEAD_WIDTH : this.x
+        return this.note.stemDir === 'up' ? this.x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2 : this.x + STEM_WIDTH / 2
     }
 
     /** Default stem tip Y without beam adjustment — safe for BeamLayout to call */
@@ -48,7 +48,7 @@ export class NoteLayout {
         if (!flagName) return
         return {
             glyphName: flagName,
-            ...(dir === 'up' ? { x: x + NOTEHEAD_WIDTH, y: y - STEM_HEIGHT } : { x, y: y + STEM_HEIGHT }),
+            ...(dir === 'up' ? { x: x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2, y: y - STEM_HEIGHT } : { x: x + STEM_WIDTH / 2, y: y + STEM_HEIGHT }),
         }
     }
 
@@ -60,8 +60,8 @@ export class NoteLayout {
         const beam = this.note.beam
         const beamY = beam ? beam.layout.beamFirstY + (x - beam.layout.firstStemX) * beam.layout.slope : null
         return dir === 'up'
-            ? { x: x + NOTEHEAD_WIDTH, y1: y, y2: beamY ?? y - STEM_HEIGHT }
-            : { x, y1: y, y2: beamY ?? y + STEM_HEIGHT }
+            ? { x: x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2, y1: y, y2: beamY ?? y - STEM_HEIGHT }
+            : { x: x + STEM_WIDTH / 2, y1: y, y2: beamY ?? y + STEM_HEIGHT }
     }
 
     get ledgerLines() {
@@ -71,7 +71,7 @@ export class NoteLayout {
         return ledgerLineYs.map((ly) => ({
             x1: x - LEDGER_LINE_EXTENSION,
             y1: ly,
-            x2: x + NOTEHEAD_WIDTH + LEDGER_LINE_EXTENSION,
+            x2: x + NOTEHEAD_WIDTH + 2 * LEDGER_LINE_EXTENSION,
             y2: ly,
         }))
     }

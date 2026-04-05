@@ -18,7 +18,7 @@ export const NoteGroup = memo(
             <g>
                 {/* Ledger lines (behind everything) */}
                 {ledgerLines.map((ll, i) => (
-                    <line key={`ledger-${i}`} x1={ll.x1} y1={ll.y1} x2={ll.x2} y2={ll.y2} stroke="#000" strokeWidth={1} />
+                    <line key={`ledger-${i}`} x1={ll.x1} y1={ll.y1} x2={ll.x2} y2={ll.y2} stroke="#000" strokeWidth={1.5} />
                 ))}
 
                 {/* Accidental */}
