@@ -8,6 +8,8 @@ const NOTE_INDEX: Record<string, number> = {
     B: 6,
 }
 
+const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
+
 const INDEX_TO_NOTE = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
 export class Pitch {
@@ -75,6 +77,10 @@ export class Pitch {
             default:
                 return undefined
         }
+    }
+
+    toMidi(): number {
+        return (this.octave + 1) * 12 + (SEMITONES[this.name] ?? 0) + this.alter
     }
 
     static fromLine(line: number): Pitch {

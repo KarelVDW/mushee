@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { loadScore, updateScore } from '@/lib/api'
-import { PlaybackEngine } from '@/lib/playback'
+import { MidiPlayer } from '@/lib/MidiPlayer'
+import { ScorePlayer } from '@/lib/ScorePlayer'
 import { Duration, type Note, Pitch, Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
@@ -22,7 +23,7 @@ export default function ScoreEditorPage() {
     const [activeNote, setActiveNote] = useState<Note | undefined>()
     const containerRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-    const playbackRef = useRef<PlaybackEngine | null>(null)
+    const playbackRef = useRef<ScorePlayer | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
 
@@ -203,14 +204,28 @@ export default function ScoreEditorPage() {
     }, [score, saveToApi])
 
     // Initialize playback engine and preload samples
+    const midiPlayerRef = useRef<MidiPlayer | null>(null)
     useEffect(() => {
-        const engine = new PlaybackEngine()
+        const midiPlayer = new MidiPlayer()
+        midiPlayerRef.current = midiPlayer
+        const engine = new ScorePlayer(midiPlayer)
         playbackRef.current = engine
-        engine.loadSamples().catch(() => {
+        midiPlayer.loadSamples().catch(() => {
             // Samples failed to load — will fall back to oscillator synthesis
         })
-        return () => engine.stop()
+        return () => {
+            engine.stop()
+            midiPlayer.stopPreview()
+        }
     }, [])
+
+    // Preview the selected note's pitch
+    useEffect(() => {
+        const midi = activeNote?.pitch?.toMidi()
+        const player = midiPlayerRef.current
+        if (midi === undefined || !player) return
+        player.preview(midi, 0.75)
+    }, [activeNote])
 
     const handlePlayToggle = useCallback(() => {
         if (!score) return
