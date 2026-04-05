@@ -1,6 +1,6 @@
-import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '@/components/notation/constants'
+import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '@/components/notation/constants';
 
-import type { Beam } from '../Beam'
+import type { Beam } from '../Beam';
 
 interface LayoutBeamSegment {
   x1: number;
@@ -70,19 +70,19 @@ export class BeamLayout {
     }
 
     get primary(): LayoutBeamSegment {
-        const dirSign = this.beam.stemDir === 'up' ? -1 : 1
+        const dirSign = this.beam.stemDir === 'up' ? 1 : -1
         const y1 = this.beamFirstY
         const y2 = y1 + (this.lastStemX - this.firstStemX) * this.slope
         return { x1: this.firstStemX, y1, x2: this.lastStemX, y2, thickness: BEAM_WIDTH * dirSign }
     }
 
     get secondaries(): LayoutBeamSegment[] {
-        const dirSign = this.beam.stemDir === 'up' ? -1 : 1
+        const dirSign = this.beam.stemDir === 'up' ? 1 : -1
         const slope = this.slope
         const segments: LayoutBeamSegment[] = []
         const thickness = BEAM_WIDTH * dirSign
 
-        const beamY = this.beamFirstY - BEAM_LEVEL_STRIDE * dirSign
+        const beamY = this.beamFirstY - BEAM_LEVEL_STRIDE * -dirSign
         let segStart: number | null = null
         let segStartY: number | null = null
         for (let i = 0; i < this.beam.notes.length; i++) {

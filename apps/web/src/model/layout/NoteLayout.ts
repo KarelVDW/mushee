@@ -58,10 +58,11 @@ export class NoteLayout {
         const x = this.x
         const y = this.y
         const beam = this.note.beam
-        const beamY = beam ? beam.layout.beamFirstY + (x - beam.layout.firstStemX) * beam.layout.slope : null
+        const sx = dir === 'up' ? x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2 : x + STEM_WIDTH / 2
+        const beamY = beam ? beam.layout.beamFirstY + (sx - beam.layout.firstStemX) * beam.layout.slope : null
         return dir === 'up'
-            ? { x: x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2, y1: y, y2: beamY ?? y - STEM_HEIGHT }
-            : { x: x + STEM_WIDTH / 2, y1: y, y2: beamY ?? y + STEM_HEIGHT }
+            ? { x: sx, y1: y, y2: beamY ?? y - STEM_HEIGHT }
+            : { x: sx, y1: y, y2: beamY ?? y + STEM_HEIGHT }
     }
 
     get ledgerLines() {
