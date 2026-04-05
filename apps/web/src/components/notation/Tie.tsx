@@ -8,7 +8,7 @@ const TIE_CP1 = 8
 const TIE_CP2 = 12
 
 export const Tie = memo(
-    function Tie({ tie }: { tie: TieModel }) {
+    function Tie({ tie }: { tie: TieModel; layoutId: string }) {
         const { startX, startY, endX, endY, direction } = tie.layout
 
         // Reduce curvature for very close notes
@@ -36,5 +36,4 @@ export const Tie = memo(
 
         return <path d={d} fill="#000" />
     },
-    (prev, next) => prev.tie.layout.id === next.tie.layout.id,
 )

@@ -21,8 +21,8 @@ import { TimeSignature } from '../TimeSignature'
 export class ScoreDeserializer {
     constructor(readonly input: ScorePartwise) {}
 
-    toScore(): Score {
-        const score = new Score()
+    toScore(onChange?: (() => void)): Score {
+        const score = new Score(onChange)
         const part = this.input.parts[0]
         if (!part) return score
 

@@ -13,6 +13,7 @@ const TEMPO_TEXT_GAP = 3
 interface TempoMarkingProps {
     tempo: Tempo
     onClick: (e: React.MouseEvent<SVGGElement>) => void
+    layoutId: string
 }
 
 export const TempoMarking = memo(
@@ -54,5 +55,4 @@ export const TempoMarking = memo(
             </g>
         )
     },
-    (prev, next) => prev.tempo.layout.id === next.tempo.layout.id,
 )

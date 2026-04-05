@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//Users/karelvandewinkel/Projecten/Smoosic/**)",
-      "Bash(npx turbo:*)"
+      "Bash(npx turbo:*)",
+      "Bash(git diff:*)"
     ]
   }
 }

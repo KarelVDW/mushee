@@ -5,7 +5,7 @@ import type { TimeSignature as TimeSignatureModel } from '@/model'
 import { Glyph } from './Glyph'
 
 export const TimeSignature = memo(
-    function TimeSignature({ timeSignature }: { timeSignature: TimeSignatureModel }) {
+    function TimeSignature({ timeSignature }: { timeSignature: TimeSignatureModel; layoutId: string }) {
         const { topDigits, bottomDigits } = timeSignature.layout
         return (
             <g>
@@ -18,5 +18,4 @@ export const TimeSignature = memo(
             </g>
         )
     },
-    (prev, next) => prev.timeSignature.layout.id === next.timeSignature.layout.id,
 )

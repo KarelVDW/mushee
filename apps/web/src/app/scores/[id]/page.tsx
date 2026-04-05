@@ -8,8 +8,8 @@ import type { ScorePartwise } from '@/components/notation/types'
 import { loadScore, updateScore } from '@/lib/api'
 import { PlaybackEngine } from '@/lib/playback'
 import { Duration, type Note, Pitch, Score } from '@/model'
-
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
+
 import { ControlBar } from './ControlBar'
 
 export default function ScoreEditorPage() {
@@ -31,11 +31,8 @@ export default function ScoreEditorPage() {
             try {
                 const data = await loadScore(id)
                 const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
-                                console.log('Karel here', data)
-
-                const s = deserializer.toScore()
+                const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
                 setScore(s)
-                console.log('Karel here', s)
                 setActiveNote(s.firstMeasure?.firstNote ?? undefined)
             } catch (err) {
                 console.log(err)
@@ -303,6 +300,7 @@ export default function ScoreEditorPage() {
                 <div className="mx-auto max-w-4xl min-h-full bg-white shadow p-6">
                     <ScoreView
                         score={score}
+                        layoutId={score.layout.id}
                         selectedNoteId={activeNote?.id}
                         playbackCursorRef={playbackCursorRef}
                         onNoteSelect={handleNoteSelect}

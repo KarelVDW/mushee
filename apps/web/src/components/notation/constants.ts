@@ -86,6 +86,17 @@ export const DOT_SPACING = 5;
 /** Vertical offset from notehead center to tie endpoint */
 export const TIE_Y_SHIFT = 7
 
+
+export const SCORE_WIDTH = 1000
+export const ROW_GAP = 16
+export const ROW_HEIGHT = 160
+export const MAX_MEASURES_PER_ROW = 4
+
+export const MEASURE_BUTTONS_WIDTH = 30
+export const MEASURE_BUTTON_SIZE = 18
+export const MEASURE_BUTTON_GAP = 3
+
+
 /** Clef glyph names and staff-line positions */
 export const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {
     treble: { glyphName: 'gClef', lineIndex: 3 },

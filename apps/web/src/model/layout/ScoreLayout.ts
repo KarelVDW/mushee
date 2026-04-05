@@ -4,6 +4,11 @@ import {
     BARLINE_THIN_WIDTH,
     CLEF_CONFIG,
     CLEF_TIME_SIG_PADDING,
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTONS_WIDTH,
+    ROW_GAP,
+    ROW_HEIGHT,
+    SCORE_WIDTH,
     STAVE_LEFT_PADDING,
     STAVE_RIGHT_PADDING,
     TIME_SIG_NOTE_PADDING,
@@ -15,14 +20,6 @@ import type { Measure } from '../Measure'
 import type { Score } from '../Score'
 import { RowLayout } from './RowLayout'
 
-export interface ScoreLayoutOptions {
-    containerWidth: number
-    maxMeasuresPerRow?: number
-    rowGap?: number
-    reserveLastRowWidth?: number
-    rowHeight?: number
-}
-
 interface MeasurePosition {
     x: number
     width: number
@@ -31,17 +28,18 @@ interface MeasurePosition {
 
 export class ScoreLayout {
     readonly id = crypto.randomUUID()
+    readonly scoreWidth: number
     readonly rowGap: number
     readonly rowHeight: number
+    readonly maxMeasuresPerRow: number
     private _positions?: Map<number, MeasurePosition>
     private _rows?: RowLayout[]
 
-    constructor(
-        private score: Score,
-        private options: ScoreLayoutOptions,
-    ) {
-        this.rowGap = options.rowGap ?? 16
-        this.rowHeight = options.rowHeight ?? 160
+    constructor(private score: Score) {
+        this.scoreWidth = SCORE_WIDTH
+        this.rowGap = ROW_GAP
+        this.rowHeight = ROW_HEIGHT
+        this.maxMeasuresPerRow = MAX_MEASURES_PER_ROW
     }
 
     // ── Position computation (eager, cached) ──────────────────────────
@@ -51,14 +49,14 @@ export class ScoreLayout {
         this._positions = new Map()
         this._rows = []
 
-        const { containerWidth, maxMeasuresPerRow = 4, reserveLastRowWidth = 0 } = this.options
+        const reserveLastRowWidth = MEASURE_BUTTONS_WIDTH
         let lastClef: string | undefined
 
-        for (let i = 0; i < this.score.measures.length; i += maxMeasuresPerRow) {
-            const rowMeasures = this.score.measures.slice(i, i + maxMeasuresPerRow)
-            const isLastRow = i + maxMeasuresPerRow >= this.score.measures.length
+        for (let i = 0; i < this.score.measures.length; i += this.maxMeasuresPerRow) {
+            const rowMeasures = this.score.measures.slice(i, i + this.maxMeasuresPerRow)
+            const isLastRow = i + this.maxMeasuresPerRow >= this.score.measures.length
 
-            const rowWidth = Math.round(containerWidth * (rowMeasures.length / maxMeasuresPerRow))
+            const rowWidth = Math.round(this.scoreWidth * (rowMeasures.length / this.maxMeasuresPerRow))
             const layoutWidth = isLastRow && reserveLastRowWidth > 0 ? rowWidth - reserveLastRowWidth : rowWidth
 
             // Determine clef overrides for this row
@@ -139,7 +137,7 @@ export class ScoreLayout {
     }
 
     get totalHeight() {
-        const rowCount = Math.ceil(this.score.measures.length / (this.options.maxMeasuresPerRow ?? 4))
+        const rowCount = Math.ceil(this.score.measures.length / (this.maxMeasuresPerRow ?? 4))
         return rowCount * this.rowHeight + Math.max(0, rowCount - 1) * this.rowGap
     }
 

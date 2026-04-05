@@ -6,7 +6,7 @@ import { TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP, TUPLET_NUMBER_SCALE } from '.
 import { Glyph } from './Glyph'
 
 export const TupletBracket = memo(
-    function TupletBracket({ tuplet }: { tuplet: Tuplet }) {
+    function TupletBracket({ tuplet }: { tuplet: Tuplet; layoutId: string }) {
         const { x1, x2, y, location, numberGlyphs, bracketed } = tuplet.layout
         const centerX = (x1 + x2) / 2
         const numberHalfWidth = TUPLET_NUMBER_GAP
@@ -67,5 +67,4 @@ export const TupletBracket = memo(
             </g>
         )
     },
-    (prev, next) => prev.tuplet.layout.id === next.tuplet.layout.id,
 )

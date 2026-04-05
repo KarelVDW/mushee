@@ -230,10 +230,14 @@ export class Measure {
         const tupletFinder = new TupletFinder(this)
         this._tuplets = tupletFinder.tuplets
         this._tupletByNote = tupletFinder.tupletByNote
+        // invalidate old beam notes
+        this._beams.forEach(b => b.notes.forEach(n => n.invalidateLayout()))
         // find beams
         const beamFinder = new BeamFinder(this)
         this._beams = beamFinder.beams
         this._beamByNote = beamFinder.beamByNote
+        // invalidate new beam notes
+        this._beams.forEach(b => b.notes.forEach(n => n.invalidateLayout()))
         // invalidate layout
         this._layout = null
     }

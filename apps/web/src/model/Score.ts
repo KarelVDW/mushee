@@ -1,30 +1,34 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
-
-const DIVISIONS = 12 // divisions per quarter note
-
 import { Duration } from './Duration'
-import { ScoreLayout, ScoreLayoutOptions } from './layout/ScoreLayout'
+import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { TimeSignature } from './TimeSignature'
 import { MeasureSerializer } from './util/ScoreSerializer'
 
 export class Score {
-    private _touchedAt: number
     readonly measures: Measure[] = []
-    private _layout: ScoreLayout | undefined
+    private _layout: ScoreLayout | null = null
     private onChange: () => void
     private _dirtyMeasures = new Set<number>()
     private _structureChanged = false
 
     constructor(onChange?: () => void) {
         this.onChange = () => {
-            this.touch()
+            this.invalidateLayout()
             onChange?.()
         }
-        this._touchedAt = Date.now()
         // this.layout = new ScoreLayout(this)
+    }
+
+    get layout() {
+        this._layout ||= new ScoreLayout(this)
+        return this._layout
+    }
+
+    invalidateLayout() {
+        this._layout = null
     }
 
     markMeasureDirty(index: number) {
@@ -42,23 +46,6 @@ export class Score {
     clearDirty() {
         this._dirtyMeasures.clear()
         this._structureChanged = false
-    }
-
-    get layout() {
-        if (!this._layout) throw new Error('ScoreLayout has not yet been initialized')
-        return this._layout
-    }
-
-    initializeLayout(options: ScoreLayoutOptions) {
-        this._layout = new ScoreLayout(this, options)
-    }
-
-    get touchedAt() {
-        return this._touchedAt
-    }
-
-    touch() {
-        this._touchedAt = Date.now()
     }
 
     get totalNotes(): number {

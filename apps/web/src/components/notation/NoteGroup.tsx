@@ -8,6 +8,7 @@ import { Glyph } from './Glyph'
 interface NoteGroupProps {
     note: Note
     color?: string
+    layoutId: string
 }
 
 export const NoteGroup = memo(
@@ -42,5 +43,4 @@ export const NoteGroup = memo(
             </g>
         )
     },
-    (prev, next) => prev.note.layout.id === next.note.layout.id && prev.color === next.color,
 )

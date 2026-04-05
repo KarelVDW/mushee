@@ -1,11 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 
 import { Barline } from './Barline'
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { GhostNote } from './GhostNote'
 import { getGlyphWidth } from './glyph-utils'
@@ -20,12 +20,10 @@ import { Tie } from './Tie'
 const CURSOR_Y_OFFSET = 15
 
 /** Extra width reserved for add/remove measure buttons */
-const MEASURE_BUTTONS_WIDTH = 30
-const MEASURE_BUTTON_SIZE = 18
-const MEASURE_BUTTON_GAP = 3
 
 interface ScoreProps {
     score: ScoreModel
+    layoutId: string
     height?: number
     selectedNoteId?: string
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
@@ -37,7 +35,7 @@ interface ScoreProps {
     onTempoChange?: (measureIndex: number, beatPosition: number, bpm: number) => void
 }
 
-export function Score({
+export const Score = memo(function Score({
     score,
     height = 160,
     selectedNoteId,
@@ -53,7 +51,13 @@ export function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; x: number; y: number } | null>(null)
-    const [openPopover, setOpenPopover] = useState<{ measureIndex: number; beatPosition: number; bpm: number; x: number; y: number } | null>(null)
+    const [openPopover, setOpenPopover] = useState<{
+        measureIndex: number
+        beatPosition: number
+        bpm: number
+        x: number
+        y: number
+    } | null>(null)
 
     useEffect(() => {
         const el = containerRef.current
@@ -68,20 +72,10 @@ export function Score({
 
     // Compute layouts for all rows
     const showMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
-
-    const scoreLayout = useMemo(() => {
-        if (containerWidth <= 0 || score.measures.length === 0) return null
-        score.initializeLayout({
-            containerWidth,
-            rowHeight: height,
-            reserveLastRowWidth: showMeasureButtons ? MEASURE_BUTTONS_WIDTH : 0,
-        })
-        return score.layout
-    }, [containerWidth, score.touchedAt, height, showMeasureButtons])
-
-    const rows = scoreLayout?.rows ?? []
-    const totalHeight = scoreLayout?.totalHeight ?? 0
-    const rowGap = scoreLayout?.rowGap ?? 0
+    const rows = score.layout?.rows ?? []
+    const totalHeight = score.layout?.totalHeight ?? 0
+    const rowGap = score.layout?.rowGap ?? 0
+    const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / SCORE_WIDTH) : 0
 
     const rowYOffset = useCallback((ri: number) => ri * (height + rowGap), [height, rowGap])
 
@@ -186,11 +180,11 @@ export function Score({
             if (!svg) return null
             const rect = svg.getBoundingClientRect()
             return {
-                x: ((clientX - rect.left) / rect.width) * containerWidth,
+                x: ((clientX - rect.left) / rect.width) * SCORE_WIDTH,
                 y: ((clientY - rect.top) / rect.height) * totalHeight,
             }
         },
-        [containerWidth, totalHeight],
+        [totalHeight],
     )
 
     // SVG coordinate to container-relative pixel position (inverse of clientToSvg)
@@ -201,14 +195,14 @@ export function Score({
             if (!svg || !container) return null
             const svgRect = svg.getBoundingClientRect()
             const containerRect = container.getBoundingClientRect()
-            const scaleX = svgRect.width / containerWidth
+            const scaleX = svgRect.width / SCORE_WIDTH
             const scaleY = svgRect.height / totalHeight
             return {
                 x: svgRect.left + svgX * scaleX - containerRect.left,
                 y: svgRect.top + svgY * scaleY - containerRect.top,
             }
         },
-        [containerWidth, totalHeight],
+        [totalHeight],
     )
 
     const handleTempoClick = useCallback(
@@ -285,7 +279,7 @@ export function Score({
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
-        if (rows.length === 0 || !showMeasureButtons || !scoreLayout) return null
+        if (rows.length === 0 || !showMeasureButtons || !score.layout) return null
         const lastRow = rows[rows.length - 1]
         const barlines = lastRow.barlines
         const lastBarline = barlines[barlines.length - 1]
@@ -295,17 +289,17 @@ export function Score({
         const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
         const topY = staffCenterY - btnTotalHeight / 2
         return { x, topY }
-    }, [rows, showMeasureButtons, scoreLayout])
+    }, [rows, showMeasureButtons, score.layout])
 
     const lastRowIndex = rows.length - 1
     return (
         <div ref={containerRef} style={{ position: 'relative' }}>
-            {containerWidth > 0 && totalHeight > 0 && scoreLayout && (
+            {containerWidth > 0 && totalHeight > 0 && score.layout && (
                 <svg
                     ref={svgRef}
                     width={containerWidth}
-                    height={totalHeight}
-                    viewBox={`0 0 ${containerWidth} ${totalHeight}`}
+                    height={scaledHeight}
+                    viewBox={`0 0 ${SCORE_WIDTH} ${totalHeight}`}
                     xmlns="http://www.w3.org/2000/svg"
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
@@ -326,26 +320,45 @@ export function Score({
                             <StaffLines lines={row.staffLines} />
 
                             {row.measures.map((measure) => (
-                                <Measure key={measure.index} measure={measure} selectedNote={selectedNote ?? undefined} hoveredNote={hoveredNote} />
+                                <Measure
+                                    key={measure.index}
+                                    measure={measure}
+                                    selectedNote={selectedNote ?? undefined}
+                                    hoveredNote={hoveredNote}
+                                    layoutId={measure.layout.id}
+                                />
                             ))}
 
                             {row.barlines.map((barline, bi) => (
                                 <Barline key={bi} layout={barline} />
                             ))}
 
-                            {row.measures.flatMap((m) => m.notes).map((note) => {
-                                const tie = note.tieToNext
-                                if (!tie) return null
-                                return <Tie key={note.id} tie={tie} />
-                            })}
+                            {row.measures
+                                .flatMap((m) => m.notes)
+                                .map((note) => {
+                                    const tie = note.tieToNext
+                                    if (!tie) return null
+                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} />
+                                })}
 
-                            {row.measures.flatMap((m) => m.tempos).map((tempo, ti) => (
-                                <TempoMarking
-                                    key={`tempo-${ti}`}
-                                    tempo={tempo}
-                                    onClick={() => handleTempoClick(tempo.measure.index, tempo.beatPosition, tempo.bpm, tempo.layout.x, rowYOffset(ri) + tempo.layout.y)}
-                                />
-                            ))}
+                            {row.measures
+                                .flatMap((m) => m.tempos)
+                                .map((tempo, ti) => (
+                                    <TempoMarking
+                                        key={`tempo-${ti}`}
+                                        tempo={tempo}
+                                        layoutId={tempo.layout.id}
+                                        onClick={() =>
+                                            handleTempoClick(
+                                                tempo.measure.index,
+                                                tempo.beatPosition,
+                                                tempo.bpm,
+                                                tempo.layout.x,
+                                                rowYOffset(ri) + tempo.layout.y,
+                                            )
+                                        }
+                                    />
+                                ))}
 
                             {cursorPos && cursorPos.rowIndex === ri && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}
 
@@ -390,7 +403,7 @@ export function Score({
             )}
         </div>
     )
-}
+})
 
 function MeasureButton({
     x,
