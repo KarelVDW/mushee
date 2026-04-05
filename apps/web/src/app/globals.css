@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* M3 Color Palette — The Curated Manuscript */
+  --color-background: #fcf9f8;
+  --color-on-background: #1c1b1b;
+  --color-surface: #fcf9f8;
+  --color-on-surface: #1c1b1b;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0edec;
+  --color-surface-container-high: #ebe7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-surface-variant: #e5e2e1;
+  --color-on-surface-variant: #3f4945;
+  --color-surface-tint: #29695b;
+  --color-primary: #00342b;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #004d40;
+  --color-on-primary-container: #7ebdac;
+  --color-primary-fixed: #afefdd;
+  --color-primary-fixed-dim: #94d3c1;
+  --color-on-primary-fixed: #00201a;
+  --color-on-primary-fixed-variant: #065043;
+  --color-inverse-primary: #94d3c1;
+  --color-secondary: #546067;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d7e4ec;
+  --color-on-secondary-container: #5a666d;
+  --color-secondary-fixed: #d7e4ec;
+  --color-secondary-fixed-dim: #bbc8d0;
+  --color-on-secondary-fixed: #111d23;
+  --color-on-secondary-fixed-variant: #3c494f;
+  --color-tertiary: #4e2013;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #693527;
+  --color-on-tertiary-container: #e89f8c;
+  --color-tertiary-fixed: #ffdbd1;
+  --color-tertiary-fixed-dim: #ffb5a1;
+  --color-on-tertiary-fixed: #370e04;
+  --color-on-tertiary-fixed-variant: #6d382a;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-outline: #707975;
+  --color-outline-variant: #bfc9c4;
+  --color-inverse-surface: #313030;
+  --color-inverse-on-surface: #f3f0ef;
+
+  /* Fonts — Dual Voice typography */
+  --font-headline: var(--font-newsreader);
+  --font-serif: var(--font-newsreader);
+  --font-body: var(--font-manrope);
+  --font-label: var(--font-manrope);
+  --font-sans: var(--font-manrope);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--color-background);
+  color: var(--color-on-background);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.tonal-layer-glow {
+  box-shadow: 0 10px 24px -4px rgba(28, 27, 27, 0.04);
+}
+
+.manuscript-canvas {
+  background-image: radial-gradient(
+    circle at 2px 2px,
+    rgba(191, 201, 196, 0.15) 1px,
+    transparent 0
+  );
+  background-size: 40px 40px;
+}
+
+.editorial-shadow {
+  box-shadow: 0 24px 48px -12px rgba(28, 27, 27, 0.04);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #00342b 0%, #004d40 100%);
 }
