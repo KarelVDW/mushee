@@ -65,16 +65,18 @@ export class MidiPlayer {
         }
     }
 
-    /** Start a new audio context and schedule all notes for playback. */
-    start(notes: ScheduledNote[]) {
+    /** Open a new audio context for playback. Notes are scheduled individually via schedule(). */
+    start() {
         this.stop()
         this.audioCtx = new AudioContext()
         this.startOffset = this.audioCtx.currentTime
+    }
 
-        for (const note of notes) {
-            const t = this.startOffset + note.startTime
-            this.sourceNodes.push(this.createSource(this.audioCtx, t, note.duration, note.midi))
-        }
+    /** Schedule a single note on the running playback context. */
+    schedule(note: ScheduledNote) {
+        if (!this.audioCtx) return
+        const t = this.startOffset + note.startTime
+        this.sourceNodes.push(this.createSource(this.audioCtx, t, note.duration, note.midi))
     }
 
     stop() {

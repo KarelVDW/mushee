@@ -76,13 +76,15 @@ interface ControlBarProps {
   onTempoToggle: () => void
   isPlaying: boolean
   onPlayToggle: () => void
+  metronome: boolean
+  onMetronomeToggle: () => void
   onBack?: () => void
 }
 
 export function ControlBar({
   accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
   dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
-  isPlaying, onPlayToggle, onBack,
+  isPlaying, onPlayToggle, metronome, onMetronomeToggle, onBack,
 }: ControlBarProps) {
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
@@ -158,6 +160,12 @@ export function ControlBar({
             <path d="M1 1.5v11l10-5.5z" fill="#374151" />
           </svg>
         )}
+      </button>
+      <button type="button" onClick={onMetronomeToggle} className={`${toggleBtnClass(metronome)} px-2.5 py-1`}>
+        <svg width={12} height={14} viewBox="0 0 12 16">
+          <path d="M3 15L6 1l3 14" stroke={metronome ? '#fff' : '#374151'} strokeWidth={1.5} fill="none" />
+          <line x1={3} y1={6} x2={9} y2={6} stroke={metronome ? '#fff' : '#374151'} strokeWidth={1.2} />
+        </svg>
       </button>
     </div>
   );

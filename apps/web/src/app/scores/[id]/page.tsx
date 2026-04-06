@@ -6,8 +6,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { loadScore, updateScore } from '@/lib/api'
+import { CursorManager } from '@/lib/CursorManager'
+import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
-import { ScorePlayer } from '@/lib/ScorePlayer'
+import { ScoreScheduler } from '@/lib/ScoreScheduler'
+import { Ticker } from '@/lib/Ticker'
 import { Duration, type Note, Pitch, Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
@@ -23,9 +26,14 @@ export default function ScoreEditorPage() {
     const [activeNote, setActiveNote] = useState<Note | undefined>()
     const containerRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-    const playbackRef = useRef<ScorePlayer | null>(null)
+    const tickerRef = useRef<Ticker | null>(null)
+    const schedulerRef = useRef<ScoreScheduler | null>(null)
+    const metronomeRef = useRef<Metronome | null>(null)
+    const cursorRef = useRef<CursorManager | null>(null)
+    const midiPlayerRef = useRef<MidiPlayer | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [metronome, setMetronome] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -203,18 +211,29 @@ export default function ScoreEditorPage() {
         saveToApi({ score })
     }, [score, saveToApi])
 
-    // Initialize playback engine and preload samples
-    const midiPlayerRef = useRef<MidiPlayer | null>(null)
+    // Initialize playback components
     useEffect(() => {
         const midiPlayer = new MidiPlayer()
+        const scheduler = new ScoreScheduler(midiPlayer)
+        const met = new Metronome(midiPlayer)
+        const cursor = new CursorManager(scheduler)
+        const ticker = new Ticker(midiPlayer)
+
+        ticker.addTickable(scheduler)
+        ticker.addTickable(met)
+        ticker.addTickable(cursor)
+
         midiPlayerRef.current = midiPlayer
-        const engine = new ScorePlayer(midiPlayer)
-        playbackRef.current = engine
+        tickerRef.current = ticker
+        schedulerRef.current = scheduler
+        metronomeRef.current = met
+        cursorRef.current = cursor
+
         midiPlayer.loadSamples().catch(() => {
             // Samples failed to load — will fall back to oscillator synthesis
         })
         return () => {
-            engine.stop()
+            ticker.stop()
             midiPlayer.stopPreview()
         }
     }, [])
@@ -227,13 +246,24 @@ export default function ScoreEditorPage() {
         player.preview(midi, 0.75)
     }, [activeNote])
 
+    // Sync metronome toggle so it takes effect mid-playback
+    useEffect(() => {
+        if (metronomeRef.current && tickerRef.current) {
+            if (metronome) tickerRef.current.addTickable(metronomeRef.current)
+            else tickerRef.current.removeTickable(metronomeRef.current)
+        }
+    }, [metronome])
+
     const handlePlayToggle = useCallback(() => {
         if (!score) return
-        const engine = playbackRef.current
-        if (!engine) return
+        const ticker = tickerRef.current
+        const scheduler = schedulerRef.current
+        const met = metronomeRef.current
+        const cursor = cursorRef.current
+        if (!ticker || !scheduler || !met || !cursor) return
 
-        if (engine.isPlaying) {
-            engine.stop()
+        if (ticker.isPlaying) {
+            ticker.stop()
             setIsPlaying(false)
         } else {
             const cursorEl = playbackCursorRef.current
@@ -254,7 +284,11 @@ export default function ScoreEditorPage() {
                 return null
             }
 
-            engine.play(score, cursorEl, resolvePosition, () => {
+            scheduler.score = score
+            met.score = score
+            cursor.bind(cursorEl, resolvePosition)
+
+            ticker.play(() => {
                 setIsPlaying(false)
             })
             setIsPlaying(true)
@@ -308,6 +342,8 @@ export default function ScoreEditorPage() {
                 onTempoToggle={handleTempoToggle}
                 isPlaying={isPlaying}
                 onPlayToggle={handlePlayToggle}
+                metronome={metronome}
+                onMetronomeToggle={() => setMetronome((m) => !m)}
                 onBack={() => router.push('/scores')}
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8">
