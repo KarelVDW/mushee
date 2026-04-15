@@ -1,5 +1,6 @@
-import { difference, sumBy } from 'lodash-es'
+import { compact, difference, sumBy } from 'lodash-es'
 
+import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '@/components/notation/constants'
 import type { BarlineType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
@@ -8,6 +9,7 @@ import { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
+import { PhysicalElement } from './PhysicalElement'
 import type { Score } from './Score'
 import { Tempo } from './Tempo'
 import type { TimeSignature } from './TimeSignature'
@@ -29,6 +31,8 @@ export class Measure {
     private _beamByNote = new Map<Note, Beam>()
     private _noteSet = new Set<Note>()
     private _layout: MeasureLayout | null = null
+    private _physicalElements: PhysicalElement[] = []
+    private _minimalWidth: number = 0
 
     constructor(
         readonly score: Score,
@@ -62,6 +66,14 @@ export class Measure {
 
     get beams() {
         return this._beams
+    }
+
+    get physicalElements() {
+        return this._physicalElements
+    }
+
+    get minimalWidth() {
+        return this._minimalWidth
     }
 
     beatOffsetOf(note: Note): number {
@@ -110,6 +122,20 @@ export class Measure {
 
     get endBarline() {
         return this._endBarline
+    }
+
+    get barlineWidth(): number {
+        const type = this._endBarline ?? 'single'
+        switch (type) {
+            case 'none':
+                return 0
+            case 'single':
+                return BARLINE_THIN_WIDTH
+            case 'double':
+                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH
+            case 'end':
+                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH
+        }
     }
 
     get firstNote(): Note | null {
@@ -231,14 +257,16 @@ export class Measure {
         this._tuplets = tupletFinder.tuplets
         this._tupletByNote = tupletFinder.tupletByNote
         // invalidate old beam notes
-        this._beams.forEach(b => b.notes.forEach(n => n.invalidateLayout()))
+        this._beams.forEach((b) => b.notes.forEach((n) => n.invalidateLayout()))
         // find beams
         const beamFinder = new BeamFinder(this)
         this._beams = beamFinder.beams
         this._beamByNote = beamFinder.beamByNote
         // invalidate new beam notes
-        this._beams.forEach(b => b.notes.forEach(n => n.invalidateLayout()))
+        this._beams.forEach((b) => b.notes.forEach((n) => n.invalidateLayout()))
         // invalidate layout
+        this._physicalElements = compact([this._clef, this._timeSignature, ...this._notes])
+        this._minimalWidth = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
         this._layout = null
     }
 }

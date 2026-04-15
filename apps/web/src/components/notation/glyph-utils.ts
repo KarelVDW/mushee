@@ -69,8 +69,56 @@ export function outlineToSvgPath(outline: string, scale: number): string {
     return segments.join(' ')
 }
 
-/** Get the rendered width of a glyph in pixels */
-export function getGlyphWidth(name: string, scale: number = GLYPH_SCALE): number {
+/** Cached visual outline widths in font units (parsed once per glyph). */
+const outlineWidthCache = new Map<string, number>()
+
+function getOutlineWidth(name: string): number {
+    let w = outlineWidthCache.get(name)
+    if (w !== undefined) return w
+
     const glyph = BravuraFont.glyphs[name as keyof typeof BravuraFont.glyphs]
-    return (glyph.x_max - glyph.x_min) * scale
+    const parts = glyph.o.split(' ')
+
+    let xMin = Infinity
+    let xMax = -Infinity
+
+    let i = 0
+    while (i < parts.length) {
+        switch (parts[i++]) {
+            case 'm':
+            case 'l': {
+                const x = parseFloat(parts[i++])
+                i++ // skip y
+                if (x < xMin) xMin = x
+                if (x > xMax) xMax = x
+                break
+            }
+            case 'q': {
+                const eX = parseFloat(parts[i++]); i++
+                const cX = parseFloat(parts[i++]); i++
+                if (eX < xMin) xMin = eX; if (eX > xMax) xMax = eX
+                if (cX < xMin) xMin = cX; if (cX > xMax) xMax = cX
+                break
+            }
+            case 'b': {
+                const eX = parseFloat(parts[i++]); i++
+                const c1X = parseFloat(parts[i++]); i++
+                const c2X = parseFloat(parts[i++]); i++
+                if (eX < xMin) xMin = eX; if (eX > xMax) xMax = eX
+                if (c1X < xMin) xMin = c1X; if (c1X > xMax) xMax = c1X
+                if (c2X < xMin) xMin = c2X; if (c2X > xMax) xMax = c2X
+                break
+            }
+        }
+    }
+
+    w = xMax - xMin
+    outlineWidthCache.set(name, w)
+    return w
 }
+
+/** Get the visual rendered width of a glyph in pixels (from outline bounds). */
+export function getGlyphWidth(name: string, scale: number = GLYPH_SCALE): number {
+    return getOutlineWidth(name) * scale
+}
+

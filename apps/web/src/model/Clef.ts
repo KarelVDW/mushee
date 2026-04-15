@@ -2,12 +2,19 @@ import type { ClefType } from '@/components/notation/types'
 
 import { ClefLayout } from './layout/ClefLayout'
 import { Measure } from './Measure'
+import { ClefWidth } from './width/ClefWidth'
 
 export class Clef {
     private _measure: Measure | undefined
     private _layout: ClefLayout | null = null
+    private _width: ClefWidth | null = null
 
     constructor(readonly type: ClefType) {}
+
+    get width() {
+        if (!this._width) this._width = new ClefWidth(this)
+        return this._width
+    }
 
     get layout() {
         if (!this._layout) this._layout = new ClefLayout(this)

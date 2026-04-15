@@ -1,112 +1,87 @@
 import { getGlyphWidth, getLedgerLinePositions, getYForNote } from '@/components/notation'
-import { DOT_NOTEHEAD_OFFSET, DOT_SPACING, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT, STEM_WIDTH } from '@/components/notation/constants'
+import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 
 import type { Note } from '../Note'
 
-const NOTEHEAD_WIDTH = getGlyphWidth('noteheadBlack')
-
 export class NoteLayout {
     readonly id = crypto.randomUUID()
-    constructor(private note: Note) {}
+    readonly noteX: number
+    readonly noteY: number
+    readonly glyphName: string
+    readonly flag: { glyphName: string; x: number; y: number; scale?: number } | undefined
+    readonly stem: { x: number; y1: number; y2: number } | undefined
+    readonly ledgerLines: { x1: number; y1: number; x2: number; y2: number }[]
+    readonly accidental: { x: number; y: number; glyphName: string } | undefined
+    readonly dots: { x: number; y: number }[] | undefined
 
-    get x() {
-        return this.note.measure.layout.getX(this.note.beatOffset)
-    }
+    constructor(note: Note) {
+        this.noteY = getYForNote(note.pitch ? note.pitch.line : note.duration.restLine)
+        this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
+        const hasStem = !!note.pitch && note.duration.type !== 'w'
 
-    get y() {
-        return getYForNote(this.note.pitch ? this.note.pitch.line : this.note.duration.restLine)
-    }
+        let cursorX = note.width.paddingLeft
 
-    get glyphName() {
-        return !this.note.pitch ? this.note.duration.restGlyph : this.note.duration.noteheadGlyph
-    }
-
-    /** Whether this note renders a stem (pitched notes except whole notes) */
-    private get hasStem() {
-        return !!this.note.pitch && this.note.duration.type !== 'w'
-    }
-
-    /** Stem X position — no beam dependency, safe for BeamLayout to call */
-    get stemX(): number | undefined {
-        if (!this.hasStem) return
-        return this.note.stemDir === 'up' ? this.x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2 : this.x + STEM_WIDTH / 2
-    }
-
-    /** Default stem tip Y without beam adjustment — safe for BeamLayout to call */
-    get defaultStemTipY(): number | undefined {
-        if (!this.hasStem) return
-        return this.note.stemDir === 'up' ? this.y - STEM_HEIGHT : this.y + STEM_HEIGHT
-    }
-
-    get flag() {
-        if (!this.hasStem) return
-        if (this.note.beam) return
-        const dir = this.note.stemDir
-        const x = this.x
-        const y = this.y
-        const flagName = this.note.duration.flagGlyph(dir)
-        if (!flagName) return
-        return {
-            glyphName: flagName,
-            ...(dir === 'up' ? { x: x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2, y: y - STEM_HEIGHT } : { x: x + STEM_WIDTH / 2, y: y + STEM_HEIGHT }),
+        // accidental
+        if (note.pitch?.accidental) {
+            const accGlyph = note.pitch.accidentalGlyph
+            if (accGlyph) {
+                this.accidental = { x: cursorX, y: this.noteY, glyphName: accGlyph }
+                cursorX += getGlyphWidth(accGlyph) + note.width.gap
+            }
         }
-    }
 
-    get stem(): { x: number; y1: number; y2: number } | undefined {
-        if (!this.hasStem) return
-        const dir = this.note.stemDir
-        const x = this.x
-        const y = this.y
-        const beam = this.note.beam
-        const sx = dir === 'up' ? x + NOTEHEAD_WIDTH + STEM_WIDTH * 3 / 2 : x + STEM_WIDTH / 2
-        const beamY = beam ? beam.layout.beamFirstY + (sx - beam.layout.firstStemX) * beam.layout.slope : null
-        return dir === 'up'
-            ? { x: sx, y1: y, y2: beamY ?? y - STEM_HEIGHT }
-            : { x: sx, y1: y, y2: beamY ?? y + STEM_HEIGHT }
-    }
+        // ledgerLines
+        this.ledgerLines = note.pitch
+            ? getLedgerLinePositions(note.pitch.line).map((ly) => ({
+                  x1: cursorX,
+                  y1: ly,
+                  x2: cursorX + note.width.noteHeadWidth + 2 * note.width.ledgerLineExtension,
+                  y2: ly,
+              }))
+            : []
+        cursorX += note.width.ledgerLineExtension
 
-    get ledgerLines() {
-        if (!this.note.pitch) return []
-        const x = this.x
-        const ledgerLineYs = getLedgerLinePositions(this.note.pitch.line)
-        return ledgerLineYs.map((ly) => ({
-            x1: x - LEDGER_LINE_EXTENSION,
-            y1: ly,
-            x2: x + NOTEHEAD_WIDTH + 2 * LEDGER_LINE_EXTENSION,
-            y2: ly,
-        }))
-    }
+        this.noteX = cursorX
 
-    get accidental() {
-        if (!this.note.pitch?.accidental) return
-        const accGlyph = this.note.pitch.accidentalGlyph
-        if (!accGlyph) return
-        return {
-            x: this.x - getGlyphWidth(accGlyph) - 2,
-            y: this.y,
-            glyphName: accGlyph,
+        // stem
+        if (hasStem) {
+            const stemX =
+                note.stemDir === 'up'
+                    ? cursorX + note.width.noteHeadWidth - (note.width.stemWidth ) / 2
+                    : cursorX + note.width.stemWidth / 2
+            this.stem =
+                note.stemDir === 'up'
+                    ? { x: stemX, y1: this.noteY, y2: this.noteY - note.width.stemHeight }
+                    : { x: stemX, y1: this.noteY, y2: this.noteY + note.width.stemHeight }
+
+            // flag
+            if (!note.beam) {
+                const flagName = note.duration.flagGlyph(note.stemDir)
+                if (flagName) {
+                    this.flag = {
+                        glyphName: flagName,
+                        x: stemX,
+                        y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * note.width.stemHeight,
+                        scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
+                    }
+                }
+            }
         }
-    }
 
-    get dots() {
-        const numDots = this.note.duration.dots
-        if (!numDots || numDots <= 0) return
-        const noteLine = this.note.pitch ? this.note.pitch.line : this.note.duration.restLine
-        const y = this.y
+        cursorX += note.width.noteHeadWidth + note.width.ledgerLineExtension + note.width.gap
 
-        const noteRightX = this.x + NOTEHEAD_WIDTH
-        const dots: { x: number; y: number }[] = []
-
-        // If the note sits on a line (integer noteLine), shift dots up by half a space
-        const onLine = Number.isInteger(noteLine)
-        const dotY = onLine ? y - STAVE_LINE_DISTANCE / 2 : y
-
-        for (let i = 0; i < numDots; i++) {
-            dots.push({
-                x: noteRightX + DOT_NOTEHEAD_OFFSET + i * DOT_SPACING,
-                y: dotY,
-            })
+        // dots
+        const numDots = note.duration.dots
+        if (numDots && numDots > 0) {
+            // If the note sits on a line (integer noteLine), shift dots up by half a space
+            const onLine = Number.isInteger(note.pitch ? note.pitch.line : note.duration.restLine)
+            const dotY = onLine ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
+            this.dots = []
+            for (let i = 0; i < numDots; i++) {
+                const offset = note.width.gap + note.width.dotSpacing
+                this.dots.push({ x: cursorX + offset, y: dotY })
+                cursorX += offset
+            }
         }
-        return dots
     }
 }

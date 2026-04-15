@@ -5,6 +5,7 @@ import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
 import { Tie } from './Tie'
+import { NoteWidth } from './width/NoteWidth'
 
 export class Note {
     readonly id: string
@@ -12,6 +13,7 @@ export class Note {
     readonly duration: Duration
     readonly pitch: Pitch | undefined
     readonly tie: TieType | undefined
+    private _width: NoteWidth | null = null
     private _layout: NoteLayout | null = null
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
@@ -19,6 +21,11 @@ export class Note {
         this.duration = value.duration
         this.pitch = value.pitch
         this.tie = value.tie
+    }
+
+    get width() {
+        if (!this._width) this._width = new NoteWidth(this)
+        return this._width
     }
 
     get layout() {
@@ -51,12 +58,16 @@ export class Note {
         return this.measure.beatOffsetOf(this)
     }
 
+    get beats() {
+        return this.duration.effectiveBeats
+    }
+
     get tuplet() {
-        return this.measure.tupletGroupOf(this)
+        return this._measure?.tupletGroupOf(this)
     }
 
     get beam() {
-        return this.measure.beamOf(this)
+        return this._measure?.beamOf(this)
     }
 
     get tiesForward(): boolean {

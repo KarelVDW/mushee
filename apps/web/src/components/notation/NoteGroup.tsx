@@ -2,7 +2,7 @@ import { memo } from 'react'
 
 import type { Note } from '@/model'
 
-import { DOT_RADIUS, STEM_WIDTH } from './constants'
+import { DOT_RADIUS } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {
@@ -13,10 +13,11 @@ interface NoteGroupProps {
 
 export const NoteGroup = memo(
     function NoteGroup({ note, color }: NoteGroupProps) {
-        const { x, y, glyphName, stem, flag, accidental, dots, ledgerLines } = note.layout
-
+        const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
+        const beamStem = note.beam?.layout.getStem(note)
+        const stem = beamStem ?? originalStem
         return (
-            <g>
+            <>
                 {/* Ledger lines (behind everything) */}
                 {ledgerLines.map((ll, i) => (
                     <line key={`ledger-${i}`} x1={ll.x1} y1={ll.y1} x2={ll.x2} y2={ll.y2} stroke="#000" strokeWidth={1.5} />
@@ -27,11 +28,11 @@ export const NoteGroup = memo(
 
                 {/* Stem */}
                 {stem && (
-                    <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke="#000" strokeWidth={STEM_WIDTH} />
+                    <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke="#000" strokeWidth={note.width.stemWidth} />
                 )}
 
                 {/* Flag (8th, 16th notes) */}
-                {flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} />}
+                {flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}
 
                 {/* Augmentation dots */}
                 {dots?.map((dot, i) => (
@@ -39,8 +40,8 @@ export const NoteGroup = memo(
                 ))}
 
                 {/* Notehead */}
-                <Glyph name={glyphName} x={x} y={y} fill={color} />
-            </g>
+                <Glyph name={glyphName} x={noteX} y={noteY} fill={color} />
+            </>
         )
     },
 )

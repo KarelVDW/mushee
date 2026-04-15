@@ -1,15 +1,22 @@
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
 import type { Measure } from './Measure'
+import { TimeSignatureWidth } from './width/TimeSignatureWidth'
 
 export class TimeSignature {
-    readonly beats: number
+    readonly beatAmount: number
     readonly beatType: number
     private _measure: Measure | undefined
     private _layout: TimeSignatureLayout | null = null
+    private _width: TimeSignatureWidth | null = null
 
-    constructor(beats: number, beatType: number) {
-        this.beats = beats
+    constructor(beatAmount: number, beatType: number) {
+        this.beatAmount = beatAmount
         this.beatType = beatType
+    }
+
+    get width() {
+        if (!this._width) this._width = new TimeSignatureWidth(this)
+        return this._width
     }
 
     get layout() {
@@ -32,12 +39,12 @@ export class TimeSignature {
 
     /** Total beats per measure in quarter-note units */
     get maxBeats(): number {
-        return this.beats * (4 / this.beatType)
+        return this.beatAmount * (4 / this.beatType)
     }
 
     /** String digits of the numerator, e.g. [4] or [1, 2] for 12/8 */
     get beatsDigits(): string[] {
-        return String(this.beats).split('')
+        return String(this.beatAmount).split('')
     }
 
     /** String digits of the denominator */

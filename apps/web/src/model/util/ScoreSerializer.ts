@@ -109,7 +109,7 @@ export class MeasureSerializer {
     }
 
     private static timeSignatureToMxmlTime(ts: TimeSignature): { beats: string; beatType: string } {
-        return { beats: String(ts.beats), beatType: String(ts.beatType) }
+        return { beats: String(ts.beatAmount), beatType: String(ts.beatType) }
     }
 
     private static tieTypeToMxmlTie(tie: TieType): Array<{ type: 'start' | 'stop' }> {

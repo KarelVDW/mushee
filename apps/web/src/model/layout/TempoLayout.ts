@@ -4,13 +4,6 @@ import type { Tempo } from '../Tempo'
 
 export class TempoLayout {
     readonly id = crypto.randomUUID()
-    constructor(private tempo: Tempo) {}
-
-    get x() {
-        return this.tempo.measure.layout.getX(this.tempo.beatPosition)
-    }
-
-    get y() {
-        return TEMPO_MARKING_Y
-    }
+    readonly y = TEMPO_MARKING_Y
+    constructor(_tempo: Tempo) {}
 }

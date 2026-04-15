@@ -2,6 +2,7 @@ import { memo } from 'react'
 
 import type { Measure as MeasureModel, Note } from '@/model'
 
+import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
 import { NoteGroup } from './NoteGroup'
@@ -17,28 +18,40 @@ interface MeasureProps {
     layoutId: string
 }
 
-export const Measure = memo(
-    function Measure({ measure, selectedNote, hoveredNote }: MeasureProps) {
-        return (
-            <g>
-                {measure.clef && <Clef clef={measure.clef} layoutId={measure.clef.layout.id} />}
+export const Measure = memo(function Measure({ measure, selectedNote, hoveredNote }: MeasureProps) {
+    return (
+        <>
+            {measure.clef && (
+                <g transform={`translate(${measure.layout.getXForElement(measure.clef)}, 0)`}>
+                    <Clef clef={measure.clef} layoutId={measure.clef.layout.id} />
+                </g>
+            )}
 
-                {measure.timeSignature && <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />}
+            {measure.timeSignature && (
+                <g transform={`translate(${measure.layout.getXForElement(measure.timeSignature)}, 0)`}>
+                    <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />
+                </g>
+            )}
 
-                {measure.notes.map((note) => {
-                    const isSelected = note === selectedNote
-                    const isHovered = !isSelected && note === hoveredNote
-                    return <NoteGroup key={note.id} note={note} color={isSelected || isHovered ? CURSOR_COLOR : undefined} layoutId={note.layout.id} />
-                })}
+            {measure.notes.map((note) => {
+                const isSelected = note === selectedNote
+                const isHovered = !isSelected && note === hoveredNote
+                return (
+                    <g key={note.id} transform={`translate(${measure.layout.getXForElement(note)}, 0)`}>
+                        <NoteGroup note={note} color={isSelected || isHovered ? CURSOR_COLOR : undefined} layoutId={note.layout.id} />
+                    </g>
+                )
+            })}
 
-                {measure.beams.map((beam, i) => (
-                    <BeamGroup key={i} beam={beam} layoutId={beam.layout.id} />
-                ))}
+            {measure.beams.map((beam, i) => (
+                <BeamGroup key={i} beam={beam} layoutId={beam.layout.id} />
+            ))}
 
-                {measure.tuplets.map((tuplet, i) => (
-                    <TupletBracket key={i} tuplet={tuplet} layoutId={tuplet.layout.id} />
-                ))}
-            </g>
-        )
-    },
-)
+            {measure.tuplets.map((tuplet, i) => (
+                <TupletBracket key={i} tuplet={tuplet} layoutId={tuplet.layout.id} />
+            ))}
+
+            {measure.layout.barline && <Barline layout={measure.layout.barline} />}
+        </>
+    )
+})

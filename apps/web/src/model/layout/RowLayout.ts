@@ -8,7 +8,6 @@ export class RowLayout {
     constructor(
         readonly measures: Measure[],
         readonly width: number,
-        private positions: Map<number, { x: number; width: number }>,
     ) {}
 
     get staffLines(): LayoutLine[] {
@@ -21,23 +20,9 @@ export class RowLayout {
         return lines
     }
 
-    get barlines(): LayoutBarline[] {
+    get openingBarline(): LayoutBarline {
         const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
         const staffHeight = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
-
-        const barlines: LayoutBarline[] = [{ x: 0, y: headroom, height: staffHeight, type: 'single' }]
-        for (const m of this.measures) {
-            const pos = this.positions.get(m.index)
-            if (pos) {
-                barlines.push({
-                    x: pos.x + pos.width,
-                    y: headroom,
-                    height: staffHeight,
-                    type: m.endBarline ?? 'single',
-                })
-            }
-        }
-        return barlines
+        return { x: 0, y: headroom, height: staffHeight, type: 'single' }
     }
-
 }

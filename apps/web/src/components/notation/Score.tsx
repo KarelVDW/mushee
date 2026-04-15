@@ -7,10 +7,10 @@ import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { Barline } from './Barline'
 import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
-import { GhostNote } from './GhostNote'
 import { getGlyphWidth } from './glyph-utils'
 import { Measure } from './Measure'
-import { xToBeat, yToLine } from './note-utils'
+import { yToLine } from './note-utils'
+import { NoteGroup } from './NoteGroup'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
 import { TempoPopover } from './TempoPopover'
@@ -50,7 +50,8 @@ export const Score = memo(function Score({
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
-    const [hoverInfo, setHoverInfo] = useState<{ rowIndex: number; x: number; y: number } | null>(null)
+    const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
+    const [ghostNote, setGhostNote] = useState<{ note: Note; parent: Note } | null>(null)
     const [openPopover, setOpenPopover] = useState<{
         measureIndex: number
         beatPosition: number
@@ -78,20 +79,6 @@ export const Score = memo(function Score({
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / SCORE_WIDTH) : 0
 
     const rowYOffset = useCallback((ri: number) => ri * (height + rowGap), [height, rowGap])
-
-    // Determine which row a Y coordinate falls in
-    const yToRow = useCallback(
-        (svgY: number): { rowIndex: number; localY: number } | null => {
-            for (let ri = 0; ri < rows.length; ri++) {
-                const y0 = rowYOffset(ri)
-                if (svgY >= y0 && svgY < y0 + height) {
-                    return { rowIndex: ri, localY: svgY - y0 }
-                }
-            }
-            return null
-        },
-        [rows.length, height, rowYOffset],
-    )
 
     // Which row contains the cursor (find by noteId)
     const cursorRowInfo = useMemo(() => {
@@ -137,42 +124,6 @@ export const Score = memo(function Score({
         return lastClef
     }, [cursorRowInfo])
 
-    // Hovered note: X → measure → beat → noteAtBeat
-    const hoveredNote = useMemo(() => {
-        if (!hoverInfo) return null
-        const row = rows[hoverInfo.rowIndex]
-        if (!row) return null
-
-        // Find which measure contains the hover X
-        const measure = row.measures.find((m) => {
-            const mx = m.layout.measureX
-            return hoverInfo.x >= mx && hoverInfo.x < mx + m.layout.measureWidth
-        })
-        if (!measure || measure.notes.length === 0) return null
-
-        // Use actual note X range (excludes clef/time sig overhead)
-        const firstNoteX = measure.notes[0].layout.x
-        const lastNoteX = measure.notes[measure.notes.length - 1].layout.x
-        const noteheadWidth = getGlyphWidth('noteheadBlack')
-        const beat = xToBeat(hoverInfo.x, firstNoteX, lastNoteX - firstNoteX + noteheadWidth, measure.beats)
-        return measure.noteAtBeat(beat)
-    }, [hoverInfo, rows])
-
-    // Ghost note info (row-local coordinates) — only when hovering the active note
-    const ghostInfo = useMemo(() => {
-        if (!hoverInfo || !selectedNote || !cursorRowInfo) return null
-        if (hoverInfo.rowIndex !== cursorRowInfo.rowIndex) return null
-        if (hoveredNote !== selectedNote) return null
-        const isRest = selectedNote.isRest
-        const hoverLine = yToLine(hoverInfo.y)
-        if (!isRest) {
-            const currentLine = Pitch.fromLine(yToLine(selectedNote.layout.y)).line
-            if (hoverLine === currentLine) return null
-        }
-        const glyphName = isRest ? 'noteheadBlack' : selectedNote.layout.glyphName
-        return { line: hoverLine, x: selectedNote.layout.x, glyphName, rowIndex: cursorRowInfo.rowIndex }
-    }, [hoverInfo, selectedNote, cursorRowInfo, selectedClef, hoveredNote])
-
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(
         (clientX: number, clientY: number): { x: number; y: number } | null => {
@@ -180,7 +131,7 @@ export const Score = memo(function Score({
             if (!svg) return null
             const rect = svg.getBoundingClientRect()
             return {
-                x: ((clientX - rect.left) / rect.width) * SCORE_WIDTH,
+                x: ((clientX - rect.left) / rect.width) * score.layout.scoreWidth,
                 y: ((clientY - rect.top) / rect.height) * totalHeight,
             }
         },
@@ -218,21 +169,36 @@ export const Score = memo(function Score({
         (e: React.MouseEvent<SVGSVGElement>) => {
             const pt = clientToSvg(e.clientX, e.clientY)
             if (!pt) {
-                setHoverInfo(null)
+                if (hoveredNote) setHoveredNote(null)
+                if (ghostNote) setGhostNote(null)
                 return
             }
-            const rowInfo = yToRow(pt.y)
-            if (!rowInfo) {
-                setHoverInfo(null)
+            const rowIndex = score.layout.getRowIndexForY(pt.y)
+            const localY = pt.y - rowYOffset(rowIndex)
+            const measure = score.layout.getMeasureForX(pt.x, rowIndex)
+            if (!measure) {
+                if (hoveredNote) setHoveredNote(null)
+                if (ghostNote) setGhostNote(null)
                 return
             }
-            setHoverInfo({ rowIndex: rowInfo.rowIndex, x: pt.x, y: rowInfo.localY })
+            const localX = pt.x - score.layout.getMeasureX(measure)
+            const note = measure.layout.getNoteForX(localX)
+            if (!note) {
+                if (hoveredNote) setHoveredNote(null)
+                if (ghostNote) setGhostNote(null)
+                return
+            }
+            if (note.id !== hoveredNote?.id) setHoveredNote(note)
+            const hoverLine = yToLine(localY)
+            if (hoverLine === note.pitch?.line && ghostNote) setGhostNote(null)
+            setGhostNote({ note: note.clone({ pitch: Pitch.fromLine(hoverLine) }), parent: note })
         },
-        [clientToSvg, yToRow],
+        [clientToSvg],
     )
 
     const handleMouseLeave = useCallback(() => {
-        setHoverInfo(null)
+        setHoveredNote(null)
+        setGhostNote(null)
     }, [])
 
     const handleClick = useCallback(
@@ -241,51 +207,32 @@ export const Score = memo(function Score({
                 setOpenPopover(null)
                 return
             }
-            const pt = clientToSvg(e.clientX, e.clientY)
-            if (!pt) return
-            const rowInfo = yToRow(pt.y)
-            if (!rowInfo) return
+            if (!hoveredNote) return
 
-            const row = rows[rowInfo.rowIndex]
-            if (!row) return
-
-            // Find clicked measure via layout position
-            const measure = row.measures.find((m) => {
-                const mx = m.layout.measureX
-                return pt.x >= mx && pt.x < mx + m.layout.measureWidth
-            })
-            if (!measure || measure.notes.length === 0) return
-
-            const firstNoteX = measure.notes[0].layout.x
-            const lastNoteX = measure.notes[measure.notes.length - 1].layout.x
-            const noteheadWidth = getGlyphWidth('noteheadBlack')
-            const beat = xToBeat(pt.x, firstNoteX, lastNoteX - firstNoteX + noteheadWidth, measure.beats)
-            const clickedNote = measure.noteAtBeat(beat)
-            if (!clickedNote) return
-
-            if (clickedNote.id !== selectedNoteId) {
-                onNoteSelect?.(clickedNote)
+            if (ghostNote?.note.pitch && onNoteChange) {
+                setGhostNote(null)
+                onNoteChange(ghostNote.parent, ghostNote.note.pitch)
                 return
             }
 
-            // Ghost note pitch change
-            if (!ghostInfo || !onNoteChange) return
-            if (ghostInfo.rowIndex !== rowInfo.rowIndex) return
-            const newKey = Pitch.fromLine(ghostInfo.line /* , selectedClef */)
-            onNoteChange(clickedNote, newKey)
+            if (hoveredNote.id !== selectedNote?.id) {
+                onNoteSelect?.(hoveredNote)
+                return
+            }
         },
-        [openPopover, clientToSvg, yToRow, rows, selectedNoteId, onNoteSelect, ghostInfo, onNoteChange, selectedClef],
+        [openPopover, onNoteSelect, onNoteChange, ghostNote, hoveredNote, selectedNote],
     )
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
         if (rows.length === 0 || !showMeasureButtons || !score.layout) return null
         const lastRow = rows[rows.length - 1]
-        const barlines = lastRow.barlines
-        const lastBarline = barlines[barlines.length - 1]
-        if (!lastBarline) return null
-        const staffCenterY = lastBarline.y + lastBarline.height / 2
-        const x = lastBarline.x + 10
+        const lastMeasure = lastRow.measures[lastRow.measures.length - 1]
+        const barline = lastMeasure?.layout.barline
+        if (!barline) return null
+        const measureX = score.layout.getMeasureX(lastMeasure)
+        const staffCenterY = barline.y + barline.height / 2
+        const x = measureX + barline.x + lastMeasure.barlineWidth + 10
         const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
         const topY = staffCenterY - btnTotalHeight / 2
         return { x, topY }
@@ -315,23 +262,50 @@ export const Score = memo(function Score({
                         rx={1.5}
                     />
 
+                    {score.measures.map((measure) => (
+                        <g
+                            key={measure.index}
+                            transform={`translate(${score.layout.getMeasureX(measure)}, ${rowYOffset(score.layout.getRowIndex(measure))})`}>
+                            <Measure
+                                measure={measure}
+                                selectedNote={selectedNote ?? undefined}
+                                hoveredNote={hoveredNote}
+                                layoutId={measure.layout.id}
+                            />
+
+                            {ghostNote && ghostNote.parent.measure === measure && (
+                                <g
+                                    key={ghostNote.note.id}
+                                    transform={`translate(${measure.layout.getXForElement(ghostNote.parent)}, 0)`}
+                                    opacity={0.35}>
+                                    <NoteGroup note={ghostNote.note} layoutId={ghostNote.note.layout.id} />
+                                </g>
+                            )}
+
+                            {measure.tempos.map((tempo, ti) => (
+                                <TempoMarking
+                                    key={`tempo-${ti}`}
+                                    tempo={tempo}
+                                    layoutId={tempo.layout.id}
+                                    onClick={() =>
+                                        handleTempoClick(
+                                            tempo.measure.index,
+                                            tempo.beatPosition,
+                                            tempo.bpm,
+                                            tempo.layout.x,
+                                            rowYOffset(score.layout.getRowIndex(measure)) + tempo.layout.y,
+                                        )
+                                    }
+                                />
+                            ))}
+                        </g>
+                    ))}
+
                     {rows.map((row, ri) => (
                         <g key={row.measures.map((m) => m.index).join('-')} transform={`translate(0, ${rowYOffset(ri)})`}>
                             <StaffLines lines={row.staffLines} />
 
-                            {row.measures.map((measure) => (
-                                <Measure
-                                    key={measure.index}
-                                    measure={measure}
-                                    selectedNote={selectedNote ?? undefined}
-                                    hoveredNote={hoveredNote}
-                                    layoutId={measure.layout.id}
-                                />
-                            ))}
-
-                            {row.barlines.map((barline, bi) => (
-                                <Barline key={bi} layout={barline} />
-                            ))}
+                            <Barline layout={row.openingBarline} />
 
                             {row.measures
                                 .flatMap((m) => m.notes)
@@ -341,30 +315,7 @@ export const Score = memo(function Score({
                                     return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} />
                                 })}
 
-                            {row.measures
-                                .flatMap((m) => m.tempos)
-                                .map((tempo, ti) => (
-                                    <TempoMarking
-                                        key={`tempo-${ti}`}
-                                        tempo={tempo}
-                                        layoutId={tempo.layout.id}
-                                        onClick={() =>
-                                            handleTempoClick(
-                                                tempo.measure.index,
-                                                tempo.beatPosition,
-                                                tempo.bpm,
-                                                tempo.layout.x,
-                                                rowYOffset(ri) + tempo.layout.y,
-                                            )
-                                        }
-                                    />
-                                ))}
-
                             {cursorPos && cursorPos.rowIndex === ri && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}
-
-                            {ghostInfo && ghostInfo.rowIndex === ri && hoverInfo !== null && (
-                                <GhostNote x={ghostInfo.x} hoverY={hoverInfo.y} glyphName={ghostInfo.glyphName} />
-                            )}
 
                             {ri === lastRowIndex && measureButtonPos && onAddMeasure && (
                                 <MeasureButton

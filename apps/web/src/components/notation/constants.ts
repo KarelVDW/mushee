@@ -17,12 +17,6 @@ export const FONT_RESOLUTION = 1000;
 export const GLYPH_SCALE =
   (NOTATION_FONT_SCALE * 72) / (FONT_RESOLUTION * 100); // ≈ 0.02808
 
-/** Default stem height in pixels */
-export const STEM_HEIGHT = 35;
-
-/** Default stem line width in pixels */
-export const STEM_WIDTH = 1.5;
-
 /** Ledger line overshoot on each side of the notehead (pixels) */
 export const LEDGER_LINE_EXTENSION = 4;
 
@@ -73,6 +67,9 @@ export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5);
 
 /** Y position of tempo markings within headroom above staff */
 export const TEMPO_MARKING_Y = 15;
+
+/** Scale multiplier for flags on dotted notes (relative to GLYPH_SCALE) */
+export const DOTTED_FLAG_SCALE = GLYPH_SCALE * 0.7
 
 /** Augmentation dot radius in pixels */
 export const DOT_RADIUS = 2;
