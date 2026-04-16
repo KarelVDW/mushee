@@ -1,5 +1,6 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
+import { Clef } from './Clef'
 import { Duration } from './Duration'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
@@ -13,6 +14,7 @@ export class Score {
     private _layout: ScoreLayout | null = null
     private _rows: Row[] = []
     private _rowByMeasure: Map<Measure, Row> = new Map()
+    private _clefByMeasure: Map<Measure, Clef> = new Map()
     private onChange: () => void
     private _dirtyMeasures = new Set<number>()
     private _structureChanged = false
@@ -80,6 +82,10 @@ export class Score {
         return this.rows[this.rows.length - 1] ?? null
     }
 
+    getClefForMeasure(measure: Measure): Clef | undefined {
+        return this._clefByMeasure.get(measure)
+    }
+
     /** Resolve the active time signature at a given measure index by walking backwards. */
     getActiveTimeSignature(measureIndex: number): TimeSignature | undefined {
         for (let i = measureIndex; i >= 0; i--) {
@@ -104,7 +110,8 @@ export class Score {
     }
 
     addMeasure(measure = new Measure(this, this.measures.length)) {
-        last(this.measures)?.setEndBarline('single')
+        const previousMeasure = last(this.measures)
+        previousMeasure?.setEndBarline('single')
         measure.setEndBarline('end')
         this.measures.push(measure)
         let row = last(this._rows)
@@ -114,6 +121,9 @@ export class Score {
         }
         row.addMeasure(measure)
         this._rowByMeasure.set(measure, row)
+        const activeClef = measure.clef ?? (previousMeasure && this._clefByMeasure.get(previousMeasure))
+        if (activeClef) this._clefByMeasure.set(measure, activeClef)
+        this.updateClefForMeasure(measure)
         this.markStructureChanged()
         this.onChange()
         return measure
@@ -123,6 +133,7 @@ export class Score {
         const removed = this.measures.pop()
         if (removed) {
             this._rowByMeasure.delete(removed)
+            this._clefByMeasure.delete(removed)
             const lastRow = last(this._rows)
             if (lastRow) {
                 lastRow.removeLastMeasure()
@@ -188,6 +199,9 @@ export class Score {
             this.getRowForMeasure(measure).invalidateLayout()
         }
         this.onChange()
+    }
+
+    private updateClefForMeasure(measure: Measure) {
     }
 
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
