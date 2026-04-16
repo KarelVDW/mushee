@@ -17,21 +17,6 @@ export const FONT_RESOLUTION = 1000;
 export const GLYPH_SCALE =
   (NOTATION_FONT_SCALE * 72) / (FONT_RESOLUTION * 100); // ≈ 0.02808
 
-/** Ledger line overshoot on each side of the notehead (pixels) */
-export const LEDGER_LINE_EXTENSION = 4;
-
-/** Padding between stave left edge and first modifier (clef) */
-export const STAVE_LEFT_PADDING = 10;
-
-/** Padding between clef and time signature */
-export const CLEF_TIME_SIG_PADDING = 8;
-
-/** Padding between time signature and first note */
-export const TIME_SIG_NOTE_PADDING = 15;
-
-/** Padding after last note before stave right edge */
-export const STAVE_RIGHT_PADDING = 10;
-
 /** Beam line thickness in pixels */
 export const BEAM_WIDTH = 5;
 
@@ -74,12 +59,6 @@ export const DOTTED_FLAG_SCALE = GLYPH_SCALE * 0.7
 /** Augmentation dot radius in pixels */
 export const DOT_RADIUS = 2;
 
-/** Horizontal offset from notehead right edge to first dot center */
-export const DOT_NOTEHEAD_OFFSET = 5;
-
-/** Horizontal spacing between multiple dots (center to center) */
-export const DOT_SPACING = 5;
-
 /** Vertical offset from notehead center to tie endpoint */
 export const TIE_Y_SHIFT = 7
 
@@ -89,7 +68,6 @@ export const ROW_GAP = 16
 export const ROW_HEIGHT = 160
 export const MAX_MEASURES_PER_ROW = 4
 
-export const MEASURE_BUTTONS_WIDTH = 30
 export const MEASURE_BUTTON_SIZE = 18
 export const MEASURE_BUTTON_GAP = 3
 
