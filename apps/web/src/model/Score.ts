@@ -123,7 +123,9 @@ export class Score {
         this._rowByMeasure.set(measure, row)
         const activeClef = measure.clef ?? (previousMeasure && this._clefByMeasure.get(previousMeasure))
         if (activeClef) this._clefByMeasure.set(measure, activeClef)
-        this.updateClefForMeasure(measure)
+        if (row.firstMeasures === measure && !measure.clef && activeClef) {
+            measure.setRowStartClef(activeClef)
+        }
         this.markStructureChanged()
         this.onChange()
         return measure
@@ -199,9 +201,6 @@ export class Score {
             this.getRowForMeasure(measure).invalidateLayout()
         }
         this.onChange()
-    }
-
-    private updateClefForMeasure(measure: Measure) {
     }
 
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */

@@ -20,6 +20,7 @@ import { TupletFinder } from './util/TupletFinder'
 export class Measure {
     private _notes: Note[] = []
     private _clef?: Clef
+    private _rowStartClef?: Clef
     private _timeSignature?: TimeSignature
     private _keySignature?: KeySignature
     private _endBarline?: BarlineType
@@ -49,6 +50,12 @@ export class Measure {
     setClef(clef: Clef | undefined) {
         this._clef = clef
         this._clef?.setMeasure(this)
+    }
+
+    setRowStartClef(clef: Clef | undefined) {
+        this._rowStartClef = clef
+        this._rowStartClef?.setMeasure(this)
+        this.rebuildPhysicalElements()
     }
 
     get layout() {
@@ -109,6 +116,10 @@ export class Measure {
 
     get clef() {
         return this._clef
+    }
+
+    get displayClef() {
+        return this._clef ?? this._rowStartClef
     }
 
     get timeSignature() {
@@ -263,7 +274,11 @@ export class Measure {
         // invalidate new beam notes
         this._beams.forEach((b) => b.notes.forEach((n) => n.invalidateLayout()))
         // invalidate layout
-        this._physicalElements = compact([this._clef, this._timeSignature, ...this._notes])
+        this.rebuildPhysicalElements()
+    }
+
+    private rebuildPhysicalElements() {
+        this._physicalElements = compact([this._clef ?? this._rowStartClef, this._timeSignature, ...this._notes])
         this._minimalWidth = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
         this._layout = null
     }
