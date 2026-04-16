@@ -21,6 +21,14 @@ export class Row {
         return this._width
     }
 
+    get firstMeasures(): Measure {
+        return this._measures[0]
+    }
+
+    get lastMeasures(): Measure {
+        return this._measures[this._measures.length - 1]
+    }
+
     canFit(measure: Measure): boolean {
         return this._measures.length < MAX_MEASURES_PER_ROW && (this._width + this.effectiveWidth(measure)) <= SCORE_WIDTH
     }

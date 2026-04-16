@@ -21,17 +21,32 @@ export class RowLayout {
                 return measureData
             }
             const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? 30 : 0)
-            const defaultMeasureWidth = totalWidth / measures.length
-            const specialDemandMeasures = new Set(measures.filter((m) => m.minimalWidth > defaultMeasureWidth))
 
-            const specialWidth = Array.from(specialDemandMeasures).reduce((sum, m) => sum + m.minimalWidth, 0)
-            const normalCount = measures.length - specialDemandMeasures.size
-            let normalWidth = normalCount > 0 ? (totalWidth - specialWidth) / normalCount : 0
-            if (measures.length <= 2) normalWidth = totalWidth  / MAX_MEASURES_PER_ROW
+            // Iteratively allocate special measures (those exceeding equal share) until stable
+            const widths = new Map<Measure, number>()
+            let remaining = totalWidth
+            let unallocated = [...measures]
+            let changed = true
+            while (changed) {
+                changed = false
+                const share = remaining / unallocated.length
+                for (const m of [...unallocated]) {
+                    if (m.minimalWidth > share) {
+                        widths.set(m, m.minimalWidth)
+                        remaining -= m.minimalWidth
+                        unallocated = unallocated.filter((x) => x !== m)
+                        changed = true
+                    }
+                }
+            }
+            let normalWidth = unallocated.length > 0 ? remaining / unallocated.length : 0
+            if (measures.length <= 2) normalWidth = Math.min(normalWidth, totalWidth / MAX_MEASURES_PER_ROW)
+            for (const m of unallocated) widths.set(m, normalWidth)
+
             let cursorX = 0
             for (let i = 0; i < measures.length; i++) {
                 const m = measures[i]
-                const width = specialDemandMeasures.has(m) ? m.minimalWidth : normalWidth
+                const width = widths.get(m) ?? 0
                 measureData.set(m, { width, measureX: cursorX, indexInRow: i })
                 cursorX += width
             }
