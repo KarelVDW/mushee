@@ -269,19 +269,11 @@ export default function ScoreEditorPage() {
             const cursorEl = playbackCursorRef.current
             if (!cursorEl) return
 
-            const layout = score.layout
-            if (!layout) return
-
             const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
-                for (let ri = 0; ri < layout.rows.length; ri++) {
-                    const measure = layout.rows[ri].measures.find((m) => m.index === pos.measureIndex)
-                    if (measure) {
-                        const x = measure.layout.getX(pos.beat)
-                        const rowY = ri * (layout.rowHeight + layout.rowGap)
-                        return { x, rowY }
-                    }
-                }
-                return null
+                const measure = score.measures[pos.measureIndex]
+                const row = score.getRowForMeasure(measure)
+                const measureX = row.layout.getMeasureX(measure)
+                return { x: measureX + measure.layout.getX(pos.beat), rowY: score.layout.getYForRow(row) }
             }
 
             scheduler.score = score
@@ -351,7 +343,7 @@ export default function ScoreEditorPage() {
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}
-                        selectedNoteId={activeNote?.id}
+                        selectedNote={activeNote}
                         playbackCursorRef={playbackCursorRef}
                         onNoteSelect={handleNoteSelect}
                         onNoteChange={handleNoteChange}
