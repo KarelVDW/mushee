@@ -47,14 +47,16 @@ export class MeasureLayout {
         for (const [parent, children] of dependents.entries()) {
             const parentReserve = reserves.get(parent) || 0
             const totalChildWidth = sumBy(children, (el) => el.width.total)
-            if (totalChildWidth < parentReserve) {
+            if (totalChildWidth <= parentReserve) {
+                reserves.set(parent, parentReserve - totalChildWidth)
+            } else {
                 reserves.delete(parent)
                 deficits.set(parent, (deficits.get(parent) || 0) + totalChildWidth - parentReserve)
-            } else reserves.set(parent, parentReserve - totalChildWidth)
+            }
         }
         let totalReserve = sum(Array.from(reserves.values()))
         let totalDeficit = sum(Array.from(deficits.values()))
-        if (totalDeficit > 0.001 && totalReserve < totalDeficit) throw new Error('Measure is too small')
+        if (totalDeficit > 0.001 && totalReserve < totalDeficit - 0.001) throw new Error('Measure is too small')
 
         if (deficits.size) {
             const sortedReserves = sortBy(uniq(Array.from(reserves.values())))
@@ -66,28 +68,30 @@ export class MeasureLayout {
                 const actualFillIn = totalPossibleFillIn > totalDeficit ? totalDeficit : totalPossibleFillIn
                 totalReserve -= actualFillIn
                 totalDeficit -= actualFillIn
-                const fillInIncrement = actualFillIn / deficits.size
+                let remaining = actualFillIn
 
                 for (const [el, deficit] of Array.from(deficits)) {
-                    if (deficit <= fillInIncrement) {
+                    const give = Math.min(deficit, remaining / deficits.size)
+                    if (deficit <= give) {
                         deficits.delete(el)
-                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        allotted.set(el, allotted.get(el)! + deficit)
                     } else {
-                        deficits.set(el, deficit - fillInIncrement)
-                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        allotted.set(el, allotted.get(el)! + fillInIncrement)
+                        deficits.set(el, deficit - give)
                     }
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    allotted.set(el, allotted.get(el)! + give)
+                    remaining -= give
                 }
+
+                const reserveIncrement = actualFillIn / reserves.size
                 for (const [el, reserve] of Array.from(reserves)) {
-                    if (reserve <= fillInIncrement) {
+                    if (reserve <= reserveIncrement) {
                         reserves.delete(el)
                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                         allotted.set(el, allotted.get(el)! - reserve)
                     } else {
-                        reserves.set(el, reserve - fillInIncrement)
+                        reserves.set(el, reserve - reserveIncrement)
                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        allotted.set(el, allotted.get(el)! - fillInIncrement)
+                        allotted.set(el, allotted.get(el)! - reserveIncrement)
                     }
                 }
                 if (actualFillIn < totalPossibleFillIn) break

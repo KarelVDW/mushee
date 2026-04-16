@@ -21,32 +21,17 @@ export class RowLayout {
                 return measureData
             }
             const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? 30 : 0)
+            const defaultMeasureWidth = totalWidth / MAX_MEASURES_PER_ROW
+            const specialDemandMeasures = new Set(measures.filter((m) => m.minimalWidth > defaultMeasureWidth))
 
-            // Iteratively allocate special measures (those exceeding equal share) until stable
-            const widths = new Map<Measure, number>()
-            let remaining = totalWidth
-            let unallocated = [...measures]
-            let changed = true
-            while (changed) {
-                changed = false
-                const share = remaining / unallocated.length
-                for (const m of [...unallocated]) {
-                    if (m.minimalWidth > share) {
-                        widths.set(m, m.minimalWidth)
-                        remaining -= m.minimalWidth
-                        unallocated = unallocated.filter((x) => x !== m)
-                        changed = true
-                    }
-                }
-            }
-            let normalWidth = unallocated.length > 0 ? remaining / unallocated.length : 0
-            if (measures.length <= 2) normalWidth = Math.min(normalWidth, totalWidth / MAX_MEASURES_PER_ROW)
-            for (const m of unallocated) widths.set(m, normalWidth)
-
+            const specialWidth = Array.from(specialDemandMeasures).reduce((sum, m) => sum + m.minimalWidth, 0)
+            const normalCount = measures.length - specialDemandMeasures.size
+            let normalWidth = normalCount > 0 ? (totalWidth - specialWidth) / normalCount : 0
+            if (measures.length <= 2 && normalWidth > defaultMeasureWidth) normalWidth = defaultMeasureWidth
             let cursorX = 0
             for (let i = 0; i < measures.length; i++) {
                 const m = measures[i]
-                const width = widths.get(m) ?? 0
+                const width = specialDemandMeasures.has(m) ? m.minimalWidth : normalWidth
                 measureData.set(m, { width, measureX: cursorX, indexInRow: i })
                 cursorX += width
             }
@@ -56,7 +41,7 @@ export class RowLayout {
     }
 
     get width(): number {
-        return sumBy(this.row.measures, m => this.measureData.get(m)?.width ?? 0 )
+        return sumBy(this.row.measures, (m) => this.measureData.get(m)?.width ?? 0)
     }
 
     getMeasureX(measure: Measure): number {
