@@ -4,12 +4,15 @@ import { Duration } from './Duration'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
+import { Row } from './Row'
 import { TimeSignature } from './TimeSignature'
 import { MeasureSerializer } from './util/ScoreSerializer'
 
 export class Score {
     readonly measures: Measure[] = []
     private _layout: ScoreLayout | null = null
+    private _rows: Row[] = []
+    private _rowByMeasure: Map<Measure, Row> = new Map()
     private onChange: () => void
     private _dirtyMeasures = new Set<number>()
     private _structureChanged = false
@@ -24,6 +27,16 @@ export class Score {
     get layout() {
         this._layout ||= new ScoreLayout(this)
         return this._layout
+    }
+
+    get rows(): Row[] {
+        return this._rows
+    }
+
+    getRowForMeasure(measure: Measure) {
+        const row = this._rowByMeasure.get(measure)
+        if (!row) throw new Error('Measure not part of a row')
+        return row
     }
 
     invalidateLayout() {
@@ -59,6 +72,14 @@ export class Score {
         return this.measures[this.measures.length - 1] ?? null
     }
 
+    get firstRow(): Row | null {
+        return this.rows[0] ?? null
+    }
+
+    get lastRow(): Row | null {
+        return this.rows[this.rows.length - 1] ?? null
+    }
+
     /** Resolve the active time signature at a given measure index by walking backwards. */
     getActiveTimeSignature(measureIndex: number): TimeSignature | undefined {
         for (let i = measureIndex; i >= 0; i--) {
@@ -66,15 +87,6 @@ export class Score {
             if (ts) return ts
         }
         return undefined
-    }
-
-    noteById(id: string): Note | null {
-        for (const measure of this.measures) {
-            for (const note of measure.notes) {
-                if (note.id === id) return note
-            }
-        }
-        return null
     }
 
     getNextMeasure(measure?: Measure): Measure | null {
@@ -91,18 +103,34 @@ export class Score {
         return this.measures[measureIndex - 1] ?? null
     }
 
-    addMeasure() {
-        const measure = new Measure(this, this.measures.length)
+    addMeasure(measure = new Measure(this, this.measures.length)) {
         last(this.measures)?.setEndBarline('single')
         measure.setEndBarline('end')
         this.measures.push(measure)
+        let row = last(this._rows)
+        if (!row || !row.canFit(measure)) {
+            row = new Row(this, this._rows.length)
+            this._rows.push(row)
+        }
+        row.addMeasure(measure)
+        this._rowByMeasure.set(measure, row)
         this.markStructureChanged()
         this.onChange()
         return measure
     }
 
     removeLastMeasure() {
-        this.measures.splice(this.measures.length - 1, 1)
+        const removed = this.measures.pop()
+        if (removed) {
+            this._rowByMeasure.delete(removed)
+            const lastRow = last(this._rows)
+            if (lastRow) {
+                lastRow.removeLastMeasure()
+                if (lastRow.isEmpty) {
+                    this._rows.pop()
+                }
+            }
+        }
         last(this.measures)?.setEndBarline('end')
         this.markStructureChanged()
         this.onChange()
@@ -157,6 +185,7 @@ export class Score {
             measure.replaceNotes(notes, newNotes)
             this.markMeasureDirty(measure.index)
             replaceValues = [...remainderNotes, ...replaceValues]
+            this.getRowForMeasure(measure).invalidateLayout()
         }
         this.onChange()
     }

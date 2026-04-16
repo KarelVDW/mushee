@@ -14,8 +14,9 @@ export class MeasureLayout {
     readonly measureWidth: number
     private _xMap: Map<PhysicalElement, { x: number; allottedWidth: number }> = new Map()
     constructor(readonly measure: Measure) {
-        this.measureX = this.measure.score.layout.getMeasureX(this.measure)
-        this.measureWidth = this.measure.score.layout.getMeasureWidth(this.measure)
+        const row = measure.score.getRowForMeasure(measure)
+        this.measureX = row.layout.getMeasureX(measure)
+        this.measureWidth = row.layout.getMeasureWidth(measure)
 
         const elements = this.measure.physicalElements
         const sortedElements = sortBy(

@@ -96,7 +96,7 @@ export class ScoreDeserializer {
                 const note = notes[noteIndex]
                 if (note) measure.addTempo(measure.beatOffsetOf(note), bpm)
             }
-            score.measures.push(measure)
+            score.addMeasure(measure)
         }
         return score
     }
