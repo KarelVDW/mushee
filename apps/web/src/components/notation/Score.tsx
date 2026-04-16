@@ -9,7 +9,8 @@ import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, 
 import { CursorIndicator } from './CursorIndicator'
 import { getGlyphWidth } from './glyph-utils'
 import { Measure } from './Measure'
-import { yToLine } from './note-utils'
+import { MeasureButton } from './MeasureButton'
+import { getLineForY } from './note-utils'
 import { NoteGroup } from './NoteGroup'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
@@ -189,7 +190,7 @@ export const Score = memo(function Score({
                 return
             }
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
-            const hoverLine = yToLine(localY)
+            const hoverLine = getLineForY(localY)
             if (hoverLine === note.pitch?.line && ghostNote) setGhostNote(null)
             setGhostNote({ note: note.clone({ pitch: Pitch.fromLine(hoverLine) }), parent: note })
         },
@@ -201,27 +202,24 @@ export const Score = memo(function Score({
         setGhostNote(null)
     }, [])
 
-    const handleClick = useCallback(
-        (e: React.MouseEvent<SVGSVGElement>) => {
-            if (openPopover) {
-                setOpenPopover(null)
-                return
-            }
-            if (!hoveredNote) return
+    const handleClick = useCallback(() => {
+        if (openPopover) {
+            setOpenPopover(null)
+            return
+        }
+        if (!hoveredNote) return
 
-            if (ghostNote?.note.pitch && onNoteChange) {
-                setGhostNote(null)
-                onNoteChange(ghostNote.parent, ghostNote.note.pitch)
-                return
-            }
+        if (ghostNote?.note.pitch && onNoteChange) {
+            setGhostNote(null)
+            onNoteChange(ghostNote.parent, ghostNote.note.pitch)
+            return
+        }
 
-            if (hoveredNote.id !== selectedNote?.id) {
-                onNoteSelect?.(hoveredNote)
-                return
-            }
-        },
-        [openPopover, onNoteSelect, onNoteChange, ghostNote, hoveredNote, selectedNote],
-    )
+        if (hoveredNote.id !== selectedNote?.id) {
+            onNoteSelect?.(hoveredNote)
+            return
+        }
+    }, [openPopover, onNoteSelect, onNoteChange, ghostNote, hoveredNote, selectedNote])
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
@@ -355,43 +353,3 @@ export const Score = memo(function Score({
         </div>
     )
 })
-
-function MeasureButton({
-    x,
-    y,
-    size,
-    label,
-    onClick,
-    disabled,
-}: {
-    x: number
-    y: number
-    size: number
-    label: string
-    onClick: () => void
-    disabled?: boolean
-}) {
-    return (
-        <g
-            onClick={(e) => {
-                e.stopPropagation()
-                if (!disabled) onClick()
-            }}
-            style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
-            opacity={disabled ? 0.3 : 1}>
-            <rect x={x} y={y} width={size} height={size} rx={2} fill="white" stroke="#d1d5db" strokeWidth={0.75} />
-            <text
-                x={x + size / 2}
-                y={y + size / 2}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={size * 0.7}
-                fontFamily="system-ui, sans-serif"
-                fontWeight={500}
-                fill="#374151"
-                style={{ userSelect: 'none' }}>
-                {label}
-            </text>
-        </g>
-    )
-}

@@ -4,91 +4,38 @@ import type { LayoutGlyph } from '@/components/notation/types'
 
 import type { Tuplet } from '../Tuplet'
 
-const NOTEHEAD_WIDTH = getGlyphWidth('noteheadBlack')
-
 export class TupletLayout {
     readonly id = crypto.randomUUID()
-    private stemDir: 'up' | 'down'
-    constructor(private tuplet: Tuplet) {
-        const upCount = this.tuplet.notes.filter((n) => n.stemDir === 'up').length
-        this.stemDir = upCount >= this.tuplet.notes.length / 2 ? 'up' : 'down'
-    }
+    readonly x1: number
+    readonly x2: number
+    readonly y: number
+    readonly bracketed: boolean
+    readonly location: 1 | -1
+    readonly numberGlyphs: Array<{ glyphName: string; x: number; y: number }>
+    constructor(tuplet: Tuplet) {
+        const upCount = tuplet.notes.filter((n) => n.stemDir === 'up').length
+        const stemDir = upCount >= tuplet.notes.length / 2 ? 'up' : 'down'
+        this.x1 = tuplet.measure.layout.getXForElement(tuplet.firstNote) + tuplet.firstNote.layout.noteX
+        this.x2 = tuplet.measure.layout.getXForElement(tuplet.lastNote) + tuplet.lastNote.layout.noteX + tuplet.lastNote.width.noteHeadWidth
+        const stemTips = tuplet.notes.map((n) => n.layout.stem?.y2 ?? n.layout.noteY)
+        this.y = stemDir === 'up' ? Math.min(...stemTips) - TUPLET_OFFSET : Math.max(...stemTips) + TUPLET_OFFSET
+        this.bracketed = !tuplet.notes.every((n) => n.layout.flag === undefined && n.duration.isBeamable)
+        this.location = stemDir === 'up' ? 1 : -1
 
-    get x1() {
-        return this.tuplet.firstNote.layout.x
-    }
-
-    get x2() {
-        return this.tuplet.lastNote.layout.x + NOTEHEAD_WIDTH
-    }
-
-    get y() {
-        let y: number
-        if (this.stemDir === 'up') {
-            // Bracket above: find the highest stem tip (lowest Y)
-            const stemTips = this.tuplet.notes.map((n) => n.layout.stem?.y2 ?? n.layout.y)
-            y = Math.min(...stemTips) - TUPLET_OFFSET
-        } else {
-            // Bracket below: find the lowest stem tip (highest Y)
-            const stemTips = this.tuplet.notes.map((n) => n.layout.stem?.y2 ?? n.layout.y)
-            y = Math.max(...stemTips) + TUPLET_OFFSET
-        }
-        return y
-    }
-
-    get bracketed() {
-        return !this.tuplet.notes.every((n) => n.layout.flag === undefined && n.duration.isBeamable)
-    }
-
-    get location(): 1 | -1 {
-        return this.stemDir === 'up' ? 1 : -1
-    }
-
-    get numberGlyphs() {
-        const showRatio = false
-
-        const centerX = (this.x1 + this.x2) / 2
-
-        const { normalNotes: notesOccupied, actualNotes: numNotes } = this.tuplet.notes[0].duration.ratio
-
-        const digits = String(numNotes).split('')
-        const glyphs: LayoutGlyph[] = []
-
-        // Calculate total width of all glyphs to center them
-        const glyphNames = digits.map((d) => `timeSig${d}`)
-
-        let ratioGlyphNames: string[] = []
-        if (showRatio) {
-            const denomDigits = String(notesOccupied).split('')
-            ratioGlyphNames = denomDigits.map((d) => `timeSig${d}`)
-        }
-
-        // Total width at tuplet scale
+        const { actualNotes: numNotes } = tuplet.notes[0].duration.ratio
+        const glyphNames = String(numNotes)
+            .split('')
+            .map((d) => `timeSig${d}`)
         const scale = TUPLET_NUMBER_SCALE
-        let totalWidth = glyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
-        if (showRatio && ratioGlyphNames.length > 0) {
-            totalWidth += 4 // colon spacing
-            totalWidth += ratioGlyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
-        }
-
-        let x = centerX - totalWidth / 2
+        const totalWidth = glyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
+        let x = (this.x1 + this.x2) / 2 - totalWidth / 2
         const y = this.y
-
+        const glyphs: LayoutGlyph[] = []
         // Numerator digits
         for (const name of glyphNames) {
             glyphs.push({ glyphName: name, x, y })
             x += getGlyphWidth(name, scale)
         }
-
-        // Ratio ":N" if requested
-        if (showRatio && ratioGlyphNames.length > 0) {
-            x += 4 // colon spacing
-            for (const name of ratioGlyphNames) {
-                glyphs.push({ glyphName: name, x, y })
-                x += getGlyphWidth(name, scale)
-            }
-        }
-
-        return glyphs
+        this.numberGlyphs = glyphs
     }
 }

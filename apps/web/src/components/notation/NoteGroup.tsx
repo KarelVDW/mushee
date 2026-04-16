@@ -1,20 +1,21 @@
 import { memo } from 'react'
 
-import type { Note } from '@/model'
+import type { Beam, Note } from '@/model'
 
 import { DOT_RADIUS } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {
     note: Note
+    beam?: Beam
     color?: string
     layoutId: string
 }
 
 export const NoteGroup = memo(
-    function NoteGroup({ note, color }: NoteGroupProps) {
+    function NoteGroup({ note,beam,  color }: NoteGroupProps) {
         const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
-        const beamStem = note.beam?.layout.getStem(note)
+        const beamStem = beam?.layout.getStem(note)
         const stem = beamStem ?? originalStem
         return (
             <>

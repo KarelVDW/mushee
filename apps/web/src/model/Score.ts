@@ -19,7 +19,6 @@ export class Score {
             this.invalidateLayout()
             onChange?.()
         }
-        // this.layout = new ScoreLayout(this)
     }
 
     get layout() {
@@ -96,7 +95,7 @@ export class Score {
         const measure = new Measure(this, this.measures.length)
         last(this.measures)?.setEndBarline('single')
         measure.setEndBarline('end')
-        this.measures.splice(this.measures.length, 0, measure)
+        this.measures.push(measure)
         this.markStructureChanged()
         this.onChange()
         return measure
@@ -114,7 +113,6 @@ export class Score {
         if (!values.length) throw new Error('Replace values can not be empty')
         let targetBeats = sumBy(targets, (n) => n.duration.effectiveBeats)
         let valueBeats = sumBy(values, (n) => n.duration.effectiveBeats)
-        console.log('replace', { targetBeats, valueBeats })
 
         while (targetBeats < valueBeats) {
             const lastTarget = targets[targets.length - 1]
@@ -129,8 +127,6 @@ export class Score {
             values = [...values, ...Duration.fromBeats(targetBeats - valueBeats).map((d) => new Note({ duration: d }))]
             valueBeats += targetBeats - valueBeats
         }
-        console.log('replace2', { values })
-
         const measuresById = keyBy(
             targets.map((n) => n.measure),
             (m) => m.index,
@@ -150,9 +146,10 @@ export class Score {
                     newNotes.push(note)
                     freeBeats -= noteBeats
                 } else {
+                    const remainderBeats = noteBeats - freeBeats
                     newNotes.push(...Duration.fromBeats(freeBeats).map((d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' })))
                     freeBeats = 0
-                    remainderNotes = Duration.fromBeats(note.duration.effectiveBeats - freeBeats).map(
+                    remainderNotes = Duration.fromBeats(remainderBeats).map(
                         (d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' }),
                     )
                 }

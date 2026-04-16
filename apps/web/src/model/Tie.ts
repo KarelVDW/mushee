@@ -2,7 +2,7 @@ import { TieLayout } from './layout/TieLayout'
 import type { Note } from './Note'
 
 export class Tie {
-    private _layout: TieLayout | undefined
+    private _layout: TieLayout | null = null
 
     constructor(
         readonly note: Note,
@@ -15,6 +15,6 @@ export class Tie {
     }
 
     invalidateLayout() {
-        this._layout = undefined
+        this._layout = null
     }
 }

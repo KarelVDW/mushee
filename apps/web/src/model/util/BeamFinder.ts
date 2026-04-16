@@ -33,9 +33,10 @@ export class BeamFinder {
             }
 
             if (currentNotes.length > 0) {
+                const tuplet = measure.tupletGroupOf(note)
                 const prevNote = currentNotes[currentNotes.length - 1]
-                const prevTuplet = prevNote.tuplet
-                const sameTuplet = prevTuplet !== undefined && prevTuplet === note.tuplet
+                const prevTuplet = measure.tupletGroupOf(prevNote)
+                const sameTuplet = prevTuplet !== undefined && prevTuplet === tuplet
 
                 if (!sameTuplet) {
                     const eitherInTuplet = prevNote.inTuplet || note.inTuplet

@@ -54,20 +54,8 @@ export class Note {
         return this.duration.ratio.actualNotes !== 1
     }
 
-    get beatOffset() {
-        return this.measure.beatOffsetOf(this)
-    }
-
     get beats() {
         return this.duration.effectiveBeats
-    }
-
-    get tuplet() {
-        return this._measure?.tupletGroupOf(this)
-    }
-
-    get beam() {
-        return this._measure?.beamOf(this)
     }
 
     get tiesForward(): boolean {
@@ -88,7 +76,7 @@ export class Note {
     get stemDir(): 'up' | 'down' {
         if (this.isRest) return 'up'
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.beam?.stemDir ?? (this.pitch!.line >= 3 ? 'down' : 'up')
+        return (this.pitch!.line >= 3 ? 'down' : 'up')
     }
 
     // --- Navigation ---

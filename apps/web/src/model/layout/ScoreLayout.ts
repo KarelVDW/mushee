@@ -22,6 +22,7 @@ export class ScoreLayout {
     }
 
     private formRows() {
+        if (this._rows) return
         let measureData: Map<Measure, { width: number; measureX: number; rowIndex: number; indexInRow: number }> = new Map()
         const rows: RowLayout[] = []
         const measures = [...this.score.measures]
@@ -106,10 +107,6 @@ export class ScoreLayout {
             if (x >= data.measureX && x < data.measureX + data.width)return measure
         }
         return null
-    }
-
-    getClefOverride(_measure: Measure): string | undefined {
-        return undefined // this._positions?.get(measure.index)?.clefOverride
     }
 
     // ── Row structure ─────────────────────────────────────────────────

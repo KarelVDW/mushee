@@ -1,4 +1,4 @@
-import { getGlyphWidth, getLedgerLinePositions, getYForNote } from '@/components/notation'
+import { getGlyphWidth, getYForNote } from '@/components/notation'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 
 import type { Note } from '../Note'
@@ -31,8 +31,22 @@ export class NoteLayout {
         }
 
         // ledgerLines
+        const ledgerLinePositions: number[] = []
+        if (note.pitch) {
+            const noteLine = note.pitch.line
+            if (noteLine < 1) {
+                for (let l = 0; l >= noteLine; l--) {
+                    if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
+                }
+            }
+            if (noteLine > 5) {
+                for (let l = 6; l <= noteLine; l++) {
+                    if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
+                }
+            }
+        }
         this.ledgerLines = note.pitch
-            ? getLedgerLinePositions(note.pitch.line).map((ly) => ({
+            ? ledgerLinePositions.map((ly) => ({
                   x1: cursorX,
                   y1: ly,
                   x2: cursorX + note.width.noteHeadWidth + 2 * note.width.ledgerLineExtension,
@@ -46,24 +60,20 @@ export class NoteLayout {
         // stem
         if (hasStem) {
             const stemX =
-                note.stemDir === 'up'
-                    ? cursorX + note.width.noteHeadWidth - (note.width.stemWidth ) / 2
-                    : cursorX + note.width.stemWidth / 2
+                note.stemDir === 'up' ? cursorX + note.width.noteHeadWidth - note.width.stemWidth / 2 : cursorX + note.width.stemWidth / 2
             this.stem =
                 note.stemDir === 'up'
                     ? { x: stemX, y1: this.noteY, y2: this.noteY - note.width.stemHeight }
                     : { x: stemX, y1: this.noteY, y2: this.noteY + note.width.stemHeight }
 
             // flag
-            if (!note.beam) {
-                const flagName = note.duration.flagGlyph(note.stemDir)
-                if (flagName) {
-                    this.flag = {
-                        glyphName: flagName,
-                        x: stemX,
-                        y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * note.width.stemHeight,
-                        scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
-                    }
+            const flagName = note.duration.flagGlyph(note.stemDir)
+            if (flagName) {
+                this.flag = {
+                    glyphName: flagName,
+                    x: stemX,
+                    y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * note.width.stemHeight,
+                    scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
                 }
             }
         }

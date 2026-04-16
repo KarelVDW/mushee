@@ -22,7 +22,7 @@ export class Clef {
     }
 
     get measure() {
-        if (!this._measure) throw new Error('Note is not assigned to measure')
+        if (!this._measure) throw new Error('Clef is not assigned to measure')
         return this._measure
     }
 

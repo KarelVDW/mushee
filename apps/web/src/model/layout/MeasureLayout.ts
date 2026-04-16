@@ -20,7 +20,7 @@ export class MeasureLayout {
         const elements = this.measure.physicalElements
         const sortedElements = sortBy(
             elements,
-            (el) => el.beatOffset ?? -1,
+            (el) => this.measure.beatOffsetOf(el) ?? -1,
             (el) => !(el instanceof Clef),
             (el) => !(el instanceof TimeSignature),
         )
@@ -128,18 +128,18 @@ export class MeasureLayout {
         for (const note of this.measure.notes) {
             const spacing = this._xMap.get(note)
             if (!spacing) continue
-            if (x>= spacing.x && x < spacing.x + spacing.allottedWidth) return note
+            if (x >= spacing.x && x < spacing.x + spacing.allottedWidth) return note
         }
         return null
     }
 
     getX(beat: number) {
-        const overshootIndex = this.measure.notes.findIndex((el) => el.beatOffset > beat)
+        const overshootIndex = this.measure.notes.findIndex((el) => this.measure.beatOffsetOf(el) > beat)
         const note = this.measure.notes[overshootIndex - 1] || this.measure.firstNote
         if (!note) return 0
         const spacing = this._xMap.get(note)
         if (!spacing) throw new Error('Note not spaced in measure')
-        return spacing.x + (spacing.allottedWidth * (beat - note.beatOffset)) / note.duration.effectiveBeats
+        return spacing.x + (spacing.allottedWidth * (beat - this.measure.beatOffsetOf(note))) / note.duration.effectiveBeats
     }
 
     get barline(): LayoutBarline | null {

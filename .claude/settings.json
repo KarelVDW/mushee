@@ -3,7 +3,8 @@
     "allow": [
       "Read(//Users/karelvandewinkel/Projecten/Smoosic/**)",
       "Bash(npx turbo:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

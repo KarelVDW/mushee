@@ -1,5 +1,5 @@
 import { BeamLayout } from './layout/BeamLayout'
-import { Measure } from './Measure'
+import type { Measure } from './Measure'
 import { Note } from './Note'
 
 export class Beam {
@@ -7,7 +7,7 @@ export class Beam {
     private _indexMap: Map<Note, number>
     private _layout: BeamLayout | undefined
     constructor(
-        private measure: Measure,
+        _measure: Measure,
         readonly notes: Note[],
         readonly stemDir: 'up' | 'down'
     ) {

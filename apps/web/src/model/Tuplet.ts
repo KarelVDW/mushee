@@ -5,9 +5,9 @@ import { Note } from './Note'
 export class Tuplet {
     private _noteSet: Set<Note>
     private _indexMap: Map<Note, number>
-    private _layout: TupletLayout | undefined
+    private _layout: TupletLayout | null = null
     constructor(
-        private measure: Measure,
+        readonly measure: Measure,
         readonly notes: Note[],
     ) {
         this._noteSet = new Set(notes)
@@ -17,6 +17,10 @@ export class Tuplet {
     get layout() {
         if (!this._layout) this._layout = new TupletLayout(this)
         return this._layout
+    }
+
+    invalidateLayout() {
+        this._layout = null
     }
 
     get firstNote() {
@@ -33,9 +37,5 @@ export class Tuplet {
 
     hasNote(note: Note) {
         return this._noteSet.has(note)
-    }
-
-    invalidateLayout() {
-        this._layout = undefined
     }
 }

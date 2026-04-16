@@ -111,14 +111,6 @@ export class ScoreDeserializer {
         '16th': '16',
     }
 
-    private static readonly DURATION_TYPE_MAP: Record<DurationType, MxmlNoteType> = {
-        w: 'whole',
-        h: 'half',
-        q: 'quarter',
-        '8': 'eighth',
-        '16': '16th',
-    }
-
     private static mxmlNoteTypeToDurationType(type: MxmlNoteType): DurationType {
         return ScoreDeserializer.NOTE_TYPE_MAP[type]
     }

@@ -1,7 +1,7 @@
 export { GLYPH_SCALE } from './constants'
 export { Glyph } from './Glyph'
 export { getGlyphWidth } from './glyph-utils'
-export { getLedgerLinePositions, getYForLine, getYForNote, yToLine } from './note-utils'
+export { getLineForY, getYForLine, getYForNote } from './note-utils'
 export { Score } from './Score'
 export type {
     DurationType,
@@ -14,6 +14,7 @@ export type {
     MxmlPart,
     MxmlPartList,
     MxmlScorePart,
-    ScorePartwise,
+    ScorePartwise
 } from './types'
 export { Duration, Measure, Note, Pitch, Score as ScoreModel } from '@/model'
+

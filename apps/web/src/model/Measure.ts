@@ -26,7 +26,7 @@ export class Measure {
     private _tempos: Tempo[] = []
     private _tuplets: Tuplet[] = []
     private _beams: Beam[] = []
-    private _beatOffsets = new Map<Note, number>()
+    private _beatOffsets = new Map<PhysicalElement, number>()
     private _tupletByNote = new Map<Note, Tuplet>()
     private _beamByNote = new Map<Note, Beam>()
     private _noteSet = new Set<Note>()
@@ -76,10 +76,9 @@ export class Measure {
         return this._minimalWidth
     }
 
-    beatOffsetOf(note: Note): number {
-        const offset = this._beatOffsets.get(note)
-        if (offset === undefined) throw new Error('Note does not belong to this measure')
-        return offset
+    beatOffsetOf(el: PhysicalElement): number {
+        const offset = this._beatOffsets.get(el)
+        return offset ?? 0
     }
 
     tupletGroupOf(note: Note): Tuplet | undefined {
@@ -224,7 +223,6 @@ export class Measure {
     }
 
     replaceNotes(targets: Note[], values: Note[]) {
-        console.log('replaceNotes', { targets, values })
         if (!targets.length) throw new Error('Replace targets can not be empty')
         if (targets.some((n) => n.measure.index !== this.index)) throw new Error('Cannot replace notes not belonging to this measure')
         const startIndex = this.notes.findIndex((n) => n.id === targets[0].id)
