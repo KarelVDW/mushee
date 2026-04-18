@@ -15,10 +15,11 @@ export class Score {
     private _layout: ScoreLayout | null = null
     private _rows: Row[] = []
     private _rowByMeasure: Map<Measure, Row> = new Map()
+    private _indexByMeasure: Map<Measure, number> = new Map()
     private _clefByMeasure: Map<Measure, Clef> = new Map()
     private _tiesByNote: Map<Note, Tie> = new Map()
     private onChange: () => void
-    private _dirtyMeasures = new Set<number>()
+    private _dirtyMeasures = new Set<Measure>()
     private _structureChanged = false
 
     constructor(onChange?: () => void) {
@@ -76,16 +77,18 @@ export class Score {
         this._layout = null
     }
 
-    markMeasureDirty(index: number) {
-        this._dirtyMeasures.add(index)
+    markMeasureDirty(measure: Measure) {
+        this._dirtyMeasures.add(measure)
     }
 
     markStructureChanged() {
         this._structureChanged = true
     }
 
-    get dirtyMeasureIndices(): number[] {
-        return [...this._dirtyMeasures]
+    getIndexForMeasure(measure: Measure): number {
+        const index = this._indexByMeasure.get(measure)
+        if (index === undefined) throw new Error('Measure not part of this score')
+        return index
     }
 
     clearDirty() {
@@ -128,41 +131,31 @@ export class Score {
 
     getNextMeasure(measure?: Measure): Measure | null {
         if (!measure) return this.firstMeasure
-        const measureIndex = this.measures.findIndex((m) => m.index === measure.index)
-        if (measureIndex < 0) return null
-        const idx = measureIndex + 1
-        return idx < this.measures.length ? (this.measures[idx] ?? null) : null
+        const measureIndex = this._indexByMeasure.get(measure)
+        if (measureIndex === undefined) return null
+        return this.measures[measureIndex + 1] ?? null
     }
 
     getPreviousMeasure(measure: Measure): Measure | null {
-        const measureIndex = this.measures.findIndex((m) => m.index === measure.index)
-        if (measureIndex < 1) return null
+        const measureIndex = this._indexByMeasure.get(measure)
+        if (measureIndex === undefined || measureIndex < 1) return null
         return this.measures[measureIndex - 1] ?? null
     }
 
-    addMeasure(measure = new Measure(this, this.measures.length)) {
-        const previousMeasure = last(this.measures)
-        previousMeasure?.setEndBarline('single')
-        measure.setEndBarline('end')
-        this.measures.push(measure)
-        let row = last(this._rows)
-        if (!row || !row.canFit(measure)) {
-            row = new Row(this, this._rows.length)
-            this._rows.push(row)
+    addMeasure(measure = new Measure(this), index = this.measures.length) {
+        this.measures.splice(index, 0, measure)
+        this._rebuildIndexMap()
+        const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
+        const nextMeasure = this.measures[index + 1]
+        if (nextMeasure) {
+            measure.setEndBarline('single')
+        } else {
+            previousMeasure?.setEndBarline('single')
+            measure.setEndBarline('end')
         }
-        row.addMeasure(measure)
-        this._rowByMeasure.set(measure, row)
-        const activeClef = measure.clef ?? (previousMeasure && this._clefByMeasure.get(previousMeasure))
-        if (activeClef) this._clefByMeasure.set(measure, activeClef)
-        if (row.firstMeasures === measure && !measure.clef && activeClef) {
-            measure.setRowStartClef(activeClef)
-        }
-        const previousLastNote = previousMeasure?.notes[previousMeasure.notes.length - 1]
-        if (previousLastNote) {
-            this._removeTieEntriesFor(previousLastNote)
-            this._addTieEntryFor(previousLastNote)
-        }
-        for (const note of measure.notes) this._addTieEntryFor(note)
+        this._rebuildClefMap()
+        this._rebuildRows()
+        this._rebuildTies()
         this.markStructureChanged()
         this.onChange()
         return measure
@@ -174,6 +167,7 @@ export class Score {
             for (const note of removed.notes) this._removeTieEntriesFor(note)
             this._rowByMeasure.delete(removed)
             this._clefByMeasure.delete(removed)
+            this._indexByMeasure.delete(removed)
             const lastRow = last(this._rows)
             if (lastRow) {
                 lastRow.removeLastMeasure()
@@ -188,6 +182,52 @@ export class Score {
         last(this.measures)?.setEndBarline('end')
         this.markStructureChanged()
         this.onChange()
+    }
+
+    private _rebuildIndexMap() {
+        this._indexByMeasure.clear()
+        this.measures.forEach((m, i) => this._indexByMeasure.set(m, i))
+    }
+
+    private _rebuildClefMap() {
+        this._clefByMeasure.clear()
+        let active: Clef | undefined
+        for (const measure of this.measures) {
+            if (measure.clef) active = measure.clef
+            if (active) this._clefByMeasure.set(measure, active)
+        }
+    }
+
+    private _rebuildRows() {
+        this._rows = []
+        this._rowByMeasure.clear()
+        for (const measure of this.measures) {
+            measure.setRowStartClef(undefined)
+            let row = last(this._rows)
+            if (!row || !row.canFit(measure)) {
+                row = new Row(this, this._rows.length)
+                this._rows.push(row)
+            }
+            row.addMeasure(measure)
+            this._rowByMeasure.set(measure, row)
+        }
+        for (const row of this._rows) {
+            const firstMeasure = row.firstMeasures
+            if (!firstMeasure) continue
+            const activeClef = this._clefByMeasure.get(firstMeasure)
+            if (!firstMeasure.clef && activeClef) {
+                firstMeasure.setRowStartClef(activeClef)
+            }
+        }
+    }
+
+    private _rebuildTies() {
+        this._tiesByNote.clear()
+        for (const measure of this.measures) {
+            for (const note of measure.notes) {
+                this._addTieEntryFor(note)
+            }
+        }
     }
 
     replace(targets: Note[], values: Note[]) {
@@ -211,9 +251,9 @@ export class Score {
         }
         const measuresById = keyBy(
             targets.map((n) => n.measure),
-            (m) => m.index,
+            (m) => m.id,
         )
-        const targetsByMeasure = groupBy(targets, (n) => n.measure.index)
+        const targetsByMeasure = groupBy(targets, (n) => n.measure.id)
         let replaceValues = [...values]
         const allNewNotes = []
         for (const [measureId, notes] of Object.entries(targetsByMeasure)) {
@@ -239,7 +279,7 @@ export class Score {
                 }
             }
             measure.replaceNotes(notes, newNotes)
-            this.markMeasureDirty(measure.index)
+            this.markMeasureDirty(measure)
             replaceValues = [...remainderNotes, ...replaceValues]
             this.getRowForMeasure(measure).invalidateLayout()
             allNewNotes.push(...newNotes)
@@ -256,17 +296,17 @@ export class Score {
 
         if (this._structureChanged) {
             // Structure changed (add/remove measure) — send all measures
-            const allMeasures = this.measures.map((m, mi) => new MeasureSerializer(m).serialize())
+            const allMeasures = this.measures.map((m) => new MeasureSerializer(m).serialize())
             this.clearDirty()
             return { allMeasures }
         }
 
         // Only specific measures changed — send partial update
         const measures: Record<string, unknown> = {}
-        for (const idx of this._dirtyMeasures) {
-            const measure = this.measures.find((m) => m.index === idx)
-            if (measure) {
-                measures[String(measure.index)] = new MeasureSerializer(measure).serialize()
+        for (const measure of this._dirtyMeasures) {
+            const index = this._indexByMeasure.get(measure)
+            if (index !== undefined) {
+                measures[String(index)] = new MeasureSerializer(measure).serialize()
             }
         }
         this.clearDirty()

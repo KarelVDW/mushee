@@ -108,7 +108,7 @@ export class ScoreScheduler implements Tickable {
                 startTime: this.nextNoteTime,
                 duration: durationSecs,
                 beatSpan,
-                measureIndex: measure.index,
+                measureIndex: this.measureIdx,
                 beat,
             })
 

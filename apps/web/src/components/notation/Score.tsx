@@ -231,7 +231,7 @@ export const Score = memo(function Score({
                     {score.rows.map((row) =>
                         row.measures.map((measure) => (
                             <g
-                                key={measure.index}
+                                key={measure.id}
                                 transform={`translate(${row.layout.getMeasureX(measure)}, ${score.layout.getYForRow(row)})`}>
                                 <Measure
                                     measure={measure}
@@ -260,7 +260,7 @@ export const Score = memo(function Score({
                                         layoutId={tempo.layout.id}
                                         onClick={() =>
                                             handleTempoClick(
-                                                tempo.measure.index,
+                                                score.getIndexForMeasure(tempo.measure),
                                                 tempo.beatPosition,
                                                 tempo.bpm,
                                                 tempo.layout.x,
@@ -280,7 +280,7 @@ export const Score = memo(function Score({
                     )}
 
                     {rows.map((row, ri) => (
-                        <g key={row.measures.map((m) => m.index).join('-')} transform={`translate(0, ${score.layout.getYForRow(row)})`}>
+                        <g key={row.measures.map((m) => m.id).join('-')} transform={`translate(0, ${score.layout.getYForRow(row)})`}>
                             <StaffLines lines={row.layout.staffLines} />
 
                             <Barline layout={row.layout.openingBarline} />

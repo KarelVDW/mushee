@@ -88,7 +88,7 @@ export class ScoreDeserializer {
                 }
             }
 
-            const measure = new Measure(score, mi, { keySignature, endBarline })
+            const measure = new Measure(score, { keySignature, endBarline })
             measure.setClef(clef)
             measure.setTimeSignature(timeSignature)
             if (notes.length > 0) measure.addNotes(notes)

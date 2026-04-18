@@ -18,6 +18,7 @@ import { BeamFinder } from './util/BeamFinder'
 import { TupletFinder } from './util/TupletFinder'
 
 export class Measure {
+    readonly id = crypto.randomUUID()
     private _notes: Note[] = []
     private _clef?: Clef
     private _rowStartClef?: Clef
@@ -37,14 +38,18 @@ export class Measure {
 
     constructor(
         readonly score: Score,
-        readonly index: number,
         value?: {
             keySignature?: KeySignature
             endBarline?: BarlineType
         },
     ) {
+
         this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
+    }
+
+    get index(): number {
+        return this.score.getIndexForMeasure(this)
     }
 
     setClef(clef: Clef | undefined) {
@@ -236,7 +241,7 @@ export class Measure {
 
     replaceNotes(targets: Note[], values: Note[]) {
         if (!targets.length) throw new Error('Replace targets can not be empty')
-        if (targets.some((n) => n.measure.index !== this.index)) throw new Error('Cannot replace notes not belonging to this measure')
+        if (targets.some((n) => n.measure.id !== this.id)) throw new Error('Cannot replace notes not belonging to this measure')
         const startIndex = this.notes.findIndex((n) => n.id === targets[0].id)
         if (startIndex < 0) throw new Error('Cannot find startIndex for replace')
         const diff = difference(this._notes, targets)

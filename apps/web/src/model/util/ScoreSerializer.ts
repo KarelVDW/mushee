@@ -76,7 +76,7 @@ export class MeasureSerializer {
             })
         }
 
-        return { number: String(this.measure.index + 1), entries }
+        return { number: String(this.measure.score.getIndexForMeasure(this.measure) + 1), entries }
     }
 
     private static readonly DURATION_TYPE_MAP: Record<DurationType, MxmlNoteType> = {
