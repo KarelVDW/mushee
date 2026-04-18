@@ -13,7 +13,7 @@ interface NoteGroupProps {
 }
 
 export const NoteGroup = memo(
-    function NoteGroup({ note,beam,  color }: NoteGroupProps) {
+    function NoteGroup({ note, beam,  color }: NoteGroupProps) {
         const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
         const beamStem = beam?.layout.getStem(note)
         const stem = beamStem ?? originalStem
@@ -33,7 +33,7 @@ export const NoteGroup = memo(
                 )}
 
                 {/* Flag (8th, 16th notes) */}
-                {flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}
+                {!beam && flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}
 
                 {/* Augmentation dots */}
                 {dots?.map((dot, i) => (

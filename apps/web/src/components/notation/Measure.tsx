@@ -36,9 +36,10 @@ export const Measure = memo(function Measure({ measure, selectedNote, hoveredNot
             {measure.notes.map((note) => {
                 const isSelected = note === selectedNote
                 const isHovered = !isSelected && note === hoveredNote
+                const beam = measure.beamOf(note)
                 return (
                     <g key={note.id} transform={`translate(${measure.layout.getXForElement(note)}, 0)`}>
-                        <NoteGroup note={note} color={isSelected || isHovered ? CURSOR_COLOR : undefined} layoutId={note.layout.id} />
+                        <NoteGroup note={note} beam={beam} color={isSelected || isHovered ? CURSOR_COLOR : undefined} layoutId={note.layout.id} />
                     </g>
                 )
             })}

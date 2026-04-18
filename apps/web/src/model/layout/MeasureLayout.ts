@@ -138,7 +138,7 @@ export class MeasureLayout {
         return null
     }
 
-    getX(beat: number) {
+    getXForBeat(beat: number) {
         const overshootIndex = this.measure.notes.findIndex((el) => this.measure.beatOffsetOf(el) > beat)
         const note = this.measure.notes[overshootIndex - 1] || this.measure.firstNote
         if (!note) return 0

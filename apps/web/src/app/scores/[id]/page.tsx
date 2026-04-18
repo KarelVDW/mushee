@@ -264,7 +264,7 @@ export default function ScoreEditorPage() {
                 const measure = score.measures[pos.measureIndex]
                 const row = score.getRowForMeasure(measure)
                 const measureX = row.layout.getMeasureX(measure)
-                return { x: measureX + measure.layout.getX(pos.beat), rowY: score.layout.getYForRow(row) }
+                return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
             }
 
             scheduler.score = score

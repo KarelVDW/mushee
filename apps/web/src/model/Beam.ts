@@ -7,7 +7,7 @@ export class Beam {
     private _indexMap: Map<Note, number>
     private _layout: BeamLayout | undefined
     constructor(
-        _measure: Measure,
+        readonly measure: Measure,
         readonly notes: Note[],
         readonly stemDir: 'up' | 'down'
     ) {

@@ -18,14 +18,16 @@ export class BeamLayout {
     private _stemByNote: Map<Note, { x: number; y1: number; y2: number }>
 
     constructor(beam: Beam) {
-        const firstStem = beam.firstNote.layout.stem
+        const firstStem = beam.firstNote.layout.getStem(beam.stemDir)
         if (typeof firstStem === 'undefined') throw new Error('Beam note has no stem')
+        const firstStemX = beam.measure.layout.getXForElement(beam.firstNote) + firstStem.x
 
-        const lastStem = beam.lastNote.layout.stem
+        const lastStem = beam.lastNote.layout.getStem(beam.stemDir)
         if (typeof lastStem === 'undefined') throw new Error('Beam note has no stem')
+        const lastStemX = beam.measure.layout.getXForElement(beam.lastNote) + lastStem.x
 
         // slope
-        const dx = lastStem.x - firstStem.x
+        const dx = lastStemX - firstStemX
         let slope = 0
         if (dx !== 0) {
             const rawSlope = (lastStem.y2 - firstStem.y2) / dx
@@ -36,10 +38,9 @@ export class BeamLayout {
 
         let beamFirstY = firstStem.y2
         for (const n of beam.notes) {
-            const originalStem = n.layout.stem
-            if (typeof originalStem === 'undefined') continue
-            const beamYAtNote = beamFirstY + (originalStem.x - firstStem.x) * slope
-            this._stemByNote.set(n, { ...originalStem, y2: beamYAtNote })
+            const originalStem = n.layout.getStem(beam.stemDir)
+            const stemX = n.measure.layout.getXForElement(n) + originalStem.x
+            const beamYAtNote = beamFirstY + (stemX - firstStemX) * slope
 
             if (beam.stemDir === 'up' && beamYAtNote > originalStem.y2) {
                 beamFirstY -= beamYAtNote - originalStem.y2
@@ -48,11 +49,18 @@ export class BeamLayout {
             }
         }
 
+        for (const n of beam.notes) {
+            const originalStem = n.layout.getStem(beam.stemDir)
+            const stemX = n.measure.layout.getXForElement(n) + originalStem.x
+            const beamYAtNote = beamFirstY + (stemX - firstStemX) * slope
+            this._stemByNote.set(n, { ...originalStem, y2: beamYAtNote })
+        }
+
         // primary
         const dirSign = beam.stemDir === 'up' ? 1 : -1
         const y1 = beamFirstY
-        const y2 = y1 + (lastStem.x - firstStem.x) * slope
-        this.primary = { x1: firstStem.x, y1, x2: lastStem.x, y2, thickness: BEAM_WIDTH * dirSign }
+        const y2 = y1 + (lastStemX - firstStemX) * slope
+        this.primary = { x1: firstStemX, y1, x2: lastStemX, y2, thickness: BEAM_WIDTH * dirSign }
 
         // secondaries
         const segments: LayoutBeamSegment[] = []
@@ -64,9 +72,9 @@ export class BeamLayout {
             const n = beam.notes[i]
             if (!n.duration.hasSecondaryBeam) continue
 
-            const stemX = n.layout.stem?.x
+            const stemX = n.measure.layout.getXForElement(n) + n.layout.getStem(beam.stemDir).x
             if (typeof stemX === 'undefined') continue
-            const yAtNote = beamY + (stemX - firstStem.x) * slope
+            const yAtNote = beamY + (stemX - firstStemX) * slope
 
             if (segStart === null) segStart = stemX
             if (segStartY === null) segStartY = yAtNote

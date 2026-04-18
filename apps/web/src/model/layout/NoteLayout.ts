@@ -14,7 +14,7 @@ export class NoteLayout {
     readonly accidental: { x: number; y: number; glyphName: string } | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
-    constructor(note: Note) {
+    constructor(private note: Note) {
         this.noteY = getYForNote(note.pitch ? note.pitch.line : note.duration.restLine)
         this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
@@ -59,19 +59,13 @@ export class NoteLayout {
 
         // stem
         if (hasStem) {
-            const stemX =
-                note.stemDir === 'up' ? cursorX + note.width.noteHeadWidth - note.width.stemWidth / 2 : cursorX + note.width.stemWidth / 2
-            this.stem =
-                note.stemDir === 'up'
-                    ? { x: stemX, y1: this.noteY, y2: this.noteY - note.width.stemHeight }
-                    : { x: stemX, y1: this.noteY, y2: this.noteY + note.width.stemHeight }
-
+            this.stem = this.getStem(note.stemDir)
             // flag
             const flagName = note.duration.flagGlyph(note.stemDir)
             if (flagName) {
                 this.flag = {
                     glyphName: flagName,
-                    x: stemX,
+                    x: this.stem.x,
                     y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * note.width.stemHeight,
                     scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
                 }
@@ -93,5 +87,15 @@ export class NoteLayout {
                 cursorX += offset
             }
         }
+    }
+
+    getStem(stemDir: 'up' | 'down') {
+        const stemX =
+            stemDir === 'up'
+                ? this.noteX + this.note.width.noteHeadWidth - this.note.width.stemWidth / 2
+                : this.noteX + this.note.width.stemWidth / 2
+        return stemDir === 'up'
+            ? { x: stemX, y1: this.noteY, y2: this.noteY - this.note.width.stemHeight }
+            : { x: stemX, y1: this.noteY, y2: this.noteY + this.note.width.stemHeight }
     }
 }
