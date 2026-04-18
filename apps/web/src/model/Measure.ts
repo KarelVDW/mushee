@@ -175,6 +175,7 @@ export class Measure {
 
     setEndBarline(barLine: BarlineType | undefined) {
         this._endBarline = barLine
+        this.rebuildPhysicalElements()
     }
 
     get tempos(): Tempo[] {
