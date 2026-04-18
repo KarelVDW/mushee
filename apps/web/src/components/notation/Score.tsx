@@ -25,7 +25,7 @@ interface ScoreProps {
     score: ScoreModel
     layoutId: string
     height?: number
-    selectedNote?: Note
+    selectedNote?: Note | null
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
     onNoteSelect?: (note: Note) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void

@@ -207,8 +207,8 @@ export default function ScoreEditorPage() {
         const midiPlayer = new MidiPlayer()
         const scheduler = new ScoreScheduler(midiPlayer)
         const met = new Metronome(midiPlayer)
-        const cursor = new CursorManager(scheduler)
-        const ticker = new Ticker(midiPlayer)
+        const cursor = new CursorManager(midiPlayer, scheduler)
+        const ticker = new Ticker()
 
         ticker.addTickable(scheduler)
         ticker.addTickable(met)
@@ -225,6 +225,7 @@ export default function ScoreEditorPage() {
         })
         return () => {
             ticker.stop()
+            midiPlayer.stop()
             midiPlayer.stopPreview()
         }
     }, [])
@@ -247,6 +248,7 @@ export default function ScoreEditorPage() {
 
     const handlePlayToggle = useCallback(() => {
         if (!score) return
+        const midiPlayer= midiPlayerRef.current
         const ticker = tickerRef.current
         const scheduler = schedulerRef.current
         const met = metronomeRef.current
@@ -254,6 +256,7 @@ export default function ScoreEditorPage() {
         if (!ticker || !scheduler || !met || !cursor) return
 
         if (ticker.isPlaying) {
+            if (midiPlayer) midiPlayer.stop()
             ticker.stop()
             setIsPlaying(false)
         } else {
@@ -271,6 +274,7 @@ export default function ScoreEditorPage() {
             met.score = score
             cursor.bind(cursorEl, resolvePosition)
 
+            if (midiPlayer) midiPlayer.start()
             ticker.play(() => {
                 setIsPlaying(false)
             })

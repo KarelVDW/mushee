@@ -52,8 +52,9 @@ export class ScoreScheduler implements Tickable {
         }
     }
 
-    tick(elapsed: number): boolean {
+    tick(): boolean {
         if (!this.score || this._done) return true
+        const elapsed = this.midiPlayer.currentTime
 
         while (this.nextNoteTime <= elapsed + LOOK_AHEAD) {
             const measure = this.score.measures[this.measureIdx]

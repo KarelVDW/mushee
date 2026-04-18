@@ -1,3 +1,4 @@
+import { MidiPlayer } from './MidiPlayer'
 import type { ScoreScheduler, TimelineEntry } from './ScoreScheduler'
 import type { Tickable } from './Ticker'
 
@@ -7,18 +8,17 @@ interface PlaybackPosition {
 }
 
 export class CursorManager implements Tickable {
+    private midiPlayer: MidiPlayer
     private cursorEl: SVGRectElement | null = null
     private resolvePosition: ((pos: PlaybackPosition) => { x: number; rowY: number } | null) | null = null
     private scheduler: ScoreScheduler
 
-    constructor(scheduler: ScoreScheduler) {
+    constructor(midiPlayer: MidiPlayer, scheduler: ScoreScheduler) {
+        this.midiPlayer = midiPlayer
         this.scheduler = scheduler
     }
 
-    bind(
-        cursorEl: SVGRectElement,
-        resolvePosition: (pos: PlaybackPosition) => { x: number; rowY: number } | null,
-    ) {
+    bind(cursorEl: SVGRectElement, resolvePosition: (pos: PlaybackPosition) => { x: number; rowY: number } | null) {
         this.cursorEl = cursorEl
         this.resolvePosition = resolvePosition
     }
@@ -27,7 +27,8 @@ export class CursorManager implements Tickable {
         // no internal state to reset — reads from scheduler.entries
     }
 
-    tick(elapsed: number): boolean {
+    tick(): boolean {
+        const elapsed = this.midiPlayer.currentTime
         this.updateCursor(elapsed)
 
         if (this.scheduler.endTime >= 0 && elapsed >= this.scheduler.endTime) {

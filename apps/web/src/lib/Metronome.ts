@@ -36,9 +36,9 @@ export class Metronome implements Tickable {
         }
     }
 
-    tick(elapsed: number): boolean {
+    tick(): boolean {
         if (!this.score) return true
-
+        const elapsed = this.midiPlayer.currentTime
         while (this.nextClickTime <= elapsed + LOOK_AHEAD) {
             const measure = this.score.measures[this.measureIdx]
             if (!measure) return true
