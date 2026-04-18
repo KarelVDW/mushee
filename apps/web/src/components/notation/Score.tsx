@@ -271,9 +271,9 @@ export const Score = memo(function Score({
                                 ))}
 
                                 {measure.notes.map((note) => {
-                                    const tie = note.tieToNext
+                                    const tie = score.getTieByNote(note)
                                     if (!tie) return null
-                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} />
+                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} rowIndex={row.index} />
                                 })}
                             </g>
                         )),

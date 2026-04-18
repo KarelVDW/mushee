@@ -4,7 +4,6 @@ import { Duration } from './Duration'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
-import { Tie } from './Tie'
 import { NoteWidth } from './width/NoteWidth'
 
 export class Note {
@@ -64,13 +63,6 @@ export class Note {
 
     get tiesBack(): boolean {
         return this.tie === 'stop' || this.tie === 'start-stop'
-    }
-
-    get tieToNext(): Tie | undefined {
-        if (!this.tiesForward) return undefined
-        const next = this.getNext()
-        if (!next) return undefined
-        return new Tie(this, next)
     }
 
     get stemDir(): 'up' | 'down' {

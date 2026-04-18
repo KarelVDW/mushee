@@ -6,6 +6,7 @@ import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { Row } from './Row'
+import { Tie } from './Tie'
 import { TimeSignature } from './TimeSignature'
 import { MeasureSerializer } from './util/ScoreSerializer'
 
@@ -15,6 +16,7 @@ export class Score {
     private _rows: Row[] = []
     private _rowByMeasure: Map<Measure, Row> = new Map()
     private _clefByMeasure: Map<Measure, Clef> = new Map()
+    private _tiesByNote: Map<Note, Tie> = new Map()
     private onChange: () => void
     private _dirtyMeasures = new Set<number>()
     private _structureChanged = false
@@ -39,6 +41,35 @@ export class Score {
         const row = this._rowByMeasure.get(measure)
         if (!row) throw new Error('Measure not part of a row')
         return row
+    }
+
+    getTieByNote(note: Note): Tie | undefined {
+        return this._tiesByNote.get(note)
+    }
+
+    private _removeTieEntriesFor(note: Note) {
+        const tie = this._tiesByNote.get(note)
+        if (!tie) return
+        this._tiesByNote.delete(tie.note)
+        this._tiesByNote.delete(tie.nextNote)
+    }
+
+    private _addTieEntryFor(note: Note) {
+        if (!note.tiesForward) return
+        let nextNote: Note | null
+        try {
+            nextNote = note.getNext()
+        } catch {
+            return
+        }
+        if (!nextNote) return
+        const tie = new Tie(note, nextNote)
+        this._tiesByNote.set(note, tie)
+        const startRow = this._rowByMeasure.get(tie.note.measure)
+        const endRow = this._rowByMeasure.get(tie.nextNote.measure)
+        if (startRow && endRow && startRow !== endRow) {
+            this._tiesByNote.set(nextNote, tie)
+        }
     }
 
     invalidateLayout() {
@@ -126,6 +157,12 @@ export class Score {
         if (row.firstMeasures === measure && !measure.clef && activeClef) {
             measure.setRowStartClef(activeClef)
         }
+        const previousLastNote = previousMeasure?.notes[previousMeasure.notes.length - 1]
+        if (previousLastNote) {
+            this._removeTieEntriesFor(previousLastNote)
+            this._addTieEntryFor(previousLastNote)
+        }
+        for (const note of measure.notes) this._addTieEntryFor(note)
         this.markStructureChanged()
         this.onChange()
         return measure
@@ -134,6 +171,7 @@ export class Score {
     removeLastMeasure() {
         const removed = this.measures.pop()
         if (removed) {
+            for (const note of removed.notes) this._removeTieEntriesFor(note)
             this._rowByMeasure.delete(removed)
             this._clefByMeasure.delete(removed)
             const lastRow = last(this._rows)
@@ -143,6 +181,9 @@ export class Score {
                     this._rows.pop()
                 }
             }
+            const newLastMeasure = last(this.measures)
+            const newLastNote = newLastMeasure && newLastMeasure.notes[newLastMeasure.notes.length - 1]
+            if (newLastNote) this._removeTieEntriesFor(newLastNote)
         }
         last(this.measures)?.setEndBarline('end')
         this.markStructureChanged()
@@ -203,6 +244,8 @@ export class Score {
             this.getRowForMeasure(measure).invalidateLayout()
             allNewNotes.push(...newNotes)
         }
+        for (const note of targets) this._removeTieEntriesFor(note)
+        for (const note of allNewNotes) this._addTieEntryFor(note)
         this.onChange()
         return allNewNotes
     }
