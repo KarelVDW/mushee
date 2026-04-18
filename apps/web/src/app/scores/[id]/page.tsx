@@ -35,6 +35,7 @@ export default function ScoreEditorPage() {
     const midiPlayerRef = useRef<MidiPlayer | null>(null)
     const recordingEngineRef = useRef<RecordingEngine | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
+    const recordingWaveformRef = useRef<SVGPathElement | null>(null)
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
@@ -355,6 +356,7 @@ export default function ScoreEditorPage() {
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
+                waveformEl: recordingWaveformRef.current,
                 resolvePosition,
                 wsUrl,
                 onStateChange: setRecordingState,
@@ -434,6 +436,7 @@ export default function ScoreEditorPage() {
                         layoutId={score.layout.id}
                         selectedNote={activeNote}
                         playbackCursorRef={playbackCursorRef}
+                        recordingWaveformRef={recordingWaveformRef}
                         onNoteSelect={handleNoteSelect}
                         onNoteChange={handleNoteChange}
                         onAddMeasure={handleAddMeasure}

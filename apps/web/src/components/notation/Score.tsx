@@ -27,6 +27,7 @@ interface ScoreProps {
     height?: number
     selectedNote?: Note | null
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
+    recordingWaveformRef?: React.RefObject<SVGPathElement | null>
     onNoteSelect?: (note: Note) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void
     onAddMeasure?: () => void
@@ -39,6 +40,7 @@ export const Score = memo(function Score({
     score,
     selectedNote,
     playbackCursorRef,
+    recordingWaveformRef,
     onNoteSelect,
     onNoteChange,
     onAddMeasure,
@@ -217,6 +219,16 @@ export const Score = memo(function Score({
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
+                    {/* Recording waveform — painted directly by RecordingEngine via ref */}
+                    <path
+                        ref={recordingWaveformRef}
+                        stroke="#1e3a8a"
+                        strokeWidth={2.5}
+                        strokeLinecap="square"
+                        fill="none"
+                        opacity={0.5}
+                    />
+
                     {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
                     <rect
                         ref={playbackCursorRef}
