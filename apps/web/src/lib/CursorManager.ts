@@ -27,12 +27,16 @@ export class CursorManager implements Tickable {
         // no internal state to reset — reads from scheduler.entries
     }
 
+    hideCursor() {
+        if (this.cursorEl) this.cursorEl.setAttribute('display', 'none')
+    }
+
     tick(): boolean {
         const elapsed = this.midiPlayer.currentTime
         this.updateCursor(elapsed)
 
         if (this.scheduler.endTime >= 0 && elapsed >= this.scheduler.endTime) {
-            if (this.cursorEl) this.cursorEl.setAttribute('display', 'none')
+            this.hideCursor()
             return true
         }
 

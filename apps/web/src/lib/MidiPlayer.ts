@@ -89,6 +89,16 @@ export class MidiPlayer {
         }
     }
 
+    /** Suspend playback — freezes currentTime and halts audio output without losing state. */
+    pause() {
+        this.audioCtx?.suspend().catch(() => {})
+    }
+
+    /** Resume a suspended playback context. */
+    resume() {
+        this.audioCtx?.resume().catch(() => {})
+    }
+
     /** Play a single note for the given duration. Stops any previous preview. */
     preview(midi: number, duration: number) {
         this.stopPreview()

@@ -74,8 +74,9 @@ interface ControlBarProps {
   onRestToggle: () => void
   tempo: unknown
   onTempoToggle: () => void
-  isPlaying: boolean
+  playbackState: 'stopped' | 'playing' | 'paused'
   onPlayToggle: () => void
+  onStop: () => void
   metronome: boolean
   onMetronomeToggle: () => void
   onBack?: () => void
@@ -84,8 +85,10 @@ interface ControlBarProps {
 export function ControlBar({
   accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
   dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
-  isPlaying, onPlayToggle, metronome, onMetronomeToggle, onBack,
+  playbackState, onPlayToggle, onStop, metronome, onMetronomeToggle, onBack,
 }: ControlBarProps) {
+  const isPlaying = playbackState === 'playing'
+  const canStop = playbackState !== 'stopped'
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
       {onBack && (
@@ -152,14 +155,24 @@ export function ControlBar({
       <button type="button" onClick={onPlayToggle} className={`${toggleBtnClass(isPlaying)} px-2.5 py-1`}>
         {isPlaying ? (
           <svg width={12} height={14} viewBox="0 0 12 14">
-            <rect x={1} y={1} width={3.5} height={12} rx={0.5} fill={isPlaying ? '#fff' : '#374151'} />
-            <rect x={7.5} y={1} width={3.5} height={12} rx={0.5} fill={isPlaying ? '#fff' : '#374151'} />
+            <rect x={1} y={1} width={3.5} height={12} rx={0.5} fill="#fff" />
+            <rect x={7.5} y={1} width={3.5} height={12} rx={0.5} fill="#fff" />
           </svg>
         ) : (
           <svg width={12} height={14} viewBox="0 0 12 14">
             <path d="M1 1.5v11l10-5.5z" fill="#374151" />
           </svg>
         )}
+      </button>
+      <button
+        type="button"
+        onClick={onStop}
+        disabled={!canStop}
+        className={`${TOGGLE_BTN} px-2.5 py-1 ${canStop ? 'bg-white text-gray-700 hover:bg-gray-100' : 'bg-white text-gray-700 opacity-40 cursor-not-allowed'}`}
+      >
+        <svg width={12} height={14} viewBox="0 0 12 14">
+          <rect x={1} y={2} width={10} height={10} rx={0.5} fill="#374151" />
+        </svg>
       </button>
       <button type="button" onClick={onMetronomeToggle} className={`${toggleBtnClass(metronome)} px-2.5 py-1`}>
         <svg width={12} height={14} viewBox="0 0 12 16">

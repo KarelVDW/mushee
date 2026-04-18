@@ -32,7 +32,7 @@ export default function ScoreEditorPage() {
     const cursorRef = useRef<CursorManager | null>(null)
     const midiPlayerRef = useRef<MidiPlayer | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
-    const [isPlaying, setIsPlaying] = useState(false)
+    const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
     const [metronome, setMetronome] = useState(false)
 
     useEffect(() => {
@@ -230,13 +230,21 @@ export default function ScoreEditorPage() {
         }
     }, [])
 
-    // Preview the selected note's pitch
+    const stopPlayback = useCallback(() => {
+        tickerRef.current?.stop()
+        midiPlayerRef.current?.stop()
+        cursorRef.current?.hideCursor()
+        setPlaybackState('stopped')
+    }, [])
+
+    // Preview the selected note's pitch and stop any ongoing playback
     useEffect(() => {
+        stopPlayback()
         const midi = activeNote?.pitch?.toMidi()
         const player = midiPlayerRef.current
         if (midi === undefined || !player) return
         player.preview(midi, 0.75)
-    }, [activeNote])
+    }, [activeNote, stopPlayback])
 
     // Sync metronome toggle so it takes effect mid-playback
     useEffect(() => {
@@ -248,39 +256,45 @@ export default function ScoreEditorPage() {
 
     const handlePlayToggle = useCallback(() => {
         if (!score) return
-        const midiPlayer= midiPlayerRef.current
+        const midiPlayer = midiPlayerRef.current
         const ticker = tickerRef.current
         const scheduler = schedulerRef.current
         const met = metronomeRef.current
         const cursor = cursorRef.current
         if (!ticker || !scheduler || !met || !cursor) return
 
-        if (ticker.isPlaying) {
-            if (midiPlayer) midiPlayer.stop()
+        if (playbackState === 'playing') {
             ticker.stop()
-            setIsPlaying(false)
-        } else {
-            const cursorEl = playbackCursorRef.current
-            if (!cursorEl) return
-
-            const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
-                const measure = score.measures[pos.measureIndex]
-                const row = score.getRowForMeasure(measure)
-                const measureX = row.layout.getMeasureX(measure)
-                return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
-            }
-
-            scheduler.score = score
-            met.score = score
-            cursor.bind(cursorEl, resolvePosition)
-
-            if (midiPlayer) midiPlayer.start()
-            ticker.play(() => {
-                setIsPlaying(false)
-            })
-            setIsPlaying(true)
+            midiPlayer?.pause()
+            setPlaybackState('paused')
+            return
         }
-    }, [score])
+
+        if (playbackState === 'paused') {
+            midiPlayer?.resume()
+            ticker.resume()
+            setPlaybackState('playing')
+            return
+        }
+
+        const cursorEl = playbackCursorRef.current
+        if (!cursorEl) return
+
+        const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
+            const measure = score.measures[pos.measureIndex]
+            const row = score.getRowForMeasure(measure)
+            const measureX = row.layout.getMeasureX(measure)
+            return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
+        }
+
+        scheduler.score = score
+        met.score = score
+        cursor.bind(cursorEl, resolvePosition)
+
+        midiPlayer?.start()
+        ticker.play(() => setPlaybackState('stopped'))
+        setPlaybackState('playing')
+    }, [score, playbackState])
 
     useEffect(() => {
         const el = containerRef.current
@@ -327,8 +341,9 @@ export default function ScoreEditorPage() {
                 onRestToggle={handleRestToggle}
                 tempo={activeNote ? activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote)) : undefined}
                 onTempoToggle={handleTempoToggle}
-                isPlaying={isPlaying}
+                playbackState={playbackState}
                 onPlayToggle={handlePlayToggle}
+                onStop={stopPlayback}
                 metronome={metronome}
                 onMetronomeToggle={() => setMetronome((m) => !m)}
                 onBack={() => router.push('/scores')}

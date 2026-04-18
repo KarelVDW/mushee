@@ -39,6 +39,13 @@ export class Ticker {
         }
     }
 
+    /** Restart the tick loop without resetting tickable state. */
+    resume() {
+        if (this._isPlaying) return
+        this._isPlaying = true
+        this.animationId = requestAnimationFrame(this.tick)
+    }
+
     private tick = () => {
         if (!this._isPlaying) return
 
