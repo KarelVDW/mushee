@@ -9,9 +9,11 @@ import { loadScore, updateScore } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
+import { RecordingEngine, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
 import { Duration, type Note, Pitch, Score } from '@/model'
+import { Measure } from '@/model/Measure'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import { ControlBar } from './ControlBar'
@@ -31,8 +33,10 @@ export default function ScoreEditorPage() {
     const metronomeRef = useRef<Metronome | null>(null)
     const cursorRef = useRef<CursorManager | null>(null)
     const midiPlayerRef = useRef<MidiPlayer | null>(null)
+    const recordingEngineRef = useRef<RecordingEngine | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
+    const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
 
     useEffect(() => {
@@ -208,51 +212,60 @@ export default function ScoreEditorPage() {
         const scheduler = new ScoreScheduler(midiPlayer)
         const met = new Metronome(midiPlayer)
         const cursor = new CursorManager(midiPlayer, scheduler)
+        const recordingEngine = new RecordingEngine(midiPlayer)
         const ticker = new Ticker()
 
         ticker.addTickable(scheduler)
         ticker.addTickable(met)
         ticker.addTickable(cursor)
+        ticker.addTickable(recordingEngine)
 
         midiPlayerRef.current = midiPlayer
         tickerRef.current = ticker
         schedulerRef.current = scheduler
         metronomeRef.current = met
         cursorRef.current = cursor
+        recordingEngineRef.current = recordingEngine
 
         midiPlayer.loadSamples().catch(() => {
             // Samples failed to load — will fall back to oscillator synthesis
         })
         return () => {
             ticker.stop()
+            recordingEngine.stop()
             midiPlayer.stop()
             midiPlayer.stopPreview()
         }
     }, [])
 
-    const stopPlayback = useCallback(() => {
+    const stopAll = useCallback(() => {
         tickerRef.current?.stop()
+        recordingEngineRef.current?.stop()
         midiPlayerRef.current?.stop()
         cursorRef.current?.hideCursor()
         setPlaybackState('stopped')
     }, [])
 
-    // Preview the selected note's pitch and stop any ongoing playback
+    // Preview the selected note's pitch and stop any ongoing playback/recording
     useEffect(() => {
-        stopPlayback()
+        stopAll()
         const midi = activeNote?.pitch?.toMidi()
         const player = midiPlayerRef.current
         if (midi === undefined || !player) return
         player.preview(midi, 0.75)
-    }, [activeNote, stopPlayback])
+    }, [activeNote, stopAll])
 
-    // Sync metronome toggle so it takes effect mid-playback
+    // Sync metronome toggle to the ticker. Skipped during recording — the recording flow
+    // forces the metronome on; when recording ends this effect re-syncs to the user's toggle.
     useEffect(() => {
-        if (metronomeRef.current && tickerRef.current) {
-            if (metronome) tickerRef.current.addTickable(metronomeRef.current)
-            else tickerRef.current.removeTickable(metronomeRef.current)
-        }
-    }, [metronome])
+        const met = metronomeRef.current
+        const ticker = tickerRef.current
+        if (!met || !ticker) return
+        if (recordingState !== 'idle') return
+        if (metronome) ticker.addTickable(met)
+        else ticker.removeTickable(met)
+        met.startMeasureIndex = 0
+    }, [metronome, recordingState])
 
     const handlePlayToggle = useCallback(() => {
         if (!score) return
@@ -295,6 +308,70 @@ export default function ScoreEditorPage() {
         ticker.play(() => setPlaybackState('stopped'))
         setPlaybackState('playing')
     }, [score, playbackState])
+
+    const handleRecordToggle = useCallback(async () => {
+        if (!score || !activeNote) return
+        const midiPlayer = midiPlayerRef.current
+        const ticker = tickerRef.current
+        const engine = recordingEngineRef.current
+        const met = metronomeRef.current
+        if (!ticker || !engine || !midiPlayer || !met) return
+
+        if (engine.state !== 'idle') {
+            stopAll()
+            return
+        }
+
+        // Stop any ongoing playback before beginning a recording session.
+        ticker.stop()
+        midiPlayer.stop()
+        setPlaybackState('stopped')
+
+        let measureIndex = activeNote.measure.index
+        const startIndex = measureIndex
+        score.addMeasure(new Measure(score), measureIndex++).complete()
+        saveToApi({ score })
+
+        met.score = score
+        met.startMeasureIndex = startIndex
+        ticker.addTickable(met)
+
+        const cursorEl = playbackCursorRef.current
+        if (!cursorEl) return
+
+        const resolvePosition = (measureIndex: number, beat: number) => {
+            const measure = score.measures[measureIndex]
+            if (!measure) return null
+            const row = score.getRowForMeasure(measure)
+            const measureX = row.layout.getMeasureX(measure)
+            return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
+        }
+
+        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000')
+            .replace(/^http/, 'ws') + '/recording'
+
+        try {
+            await engine.start({
+                score,
+                startMeasureIndex: startIndex,
+                cursorEl,
+                resolvePosition,
+                wsUrl,
+                onStateChange: setRecordingState,
+                onNeedNewMeasure: () => {
+                    score.addMeasure(new Measure(score), measureIndex++).complete()
+                    saveToApi({ score })
+                },
+            })
+        } catch (err) {
+            console.error('Recording failed to start', err)
+            stopAll()
+            return
+        }
+
+        midiPlayer.start()
+        ticker.play(() => setRecordingState('idle'))
+    }, [score, activeNote, stopAll, saveToApi])
 
     useEffect(() => {
         const el = containerRef.current
@@ -343,7 +420,9 @@ export default function ScoreEditorPage() {
                 onTempoToggle={handleTempoToggle}
                 playbackState={playbackState}
                 onPlayToggle={handlePlayToggle}
-                onStop={stopPlayback}
+                onStop={stopAll}
+                recordingState={recordingState}
+                onRecordToggle={() => void handleRecordToggle()}
                 metronome={metronome}
                 onMetronomeToggle={() => setMetronome((m) => !m)}
                 onBack={() => router.push('/scores')}

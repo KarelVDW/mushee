@@ -10,6 +10,8 @@ const CLICK_DURATION = 0.06
 
 export class Metronome implements Tickable {
     score: Score | null = null
+    /** Measure index to begin ticking from. Default 0 = start of score. */
+    startMeasureIndex = 0
 
     private midiPlayer: MidiPlayer
     private measureIdx = 0
@@ -22,16 +24,21 @@ export class Metronome implements Tickable {
     }
 
     reset() {
-        this.measureIdx = 0
+        this.measureIdx = this.startMeasureIndex
         this.beat = 0
         this.nextClickTime = 0
         this.bpm = DEFAULT_BPM
 
-        if (this.score) {
-            const firstMeasure = this.score.firstMeasure
-            if (firstMeasure) {
-                const tempo = firstMeasure.tempoAtBeat(0)
-                if (tempo) this.bpm = tempo.bpm
+        if (!this.score) return
+
+        // Walk back from the start measure to find the last active tempo.
+        for (let i = this.startMeasureIndex; i >= 0; i--) {
+            const measure = this.score.measures[i]
+            if (!measure) continue
+            const tempos = [...measure.tempos].sort((a, b) => b.beatPosition - a.beatPosition)
+            if (tempos.length > 0) {
+                this.bpm = tempos[0].bpm
+                break
             }
         }
     }

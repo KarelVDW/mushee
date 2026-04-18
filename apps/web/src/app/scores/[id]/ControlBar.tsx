@@ -77,6 +77,8 @@ interface ControlBarProps {
   playbackState: 'stopped' | 'playing' | 'paused'
   onPlayToggle: () => void
   onStop: () => void
+  recordingState: 'idle' | 'countoff' | 'recording'
+  onRecordToggle: () => void
   metronome: boolean
   onMetronomeToggle: () => void
   onBack?: () => void
@@ -85,10 +87,12 @@ interface ControlBarProps {
 export function ControlBar({
   accidental, duration, accidentalDisabled, onAccidentalChange, onDurationChange,
   dotted, onDotToggle, tie, onTieToggle, rest, onRestToggle, tempo, onTempoToggle,
-  playbackState, onPlayToggle, onStop, metronome, onMetronomeToggle, onBack,
+  playbackState, onPlayToggle, onStop, recordingState, onRecordToggle, metronome, onMetronomeToggle, onBack,
 }: ControlBarProps) {
+  const isRecording = recordingState !== 'idle'
   const isPlaying = playbackState === 'playing'
-  const canStop = playbackState !== 'stopped'
+  const canStop = playbackState !== 'stopped' || isRecording
+  const playDisabled = isRecording
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 bg-white">
       {onBack && (
@@ -152,7 +156,12 @@ export function ControlBar({
       <Sep />
 
       {/* Playback */}
-      <button type="button" onClick={onPlayToggle} className={`${toggleBtnClass(isPlaying)} px-2.5 py-1`}>
+      <button
+        type="button"
+        onClick={onPlayToggle}
+        disabled={playDisabled}
+        className={`${toggleBtnClass(isPlaying)} px-2.5 py-1 ${playDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+      >
         {isPlaying ? (
           <svg width={12} height={14} viewBox="0 0 12 14">
             <rect x={1} y={1} width={3.5} height={12} rx={0.5} fill="#fff" />
@@ -172,6 +181,16 @@ export function ControlBar({
       >
         <svg width={12} height={14} viewBox="0 0 12 14">
           <rect x={1} y={2} width={10} height={10} rx={0.5} fill="#374151" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={onRecordToggle}
+        className={`${TOGGLE_BTN} px-2.5 py-1 ${isRecording ? 'bg-red-500 border-red-500' : 'bg-white hover:bg-gray-100'}`}
+        title={isRecording ? 'Stop recording' : 'Record'}
+      >
+        <svg width={12} height={14} viewBox="0 0 12 14">
+          <circle cx={6} cy={7} r={5} fill={isRecording ? '#fff' : '#ef4444'} />
         </svg>
       </button>
       <button type="button" onClick={onMetronomeToggle} className={`${toggleBtnClass(metronome)} px-2.5 py-1`}>
