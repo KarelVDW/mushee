@@ -191,8 +191,9 @@ export class Score {
                     const remainderBeats = noteBeats - freeBeats
                     newNotes.push(...Duration.fromBeats(freeBeats).map((d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' })))
                     freeBeats = 0
-                    remainderNotes = Duration.fromBeats(remainderBeats).map(
-                        (d) => new Note({ duration: d, pitch: note.pitch, tie: 'start' }),
+                    const remainderDurations = Duration.fromBeats(remainderBeats)
+                    remainderNotes = remainderDurations.map(
+                        (d, i) => new Note({ duration: d, pitch: note.pitch, ...(i != remainderDurations.length - 1 && { tie: 'start' }) }),
                     )
                 }
             }

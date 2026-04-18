@@ -269,6 +269,12 @@ export const Score = memo(function Score({
                                         }
                                     />
                                 ))}
+
+                                {measure.notes.map((note) => {
+                                    const tie = note.tieToNext
+                                    if (!tie) return null
+                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} />
+                                })}
                             </g>
                         )),
                     )}
@@ -278,16 +284,6 @@ export const Score = memo(function Score({
                             <StaffLines lines={row.layout.staffLines} />
 
                             <Barline layout={row.layout.openingBarline} />
-
-                            {row.measures
-                                .flatMap((m) => m.notes)
-                                .map((note) => {
-                                    const tie = note.tieToNext
-                                    if (!tie) return null
-                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} />
-                                })}
-
-                            {cursorPos && cursorPos.rowIndex === ri && <CursorIndicator x={cursorPos.x} y={cursorPos.y} />}
 
                             {ri === lastRowIndex && measureButtonPos && onAddMeasure && (
                                 <MeasureButton

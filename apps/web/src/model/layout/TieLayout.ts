@@ -14,11 +14,14 @@ export class TieLayout {
         const beam = tie.note.measure.beamOf(tie.note)
         this.direction = (beam?.stemDir ?? tie.note.stemDir) === 'up' ? 1 : -1
         const yShift = TIE_Y_SHIFT * this.direction
-        const startRow = tie.note.measure.score.getRowForMeasure(tie.note.measure)
-        this.startX = startRow.layout.getMeasureX(tie.note.measure) + tie.note.layout.noteX + tie.note.width.noteHeadWidth
+        const startMeasure = tie.note.measure
+        const endMeasure = tie.nextNote.measure
+        const startRow = startMeasure.score.getRowForMeasure(startMeasure)
+        const endRow = endMeasure.score.getRowForMeasure(endMeasure)
+        const measureXOffset = endRow.layout.getMeasureX(endMeasure) - startRow.layout.getMeasureX(startMeasure)
+        this.startX = startMeasure.layout.getXForElement(tie.note) + tie.note.layout.noteX + tie.note.width.noteHeadWidth
         this.startY = tie.note.layout.noteY + yShift
-        const endRow = tie.nextNote.measure.score.getRowForMeasure(tie.nextNote.measure)
-        this.endX = endRow.layout.getMeasureX(tie.nextNote.measure) +  tie.nextNote.layout.noteX
+        this.endX = measureXOffset + endMeasure.layout.getXForElement(tie.nextNote) + tie.nextNote.layout.noteX
         this.endY = tie.nextNote.layout.noteY + yShift
     }
 }
