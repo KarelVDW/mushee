@@ -50,7 +50,7 @@ export const Score = memo(function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
-    const [ghostNote, setGhostNote] = useState<{ note: Note; parent: Note } | null>(null)
+    const [ghostNote, setGhostNote] = useState<Note | null>(null)
     const [openPopover, setOpenPopover] = useState<{
         measureIndex: number
         beatPosition: number
@@ -159,10 +159,10 @@ export const Score = memo(function Score({
             }
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
             const hoverLine = getLineForY(localY)
-            if (hoverLine === note.pitch?.line && ghostNote) setGhostNote(null)
-            setGhostNote({ note: note.clone({ pitch: Pitch.fromLine(hoverLine) }), parent: note })
+            if ((hoverLine === note.pitch?.line && ghostNote) || note !== selectedNote) setGhostNote(null)
+            else setGhostNote(note.clone({ pitch: Pitch.fromLine(hoverLine) }))
         },
-        [clientToSvg],
+        [clientToSvg, selectedNote],
     )
 
     const handleMouseLeave = useCallback(() => {
@@ -177,9 +177,9 @@ export const Score = memo(function Score({
         }
         if (!hoveredNote) return
 
-        if (ghostNote?.note.pitch && onNoteChange) {
+        if (ghostNote?.pitch && selectedNote && onNoteChange) {
             setGhostNote(null)
-            onNoteChange(ghostNote.parent, ghostNote.note.pitch)
+            onNoteChange(selectedNote, ghostNote.pitch)
             return
         }
 
@@ -191,7 +191,7 @@ export const Score = memo(function Score({
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
-        if (rows.length === 0 || !showMeasureButtons || !score.layout || ! score.lastRow) return null
+        if (rows.length === 0 || !showMeasureButtons || !score.layout || !score.lastRow) return null
         const lastMeasure = score.lastRow.measures[score.lastRow.measures.length - 1]
         const barline = lastMeasure?.layout.barline
         if (!barline) return null
@@ -244,16 +244,12 @@ export const Score = memo(function Score({
                                     <g
                                         key={`cursor-${selectedNote.id}`}
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
+                                        {ghostNote && (
+                                            <g key={ghostNote.id} opacity={0.35}>
+                                                <NoteGroup note={ghostNote} layoutId={ghostNote.layout.id} />
+                                            </g>
+                                        )}
                                         <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
-                                    </g>
-                                )}
-
-                                {ghostNote && ghostNote.parent.measure === measure && (
-                                    <g
-                                        key={ghostNote.note.id}
-                                        transform={`translate(${measure.layout.getXForElement(ghostNote.parent)}, 0)`}
-                                        opacity={0.35}>
-                                        <NoteGroup note={ghostNote.note} layoutId={ghostNote.note.layout.id} />
                                     </g>
                                 )}
 

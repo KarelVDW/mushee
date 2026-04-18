@@ -23,7 +23,7 @@ export default function ScoreEditorPage() {
     const [, setUpdatedAt] = useState(0)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeNote, setActiveNote] = useState<Note | undefined>()
+    const [activeNote, setActiveNote] = useState<Note | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const tickerRef = useRef<Ticker | null>(null)
@@ -42,7 +42,7 @@ export default function ScoreEditorPage() {
                 const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
                 const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
                 setScore(s)
-                setActiveNote(s.firstMeasure?.firstNote ?? undefined)
+                setActiveNote(s.firstMeasure?.firstNote ?? null)
             } catch (err) {
                 console.log(err)
                 setError('Failed to load score')
@@ -50,7 +50,7 @@ export default function ScoreEditorPage() {
                 setLoading(false)
             }
         }
-        load()
+        void load()
     }, [id])
 
     const saveToApi = useCallback(
@@ -73,8 +73,7 @@ export default function ScoreEditorPage() {
     const handleNoteChange = useCallback(
         (note: Note, newPitch: Pitch) => {
             if (!score) return
-            const newNote = note.clone({ pitch: newPitch })
-            score.replace([note], [newNote])
+            const [newNote] = score.replace([note], [note.clone({ pitch: newPitch })])
             setActiveNote(newNote)
             saveToApi({ score })
         },
@@ -95,24 +94,21 @@ export default function ScoreEditorPage() {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault()
                 if (activeNote) {
-                    const newNote = activeNote.clone({ pitch: activeNote.pitch?.raised() })
-                    score.replace([activeNote], [newNote])
+                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.raised() })])
                     setActiveNote(newNote)
                     saveToApi({ score })
                 }
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault()
                 if (activeNote) {
-                    const newNote = activeNote.clone({ pitch: activeNote.pitch?.lowered() })
-                    score.replace([activeNote], [newNote])
+                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.lowered() })])
                     setActiveNote(newNote)
                     saveToApi({ score })
                 }
             } else if (e.key === 'Backspace') {
                 e.preventDefault()
                 if (activeNote) {
-                    const newNote = activeNote.clone({ pitch: undefined })
-                    score.replace([activeNote], [newNote])
+                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: undefined })])
                     setActiveNote(newNote)
                     saveToApi({ score })
                 }
@@ -124,8 +120,7 @@ export default function ScoreEditorPage() {
     const handleAccidentalChange = useCallback(
         (acc: string | undefined) => {
             if (!activeNote || !score) return
-            const newNote = activeNote.clone({ pitch: activeNote.pitch?.withAccidental(acc) })
-            score.replace([activeNote], [newNote])
+            const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.withAccidental(acc) })])
             setActiveNote(newNote)
             saveToApi({ score })
         },
@@ -135,8 +130,7 @@ export default function ScoreEditorPage() {
     const handleDurationChange = useCallback(
         (newDuration: DurationType) => {
             if (!activeNote || !score) return
-            const newNote = activeNote.clone({ duration: new Duration({ type: newDuration }) })
-            score.replace([activeNote], [newNote])
+            const [newNote] = score.replace([activeNote], [activeNote.clone({ duration: new Duration({ type: newDuration }) })])
             setActiveNote(newNote)
             saveToApi({ score })
         },
@@ -146,10 +140,9 @@ export default function ScoreEditorPage() {
     const handleDotToggle = useCallback(() => {
         if (!activeNote || !score) return
         const newDots = activeNote.duration.dots > 0 ? 0 : 1
-        const newNote = activeNote.clone({
+        const [newNote] = score.replace([activeNote], [activeNote.clone({
             duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }),
-        })
-        score.replace([activeNote], [newNote])
+        })])
         setActiveNote(newNote)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
@@ -157,8 +150,7 @@ export default function ScoreEditorPage() {
     const handleTieToggle = useCallback(() => {
         if (!activeNote || !score) return
         const newTie = activeNote.tiesForward ? undefined : ('start' as const)
-        const newNote = activeNote.clone({ tie: newTie })
-        score.replace([activeNote], [newNote])
+        const [newNote] = score.replace([activeNote], [activeNote.clone({ tie: newTie })])
         setActiveNote(newNote)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
@@ -166,8 +158,7 @@ export default function ScoreEditorPage() {
     const handleRestToggle = useCallback(() => {
         if (!activeNote || !score) return
         const newPitch = activeNote.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined
-        const newNote = activeNote.clone({ pitch: newPitch })
-        score.replace([activeNote], [newNote])
+        const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: newPitch })])
         setActiveNote(newNote)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
@@ -207,7 +198,7 @@ export default function ScoreEditorPage() {
     const handleRemoveMeasure = useCallback(() => {
         if (!score) return
         score.removeLastMeasure()
-        setActiveNote(score.lastMeasure?.lastNote || undefined)
+        setActiveNote(score.lastMeasure?.lastNote || null)
         saveToApi({ score })
     }, [score, saveToApi])
 

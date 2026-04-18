@@ -174,6 +174,7 @@ export class Score {
         )
         const targetsByMeasure = groupBy(targets, (n) => n.measure.index)
         let replaceValues = [...values]
+        const allNewNotes = []
         for (const [measureId, notes] of Object.entries(targetsByMeasure)) {
             const measure = measuresById[measureId]
             const newNotes = []
@@ -199,8 +200,10 @@ export class Score {
             this.markMeasureDirty(measure.index)
             replaceValues = [...remainderNotes, ...replaceValues]
             this.getRowForMeasure(measure).invalidateLayout()
+            allNewNotes.push(...newNotes)
         }
         this.onChange()
+        return allNewNotes
     }
 
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
