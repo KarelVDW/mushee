@@ -26,10 +26,7 @@ function toBuffer(data: RawData): Buffer {
 }
 
 async function startServer(): Promise<() => Promise<void>> {
-  process.env.BASIC_PITCH_MODEL_DIR = resolve(
-    __dirname,
-    '../../converter/data',
-  );
+  process.env.BASIC_PITCH_MODEL_DIR = resolve(__dirname, '../model');
 
   const service = new RecordingsService();
   service.onModuleInit();

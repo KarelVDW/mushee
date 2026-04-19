@@ -2,7 +2,6 @@
     "files": [],
     "references": [
         { "path": "apps/api" },
-        { "path": "apps/converter" },
         { "path": "apps/web" }
     ]
 }

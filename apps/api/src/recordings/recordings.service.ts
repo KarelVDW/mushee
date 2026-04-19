@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { BasicPitchModelLoader } from './BasicPitchModelLoader';
 import { RecordingPipeline } from './RecordingPipeline';
 
-const DEFAULT_MODEL_DIR = resolve(process.cwd(), '..', 'converter', 'data');
+const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
 
 @Injectable()
 export class RecordingsService implements OnModuleInit {
