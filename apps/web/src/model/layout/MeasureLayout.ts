@@ -1,4 +1,4 @@
-import { sortBy, sum, sumBy, takeWhile, uniq } from 'lodash-es'
+import { sortBy, sumBy, takeWhile } from 'lodash-es'
 
 import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 import type { LayoutBarline } from '@/components/notation/types'
@@ -7,6 +7,7 @@ import { Clef } from '../Clef'
 import type { Measure } from '../Measure'
 import { PhysicalElement } from '../PhysicalElement'
 import { TimeSignature } from '../TimeSignature'
+import { Resizer, type Sizeable } from '../util/Resizer'
 
 export class MeasureLayout {
     readonly id = crypto.randomUUID()
@@ -18,9 +19,8 @@ export class MeasureLayout {
         this.measureX = row.layout.getMeasureX(measure)
         this.measureWidth = row.layout.getMeasureWidth(measure)
 
-        const elements = this.measure.physicalElements
         const sortedElements = sortBy(
-            elements,
+            this.measure.physicalElements,
             (el) => this.measure.beatOffsetOf(el) ?? -1,
             (el) => !(el instanceof Clef),
             (el) => !(el instanceof TimeSignature),
@@ -30,96 +30,41 @@ export class MeasureLayout {
         const totalBeats = sumBy(this.measure.notes, (n) => n.duration.effectiveBeats)
         const contentWidth = this.measureWidth - this.measure.barlineWidth - sumBy(startOverhead, (el) => el.width.total)
         const widthByBeat = contentWidth / totalBeats
-        let parent: PhysicalElement | undefined
-        const allotted: Map<PhysicalElement, number> = new Map()
-        const deficits: Map<PhysicalElement, number> = new Map()
-        const reserves: Map<PhysicalElement, number> = new Map()
-        const dependents: Map<PhysicalElement, PhysicalElement[]> = new Map()
+
+        const sizeableElements: Array<Sizeable & { element: PhysicalElement; children?: PhysicalElement[] }> = []
         for (const el of sortedElements.slice(startOverhead.length)) {
             if (typeof el.beats === 'number') {
-                const allotedWidth = el.beats * widthByBeat
-                allotted.set(el, allotedWidth)
-                if (allotedWidth < el.width.total) deficits.set(el, el.width.total - allotedWidth)
-                if (allotedWidth > el.width.total) reserves.set(el, allotedWidth - el.width.total)
-                parent = el
-            } else if (parent) dependents.set(parent, [...(dependents.get(parent) || []), el])
-        }
-        for (const [parent, children] of dependents.entries()) {
-            const parentReserve = reserves.get(parent) || 0
-            const totalChildWidth = sumBy(children, (el) => el.width.total)
-            if (totalChildWidth <= parentReserve) {
-                reserves.set(parent, parentReserve - totalChildWidth)
+                sizeableElements.push({ default: el.beats * widthByBeat, minimum: el.width.total, element: el })
             } else {
-                reserves.delete(parent)
-                deficits.set(parent, (deficits.get(parent) || 0) + totalChildWidth - parentReserve)
+                const lastElement = sizeableElements[sizeableElements.length - 1]
+                sizeableElements.splice(-1, 1, {
+                    ...lastElement,
+                    minimum: lastElement.minimum + el.width.total,
+                    children: [...(lastElement.children || []), el],
+                })
             }
         }
-        let totalReserve = sum(Array.from(reserves.values()))
-        let totalDeficit = sum(Array.from(deficits.values()))
-        if (totalDeficit > 0.001 && totalReserve < totalDeficit - 0.001) throw new Error('Measure is too small')
+        const resizer = new Resizer(sizeableElements)
 
-        if (deficits.size) {
-            const sortedReserves = sortBy(uniq(Array.from(reserves.values())))
-            let currentLevel = 0
-            for (const level of sortedReserves) {
-                const levelDiff = level - currentLevel
-                currentLevel = level
-                const totalPossibleFillIn = levelDiff * reserves.size
-                const actualFillIn = totalPossibleFillIn > totalDeficit ? totalDeficit : totalPossibleFillIn
-                totalReserve -= actualFillIn
-                totalDeficit -= actualFillIn
-                let remaining = actualFillIn
-
-                for (const [el, deficit] of Array.from(deficits)) {
-                    const give = Math.min(deficit, remaining / deficits.size)
-                    if (deficit <= give) {
-                        deficits.delete(el)
-                    } else {
-                        deficits.set(el, deficit - give)
-                    }
-                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    allotted.set(el, allotted.get(el)! + give)
-                    remaining -= give
-                }
-
-                const reserveIncrement = actualFillIn / reserves.size
-                for (const [el, reserve] of Array.from(reserves)) {
-                    if (reserve <= reserveIncrement) {
-                        reserves.delete(el)
-                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        allotted.set(el, allotted.get(el)! - reserve)
-                    } else {
-                        reserves.set(el, reserve - reserveIncrement)
-                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        allotted.set(el, allotted.get(el)! - reserveIncrement)
-                    }
-                }
-                if (actualFillIn < totalPossibleFillIn) break
-            }
-        }
         let cursorX = 0
         const xMap = new Map<PhysicalElement, { x: number; allottedWidth: number }>()
         for (const el of startOverhead) {
             xMap.set(el, { x: cursorX, allottedWidth: el.width.total })
             cursorX += el.width.total
         }
-        for (const el of sortedElements.slice(startOverhead.length)) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const allottedWidth = allotted.get(el)!
-            xMap.set(el, { x: cursorX, allottedWidth })
+        for (const el of sizeableElements) {
+            const allottedWidth = resizer.getSize(el)
+            xMap.set(el.element, { x: cursorX, allottedWidth })
             cursorX += allottedWidth
-        }
-        for (const [parent, children] of dependents.entries()) {
-            const totalChildWidth = sumBy(children, (el) => el.width.total)
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const { x: parentX, allottedWidth: parentAllottedWidth } = xMap.get(parent)!
-            let internalCursorX = parentX + parentAllottedWidth - totalChildWidth
-            for (const child of children) {
-                xMap.set(child, { x: internalCursorX, allottedWidth: 0 })
-                internalCursorX += child.width.total
+            if (el.children) {
+                const totalChildWidth = sumBy(el.children, (el) => el.width.total)
+                cursorX -= totalChildWidth
+                for (const child of el.children) {
+                    xMap.set(child, { x: cursorX, allottedWidth: 0 })
+                    cursorX += child.width.total
+                }
             }
         }
-
         this._xMap = xMap
     }
 

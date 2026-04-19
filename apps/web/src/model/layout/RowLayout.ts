@@ -1,10 +1,18 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
+import {
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_SPACING,
+    NUM_STAFF_LINES,
+    SCORE_WIDTH,
+    SPACE_ABOVE_STAFF,
+    STAVE_LINE_DISTANCE,
+} from '@/components/notation/constants'
 import type { LayoutBarline, LayoutLine } from '@/components/notation/types'
 
 import type { Measure } from '../Measure'
 import type { Row } from '../Row'
+import { Resizer, type Sizeable } from '../util/Resizer'
 
 export class RowLayout {
     readonly id = crypto.randomUUID()
@@ -20,24 +28,20 @@ export class RowLayout {
                 this._measureData = measureData
                 return measureData
             }
-            const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? 30 : 0)
-            const defaultMeasureWidth = totalWidth / MAX_MEASURES_PER_ROW
-            const specialDemandMeasures = new Set(measures.filter((m) => m.minimalWidth > defaultMeasureWidth))
-            let normalWidth = 0
-            while (true) {
-                const specialWidth = Array.from(specialDemandMeasures).reduce((sum, m) => sum + m.minimalWidth, 0)
-                const normalCount = measures.length - specialDemandMeasures.size
-                normalWidth = normalCount > 0 ? (totalWidth - specialWidth) / normalCount : 0
-                if (measures.length <= 2 && normalWidth > defaultMeasureWidth) normalWidth = defaultMeasureWidth
-                const toPromote = measures.filter((m) => !specialDemandMeasures.has(m) && m.minimalWidth > normalWidth)
-                if (toPromote.length === 0) break
-                toPromote.forEach((m) => specialDemandMeasures.add(m))
-            }
+            const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? MEASURE_BUTTON_SPACING : 0)
+            const allowIncompleteRow = this.row.score.lastRow === this.row &&  measures.length <= 2
+            const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : measures.length)
+            const sizeableElements: Array<Sizeable & { measure: Measure }> = measures.map((measure) => ({
+                measure,
+                minimum: measure.minimalWidth,
+                default: defaultMeasureWidth,
+            }))
+            const resizer = new Resizer(sizeableElements, allowIncompleteRow ? { maximumWidth: totalWidth } : { width: totalWidth })
             let cursorX = 0
-            for (let i = 0; i < measures.length; i++) {
-                const m = measures[i]
-                const width = specialDemandMeasures.has(m) ? m.minimalWidth : normalWidth
-                measureData.set(m, { width, measureX: cursorX, indexInRow: i })
+            for (let i = 0; i < sizeableElements.length; i++) {
+                const el = sizeableElements[i]
+                const width = resizer.getSize(el)
+                measureData.set(el.measure, { width, measureX: cursorX, indexInRow: i })
                 cursorX += width
             }
             this._measureData = measureData

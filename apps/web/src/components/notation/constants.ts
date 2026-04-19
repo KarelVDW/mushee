@@ -68,6 +68,7 @@ export const ROW_GAP = 16
 export const ROW_HEIGHT = 160
 export const MAX_MEASURES_PER_ROW = 4
 
+export const MEASURE_BUTTON_SPACING = 30
 export const MEASURE_BUTTON_SIZE = 18
 export const MEASURE_BUTTON_GAP = 3
 

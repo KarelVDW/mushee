@@ -205,19 +205,13 @@ export class Score {
             measure.setRowStartClef(undefined)
             let row = last(this._rows)
             if (!row || !row.canFit(measure)) {
+                const activeClef = this._clefByMeasure.get(measure)
+                if (!measure.clef && activeClef) measure.setRowStartClef(activeClef)
                 row = new Row(this, this._rows.length)
                 this._rows.push(row)
             }
             row.addMeasure(measure)
             this._rowByMeasure.set(measure, row)
-        }
-        for (const row of this._rows) {
-            const firstMeasure = row.firstMeasures
-            if (!firstMeasure) continue
-            const activeClef = this._clefByMeasure.get(firstMeasure)
-            if (!firstMeasure.clef && activeClef) {
-                firstMeasure.setRowStartClef(activeClef)
-            }
         }
     }
 

@@ -1,6 +1,6 @@
 import { compact, difference, sumBy } from 'lodash-es'
 
-import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '@/components/notation/constants'
+import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH, MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
 import type { BarlineType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
@@ -285,7 +285,9 @@ export class Measure {
 
     private rebuildPhysicalElements() {
         this._physicalElements = compact([this._clef ?? this._rowStartClef, this._timeSignature, ...this._notes])
-        this._minimalWidth = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
+        const widthSum = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
+        const absoluteMinimum = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
+        this._minimalWidth = widthSum > absoluteMinimum ? widthSum : absoluteMinimum
         this._layout = null
     }
 }

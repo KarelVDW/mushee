@@ -6,7 +6,6 @@ import { RowLayout } from './layout/RowLayout'
 import type { Measure } from './Measure'
 import { Score } from './Score'
 
-const MEASURE_ABSOLUTE_MIN_WIDTH = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
 
 export class Row {
     private _layout: RowLayout | null = null
@@ -19,7 +18,7 @@ export class Row {
     }
 
     get width(): number {
-        return sumBy(this._measures, (m) => this.effectiveWidth(m))
+        return sumBy(this._measures, (m) => m.minimalWidth)
     }
 
     get firstMeasures(): Measure {
@@ -31,7 +30,7 @@ export class Row {
     }
 
     canFit(measure: Measure): boolean {
-        return this._measures.length < MAX_MEASURES_PER_ROW && (this.width + this.effectiveWidth(measure)) <= SCORE_WIDTH
+        return this._measures.length < MAX_MEASURES_PER_ROW && (this.width + measure.minimalWidth) <= SCORE_WIDTH
     }
 
     addMeasure(measure: Measure) {
@@ -51,9 +50,6 @@ export class Row {
         return this._measures.length === 0
     }
 
-    private effectiveWidth(measure: Measure): number {
-        return Math.max(measure.minimalWidth, MEASURE_ABSOLUTE_MIN_WIDTH)
-    }
 
     get layout(): RowLayout {
         this._layout ||= new RowLayout(this)
