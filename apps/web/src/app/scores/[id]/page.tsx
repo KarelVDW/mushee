@@ -329,6 +329,7 @@ export default function ScoreEditorPage() {
         setPlaybackState('stopped')
 
         let measureIndex = activeNote.measure.index
+        setActiveNote(null)
         const startIndex = measureIndex
         score.addMeasure(new Measure(score), measureIndex++).complete()
         saveToApi({ score })
@@ -362,6 +363,17 @@ export default function ScoreEditorPage() {
                 onStateChange: setRecordingState,
                 onNeedNewMeasure: () => {
                     score.addMeasure(new Measure(score), measureIndex++).complete()
+                    saveToApi({ score })
+                },
+                onScoreUpdate: ({ measures }) => {
+                    for (const [key, mxmlMeasure] of Object.entries(measures)) {
+                        const absIndex = startIndex + Number(key)
+                        const measure = score.measures[absIndex]
+                        if (!measure?.firstNote) continue
+                        const notes = ScoreDeserializer.mxmlMeasureToNotes(mxmlMeasure)
+                        if (!notes.length) continue
+                        score.replace([measure.firstNote], notes)
+                    }
                     saveToApi({ score })
                 },
             })

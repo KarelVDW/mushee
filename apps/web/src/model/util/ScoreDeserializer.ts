@@ -4,6 +4,8 @@ import type {
     ClefType,
     DurationType,
     MxmlBarStyle,
+    MxmlMeasure,
+    MxmlNote,
     MxmlNoteType,
     ScorePartwise,
     TieType
@@ -60,29 +62,7 @@ export class ScoreDeserializer {
                             tempos.push({ noteIndex: notes.length, bpm: pendingTempo })
                             pendingTempo = undefined
                         }
-                        const pitch = entry.pitch
-                            ? new Pitch({
-                                  name: entry.pitch.step,
-                                  alter: entry.pitch.alter ?? 0,
-                                  accidental: ScoreDeserializer.alterToAccidental(entry.pitch.alter),
-                                  octave: entry.pitch.octave,
-                              })
-                            : undefined
-                        const ratio = entry.timeModification
-                            ? { actualNotes: entry.timeModification.actualNotes, normalNotes: entry.timeModification.normalNotes }
-                            : undefined
-                        const tie = ScoreDeserializer.mxmlTieToTieType(entry.tie)
-                        notes.push(
-                            new Note({
-                                duration: new Duration({
-                                    type: entry.type ? ScoreDeserializer.mxmlNoteTypeToDurationType(entry.type) : 'q',
-                                    dots: entry.dot,
-                                    ratio,
-                                }),
-                                pitch,
-                                tie,
-                            }),
-                        )
+                        notes.push(ScoreDeserializer.mxmlNoteToNote(entry))
                         break
                     }
                 }
@@ -101,7 +81,45 @@ export class ScoreDeserializer {
         return score
     }
 
+    /**
+     * Extract the `<note>` entries of a single MxmlMeasure as Note[]. Attributes,
+     * barlines, and direction entries are ignored. Use this when applying a
+     * streamed measure update (e.g. from the recording gateway) onto an
+     * existing Score via `score.replace([measure.firstNote], notes)`.
+     */
+    static mxmlMeasureToNotes(measure: MxmlMeasure): Note[] {
+        const notes: Note[] = []
+        for (const entry of measure.entries) {
+            if (entry._type === 'note') notes.push(ScoreDeserializer.mxmlNoteToNote(entry))
+        }
+        return notes
+    }
+
     // --- MusicXML ↔ Internal type conversions ---
+
+    private static mxmlNoteToNote(entry: MxmlNote): Note {
+        const pitch = entry.pitch
+            ? new Pitch({
+                  name: entry.pitch.step,
+                  alter: entry.pitch.alter ?? 0,
+                  accidental: ScoreDeserializer.alterToAccidental(entry.pitch.alter),
+                  octave: entry.pitch.octave,
+              })
+            : undefined
+        const ratio = entry.timeModification
+            ? { actualNotes: entry.timeModification.actualNotes, normalNotes: entry.timeModification.normalNotes }
+            : undefined
+        const tie = ScoreDeserializer.mxmlTieToTieType(entry.tie)
+        return new Note({
+            duration: new Duration({
+                type: entry.type ? ScoreDeserializer.mxmlNoteTypeToDurationType(entry.type) : 'q',
+                dots: entry.dot,
+                ratio,
+            }),
+            pitch,
+            tie,
+        })
+    }
 
     private static readonly NOTE_TYPE_MAP: Record<MxmlNoteType, DurationType> = {
         whole: 'w',

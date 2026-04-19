@@ -1,4 +1,5 @@
 import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
+import type { MxmlMeasure } from '@/components/notation/types'
 import type { Score } from '@/model/Score'
 
 import { MidiPlayer } from './MidiPlayer'
@@ -29,6 +30,12 @@ export interface RecordingOptions {
     onStateChange: (state: RecordingState) => void
     /** Fired when the cursor is about to run off the last available measure. */
     onNeedNewMeasure: () => void
+    /**
+     * Fired when the gateway streams back a score update. Measure keys are
+     * 0-based indices relative to the recording start (i.e., the first recording
+     * measure is `0`, which in the score lives at `startMeasureIndex + 1`).
+     */
+    onScoreUpdate?: (update: { measures: Record<number, MxmlMeasure> }) => void
 }
 
 /**
@@ -240,6 +247,21 @@ export class RecordingEngine implements Tickable {
             if (!this.ws) return resolve()
             this.ws.addEventListener('open', () => resolve(), { once: true })
             this.ws.addEventListener('error', () => resolve(), { once: true })
+        })
+
+        this.ws.addEventListener('message', (event) => {
+            if (typeof event.data !== 'string') return
+            let msg: unknown
+            try {
+                msg = JSON.parse(event.data)
+            } catch {
+                return
+            }
+            if (!msg || typeof msg !== 'object') return
+            const payload = msg as { type?: string; measures?: Record<number, MxmlMeasure> }
+            if (payload.type === 'score-update' && payload.measures) {
+                this.options?.onScoreUpdate?.({ measures: payload.measures })
+            }
         })
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN && this.options) {
