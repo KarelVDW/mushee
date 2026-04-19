@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { CronModule } from './cron/cron.module';
+import { RecordingsModule } from './recordings/recordings.module';
 import { ScoresModule } from './scores/scores.module';
 import { StorageModule } from './storage/storage.module';
 
@@ -30,6 +31,7 @@ import { StorageModule } from './storage/storage.module';
     CacheModule,
     StorageModule,
     CronModule,
+    RecordingsModule,
   ],
 })
 export class AppModule {}

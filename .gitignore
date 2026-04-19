@@ -11,3 +11,4 @@ out/
 *~
 logs
 *.log
+apps/api/debug/
