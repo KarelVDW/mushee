@@ -5,7 +5,8 @@
       "Bash(npx turbo:*)",
       "Bash(git diff:*)",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(pnpm test:recording)"
     ]
   }
 }

@@ -1,9 +1,8 @@
-import { mkdir, writeFile } from 'fs/promises';
-import { join, resolve } from 'path';
-
 import { Logger } from '@nestjs/common';
 import { BasicPitch, NoteEventTime } from '@spotify/basic-pitch';
 import type { GraphModel } from '@tensorflow/tfjs';
+import { mkdir, writeFile } from 'fs/promises';
+import { join, resolve } from 'path';
 
 import { AudioDecoder, DecodedAudio } from './AudioDecoder';
 import type { MxmlMeasure } from './mxml.types';
@@ -14,7 +13,7 @@ import { RecordingDebugRenderer } from './RecordingDebugRenderer';
 const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
 const DEFAULT_BEAT_TYPE = 4;
-const DEBOUNCE_MS = 1500;
+const DEBOUNCE_MS = 1000;
 const STABLE_MARGIN_SEC = 0.4;
 const DEFAULT_DEBUG_DIR = resolve(
   process.cwd(),
@@ -46,6 +45,15 @@ export class RecordingPipeline {
   private lastRawNotes: NoteEventTime[] = [];
   private lastDuration = 0;
   private debugWritten = false;
+
+  private readonly timings = {
+    firstChunkAt: 0,
+    firstDecodeAt: 0,
+    firstUpdateAt: 0,
+    processCount: 0,
+    processTotalMs: 0,
+    processMaxMs: 0,
+  };
 
   private bpm = DEFAULT_BPM;
   private beats = DEFAULT_BEATS;
@@ -85,6 +93,7 @@ export class RecordingPipeline {
   }
 
   appendChunk(buffer: Buffer): void {
+    if (!this.timings.firstChunkAt) this.timings.firstChunkAt = Date.now();
     this.chunks.push(buffer);
     this.scheduleProcess();
   }
@@ -97,6 +106,7 @@ export class RecordingPipeline {
     this.finalRequested = true;
     await this.kick();
     await this.writeDebugBundle();
+    this.logTimings();
   }
 
   private scheduleProcess(): void {
@@ -118,10 +128,20 @@ export class RecordingPipeline {
         this.rerunRequested = false;
         const isFinal = this.finalRequested;
         if (isFinal) this.finalRequested = false;
+        const start = Date.now();
         try {
           await this.process(isFinal);
         } catch (err) {
           this.logger.warn(`Process pass failed: ${describeError(err)}`);
+          if (err instanceof Error && err.stack) {
+            this.logger.warn(err.stack);
+          }
+        }
+        const elapsed = Date.now() - start;
+        this.timings.processCount += 1;
+        this.timings.processTotalMs += elapsed;
+        if (elapsed > this.timings.processMaxMs) {
+          this.timings.processMaxMs = elapsed;
         }
       } while (this.rerunRequested || this.finalRequested);
     } finally {
@@ -132,7 +152,9 @@ export class RecordingPipeline {
   private async process(isFinal: boolean): Promise<void> {
     if (!this.chunks.length) return;
 
+    const tStart = Date.now();
     const buffer = Buffer.concat(this.chunks);
+    const tConcat = Date.now();
 
     let decoded: DecodedAudio;
     try {
@@ -141,24 +163,44 @@ export class RecordingPipeline {
       this.logger.debug(`Cannot decode buffer yet (${describeError(err)})`);
       return;
     }
+    const tDecode = Date.now();
+    if (!this.timings.firstDecodeAt) this.timings.firstDecodeAt = tDecode;
 
     const model = await this.modelPromise;
+    const tModelReady = Date.now();
     const basicPitch = new BasicPitch(Promise.resolve(model));
     const frames: number[][] = [];
     const onsets: number[][] = [];
     const duration = decoded.duration;
+    let emitMs = 0;
 
     await basicPitch.evaluateModel(
       decoded.samples,
       (f, o) => {
         frames.push(...f);
         onsets.push(...o);
+        const t0 = Date.now();
         this.emitFromState(frames, onsets, duration, isFinal);
+        emitMs += Date.now() - t0;
       },
       () => {},
     );
+    const tModelDone = Date.now();
 
+    const tFinalEmitStart = Date.now();
     this.emitFromState(frames, onsets, duration, isFinal);
+    emitMs += Date.now() - tFinalEmitStart;
+    const tEnd = Date.now();
+
+    this.logger.debug(
+      `Pass timings: concat=${tConcat - tStart}ms, ` +
+        `decode=${tDecode - tConcat}ms, ` +
+        `model-wait=${tModelReady - tDecode}ms, ` +
+        `model-eval=${tModelDone - tModelReady - emitMs}ms, ` +
+        `emit=${emitMs}ms, ` +
+        `total=${tEnd - tStart}ms ` +
+        `(audioDur=${duration.toFixed(2)}s, bytes=${buffer.byteLength}, final=${isFinal})`,
+    );
   }
 
   private emitFromState(
@@ -202,7 +244,26 @@ export class RecordingPipeline {
     for (const idx of affected) {
       measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
     }
+    if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now();
     this.onUpdate({ measures });
+  }
+
+  private logTimings(): void {
+    const t = this.timings;
+    if (!t.firstChunkAt) return;
+    const totalBytes = this.chunks.reduce((s, c) => s + c.byteLength, 0);
+    const relativeTo = (at: number): string =>
+      at ? `${at - t.firstChunkAt}ms` : 'never';
+    const avgPassMs = t.processCount
+      ? Math.round(t.processTotalMs / t.processCount)
+      : 0;
+    const totalMs = Date.now() - t.firstChunkAt;
+    this.logger.debug(
+      `Session timings: first-response=${relativeTo(t.firstUpdateAt)}, ` +
+        `first-decode=${relativeTo(t.firstDecodeAt)}, ` +
+        `passes=${t.processCount} (avg=${avgPassMs}ms, max=${t.processMaxMs}ms), ` +
+        `total=${totalMs}ms, chunks=${this.chunks.length} (${totalBytes} bytes)`,
+    );
   }
 
   private async writeDebugBundle(): Promise<void> {
