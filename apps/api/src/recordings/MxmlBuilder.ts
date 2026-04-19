@@ -9,12 +9,22 @@ import type {
 
 const DIVISIONS_PER_QUARTER = 12;
 
-const STANDARD_DURATIONS: Array<{ type: MxmlNoteType; divisions: number }> = [
-  { type: 'whole', divisions: 48 },
-  { type: 'half', divisions: 24 },
-  { type: 'quarter', divisions: 12 },
-  { type: 'eighth', divisions: 6 },
-  { type: '16th', divisions: 3 },
+interface StandardDuration {
+  type: MxmlNoteType;
+  divisions: number;
+  dots: number;
+}
+
+/** Sorted descending so greedy "largest fit" picks the coarsest match first. */
+const STANDARD_DURATIONS: StandardDuration[] = [
+  { type: 'whole', divisions: 48, dots: 0 },
+  { type: 'half', divisions: 36, dots: 1 },
+  { type: 'half', divisions: 24, dots: 0 },
+  { type: 'quarter', divisions: 18, dots: 1 },
+  { type: 'quarter', divisions: 12, dots: 0 },
+  { type: 'eighth', divisions: 9, dots: 1 },
+  { type: 'eighth', divisions: 6, dots: 0 },
+  { type: '16th', divisions: 3, dots: 0 },
 ];
 
 const STEP_TABLE: Array<{ step: MxmlStep; alter: number }> = [
@@ -106,18 +116,15 @@ export class MxmlBuilder {
   }
 
   private appendRests(entries: MxmlMeasureEntry[], beats: number): void {
-    let divs = Math.round(beats * DIVISIONS_PER_QUARTER);
-    while (divs >= STANDARD_DURATIONS[STANDARD_DURATIONS.length - 1].divisions) {
-      const fit = STANDARD_DURATIONS.find((d) => d.divisions <= divs);
-      if (!fit) break;
+    for (const seg of this.splitIntoStandardDurations(beats)) {
       entries.push({
         _type: 'note',
         rest: {},
-        duration: fit.divisions,
+        duration: seg.divisions,
         voice: '1',
-        type: fit.type,
+        type: seg.type,
+        ...(seg.dots > 0 && { dot: seg.dots }),
       });
-      divs -= fit.divisions;
     }
   }
 
@@ -127,14 +134,7 @@ export class MxmlBuilder {
     midi: number,
   ): void {
     const pitch = this.midiToPitch(midi);
-    let divs = Math.round(beats * DIVISIONS_PER_QUARTER);
-    const segments: Array<{ type: MxmlNoteType; divisions: number }> = [];
-    while (divs >= STANDARD_DURATIONS[STANDARD_DURATIONS.length - 1].divisions) {
-      const fit = STANDARD_DURATIONS.find((d) => d.divisions <= divs);
-      if (!fit) break;
-      segments.push(fit);
-      divs -= fit.divisions;
-    }
+    const segments = this.splitIntoStandardDurations(beats);
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       const tie = this.tieFor(i, segments.length);
@@ -144,9 +144,23 @@ export class MxmlBuilder {
         duration: seg.divisions,
         voice: '1',
         type: seg.type,
+        ...(seg.dots > 0 && { dot: seg.dots }),
         ...(tie && { tie }),
       });
     }
+  }
+
+  private splitIntoStandardDurations(beats: number): StandardDuration[] {
+    const minDivs = STANDARD_DURATIONS[STANDARD_DURATIONS.length - 1].divisions;
+    const result: StandardDuration[] = [];
+    let divs = Math.round(beats * DIVISIONS_PER_QUARTER);
+    while (divs >= minDivs) {
+      const fit = STANDARD_DURATIONS.find((d) => d.divisions <= divs);
+      if (!fit) break;
+      result.push(fit);
+      divs -= fit.divisions;
+    }
+    return result;
   }
 
   private tieFor(index: number, total: number): MxmlTie[] | undefined {
