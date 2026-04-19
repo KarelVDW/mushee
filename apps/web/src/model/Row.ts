@@ -1,3 +1,5 @@
+import { sumBy } from 'lodash-es'
+
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
 
 import { RowLayout } from './layout/RowLayout'
@@ -9,7 +11,6 @@ const MEASURE_ABSOLUTE_MIN_WIDTH = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
 export class Row {
     private _layout: RowLayout | null = null
     private _measures: Measure[] = []
-    private _width = 0
 
     constructor(readonly score: Score, readonly index: number) {}
 
@@ -18,7 +19,7 @@ export class Row {
     }
 
     get width(): number {
-        return this._width
+        return sumBy(this._measures, (m) => this.effectiveWidth(m))
     }
 
     get firstMeasures(): Measure {
@@ -30,19 +31,17 @@ export class Row {
     }
 
     canFit(measure: Measure): boolean {
-        return this._measures.length < MAX_MEASURES_PER_ROW && (this._width + this.effectiveWidth(measure)) <= SCORE_WIDTH
+        return this._measures.length < MAX_MEASURES_PER_ROW && (this.width + this.effectiveWidth(measure)) <= SCORE_WIDTH
     }
 
     addMeasure(measure: Measure) {
         this._measures.push(measure)
-        this._width += this.effectiveWidth(measure)
         this.invalidateLayout()
     }
 
     removeLastMeasure(): Measure | undefined {
         const measure = this._measures.pop()
         if (measure) {
-            this._width -= this.effectiveWidth(measure)
             this.invalidateLayout()
         }
         return measure

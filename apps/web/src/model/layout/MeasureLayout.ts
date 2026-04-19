@@ -140,8 +140,7 @@ export class MeasureLayout {
 
     getXForBeat(beat: number) {
         const overshootIndex = this.measure.notes.findIndex((el) => this.measure.beatOffsetOf(el) > beat)
-        const note =
-            overshootIndex === -1 ? this.measure.notes.at(-1) : this.measure.notes[overshootIndex - 1] || this.measure.firstNote
+        const note = overshootIndex === -1 ? this.measure.notes.at(-1) : this.measure.notes[overshootIndex - 1] || this.measure.firstNote
         if (!note) return 0
         const spacing = this._xMap.get(note)
         if (!spacing) throw new Error('Note not spaced in measure')

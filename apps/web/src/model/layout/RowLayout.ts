@@ -23,11 +23,16 @@ export class RowLayout {
             const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? 30 : 0)
             const defaultMeasureWidth = totalWidth / MAX_MEASURES_PER_ROW
             const specialDemandMeasures = new Set(measures.filter((m) => m.minimalWidth > defaultMeasureWidth))
-
-            const specialWidth = Array.from(specialDemandMeasures).reduce((sum, m) => sum + m.minimalWidth, 0)
-            const normalCount = measures.length - specialDemandMeasures.size
-            let normalWidth = normalCount > 0 ? (totalWidth - specialWidth) / normalCount : 0
-            if (measures.length <= 2 && normalWidth > defaultMeasureWidth) normalWidth = defaultMeasureWidth
+            let normalWidth = 0
+            while (true) {
+                const specialWidth = Array.from(specialDemandMeasures).reduce((sum, m) => sum + m.minimalWidth, 0)
+                const normalCount = measures.length - specialDemandMeasures.size
+                normalWidth = normalCount > 0 ? (totalWidth - specialWidth) / normalCount : 0
+                if (measures.length <= 2 && normalWidth > defaultMeasureWidth) normalWidth = defaultMeasureWidth
+                const toPromote = measures.filter((m) => !specialDemandMeasures.has(m) && m.minimalWidth > normalWidth)
+                if (toPromote.length === 0) break
+                toPromote.forEach((m) => specialDemandMeasures.add(m))
+            }
             let cursorX = 0
             for (let i = 0; i < measures.length; i++) {
                 const m = measures[i]
