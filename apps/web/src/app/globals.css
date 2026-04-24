@@ -1,67 +1,88 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* M3 Color Palette — The Curated Manuscript */
-  --color-background: #fcf9f8;
-  --color-on-background: #1c1b1b;
-  --color-surface: #fcf9f8;
-  --color-on-surface: #1c1b1b;
-  --color-surface-dim: #dcd9d9;
-  --color-surface-bright: #fcf9f8;
+  /* M3 Color Palette — Precision Maverick (Sheemu) */
+  /* Canvas */
+  --color-background: #f6f6f6;
+  --color-on-background: #2d2f2f;
+  --color-surface: #f6f6f6;
+  --color-on-surface: #2d2f2f;
+  --color-surface-dim: #d2d5d5;
+  --color-surface-bright: #f6f6f6;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f6f3f2;
-  --color-surface-container: #f0edec;
-  --color-surface-container-high: #ebe7e7;
-  --color-surface-container-highest: #e5e2e1;
-  --color-surface-variant: #e5e2e1;
-  --color-on-surface-variant: #3f4945;
-  --color-surface-tint: #29695b;
-  --color-primary: #00342b;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #004d40;
-  --color-on-primary-container: #7ebdac;
-  --color-primary-fixed: #afefdd;
-  --color-primary-fixed-dim: #94d3c1;
-  --color-on-primary-fixed: #00201a;
-  --color-on-primary-fixed-variant: #065043;
-  --color-inverse-primary: #94d3c1;
-  --color-secondary: #546067;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #d7e4ec;
-  --color-on-secondary-container: #5a666d;
-  --color-secondary-fixed: #d7e4ec;
-  --color-secondary-fixed-dim: #bbc8d0;
-  --color-on-secondary-fixed: #111d23;
-  --color-on-secondary-fixed-variant: #3c494f;
-  --color-tertiary: #4e2013;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #693527;
-  --color-on-tertiary-container: #e89f8c;
-  --color-tertiary-fixed: #ffdbd1;
-  --color-tertiary-fixed-dim: #ffb5a1;
-  --color-on-tertiary-fixed: #370e04;
-  --color-on-tertiary-fixed-variant: #6d382a;
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-  --color-outline: #707975;
-  --color-outline-variant: #bfc9c4;
-  --color-inverse-surface: #313030;
-  --color-inverse-on-surface: #f3f0ef;
+  --color-surface-container-low: #f0f1f1;
+  --color-surface-container: #e7e8e8;
+  --color-surface-container-high: #e1e3e3;
+  --color-surface-container-highest: #dbdddd;
+  --color-surface-variant: #dbdddd;
+  --color-on-surface-variant: #5a5c5c;
+  --color-surface-tint: #00666d;
+  --color-inverse-surface: #0c0f0f;
+  --color-inverse-on-surface: #9c9d9d;
 
-  /* Fonts — Dual Voice typography */
-  --font-headline: var(--font-newsreader);
-  --font-serif: var(--font-newsreader);
-  --font-body: var(--font-manrope);
-  --font-label: var(--font-manrope);
-  --font-sans: var(--font-manrope);
+  /* The Pulse — Primary (Cyan power-source) */
+  --color-primary: #00666d;
+  --color-on-primary: #cffbff;
+  --color-primary-container: #00dbe9;
+  --color-on-primary-container: #005359;
+  --color-primary-dim: #00595f;
+  --color-primary-fixed: #00dbe9;
+  --color-primary-fixed-dim: #00deec;
+  --color-on-primary-fixed: #003f43;
+  --color-on-primary-fixed-variant: #005e64;
+  --color-inverse-primary: #00dbe9;
+
+  /* The Accent — Secondary (Magenta rebellion) */
+  --color-secondary: #b60052;
+  --color-on-secondary: #ffeff0;
+  --color-secondary-container: #ff2079;
+  --color-on-secondary-container: #91003f;
+  --color-secondary-dim: #a00047;
+  --color-secondary-fixed: #ff2079;
+  --color-secondary-fixed-dim: #ffadbf;
+  --color-on-secondary-fixed: #6d002e;
+  --color-on-secondary-fixed-variant: #a20048;
+
+  /* Tertiary — muted technical neutrals */
+  --color-tertiary: #5b5b5b;
+  --color-on-tertiary: #f3f3f3;
+  --color-tertiary-container: #ffffff;
+  --color-on-tertiary-container: #626262;
+  --color-tertiary-dim: #4f4f4f;
+  --color-tertiary-fixed: #ffffff;
+  --color-tertiary-fixed-dim: #f1f1f1;
+  --color-on-tertiary-fixed: #505050;
+  --color-on-tertiary-fixed-variant: #6d6d6d;
+
+  /* Error */
+  --color-error: #b31b25;
+  --color-on-error: #ffefee;
+  --color-error-container: #fb5151;
+  --color-on-error-container: #570008;
+  --color-error-dim: #9f0519;
+
+  /* Outlines (ghost borders only — see DESIGN.md) */
+  --color-outline: #767777;
+  --color-outline-variant: #acadad;
+
+  /* Typography — Space Grotesk exclusively */
+  --font-display: var(--font-space-grotesk);
+  --font-headline: var(--font-space-grotesk);
+  --font-body: var(--font-space-grotesk);
+  --font-label: var(--font-space-grotesk);
+  --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
+
+  /* Roundedness — DESIGN.md scale */
+  --radius-DEFAULT: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-on-background);
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
 }
 
 .material-symbols-outlined {
@@ -70,28 +91,67 @@ body {
   vertical-align: middle;
 }
 
+/* Atmospheric Shadow — tinted with on_surface, never black.
+   Spec: 24px blur, 0px offset, 6% opacity of #2d2f2f. */
 .tonal-layer-glow {
-  box-shadow: 0 10px 24px -4px rgba(28, 27, 27, 0.04);
+  box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+}
+.editorial-shadow {
+  box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
 }
 
+/* Subtle dot texture for "stage" surfaces. Muted — tonal, not decorative. */
 .manuscript-canvas {
   background-image: radial-gradient(
     circle at 2px 2px,
-    rgba(191, 201, 196, 0.15) 1px,
+    rgba(172, 173, 173, 0.15) 1px,
     transparent 0
   );
   background-size: 40px 40px;
 }
 
-.editorial-shadow {
-  box-shadow: 0 24px 48px -12px rgba(28, 27, 27, 0.04);
-}
-
+/* Glassmorphism — surface_container_lowest at 85%, blur 12px. */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
+/* Primary CTA gradient — 135deg, primary → primary_container. */
 .primary-gradient {
-  background: linear-gradient(135deg, #00342b 0%, #004d40 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
+}
+
+/* Input field — no four-sided box.
+   surface_container_low fill, 2px primary bottom stroke animating 0→100% on focus. */
+.input-field-container {
+  position: relative;
+}
+.input-field-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  transition: width 0.3s ease, left 0.3s ease;
+  transform: translateX(-50%);
+}
+.input-field-container:focus-within::after {
+  width: 100%;
+}
+.input-field {
+  border: none !important;
+  box-shadow: none !important;
+}
+.input-field:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ghost border — outline_variant at 15% opacity, felt not seen. */
+.ghost-border {
+  border: 1px solid rgba(172, 173, 173, 0.15);
 }

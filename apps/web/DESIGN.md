@@ -1,90 +1,90 @@
-```markdown
-# Design System Specification: The Curated Manuscript
+# Design System Documentation: High-Energy Musical Rebellion
 
 ## 1. Overview & Creative North Star
-**The Creative North Star: "The Curated Manuscript"**
+**Creative North Star: "The Precision Maverick"**
+This design system is a visual manifesto for the modern musician. It rejects the cluttered, "academic" look of traditional notation software in favor of a sleek, high-tech editorial experience. We are blending the raw energy of a digital "life hack" with the sophisticated precision of a high-end studio.
 
-This design system is built on the tension between the fluid, predictive intelligence of AI and the rigid, centuries-old tradition of musical notation. We are moving away from "app-like" interfaces characterized by boxes and borders. Instead, we are leaning into an editorial, high-end experience that feels like a living document.
-
-The visual identity relies on **intentional asymmetry**, high-contrast typography, and vast expanses of whitespace (the "paper"). By overlapping elements and using varied tonal depths, we create a sense of organized luxury. The goal is to make the user feel like a composer working on a premium parchment, assisted by an invisible, sophisticated hand.
+The aesthetic is driven by **Intentional Asymmetry** and **Aggressive Contrast**. We utilize a clean, clinical white-space environment as the "stage," allowing neon accents and bold typography to act as "performers." The layout should feel like a high-end streetwear magazine—structured yet rebellious, breathable yet punchy.
 
 ---
 
-## 2. Colors & Tonal Architecture
-The palette avoids the sterile "tech blue." Instead, it uses a deep, intellectual teal (`primary`) against a warm, off-white base (`surface`) to evoke the feeling of ink on aged paper.
+## 2. Colors: High-Voltage Neutrals
+Our palette relies on a sophisticated "White-on-White" layering system punctuated by two neon power-sources: Cyan and Magenta.
 
-### The Palette (Material Design Convention)
-*   **Primary (The Ink):** `#00342b` (Deep Teal) / `#004d40` (Primary Container)
-*   **Surface (The Paper):** `#fcf9f8` (Background) / `#f0edec` (Surface Container)
-*   **Accent (The Soul):** `#4e2013` (Tertiary - a muted earthy tone for focus)
+### The Palette
+- **The Canvas:** `surface` (#f6f6f6) and `surface_container_lowest` (#ffffff). These provide the clean, airy foundation.
+- **The Pulse (Primary):** `primary_container` (#00DBE9 - Neon Cyan). Use this for high-energy actions and primary focus states.
+- **The Accent (Secondary):** `secondary_container` (#FF2079 - Neon Magenta) and `secondary` (#b60052 - Deep Magenta). This is our "rebellious" pop, used for secondary interactions and highlights.
+- **The Depth:** `on_surface` (#2d2f2f). This isn't pure black; it’s a deep, tech-charcoal that provides "punch" without looking dated.
 
 ### The "No-Line" Rule
-To maintain an editorial feel, **1px solid borders are strictly prohibited for sectioning.** Boundaries must be defined through:
-1.  **Background Shifts:** Place a `surface-container-low` section against a `surface` background.
-2.  **Negative Space:** Use the spacing scale to create distinct visual groups.
-3.  **Tonal Transitions:** A subtle shift from `#fcf9f8` to `#f6f3f2` is enough to signal a new functional area.
+**Prohibit 1px solid borders for sectioning.** To define boundaries, use tonal shifts.
+- A navigation sidebar should sit on `surface_container_low` (#f0f1f1) against a `surface` (#f6f6f6) background.
+- This creates a seamless, "molded" look rather than a boxed-in feel.
 
-### Glass & Gradient Implementation
-To move beyond a flat UI, use **Glassmorphism** for floating AI panels. Use a background blur of `20px` with a semi-transparent `surface_container_lowest` (80% opacity). Main CTAs should utilize a subtle linear gradient from `primary` (#00342b) to `primary_container` (#004d40) at a 135-degree angle to add "soul" and depth.
+### Surface Hierarchy & Nesting
+Treat the UI as a series of stacked sheets of fine paper.
+- **Base Level:** `surface` (#f6f6f6)
+- **Mid-Level Panels:** `surface_container` (#e7e8e8)
+- **Interactive Floating Elements:** `surface_container_lowest` (#ffffff) with Glassmorphism.
 
----
-
-## 3. Typography: The Dual Voice
-We pair a traditional serif for "the music" (expression) with a modern sans-serif for "the tool" (utility).
-
-*   **Display & Headline (Newsreader):** This serif font carries the brand's heritage. Use `display-lg` (3.5rem) for hero statements with tight letter-spacing (-0.02em) to mimic high-end mastheads.
-*   **Title & Body (Manrope):** This sans-serif provides the AI’s clarity. Use `body-lg` (1rem) for general instruction.
-*   **Editorial Hierarchy:** Always lead with a Newsreader headline. The transition from a `headline-lg` serif to a `body-md` sans-serif creates an immediate sense of authoritative hierarchy.
-
----
-
-## 4. Elevation & Depth: Tonal Layering
-We reject the standard Material Design drop shadow. Depth is achieved through "Tonal Layering."
-
-*   **The Layering Principle:** Treat the UI as stacked sheets of fine paper. 
-    *   **Base:** `surface` (#fcf9f8)
-    *   **Sections:** `surface_container_low` (#f6f3f2)
-    *   **Floating Cards:** `surface_container_lowest` (#ffffff)
-*   **Ambient Shadows:** For floating elements (like an AI suggestion box), use a shadow with a `24px` blur and `4%` opacity, tinted with the `on_surface` color (#1c1b1b). It should look like a soft glow of light, not a "drop shadow."
-*   **The Ghost Border Fallback:** If accessibility requires a border, use `outline_variant` at `15%` opacity. It should be felt, not seen.
+### The Glass & Gradient Rule
+For primary call-to-actions or floating music-control docks, use a **Glassmorphism** effect:
+- Background: `surface_container_lowest` at 85% opacity.
+- Effect: `backdrop-filter: blur(12px)`.
+- For CTAs, use a subtle gradient from `primary` (#00666d) to `primary_container` (#00DBE9) at a 135-degree angle to add "visual soul."
 
 ---
 
-## 5. Components & Interface Elements
+## 3. Typography: Space Grotesk
+We use **Space Grotesk** exclusively. It is a font that feels both technical and human, with quirky terminals that suggest a "rebellious" streak.
+
+- **Display (The Statement):** `display-lg` (3.5rem) should be used sparingly for screen titles or "hero" numbers (like BPM). Set with `-0.04em` letter-spacing for a tight, high-fashion look.
+- **Headlines (The Anchor):** `headline-lg` (2rem) and `headline-md` (1.75rem) use Bold weights to anchor the user’s eye.
+- **Body (The Utility):** `body-lg` (1rem) for general reading.
+- **Labels (The Tech):** `label-md` (0.75rem) in All-Caps for secondary metadata, mimicking the look of technical schematics or hardware labeling.
+
+---
+
+## 4. Elevation & Depth
+Depth in this system is achieved through **Tonal Layering** and **Atmospheric Shadows**, not structural lines.
+
+- **The Layering Principle:** Place a `surface_container_lowest` card on a `surface_container_low` section to create a soft, natural lift.
+- **Ambient Shadows:** When a floating effect is required (e.g., a music tool-kit), use a shadow with a 24px blur, 0px offset, and 6% opacity of the `on_surface` color. This mimics natural light.
+- **The "Ghost Border" Fallback:** If a container requires definition for accessibility, use the `outline_variant` (#acadad) at **15% opacity**. It should be felt, not seen.
+- **The Sanctuary (Sheet Music Editor):** The editor area must be strictly `#ffffff` with `#2d2f2f` notes. No elevation, no color. It is a vacuum of focus in the center of a high-energy UI.
+
+---
+
+## 5. Components
 
 ### Buttons
-*   **Primary:** Rounded at `md` (0.375rem). Uses the Primary-to-Container gradient. Text is `on_primary` (#ffffff).
-*   **Secondary:** No fill. `Ghost Border` (20% opacity outline). Use `title-sm` for the label.
-*   **Interaction:** On hover, increase the `surface_tint` overlay by 8% rather than changing the base color.
-
-### The Manuscript Canvas (Custom Component)
-The area where sheet music is edited. This should always be `surface_container_lowest` (#ffffff) to appear as the "brightest" and most important layer. Use `xl` (0.75rem) rounding for the canvas container to soften the technical feel.
-
-### Cards & Lists
-*   **Rule:** Forbid the use of divider lines.
-*   **Implementation:** Use a `surface_container_high` background on hover to define list items. Use `body-md` for list content, ensuring the `on_surface_variant` is used for secondary metadata to maintain a soft contrast.
+- **Primary:** Gradient fill (`primary` to `primary_container`), `on_primary_container` text, `full` roundedness. High energy.
+- **Secondary:** `surface_container_highest` background with `primary` text. Use for less critical tools.
+- **Tertiary:** Transparent background, `on_surface` text, bold `label-md` styling.
 
 ### Input Fields
-*   **Styling:** Minimalist. No bottom line. Use a `surface_container` fill with `sm` (0.125rem) rounding. 
-*   **States:** On focus, the background shifts to `surface_container_highest` and the label (Manrope `label-md`) shifts to the `primary` color.
+- Avoid four-sided boxes. Use a `surface_container_low` background with a `0.25rem` (DEFAULT) roundedness and a `2px` bottom-only stroke in `primary` that animates from 0% to 100% width on focus.
 
-### AI Floating Tooltips
-*   **Styling:** Use the Glassmorphism rule. `backdrop-blur: 12px`.
-*   **Animation:** Should slide in from a 4px offset with a "soft-spring" easing (0.4, 0, 0.2, 1).
+### The "Tool-Dock" (Floating Controls)
+- Create a floating container using `surface_container_lowest` with Glassmorphism. 
+- Use `xl` (0.75rem) roundedness to make it feel like a modern handheld device.
+- Forbid dividers. Use `1.5rem` horizontal spacing between icon groups to define categories.
+
+### Chips (Genre/Instrument Tags)
+- Use `secondary_container` (Magenta) for active states.
+- Forbid borders; use the contrast between `secondary_container` and the `surface` background to define the shape.
 
 ---
 
-## 6. Do’s and Don’ts
+## 6. Do’s and Don'ts
 
 ### Do:
-*   **Embrace Whitespace:** If a layout feels "busy," increase the padding rather than adding a border.
-*   **Asymmetric Compositions:** Align a headline to the far left and the body text to a center-column to create an editorial feel.
-*   **Use Tonal Shifts:** Layer `surface` tiers to show which information is "inside" another.
+- **Asymmetric Spacing:** Use wider margins on the left than the right to create an editorial, "off-beat" feel.
+- **High-Contrast Scale:** Use a massive `display-lg` title right next to a tiny `label-sm` technical detail.
+- **Color Pop:** Use the Magenta (`secondary`) sparingly—only for "Destructive" actions or "High-Rebellion" features (like a 'Turbo' or 'Remix' button).
 
-### Don't:
-*   **Don't use 100% Black:** Use `on_background` (#1c1b1b) for text to keep the "ink" from feeling too harsh against the "paper."
-*   **Don't use Default Shadows:** Avoid the "fuzzy grey" shadow look; it kills the premium editorial aesthetic.
-*   **Don't Over-round:** Stick to the scale. `0.375rem` is the sweet spot. Anything more feels "bubbly" and toy-like, undermining the professional AI context.
-
-### Accessibility Note:
-While we use soft transitions, ensure the contrast between `on_surface` and `surface` always meets WCAG AA standards. The `primary` teal (#00342b) is specifically chosen to be highly legible against our warm white backgrounds.```
+### Don’t:
+- **No Divider Lines:** Never use a horizontal rule `<hr>` or border to separate list items. Use a background shift to `surface_container_low` on hover instead.
+- **No Grey Shadows:** Never use `#000000` for shadows. Always tint the shadow with the `on_surface` (#2d2f2f) color to maintain the clean, light-mode vibrance.
+- **No Color in the Editor:** Do not allow the Cyan or Magenta to bleed into the sheet music editor. That space is sacred and strictly monochrome for maximum cognitive focus.
