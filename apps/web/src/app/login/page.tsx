@@ -62,8 +62,8 @@ export default function LoginPage() {
                 </section>
 
                 {/* Right: Form */}
-                <section className="w-full lg:w-7/12 p-[1.6rem] sm:p-[2.4rem] lg:p-16 flex flex-col justify-center relative z-20 bg-surface-container-lowest">
-                    <div className="max-w-[22.4rem] w-full mx-auto">
+                <section className="w-full lg:w-7/12 p-[1.6rem] sm:p-[2.4rem] lg:p-16 flex flex-col justify-start relative z-20 bg-surface-container-lowest">
+                    <div className="max-w-[22.4rem] w-full mx-auto flex-1 flex flex-col">
                         {/* Tabs */}
                         <div className="flex items-center gap-[1.6rem] mb-[2.4rem] border-b-2 border-surface-container pb-[0.8rem]">
                             <Link
@@ -78,8 +78,8 @@ export default function LoginPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-[1.6rem]">
-                            <div className="space-y-[1.2rem]">
+                        <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-[1.6rem]">
+                            <div className="space-y-[1.2rem] flex-1 flex flex-col justify-center">
                                 {/* Email */}
                                 <div>
                                     <label
