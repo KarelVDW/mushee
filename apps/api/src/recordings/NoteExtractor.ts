@@ -49,6 +49,27 @@ const MERGE_MAX_PITCH_DIFF = 1;
  */
 const OUTLIER_PITCH_DIFF_SEMITONES = 7;
 
+/**
+ * basic-pitch tuning. Defaults match Spotify's Python CLI rather than the
+ * looser TS-port defaults — see the project README's `outputToNotesPoly` notes.
+ *
+ * - Higher onset/frame thresholds suppress ghost notes.
+ * - 11-frame minimum at 22050/256 hop ≈ 127 ms (drops sub-eighth-note blips).
+ * - min/max frequency window cuts harmonic octave errors at the source.
+ * - melodiaTrick disabled: it invents extra notes from sustained harmonics,
+ *   which is harmful for monophonic sources.
+ */
+const BASIC_PITCH_ONSET_THRESHOLD = 0.5;
+const BASIC_PITCH_FRAME_THRESHOLD = 0.3;
+const BASIC_PITCH_MIN_NOTE_LEN_FRAMES = 11;
+const BASIC_PITCH_INFER_ONSETS = true;
+/** Hz. ~C6, top of normal vocal range. */
+const BASIC_PITCH_MAX_FREQ = 1100;
+/** Hz. C2, bottom of normal vocal range. */
+const BASIC_PITCH_MIN_FREQ = 65;
+const BASIC_PITCH_MELODIA_TRICK = false;
+const BASIC_PITCH_ENERGY_TOLERANCE = 11;
+
 export interface ExtractOptions {
   bpm: number;
 }
@@ -74,7 +95,18 @@ export class NoteExtractor {
     onsets: number[][],
     options: ExtractOptions,
   ): ExtractedNotes {
-    const rawNotes = outputToNotesPoly(frames, onsets, 0.25, 0.25, 5);
+    const rawNotes = outputToNotesPoly(
+      frames,
+      onsets,
+      BASIC_PITCH_ONSET_THRESHOLD,
+      BASIC_PITCH_FRAME_THRESHOLD,
+      BASIC_PITCH_MIN_NOTE_LEN_FRAMES,
+      BASIC_PITCH_INFER_ONSETS,
+      BASIC_PITCH_MAX_FREQ,
+      BASIC_PITCH_MIN_FREQ,
+      BASIC_PITCH_MELODIA_TRICK,
+      BASIC_PITCH_ENERGY_TOLERANCE,
+    );
     const raw = noteFramesToTime(rawNotes);
     const monophonic = this.selectMonophonic(raw, options.bpm);
     const cleaned = this.filterPitchOutliers(monophonic);

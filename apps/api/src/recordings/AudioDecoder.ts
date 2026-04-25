@@ -36,6 +36,12 @@ export class AudioDecoder {
         'error',
         '-i',
         'pipe:0',
+        // 80 Hz high-pass clears sub-bass rumble that the onset head
+        // otherwise misreads as low-pitch onsets; loudnorm hits ~-16 LUFS
+        // with -3 dBFS true-peak ceiling so the model sees consistent
+        // signal level regardless of mic gain.
+        '-af',
+        'highpass=f=80,loudnorm=I=-16:TP=-3',
         '-f',
         'f32le',
         '-ac',
