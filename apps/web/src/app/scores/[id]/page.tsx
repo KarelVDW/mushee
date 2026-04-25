@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -397,19 +398,26 @@ export default function ScoreEditorPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-100">
-                <p className="text-gray-500">Loading score...</p>
+            <div className="flex min-h-screen items-center justify-center bg-surface text-on-surface">
+                <div className="text-center">
+                    <div className="text-[1.8rem] font-black tracking-tighter italic mb-[0.4rem]">Sheemu</div>
+                    <p className="text-[0.6rem] uppercase tracking-widest text-on-surface-variant font-bold">Loading score…</p>
+                </div>
             </div>
         )
     }
 
     if (error || !score) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-100">
+            <div className="flex min-h-screen items-center justify-center bg-surface text-on-surface">
                 <div className="text-center">
-                    <p className="text-red-600">{error ?? 'Score not found'}</p>
-                    <button type="button" onClick={() => router.push('/scores')} className="mt-4 text-sm text-blue-600 hover:underline">
-                        Back to scores
+                    <div className="text-[1.8rem] font-black tracking-tighter italic mb-[0.8rem]">Sheemu</div>
+                    <p className="text-error text-[0.9rem] mb-[1.2rem]">{error ?? 'Score not found'}</p>
+                    <button
+                        type="button"
+                        onClick={() => router.push('/scores')}
+                        className="text-secondary font-bold text-[0.6rem] uppercase tracking-widest hover:text-secondary-container transition-colors">
+                        ← Back to Library
                     </button>
                 </div>
             </div>
@@ -417,7 +425,19 @@ export default function ScoreEditorPage() {
     }
 
     return (
-        <div ref={containerRef} tabIndex={0} className="flex flex-col min-h-screen max-h-screen bg-gray-100 outline-none">
+        <div ref={containerRef} tabIndex={0} className="flex flex-col min-h-screen max-h-screen bg-surface text-on-surface outline-none">
+            {/* Top brand strip */}
+            <header className="flex justify-between items-center w-full px-8 py-[0.8rem] bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
+                <Link href="/scores" className="text-[1.4rem] font-black tracking-tighter text-on-surface italic">
+                    Sheemu
+                </Link>
+                <button
+                    type="button"
+                    onClick={() => router.push('/scores')}
+                    className="text-on-surface font-bold text-[0.6rem] uppercase tracking-widest hover:text-secondary transition-colors">
+                    ← Back to Library
+                </button>
+            </header>
             <ControlBar
                 accidental={activeNote?.pitch?.accidental}
                 duration={activeNote?.duration.type}
@@ -439,10 +459,9 @@ export default function ScoreEditorPage() {
                 onRecordToggle={() => void handleRecordToggle()}
                 metronome={metronome}
                 onMetronomeToggle={() => setMetronome((m) => !m)}
-                onBack={() => router.push('/scores')}
             />
-            <div className="flex-1 overflow-y-auto min-h-full px-8">
-                <div className="mx-auto max-w-4xl min-h-full bg-white shadow p-6">
+            <div className="flex-1 overflow-y-auto min-h-full px-8 py-[1.6rem] bg-surface">
+                <div className="mx-auto max-w-4xl min-h-full bg-surface-container-lowest p-6">
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}
