@@ -314,6 +314,28 @@ export class RecordingPipeline {
       }
     }
 
+    if (this.emittedNotes.length) {
+      const measures: Record<number, MxmlMeasure> = {};
+      const indices = new Set(
+        this.emittedNotes.map((n) =>
+          this.builder.measureIndexFor(n.startTimeSeconds),
+        ),
+      );
+      for (const idx of indices) {
+        measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
+      }
+      const scorePath = join(sessionDir, 'score.json');
+      try {
+        await writeFile(
+          scorePath,
+          JSON.stringify({ measures }, null, 2),
+          'utf8',
+        );
+      } catch (err) {
+        this.logger.warn(`Failed to write debug score: ${describeError(err)}`);
+      }
+    }
+
     this.logger.log(`Wrote debug bundle: ${sessionDir}`);
   }
 }
