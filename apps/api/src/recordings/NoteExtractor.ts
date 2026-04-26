@@ -1,8 +1,4 @@
-import {
-  NoteEventTime,
-  noteFramesToTime,
-  outputToNotesPoly,
-} from '@spotify/basic-pitch';
+import { NoteEventTime } from '@spotify/basic-pitch';
 
 /**
  * Common note lengths in beats, matching the front-end Duration table.
@@ -49,93 +45,33 @@ const MERGE_MAX_PITCH_DIFF = 1;
  */
 const OUTLIER_PITCH_DIFF_SEMITONES = 7;
 
-/**
- * basic-pitch tuning. Defaults match Spotify's Python CLI rather than the
- * looser TS-port defaults — see the project README's `outputToNotesPoly` notes.
- *
- * - Higher onset/frame thresholds suppress ghost notes.
- * - 11-frame minimum at 22050/256 hop ≈ 127 ms (drops sub-eighth-note blips).
- * - min/max frequency window cuts harmonic octave errors at the source.
- * - melodiaTrick disabled: it invents extra notes from sustained harmonics,
- *   which is harmful for monophonic sources.
- */
-const BASIC_PITCH_ONSET_THRESHOLD = 0.5;
-const BASIC_PITCH_FRAME_THRESHOLD = 0.3;
-const BASIC_PITCH_MIN_NOTE_LEN_FRAMES = 11;
-const BASIC_PITCH_INFER_ONSETS = true;
-/** Hz. ~C6, top of normal vocal range. */
-const BASIC_PITCH_MAX_FREQ = 1100;
-/** Hz. C2, bottom of normal vocal range. */
-const BASIC_PITCH_MIN_FREQ = 65;
-const BASIC_PITCH_MELODIA_TRICK = false;
-const BASIC_PITCH_ENERGY_TOLERANCE = 11;
-
 export interface ExtractOptions {
   bpm: number;
 }
 
 export interface ExtractedNotes {
-  /** Notes straight out of basic-pitch — noisy, possibly overlapping. */
+  /** Notes straight from the upstream provider — noisy, possibly overlapping. */
   raw: NoteEventTime[];
   /** Monophonic, beat-aligned, snapped to common note lengths. */
   deduced: NoteEventTime[];
 }
 
 /**
- * Cleans up basic-pitch's polyphonic frame output into a monophonic stream of
- * notes whose starts and lengths fit the front-end's score model:
+ * Provider-agnostic post-processor. Takes the raw note events emitted by a
+ * `PitchProvider` and produces a monophonic stream whose starts and lengths
+ * fit the front-end's score model:
  *   - one note at a time (overlap resolved by amplitude)
  *   - starts biased to integer beats, falling through halves/quarters/etc.
  *   - lengths snapped to {whole, dotted half, half, dotted quarter, quarter,
  *     dotted eighth, eighth, sixteenth}
  */
 export class NoteExtractor {
-  extract(
-    frames: number[][],
-    onsets: number[][],
-    options: ExtractOptions,
-  ): ExtractedNotes {
-    const rawNotes = outputToNotesPoly(
-      frames,
-      onsets,
-      BASIC_PITCH_ONSET_THRESHOLD,
-      BASIC_PITCH_FRAME_THRESHOLD,
-      BASIC_PITCH_MIN_NOTE_LEN_FRAMES,
-      BASIC_PITCH_INFER_ONSETS,
-      BASIC_PITCH_MAX_FREQ,
-      BASIC_PITCH_MIN_FREQ,
-      BASIC_PITCH_MELODIA_TRICK,
-      BASIC_PITCH_ENERGY_TOLERANCE,
-    );
-    const raw = noteFramesToTime(rawNotes);
+  extract(raw: NoteEventTime[], options: ExtractOptions): ExtractedNotes {
     const monophonic = this.selectMonophonic(raw, options.bpm);
     const cleaned = this.filterPitchOutliers(monophonic);
     const merged = this.mergeAdjacent(cleaned, options.bpm);
     const deduced = this.alignAndQuantize(merged, options.bpm);
     return { raw, deduced };
-  }
-
-  /**
-   * Drop notes that spike far from both neighbors in the same direction —
-   * classic symptom of basic-pitch mis-labeling the octave. We score every
-   * note against its *original* neighbors first, then remove in one pass, so
-   * consecutive outliers don't shield each other.
-   */
-  private filterPitchOutliers(notes: NoteEventTime[]): NoteEventTime[] {
-    if (notes.length < 3) return notes;
-    const outlierIndices = new Set<number>();
-    for (let i = 1; i < notes.length - 1; i++) {
-      const diffPrev = notes[i].pitchMidi - notes[i - 1].pitchMidi;
-      const diffNext = notes[i].pitchMidi - notes[i + 1].pitchMidi;
-      if (
-        Math.sign(diffPrev) === Math.sign(diffNext) &&
-        Math.abs(diffPrev) >= OUTLIER_PITCH_DIFF_SEMITONES &&
-        Math.abs(diffNext) >= OUTLIER_PITCH_DIFF_SEMITONES
-      ) {
-        outlierIndices.add(i);
-      }
-    }
-    return notes.filter((_, i) => !outlierIndices.has(i));
   }
 
   /**
@@ -184,6 +120,29 @@ export class NoteExtractor {
   }
 
   /**
+   * Drop notes that spike far from both neighbors in the same direction —
+   * classic symptom of basic-pitch mis-labeling the octave. We score every
+   * note against its *original* neighbors first, then remove in one pass, so
+   * consecutive outliers don't shield each other.
+   */
+  private filterPitchOutliers(notes: NoteEventTime[]): NoteEventTime[] {
+    if (notes.length < 3) return notes;
+    const outlierIndices = new Set<number>();
+    for (let i = 1; i < notes.length - 1; i++) {
+      const diffPrev = notes[i].pitchMidi - notes[i - 1].pitchMidi;
+      const diffNext = notes[i].pitchMidi - notes[i + 1].pitchMidi;
+      if (
+        Math.sign(diffPrev) === Math.sign(diffNext) &&
+        Math.abs(diffPrev) >= OUTLIER_PITCH_DIFF_SEMITONES &&
+        Math.abs(diffNext) >= OUTLIER_PITCH_DIFF_SEMITONES
+      ) {
+        outlierIndices.add(i);
+      }
+    }
+    return notes.filter((_, i) => !outlierIndices.has(i));
+  }
+
+  /**
    * Merge adjacent notes with same-or-near pitch (within a semitone) and a
    * small time gap iff merging gives us a cleaner bias fit than keeping them
    * separate. Catches basic-pitch splitting a held note into near-duplicates.
@@ -212,7 +171,10 @@ export class NoteExtractor {
         continue;
       }
 
-      const mergedEnd = Math.max(prevEnd, note.startTimeSeconds + note.durationSeconds);
+      const mergedEnd = Math.max(
+        prevEnd,
+        note.startTimeSeconds + note.durationSeconds,
+      );
       const louderIsNote = note.amplitude > prev.amplitude;
       const merged: NoteEventTime = {
         ...prev,
@@ -288,7 +250,6 @@ export class NoteExtractor {
       const snapStart = this.snapToGrid(startBeat);
       const rawDuration = Math.max(MIN_DURATION_BEATS, endBeat - snapStart);
 
-      // Cap to whatever's available before the next note's snapped start.
       let maxAvailable = Number.POSITIVE_INFINITY;
       const next = notes[i + 1];
       if (next) {
@@ -328,7 +289,6 @@ export class NoteExtractor {
     let best = STANDARD_DURATION_BEATS[STANDARD_DURATION_BEATS.length - 1];
     let bestDist = Math.abs(beats - best);
     for (const candidate of STANDARD_DURATION_BEATS) {
-      // Never round UP past what's available.
       if (candidate > beats + 1e-6) continue;
       const dist = Math.abs(beats - candidate);
       if (dist < bestDist) {

@@ -1,13 +1,13 @@
 import { Logger } from '@nestjs/common';
-import { BasicPitch, NoteEventTime } from '@spotify/basic-pitch';
-import type { GraphModel } from '@tensorflow/tfjs';
+import { NoteEventTime } from '@spotify/basic-pitch';
 import { mkdir, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
+import { AudioConverter } from './AudioConverter';
 import { AudioDecoder, DecodedAudio } from './AudioDecoder';
 import type { MxmlMeasure } from './mxml.types';
 import { MxmlBuilder, PendingNote } from './MxmlBuilder';
-import { NoteExtractor } from './NoteExtractor';
+import { ExtractedNotes } from './NoteExtractor';
 import { RecordingDebugRenderer } from './RecordingDebugRenderer';
 
 const DEFAULT_BPM = 120;
@@ -31,13 +31,12 @@ function describeError(err: unknown): string {
 
 /**
  * One pipeline per recording session. Buffers raw WebM chunks, periodically
- * re-decodes the cumulative buffer, runs basic-pitch, and emits MxmlMeasure
- * deltas to the caller as notes settle.
+ * re-decodes the cumulative buffer, runs the configured `AudioConverter`,
+ * and emits MxmlMeasure deltas to the caller as notes settle.
  */
 export class RecordingPipeline {
   private readonly logger = new Logger(RecordingPipeline.name);
   private readonly decoder = new AudioDecoder();
-  private readonly extractor = new NoteExtractor();
 
   private readonly chunks: Buffer[] = [];
   private readonly emittedNotes: PendingNote[] = [];
@@ -70,7 +69,7 @@ export class RecordingPipeline {
   private debounceTimer: NodeJS.Timeout | null = null;
   private onUpdate: (update: ScoreUpdate) => void = () => {};
 
-  constructor(private readonly modelPromise: Promise<GraphModel>) {}
+  constructor(private readonly converter: AudioConverter) {}
 
   setMeta(meta: {
     bpm?: number;
@@ -158,7 +157,10 @@ export class RecordingPipeline {
 
     let decoded: DecodedAudio;
     try {
-      decoded = await this.decoder.decode(buffer);
+      decoded = await this.decoder.decode(
+        buffer,
+        this.converter.provider.sampleRate,
+      );
     } catch (err) {
       this.logger.debug(`Cannot decode buffer yet (${describeError(err)})`);
       return;
@@ -166,54 +168,40 @@ export class RecordingPipeline {
     const tDecode = Date.now();
     if (!this.timings.firstDecodeAt) this.timings.firstDecodeAt = tDecode;
 
-    const model = await this.modelPromise;
-    const tModelReady = Date.now();
-    const basicPitch = new BasicPitch(Promise.resolve(model));
-    const frames: number[][] = [];
-    const onsets: number[][] = [];
     const duration = decoded.duration;
     let emitMs = 0;
+    let emitCount = 0;
 
-    await basicPitch.evaluateModel(
+    await this.converter.convert(
       decoded.samples,
-      (f, o) => {
-        frames.push(...f);
-        onsets.push(...o);
+      { bpm: this.bpm },
+      (extracted) => {
         const t0 = Date.now();
-        this.emitFromState(frames, onsets, duration, isFinal);
+        this.emitFromExtracted(extracted, duration, isFinal);
         emitMs += Date.now() - t0;
+        emitCount += 1;
       },
-      () => {},
     );
-    const tModelDone = Date.now();
-
-    const tFinalEmitStart = Date.now();
-    this.emitFromState(frames, onsets, duration, isFinal);
-    emitMs += Date.now() - tFinalEmitStart;
     const tEnd = Date.now();
 
     this.logger.debug(
       `Pass timings: concat=${tConcat - tStart}ms, ` +
         `decode=${tDecode - tConcat}ms, ` +
-        `model-wait=${tModelReady - tDecode}ms, ` +
-        `model-eval=${tModelDone - tModelReady - emitMs}ms, ` +
-        `emit=${emitMs}ms, ` +
+        `convert=${tEnd - tDecode - emitMs}ms, ` +
+        `emit=${emitMs}ms (${emitCount}x), ` +
         `total=${tEnd - tStart}ms ` +
         `(audioDur=${duration.toFixed(2)}s, bytes=${buffer.byteLength}, final=${isFinal})`,
     );
   }
 
-  private emitFromState(
-    frames: number[][],
-    onsets: number[][],
+  private emitFromExtracted(
+    extracted: ExtractedNotes,
     duration: number,
     isFinal: boolean,
   ): void {
-    if (!frames.length || !onsets.length) return;
+    const { raw, deduced } = extracted;
+    if (!raw.length && !deduced.length) return;
 
-    const { raw, deduced } = this.extractor.extract(frames, onsets, {
-      bpm: this.bpm,
-    });
     this.lastRawNotes = raw;
     this.lastDuration = duration;
     const cutoff = duration - (isFinal ? 0 : STABLE_MARGIN_SEC);

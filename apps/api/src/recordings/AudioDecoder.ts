@@ -2,8 +2,6 @@ import { spawn } from 'child_process';
 
 import ffmpegPath from 'ffmpeg-static';
 
-export const TARGET_SAMPLE_RATE = 22050;
-
 export interface DecodedAudio {
   samples: Float32Array;
   sampleRate: number;
@@ -12,7 +10,7 @@ export interface DecodedAudio {
 
 /**
  * Decodes an arbitrary audio container (WebM/Opus, MP3, WAV, ...) to mono
- * 32-bit float PCM at basic-pitch's required sample rate, via ffmpeg.
+ * 32-bit float PCM at the requested sample rate, via ffmpeg.
  *
  * Tolerates truncated / still-streaming inputs — ffmpeg decodes the parts it
  * can parse and exits with an error on the tail, which we ignore as long as
@@ -28,7 +26,7 @@ export class AudioDecoder {
     this.ffmpeg = ffmpegPath;
   }
 
-  decode(buffer: Buffer): Promise<DecodedAudio> {
+  decode(buffer: Buffer, targetSampleRate: number): Promise<DecodedAudio> {
     return new Promise<DecodedAudio>((resolve, reject) => {
       const proc = spawn(this.ffmpeg, [
         '-hide_banner',
@@ -47,7 +45,7 @@ export class AudioDecoder {
         '-ac',
         '1',
         '-ar',
-        String(TARGET_SAMPLE_RATE),
+        String(targetSampleRate),
         'pipe:1',
       ]);
 
@@ -77,8 +75,8 @@ export class AudioDecoder {
         );
         resolve({
           samples,
-          sampleRate: TARGET_SAMPLE_RATE,
-          duration: samples.length / TARGET_SAMPLE_RATE,
+          sampleRate: targetSampleRate,
+          duration: samples.length / targetSampleRate,
         });
       });
 
