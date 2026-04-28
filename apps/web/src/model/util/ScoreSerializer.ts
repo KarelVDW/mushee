@@ -26,14 +26,19 @@ export class MeasureSerializer {
     serialize() {
         const entries: MxmlMeasureEntry[] = []
 
-        const previousClef = this.measure.score.getPreviousMeasure(this.measure)?.clef
+        const previousMeasure = this.measure.score.getPreviousMeasure(this.measure)
+        const previousClef = previousMeasure?.clef
+        const previousTimeSignature = previousMeasure?.timeSignature
         const clefChanged = previousClef?.type !== this.measure.clef.type
-        if (clefChanged || this.measure.timeSignature || this.measure.keySignature) {
+        const timeSignatureChanged =
+            previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
+            previousTimeSignature?.beatType !== this.measure.timeSignature.beatType
+        if (clefChanged || timeSignatureChanged || this.measure.keySignature) {
             entries.push({
                 _type: 'attributes' as const,
                 divisions: DIVISIONS,
                 ...(clefChanged && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
-                ...(this.measure.timeSignature && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
+                ...(timeSignatureChanged && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
                 ...(this.measure.keySignature && {
                     key: [{ fifths: this.measure.keySignature.fifths, ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }) }],
                 }),

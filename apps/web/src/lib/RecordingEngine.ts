@@ -265,7 +265,7 @@ export class RecordingEngine implements Tickable {
         })
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN && this.options) {
-            const ts = this.options.score.getActiveTimeSignature(this.options.startMeasureIndex)
+            const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
             this.ws.send(
                 JSON.stringify({
                     type: 'meta',

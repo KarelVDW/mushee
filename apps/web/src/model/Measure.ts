@@ -12,7 +12,7 @@ import { Note } from './Note'
 import { PhysicalElement } from './PhysicalElement'
 import type { Score } from './Score'
 import { Tempo } from './Tempo'
-import type { TimeSignature } from './TimeSignature'
+import { TimeSignature } from './TimeSignature'
 import { Tuplet } from './Tuplet'
 import { BeamFinder } from './util/BeamFinder'
 import { TupletFinder } from './util/TupletFinder'
@@ -22,7 +22,8 @@ export class Measure {
     private _notes: Note[] = []
     private _clef: Clef
     private _showsClef: boolean = false
-    private _timeSignature?: TimeSignature
+    private _timeSignature: TimeSignature
+    private _showsTimeSignature: boolean = false
     private _keySignature?: KeySignature
     private _endBarline?: BarlineType
     private _tempos: Tempo[] = []
@@ -39,6 +40,7 @@ export class Measure {
     constructor(
         readonly score: Score,
         clef: Clef,
+        timeSignature: TimeSignature,
         value?: {
             keySignature?: KeySignature
             endBarline?: BarlineType
@@ -46,6 +48,8 @@ export class Measure {
     ) {
         this._clef = clef
         this._clef.setMeasure(this)
+        this._timeSignature = timeSignature
+        this._timeSignature.setMeasure(this)
         this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
     }
@@ -134,6 +138,10 @@ export class Measure {
         return this._timeSignature
     }
 
+    get showsTimeSignature() {
+        return this._showsTimeSignature
+    }
+
     get keySignature() {
         return this._keySignature
     }
@@ -169,12 +177,19 @@ export class Measure {
     }
 
     get maxBeats(): number {
-        return this.score.getActiveTimeSignature(this.index)?.maxBeats ?? 4
+        return this._timeSignature.maxBeats
     }
 
-    setTimeSignature(timeSignature: TimeSignature | undefined) {
+    setTimeSignature(timeSignature: TimeSignature) {
         this._timeSignature = timeSignature
-        this._timeSignature?.setMeasure(this)
+        this._timeSignature.setMeasure(this)
+        this.rebuildPhysicalElements()
+    }
+
+    setShowsTimeSignature(value: boolean) {
+        if (this._showsTimeSignature === value) return
+        this._showsTimeSignature = value
+        this.rebuildPhysicalElements()
     }
 
     setKeySignature(keySignature: KeySignature | undefined) {
@@ -287,7 +302,11 @@ export class Measure {
     }
 
     private rebuildPhysicalElements() {
-        this._physicalElements = compact([this._showsClef ? this._clef : undefined, this._timeSignature, ...this._notes])
+        this._physicalElements = compact([
+            this._showsClef ? this._clef : undefined,
+            this._showsTimeSignature ? this._timeSignature : undefined,
+            ...this._notes,
+        ])
         const widthSum = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
         const absoluteMinimum = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
         this._minimalWidth = widthSum > absoluteMinimum ? widthSum : absoluteMinimum

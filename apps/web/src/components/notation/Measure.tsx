@@ -27,7 +27,7 @@ export const Measure = memo(function Measure({ measure, selectedNote, hoveredNot
                 </g>
             )}
 
-            {measure.timeSignature && (
+            {measure.showsTimeSignature && (
                 <g transform={`translate(${measure.layout.getXForElement(measure.timeSignature)}, 0)`}>
                     <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />
                 </g>

@@ -29,6 +29,7 @@ export class ScoreDeserializer {
         if (!part) return score
 
         let activeClef: Clef = new Clef('treble')
+        let activeTimeSignature: TimeSignature = new TimeSignature(4, 4)
         for (let mi = 0; mi < part.measures.length; mi++) {
             const mxmlMeasure = part.measures[mi]
             let clef: Clef | undefined
@@ -70,8 +71,8 @@ export class ScoreDeserializer {
             }
 
             if (clef) activeClef = clef
-            const measure = new Measure(score, activeClef, { keySignature, endBarline })
-            measure.setTimeSignature(timeSignature)
+            if (timeSignature) activeTimeSignature = timeSignature
+            const measure = new Measure(score, activeClef, activeTimeSignature, { keySignature, endBarline })
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
                 const note = notes[noteIndex]

@@ -115,15 +115,6 @@ export class Score {
         return this.rows[this.rows.length - 1] ?? null
     }
 
-    /** Resolve the active time signature at a given measure index by walking backwards. */
-    getActiveTimeSignature(measureIndex: number): TimeSignature | undefined {
-        for (let i = measureIndex; i >= 0; i--) {
-            const ts = this.measures[i].timeSignature
-            if (ts) return ts
-        }
-        return undefined
-    }
-
     getNextMeasure(measure?: Measure): Measure | null {
         if (!measure) return this.firstMeasure
         const measureIndex = this._indexByMeasure.get(measure)
@@ -137,10 +128,12 @@ export class Score {
         return this.measures[measureIndex - 1] ?? null
     }
 
-    addMeasure(index = this.measures.length, measure?: Measure, ) {
+    addMeasure(index = this.measures.length, measure?: Measure) {
         if (!measure) {
-            const inheritedClef = this.measures[index - 1]?.clef ?? new Clef('treble')
-            measure = new Measure(this, inheritedClef)
+            const previous = this.measures[index - 1]
+            const inheritedClef = previous?.clef ?? new Clef('treble')
+            const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
+            measure = new Measure(this, inheritedClef, inheritedTimeSignature)
         }
         this.measures.splice(index, 0, measure)
         this._rebuildIndexMap()
@@ -190,9 +183,14 @@ export class Score {
         this._rows = []
         this._rowByMeasure.clear()
         let prevClef: Clef | undefined
+        let prevTimeSignature: TimeSignature | undefined
         for (const measure of this.measures) {
-            const intrinsicShows = !prevClef || prevClef.type !== measure.clef.type
-            measure.setShowsClef(intrinsicShows)
+            measure.setShowsClef(!prevClef || prevClef.type !== measure.clef.type)
+            measure.setShowsTimeSignature(
+                !prevTimeSignature ||
+                    prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
+                    prevTimeSignature.beatType !== measure.timeSignature.beatType,
+            )
             let row = last(this._rows)
             if (!row || !row.canFit(measure)) {
                 row = new Row(this, this._rows.length)
@@ -202,6 +200,7 @@ export class Score {
             row.addMeasure(measure)
             this._rowByMeasure.set(measure, row)
             prevClef = measure.clef
+            prevTimeSignature = measure.timeSignature
         }
     }
 
