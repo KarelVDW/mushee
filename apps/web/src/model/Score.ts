@@ -16,7 +16,6 @@ export class Score {
     private _rows: Row[] = []
     private _rowByMeasure: Map<Measure, Row> = new Map()
     private _indexByMeasure: Map<Measure, number> = new Map()
-    private _clefByMeasure: Map<Measure, Clef> = new Map()
     private _tiesByNote: Map<Note, Tie> = new Map()
     private onChange: () => void
     private _dirtyMeasures = new Set<Measure>()
@@ -116,10 +115,6 @@ export class Score {
         return this.rows[this.rows.length - 1] ?? null
     }
 
-    getClefForMeasure(measure: Measure): Clef | undefined {
-        return this._clefByMeasure.get(measure)
-    }
-
     /** Resolve the active time signature at a given measure index by walking backwards. */
     getActiveTimeSignature(measureIndex: number): TimeSignature | undefined {
         for (let i = measureIndex; i >= 0; i--) {
@@ -142,7 +137,11 @@ export class Score {
         return this.measures[measureIndex - 1] ?? null
     }
 
-    addMeasure(measure = new Measure(this), index = this.measures.length) {
+    addMeasure(index = this.measures.length, measure?: Measure, ) {
+        if (!measure) {
+            const inheritedClef = this.measures[index - 1]?.clef ?? new Clef('treble')
+            measure = new Measure(this, inheritedClef)
+        }
         this.measures.splice(index, 0, measure)
         this._rebuildIndexMap()
         const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
@@ -153,7 +152,6 @@ export class Score {
             previousMeasure?.setEndBarline('single')
             measure.setEndBarline('end')
         }
-        this._rebuildClefMap()
         this._rebuildRows()
         this._rebuildTies()
         this.markStructureChanged()
@@ -166,7 +164,6 @@ export class Score {
         if (removed) {
             for (const note of removed.notes) this._removeTieEntriesFor(note)
             this._rowByMeasure.delete(removed)
-            this._clefByMeasure.delete(removed)
             this._indexByMeasure.delete(removed)
             const lastRow = last(this._rows)
             if (lastRow) {
@@ -189,29 +186,22 @@ export class Score {
         this.measures.forEach((m, i) => this._indexByMeasure.set(m, i))
     }
 
-    private _rebuildClefMap() {
-        this._clefByMeasure.clear()
-        let active: Clef | undefined
-        for (const measure of this.measures) {
-            if (measure.clef) active = measure.clef
-            if (active) this._clefByMeasure.set(measure, active)
-        }
-    }
-
     private _rebuildRows() {
         this._rows = []
         this._rowByMeasure.clear()
+        let prevClef: Clef | undefined
         for (const measure of this.measures) {
-            measure.setRowStartClef(undefined)
+            const intrinsicShows = !prevClef || prevClef.type !== measure.clef.type
+            measure.setShowsClef(intrinsicShows)
             let row = last(this._rows)
             if (!row || !row.canFit(measure)) {
-                const activeClef = this._clefByMeasure.get(measure)
-                if (!measure.clef && activeClef) measure.setRowStartClef(activeClef)
                 row = new Row(this, this._rows.length)
                 this._rows.push(row)
+                measure.setShowsClef(true)
             }
             row.addMeasure(measure)
             this._rowByMeasure.set(measure, row)
+            prevClef = measure.clef
         }
     }
 

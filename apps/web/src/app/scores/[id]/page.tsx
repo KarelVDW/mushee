@@ -14,7 +14,6 @@ import { RecordingEngine, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
 import { Duration, type Note, Pitch, Score } from '@/model'
-import { Measure } from '@/model/Measure'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import { ControlBar } from './ControlBar'
@@ -332,7 +331,7 @@ export default function ScoreEditorPage() {
         let measureIndex = activeNote.measure.index
         setActiveNote(null)
         const startIndex = measureIndex
-        score.addMeasure(new Measure(score), measureIndex++).complete()
+        score.addMeasure(measureIndex++).complete()
         saveToApi({ score })
 
         met.score = score
@@ -350,8 +349,7 @@ export default function ScoreEditorPage() {
             return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
         }
 
-        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000')
-            .replace(/^http/, 'ws') + '/recording'
+        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/^http/, 'ws') + '/recording'
 
         try {
             await engine.start({
@@ -363,7 +361,7 @@ export default function ScoreEditorPage() {
                 wsUrl,
                 onStateChange: setRecordingState,
                 onNeedNewMeasure: () => {
-                    score.addMeasure(new Measure(score), measureIndex++).complete()
+                    score.addMeasure(measureIndex++).complete()
                     saveToApi({ score })
                 },
                 onScoreUpdate: ({ measures }) => {

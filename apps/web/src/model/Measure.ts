@@ -20,8 +20,8 @@ import { TupletFinder } from './util/TupletFinder'
 export class Measure {
     readonly id = crypto.randomUUID()
     private _notes: Note[] = []
-    private _clef?: Clef
-    private _rowStartClef?: Clef
+    private _clef: Clef
+    private _showsClef: boolean = false
     private _timeSignature?: TimeSignature
     private _keySignature?: KeySignature
     private _endBarline?: BarlineType
@@ -38,12 +38,14 @@ export class Measure {
 
     constructor(
         readonly score: Score,
+        clef: Clef,
         value?: {
             keySignature?: KeySignature
             endBarline?: BarlineType
         },
     ) {
-
+        this._clef = clef
+        this._clef.setMeasure(this)
         this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
     }
@@ -52,14 +54,15 @@ export class Measure {
         return this.score.getIndexForMeasure(this)
     }
 
-    setClef(clef: Clef | undefined) {
+    setClef(clef: Clef) {
         this._clef = clef
-        this._clef?.setMeasure(this)
+        this._clef.setMeasure(this)
+        this.rebuildPhysicalElements()
     }
 
-    setRowStartClef(clef: Clef | undefined) {
-        this._rowStartClef = clef
-        this._rowStartClef?.setMeasure(this)
+    setShowsClef(value: boolean) {
+        if (this._showsClef === value) return
+        this._showsClef = value
         this.rebuildPhysicalElements()
     }
 
@@ -123,8 +126,8 @@ export class Measure {
         return this._clef
     }
 
-    get displayClef() {
-        return this._clef ?? this._rowStartClef
+    get showsClef() {
+        return this._showsClef
     }
 
     get timeSignature() {
@@ -284,7 +287,7 @@ export class Measure {
     }
 
     private rebuildPhysicalElements() {
-        this._physicalElements = compact([this._clef ?? this._rowStartClef, this._timeSignature, ...this._notes])
+        this._physicalElements = compact([this._showsClef ? this._clef : undefined, this._timeSignature, ...this._notes])
         const widthSum = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
         const absoluteMinimum = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
         this._minimalWidth = widthSum > absoluteMinimum ? widthSum : absoluteMinimum

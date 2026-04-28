@@ -21,9 +21,9 @@ interface MeasureProps {
 export const Measure = memo(function Measure({ measure, selectedNote, hoveredNote }: MeasureProps) {
     return (
         <>
-            {measure.displayClef && (
-                <g transform={`translate(${measure.layout.getXForElement(measure.displayClef)}, 0)`}>
-                    <Clef clef={measure.displayClef} layoutId={measure.displayClef.layout.id} />
+            {measure.showsClef && (
+                <g transform={`translate(${measure.layout.getXForElement(measure.clef)}, 0)`}>
+                    <Clef clef={measure.clef} layoutId={measure.clef.layout.id} />
                 </g>
             )}
 

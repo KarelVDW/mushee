@@ -26,11 +26,13 @@ export class MeasureSerializer {
     serialize() {
         const entries: MxmlMeasureEntry[] = []
 
-        if (this.measure.clef || this.measure.timeSignature || this.measure.keySignature) {
+        const previousClef = this.measure.score.getPreviousMeasure(this.measure)?.clef
+        const clefChanged = previousClef?.type !== this.measure.clef.type
+        if (clefChanged || this.measure.timeSignature || this.measure.keySignature) {
             entries.push({
                 _type: 'attributes' as const,
                 divisions: DIVISIONS,
-                ...(this.measure.clef && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
+                ...(clefChanged && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
                 ...(this.measure.timeSignature && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
                 ...(this.measure.keySignature && {
                     key: [{ fifths: this.measure.keySignature.fifths, ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }) }],
