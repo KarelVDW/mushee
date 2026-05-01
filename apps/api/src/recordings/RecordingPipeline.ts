@@ -160,6 +160,7 @@ export class RecordingPipeline {
       decoded = await this.decoder.decode(
         buffer,
         this.converter.provider.sampleRate,
+        { loudnorm: this.converter.provider.normalizeLoudness },
       );
     } catch (err) {
       this.logger.debug(`Cannot decode buffer yet (${describeError(err)})`);

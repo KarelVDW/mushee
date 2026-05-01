@@ -8,7 +8,8 @@ import type { PitchProvider } from './providers/PitchProvider';
 import { RecordingPipeline } from './RecordingPipeline';
 
 const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
-const DEFAULT_CREPE_MODEL_DIR = resolve(process.cwd(), 'model-crepe');
+const DEFAULT_CREPE_FULL_DIR = resolve(process.cwd(), 'model-crepe-full');
+const DEFAULT_CREPE_TINY_DIR = resolve(process.cwd(), 'model-crepe-tiny');
 
 @Injectable()
 export class RecordingsService implements OnModuleInit {
@@ -19,25 +20,38 @@ export class RecordingsService implements OnModuleInit {
     const modelDir = process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR;
     // ============================================================
     //  PITCH PROVIDER — set PITCH_PROVIDER env var to swap, or change
-    //  the default below. Both implement `PitchProvider`.
+    //  the default below. All implement `PitchProvider`.
     //   - basic-pitch: polyphonic Spotify ML model, ~1.5s/pass
-    //   - yin:         pure-JS YIN, monophonic-by-design, instant init
+    //   - crepe-full:  CREPE n=32 (~85 MB), best accuracy, slow on WASM
+    //   - crepe-tiny:  CREPE n=4  (~2 MB),  ~30× faster, lower accuracy
+    //   - crepe:       alias for crepe-full
     // ============================================================
-    const crepeDir =
-      process.env.CREPE_MODEL_DIR ?? DEFAULT_CREPE_MODEL_DIR;
+    const crepeFullDir =
+      process.env.CREPE_FULL_MODEL_DIR ?? DEFAULT_CREPE_FULL_DIR;
+    const crepeTinyDir =
+      process.env.CREPE_TINY_MODEL_DIR ?? DEFAULT_CREPE_TINY_DIR;
     const choice = (process.env.PITCH_PROVIDER ?? 'basic-pitch').toLowerCase();
-    this.provider = this.buildProvider(choice, modelDir, crepeDir);
+    this.provider = this.buildProvider(
+      choice,
+      modelDir,
+      crepeFullDir,
+      crepeTinyDir,
+    );
     this.logger.log(`Pitch provider: ${this.provider.name}`);
   }
 
   private buildProvider(
     choice: string,
     basicPitchDir: string,
-    crepeDir: string,
+    crepeFullDir: string,
+    crepeTinyDir: string,
   ): PitchProvider {
     switch (choice) {
       case 'crepe':
-        return new CrepeProvider(crepeDir);
+      case 'crepe-full':
+        return new CrepeProvider(crepeFullDir, 'crepe-full');
+      case 'crepe-tiny':
+        return new CrepeProvider(crepeTinyDir, 'crepe-tiny');
       case 'basic-pitch':
       default:
         return new BasicPitchProvider(basicPitchDir);

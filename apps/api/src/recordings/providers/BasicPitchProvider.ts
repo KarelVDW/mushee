@@ -35,6 +35,7 @@ const TARGET_SAMPLE_RATE = 22050;
 export class BasicPitchProvider implements PitchProvider {
   readonly name = 'basic-pitch';
   readonly sampleRate = TARGET_SAMPLE_RATE;
+  readonly normalizeLoudness = true;
 
   private readonly logger = new Logger(BasicPitchProvider.name);
   private readonly loader: BasicPitchModelLoader;
@@ -46,6 +47,10 @@ export class BasicPitchProvider implements PitchProvider {
 
   async init(): Promise<void> {
     await this.loader.load();
+  }
+
+  createSession(): undefined {
+    return undefined;
   }
 
   async transcribe(

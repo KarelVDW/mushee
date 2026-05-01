@@ -12,3 +12,4 @@ out/
 logs
 *.log
 apps/api/debug/
+apps/api/.venv-crepe/

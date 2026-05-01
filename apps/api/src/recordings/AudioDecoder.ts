@@ -8,6 +8,18 @@ export interface DecodedAudio {
   duration: number;
 }
 
+export interface DecodeOptions {
+  /**
+   * Apply ffmpeg's `loudnorm` filter (~-16 LUFS, -3 dBFS true-peak ceiling).
+   * Stabilizes amplitude for downstream consumers that care, but DEPENDS ON
+   * THE FULL INPUT — re-decoding a longer prefix of the same stream will
+   * change earlier output samples, breaking any per-frame caching the
+   * provider does. Disable when the caller needs prefix-stable output.
+   * Defaults to true.
+   */
+  loudnorm?: boolean;
+}
+
 /**
  * Decodes an arbitrary audio container (WebM/Opus, MP3, WAV, ...) to mono
  * 32-bit float PCM at the requested sample rate, via ffmpeg.
@@ -26,7 +38,19 @@ export class AudioDecoder {
     this.ffmpeg = ffmpegPath;
   }
 
-  decode(buffer: Buffer, targetSampleRate: number): Promise<DecodedAudio> {
+  decode(
+    buffer: Buffer,
+    targetSampleRate: number,
+    opts?: DecodeOptions,
+  ): Promise<DecodedAudio> {
+    // 80 Hz high-pass clears sub-bass rumble that the onset head otherwise
+    // misreads as low-pitch onsets. It's a causal IIR, so the prefix of its
+    // output is stable across re-runs with longer inputs. loudnorm is
+    // optional because it's a look-ahead filter and breaks that property.
+    const filters = ['highpass=f=80'];
+    if (opts?.loudnorm ?? true) filters.push('loudnorm=I=-16:TP=-3');
+    const filterChain = filters.join(',');
+
     return new Promise<DecodedAudio>((resolve, reject) => {
       const proc = spawn(this.ffmpeg, [
         '-hide_banner',
@@ -34,12 +58,8 @@ export class AudioDecoder {
         'error',
         '-i',
         'pipe:0',
-        // 80 Hz high-pass clears sub-bass rumble that the onset head
-        // otherwise misreads as low-pitch onsets; loudnorm hits ~-16 LUFS
-        // with -3 dBFS true-peak ceiling so the model sees consistent
-        // signal level regardless of mic gain.
         '-af',
-        'highpass=f=80,loudnorm=I=-16:TP=-3',
+        filterChain,
         '-f',
         'f32le',
         '-ac',
