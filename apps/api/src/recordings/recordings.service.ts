@@ -4,12 +4,14 @@ import { resolve } from 'path';
 import { AudioConverter } from './AudioConverter';
 import { BasicPitchProvider } from './providers/BasicPitchProvider';
 import { CrepeProvider } from './providers/CrepeProvider';
+import { PestoProvider } from './providers/PestoProvider';
 import type { PitchProvider } from './providers/PitchProvider';
 import { RecordingPipeline } from './RecordingPipeline';
 
 const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
 const DEFAULT_CREPE_FULL_DIR = resolve(process.cwd(), 'model-crepe-full');
 const DEFAULT_CREPE_TINY_DIR = resolve(process.cwd(), 'model-crepe-tiny');
+const DEFAULT_PESTO_DIR = resolve(process.cwd(), 'model-pesto');
 
 @Injectable()
 export class RecordingsService implements OnModuleInit {
@@ -25,17 +27,20 @@ export class RecordingsService implements OnModuleInit {
     //   - crepe-full:  CREPE n=32 (~85 MB), best accuracy, slow on WASM
     //   - crepe-tiny:  CREPE n=4  (~2 MB),  ~30× faster, lower accuracy
     //   - crepe:       alias for crepe-full
+    //   - pesto:       PESTO mir-1k_g7 ONNX, ~30k params, self-supervised
     // ============================================================
     const crepeFullDir =
       process.env.CREPE_FULL_MODEL_DIR ?? DEFAULT_CREPE_FULL_DIR;
     const crepeTinyDir =
       process.env.CREPE_TINY_MODEL_DIR ?? DEFAULT_CREPE_TINY_DIR;
+    const pestoDir = process.env.PESTO_MODEL_DIR ?? DEFAULT_PESTO_DIR;
     const choice = (process.env.PITCH_PROVIDER ?? 'basic-pitch').toLowerCase();
     this.provider = this.buildProvider(
       choice,
       modelDir,
       crepeFullDir,
       crepeTinyDir,
+      pestoDir,
     );
     this.logger.log(`Pitch provider: ${this.provider.name}`);
   }
@@ -45,6 +50,7 @@ export class RecordingsService implements OnModuleInit {
     basicPitchDir: string,
     crepeFullDir: string,
     crepeTinyDir: string,
+    pestoDir: string,
   ): PitchProvider {
     switch (choice) {
       case 'crepe':
@@ -52,6 +58,8 @@ export class RecordingsService implements OnModuleInit {
         return new CrepeProvider(crepeFullDir, 'crepe-full');
       case 'crepe-tiny':
         return new CrepeProvider(crepeTinyDir, 'crepe-tiny');
+      case 'pesto':
+        return new PestoProvider(pestoDir);
       case 'basic-pitch':
       default:
         return new BasicPitchProvider(basicPitchDir);

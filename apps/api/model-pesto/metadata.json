@@ -1,0 +1,9 @@
+{
+  "checkpoint": "mir-1k_g7",
+  "sampling_rate": 16000,
+  "hop_samples": 160,
+  "step_size_ms": 10.0,
+  "bins_per_semitone": 3,
+  "num_bins": 384,
+  "cache_size": 1968
+}

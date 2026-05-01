@@ -13,3 +13,4 @@ logs
 *.log
 apps/api/debug/
 apps/api/.venv-crepe/
+apps/api/.venv-pesto/
