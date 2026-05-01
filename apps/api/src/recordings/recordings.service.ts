@@ -58,11 +58,11 @@ export class RecordingsService implements OnModuleInit {
         return new CrepeProvider(crepeFullDir, 'crepe-full');
       case 'crepe-tiny':
         return new CrepeProvider(crepeTinyDir, 'crepe-tiny');
-      case 'pesto':
-        return new PestoProvider(pestoDir);
-      case 'basic-pitch':
-      default:
-        return new BasicPitchProvider(basicPitchDir);
+        case 'basic-pitch':
+          return new BasicPitchProvider(basicPitchDir);
+          default:
+        case 'pesto':
+          return new PestoProvider(pestoDir);
     }
   }
 
