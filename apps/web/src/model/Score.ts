@@ -20,6 +20,7 @@ export class Score {
     private onChange: () => void
     private _dirtyMeasures = new Set<Measure>()
     private _structureChanged = false
+    private _rebuildingRows = false
 
     constructor(onChange?: () => void) {
         this.onChange = () => {
@@ -180,28 +181,47 @@ export class Score {
     }
 
     private _rebuildRows() {
-        this._rows = []
-        this._rowByMeasure.clear()
-        let prevClef: Clef | undefined
-        let prevTimeSignature: TimeSignature | undefined
-        for (const measure of this.measures) {
-            measure.setShowsClef(!prevClef || prevClef.type !== measure.clef.type)
-            measure.setShowsTimeSignature(
-                !prevTimeSignature ||
-                    prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
-                    prevTimeSignature.beatType !== measure.timeSignature.beatType,
-            )
-            let row = last(this._rows)
-            if (!row || !row.canFit(measure)) {
-                row = new Row(this, this._rows.length)
-                this._rows.push(row)
-                measure.setShowsClef(true)
+        this._rebuildingRows = true
+        try {
+            this._rows = []
+            this._rowByMeasure.clear()
+            let prevClef: Clef | undefined
+            let prevTimeSignature: TimeSignature | undefined
+            for (const measure of this.measures) {
+                measure.setShowsClef(!prevClef || prevClef.type !== measure.clef.type)
+                measure.setShowsTimeSignature(
+                    !prevTimeSignature ||
+                        prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
+                        prevTimeSignature.beatType !== measure.timeSignature.beatType,
+                )
+                let row = last(this._rows)
+                if (!row || !row.canFit(measure)) {
+                    row = new Row(this, this._rows.length)
+                    this._rows.push(row)
+                    measure.setShowsClef(true)
+                }
+                row.addMeasure(measure)
+                this._rowByMeasure.set(measure, row)
+                prevClef = measure.clef
+                prevTimeSignature = measure.timeSignature
             }
-            row.addMeasure(measure)
-            this._rowByMeasure.set(measure, row)
-            prevClef = measure.clef
-            prevTimeSignature = measure.timeSignature
+        } finally {
+            this._rebuildingRows = false
         }
+    }
+
+    /**
+     * Called by a Measure when its minimalWidth changes. Re-runs row composition
+     * so that a measure that has grown past what its row can hold is pushed onto
+     * a new row (preventing ResizeError in RowLayout). Re-entry from inside
+     * _rebuildRows itself is suppressed.
+     */
+    onMeasureWidthChanged(measure: Measure) {
+        if (this._rebuildingRows) return
+        if (!this._indexByMeasure.has(measure)) return
+        this._rebuildRows()
+        this._rebuildTies()
+        this.invalidateLayout()
     }
 
     private _rebuildTies() {

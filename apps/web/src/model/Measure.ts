@@ -309,7 +309,11 @@ export class Measure {
         ])
         const widthSum = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
         const absoluteMinimum = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
+        const previousMinimalWidth = this._minimalWidth
         this._minimalWidth = widthSum > absoluteMinimum ? widthSum : absoluteMinimum
         this._layout = null
+        if (this._minimalWidth !== previousMinimalWidth) {
+            this.score.onMeasureWidthChanged(this)
+        }
     }
 }
