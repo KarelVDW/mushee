@@ -275,7 +275,7 @@ export const Score = memo(function Score({
                                                 score.getIndexForMeasure(tempo.measure),
                                                 tempo.beatPosition,
                                                 tempo.bpm,
-                                                tempo.layout.x,
+                                                row.layout.getMeasureX(tempo.measure) + tempo.measure.layout.getXForBeat(tempo.beatPosition),
                                                 score.layout.getYForRow(row) + tempo.layout.y,
                                             )
                                         }
