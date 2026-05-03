@@ -13,9 +13,10 @@ import { MidiPlayer } from '@/lib/MidiPlayer'
 import { RecordingEngine, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
-import { Duration, type Note, Pitch, Score } from '@/model'
+import { Duration, Instrument, type Note, Pitch, Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
+import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { ControlBar } from './ControlBar'
 
 export default function ScoreEditorPage() {
@@ -39,6 +40,7 @@ export default function ScoreEditorPage() {
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
+    const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
 
     useEffect(() => {
         async function load() {
@@ -62,14 +64,15 @@ export default function ScoreEditorPage() {
         (changes: { title?: string; score?: Score }) => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
             saveTimeoutRef.current = setTimeout(() => {
-                const body: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[] } = {}
+                const body: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } = {}
                 if (changes.title !== undefined) body.title = changes.title
                 if (changes.score) {
                     const dirty = changes.score.flushDirty()
                     if (dirty?.measures) body.measures = dirty.measures
                     if (dirty?.allMeasures) body.allMeasures = dirty.allMeasures
+                    if (dirty?.partList) body.partList = dirty.partList
                 }
-                if (body.title !== undefined || body.measures || body.allMeasures) void updateScore(id, body)
+                if (body.title !== undefined || body.measures || body.allMeasures || body.partList) void updateScore(id, body)
             }, 2000)
         },
         [id],
@@ -228,16 +231,22 @@ export default function ScoreEditorPage() {
         cursorRef.current = cursor
         recordingEngineRef.current = recordingEngine
 
-        midiPlayer.loadSamples().catch(() => {
-            // Samples failed to load — will fall back to oscillator synthesis
-        })
         return () => {
             ticker.stop()
             recordingEngine.stop()
-            midiPlayer.stop()
-            midiPlayer.stopPreview()
+            midiPlayer.dispose()
         }
     }, [])
+
+    // Lazy-load only the instruments the score needs (its own + woodblock for the metronome click).
+    // Re-runs when the score's selected instrument changes — the picker mutates `score.instrument`
+    // in place but `setUpdatedAt` triggers a re-render that re-evaluates `score?.instrument.id`.
+    useEffect(() => {
+        if (!score) return
+        const player = midiPlayerRef.current
+        if (!player) return
+        void player.loadInstruments([score.instrument, Instrument.Woodblock])
+    }, [score, score?.instrument.id])
 
     const stopAll = useCallback(() => {
         tickerRef.current?.stop()
@@ -252,9 +261,20 @@ export default function ScoreEditorPage() {
         stopAll()
         const midi = activeNote?.pitch?.toMidi()
         const player = midiPlayerRef.current
-        if (midi === undefined || !player) return
-        player.preview(midi, 0.75)
-    }, [activeNote, stopAll])
+        if (midi === undefined || !player || !score) return
+        player.preview(midi, 0.75, score.instrument)
+    }, [activeNote, stopAll, score])
+
+    const handleInstrumentChange = useCallback(
+        (instrument: Instrument) => {
+            if (!score) return
+            stopAll()
+            score.setInstrument(instrument)
+            setInstrumentDialogOpen(false)
+            saveToApi({ score })
+        },
+        [score, stopAll, saveToApi],
+    )
 
     // Sync metronome toggle to the ticker. Skipped during recording — the recording flow
     // forces the metronome on; when recording ends this effect re-syncs to the user's toggle.
@@ -460,6 +480,20 @@ export default function ScoreEditorPage() {
             />
             <div className="flex-1 overflow-y-auto min-h-full px-8 py-[1.6rem] bg-surface">
                 <div className="mx-auto max-w-4xl min-h-full bg-surface-container-lowest p-6">
+                    <button
+                        type="button"
+                        onClick={() => setInstrumentDialogOpen(true)}
+                        aria-label={`Change instrument (current: ${score.instrument.displayName})`}
+                        className="group flex items-center gap-[0.4rem] mb-[1rem] -ml-[0.2rem] px-[0.6rem] py-[0.3rem] rounded-full bg-surface-container hover:bg-secondary-container transition-colors">
+                        <span
+                            className="material-symbols-outlined text-on-surface group-hover:text-on-secondary-container transition-colors"
+                            style={{ fontSize: '14px' }}>
+                            music_note
+                        </span>
+                        <span className="text-[0.65rem] uppercase tracking-widest font-bold text-on-surface group-hover:text-on-secondary-container transition-colors">
+                            {score.instrument.displayName}
+                        </span>
+                    </button>
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}
@@ -475,6 +509,13 @@ export default function ScoreEditorPage() {
                     />
                 </div>
             </div>
+
+            <ChangeInstrumentDialog
+                open={instrumentDialogOpen}
+                current={score.instrument}
+                onCancel={() => setInstrumentDialogOpen(false)}
+                onConfirm={handleInstrumentChange}
+            />
         </div>
     )
 }

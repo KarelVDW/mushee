@@ -110,9 +110,22 @@ export interface MxmlMeasure {
   entries: MxmlMeasureEntry[];
 }
 
+export interface MxmlScoreInstrument {
+  id: string;
+  instrumentName: string;
+}
+
+export interface MxmlMidiInstrument {
+  id: string;
+  /** 1-indexed General MIDI program (MusicXML convention). */
+  midiProgram: number;
+}
+
 export interface MxmlScorePart {
   id: string;
   partName: string;
+  scoreInstrument?: MxmlScoreInstrument;
+  midiInstrument?: MxmlMidiInstrument;
 }
 
 export interface MxmlPartList {

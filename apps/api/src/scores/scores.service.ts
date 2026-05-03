@@ -95,6 +95,10 @@ export class ScoresService {
       await this.cacheService.updateMeasures(score.id, dto.measures);
     }
 
+    if (dto.partList) {
+      await this.cacheService.updatePartList(score.id, dto.partList);
+    }
+
     return score;
   }
 

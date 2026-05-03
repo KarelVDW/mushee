@@ -101,6 +101,7 @@ export class ScoreScheduler implements Tickable {
                     startTime: this.nextNoteTime,
                     duration: audioDuration ?? durationSecs,
                     midi,
+                    instrument: this.score.instrument,
                 })
             }
 

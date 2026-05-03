@@ -145,6 +145,9 @@ importers:
       react-dom:
         specifier: 19.2.3
         version: 19.2.3(react@19.2.3)
+      smplr:
+        specifier: ^0.20.0
+        version: 0.20.0
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -3174,6 +3177,10 @@ packages:
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
     engines: {node: '>=18'}
+
+  smplr@0.20.0:
+    resolution: {integrity: sha512-XGxPL4ANBP0qzs30y673HYqvAEl/fJq/SKLv1oJpRuoo0VDqUcRGBz5A99PzN7srKT2WYtFU+yl6uqGHz/21zQ==}
+    engines: {node: '>=14.0.0'}
 
   sonic-boom@4.2.0:
     resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
@@ -6581,6 +6588,8 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
+
+  smplr@0.20.0: {}
 
   sonic-boom@4.2.0:
     dependencies:

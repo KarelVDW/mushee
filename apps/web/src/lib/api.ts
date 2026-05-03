@@ -44,7 +44,10 @@ export function createScore(title: string, score: Record<string, unknown>): Prom
     });
 }
 
-export function updateScore(id: string, data: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[] }): Promise<ScoreMeta> {
+export function updateScore(
+    id: string,
+    data: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> },
+): Promise<ScoreMeta> {
     return api(`/scores/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),

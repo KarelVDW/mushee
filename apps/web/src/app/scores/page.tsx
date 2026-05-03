@@ -6,6 +6,9 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { createScore, deleteScore, listScores, type ScoreMeta } from '@/lib/api'
 import { signOut, useSession } from '@/lib/auth-client'
+import { Instrument } from '@/model'
+
+import { CreateScoreDialog } from './CreateScoreDialog'
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, {
@@ -34,6 +37,7 @@ export default function ScoresPage() {
     const [scores, setScores] = useState<ScoreMeta[]>([])
     const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
+    const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
     const fetchScores = useCallback(async (query?: string) => {
         setLoading(true)
@@ -56,12 +60,18 @@ export default function ScoresPage() {
         return () => clearTimeout(timeout)
     }, [search, fetchScores])
 
-    async function handleCreate() {
-        const title = prompt('Score title:')
-        if (!title) return
-
+    async function handleCreate(title: string, instrument: Instrument) {
         const emptyScore = {
-            partList: { scoreParts: [{ id: 'P1', partName: 'Piano' }] },
+            partList: {
+                scoreParts: [
+                    {
+                        id: 'P1',
+                        partName: instrument.displayName,
+                        scoreInstrument: { id: 'P1-I1', instrumentName: instrument.displayName },
+                        midiInstrument: { id: 'P1-I1', midiProgram: instrument.gmProgram + 1 },
+                    },
+                ],
+            },
             parts: [{
                 id: 'P1',
                 measures: [{
@@ -121,7 +131,7 @@ export default function ScoresPage() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => void handleCreate()}
+                            onClick={() => setCreateDialogOpen(true)}
                             className="bg-primary-container text-white rounded-full px-[1.2rem] py-[0.4rem] font-bold text-[0.6rem] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--color-secondary-container)] hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] hover:-translate-y-[2px] transition-all">
                             Create New
                         </button>
@@ -219,6 +229,15 @@ export default function ScoresPage() {
                     )}
                 </div>
             </main>
+
+            <CreateScoreDialog
+                open={createDialogOpen}
+                onCancel={() => setCreateDialogOpen(false)}
+                onCreate={(title, instrument) => {
+                    setCreateDialogOpen(false)
+                    void handleCreate(title, instrument)
+                }}
+            />
 
             {/* Footer */}
             <footer className="bg-surface w-full py-[2.4rem] ghost-border border-x-0 border-b-0">

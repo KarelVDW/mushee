@@ -145,8 +145,18 @@ export class ScoreSerializer {
 
     toInput(): ScorePartwise {
         const measures = this.score.measures.map((measure) => new MeasureSerializer(measure).serialize())
+        const instrument = this.score.instrument
         return {
-            partList: { scoreParts: [{ id: 'P1', partName: 'Part 1' }] },
+            partList: {
+                scoreParts: [
+                    {
+                        id: 'P1',
+                        partName: instrument.displayName,
+                        scoreInstrument: { id: 'P1-I1', instrumentName: instrument.displayName },
+                        midiInstrument: { id: 'P1-I1', midiProgram: instrument.gmProgram + 1 },
+                    },
+                ],
+            },
             parts: [{ id: 'P1', measures }],
         }
     }

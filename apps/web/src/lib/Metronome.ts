@@ -1,3 +1,4 @@
+import { Instrument } from '@/model/Instrument'
 import type { Score } from '@/model/Score'
 
 import { MidiPlayer } from './MidiPlayer'
@@ -65,6 +66,7 @@ export class Metronome implements Tickable {
                 startTime: this.nextClickTime,
                 duration: CLICK_DURATION,
                 midi: CLICK_MIDI,
+                instrument: Instrument.Woodblock,
             })
 
             this.beat++

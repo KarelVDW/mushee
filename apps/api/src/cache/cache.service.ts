@@ -47,6 +47,16 @@ export class CacheService {
     );
   }
 
+  async updatePartList(
+    scoreId: string,
+    partList: Record<string, unknown>,
+  ): Promise<void> {
+    await this.cachedScoreModel.updateOne(
+      { scoreId },
+      { $set: { 'data.partList': partList } },
+    );
+  }
+
   async deleteByScoreId(scoreId: string): Promise<void> {
     await this.cachedScoreModel.deleteOne({ scoreId });
   }

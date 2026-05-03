@@ -1,6 +1,7 @@
 export { Beam } from './Beam'
 export { Clef } from './Clef'
 export { Duration } from './Duration'
+export { Instrument } from './Instrument'
 export { KeySignature } from './KeySignature'
 export { Measure } from './Measure'
 export { Note } from './Note'

@@ -1,41 +1,26 @@
-// --- Constants ---
+import { Soundfont, type StopFn } from 'smplr'
 
-/** Piano samples with their native MIDI note numbers */
-const PIANO_SAMPLES: { url: string; midi: number }[] = [
-    { url: '/samples/piano/piano-fs2.mp3', midi: 42 },  // F#2
-    { url: '/samples/piano/piano-a2.mp3', midi: 45 },   // A2
-    { url: '/samples/piano/piano-c4-iowa.mp3', midi: 60 }, // C4
-    { url: '/samples/piano/piano-bb4-iowa.mp3', midi: 70 }, // Bb4
-]
-
-interface LoadedSample {
-    buffer: AudioBuffer
-    midi: number
-}
+import { Instrument } from '@/model/Instrument'
 
 export interface ScheduledNote {
     startTime: number
     duration: number
     midi: number
-}
-
-function midiToFrequency(midi: number): number {
-    return 440 * Math.pow(2, (midi - 69) / 12)
+    instrument: Instrument
 }
 
 /**
- * Plays MIDI notes via the Web Audio API. Has no knowledge of scores or music notation.
+ * Plays MIDI notes via smplr's Soundfont sampler. Has no knowledge of scores
+ * or music notation. Each Instrument is loaded lazily on first request and
+ * kept in memory for the lifetime of this player. Call `loadInstruments`
+ * before `start`/`schedule` to avoid silent skips while samples download.
  */
 export class MidiPlayer {
     private audioCtx: AudioContext | null = null
-    private sourceNodes: AudioBufferSourceNode[] = []
+    private soundfonts = new Map<string, { sf: Soundfont; ready: Promise<unknown> }>()
     private startOffset = 0
-    private samples: LoadedSample[] = []
-    private samplesLoaded = false
-
-    // Preview uses a separate, long-lived AudioContext so it doesn't interfere with score playback
-    private previewCtx: AudioContext | null = null
-    private previewNodes: AudioBufferSourceNode[] = []
+    private scheduledStops: StopFn[] = []
+    private previewStops: StopFn[] = []
 
     get currentTime(): number {
         if (!this.audioCtx) return 0
@@ -46,47 +31,52 @@ export class MidiPlayer {
         return this.audioCtx !== null
     }
 
-    /** Preload piano samples. Call once on mount. */
-    async loadSamples() {
-        if (this.samplesLoaded) return
-        const ctx = new AudioContext()
-        try {
-            this.samples = await Promise.all(
-                PIANO_SAMPLES.map(async ({ url, midi }) => {
-                    const response = await fetch(url)
-                    const arrayBuffer = await response.arrayBuffer()
-                    const buffer = await ctx.decodeAudioData(arrayBuffer)
-                    return { buffer, midi }
-                }),
-            )
-            this.samplesLoaded = true
-        } finally {
-            await ctx.close()
+    /**
+     * Pre-fetch the listed instruments. Resolves once every requested
+     * instrument's samples are loaded. Subsequent calls for the same
+     * instrument are deduped.
+     */
+    async loadInstruments(instruments: Iterable<Instrument>): Promise<void> {
+        const ctx = this.ensureCtx()
+        const promises: Promise<unknown>[] = []
+        for (const instrument of instruments) {
+            const existing = this.soundfonts.get(instrument.id)
+            if (existing) {
+                promises.push(existing.ready)
+                continue
+            }
+            const sf = new Soundfont(ctx, { instrument: instrument.presetName })
+            const ready = sf.loaded()
+            this.soundfonts.set(instrument.id, { sf, ready })
+            promises.push(ready)
         }
+        await Promise.all(promises)
     }
 
-    /** Open a new audio context for playback. Notes are scheduled individually via schedule(). */
+    /** Begin a playback session. Notes are scheduled individually via `schedule`. */
     start() {
         this.stop()
-        this.audioCtx = new AudioContext()
-        this.startOffset = this.audioCtx.currentTime
+        const ctx = this.ensureCtx()
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        this.startOffset = ctx.currentTime
     }
 
     /** Schedule a single note on the running playback context. */
     schedule(note: ScheduledNote) {
         if (!this.audioCtx) return
-        const t = this.startOffset + note.startTime
-        this.sourceNodes.push(this.createSource(this.audioCtx, t, note.duration, note.midi))
+        const sf = this.soundfonts.get(note.instrument.id)?.sf
+        if (!sf) return
+        const stop = sf.start({
+            note: note.midi,
+            time: this.startOffset + note.startTime,
+            duration: note.duration,
+        })
+        this.scheduledStops.push(stop)
     }
 
     stop() {
-        this.stopNodes(this.sourceNodes)
-        this.sourceNodes = []
-
-        if (this.audioCtx) {
-            this.audioCtx.close().catch(() => {})
-            this.audioCtx = null
-        }
+        this.cancelStops(this.scheduledStops)
+        this.scheduledStops = []
     }
 
     /** Suspend playback — freezes currentTime and halts audio output without losing state. */
@@ -100,88 +90,45 @@ export class MidiPlayer {
     }
 
     /** Play a single note for the given duration. Stops any previous preview. */
-    preview(midi: number, duration: number) {
+    preview(midi: number, duration: number, instrument: Instrument) {
         this.stopPreview()
-        if (!this.previewCtx) this.previewCtx = new AudioContext()
-        const t = this.previewCtx.currentTime
-        this.previewNodes.push(this.createSource(this.previewCtx, t, duration, midi))
+        const ctx = this.ensureCtx()
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        const sf = this.soundfonts.get(instrument.id)?.sf
+        if (!sf) return
+        const stop = sf.start({ note: midi, time: ctx.currentTime, duration })
+        this.previewStops.push(stop)
     }
 
     stopPreview() {
-        this.stopNodes(this.previewNodes)
-        this.previewNodes = []
+        this.cancelStops(this.previewStops)
+        this.previewStops = []
+    }
+
+    /** Releases all loaded samples and closes the audio context. */
+    dispose() {
+        this.stop()
+        this.stopPreview()
+        for (const { sf } of this.soundfonts.values()) sf.disconnect()
+        this.soundfonts.clear()
+        this.audioCtx?.close().catch(() => {})
+        this.audioCtx = null
     }
 
     // --- Internal ---
 
-    private stopNodes(nodes: AudioBufferSourceNode[]) {
-        for (const src of nodes) {
+    private ensureCtx(): AudioContext {
+        if (!this.audioCtx) this.audioCtx = new AudioContext()
+        return this.audioCtx
+    }
+
+    private cancelStops(stops: StopFn[]) {
+        for (const stop of stops) {
             try {
-                src.stop()
-                src.disconnect()
+                stop()
             } catch {
                 /* already stopped */
             }
         }
-    }
-
-    private createSource(ctx: AudioContext, t: number, duration: number, midi: number): AudioBufferSourceNode {
-        if (this.samplesLoaded && this.samples.length > 0) {
-            return this.createSampleSource(ctx, t, duration, midi)
-        }
-        return this.createOscillatorSource(ctx, t, duration, midi)
-    }
-
-    private createSampleSource(ctx: AudioContext, t: number, duration: number, midi: number): AudioBufferSourceNode {
-        let bestSample = this.samples[0]
-        let bestDist = Math.abs(midi - bestSample.midi)
-        for (const s of this.samples) {
-            const dist = Math.abs(midi - s.midi)
-            if (dist < bestDist) {
-                bestSample = s
-                bestDist = dist
-            }
-        }
-
-        const source = ctx.createBufferSource()
-        source.buffer = bestSample.buffer
-        source.detune.value = (midi - bestSample.midi) * 100
-
-        const gain = ctx.createGain()
-        const attack = 0.005
-        const release = Math.min(0.08, duration * 0.15)
-
-        gain.gain.setValueAtTime(0, t)
-        gain.gain.linearRampToValueAtTime(0.5, t + attack)
-        gain.gain.setValueAtTime(0.5, t + duration - release)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration)
-
-        source.connect(gain).connect(ctx.destination)
-        source.start(t)
-        source.stop(t + duration + 0.01)
-
-        return source
-    }
-
-    private createOscillatorSource(ctx: AudioContext, t: number, duration: number, midi: number): AudioBufferSourceNode {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-
-        osc.type = 'triangle'
-        osc.frequency.value = midiToFrequency(midi)
-
-        const attack = 0.01
-        const release = Math.min(0.05, duration * 0.15)
-
-        gain.gain.setValueAtTime(0, t)
-        gain.gain.linearRampToValueAtTime(0.25, t + attack)
-        gain.gain.setValueAtTime(0.25, t + duration - release)
-        gain.gain.linearRampToValueAtTime(0, t + duration)
-
-        osc.connect(gain).connect(ctx.destination)
-        osc.start(t)
-        osc.stop(t + duration + 0.01)
-
-        return osc as unknown as AudioBufferSourceNode
     }
 }

@@ -2,6 +2,7 @@ import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
 import { Clef } from './Clef'
 import { Duration } from './Duration'
+import { Instrument } from './Instrument'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
@@ -12,6 +13,7 @@ import { MeasureSerializer } from './util/ScoreSerializer'
 
 export class Score {
     readonly measures: Measure[] = []
+    private _instrument: Instrument = Instrument.Piano
     private _layout: ScoreLayout | null = null
     private _rows: Row[] = []
     private _rowByMeasure: Map<Measure, Row> = new Map()
@@ -20,6 +22,7 @@ export class Score {
     private onChange: () => void
     private _dirtyMeasures = new Set<Measure>()
     private _structureChanged = false
+    private _instrumentDirty = false
     private _rebuildingRows = false
 
     constructor(onChange?: () => void) {
@@ -27,6 +30,22 @@ export class Score {
             this.invalidateLayout()
             onChange?.()
         }
+    }
+
+    get instrument(): Instrument {
+        return this._instrument
+    }
+
+    setInstrument(instrument: Instrument) {
+        if (this._instrument === instrument) return
+        this._instrument = instrument
+        this._instrumentDirty = true
+        this.onChange()
+    }
+
+    /** Set the initial instrument without marking the score dirty — for deserialization only. */
+    seedInstrument(instrument: Instrument) {
+        this._instrument = instrument
     }
 
     get layout() {
@@ -94,6 +113,7 @@ export class Score {
     clearDirty() {
         this._dirtyMeasures.clear()
         this._structureChanged = false
+        this._instrumentDirty = false
     }
 
     get totalNotes(): number {
@@ -294,25 +314,39 @@ export class Score {
     }
 
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
-    flushDirty(): { measures?: Record<string, unknown>; allMeasures?: unknown[] } | null {
-        if (!this._structureChanged && this._dirtyMeasures.size === 0) return null
+    flushDirty(): { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } | null {
+        const hasMeasureChanges = this._structureChanged || this._dirtyMeasures.size > 0
+        if (!hasMeasureChanges && !this._instrumentDirty) return null
 
-        if (this._structureChanged) {
-            // Structure changed (add/remove measure) — send all measures
-            const allMeasures = this.measures.map((m) => new MeasureSerializer(m).serialize())
-            this.clearDirty()
-            return { allMeasures }
-        }
+        const result: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } = {}
 
-        // Only specific measures changed — send partial update
-        const measures: Record<string, unknown> = {}
-        for (const measure of this._dirtyMeasures) {
-            const index = this._indexByMeasure.get(measure)
-            if (index !== undefined) {
-                measures[String(index)] = new MeasureSerializer(measure).serialize()
+        if (this._instrumentDirty) {
+            result.partList = {
+                scoreParts: [
+                    {
+                        id: 'P1',
+                        partName: this._instrument.displayName,
+                        scoreInstrument: { id: 'P1-I1', instrumentName: this._instrument.displayName },
+                        midiInstrument: { id: 'P1-I1', midiProgram: this._instrument.gmProgram + 1 },
+                    },
+                ],
             }
         }
+
+        if (this._structureChanged) {
+            result.allMeasures = this.measures.map((m) => new MeasureSerializer(m).serialize())
+        } else if (this._dirtyMeasures.size > 0) {
+            const measures: Record<string, unknown> = {}
+            for (const measure of this._dirtyMeasures) {
+                const index = this._indexByMeasure.get(measure)
+                if (index !== undefined) {
+                    measures[String(index)] = new MeasureSerializer(measure).serialize()
+                }
+            }
+            result.measures = measures
+        }
+
         this.clearDirty()
-        return { measures }
+        return result
     }
 }

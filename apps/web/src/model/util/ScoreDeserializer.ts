@@ -13,6 +13,7 @@ import type {
 
 import { Clef } from '../Clef'
 import { Duration } from '../Duration'
+import { Instrument } from '../Instrument'
 import { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
@@ -25,6 +26,17 @@ export class ScoreDeserializer {
 
     toScore(onChange?: (() => void)): Score {
         const score = new Score(onChange)
+        const scorePart = this.input.partList?.scoreParts?.[0]
+        if (scorePart) {
+            const program = scorePart.midiInstrument?.midiProgram
+            const instrumentName = scorePart.scoreInstrument?.instrumentName ?? scorePart.partName
+            const resolved = program !== undefined
+                ? Instrument.byGmProgram(program - 1)
+                : instrumentName
+                    ? Instrument.byDisplayName(instrumentName)
+                    : Instrument.Piano
+            score.seedInstrument(resolved)
+        }
         const part = this.input.parts[0]
         if (!part) return score
 
