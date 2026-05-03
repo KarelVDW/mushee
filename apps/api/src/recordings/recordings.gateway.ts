@@ -13,6 +13,8 @@ interface RecordingMetaMessage {
   type: 'meta';
   bpm: number;
   timeSignature: { beats: number; beatType: number } | null;
+  /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
+  chromaticTranspose?: number;
 }
 
 interface RecordingEndMessage {
@@ -62,6 +64,7 @@ export class RecordingsGateway
         p.setMeta({
           bpm: parsed.bpm,
           timeSignature: parsed.timeSignature,
+          chromaticTranspose: parsed.chromaticTranspose,
         });
       } else if (parsed.type === 'end') {
         void p.finalize();

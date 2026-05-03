@@ -46,6 +46,8 @@ export interface BuilderOptions {
   bpm: number;
   beats: number;
   beatType: number;
+  /** Sounding − written, in semitones. The mic captures sounding pitch; we subtract this to land in written-pitch space. Default 0 (concert pitch). */
+  chromaticTranspose?: number;
 }
 
 export interface PendingNote {
@@ -171,8 +173,12 @@ export class MxmlBuilder {
   }
 
   private midiToPitch(midi: number): MxmlPitch {
-    const octave = Math.floor(midi / 12) - 1;
-    const semi = ((midi % 12) + 12) % 12;
+    // basic-pitch reports the sounding MIDI captured by the mic; the score
+    // stores written pitch (MusicXML semantics), so subtract the part's
+    // chromatic transpose before mapping to step/alter/octave.
+    const written = midi - (this.options.chromaticTranspose ?? 0);
+    const octave = Math.floor(written / 12) - 1;
+    const semi = ((written % 12) + 12) % 12;
     const { step, alter } = STEP_TABLE[semi];
     return { step, octave, ...(alter !== 0 && { alter }) };
   }

@@ -57,10 +57,12 @@ export class RecordingPipeline {
   private bpm = DEFAULT_BPM;
   private beats = DEFAULT_BEATS;
   private beatType = DEFAULT_BEAT_TYPE;
+  private chromaticTranspose = 0;
   private builder = new MxmlBuilder({
     bpm: this.bpm,
     beats: this.beats,
     beatType: this.beatType,
+    chromaticTranspose: this.chromaticTranspose,
   });
 
   private processing = false;
@@ -74,16 +76,21 @@ export class RecordingPipeline {
   setMeta(meta: {
     bpm?: number;
     timeSignature?: { beats: number; beatType: number } | null;
+    chromaticTranspose?: number;
   }): void {
     if (meta.bpm) this.bpm = meta.bpm;
     if (meta.timeSignature) {
       this.beats = meta.timeSignature.beats;
       this.beatType = meta.timeSignature.beatType;
     }
+    if (typeof meta.chromaticTranspose === 'number') {
+      this.chromaticTranspose = meta.chromaticTranspose;
+    }
     this.builder = new MxmlBuilder({
       bpm: this.bpm,
       beats: this.beats,
       beatType: this.beatType,
+      chromaticTranspose: this.chromaticTranspose,
     });
   }
 

@@ -256,24 +256,33 @@ export default function ScoreEditorPage() {
         setPlaybackState('stopped')
     }, [])
 
-    // Preview the selected note's pitch and stop any ongoing playback/recording
+    // Preview the selected note's pitch and stop any ongoing playback/recording.
+    // The Note holds written pitch; convert to sounding before passing to the player.
     useEffect(() => {
         stopAll()
-        const midi = activeNote?.pitch?.toMidi()
+        const written = activeNote?.pitch?.toMidi()
         const player = midiPlayerRef.current
-        if (midi === undefined || !player || !score) return
-        player.preview(midi, 0.75, score.instrument)
+        if (written === undefined || !player || !score) return
+        const sounding = written + score.instrument.chromaticTranspose
+        player.preview(sounding, 0.75, score.instrument)
     }, [activeNote, stopAll, score])
 
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
             if (!score) return
             stopAll()
+            // Capture the active note's position; setInstrument rewrites all notes through `replace`,
+            // so the existing ref becomes stale. Re-resolve at the same (measure, index) afterwards.
+            const measureIdx = activeNote ? activeNote.measure.index : null
+            const noteIdx = activeNote ? activeNote.measure.notes.indexOf(activeNote) : null
             score.setInstrument(instrument)
+            if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
+                setActiveNote(score.measures[measureIdx]?.notes[noteIdx] ?? null)
+            }
             setInstrumentDialogOpen(false)
             saveToApi({ score })
         },
-        [score, stopAll, saveToApi],
+        [score, activeNote, stopAll, saveToApi],
     )
 
     // Sync metronome toggle to the ticker. Skipped during recording — the recording flow

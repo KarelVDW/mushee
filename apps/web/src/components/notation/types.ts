@@ -71,6 +71,15 @@ export interface MxmlClef {
   number?: number; // staff number
 }
 
+export interface MxmlTranspose {
+  /** Semitones: written + chromatic = sounding. Trumpet B♭ = -2, French Horn = -7, Piccolo = +12 (or 0 with octave-change=1). */
+  chromatic: number;
+  /** Letter steps shifted: written + diatonic = sounding (in step-space). Trumpet B♭ = -1. */
+  diatonic?: number;
+  /** Additional whole-octave shift on top of chromatic/diatonic. Piccolo = 1, Contrabass = -1. */
+  octaveChange?: number;
+}
+
 export interface MxmlAttributes {
   _type: 'attributes';
   divisions?: number;
@@ -78,6 +87,7 @@ export interface MxmlAttributes {
   time?: MxmlTime[];
   staves?: number;
   clef?: MxmlClef[];
+  transpose?: MxmlTranspose;
 }
 
 export interface MxmlBarline {

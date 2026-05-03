@@ -89,4 +89,48 @@ export class Pitch {
         const noteIndex = totalSteps - octave * 7
         return new Pitch({ name: INDEX_TO_NOTE[noteIndex], octave })
     }
+
+    /**
+     * Transpose by the given (chromatic, diatonic) interval. Convention matches
+     * MusicXML's `<transpose>` element: the diatonic value shifts the letter
+     * step (e.g. C → D = +1, C → E = +2) while chromatic shifts the absolute
+     * pitch in semitones. The resulting alter is derived from the difference
+     * between the actual MIDI and the natural MIDI of the new step.
+     */
+    transposed(chromatic: number, diatonic: number): Pitch {
+        const oldStepIdx = NOTE_INDEX[this.name]
+        if (oldStepIdx === undefined) throw new Error(`Unknown step name: ${this.name}`)
+
+        const oldDiatonicPosition = this.octave * 7 + oldStepIdx
+        const newDiatonicPosition = oldDiatonicPosition + diatonic
+        const newOctave = Math.floor(newDiatonicPosition / 7)
+        const newStepIdx = newDiatonicPosition - newOctave * 7
+        const newName = INDEX_TO_NOTE[newStepIdx]
+
+        const newMidi = this.toMidi() + chromatic
+        const newNaturalMidi = (newOctave + 1) * 12 + SEMITONES[newName]
+        const newAlter = newMidi - newNaturalMidi
+
+        return new Pitch({
+            name: newName,
+            alter: newAlter,
+            accidental: Pitch.alterToAccidentalGlyph(newAlter),
+            octave: newOctave,
+        })
+    }
+
+    private static alterToAccidentalGlyph(alter: number): string | undefined {
+        switch (alter) {
+            case 1:
+                return '#'
+            case -1:
+                return 'b'
+            case 2:
+                return '##'
+            case -2:
+                return 'bb'
+            default:
+                return undefined
+        }
+    }
 }

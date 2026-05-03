@@ -88,7 +88,8 @@ export class ScoreScheduler implements Tickable {
 
             let midi: number | undefined
             if (note.pitch && !note.tiesBack) {
-                midi = note.pitch.toMidi()
+                // Note pitch is the written pitch (MusicXML semantics); convert to sounding for playback.
+                midi = note.pitch.toMidi() + this.score.instrument.chromaticTranspose
             }
 
             let audioDuration: number | undefined

@@ -4,7 +4,10 @@ import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
 import { makeScore, pitched } from '@test/helpers'
 
 import { Duration } from '@/model/Duration'
+import { Instrument } from '@/model/Instrument'
+import { KeySignature } from '@/model/KeySignature'
 import { Note } from '@/model/Note'
+import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
 
 describe('Score', () => {
@@ -174,6 +177,81 @@ describe('Score', () => {
             score.invalidateLayout()
             const b = score.layout
             expect(a).not.toBe(b)
+        })
+    })
+
+    describe('setInstrument', () => {
+        it('preserves tie pairings across transposition', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            score.replace(
+                [m.firstNote!],
+                [
+                    new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' }),
+                    new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'stop' }),
+                ],
+            )
+            score.setInstrument(Instrument.Trumpet)
+            expect(m.notes[0].tie).toBe('start')
+            expect(m.notes[1].tie).toBe('stop')
+            expect(score.getTieByNote(m.notes[0])).toBeDefined()
+        })
+
+        it('preserves sounding pitch (concert C → trumpet writes D = sounds C)', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            score.replace([m.firstNote!], [pitched('C', 5)])
+            const soundingBefore = m.firstNote!.pitch!.toMidi() + score.instrument.chromaticTranspose
+            score.setInstrument(Instrument.Trumpet)
+            const soundingAfter = m.firstNote!.pitch!.toMidi() + score.instrument.chromaticTranspose
+            expect(soundingAfter).toBe(soundingBefore)
+            // Trumpet writes D5 to sound C5
+            expect(m.firstNote!.pitch!.name).toBe('D')
+            expect(m.firstNote!.pitch!.octave).toBe(5)
+        })
+
+        it('round-trips: piano → trumpet → piano restores the original note', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            score.replace([m.firstNote!], [pitched('F', 4)])
+            const before = m.firstNote!.pitch!
+            score.setInstrument(Instrument.Trumpet)
+            score.setInstrument(Instrument.Piano)
+            const after = m.firstNote!.pitch!
+            expect(after.name).toBe(before.name)
+            expect(after.octave).toBe(before.octave)
+            expect(after.alter).toBe(before.alter)
+        })
+
+        it('transposes the key signature', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            m.setKeySignature(new KeySignature(0))
+            score.setInstrument(Instrument.Trumpet)
+            // Concert C major (0) → trumpet writes D major (2 fifths)
+            expect(m.keySignature?.fifths).toBe(2)
+        })
+
+        it('does nothing when switching to the same instrument', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            score.replace([m.firstNote!], [pitched('C', 5)])
+            const before = m.firstNote!.pitch!
+            score.setInstrument(Instrument.Piano)
+            expect(m.firstNote!.pitch).toBe(before)
+        })
+
+        it('does not transpose when both instruments share the same transposition', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure!
+            score.replace([m.firstNote!], [pitched('C', 5)])
+            score.setInstrument(Instrument.Trumpet)
+            const afterTrumpet = m.firstNote!.pitch!
+            // Soprano sax is also B♭ (same chromatic/diatonic as trumpet)
+            score.setInstrument(Instrument.SopranoSaxophone)
+            expect(m.firstNote!.pitch!.name).toBe(afterTrumpet.name)
+            expect(m.firstNote!.pitch!.octave).toBe(afterTrumpet.octave)
+            expect(m.firstNote!.pitch!.alter).toBe(afterTrumpet.alter)
         })
     })
 })

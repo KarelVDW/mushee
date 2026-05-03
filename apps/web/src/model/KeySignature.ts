@@ -29,4 +29,15 @@ export class KeySignature {
         if (this.flats.includes(noteName)) return -1
         return 0
     }
+
+    /**
+     * Return a new KeySignature shifted by the given (chromatic, diatonic) interval.
+     * Number of fifths added = 7·chromatic − 12·diatonic. This is the same formula
+     * the circle of fifths defines for any interval — going up a M2 (+2,+1) adds
+     * +2 fifths, up a P5 (+7,+4) adds +1, an octave (+12,+7) adds 0, etc.
+     */
+    transposed(chromatic: number, diatonic: number): KeySignature {
+        const fifthsDelta = 7 * chromatic - 12 * diatonic
+        return new KeySignature(this.fifths + fifthsDelta, this.mode)
+    }
 }

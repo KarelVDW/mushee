@@ -271,6 +271,9 @@ export class RecordingEngine implements Tickable {
                     type: 'meta',
                     bpm: this.bpm,
                     timeSignature: ts ? { beats: ts.beatAmount, beatType: ts.beatType } : null,
+                    // Score notes are stored as written pitch; the mic captures sounding pitch.
+                    // The server subtracts this from each detected MIDI to land in written-pitch space.
+                    chromaticTranspose: this.options.score.instrument.chromaticTranspose,
                 }),
             )
         }

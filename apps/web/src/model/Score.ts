@@ -36,8 +36,39 @@ export class Score {
         return this._instrument
     }
 
+    /**
+     * Switch the score's lead instrument. Notes are stored as written pitch
+     * (MusicXML semantics), so to preserve the actual sounding music when the
+     * new instrument has a different transposition we rewrite every note and
+     * key signature by `oldTranspose − newTranspose`. Trumpet writing C5 (sounds
+     * B♭4) becomes a flute written B♭4 (still sounds B♭4) — the audience hears
+     * the same music; the trumpeter's "do" becomes the flutist's "si bémol".
+     *
+     * The note rewrite goes through `replace` so tie tracking and layout state
+     * stay consistent. Note identities change — callers holding a Note ref
+     * (e.g. the editor's active note) need to re-resolve by position.
+     */
     setInstrument(instrument: Instrument) {
         if (this._instrument === instrument) return
+
+        const deltaChromatic = this._instrument.chromaticTranspose - instrument.chromaticTranspose
+        const deltaDiatonic = this._instrument.diatonicTranspose - instrument.diatonicTranspose
+
+        if (deltaChromatic !== 0 || deltaDiatonic !== 0) {
+            const targets: Note[] = []
+            const values: Note[] = []
+            for (const measure of this.measures) {
+                if (measure.keySignature) {
+                    measure.setKeySignature(measure.keySignature.transposed(deltaChromatic, deltaDiatonic))
+                }
+                for (const note of measure.notes) {
+                    targets.push(note)
+                    values.push(note.clone(note.pitch ? { pitch: note.pitch.transposed(deltaChromatic, deltaDiatonic) } : {}))
+                }
+            }
+            if (targets.length > 0) this.replace(targets, values)
+        }
+
         this._instrument = instrument
         this._instrumentDirty = true
         this.onChange()

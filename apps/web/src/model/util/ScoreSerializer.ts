@@ -33,7 +33,11 @@ export class MeasureSerializer {
         const timeSignatureChanged =
             previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
             previousTimeSignature?.beatType !== this.measure.timeSignature.beatType
-        if (clefChanged || timeSignatureChanged || this.measure.keySignature) {
+        // Emit <transpose> alongside the first measure's attributes when the score's instrument transposes.
+        const isFirstMeasure = previousMeasure === null
+        const instrument = this.measure.score.instrument
+        const includeTranspose = isFirstMeasure && (instrument.chromaticTranspose !== 0 || instrument.diatonicTranspose !== 0)
+        if (clefChanged || timeSignatureChanged || this.measure.keySignature || includeTranspose) {
             entries.push({
                 _type: 'attributes' as const,
                 divisions: DIVISIONS,
@@ -41,6 +45,9 @@ export class MeasureSerializer {
                 ...(timeSignatureChanged && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
                 ...(this.measure.keySignature && {
                     key: [{ fifths: this.measure.keySignature.fifths, ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }) }],
+                }),
+                ...(includeTranspose && {
+                    transpose: { chromatic: instrument.chromaticTranspose, diatonic: instrument.diatonicTranspose },
                 }),
             })
         }
