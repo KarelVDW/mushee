@@ -117,11 +117,6 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Primary CTA gradient — 135deg, primary → primary_container. */
-.primary-gradient {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
-}
-
 /* Input field — no four-sided box.
    surface_container_low fill, 2px primary bottom stroke animating 0→100% on focus. */
 .input-field-container {

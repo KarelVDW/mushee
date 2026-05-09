@@ -28,11 +28,12 @@ Treat the UI as a series of stacked sheets of fine paper.
 - **Mid-Level Panels:** `surface_container` (#e7e8e8)
 - **Interactive Floating Elements:** `surface_container_lowest` (#ffffff) with Glassmorphism.
 
-### The Glass & Gradient Rule
-For primary call-to-actions or floating music-control docks, use a **Glassmorphism** effect:
+### The Glass Rule
+For floating music-control docks, use a **Glassmorphism** effect:
 - Background: `surface_container_lowest` at 85% opacity.
 - Effect: `backdrop-filter: blur(12px)`.
-- For CTAs, use a subtle gradient from `primary` (#00666d) to `primary_container` (#00DBE9) at a 135-degree angle to add "visual soul."
+
+**No gradients on buttons or CTAs.** Primary actions are flat fills of `primary_container` (Neon Cyan); the energy comes from the offset secondary-color dropshadow, not from a gradient.
 
 ---
 
@@ -59,7 +60,7 @@ Depth in this system is achieved through **Tonal Layering** and **Atmospheric Sh
 ## 5. Components
 
 ### Buttons
-- **Primary:** Gradient fill (`primary` to `primary_container`), `on_primary_container` text, `full` roundedness. High energy.
+- **Primary:** Flat `primary_container` (Neon Cyan) fill, `on_primary_container` text, `full` roundedness. The energy comes from a `secondary_container` (Neon Magenta) offset dropshadow — never a gradient.
 - **Secondary:** `surface_container_highest` background with `primary` text. Use for less critical tools.
 - **Tertiary:** Transparent background, `on_surface` text, bold `label-md` styling.
 

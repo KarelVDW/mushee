@@ -71,7 +71,7 @@ export function ChangeInstrumentDialog({ open, current, onCancel, onConfirm }: C
                         type="button"
                         onClick={() => dirty && onConfirm(instrument)}
                         disabled={!dirty}
-                        className="primary-gradient text-on-primary-container rounded-full px-[1.2rem] py-[0.5rem] font-bold text-[0.6rem] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed shadow-[3px_3px_0px_0px_var(--color-secondary-container)] enabled:hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] enabled:hover:-translate-y-[2px] transition-all">
+                        className="bg-primary-container text-on-primary-container rounded-full px-[1.2rem] py-[0.5rem] font-bold text-[0.6rem] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed shadow-[3px_3px_0px_0px_var(--color-secondary-container)] enabled:hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] enabled:hover:-translate-y-[2px] transition-all">
                         Update
                     </button>
                 </footer>
