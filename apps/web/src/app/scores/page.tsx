@@ -111,10 +111,10 @@ export default function ScoresPage() {
                     </div>
 
                     <div className="hidden md:flex items-center gap-[1.6rem] uppercase tracking-widest text-[0.6rem] font-bold">
-                        <span className="text-on-surface-variant hover:text-secondary transition-colors cursor-not-allowed">Editor</span>
+                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Editor</span>
                         <span className="text-primary border-b-[3px] border-primary-container pb-[0.2rem]">Library</span>
-                        <span className="text-on-surface-variant hover:text-secondary transition-colors cursor-not-allowed">Community</span>
-                        <span className="text-on-surface-variant hover:text-secondary transition-colors cursor-not-allowed">Collaborate</span>
+                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Community</span>
+                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Collaborate</span>
                     </div>
 
                     <div className="flex items-center gap-[0.8rem]">
@@ -132,7 +132,7 @@ export default function ScoresPage() {
                         <button
                             type="button"
                             onClick={() => setCreateDialogOpen(true)}
-                            className="bg-primary-container text-white rounded-full px-[1.2rem] py-[0.4rem] font-bold text-[0.6rem] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--color-secondary-container)] hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] hover:-translate-y-[2px] transition-all">
+                            className="bg-primary-container text-on-primary-container rounded-full px-[1.2rem] py-[0.4rem] font-bold text-[0.6rem] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--color-secondary-container)] hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] hover:-translate-y-[2px] transition-all">
                             Create New
                         </button>
                     </div>
@@ -185,7 +185,7 @@ export default function ScoresPage() {
                         scores.map((score) => (
                             <div
                                 key={score.id}
-                                className="group bg-surface-container-lowest rounded-lg p-[1.2rem] tonal-layer-glow hover:shadow-[0px_6px_26px_0px_rgba(45,47,47,0.12)] transition-all duration-300 grid grid-cols-1 md:grid-cols-12 gap-[0.8rem] items-center relative overflow-hidden">
+                                className="group bg-surface-container-lowest hover:bg-surface-container-low rounded-lg p-[1.2rem] tonal-layer-glow transition-colors duration-300 grid grid-cols-1 md:grid-cols-12 gap-[0.8rem] items-center relative overflow-hidden">
                                 {/* Hover accent indicator */}
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
@@ -213,14 +213,14 @@ export default function ScoresPage() {
                                         type="button"
                                         aria-label="Edit"
                                         onClick={() => router.push(`/scores/${score.id}`)}
-                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary)]">
+                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary-container)]">
                                         <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>edit</span>
                                     </button>
                                     <button
                                         type="button"
                                         aria-label="Delete"
                                         onClick={() => void handleDelete(score.id, score.title)}
-                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary)]">
+                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary-container)]">
                                         <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
                                     </button>
                                 </div>
@@ -243,7 +243,7 @@ export default function ScoresPage() {
             <footer className="bg-surface w-full py-[2.4rem] ghost-border border-x-0 border-b-0">
                 <div className="flex flex-col md:flex-row justify-between items-center px-[2.4rem] gap-[1.2rem] max-w-[1536px] mx-auto">
                     <div className="text-base font-bold text-on-surface">Sheemu</div>
-                    <div className="text-[0.7rem] text-secondary font-medium uppercase tracking-widest">
+                    <div className="text-[0.7rem] text-on-surface-variant font-medium uppercase tracking-widest">
                         © 2024 Sheemu. Boldly Composed.
                     </div>
                 </div>
