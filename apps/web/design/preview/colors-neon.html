@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Primary & Secondary — neon</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  .card { width: 760px; box-sizing: border-box; background: var(--color-surface-container-lowest); padding: 24px 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .stack { display: flex; flex-direction: column; gap: 6px; }
+  .swatch { height: 60px; border-radius: 6px; display: flex; align-items: flex-end; padding: 8px 10px; box-sizing: border-box; }
+  .swatch.tall { height: 76px; }
+  .swatch.small { height: 36px; }
+  .label { font: var(--type-label-md); letter-spacing: 0.18em; text-transform: uppercase; }
+  .name { font: var(--type-label-md); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-on-surface); }
+  .role { font: 400 11px/1.4 var(--font-body); color: var(--color-on-surface-variant); margin-top: 4px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .hex { font: 500 11px/1 var(--font-mono); color: var(--color-on-surface-variant); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="stack">
+      <div class="row"><span class="name">The Pulse · Cyan</span></div>
+      <div class="role">Loud — actions, focus, active states.</div>
+      <div class="swatch tall" style="background:var(--color-primary-container);color:var(--color-on-primary-container)"><span class="label">primary-container</span></div>
+      <div class="row"><span class="hex">#00DBE9</span><span class="hex">on · #005359</span></div>
+
+      <div class="role" style="margin-top:12px">Soft — non-clickable tags, large selectable surfaces.</div>
+      <div class="swatch" style="background:var(--color-primary-soft);color:var(--color-on-primary-soft)"><span class="label">primary-soft</span></div>
+      <div class="row"><span class="hex">#A6F2F7</span><span class="hex">on · #003F43</span></div>
+
+      <div class="role" style="margin-top:12px">Accent text on light.</div>
+      <div class="swatch small" style="background:var(--color-primary);color:var(--color-on-primary)"><span class="label">primary</span></div>
+      <div class="swatch small" style="background:var(--color-on-primary);color:var(--color-primary)"><span class="label">on-primary</span></div>
+      <div class="row"><span class="hex">#00666D</span><span class="hex">#CFFBFF</span></div>
+    </div>
+
+    <div class="stack">
+      <div class="row"><span class="name">The Rebellion · Magenta</span></div>
+      <div class="role">Loud — pop CTA shadow, destructive hover.</div>
+      <div class="swatch tall" style="background:var(--color-secondary-container);color:#91003f"><span class="label">secondary-container</span></div>
+      <div class="row"><span class="hex">#FF2079</span><span class="hex">on · #91003F</span></div>
+
+      <div class="role" style="margin-top:12px">Soft — avatar chips, identity tags.</div>
+      <div class="swatch" style="background:var(--color-secondary-soft);color:var(--color-on-secondary-soft)"><span class="label">secondary-soft</span></div>
+      <div class="row"><span class="hex">#FFADBF</span><span class="hex">on · #6D002E</span></div>
+
+      <div class="role" style="margin-top:12px">Accent text on light.</div>
+      <div class="swatch small" style="background:var(--color-secondary);color:var(--color-on-secondary)"><span class="label">secondary</span></div>
+      <div class="swatch small" style="background:var(--color-on-secondary);color:var(--color-secondary)"><span class="label">on-secondary</span></div>
+      <div class="row"><span class="hex">#B60052</span><span class="hex">#FFEFF0</span></div>
+    </div>
+  </div>
+</body>
+</html>

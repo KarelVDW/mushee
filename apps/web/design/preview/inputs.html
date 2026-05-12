@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Input fields & search</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; background: var(--color-surface); }
+  .card { width: 700px; box-sizing: border-box; background: var(--color-surface-container-lowest); padding: 28px; display: flex; flex-direction: column; gap: 22px; border-radius: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .lbl {
+    font: 600 11px/1 var(--font-label); letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+  .input-wrap {
+    background: var(--color-surface-container-low); border-radius: 4px;
+    position: relative; display: flex; align-items: center; gap: 6;
+    padding: 0 10px;
+  }
+  .input-wrap.with-icon { padding: 0 10px 0 36px; }
+  .input-wrap input {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+    color: var(--color-on-surface); font: 400 14px/1 var(--font-body);
+    padding: 12px 4px;
+  }
+  .input-wrap .ico {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--color-outline); font-size: 16px; display: inline-flex;
+  }
+  /* Underline — collapsed hairline at center, expands outward to full on focus */
+  .underline {
+    position: absolute; bottom: 0; height: 2px;
+    background: var(--color-primary-container);
+    left: 50%; right: 50%;
+    transition: left 300ms var(--ease), right 300ms var(--ease);
+  }
+  .underline.focus { left: 0; right: 0; }
+  .underline.partial { left: 25%; right: 25%; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <span class="lbl">Email</span>
+        <div class="input-wrap">
+          <input value="composer@sheemu.io">
+          <div class="underline focus"></div>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Password</span>
+        <div class="input-wrap">
+          <input type="password" value="********">
+          <div class="underline partial"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lbl">Search</span>
+      <div class="input-wrap with-icon">
+        <span class="material-symbols-outlined ico">search</span>
+        <input placeholder="Filter scores by name…">
+        <div class="underline"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

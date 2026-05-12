@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Score list rows</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; background: var(--color-surface); }
+  .card {
+    width: 820px; box-sizing: border-box; background: var(--color-surface);
+    padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .header {
+    display: grid; grid-template-columns: 5fr 2fr 2fr 2fr 1fr; gap: 16px;
+    padding: 8px 24px;
+    font: 600 11px/1 var(--font-label); letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-outline);
+  }
+  .row {
+    position: relative; overflow: hidden;
+    background: var(--color-surface-container-lowest);
+    border-radius: 8px; padding: 18px 24px;
+    box-shadow: 0 0 24px 0 rgba(45,47,47,0.06);
+    display: grid; grid-template-columns: 5fr 2fr 2fr 2fr 1fr; gap: 16px; align-items: center;
+  }
+  .row.hover { background: var(--color-surface-container-high); }
+  .accent {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--color-primary-container);
+  }
+  .row.idle .accent { display: none; }
+  .title {
+    background: transparent; border: 0; padding: 0; cursor: pointer; text-align: left;
+    font: 500 16px/1.3 var(--font-body); color: var(--color-on-surface);
+  }
+  .row.hover .title { color: var(--color-primary); }
+
+  .pill {
+    display: inline-flex; align-items: center;
+    background: var(--color-surface-container); color: var(--color-on-surface);
+    border-radius: 9999px; padding: 4px 10px;
+    font: 600 11px/1 var(--font-label); letter-spacing: 0.04em;
+    width: fit-content;
+  }
+  .row.hover .pill { background: var(--color-surface-container-lowest); }
+
+  .meta { font: 400 13px/1 var(--font-body); color: var(--color-on-surface-variant); }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 9999px; border: 0;
+    background: var(--color-surface-container);
+    color: var(--color-on-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .row.hover .icon-btn { background: var(--color-surface-container-lowest); }
+  .icon-btn .material-symbols-outlined { font-size: 14px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span>Title</span><span>Instrument</span><span>Created</span><span>Updated</span><span></span>
+    </div>
+    <div class="row hover">
+      <div class="accent"></div>
+      <button class="title">Allegro in C minor</button>
+      <span class="pill">Piano</span>
+      <span class="meta">Mar 4, 2026</span>
+      <span class="meta">2 hours ago</span>
+      <div class="actions">
+        <button class="icon-btn"><span class="material-symbols-outlined">edit</span></button>
+        <button class="icon-btn"><span class="material-symbols-outlined">delete</span></button>
+      </div>
+    </div>
+    <div class="row idle">
+      <button class="title">Nocturne — first draft</button>
+      <span class="pill">Piano</span>
+      <span class="meta">Feb 19, 2026</span>
+      <span class="meta">Yesterday</span>
+      <div class="actions">
+        <button class="icon-btn"><span class="material-symbols-outlined">edit</span></button>
+        <button class="icon-btn"><span class="material-symbols-outlined">delete</span></button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

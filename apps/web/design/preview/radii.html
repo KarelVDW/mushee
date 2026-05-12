@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  .card { width: 700px; box-sizing: border-box; background: var(--color-surface-container-lowest); padding: 24px 28px; display: flex; align-items: flex-end; gap: 22px; }
+  .swatch { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 86px; height: 86px; background: var(--color-primary-container); }
+  .pill { width: 110px; height: 40px; background: var(--color-primary-container); border-radius: 9999px; }
+  .name { font: var(--type-label-md); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-on-surface); }
+  .v { font: 500 11px/1 var(--font-mono); color: var(--color-on-surface-variant); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="swatch"><div class="box" style="border-radius:4px"></div><span class="name">sm</span><span class="v">0.25rem · 4px</span></div>
+    <div class="swatch"><div class="box" style="border-radius:8px"></div><span class="name">md</span><span class="v">0.5rem · 8px</span></div>
+    <div class="swatch"><div class="box" style="border-radius:12px"></div><span class="name">lg</span><span class="v">0.75rem · 12px</span></div>
+    <div class="swatch"><div class="box" style="border-radius:16px"></div><span class="name">xl</span><span class="v">1rem · 16px</span></div>
+    <div class="swatch"><div class="pill"></div><span class="name">full</span><span class="v">9999px · pill</span></div>
+  </div>
+</body>
+</html>

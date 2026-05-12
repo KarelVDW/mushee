@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Surfaces — white-on-white tonal layering</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  .card { width: 700px; box-sizing: border-box; background: var(--color-surface); padding: 22px 28px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 4px; }
+  .chip { width: 28px; height: 28px; border-radius: 6px; box-shadow: var(--ghost-border); }
+  .name { font: var(--type-label-md); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-on-surface); }
+  .hex { font: 500 11px/1 var(--font-mono); color: var(--color-on-surface-variant); }
+  .role { font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row" style="background:#ffffff"><div class="chip" style="background:#ffffff"></div><span class="name">surface-container-lowest</span><span class="role">cards · sanctuary</span><span class="hex">#FFFFFF</span></div>
+    <div class="row" style="background:#f6f6f6"><div class="chip" style="background:#f6f6f6"></div><span class="name">surface</span><span class="role">page background</span><span class="hex">#F6F6F6</span></div>
+    <div class="row" style="background:#f0f1f1"><div class="chip" style="background:#f0f1f1"></div><span class="name">surface-container-low</span><span class="role">sticky nav · input</span><span class="hex">#F0F1F1</span></div>
+    <div class="row" style="background:#e7e8e8"><div class="chip" style="background:#e7e8e8"></div><span class="name">surface-container</span><span class="role">mid panels · chips</span><span class="hex">#E7E8E8</span></div>
+    <div class="row" style="background:#e1e3e3"><div class="chip" style="background:#e1e3e3"></div><span class="name">surface-container-high</span><span class="role">icon button bg</span><span class="hex">#E1E3E3</span></div>
+    <div class="row" style="background:#dbdddd"><div class="chip" style="background:#dbdddd"></div><span class="name">surface-container-highest</span><span class="role">heaviest lift</span><span class="hex">#DBDDDD</span></div>
+  </div>
+</body>
+</html>

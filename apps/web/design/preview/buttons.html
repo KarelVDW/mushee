@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Buttons — primary, secondary, tertiary, icon</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; background: var(--color-surface); }
+  .card { width: 700px; box-sizing: border-box; background: var(--color-surface-container-lowest); padding: 28px; display: flex; flex-direction: column; gap: 18px; border-radius: 12px; }
+  .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+  /* Primary — capsule, cyan tonal */
+  .btn-primary {
+    background: var(--color-primary-container); color: var(--color-on-primary-container);
+    border: 0; border-radius: 9999px; padding: 9px 18px;
+    font: 600 13px/1 var(--font-label); letter-spacing: 0.01em;
+    cursor: pointer; white-space: nowrap;
+  }
+  /* Hero CTA — opt-in magenta-shadow pop. Reserved for one button per surface. */
+  .btn-pop {
+    background: var(--color-primary-container); color: var(--color-on-primary-container);
+    border: 0; border-radius: 9999px; padding: 9px 18px;
+    font: 600 13px/1 var(--font-label); letter-spacing: 0.01em;
+    box-shadow: 3px 3px 0 0 var(--color-secondary-container);
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-pop.hover { transform: translateY(-2px); box-shadow: 5px 5px 0 0 var(--color-secondary-container); }
+
+  /* Secondary — soft fill */
+  .btn-secondary {
+    background: var(--color-surface-container-low); color: var(--color-on-surface);
+    border: 0; border-radius: 9999px; padding: 9px 18px;
+    font: 600 13px/1 var(--font-label); cursor: pointer; white-space: nowrap;
+  }
+  /* Tertiary — text only */
+  .btn-tertiary {
+    background: transparent; color: var(--color-on-surface-variant);
+    border: 0; padding: 8px 0;
+    font: 500 13px/1 var(--font-body); cursor: pointer; white-space: nowrap;
+  }
+  .btn-tertiary.dest { color: var(--color-secondary); }
+
+  /* Icon button */
+  .icon-btn { width: 32px; height: 32px; border-radius: 9999px; border: 0;
+    background: var(--color-surface-container); color: var(--color-on-surface);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .icon-btn.cyan { background: var(--color-primary-container); color: var(--color-on-primary-container); }
+  .icon-btn.magenta { background: var(--color-secondary-container); color: var(--color-on-secondary); }
+
+  .lbl { font: 600 11px/1 var(--font-label); letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--color-on-surface-variant); width: 96px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row"><span class="lbl">Primary</span>
+      <button class="btn-primary">New score</button>
+      <button class="btn-pop">Start composing</button>
+      <button class="btn-pop hover">Start composing</button>
+    </div>
+    <div class="row"><span class="lbl">Secondary</span>
+      <button class="btn-secondary">Library</button>
+      <button class="btn-tertiary">Sign in</button>
+      <button class="btn-tertiary dest">Sign out</button>
+    </div>
+    <div class="row"><span class="lbl">Icon</span>
+      <button class="icon-btn"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+      <button class="icon-btn cyan"><span class="material-symbols-outlined" style="font-size:18px">play_arrow</span></button>
+      <button class="icon-btn magenta"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,266 @@
+/*
+ * Sheemu Design System — colors, type & semantic tokens.
+ *
+ * White-on-white tonal surfaces, two accent colours (cyan + magenta).
+ * Type stack: Space Grotesk (display + UI) / Manrope (body) /
+ * Newsreader (italic accent) / Geist Mono (mono).
+ * Boundaries come from surface tonal shifts, not 1px borders.
+ *
+ * ── Color usage rule for primary / secondary ───────────────────────
+ * Three intensities per accent — pick by SIZE and INTERACTIVITY of the surface.
+ *
+ *   *-container (#00DBE9 / #FF2079)  — LOUD fill. Reserved for interactive
+ *     surfaces that should read as "the action": primary buttons, focus
+ *     indicators, active-tab underline, the magenta drop-shadow.
+ *
+ *   *-soft (#A6F2F7 / #FFADBF)        — QUIET fill. Use when the loud fill
+ *     would dominate the page:
+ *       • small NON-clickable identity tags — avatar initials, instrument
+ *         pills, status badges, "you" markers
+ *       • large selectable/focusable surfaces where the full neon would
+ *         shout — onboarding option cards, feature-icon circles on the
+ *         marketing surface, the BPM tap pad, multi-select chips at rest
+ *     Pair with --color-on-primary-soft / --color-on-secondary-soft for
+ *     text + iconography (both clear WCAG AA on the soft fill).
+ *
+ *   bare primary / secondary (#00666d / #b60052) — ACCENT TEXT. Used as
+ *     foreground only — link text, eyebrow accents, destructive copy,
+ *     hover-darkened state on a cyan/magenta-fill button. The neons
+ *     themselves do not pass WCAG AA as text on white.
+ *
+ * Rule of thumb:
+ *   *-container  → loud fill (one or two per surface — the action)
+ *   *-soft       → quiet fill (identity tags, big selectable areas)
+ *   bare         → accent text / icon on a light surface
+ * ──────────────────────────────────────────────────────────────────
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Geist+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
+
+:root {
+  /* ───────────────── Colors ───────────────── */
+
+  /* Canvas — the white-on-white "stage" */
+  --color-background: #f6f6f6;
+  --color-on-background: #2d2f2f;
+  --color-surface: #f6f6f6;
+  --color-on-surface: #2d2f2f;
+  --color-surface-dim: #d2d5d5;
+  --color-surface-bright: #f6f6f6;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f0f1f1;
+  --color-surface-container: #e7e8e8;
+  --color-surface-container-high: #e1e3e3;
+  --color-surface-container-highest: #dbdddd;
+  --color-surface-variant: #dbdddd;
+  --color-on-surface-variant: #5a5c5c;
+  --color-surface-tint: #00666d;
+  --color-inverse-surface: #0c0f0f;
+  --color-inverse-on-surface: #9c9d9d;
+
+  /* The Pulse — Primary (Neon Cyan) */
+  --color-primary: #00666d;
+  --color-on-primary: #cffbff;
+  --color-primary-container: #00dbe9; /* the loud one — interactive fill */
+  --color-on-primary-container: #005359;
+  --color-primary-soft: #a6f2f7;       /* the quiet one — non-clickable tags + big selectable areas */
+  --color-on-primary-soft: #003f43;
+  --color-primary-dim: #00595f;
+  --color-inverse-primary: #00dbe9;
+
+  /* The Accent — Secondary (Neon Magenta) */
+  --color-secondary: #b60052;
+  --color-on-secondary: #ffeff0;
+  --color-secondary-container: #ff2079; /* the loud one — the rebellion */
+  --color-on-secondary-container: #91003f;
+  --color-secondary-soft: #ffadbf;     /* the quiet one — avatars, identity tags */
+  --color-on-secondary-soft: #6d002e;
+  --color-secondary-dim: #a00047;
+
+  /* Tertiary — technical neutrals */
+  --color-tertiary: #5b5b5b;
+  --color-on-tertiary: #f3f3f3;
+  --color-tertiary-container: #ffffff;
+  --color-on-tertiary-container: #626262;
+
+  /* Error */
+  --color-error: #b31b25;
+  --color-on-error: #ffefee;
+  --color-error-container: #fb5151;
+  --color-on-error-container: #570008;
+
+  /* Outlines (ghost borders ONLY — see DESIGN.md §4) */
+  --color-outline: #767777;
+  --color-outline-variant: #acadad;
+
+  /* ───────────────── Semantic foreground aliases ───────────────── */
+
+  --fg-1: #2d2f2f;            /* on_surface — primary text */
+  --fg-2: #5a5c5c;            /* on_surface_variant — secondary text */
+  --fg-3: #767777;             /* outline — tertiary text / labels */
+  --fg-muted: #acadad;         /* outline_variant — disabled / list-header */
+  --fg-accent: #00666d;        /* primary — links, active tab text */
+  --fg-rebel: #b60052;         /* secondary — destructive / sign-out */
+
+  /* ───────────────── Type ─────────────────
+     Space Grotesk — display + UI default
+     Manrope — body copy at long-reading sizes
+     Newsreader — serif italic for warm/literary moments
+     Geist Mono — code, tempo, schematic numbers */
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-headline: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Manrope", "Space Grotesk", system-ui, sans-serif;
+  --font-label: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Type scale */
+  --type-display-lg: 700 4rem/0.95 var(--font-display);    /* 64px hero */
+  --type-display-md: 700 3rem/1 var(--font-display);       /* 48px page title */
+  --type-display-sm: 700 2rem/1.05 var(--font-display);    /* 32px modal title */
+  --type-headline-lg: 600 1.5rem/1.2 var(--font-headline); /* 24px */
+  --type-headline-md: 600 1.25rem/1.3 var(--font-headline);/* 20px */
+  --type-title-lg: 600 1rem/1.4 var(--font-headline);      /* 16px card title */
+  --type-body-lg: 400 0.95rem/1.5 var(--font-body);
+  --type-body-md: 400 0.9rem/1.55 var(--font-body);
+  --type-body-sm: 400 0.75rem/1.45 var(--font-body);
+  --type-label-lg: 600 0.75rem/1 var(--font-label);
+  --type-label-md: 600 0.6875rem/1 var(--font-label);
+  --type-mono-md: 500 0.85rem/1.45 var(--font-mono);
+
+  --tracking-display: -0.03em;
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-widest: 0.12em;
+
+  /* ───────────────── Radii — DESIGN.md scale ───────────────── */
+
+  --radius-sm: 0.25rem;   /* DEFAULT — input fields, small buttons */
+  --radius-md: 0.5rem;    /* cards, list rows */
+  --radius-lg: 0.75rem;   /* tool-docks, modals */
+  --radius-xl: 1rem;      /* full sheets */
+  --radius-full: 9999px;  /* pills, primary buttons */
+
+  /* ───────────────── Shadows — atmospheric, never black ───────────────── */
+
+  --shadow-tonal: 0 0 24px 0 rgba(45, 47, 47, 0.06);          /* The standard "lift" */
+  --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06);       /* Auth panels */
+  --shadow-offset-3: 3px 3px 0 0 var(--color-secondary-container);    /* Default pop */
+  --shadow-offset-5: 5px 5px 0 0 var(--color-secondary-container);    /* Hover pop */
+  --shadow-cyan-3: 3px 3px 0 0 var(--color-primary-container);
+  --ghost-border: 1px solid rgba(172, 173, 173, 0.15);
+
+  /* ───────────────── Motion ───────────────── */
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-quick: 150ms;
+  --t-snap: 220ms;
+  --t-flow: 300ms;
+}
+
+/* ───────────────── Semantic element styles ───────────────── */
+
+body {
+  background: var(--color-background);
+  color: var(--color-on-background);
+  font: var(--type-body-md);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Display headlines — serif, mixed case, tight-but-not-extreme tracking */
+.h-display,
+.h1 {
+  font: var(--type-display-md);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-on-surface);
+  margin: 0;
+}
+.h-mega {
+  font: var(--type-display-lg);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-on-surface);
+}
+.h2 {
+  font: var(--type-display-sm);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-on-surface);
+}
+.h3 {
+  font: var(--type-headline-md);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-on-surface);
+}
+
+/* Eyebrow / micro-label — caps, but understated */
+.label,
+.eyebrow {
+  font: var(--type-label-md);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-on-surface-variant);
+}
+
+/* Body text */
+p {
+  font: var(--type-body-md);
+  color: var(--color-on-surface);
+  margin: 0;
+}
+.muted {
+  color: var(--color-on-surface-variant);
+}
+
+/* Wordmark — Space Grotesk italic, heavy weight, tight */
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--color-on-surface);
+  line-height: 1;
+}
+
+/* Mono — for technical / code-ish moments */
+code,
+.mono {
+  font: var(--type-mono-md);
+}
+
+/* Selection — neon cyan */
+::selection {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
+/* Material Symbols utility */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  line-height: 1;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Effect utilities — see DESIGN.md */
+.tonal-layer-glow,
+.editorial-shadow {
+  box-shadow: var(--shadow-tonal);
+}
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.ghost-border {
+  border: var(--ghost-border);
+}
+.manuscript-canvas {
+  background-image: radial-gradient(circle at 2px 2px, rgba(172, 173, 173, 0.15) 1px, transparent 0);
+  background-size: 40px 40px;
+}

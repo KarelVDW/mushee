@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Foreground & semantic colors</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; }
+  .card { width: 700px; box-sizing: border-box; background: var(--color-surface-container-lowest); padding: 22px 28px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 18px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .chip { width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; }
+  .stack { display: flex; flex-direction: column; gap: 2px; }
+  .name { font: var(--type-label-md); letter-spacing: 0.18em; text-transform: uppercase; }
+  .hex { font: 500 11px/1 var(--font-mono); color: var(--color-on-surface-variant); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row"><div class="chip" style="background:#2d2f2f"></div><div class="stack"><span class="name" style="color:#2d2f2f">on-surface · fg-1</span><span class="hex">#2D2F2F · text</span></div></div>
+    <div class="row"><div class="chip" style="background:#5a5c5c"></div><div class="stack"><span class="name" style="color:#5a5c5c">on-surface-variant · fg-2</span><span class="hex">#5A5C5C · meta</span></div></div>
+    <div class="row"><div class="chip" style="background:#767777"></div><div class="stack"><span class="name" style="color:#767777">outline · fg-3</span><span class="hex">#767777 · placeholder</span></div></div>
+    <div class="row"><div class="chip" style="background:#acadad"></div><div class="stack"><span class="name" style="color:#5a5c5c">outline-variant · fg-muted</span><span class="hex">#ACADAD · disabled</span></div></div>
+    <div class="row"><div class="chip" style="background:#00666d"></div><div class="stack"><span class="name" style="color:#00666d">primary · fg-accent</span><span class="hex">#00666D · links</span></div></div>
+    <div class="row"><div class="chip" style="background:#b60052"></div><div class="stack"><span class="name" style="color:#b60052">secondary · fg-rebel</span><span class="hex">#B60052 · destructive</span></div></div>
+    <div class="row"><div class="chip" style="background:#b31b25"></div><div class="stack"><span class="name" style="color:#b31b25">error</span><span class="hex">#B31B25</span></div></div>
+    <div class="row"><div class="chip" style="background:#fb5151"></div><div class="stack"><span class="name" style="color:#b31b25">error-container</span><span class="hex">#FB5151</span></div></div>
+  </div>
+</body>
+</html>
