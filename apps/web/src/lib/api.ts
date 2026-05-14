@@ -57,3 +57,18 @@ export function updateScore(
 export function deleteScore(id: string): Promise<void> {
     return api(`/scores/${id}`, { method: 'DELETE' })
 }
+
+export interface OnboardingPatch {
+    background?: string
+    instruments?: string[]
+    source?: string
+    sourceDetail?: string
+    completedAt?: string
+}
+
+export function patchOnboarding(patch: OnboardingPatch): Promise<unknown> {
+    return api('/onboarding', {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+    })
+}

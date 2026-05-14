@@ -4,12 +4,8 @@ import { useRouter } from 'next/navigation'
 import { type ReactNode, useState } from 'react'
 
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
+import { type OnboardingPatch, patchOnboarding } from '@/lib/api'
 import { emailOtp, useSession } from '@/lib/auth-client'
-
-// Mic permission uses the real browser API. Email verification is visual until
-// the backend sends/validates real codes — any 6-digit input is accepted. Collected
-// answers (name/background/instruments/source/tier) stay local until we have a
-// persistence endpoint to POST them to.
 
 const BACKGROUNDS: [string, string, string][] = [
     ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
@@ -207,9 +203,29 @@ export default function OnboardingPage() {
         }
     })()
 
+    const patchForStep = (s: number): OnboardingPatch | null => {
+        switch (s) {
+            case 3:
+                return background ? { background } : null
+            case 4:
+                return { instruments }
+            case 5:
+                return source ? { source, sourceDetail: sourceDetail.trim() } : null
+            case 6:
+                return { completedAt: new Date().toISOString() }
+            default:
+                return null
+        }
+    }
+
     const next = () => {
+        const patch = patchForStep(step)
+        if (patch) {
+            void patchOnboarding(patch).catch(() => {
+                // Swallow — onboarding persistence is best-effort and shouldn't block progress.
+            })
+        }
         if (step === STEP_COUNT - 1) {
-            // TODO: POST collected onboarding data to the backend once endpoint exists.
             setDone(true)
             return
         }

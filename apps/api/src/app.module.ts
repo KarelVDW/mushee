@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { CronModule } from './cron/cron.module';
 import { MailModule } from './mail/mail.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { ScoresModule } from './scores/scores.module';
 import { StorageModule } from './storage/storage.module';
@@ -29,6 +30,7 @@ import { StorageModule } from './storage/storage.module';
     ScheduleModule.forRoot(),
     MailModule,
     AuthModule,
+    OnboardingModule,
     ScoresModule,
     CacheModule,
     StorageModule,
