@@ -1,12 +1,12 @@
 'use client'
 
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
-import { loadScore, updateScore } from '@/lib/api'
+import { Icon, Pill, SecondaryButton, Wordmark } from '@/components/ui'
+import { getScore, loadScore, updateScore } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
@@ -23,6 +23,7 @@ export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
     const [score, setScore] = useState<Score | null>(null)
+    const [title, setTitle] = useState('Untitled composition')
     const [, setUpdatedAt] = useState(0)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -45,7 +46,8 @@ export default function ScoreEditorPage() {
     useEffect(() => {
         async function load() {
             try {
-                const data = await loadScore(id)
+                const [meta, data] = await Promise.all([getScore(id), loadScore(id)])
+                setTitle(meta.title)
                 const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
                 const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
                 setScore(s)
@@ -64,7 +66,12 @@ export default function ScoreEditorPage() {
         (changes: { title?: string; score?: Score }) => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
             saveTimeoutRef.current = setTimeout(() => {
-                const body: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } = {}
+                const body: {
+                    title?: string
+                    measures?: Record<string, unknown>
+                    allMeasures?: unknown[]
+                    partList?: Record<string, unknown>
+                } = {}
                 if (changes.title !== undefined) body.title = changes.title
                 if (changes.score) {
                     const dirty = changes.score.flushDirty()
@@ -148,9 +155,14 @@ export default function ScoreEditorPage() {
     const handleDotToggle = useCallback(() => {
         if (!activeNote || !score) return
         const newDots = activeNote.duration.dots > 0 ? 0 : 1
-        const [newNote] = score.replace([activeNote], [activeNote.clone({
-            duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }),
-        })])
+        const [newNote] = score.replace(
+            [activeNote],
+            [
+                activeNote.clone({
+                    duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }),
+                }),
+            ],
+        )
         setActiveNote(newNote)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
@@ -173,14 +185,8 @@ export default function ScoreEditorPage() {
 
     const handleTempoToggle = useCallback(() => {
         if (!activeNote || !score) return
-        const measure = activeNote.measure
-        const beat = measure.beatOffsetOf(activeNote)
-        const existing = measure.tempoAtBeat(beat)
-        if (existing) {
-            measure.removeTempo(beat)
-        } else {
-            measure.addTempo(beat, 120)
-        }
+        const existing = activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote))
+        score.setTempo(activeNote, existing ? undefined : 120)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
 
@@ -189,7 +195,7 @@ export default function ScoreEditorPage() {
             if (!score) return
             const measure = score.measures[measureIndex]
             if (!measure) return
-            measure.setTempo(beatPosition, bpm)
+            score.setTempo(measure.noteAtBeat(beatPosition), bpm)
             saveToApi({ score })
         },
         [score, saveToApi],
@@ -425,10 +431,10 @@ export default function ScoreEditorPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-surface text-on-surface">
-                <div className="text-center">
-                    <div className="text-[1.8rem] font-black tracking-tighter italic mb-[0.4rem]">Sheemu</div>
-                    <p className="text-[0.6rem] uppercase tracking-widest text-on-surface-variant font-bold">Loading score…</p>
+            <div className="min-h-screen bg-surface flex items-center justify-center">
+                <div className="text-center flex flex-col items-center gap-2">
+                    <Wordmark size={28} />
+                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Loading score…</span>
                 </div>
             </div>
         )
@@ -436,16 +442,11 @@ export default function ScoreEditorPage() {
 
     if (error || !score) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-surface text-on-surface">
-                <div className="text-center">
-                    <div className="text-[1.8rem] font-black tracking-tighter italic mb-[0.8rem]">Sheemu</div>
-                    <p className="text-error text-[0.9rem] mb-[1.2rem]">{error ?? 'Score not found'}</p>
-                    <button
-                        type="button"
-                        onClick={() => router.push('/scores')}
-                        className="text-secondary font-bold text-[0.6rem] uppercase tracking-widest hover:text-secondary-container transition-colors">
-                        ← Back to Library
-                    </button>
+            <div className="min-h-screen bg-surface flex items-center justify-center">
+                <div className="text-center flex flex-col items-center gap-4">
+                    <Wordmark size={28} />
+                    <p className="font-body font-normal text-[14px] leading-normal text-error m-0">{error ?? 'Score not found'}</p>
+                    <SecondaryButton onClick={() => router.push('/scores')}>← Back to library</SecondaryButton>
                 </div>
             </div>
         )
@@ -453,17 +454,33 @@ export default function ScoreEditorPage() {
 
     return (
         <div ref={containerRef} tabIndex={0} className="flex flex-col min-h-screen max-h-screen bg-surface text-on-surface outline-none">
-            {/* Top brand strip */}
-            <header className="flex justify-between items-center w-full px-8 py-[0.8rem] bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
-                <Link href="/scores" className="text-[1.4rem] font-black tracking-tighter text-on-surface italic">
-                    Sheemu
-                </Link>
-                <button
-                    type="button"
-                    onClick={() => router.push('/scores')}
-                    className="text-on-surface font-bold text-[0.6rem] uppercase tracking-widest hover:text-secondary transition-colors">
-                    ← Back to Library
-                </button>
+            <header className="flex items-center justify-between gap-4 px-6 py-3.5 bg-surface/85 backdrop-blur-xl tonal-layer-glow z-10">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <button
+                        onClick={() => router.push('/scores')}
+                        aria-label="Back to library"
+                        className="bg-transparent border-0 cursor-pointer text-on-surface-variant p-1 inline-flex">
+                        <Icon name="arrow-left" size={20} />
+                    </button>
+                    <Wordmark size={22} />
+                    <div className="w-px h-6 bg-outline-variant/30" />
+                    <input
+                        value={title}
+                        onChange={(e) => {
+                            const v = e.target.value
+                            setTitle(v)
+                            saveToApi({ title: v })
+                        }}
+                        className="bg-transparent border-0 outline-0 font-display italic text-[22px] text-on-surface p-1 min-w-0 flex-1"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setInstrumentDialogOpen(true)}
+                        aria-label={`Change instrument (current: ${score.instrument.displayName})`}
+                        className="bg-transparent border-0 p-0 cursor-pointer">
+                        <Pill>{score.instrument.displayName}</Pill>
+                    </button>
+                </div>
             </header>
             <ControlBar
                 accidental={activeNote?.pitch?.accidental}
@@ -487,22 +504,8 @@ export default function ScoreEditorPage() {
                 metronome={metronome}
                 onMetronomeToggle={() => setMetronome((m) => !m)}
             />
-            <div className="flex-1 overflow-y-auto min-h-full px-8 py-[1.6rem] bg-surface">
-                <div className="mx-auto max-w-4xl min-h-full bg-surface-container-lowest p-6">
-                    <button
-                        type="button"
-                        onClick={() => setInstrumentDialogOpen(true)}
-                        aria-label={`Change instrument (current: ${score.instrument.displayName})`}
-                        className="group flex items-center gap-[0.4rem] mb-[1rem] -ml-[0.2rem] px-[0.6rem] py-[0.3rem] rounded-full bg-surface-container hover:bg-secondary-container transition-colors">
-                        <span
-                            className="material-symbols-outlined text-on-surface group-hover:text-on-secondary-container transition-colors"
-                            style={{ fontSize: '14px' }}>
-                            music_note
-                        </span>
-                        <span className="text-[0.65rem] uppercase tracking-widest font-bold text-on-surface group-hover:text-on-secondary-container transition-colors">
-                            {score.instrument.displayName}
-                        </span>
-                    </button>
+            <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6 bg-surface">
+                <div className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow">
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}

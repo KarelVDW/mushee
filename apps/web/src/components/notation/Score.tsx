@@ -220,14 +220,7 @@ export const Score = memo(function Score({
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
                     {/* Recording waveform — painted directly by RecordingEngine via ref */}
-                    <path
-                        ref={recordingWaveformRef}
-                        stroke="#1e3a8a"
-                        strokeWidth={2.5}
-                        strokeLinecap="square"
-                        fill="none"
-                        opacity={0.5}
-                    />
+                    <path ref={recordingWaveformRef} stroke="#1e3a8a" strokeWidth={2.5} strokeLinecap="square" fill="none" opacity={0.5} />
 
                     {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
                     <rect
@@ -266,20 +259,25 @@ export const Score = memo(function Score({
                                 )}
 
                                 {measure.tempos.map((tempo, ti) => (
-                                    <TempoMarking
-                                        key={`tempo-${ti}`}
-                                        tempo={tempo}
-                                        layoutId={tempo.layout.id}
-                                        onClick={() =>
-                                            handleTempoClick(
-                                                score.getIndexForMeasure(tempo.measure),
-                                                tempo.beatPosition,
-                                                tempo.bpm,
-                                                row.layout.getMeasureX(tempo.measure) + tempo.measure.layout.getXForBeat(tempo.beatPosition),
-                                                score.layout.getYForRow(row) + tempo.layout.y,
-                                            )
-                                        }
-                                    />
+                                    <g
+                                        key={`cursor-${tempo.id}`}
+                                        transform={`translate(${measure.layout.getXForBeat(tempo.beatPosition)}, 0)`}>
+                                        <TempoMarking
+                                            key={`tempo-${ti}`}
+                                            tempo={tempo}
+                                            layoutId={tempo.layout.id}
+                                            onClick={() =>
+                                                handleTempoClick(
+                                                    score.getIndexForMeasure(tempo.measure),
+                                                    tempo.beatPosition,
+                                                    tempo.bpm,
+                                                    row.layout.getMeasureX(tempo.measure) +
+                                                        tempo.measure.layout.getXForBeat(tempo.beatPosition),
+                                                    score.layout.getYForRow(row) + tempo.layout.y,
+                                                )
+                                            }
+                                        />
+                                    </g>
                                 ))}
 
                                 {measure.notes.map((note) => {

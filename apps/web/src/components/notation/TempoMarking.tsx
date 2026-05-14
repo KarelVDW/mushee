@@ -18,10 +18,10 @@ interface TempoMarkingProps {
 
 export const TempoMarking = memo(
     function TempoMarking({ tempo, onClick }: TempoMarkingProps) {
-        const { x, y } = tempo.layout
+        const { y } = tempo.layout
         const { bpm } = tempo
         const nhWidth = getGlyphWidth('noteheadBlack', GLYPH_SCALE)
-        const stemX = x + nhWidth
+        const stemX =  nhWidth
         const stemY2 = y - TEMPO_NOTE_STEM_HEIGHT
 
         const textX = stemX + TEMPO_TEXT_GAP
@@ -32,14 +32,14 @@ export const TempoMarking = memo(
                 style={{ cursor: 'pointer' }}
             >
                 <rect
-                    x={x - 2}
+                    x={-2}
                     y={stemY2 - 2}
                     width={nhWidth + 40}
                     height={TEMPO_NOTE_STEM_HEIGHT + 4}
                     fill="transparent"
                 />
                 <line x1={stemX} y1={y} x2={stemX} y2={stemY2} stroke="#000" strokeWidth={1.2} />
-                <Glyph name="noteheadBlack" x={x} y={y} />
+                <Glyph name="noteheadBlack" x={0} y={y} />
                 <text
                     x={textX}
                     y={y}

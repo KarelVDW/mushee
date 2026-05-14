@@ -2,6 +2,7 @@ import { TempoLayout } from './layout/TempoLayout'
 import type { Measure } from './Measure'
 
 export class Tempo {
+    public id = crypto.randomUUID()
     private _layout: TempoLayout | undefined
 
     constructor(

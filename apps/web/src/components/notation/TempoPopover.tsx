@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import { Eyebrow, PrimaryButton } from '../ui'
 
 interface TempoPopoverProps {
     x: number
@@ -10,46 +12,125 @@ interface TempoPopoverProps {
     onDismiss: () => void
 }
 
-export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPopoverProps) {
-    const inputRef = useRef<HTMLInputElement>(null)
+const MIN_BPM = 20
+const MAX_BPM = 300
+const TAP_RESET_MS = 2000
+const TAP_WINDOW = 8
 
-    useEffect(() => {
-        inputRef.current?.focus()
-        inputRef.current?.select()
+export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPopoverProps) {
+    const popRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+    const [taps, setTaps] = useState<number[]>([])
+    const [draft, setDraft] = useState(String(initialBpm))
+    const [pulse, setPulse] = useState(0)
+
+    const tappedBpm = useMemo(() => {
+        if (taps.length < 2) return null
+        const intervals: number[] = []
+        for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1])
+        const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length
+        return Math.round(60000 / avg)
+    }, [taps])
+
+    const handleTap = useCallback(() => {
+        const now = performance.now()
+        setTaps((prev) => {
+            const last = prev[prev.length - 1]
+            return last && now - last > TAP_RESET_MS ? [now] : [...prev, now].slice(-TAP_WINDOW)
+        })
+        setPulse((p) => p + 1)
     }, [])
 
-    const commit = () => {
-        const val = parseInt(inputRef.current?.value ?? '', 10)
-        if (!isNaN(val) && val > 0 && val <= 999) {
-            onSubmit(val)
-        } else {
-            onDismiss()
+    const commit = useCallback(() => {
+        const n = parseInt(draft, 10)
+        if (n && n >= MIN_BPM && n <= MAX_BPM) onSubmit(n)
+    }, [draft, onSubmit])
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && document.activeElement !== inputRef.current) {
+                e.preventDefault()
+                handleTap()
+            } else if (e.key === 'Escape') {
+                e.preventDefault()
+                onDismiss()
+            } else if (e.key === 'Enter' && document.activeElement === inputRef.current) {
+                e.preventDefault()
+                commit()
+            }
+            e.stopPropagation()
         }
-    }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [handleTap, commit, onDismiss])
+
+    useEffect(() => {
+        const onMouseDown = (e: MouseEvent) => {
+            if (popRef.current && !popRef.current.contains(e.target as Node)) onDismiss()
+        }
+        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
+        return () => {
+            clearTimeout(t)
+            document.removeEventListener('mousedown', onMouseDown)
+        }
+    }, [onDismiss])
+
+    useEffect(() => {
+        if (tappedBpm) setDraft(String(tappedBpm))
+    }, [tappedBpm])
 
     return (
         <div
-            style={{ position: 'absolute', left: x, top: y, zIndex: 50 }}
-            className="bg-white border border-gray-300 rounded shadow-md p-2 flex items-center gap-2"
-            onMouseDown={(e) => e.stopPropagation()}
-        >
-            <span className="text-sm text-gray-600 select-none" onMouseDown={(e) => e.preventDefault()}>
-                &#9833; =
-            </span>
-            <input
-                ref={inputRef}
-                type="number"
-                min={1}
-                max={999}
-                defaultValue={initialBpm}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commit() }
-                    if (e.key === 'Escape') { e.preventDefault(); onDismiss() }
-                    e.stopPropagation()
-                }}
-                onBlur={commit}
-                className="w-16 border border-gray-300 rounded px-1 py-0.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            ref={popRef}
+            role="dialog"
+            aria-label="Set tempo"
+            style={{ left: x, top: y }}
+            className="absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg bg-surface-container-lowest shadow-[0_8px_28px_0_rgba(45,47,47,0.12),0_0_1px_0_rgba(45,47,47,0.2)]"
+            onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+                <Eyebrow>Tempo</Eyebrow>
+                <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
+                    {taps.length < 2 ? 'Tap 2+ times' : `${tappedBpm} bpm · ${taps.length} taps`}
+                </span>
+            </div>
+
+            <button
+                type="button"
+                onClick={handleTap}
+                className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft">
+                <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
+                    <span
+                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-[120ms] ease-sheemu"
+                        style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
+                    />
+                    Tap along
+                </span>
+                <span className="font-display italic font-bold text-[20px] leading-[1.2] tracking-[-0.02em]">
+                    Click or tap the spacebar in tempo
+                </span>
+            </button>
+
+            <div className="flex items-stretch gap-2">
+                <div className="relative flex-1 flex items-center px-3 rounded-sm bg-surface-container-low">
+                    <input
+                        ref={inputRef}
+                        type="number"
+                        min={MIN_BPM}
+                        max={MAX_BPM}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        aria-label="BPM"
+                        className="flex-1 min-w-0 py-3 bg-transparent border-0 outline-0 font-body font-medium text-[16px] leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                    <span className="font-label font-medium text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
+                        bpm
+                    </span>
+                    <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
+                </div>
+                <PrimaryButton onClick={commit} emphasis="pop">
+                    Set
+                </PrimaryButton>
+            </div>
         </div>
     )
 }

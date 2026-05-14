@@ -284,6 +284,16 @@ export class Score {
         }
     }
 
+    setTempo(note: Note | null | undefined, bpm: number | undefined) {
+        if (!note) return
+        const measure = note.measure
+        const beat = measure.beatOffsetOf(note)
+        if (bpm === undefined) measure.removeTempo(beat)
+        else measure.setTempo(beat, bpm)
+        this.markMeasureDirty(measure)
+        this.onChange()
+    }
+
     replace(targets: Note[], values: Note[]) {
         if (!targets.length) throw new Error('Replace targets can not be empty')
         if (!values.length) throw new Error('Replace values can not be empty')

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* M3 Color Palette — Precision Maverick (Sheemu) */
+  /* Sheemu — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
   /* Canvas */
   --color-background: #f6f6f6;
   --color-on-background: #2d2f2f;
@@ -20,87 +20,82 @@
   --color-inverse-surface: #0c0f0f;
   --color-inverse-on-surface: #9c9d9d;
 
-  /* The Pulse — Primary (Cyan power-source) */
+  /* The Pulse — Primary (Neon Cyan) */
   --color-primary: #00666d;
   --color-on-primary: #cffbff;
   --color-primary-container: #00dbe9;
   --color-on-primary-container: #005359;
+  --color-primary-soft: #a6f2f7;
+  --color-on-primary-soft: #003f43;
   --color-primary-dim: #00595f;
-  --color-primary-fixed: #00dbe9;
-  --color-primary-fixed-dim: #00deec;
-  --color-on-primary-fixed: #003f43;
-  --color-on-primary-fixed-variant: #005e64;
   --color-inverse-primary: #00dbe9;
 
-  /* The Accent — Secondary (Magenta rebellion) */
+  /* The Accent — Secondary (Neon Magenta) */
   --color-secondary: #b60052;
   --color-on-secondary: #ffeff0;
   --color-secondary-container: #ff2079;
   --color-on-secondary-container: #91003f;
+  --color-secondary-soft: #ffadbf;
+  --color-on-secondary-soft: #6d002e;
   --color-secondary-dim: #a00047;
-  --color-secondary-fixed: #ff2079;
-  --color-secondary-fixed-dim: #ffadbf;
-  --color-on-secondary-fixed: #6d002e;
-  --color-on-secondary-fixed-variant: #a20048;
 
-  /* Tertiary — muted technical neutrals */
+  /* Tertiary */
   --color-tertiary: #5b5b5b;
   --color-on-tertiary: #f3f3f3;
   --color-tertiary-container: #ffffff;
   --color-on-tertiary-container: #626262;
-  --color-tertiary-dim: #4f4f4f;
-  --color-tertiary-fixed: #ffffff;
-  --color-tertiary-fixed-dim: #f1f1f1;
-  --color-on-tertiary-fixed: #505050;
-  --color-on-tertiary-fixed-variant: #6d6d6d;
 
   /* Error */
   --color-error: #b31b25;
   --color-on-error: #ffefee;
   --color-error-container: #fb5151;
   --color-on-error-container: #570008;
-  --color-error-dim: #9f0519;
 
-  /* Outlines (ghost borders only — see DESIGN.md) */
+  /* Outlines */
   --color-outline: #767777;
   --color-outline-variant: #acadad;
 
-  /* Typography — Space Grotesk exclusively */
-  --font-display: var(--font-space-grotesk);
-  --font-headline: var(--font-space-grotesk);
-  --font-body: var(--font-space-grotesk);
-  --font-label: var(--font-space-grotesk);
-  --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-geist-mono);
+  /* Corner radii — DESIGN.md scale */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
 
-  /* Roundedness — DESIGN.md scale */
-  --radius-DEFAULT: 0.25rem;
-  --radius-xl: 0.5rem;
-  --radius-full: 0.75rem;
+  /* Motion */
+  --ease-sheemu: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
+     Values reference the next/font CSS variables that layout.tsx sets on <body>.
+     `var(--font-space-grotesk)` resolves at use-site, where <body> is in scope. */
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-headline: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-body: var(--font-manrope), var(--font-space-grotesk), system-ui, sans-serif;
+  --font-label: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-on-background);
-  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
+  line-height: 1;
 }
 
-/* Atmospheric Shadow — tinted with on_surface, never black.
-   Spec: 24px blur, 0px offset, 6% opacity of #2d2f2f. */
-.tonal-layer-glow {
-  box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
-}
+/* Atmospheric Shadow — tinted with on_surface, never black. */
+.tonal-layer-glow,
 .editorial-shadow {
   box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
 }
 
-/* Subtle dot texture for "stage" surfaces. Muted — tonal, not decorative. */
 .manuscript-canvas {
   background-image: radial-gradient(
     circle at 2px 2px,
@@ -110,15 +105,13 @@ body {
   background-size: 40px 40px;
 }
 
-/* Glassmorphism — surface_container_lowest at 85%, blur 12px. */
 .glass-panel {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Input field — no four-sided box.
-   surface_container_low fill, 2px primary bottom stroke animating 0→100% on focus. */
+/* Input bottom-only animated stroke. */
 .input-field-container {
   position: relative;
 }
@@ -129,12 +122,14 @@ body {
   left: 50%;
   width: 0;
   height: 2px;
-  background-color: var(--color-primary);
-  transition: width 0.3s ease, left 0.3s ease;
+  background-color: var(--color-primary-container);
+  transition: width 0.3s var(--ease-sheemu), left 0.3s var(--ease-sheemu);
   transform: translateX(-50%);
 }
 .input-field-container:focus-within::after {
   width: 100%;
+  left: 0;
+  transform: none;
 }
 .input-field {
   border: none !important;
@@ -146,7 +141,10 @@ body {
   box-shadow: none !important;
 }
 
-/* Ghost border — outline_variant at 15% opacity, felt not seen. */
 .ghost-border {
   border: 1px solid rgba(172, 173, 173, 0.15);
+}
+
+@keyframes sheemu-spin {
+  to { transform: rotate(360deg); }
 }

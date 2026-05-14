@@ -1,21 +1,17 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
+import { Footer, Icon, IconButton, PageHeader, PrimaryButton, TextField, TopNav } from '@/components/ui'
 import { createScore, deleteScore, listScores, type ScoreMeta } from '@/lib/api'
-import { signOut, useSession } from '@/lib/auth-client'
+import { useSession } from '@/lib/auth-client'
 import { Instrument } from '@/model'
 
 import { CreateScoreDialog } from './CreateScoreDialog'
 
 function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    })
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function relativeTime(iso: string): string {
@@ -54,9 +50,7 @@ export default function ScoresPage() {
     }, [fetchScores])
 
     useEffect(() => {
-        const timeout = setTimeout(() => {
-            fetchScores(search || undefined)
-        }, 300)
+        const timeout = setTimeout(() => fetchScores(search || undefined), 300)
         return () => clearTimeout(timeout)
     }, [search, fetchScores])
 
@@ -72,16 +66,20 @@ export default function ScoresPage() {
                     },
                 ],
             },
-            parts: [{
-                id: 'P1',
-                measures: [{
-                    number: '1',
-                    entries: [
-                        { _type: 'attributes', divisions: 12, clef: [{ sign: 'G', line: 2 }], time: [{ beats: '4', beatType: '4' }] },
-                        { _type: 'note', duration: 48, voice: '1', type: 'whole' },
+            parts: [
+                {
+                    id: 'P1',
+                    measures: [
+                        {
+                            number: '1',
+                            entries: [
+                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'G', line: 2 }], time: [{ beats: '4', beatType: '4' }] },
+                                { _type: 'note', duration: 48, voice: '1', type: 'whole' },
+                            ],
+                        },
                     ],
-                }],
-            }],
+                },
+            ],
         }
 
         const created = await createScore(title, emptyScore)
@@ -94,137 +92,56 @@ export default function ScoresPage() {
         setScores((prev) => prev.filter((s) => s.id !== id))
     }
 
-    async function handleSignOut() {
-        await signOut()
-        router.push('/login')
-    }
-
     return (
-        <div className="bg-surface text-on-surface min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-container">
-            {/* Top Nav */}
-            <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
-                <div className="flex justify-between items-center w-full px-8 py-[1.2rem] max-w-[1536px] mx-auto">
-                    <div className="flex items-center gap-[1.6rem]">
-                        <Link href="/scores" className="text-[1.8rem] font-black tracking-tighter text-on-surface italic">
-                            Sheemu
-                        </Link>
-                    </div>
+        <div className="bg-surface text-on-surface min-h-screen flex flex-col">
+            <TopNav user={session?.user?.name ?? undefined} onCreate={() => setCreateDialogOpen(true)} />
 
-                    <div className="hidden md:flex items-center gap-[1.6rem] uppercase tracking-widest text-[0.6rem] font-bold">
-                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Editor</span>
-                        <span className="text-primary border-b-[3px] border-primary-container pb-[0.2rem]">Library</span>
-                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Community</span>
-                        <span className="text-on-surface-variant hover:text-on-surface transition-colors cursor-not-allowed">Collaborate</span>
-                    </div>
-
-                    <div className="flex items-center gap-[0.8rem]">
-                        {session?.user?.name && (
-                            <span className="hidden md:inline text-[0.6rem] uppercase tracking-widest text-on-surface-variant font-bold">
-                                {session.user.name}
-                            </span>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => void handleSignOut()}
-                            className="hidden md:block text-on-surface font-bold text-[0.6rem] uppercase tracking-widest hover:text-secondary transition-colors">
-                            Sign Out
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setCreateDialogOpen(true)}
-                            className="bg-primary-container text-on-primary-container rounded-full px-[1.2rem] py-[0.4rem] font-bold text-[0.6rem] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--color-secondary-container)] hover:shadow-[5px_5px_0px_0px_var(--color-secondary-container)] hover:-translate-y-[2px] transition-all">
-                            Create New
-                        </button>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Main */}
-            <main className="flex-grow w-full max-w-[1536px] mx-auto px-[1.2rem] md:px-8 py-[2.4rem] flex flex-col gap-[1.6rem]">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-end gap-[1.2rem] pb-[1.2rem]">
-                    <div>
-                        <h1 className="text-[2.8rem] font-black leading-none tracking-[-0.04em] text-on-surface uppercase mb-[0.4rem]">My Scores</h1>
-                        <p className="text-on-surface-variant text-[0.9rem]">Manage and edit your composed pieces.</p>
-                    </div>
-                    <div className="w-full md:w-auto flex gap-[0.8rem]">
-                        <div className="input-field-container bg-surface-container-low rounded flex items-center w-full md:w-[16rem] relative">
-                            <span className="material-symbols-outlined text-outline absolute left-[0.6rem] pointer-events-none" style={{ fontSize: '19px' }}>search</span>
-                            <input
-                                className="input-field bg-transparent text-on-surface text-[0.9rem] py-[0.6rem] pl-[2rem] pr-[0.8rem] w-full placeholder-on-surface-variant/50"
-                                placeholder="Filter scores by name..."
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
+            <main className="flex-1 max-w-7xl mx-auto px-8 py-10 flex flex-col gap-6 w-full box-border">
+                <PageHeader
+                    title="Your scores"
+                    italic
+                    subtitle="A quiet shelf for everything you're working on."
+                    right={
+                        <div className="w-64">
+                            <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
                         </div>
-                    </div>
+                    }
+                />
+
+                {/* Column headers */}
+                <div className="grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-widest uppercase text-outline">
+                    <span>Title</span>
+                    <span>Created</span>
+                    <span>Updated</span>
+                    <span />
                 </div>
 
-                {/* Scores List */}
-                <div className="flex flex-col gap-[0.8rem]">
-                    {/* List Header */}
-                    <div className="hidden md:grid grid-cols-12 gap-[0.8rem] px-[1.2rem] py-[0.6rem] text-[0.6rem] uppercase tracking-widest text-outline-variant font-bold">
-                        <div className="col-span-5">Name</div>
-                        <div className="col-span-3">Created At</div>
-                        <div className="col-span-2">Updated At</div>
-                        <div className="col-span-2 text-right">Actions</div>
-                    </div>
-
+                <div className="flex flex-col gap-3">
                     {loading ? (
-                        <div className="bg-surface-container-lowest rounded-lg p-[1.2rem] tonal-layer-glow text-[0.7rem] text-on-surface-variant uppercase tracking-widest font-bold">
-                            Loading…
-                        </div>
+                        <EmptyCard>
+                            <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">Loading your scores…</span>
+                        </EmptyCard>
                     ) : scores.length === 0 ? (
-                        <div className="bg-surface-container-lowest rounded-lg p-[2.4rem] tonal-layer-glow text-center">
-                            <p className="text-on-surface-variant text-[0.9rem]">
-                                {search ? 'No scores match your filter.' : 'No scores yet. Compose your first one.'}
-                            </p>
-                        </div>
+                        search ? (
+                            <EmptyCard>
+                                <span className="text-outline-variant">
+                                    <Icon name="search" size={32} />
+                                </span>
+                                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                                    No scores match &ldquo;{search}&rdquo;.
+                                </span>
+                            </EmptyCard>
+                        ) : (
+                            <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} />
+                        )
                     ) : (
                         scores.map((score) => (
-                            <div
+                            <ScoreRow
                                 key={score.id}
-                                className="group bg-surface-container-lowest hover:bg-surface-container-low rounded-lg p-[1.2rem] tonal-layer-glow transition-colors duration-300 grid grid-cols-1 md:grid-cols-12 gap-[0.8rem] items-center relative overflow-hidden">
-                                {/* Hover accent indicator */}
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => router.push(`/scores/${score.id}`)}
-                                    className="col-span-1 md:col-span-5 flex flex-col gap-[0.2rem] text-left">
-                                    <span className="text-base font-bold text-on-surface group-hover:text-primary transition-colors">
-                                        {score.title}
-                                    </span>
-                                </button>
-
-                                <div className="col-span-1 md:col-span-3 flex flex-col md:block">
-                                    <span className="md:hidden text-[0.6rem] uppercase text-outline-variant mb-[0.2rem]">Created At</span>
-                                    <span className="text-on-surface-variant text-[0.7rem]">{formatDate(score.createdAt)}</span>
-                                </div>
-
-                                <div className="col-span-1 md:col-span-2 flex flex-col md:block">
-                                    <span className="md:hidden text-[0.6rem] uppercase text-outline-variant mb-[0.2rem]">Updated At</span>
-                                    <span className="text-on-surface-variant text-[0.7rem]">{relativeTime(score.updatedAt)}</span>
-                                </div>
-
-                                <div className="col-span-1 md:col-span-2 flex items-center justify-start md:justify-end gap-[0.4rem] mt-[0.8rem] md:mt-0">
-                                    <button
-                                        type="button"
-                                        aria-label="Edit"
-                                        onClick={() => router.push(`/scores/${score.id}`)}
-                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-primary-container hover:text-on-primary-container text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary-container)]">
-                                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>edit</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        aria-label="Delete"
-                                        onClick={() => void handleDelete(score.id, score.title)}
-                                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary text-on-surface flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_var(--color-secondary-container)]">
-                                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
-                                    </button>
-                                </div>
-                            </div>
+                                score={score}
+                                onOpen={() => router.push(`/scores/${score.id}`)}
+                                onDelete={() => void handleDelete(score.id, score.title)}
+                            />
                         ))
                     )}
                 </div>
@@ -239,15 +156,82 @@ export default function ScoresPage() {
                 }}
             />
 
-            {/* Footer */}
-            <footer className="bg-surface w-full py-[2.4rem] ghost-border border-x-0 border-b-0">
-                <div className="flex flex-col md:flex-row justify-between items-center px-[2.4rem] gap-[1.2rem] max-w-[1536px] mx-auto">
-                    <div className="text-base font-bold text-on-surface">Sheemu</div>
-                    <div className="text-[0.7rem] text-on-surface-variant font-medium uppercase tracking-widest">
-                        © 2024 Sheemu. Boldly Composed.
-                    </div>
-                </div>
-            </footer>
+            <Footer />
+        </div>
+    )
+}
+
+function EmptyCard({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="bg-surface-container-lowest rounded-md p-14 editorial-shadow text-center flex flex-col gap-3 items-center">
+            {children}
+        </div>
+    )
+}
+
+function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
+    return (
+        <div className="bg-surface-container-lowest rounded-md px-8 py-10 editorial-shadow flex items-center gap-7">
+            <svg viewBox="0 0 120 80" width="96" height="64" aria-hidden className="shrink-0">
+                {[0, 1, 2, 3, 4].map((i) => (
+                    <line key={i} x1={8} x2={112} y1={20 + i * 10} y2={20 + i * 10} stroke="var(--color-outline-variant)" strokeWidth={1} />
+                ))}
+                <text x={12} y={56} fontFamily="serif" fontSize={42} fill="var(--color-outline)">𝄞</text>
+            </svg>
+            <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                <span className="font-body font-semibold text-[16px] leading-[1.3] text-on-surface">No scores yet.</span>
+                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                    Compose your first one — it&apos;ll show up on this shelf.
+                </span>
+            </div>
+            <PrimaryButton icon="plus" onClick={onCreate}>
+                New score
+            </PrimaryButton>
+        </div>
+    )
+}
+
+function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () => void; onDelete: () => void }) {
+    return (
+        <div
+            className={[
+                'group relative overflow-hidden',
+                'bg-surface-container-lowest hover:bg-surface-container-high',
+                'rounded-md px-6 py-4.5 editorial-shadow',
+                'grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 items-center',
+                'transition-colors duration-200 ease-sheemu',
+            ].join(' ')}>
+            <div className="absolute left-0 top-0 bottom-0 w-0.75 bg-primary-container opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-sheemu" />
+            <button
+                onClick={onOpen}
+                type="button"
+                className={[
+                    'text-left bg-transparent border-0 p-0 cursor-pointer',
+                    'font-body font-medium text-[16px] leading-[1.3]',
+                    'text-on-surface group-hover:text-primary',
+                    'transition-colors duration-200 ease-sheemu',
+                ].join(' ')}>
+                {score.title}
+            </button>
+            <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{formatDate(score.createdAt)}</span>
+            <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{relativeTime(score.updatedAt)}</span>
+            <div className="flex gap-2 justify-end">
+                <IconButton
+                    icon="pencil"
+                    ariaLabel="Edit"
+                    size={28}
+                    idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
+                    onClick={onOpen}
+                />
+                <IconButton
+                    icon="trash-2"
+                    ariaLabel="Delete"
+                    size={28}
+                    hoverTone="magenta"
+                    idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
+                    onClick={onDelete}
+                />
+            </div>
         </div>
     )
 }
