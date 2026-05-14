@@ -27,7 +27,17 @@ interface TextFieldProps {
  * single pseudo-element transition.
  */
 export function TextField({
-    label, value, onChange, type = 'text', placeholder, leftIcon, rightSlot, autoFocus, hint, onKeyDown, inputRef,
+    label,
+    value,
+    onChange,
+    type = 'text',
+    placeholder,
+    leftIcon,
+    rightSlot,
+    autoFocus,
+    hint,
+    onKeyDown,
+    inputRef,
 }: TextFieldProps) {
     const [focused, setFocused] = useState(false)
     return (

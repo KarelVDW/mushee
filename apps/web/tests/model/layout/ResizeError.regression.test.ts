@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
-
 import { Duration } from '@/model/Duration'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
@@ -23,8 +22,7 @@ import { Score } from '@/model/Score'
  * widths, since RowLayout always allots at least minimalWidth to each measure.
  */
 
-const sixteenth = (octave = 4) =>
-    new Note({ duration: new Duration({ type: '16' }), pitch: new Pitch({ name: 'C', octave }) })
+const sixteenth = (octave = 4) => new Note({ duration: new Duration({ type: '16' }), pitch: new Pitch({ name: 'C', octave }) })
 
 const sixteenthSharp = (octave = 4) =>
     new Note({
@@ -99,7 +97,9 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < 16; i++) notes.push(sixteenthSharp())
             m.addNotes(notes)
             expect(m.minimalWidth).toBeLessThan(SCORE_WIDTH)
-            expect(() => score.firstRow!.layout).not.toThrow()
+            const firstRow = score.firstRow
+            if (!firstRow) throw new Error('expected firstRow')
+            expect(() => firstRow.layout).not.toThrow()
         })
     })
 
@@ -139,12 +139,15 @@ describe('ResizeError regressions', () => {
             ])
             const before = m.minimalWidth
             // Now densify by replacing a quarter rest with 4 sharp 16ths
-            const target = m.firstNote!
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
             const replacements: Note[] = []
             for (let i = 0; i < 4; i++) replacements.push(sixteenthSharp())
             m.replaceNotes([target], replacements)
             expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
-            expect(() => score.firstRow!.layout).not.toThrow()
+            const firstRow = score.firstRow
+            if (!firstRow) throw new Error('expected firstRow')
+            expect(() => firstRow.layout).not.toThrow()
             expect(() => m.layout).not.toThrow()
         })
 
@@ -167,7 +170,9 @@ describe('ResizeError regressions', () => {
             const before = m.minimalWidth
             m.setEndBarline('end')
             expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
-            expect(() => score.firstRow!.layout).not.toThrow()
+            const firstRow = score.firstRow
+            if (!firstRow) throw new Error('expected firstRow')
+            expect(() => firstRow.layout).not.toThrow()
         })
     })
 
@@ -182,7 +187,10 @@ describe('ResizeError regressions', () => {
         it('Score.replace across measure boundaries does not throw', () => {
             const score = new Score()
             for (let i = 0; i < 2; i++) score.addMeasure().complete()
-            const target = score.firstMeasure!.firstNote!
+            const firstMeasure = score.firstMeasure
+            if (!firstMeasure) throw new Error('expected firstMeasure')
+            const target = firstMeasure.firstNote
+            if (!target) throw new Error('expected firstNote')
             const longNote = new Note({ duration: new Duration({ type: 'w' }) })
             expect(() => score.replace([target], [longNote])).not.toThrow()
             for (const row of score.rows) expect(() => row.layout).not.toThrow()
@@ -206,7 +214,7 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
             expect(() => {
-                for (const m of score.measures) m.layout
+                for (const m of score.measures) void m.layout
             }).not.toThrow()
             // Each dense measure should now occupy its own row (canFit refuses pairing).
             // We don't pin the exact count, but every row must lay out cleanly.

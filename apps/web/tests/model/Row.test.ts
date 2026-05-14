@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
-
 import { Clef } from '@/model/Clef'
 import { Measure } from '@/model/Measure'
 import { Row } from '@/model/Row'
@@ -92,7 +91,8 @@ describe('Row', () => {
     it('invalidateLayout clears row layout cache', () => {
         const score = new Score()
         score.addMeasure().complete()
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         const before = row.layout
         row.invalidateLayout()
         const after = row.layout

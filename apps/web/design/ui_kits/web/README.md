@@ -4,17 +4,17 @@ High-fidelity React/JSX recreation of the Sheemu web app. Cosmetic / interactive
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `index.html` | Click-thru prototype: Library → Login (modal) → New Score → Editor. |
-| `Brand.jsx` | `<Wordmark>`, `<Eyebrow>`, `<Pill>` — the typographic primitives. |
-| `Buttons.jsx` | `<PrimaryButton>`, `<TertiaryButton>`, `<IconButton>`, `<GroupButton>`, `<ToggleButton>`. |
-| `Inputs.jsx` | `<TextField>` with the cyan underline + `<SearchField>`. |
-| `Chrome.jsx` | `<TopNav>`, `<Footer>`, `<DialogScrim>` + `<DialogPanel>`. |
-| `Library.jsx` | The `/scores` library screen — header, search, score row list. |
-| `Editor.jsx` | The `/scores/[id]` editor — control bar + sanctuary canvas + measure buttons. |
-| `Auth.jsx` | The split-panel login / signup card with the brand-side gradient panel. |
-| `CreateScoreDialog.jsx` | The new-score dialog with `<InstrumentPicker>`. |
+| File                    | Purpose                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `index.html`            | Click-thru prototype: Library → Login (modal) → New Score → Editor.                       |
+| `Brand.jsx`             | `<Wordmark>`, `<Eyebrow>`, `<Pill>` — the typographic primitives.                         |
+| `Buttons.jsx`           | `<PrimaryButton>`, `<TertiaryButton>`, `<IconButton>`, `<GroupButton>`, `<ToggleButton>`. |
+| `Inputs.jsx`            | `<TextField>` with the cyan underline + `<SearchField>`.                                  |
+| `Chrome.jsx`            | `<TopNav>`, `<Footer>`, `<DialogScrim>` + `<DialogPanel>`.                                |
+| `Library.jsx`           | The `/scores` library screen — header, search, score row list.                            |
+| `Editor.jsx`            | The `/scores/[id]` editor — control bar + sanctuary canvas + measure buttons.             |
+| `Auth.jsx`              | The split-panel login / signup card with the brand-side gradient panel.                   |
+| `CreateScoreDialog.jsx` | The new-score dialog with `<InstrumentPicker>`.                                           |
 
 ## Coverage
 

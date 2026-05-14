@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, Suspense, useEffect, useState } from 'react'
 
 import { AuthShell, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
 import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
@@ -22,6 +22,14 @@ function scorePassword(pw: string): number {
 }
 
 export default function PasswordResetPage() {
+    return (
+        <Suspense fallback={null}>
+            <PasswordResetPageInner />
+        </Suspense>
+    )
+}
+
+function PasswordResetPageInner() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const tokenFromUrl = searchParams.get('token')
@@ -35,9 +43,7 @@ export default function PasswordResetPage() {
     const [resent, setResent] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(
-        errorFromUrl === 'INVALID_TOKEN'
-            ? 'That reset link is invalid or has expired. Request a new one below.'
-            : null,
+        errorFromUrl === 'INVALID_TOKEN' ? 'That reset link is invalid or has expired. Request a new one below.' : null,
     )
 
     useEffect(() => {
@@ -107,9 +113,17 @@ export default function PasswordResetPage() {
                     <div className="flex flex-col gap-4">
                         <h1 className="font-display font-normal italic text-[48px] leading-none tracking-[-0.02em] text-on-surface m-0">
                             {stage === 'done' ? (
-                                <>You&apos;re<br />back in.</>
+                                <>
+                                    You&apos;re
+                                    <br />
+                                    back in.
+                                </>
                             ) : (
-                                <>Reset your<br />password.</>
+                                <>
+                                    Reset your
+                                    <br />
+                                    password.
+                                </>
                             )}
                         </h1>
                         <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">
@@ -145,7 +159,11 @@ export default function PasswordResetPage() {
                         )}
 
                         {stage === 'request' && (
-                            <form onSubmit={handleRequest} className="flex flex-col gap-5 flex-1">
+                            <form
+                                onSubmit={(e) => {
+                                    void handleRequest(e)
+                                }}
+                                className="flex flex-col gap-5 flex-1">
                                 <div className="flex flex-col gap-2 flex-1 justify-center">
                                     <ModalTitle>Forgot your password?</ModalTitle>
                                     <SubHeadline>Enter the email on your account and we&apos;ll send a reset link.</SubHeadline>
@@ -172,13 +190,16 @@ export default function PasswordResetPage() {
                                     </div>
                                     <ModalTitle>Check your email.</ModalTitle>
                                     <SubHeadline>
-                                        We sent a reset link to <strong className="text-on-surface">{email || 'your address'}</strong>. The link is good for the next 30 minutes.
+                                        We sent a reset link to <strong className="text-on-surface">{email || 'your address'}</strong>. The
+                                        link is good for the next 30 minutes.
                                     </SubHeadline>
                                     <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
                                         Don&apos;t see it? Check your spam folder, or{' '}
                                         <button
                                             type="button"
-                                            onClick={handleResend}
+                                            onClick={() => {
+                                                void handleResend()
+                                            }}
                                             className="bg-transparent border-0 p-0 text-primary cursor-pointer font-inherit underline">
                                             {resent ? 'sent again ✓' : 'resend the link'}
                                         </button>
@@ -194,7 +215,11 @@ export default function PasswordResetPage() {
                         )}
 
                         {stage === 'set-new' && (
-                            <form onSubmit={handleSetNew} className="flex flex-col gap-5 flex-1">
+                            <form
+                                onSubmit={(e) => {
+                                    void handleSetNew(e)
+                                }}
+                                className="flex flex-col gap-5 flex-1">
                                 <div className="flex flex-col gap-4 flex-1 justify-center">
                                     <ModalTitle>Set a new password.</ModalTitle>
                                     <SubHeadline>At least 8 characters, with a mix of letters and numbers.</SubHeadline>
@@ -221,10 +246,10 @@ export default function PasswordResetPage() {
                                             const fillClass = !filled
                                                 ? 'bg-surface-container'
                                                 : pwScore <= 1
-                                                    ? 'bg-error-container'
-                                                    : pwScore === 2
-                                                        ? 'bg-secondary-soft'
-                                                        : 'bg-primary-container'
+                                                  ? 'bg-error-container'
+                                                  : pwScore === 2
+                                                    ? 'bg-secondary-soft'
+                                                    : 'bg-primary-container'
                                             return (
                                                 <div
                                                     key={i}
@@ -234,7 +259,13 @@ export default function PasswordResetPage() {
                                         })}
                                         <Eyebrow className="ml-1">{PW_LABELS[pwScore]}</Eyebrow>
                                     </div>
-                                    <TextField label="Confirm password" value={pw2} onChange={setPw2} type={showPw ? 'text' : 'password'} placeholder="••••••••••••" />
+                                    <TextField
+                                        label="Confirm password"
+                                        value={pw2}
+                                        onChange={setPw2}
+                                        type={showPw ? 'text' : 'password'}
+                                        placeholder="••••••••••••"
+                                    />
                                     {pw2.length > 0 && !pwMatch && (
                                         <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
                                             Passwords don&apos;t match yet.

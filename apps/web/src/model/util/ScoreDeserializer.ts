@@ -1,4 +1,3 @@
-
 import type {
     BarlineType,
     ClefType,
@@ -8,7 +7,7 @@ import type {
     MxmlNote,
     MxmlNoteType,
     ScorePartwise,
-    TieType
+    TieType,
 } from '@/components/notation/types'
 
 import { Clef } from '../Clef'
@@ -24,17 +23,18 @@ import { TimeSignature } from '../TimeSignature'
 export class ScoreDeserializer {
     constructor(readonly input: ScorePartwise) {}
 
-    toScore(onChange?: (() => void)): Score {
+    toScore(onChange?: () => void): Score {
         const score = new Score(onChange)
         const scorePart = this.input.partList?.scoreParts?.[0]
         if (scorePart) {
             const program = scorePart.midiInstrument?.midiProgram
             const instrumentName = scorePart.scoreInstrument?.instrumentName ?? scorePart.partName
-            const resolved = program !== undefined
-                ? Instrument.byGmProgram(program - 1)
-                : instrumentName
-                    ? Instrument.byDisplayName(instrumentName)
-                    : Instrument.Piano
+            const resolved =
+                program !== undefined
+                    ? Instrument.byGmProgram(program - 1)
+                    : instrumentName
+                      ? Instrument.byDisplayName(instrumentName)
+                      : Instrument.Piano
             score.seedInstrument(resolved)
         }
         const part = this.input.parts[0]
@@ -166,7 +166,7 @@ export class ScoreDeserializer {
         const type: ClefType = sign === 'F' && (line === 4 || line === undefined) ? 'bass' : 'treble'
         return new Clef(type)
     }
-    
+
     private static mxmlBarStyleToBarlineType(style: MxmlBarStyle): BarlineType {
         switch (style) {
             case 'light-light':
@@ -189,5 +189,4 @@ export class ScoreDeserializer {
         if (hasStop) return 'stop'
         return undefined
     }
-
 }

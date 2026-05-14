@@ -25,10 +25,9 @@ export default function SignupPage() {
                 setError(error.message ?? 'Signup failed')
                 setLoading(false)
             } else {
-                 void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(({ error }) => {
+                void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(({ error }) => {
                     if (!error) router.push('/onboarding')
-                 })
-                
+                })
             }
         })
     }

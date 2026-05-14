@@ -5,8 +5,7 @@ import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
 
-const eighth = (name = 'C', octave = 4) =>
-    new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })
+const eighth = (name = 'C', octave = 4) => new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })
 
 describe('Beam', () => {
     function setup() {

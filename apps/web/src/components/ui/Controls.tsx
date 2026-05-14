@@ -28,9 +28,7 @@ export function Segmented<T extends string | undefined>({ options, value, onChan
                             'font-label font-semibold text-[14px] leading-none',
                             'inline-flex items-center justify-center',
                             'transition-[background-color,color] duration-150 ease-sheemu',
-                            active
-                                ? 'bg-primary-container text-on-primary-container'
-                                : 'bg-transparent text-on-surface-variant',
+                            active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
                         {o.label}
                     </button>
@@ -81,15 +79,7 @@ interface TransportBtnProps {
     disabled?: boolean
 }
 
-export function TransportBtn({
-    size,
-    tone = 'neutral',
-    active,
-    onClick,
-    ariaLabel,
-    children,
-    disabled,
-}: TransportBtnProps) {
+export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, children, disabled }: TransportBtnProps) {
     if (tone === 'record') {
         const dotSize = Math.round(size * 0.42)
         return (
@@ -110,9 +100,7 @@ export function TransportBtn({
                 <span
                     className={[
                         'rounded-full transition-[background-color] duration-200 ease-sheemu',
-                        active
-                            ? 'bg-on-error shadow-none'
-                            : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
+                        active ? 'bg-on-error shadow-none' : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
                     ].join(' ')}
                     style={{ width: dotSize, height: dotSize }}
                 />
@@ -131,9 +119,7 @@ export function TransportBtn({
                     'rounded-full p-0 inline-flex items-center justify-center shrink-0',
                     'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                     'border-[3px] border-primary-container',
-                    active
-                        ? 'bg-primary-container text-on-primary-container'
-                        : 'bg-surface-container-lowest text-primary',
+                    active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-lowest text-primary',
                     'transition-[transform,background-color,color] duration-200 ease-sheemu',
                     'enabled:hover:scale-105',
                 ].join(' ')}

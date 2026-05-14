@@ -9,8 +9,7 @@ import { Score } from '@/model/Score'
 import { TimeSignature } from '@/model/TimeSignature'
 import { BeamFinder } from '@/model/util/BeamFinder'
 
-const eighth = (name = 'C', octave = 4) =>
-    new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })
+const eighth = (name = 'C', octave = 4) => new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })
 
 const quarter = () => new Note({ duration: new Duration({ type: 'q' }) })
 

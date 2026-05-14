@@ -1,182 +1,180 @@
 // --- Internal types (used by the model and layout) ---
 
-export type ClefType = 'treble' | 'bass';
-export type DurationType = 'w' | 'h' | 'q' | '8' | '16';
-export type StemDirection = 'up' | 'down' | 'auto';
-export type BarlineType = 'single' | 'double' | 'end' | 'none';
-export type TieType = 'start' | 'stop' | 'start-stop';
+export type ClefType = 'treble' | 'bass'
+export type DurationType = 'w' | 'h' | 'q' | '8' | '16'
+export type StemDirection = 'up' | 'down' | 'auto'
+export type BarlineType = 'single' | 'double' | 'end' | 'none'
+export type TieType = 'start' | 'stop' | 'start-stop'
 
 // --- MusicXML JSON types (input/output format, mirrors MusicXML 4.0) ---
 
-export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
-export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th';
-export type MxmlStemValue = 'up' | 'down' | 'none' | 'double';
-export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none';
-export type MxmlStartStop = 'start' | 'stop';
-export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none';
-export type MxmlBeamValue = 'begin' | 'continue' | 'end' | 'forward hook' | 'backward hook';
+export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
+export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th'
+export type MxmlStemValue = 'up' | 'down' | 'none' | 'double'
+export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none'
+export type MxmlStartStop = 'start' | 'stop'
+export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none'
+export type MxmlBeamValue = 'begin' | 'continue' | 'end' | 'forward hook' | 'backward hook'
 
 export interface MxmlPitch {
-  step: MxmlStep;
-  alter?: number; // semitones: -1 = flat, 1 = sharp, -2 = double flat, 2 = double sharp
-  octave: number;
+    step: MxmlStep
+    alter?: number // semitones: -1 = flat, 1 = sharp, -2 = double flat, 2 = double sharp
+    octave: number
 }
 
 export interface MxmlRest {
-  measure?: boolean;
+    measure?: boolean
 }
 
 export interface MxmlTimeModification {
-  actualNotes: number; // e.g. 3 for a triplet
-  normalNotes: number; // e.g. 2 for a triplet
+    actualNotes: number // e.g. 3 for a triplet
+    normalNotes: number // e.g. 2 for a triplet
 }
 
 export interface MxmlTie {
-  type: MxmlStartStop;
+    type: MxmlStartStop
 }
 
 export interface MxmlBeam {
-  number?: number; // 1-8, default 1
-  value: MxmlBeamValue;
+    number?: number // 1-8, default 1
+    value: MxmlBeamValue
 }
 
 export interface MxmlNote {
-  _type: 'note';
-  pitch?: MxmlPitch;
-  rest?: MxmlRest;
-  duration: number; // in divisions
-  tie?: MxmlTie[];
-  voice?: string;
-  type?: MxmlNoteType;
-  dot?: number; // count of <dot> elements
-  stem?: MxmlStemValue;
-  staff?: number;
-  timeModification?: MxmlTimeModification;
-  beam?: MxmlBeam[];
+    _type: 'note'
+    pitch?: MxmlPitch
+    rest?: MxmlRest
+    duration: number // in divisions
+    tie?: MxmlTie[]
+    voice?: string
+    type?: MxmlNoteType
+    dot?: number // count of <dot> elements
+    stem?: MxmlStemValue
+    staff?: number
+    timeModification?: MxmlTimeModification
+    beam?: MxmlBeam[]
 }
 
 export interface MxmlKey {
-  fifths: number; // negative = flats, positive = sharps
-  mode?: string;  // 'major' | 'minor' etc.
+    fifths: number // negative = flats, positive = sharps
+    mode?: string // 'major' | 'minor' etc.
 }
 
 export interface MxmlTime {
-  beats: string;    // e.g. '4', '3+2'
-  beatType: string; // e.g. '4', '8'
+    beats: string // e.g. '4', '3+2'
+    beatType: string // e.g. '4', '8'
 }
 
 export interface MxmlClef {
-  sign: MxmlClefSign;
-  line?: number;
-  number?: number; // staff number
+    sign: MxmlClefSign
+    line?: number
+    number?: number // staff number
 }
 
 export interface MxmlTranspose {
-  /** Semitones: written + chromatic = sounding. Trumpet B♭ = -2, French Horn = -7, Piccolo = +12 (or 0 with octave-change=1). */
-  chromatic: number;
-  /** Letter steps shifted: written + diatonic = sounding (in step-space). Trumpet B♭ = -1. */
-  diatonic?: number;
-  /** Additional whole-octave shift on top of chromatic/diatonic. Piccolo = 1, Contrabass = -1. */
-  octaveChange?: number;
+    /** Semitones: written + chromatic = sounding. Trumpet B♭ = -2, French Horn = -7, Piccolo = +12 (or 0 with octave-change=1). */
+    chromatic: number
+    /** Letter steps shifted: written + diatonic = sounding (in step-space). Trumpet B♭ = -1. */
+    diatonic?: number
+    /** Additional whole-octave shift on top of chromatic/diatonic. Piccolo = 1, Contrabass = -1. */
+    octaveChange?: number
 }
 
 export interface MxmlAttributes {
-  _type: 'attributes';
-  divisions?: number;
-  key?: MxmlKey[];
-  time?: MxmlTime[];
-  staves?: number;
-  clef?: MxmlClef[];
-  transpose?: MxmlTranspose;
+    _type: 'attributes'
+    divisions?: number
+    key?: MxmlKey[]
+    time?: MxmlTime[]
+    staves?: number
+    clef?: MxmlClef[]
+    transpose?: MxmlTranspose
 }
 
 export interface MxmlBarline {
-  _type: 'barline';
-  location?: 'left' | 'right' | 'middle';
-  barStyle?: MxmlBarStyle;
+    _type: 'barline'
+    location?: 'left' | 'right' | 'middle'
+    barStyle?: MxmlBarStyle
 }
 
 export interface MxmlDirection {
-  _type: 'direction';
-  sound?: { tempo?: number };
+    _type: 'direction'
+    sound?: { tempo?: number }
 }
 
 export interface MxmlBackup {
-  _type: 'backup';
-  duration: number;
+    _type: 'backup'
+    duration: number
 }
 
 export interface MxmlForward {
-  _type: 'forward';
-  duration: number;
-  voice?: string;
-  staff?: number;
+    _type: 'forward'
+    duration: number
+    voice?: string
+    staff?: number
 }
 
-export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection | MxmlBackup | MxmlForward;
+export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection | MxmlBackup | MxmlForward
 
 export interface MxmlMeasure {
-  number: string;
-  entries: MxmlMeasureEntry[];
+    number: string
+    entries: MxmlMeasureEntry[]
 }
 
 export interface MxmlScoreInstrument {
-  id: string;
-  instrumentName: string;
+    id: string
+    instrumentName: string
 }
 
 export interface MxmlMidiInstrument {
-  id: string;
-  /** 1-indexed General MIDI program (MusicXML convention). */
-  midiProgram: number;
+    id: string
+    /** 1-indexed General MIDI program (MusicXML convention). */
+    midiProgram: number
 }
 
 export interface MxmlScorePart {
-  id: string;
-  partName: string;
-  scoreInstrument?: MxmlScoreInstrument;
-  midiInstrument?: MxmlMidiInstrument;
+    id: string
+    partName: string
+    scoreInstrument?: MxmlScoreInstrument
+    midiInstrument?: MxmlMidiInstrument
 }
 
 export interface MxmlPartList {
-  scoreParts: MxmlScorePart[];
+    scoreParts: MxmlScorePart[]
 }
 
 export interface MxmlPart {
-  id: string;
-  measures: MxmlMeasure[];
+    id: string
+    measures: MxmlMeasure[]
 }
 
 export interface ScorePartwise {
-  partList: MxmlPartList;
-  parts: MxmlPart[];
+    partList: MxmlPartList
+    parts: MxmlPart[]
 }
 
 // --- Layout output types (pre-computed positions for rendering) ---
 
 export interface LayoutLine {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+    x1: number
+    y1: number
+    x2: number
+    y2: number
 }
 
 export interface LayoutGlyph {
-  glyphName: string;
-  x: number;
-  y: number;
+    glyphName: string
+    x: number
+    y: number
 }
 
 export interface LayoutTimeSignature {
-  top: LayoutGlyph[];
-  bottom: LayoutGlyph[];
+    top: LayoutGlyph[]
+    bottom: LayoutGlyph[]
 }
-
 
 export interface LayoutBarline {
-  x: number;
-  y: number;
-  height: number;
-  type: BarlineType;
+    x: number
+    y: number
+    height: number
+    type: BarlineType
 }
-

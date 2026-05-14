@@ -29,7 +29,7 @@ export class RowLayout {
                 return measureData
             }
             const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? MEASURE_BUTTON_SPACING : 0)
-            const allowIncompleteRow = this.row.score.lastRow === this.row &&  measures.length <= 2
+            const allowIncompleteRow = this.row.score.lastRow === this.row && measures.length <= 2
             const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : measures.length)
             const sizeableElements: Array<Sizeable & { measure: Measure }> = measures.map((measure) => ({
                 measure,

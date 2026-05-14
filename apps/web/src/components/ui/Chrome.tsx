@@ -71,7 +71,17 @@ export function TopNav({ user, onCreate }: TopNavProps) {
     )
 }
 
-export function PageHeader({ title, subtitle, italic = false, right }: { title: ReactNode; subtitle?: ReactNode; italic?: boolean; right?: ReactNode }) {
+export function PageHeader({
+    title,
+    subtitle,
+    italic = false,
+    right,
+}: {
+    title: ReactNode
+    subtitle?: ReactNode
+    italic?: boolean
+    right?: ReactNode
+}) {
     return (
         <div className="flex justify-between items-end gap-4.5 pb-4.5">
             <div className="flex flex-col gap-2">
@@ -103,9 +113,7 @@ interface DialogScrimProps {
 
 export function DialogScrim({ children, onDismiss }: DialogScrimProps) {
     return (
-        <div
-            onClick={onDismiss}
-            className="fixed inset-0 z-100 bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
+        <div onClick={onDismiss} className="fixed inset-0 z-100 bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
             <div onClick={(e) => e.stopPropagation()}>{children}</div>
         </div>
     )
@@ -123,17 +131,11 @@ interface DialogPanelProps {
 
 export function DialogPanel({ title, eyebrow, children, footer, onClose, width = 560 }: DialogPanelProps) {
     return (
-        <div
-            className="glass-panel rounded-xl tonal-layer-glow max-w-[90vw] max-h-[90vh] flex flex-col"
-            style={{ width }}>
+        <div className="glass-panel rounded-xl tonal-layer-glow max-w-[90vw] max-h-[90vh] flex flex-col" style={{ width }}>
             <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                 <div className="flex flex-col gap-1.5">
                     <ModalTitle>{title}</ModalTitle>
-                    {eyebrow && (
-                        <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                            {eyebrow}
-                        </span>
-                    )}
+                    {eyebrow && <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{eyebrow}</span>}
                 </div>
                 {onClose && (
                     <button
@@ -145,11 +147,7 @@ export function DialogPanel({ title, eyebrow, children, footer, onClose, width =
                 )}
             </header>
             <div className="px-7 flex-1 min-h-0 flex flex-col">{children}</div>
-            {footer && (
-                <footer className="px-7 py-5 flex justify-end items-center gap-3">
-                    {footer}
-                </footer>
-            )}
+            {footer && <footer className="px-7 py-5 flex justify-end items-center gap-3">{footer}</footer>}
         </div>
     )
 }

@@ -28,7 +28,7 @@ describe('Duration', () => {
     it('effectiveBeats applies tuplet ratio', () => {
         // triplet eighth: actual 3 in space of 2 → 0.5 * (2/3)
         const d = new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } })
-        expect(d.effectiveBeats).toBeCloseTo(0.5 * 2 / 3)
+        expect(d.effectiveBeats).toBeCloseTo((0.5 * 2) / 3)
     })
 
     it('isBeamable for 8th and 16th only', () => {

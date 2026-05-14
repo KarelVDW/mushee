@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 
-import {
-    DialogPanel,
-    DialogScrim,
-    Icon,
-    PrimaryButton,
-    TertiaryButton,
-} from '@/components/ui'
+import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 
 // Mock plan catalogue — mirrors the design system's Settings.jsx tiers.
 // Production would feed these from /api/polar/products.
@@ -38,13 +32,7 @@ export const PLAN_TIERS: PlanTier[] = [
         icon: 'sparkles',
         priceMonthly: 8,
         priceYearly: 80,
-        features: [
-            '10 min recording / day',
-            'Unlimited scores',
-            'MIDI + MusicXML',
-            'Shareable links',
-            'Editor themes',
-        ],
+        features: ['10 min recording / day', 'Unlimited scores', 'MIDI + MusicXML', 'Shareable links', 'Editor themes'],
     },
     {
         id: 'studio',
@@ -52,13 +40,7 @@ export const PLAN_TIERS: PlanTier[] = [
         icon: 'gem',
         priceMonthly: 18,
         priceYearly: 180,
-        features: [
-            'Unlimited recording',
-            'Everything in Composer',
-            '5 collaborators per score',
-            'Custom templates',
-            'Priority support',
-        ],
+        features: ['Unlimited recording', 'Everything in Composer', '5 collaborators per score', 'Custom templates', 'Priority support'],
     },
 ]
 
@@ -107,10 +89,10 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
     const ctaLabel = isSame
         ? 'No change'
         : isCancel
-            ? 'Cancel subscription'
-            : isDowngrade
-                ? `Switch to ${nextPlan.name}`
-                : 'Continue to Polar checkout'
+          ? 'Cancel subscription'
+          : isDowngrade
+            ? `Switch to ${nextPlan.name}`
+            : 'Continue to Polar checkout'
 
     const locked = phase === 'redirecting' || phase === 'done'
 
@@ -121,17 +103,17 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                     phase === 'done'
                         ? 'Plan updated.'
                         : phase === 'redirecting'
-                            ? isDowngrade || isCancel
-                                ? 'Updating your subscription…'
-                                : 'Redirecting to Polar…'
-                            : 'Change plan'
+                          ? isDowngrade || isCancel
+                              ? 'Updating your subscription…'
+                              : 'Redirecting to Polar…'
+                          : 'Change plan'
                 }
                 eyebrow={
                     phase === 'done'
                         ? `You're now on ${nextPlan.name}.`
                         : phase === 'redirecting'
-                            ? undefined
-                            : 'Switch tiers, change billing cadence, or cancel. Payments are processed by Polar.'
+                          ? undefined
+                          : 'Switch tiers, change billing cadence, or cancel. Payments are processed by Polar.'
                 }
                 onClose={locked ? undefined : onCancel}
                 width={720}
@@ -156,10 +138,12 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                             role="radiogroup"
                             aria-label="Billing cadence"
                             className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
-                            {([
-                                ['monthly', 'Monthly'],
-                                ['yearly', 'Yearly · save 17%'],
-                            ] as const).map(([k, label]) => {
+                            {(
+                                [
+                                    ['monthly', 'Monthly'],
+                                    ['yearly', 'Yearly · save 17%'],
+                                ] as const
+                            ).map(([k, label]) => {
                                 const active = billing === k
                                 return (
                                     <button
@@ -229,15 +213,13 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
 
                         {isCancel && (
                             <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                You&apos;ll keep <strong>{currentPlan.name}</strong> features until your next billing
-                                date, then drop to Sketch. Scores beyond the 3-score limit become read-only — they&apos;re
-                                never deleted.
+                                You&apos;ll keep <strong>{currentPlan.name}</strong> features until your next billing date, then drop to
+                                Sketch. Scores beyond the 3-score limit become read-only — they&apos;re never deleted.
                             </div>
                         )}
                         {isDowngrade && !isCancel && (
                             <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                Downgrade takes effect at the end of your current billing cycle. Polar will prorate any
-                                difference.
+                                Downgrade takes effect at the end of your current billing cycle. Polar will prorate any difference.
                             </div>
                         )}
                     </div>

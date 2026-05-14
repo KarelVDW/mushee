@@ -307,7 +307,7 @@ export class Measure {
             this._showsTimeSignature ? this._timeSignature : undefined,
             ...this._notes,
         ])
-        const widthSum = sumBy(this._physicalElements, el => el.width.total) + this.barlineWidth
+        const widthSum = sumBy(this._physicalElements, (el) => el.width.total) + this.barlineWidth
         const absoluteMinimum = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
         const previousMinimalWidth = this._minimalWidth
         this._minimalWidth = widthSum > absoluteMinimum ? widthSum : absoluteMinimum

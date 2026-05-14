@@ -27,8 +27,7 @@ export class TieLayout {
         const startMeasureX = startRow.layout.getMeasureX(startMeasure)
         const endMeasureX = endRow.layout.getMeasureX(endMeasure)
 
-        const startXInStartMeasure =
-            startMeasure.layout.getXForElement(tie.note) + tie.note.layout.noteX + tie.note.width.noteHeadWidth
+        const startXInStartMeasure = startMeasure.layout.getXForElement(tie.note) + tie.note.layout.noteX + tie.note.width.noteHeadWidth
         const startY = tie.note.layout.noteY + yShift
         const endXInEndMeasure = endMeasure.layout.getXForElement(tie.nextNote) + tie.nextNote.layout.noteX
         const endY = tie.nextNote.layout.noteY + yShift

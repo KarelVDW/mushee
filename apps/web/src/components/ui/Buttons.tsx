@@ -104,9 +104,7 @@ export function TertiaryButton({ children, onClick, danger = false, type = 'butt
                 'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
                 'font-body font-medium text-[13px] leading-none',
                 'transition-colors duration-150 ease-sheemu',
-                danger
-                    ? 'text-secondary hover:text-secondary-container'
-                    : 'text-on-surface-variant hover:text-primary',
+                danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
             ].join(' ')}>
             {children}
         </button>
@@ -152,8 +150,7 @@ interface ToggleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function ToggleButton({ active, tone = 'cyan', children, className, ...rest }: ToggleButtonProps) {
-    const activePalette =
-        tone === 'rec' ? 'bg-error text-on-error' : 'bg-primary-container text-on-primary-container'
+    const activePalette = tone === 'rec' ? 'bg-error text-on-error' : 'bg-primary-container text-on-primary-container'
     return (
         <button
             type="button"

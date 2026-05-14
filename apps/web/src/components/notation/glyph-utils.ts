@@ -94,19 +94,29 @@ function getOutlineWidth(name: string): number {
                 break
             }
             case 'q': {
-                const eX = parseFloat(parts[i++]); i++
-                const cX = parseFloat(parts[i++]); i++
-                if (eX < xMin) xMin = eX; if (eX > xMax) xMax = eX
-                if (cX < xMin) xMin = cX; if (cX > xMax) xMax = cX
+                const eX = parseFloat(parts[i++])
+                i++
+                const cX = parseFloat(parts[i++])
+                i++
+                if (eX < xMin) xMin = eX
+                if (eX > xMax) xMax = eX
+                if (cX < xMin) xMin = cX
+                if (cX > xMax) xMax = cX
                 break
             }
             case 'b': {
-                const eX = parseFloat(parts[i++]); i++
-                const c1X = parseFloat(parts[i++]); i++
-                const c2X = parseFloat(parts[i++]); i++
-                if (eX < xMin) xMin = eX; if (eX > xMax) xMax = eX
-                if (c1X < xMin) xMin = c1X; if (c1X > xMax) xMax = c1X
-                if (c2X < xMin) xMin = c2X; if (c2X > xMax) xMax = c2X
+                const eX = parseFloat(parts[i++])
+                i++
+                const c1X = parseFloat(parts[i++])
+                i++
+                const c2X = parseFloat(parts[i++])
+                i++
+                if (eX < xMin) xMin = eX
+                if (eX > xMax) xMax = eX
+                if (c1X < xMin) xMin = c1X
+                if (c1X > xMax) xMax = c1X
+                if (c2X < xMin) xMin = c2X
+                if (c2X > xMax) xMax = c2X
                 break
             }
         }
@@ -121,4 +131,3 @@ function getOutlineWidth(name: string): number {
 export function getGlyphWidth(name: string, scale: number = GLYPH_SCALE): number {
     return getOutlineWidth(name) * scale
 }
-

@@ -9,7 +9,7 @@ export class Beam {
     constructor(
         readonly measure: Measure,
         readonly notes: Note[],
-        readonly stemDir: 'up' | 'down'
+        readonly stemDir: 'up' | 'down',
     ) {
         this._noteSet = new Set(notes)
         this._indexMap = new Map(notes.map((n, i) => [n, i]))

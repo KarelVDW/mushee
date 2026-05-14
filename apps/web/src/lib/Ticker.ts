@@ -1,4 +1,3 @@
-
 export interface Tickable {
     /** Reset internal state for a new playback pass. */
     reset(): void
@@ -15,7 +14,6 @@ export class Ticker {
     private _isPlaying = false
     private animationId = 0
     private onFinish: (() => void) | null = null
-
 
     get isPlaying() {
         return this._isPlaying

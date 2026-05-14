@@ -48,10 +48,7 @@ describe('TupletFinder', () => {
         // fall into a single tuplet. Capturing this so a future fix can flip the
         // assertion to `toHaveLength(2)`.
         const m = freshMeasure()
-        m.addNotes([
-            tripletEighth(), tripletEighth(), tripletEighth(),
-            tripletEighth(), tripletEighth(), tripletEighth(),
-        ])
+        m.addNotes([tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth()])
         const finder = new TupletFinder(m)
         expect(finder.tuplets).toHaveLength(1)
         expect(finder.tuplets[0].notes).toHaveLength(6)

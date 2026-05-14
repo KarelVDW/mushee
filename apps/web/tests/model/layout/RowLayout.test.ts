@@ -1,8 +1,7 @@
+import { makeScore, pitched } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
-import { makeScore, pitched } from '@test/helpers'
-
 import { Duration } from '@/model/Duration'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
@@ -11,13 +10,15 @@ import { Score } from '@/model/Score'
 describe('RowLayout', () => {
     it('lays out a single-measure row without throwing', () => {
         const score = makeScore(1)
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         expect(() => row.layout).not.toThrow()
     })
 
     it('width sums to SCORE_WIDTH minus button spacing for last row', () => {
         const score = makeScore(1)
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         // Last row with ≤2 measures uses incomplete-row layout (maximumWidth mode).
         // Otherwise it expands to fill SCORE_WIDTH.
         expect(row.layout.width).toBeGreaterThan(0)
@@ -26,7 +27,8 @@ describe('RowLayout', () => {
 
     it('measure x-positions are non-decreasing along the row', () => {
         const score = makeScore(MAX_MEASURES_PER_ROW)
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         const layout = row.layout
         let prev = -Infinity
         for (const m of row.measures) {
@@ -45,7 +47,8 @@ describe('RowLayout', () => {
 
     it('getMeasureForX returns the right measure for a given x', () => {
         const score = makeScore(2)
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         const m1 = row.measures[0]
         const m2 = row.measures[1]
         const m1x = row.layout.getMeasureX(m1)
@@ -57,7 +60,8 @@ describe('RowLayout', () => {
 
     it('staff lines: 5 horizontal lines spanning row width', () => {
         const score = makeScore(1)
-        const row = score.firstRow!
+        const row = score.firstRow
+        if (!row) throw new Error('expected firstRow')
         expect(row.layout.staffLines).toHaveLength(5)
         for (const line of row.layout.staffLines) {
             expect(line.y1).toBe(line.y2)
@@ -80,14 +84,18 @@ describe('RowLayout', () => {
             // explicit Resizer tests for the overflow math.
             const notes: Note[] = []
             for (let i = 0; i < 16; i++) {
-                notes.push(new Note({
-                    duration: new Duration({ type: '16' }),
-                    pitch: new Pitch({ name: 'C', octave: 4, accidental: '##' }),
-                }))
+                notes.push(
+                    new Note({
+                        duration: new Duration({ type: '16' }),
+                        pitch: new Pitch({ name: 'C', octave: 4, accidental: '##' }),
+                    }),
+                )
             }
             m.addNotes(notes)
             // Should still lay out without throwing — just confirm RowLayout path runs.
-            expect(() => score.firstRow!.layout).not.toThrow()
+            const row = score.firstRow
+            if (!row) throw new Error('expected firstRow')
+            expect(() => row.layout).not.toThrow()
         })
 
         it('lays out 4 measures full of 16th notes (worst-case dense row)', () => {
@@ -98,7 +106,7 @@ describe('RowLayout', () => {
             }
             // Each row will receive whatever measures fit; assert no throw.
             expect(() => {
-                for (const row of score.rows) row.layout
+                for (const row of score.rows) void row.layout
             }).not.toThrow()
         })
     })
@@ -106,7 +114,8 @@ describe('RowLayout', () => {
     describe('incomplete row (≤2 measures on last row)', () => {
         it('uses maximumWidth mode and does not stretch to full width', () => {
             const score = makeScore(1)
-            const row = score.firstRow!
+            const row = score.firstRow
+            if (!row) throw new Error('expected firstRow')
             // With one measure and minimum 200, layout width should equal at least 200
             // but not necessarily the full SCORE_WIDTH minus button.
             expect(row.layout.width).toBeGreaterThanOrEqual(200)
@@ -114,7 +123,8 @@ describe('RowLayout', () => {
 
         it('two measures on last row: still uses incomplete-row mode', () => {
             const score = makeScore(2)
-            const row = score.firstRow!
+            const row = score.firstRow
+            if (!row) throw new Error('expected firstRow')
             expect(() => row.layout).not.toThrow()
         })
     })

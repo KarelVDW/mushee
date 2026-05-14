@@ -14,7 +14,6 @@ export type {
     MxmlPart,
     MxmlPartList,
     MxmlScorePart,
-    ScorePartwise
+    ScorePartwise,
 } from './types'
 export { Duration, Measure, Note, Pitch, Score as ScoreModel } from '@/model'
-

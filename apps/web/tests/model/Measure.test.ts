@@ -1,6 +1,6 @@
+import { defaults, makeScore, pitched, rest } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
-import { defaults, makeScore, pitched, rest } from '@test/helpers'
 import { Clef } from '@/model/Clef'
 import { Duration } from '@/model/Duration'
 import { KeySignature } from '@/model/KeySignature'
@@ -21,7 +21,7 @@ describe('Measure', () => {
 
         it('starts with no notes, no tempos, no tuplets, no beams', () => {
             const score = new Score()
-            const m = new Measure(score, ...Object.values(defaults()) as [Clef, TimeSignature])
+            const m = new Measure(score, ...(Object.values(defaults()) as [Clef, TimeSignature]))
             expect(m.notes).toEqual([])
             expect(m.tempos).toEqual([])
             expect(m.tuplets).toEqual([])
@@ -70,7 +70,8 @@ describe('Measure', () => {
     describe('beats / maxBeats', () => {
         it('beats sums effectiveBeats of notes', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
             // Default complete() fills measure to maxBeats (4)
             expect(m.beats).toBeCloseTo(m.maxBeats)
         })
@@ -264,7 +265,8 @@ describe('Measure', () => {
     describe('layout invalidation', () => {
         it('invalidateLayout clears cached layout', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
             const l1 = m.layout
             m.invalidateLayout()
             const l2 = m.layout
@@ -273,7 +275,8 @@ describe('Measure', () => {
 
         it('mutating notes invalidates layout', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
             const l1 = m.layout
             m.addNotes([rest('q')])
             const l2 = m.layout

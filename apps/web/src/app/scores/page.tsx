@@ -46,11 +46,13 @@ export default function ScoresPage() {
     }, [])
 
     useEffect(() => {
-        fetchScores()
+        void fetchScores()
     }, [fetchScores])
 
     useEffect(() => {
-        const timeout = setTimeout(() => fetchScores(search || undefined), 300)
+        const timeout = setTimeout(() => {
+            void fetchScores(search || undefined)
+        }, 300)
         return () => clearTimeout(timeout)
     }, [search, fetchScores])
 
@@ -73,7 +75,12 @@ export default function ScoresPage() {
                         {
                             number: '1',
                             entries: [
-                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'G', line: 2 }], time: [{ beats: '4', beatType: '4' }] },
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'G', line: 2 }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
                                 { _type: 'note', duration: 48, voice: '1', type: 'whole' },
                             ],
                         },
@@ -119,7 +126,9 @@ export default function ScoresPage() {
                 <div className="flex flex-col gap-3">
                     {loading ? (
                         <EmptyCard>
-                            <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">Loading your scores…</span>
+                            <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                                Loading your scores…
+                            </span>
                         </EmptyCard>
                     ) : scores.length === 0 ? (
                         search ? (
@@ -176,7 +185,9 @@ function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
                 {[0, 1, 2, 3, 4].map((i) => (
                     <line key={i} x1={8} x2={112} y1={20 + i * 10} y2={20 + i * 10} stroke="var(--color-outline-variant)" strokeWidth={1} />
                 ))}
-                <text x={12} y={56} fontFamily="serif" fontSize={42} fill="var(--color-outline)">𝄞</text>
+                <text x={12} y={56} fontFamily="serif" fontSize={42} fill="var(--color-outline)">
+                    𝄞
+                </text>
             </svg>
             <div className="flex-1 flex flex-col gap-1.5 min-w-0">
                 <span className="font-body font-semibold text-[16px] leading-[1.3] text-on-surface">No scores yet.</span>

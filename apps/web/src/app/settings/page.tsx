@@ -51,8 +51,8 @@ export default function SettingsPage() {
         currentPlan.priceMonthly === 0
             ? 'Free'
             : billing === 'yearly'
-                ? `$${currentPlan.priceYearly}/yr`
-                : `$${currentPlan.priceMonthly}/mo`
+              ? `$${currentPlan.priceYearly}/yr`
+              : `$${currentPlan.priceMonthly}/mo`
 
     async function handleSignOut() {
         await signOut()
@@ -130,10 +130,16 @@ export default function SettingsPage() {
                                             <Icon name={currentPlan.icon} size={20} />
                                         </span>
                                         <div className="flex flex-col gap-0.5 flex-1">
-                                            <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">{currentPlan.name}</span>
-                                            <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{currentPlanPrice}</span>
+                                            <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+                                                {currentPlan.name}
+                                            </span>
+                                            <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                                                {currentPlanPrice}
+                                            </span>
                                         </div>
-                                        <PrimaryButton emphasis="pop" onClick={() => setChangePlanOpen(true)}>Change plan</PrimaryButton>
+                                        <PrimaryButton emphasis="pop" onClick={() => setChangePlanOpen(true)}>
+                                            Change plan
+                                        </PrimaryButton>
                                     </div>
                                 </Section>
                                 <Section title="Password" subtitle="Last changed a while ago.">
@@ -148,7 +154,9 @@ export default function SettingsPage() {
                                 </Section>
                                 <Section title="Delete account" subtitle="This permanently removes your scores. We can't undo it.">
                                     <div>
-                                        <TertiaryButton danger onClick={() => setDeleteOpen(true)}>Delete my account</TertiaryButton>
+                                        <TertiaryButton danger onClick={() => setDeleteOpen(true)}>
+                                            Delete my account
+                                        </TertiaryButton>
                                     </div>
                                 </Section>
                             </>
@@ -159,12 +167,7 @@ export default function SettingsPage() {
 
             <Footer />
 
-            {changePwOpen && (
-                <ChangePasswordDialog
-                    onCancel={() => setChangePwOpen(false)}
-                    onSuccess={() => setChangePwOpen(false)}
-                />
-            )}
+            {changePwOpen && <ChangePasswordDialog onCancel={() => setChangePwOpen(false)} onSuccess={() => setChangePwOpen(false)} />}
 
             {changePlanOpen && (
                 <ChangePlanDialog
@@ -213,9 +216,7 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'border-0 rounded-md px-3.5 py-2.5 text-left cursor-pointer',
                             'flex items-center gap-2.5',
                             'font-body font-medium text-[14px] leading-none',
-                            active
-                                ? 'bg-surface-container text-on-surface'
-                                : 'bg-transparent text-on-surface-variant',
+                            active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
                         <Icon name={icon} size={16} />
                         {label}

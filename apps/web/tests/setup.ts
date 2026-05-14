@@ -23,9 +23,16 @@ vi.mock('@/components/notation/glyph-utils', () => {
         accidentalDoubleFlat: 12,
         accidentalNatural: 7,
         // timeSig digits
-        timeSig0: 7, timeSig1: 5, timeSig2: 7, timeSig3: 7,
-        timeSig4: 7, timeSig5: 7, timeSig6: 7, timeSig7: 7,
-        timeSig8: 7, timeSig9: 7,
+        timeSig0: 7,
+        timeSig1: 5,
+        timeSig2: 7,
+        timeSig3: 7,
+        timeSig4: 7,
+        timeSig5: 7,
+        timeSig6: 7,
+        timeSig7: 7,
+        timeSig8: 7,
+        timeSig9: 7,
     }
     return {
         getGlyphWidth: (name: string) => widths[name] ?? 8,

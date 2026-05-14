@@ -1,7 +1,7 @@
+import { makeScore } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import { ROW_GAP, ROW_HEIGHT, SCORE_WIDTH } from '@/components/notation/constants'
-import { makeScore } from '@test/helpers'
 
 describe('ScoreLayout', () => {
     it('exposes constants', () => {

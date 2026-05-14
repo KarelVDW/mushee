@@ -110,7 +110,9 @@ export class RecordingEngine implements Tickable {
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             try {
                 this.mediaRecorder.stop()
-            } catch {}
+            } catch {
+                // recorder already torn down by browser — nothing left to stop
+            }
         }
         this.mediaRecorder = null
 
@@ -120,7 +122,9 @@ export class RecordingEngine implements Tickable {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             try {
                 this.ws.send(JSON.stringify({ type: 'end' }))
-            } catch {}
+            } catch {
+                // socket may have closed mid-send; close() below still runs
+            }
         }
         this.ws?.close()
         this.ws = null

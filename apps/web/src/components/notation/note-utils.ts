@@ -9,7 +9,7 @@ import { SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
  */
 export function getYForNote(line: number): number {
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
-    return  headroom + 5 * STAVE_LINE_DISTANCE - line * STAVE_LINE_DISTANCE
+    return headroom + 5 * STAVE_LINE_DISTANCE - line * STAVE_LINE_DISTANCE
 }
 
 /**
@@ -17,7 +17,7 @@ export function getYForNote(line: number): number {
  */
 export function getYForLine(lineIndex: number): number {
     const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
-    return  headroom + lineIndex * STAVE_LINE_DISTANCE
+    return headroom + lineIndex * STAVE_LINE_DISTANCE
 }
 
 /**

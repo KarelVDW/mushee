@@ -13,6 +13,7 @@ If working on production code, you can copy assets and read the rules in `README
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.
 
 **Critical Sheemu rules to remember:**
+
 - Two accent colors only: cyan `#00DBE9` and magenta `#FF2079`. Use them sparingly; the rest of the system is white-on-white tonal layering.
 - **No 1px solid borders for sectioning.** Use surface tonal shifts to define regions.
 - Type stack: **Space Grotesk** for display + UI, **Manrope** for body copy at long-reading sizes, **Newsreader** italic for warm/literary moments, **Geist Mono** for code and numeric readouts.

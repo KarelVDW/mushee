@@ -1,150 +1,154 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme inline {
-  /* Sheemu — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
-  /* Canvas */
-  --color-background: #f6f6f6;
-  --color-on-background: #2d2f2f;
-  --color-surface: #f6f6f6;
-  --color-on-surface: #2d2f2f;
-  --color-surface-dim: #d2d5d5;
-  --color-surface-bright: #f6f6f6;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f0f1f1;
-  --color-surface-container: #e7e8e8;
-  --color-surface-container-high: #e1e3e3;
-  --color-surface-container-highest: #dbdddd;
-  --color-surface-variant: #dbdddd;
-  --color-on-surface-variant: #5a5c5c;
-  --color-surface-tint: #00666d;
-  --color-inverse-surface: #0c0f0f;
-  --color-inverse-on-surface: #9c9d9d;
+    /* Sheemu — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
+    /* Canvas */
+    --color-background: #f6f6f6;
+    --color-on-background: #2d2f2f;
+    --color-surface: #f6f6f6;
+    --color-on-surface: #2d2f2f;
+    --color-surface-dim: #d2d5d5;
+    --color-surface-bright: #f6f6f6;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f0f1f1;
+    --color-surface-container: #e7e8e8;
+    --color-surface-container-high: #e1e3e3;
+    --color-surface-container-highest: #dbdddd;
+    --color-surface-variant: #dbdddd;
+    --color-on-surface-variant: #5a5c5c;
+    --color-surface-tint: #00666d;
+    --color-inverse-surface: #0c0f0f;
+    --color-inverse-on-surface: #9c9d9d;
 
-  /* The Pulse — Primary (Neon Cyan) */
-  --color-primary: #00666d;
-  --color-on-primary: #cffbff;
-  --color-primary-container: #00dbe9;
-  --color-on-primary-container: #005359;
-  --color-primary-soft: #a6f2f7;
-  --color-on-primary-soft: #003f43;
-  --color-primary-dim: #00595f;
-  --color-inverse-primary: #00dbe9;
+    /* The Pulse — Primary (Neon Cyan) */
+    --color-primary: #00666d;
+    --color-on-primary: #cffbff;
+    --color-primary-container: #00dbe9;
+    --color-on-primary-container: #005359;
+    --color-primary-soft: #a6f2f7;
+    --color-on-primary-soft: #003f43;
+    --color-primary-dim: #00595f;
+    --color-inverse-primary: #00dbe9;
 
-  /* The Accent — Secondary (Neon Magenta) */
-  --color-secondary: #b60052;
-  --color-on-secondary: #ffeff0;
-  --color-secondary-container: #ff2079;
-  --color-on-secondary-container: #91003f;
-  --color-secondary-soft: #ffadbf;
-  --color-on-secondary-soft: #6d002e;
-  --color-secondary-dim: #a00047;
+    /* The Accent — Secondary (Neon Magenta) */
+    --color-secondary: #b60052;
+    --color-on-secondary: #ffeff0;
+    --color-secondary-container: #ff2079;
+    --color-on-secondary-container: #91003f;
+    --color-secondary-soft: #ffadbf;
+    --color-on-secondary-soft: #6d002e;
+    --color-secondary-dim: #a00047;
 
-  /* Tertiary */
-  --color-tertiary: #5b5b5b;
-  --color-on-tertiary: #f3f3f3;
-  --color-tertiary-container: #ffffff;
-  --color-on-tertiary-container: #626262;
+    /* Tertiary */
+    --color-tertiary: #5b5b5b;
+    --color-on-tertiary: #f3f3f3;
+    --color-tertiary-container: #ffffff;
+    --color-on-tertiary-container: #626262;
 
-  /* Error */
-  --color-error: #b31b25;
-  --color-on-error: #ffefee;
-  --color-error-container: #fb5151;
-  --color-on-error-container: #570008;
+    /* Error */
+    --color-error: #b31b25;
+    --color-on-error: #ffefee;
+    --color-error-container: #fb5151;
+    --color-on-error-container: #570008;
 
-  /* Outlines */
-  --color-outline: #767777;
-  --color-outline-variant: #acadad;
+    /* Outlines */
+    --color-outline: #767777;
+    --color-outline-variant: #acadad;
 
-  /* Corner radii — DESIGN.md scale */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-full: 9999px;
+    /* Corner radii — DESIGN.md scale */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
 
-  /* Motion */
-  --ease-sheemu: cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* Motion */
+    --ease-sheemu: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
+    /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      Values reference the next/font CSS variables that layout.tsx sets on <body>.
      `var(--font-space-grotesk)` resolves at use-site, where <body> is in scope. */
-  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
-  --font-headline: var(--font-space-grotesk), system-ui, sans-serif;
-  --font-body: var(--font-manrope), var(--font-space-grotesk), system-ui, sans-serif;
-  --font-label: var(--font-space-grotesk), system-ui, sans-serif;
-  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), Georgia, serif;
-  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+    --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+    --font-headline: var(--font-space-grotesk), system-ui, sans-serif;
+    --font-body: var(--font-manrope), var(--font-space-grotesk), system-ui, sans-serif;
+    --font-label: var(--font-space-grotesk), system-ui, sans-serif;
+    --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
+    --font-serif: var(--font-newsreader), Georgia, serif;
+    --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-on-background);
-  font-family: var(--font-body);
+    background: var(--color-background);
+    color: var(--color-on-background);
+    font-family: var(--font-body);
 }
 
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  vertical-align: middle;
-  line-height: 1;
+    font-family: 'Material Symbols Outlined';
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    vertical-align: middle;
+    line-height: 1;
 }
 
 /* Atmospheric Shadow — tinted with on_surface, never black. */
 .tonal-layer-glow,
 .editorial-shadow {
-  box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+    box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
 }
 
 .manuscript-canvas {
-  background-image: radial-gradient(
-    circle at 2px 2px,
-    rgba(172, 173, 173, 0.15) 1px,
-    transparent 0
-  );
-  background-size: 40px 40px;
+    background-image: radial-gradient(circle at 2px 2px, rgba(172, 173, 173, 0.15) 1px, transparent 0);
+    background-size: 40px 40px;
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 /* Input bottom-only animated stroke. */
 .input-field-container {
-  position: relative;
+    position: relative;
 }
 .input-field-container::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background-color: var(--color-primary-container);
-  transition: width 0.3s var(--ease-sheemu), left 0.3s var(--ease-sheemu);
-  transform: translateX(-50%);
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: var(--color-primary-container);
+    transition:
+        width 0.3s var(--ease-sheemu),
+        left 0.3s var(--ease-sheemu);
+    transform: translateX(-50%);
 }
 .input-field-container:focus-within::after {
-  width: 100%;
-  left: 0;
-  transform: none;
+    width: 100%;
+    left: 0;
+    transform: none;
 }
 .input-field {
-  border: none !important;
-  box-shadow: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 .input-field:focus {
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .ghost-border {
-  border: 1px solid rgba(172, 173, 173, 0.15);
+    border: 1px solid rgba(172, 173, 173, 0.15);
 }
 
 @keyframes sheemu-spin {
-  to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

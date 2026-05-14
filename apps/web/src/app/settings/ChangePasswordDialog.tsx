@@ -3,15 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-import {
-    DialogPanel,
-    DialogScrim,
-    Eyebrow,
-    Icon,
-    PrimaryButton,
-    TertiaryButton,
-    TextField,
-} from '@/components/ui'
+import { DialogPanel, DialogScrim, Eyebrow, Icon, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 import { changePassword } from '@/lib/auth-client'
 
 const PW_LABELS = ['Too short', 'Weak', 'OK', 'Strong', 'Strong'] as const
@@ -78,14 +70,16 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title={saved ? 'Password updated.' : 'Change password'}
-                eyebrow={saved
-                    ? 'Use your new password next time you sign in.'
-                    : 'At least 8 characters, with a mix of letters and numbers.'}
+                eyebrow={
+                    saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'
+                }
                 onClose={saved ? undefined : onCancel}
                 width={480}
                 footer={
                     saved ? (
-                        <PrimaryButton emphasis="pop" onClick={onSuccess}>Done</PrimaryButton>
+                        <PrimaryButton emphasis="pop" onClick={onSuccess}>
+                            Done
+                        </PrimaryButton>
                     ) : (
                         <>
                             <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
@@ -128,10 +122,10 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
                                 const tone = !filled
                                     ? 'bg-surface-container'
                                     : pwScore <= 1
-                                        ? 'bg-error-container'
-                                        : pwScore === 2
-                                            ? 'bg-secondary-soft'
-                                            : 'bg-primary-container'
+                                      ? 'bg-error-container'
+                                      : pwScore === 2
+                                        ? 'bg-secondary-soft'
+                                        : 'bg-primary-container'
                                 return (
                                     <div
                                         key={i}
@@ -158,11 +152,7 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
                                 Pick something different from your current password.
                             </span>
                         )}
-                        {error && (
-                            <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
-                                {error}
-                            </span>
-                        )}
+                        {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
                         <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
                             Forgot your current password?{' '}
                             <Link href="/reset-password" className="text-primary">

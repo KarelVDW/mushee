@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 const publicPaths = ['/login', '/signup']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     if (publicPaths.some((p) => pathname.startsWith(p))) {

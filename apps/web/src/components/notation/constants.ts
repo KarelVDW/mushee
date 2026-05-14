@@ -1,67 +1,65 @@
 /** Pixels between adjacent staff lines */
-export const STAVE_LINE_DISTANCE = 10;
+export const STAVE_LINE_DISTANCE = 10
 
 /** Staff lines of headroom above the top staff line */
-export const SPACE_ABOVE_STAFF = 4;
+export const SPACE_ABOVE_STAFF = 4
 
 /** Number of horizontal staff lines */
-export const NUM_STAFF_LINES = 5;
+export const NUM_STAFF_LINES = 5
 
 /** Point size for notation glyphs (from VexFlow Tables.NOTATION_FONT_SCALE) */
-export const NOTATION_FONT_SCALE = 39;
+export const NOTATION_FONT_SCALE = 39
 
 /** Bravura font resolution (units per em) */
-export const FONT_RESOLUTION = 1000;
+export const FONT_RESOLUTION = 1000
 
 /** Scale factor to convert font units to SVG pixels */
-export const GLYPH_SCALE =
-  (NOTATION_FONT_SCALE * 72) / (FONT_RESOLUTION * 100); // ≈ 0.02808
+export const GLYPH_SCALE = (NOTATION_FONT_SCALE * 72) / (FONT_RESOLUTION * 100) // ≈ 0.02808
 
 /** Beam line thickness in pixels */
-export const BEAM_WIDTH = 5;
+export const BEAM_WIDTH = 5
 
 /** Maximum allowed beam slope */
-export const BEAM_MAX_SLOPE = 0.25;
+export const BEAM_MAX_SLOPE = 0.25
 
 /** Vertical stride between stacked beam levels (thickness * 1.5) */
-export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5;
+export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5
 
 /** Length of partial (orphaned) secondary beams */
-export const PARTIAL_BEAM_LENGTH = 10;
+export const PARTIAL_BEAM_LENGTH = 10
 
 /** Thin barline width in pixels */
-export const BARLINE_THIN_WIDTH = 1;
+export const BARLINE_THIN_WIDTH = 1
 
 /** Thick barline width in pixels (end barline) */
-export const BARLINE_THICK_WIDTH = 3;
+export const BARLINE_THICK_WIDTH = 3
 
 /** Gap between double/end barline strokes */
-export const BARLINE_GAP = 3;
+export const BARLINE_GAP = 3
 
 /** Tuplet bracket vertical tick height in pixels */
-export const TUPLET_BRACKET_HEIGHT = 10;
+export const TUPLET_BRACKET_HEIGHT = 10
 
 /** Horizontal gap between bracket lines and the number */
-export const TUPLET_NUMBER_GAP = 5;
+export const TUPLET_NUMBER_GAP = 5
 
 /** Vertical offset from stem tips / noteheads to bracket */
-export const TUPLET_OFFSET = 15;
+export const TUPLET_OFFSET = 15
 
 /** Scale for tuplet number glyphs (3/5 of normal notation scale) */
-export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5);
+export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5)
 
 /** Y position of tempo markings within headroom above staff */
-export const TEMPO_MARKING_Y = 15;
+export const TEMPO_MARKING_Y = 15
 
 /** Scale multiplier for flags on dotted notes (relative to GLYPH_SCALE) */
 export const DOTTED_FLAG_SCALE = GLYPH_SCALE * 0.7
 
 /** Augmentation dot radius in pixels */
-export const DOT_RADIUS = 2;
+export const DOT_RADIUS = 2
 
 /** Vertical offset from notehead center to tie endpoint */
 export const TIE_Y_SHIFT = 7
-
 
 export const SCORE_WIDTH = 1000
 export const ROW_GAP = 16
@@ -71,7 +69,6 @@ export const MAX_MEASURES_PER_ROW = 4
 export const MEASURE_BUTTON_SPACING = 30
 export const MEASURE_BUTTON_SIZE = 18
 export const MEASURE_BUTTON_GAP = 3
-
 
 /** Clef glyph names and staff-line positions */
 export const CLEF_CONFIG: Record<string, { glyphName: string; lineIndex: number }> = {

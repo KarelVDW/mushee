@@ -38,9 +38,15 @@ function LandingNav({ authed, onSignIn, onGetStarted }: { authed: boolean; onSig
             <div className="max-w-320 mx-auto px-8 py-5 flex justify-between items-center">
                 <Wordmark size={28} />
                 <div className="flex items-center gap-6">
-                    <a href="#features" className={navLinkClass}>Features</a>
-                    <a href="#how" className={navLinkClass}>How it works</a>
-                    <a href="#pricing" className={navLinkClass}>Pricing</a>
+                    <a href="#features" className={navLinkClass}>
+                        Features
+                    </a>
+                    <a href="#how" className={navLinkClass}>
+                        How it works
+                    </a>
+                    <a href="#pricing" className={navLinkClass}>
+                        Pricing
+                    </a>
                     {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
                     <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
                         {authed ? 'Open library' : 'Start composing'}
@@ -60,12 +66,13 @@ function Hero({ authed, onSignIn, onGetStarted }: { authed: boolean; onSignIn: (
                 <div className="flex flex-col gap-6">
                     <Eyebrow className="text-primary">A score editor for the rest of us</Eyebrow>
                     <h1 className="font-display font-bold text-[76px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
-                        Write the music<br />
+                        Write the music
+                        <br />
                         <em className="font-serif font-normal">in your head.</em>
                     </h1>
                     <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
-                        Sheemu is a fast, quiet space for sketching scores — no fiddly menus, no twelve dialogs to find a sharp.
-                        Just you and the notes.
+                        Sheemu is a fast, quiet space for sketching scores — no fiddly menus, no twelve dialogs to find a sharp. Just you
+                        and the notes.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
                         <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
@@ -94,9 +101,7 @@ function HeroScreenshot() {
                         key={i}
                         className={[
                             'px-2.5 py-1 rounded-sm text-[16px]',
-                            i === 2
-                                ? 'bg-primary-container text-on-primary-container'
-                                : 'bg-surface-container-lowest text-on-surface',
+                            i === 2 ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-lowest text-on-surface',
                         ].join(' ')}>
                         {g}
                     </span>
@@ -106,7 +111,9 @@ function HeroScreenshot() {
                 {[0, 1, 2, 3, 4].map((i) => (
                     <line key={i} x1={20} x2={580} y1={40 + i * 10} y2={40 + i * 10} stroke="#2d2f2f" strokeWidth={1} />
                 ))}
-                <text x={26} y={88} fontFamily="serif" fontSize={56} fill="#2d2f2f">𝄞</text>
+                <text x={26} y={88} fontFamily="serif" fontSize={56} fill="#2d2f2f">
+                    𝄞
+                </text>
                 {[120, 180, 240, 300, 360, 420, 480, 540].map((x, i) => {
                     const cy = 40 + [2, 1, 0, 1, 2, 3, 2, 1][i] * 10
                     return (
@@ -160,7 +167,9 @@ function HowItWorks() {
                     {steps.map(([num, title, body]) => (
                         <div key={num} className="flex flex-col gap-3">
                             <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
-                            <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">{title}</h3>
+                            <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
+                                {title}
+                            </h3>
                             <p className="font-body font-normal text-[15px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
                         </div>
                     ))}
@@ -194,7 +203,9 @@ function FeatureGrid() {
                             <div className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                                 <Icon name={icon} size={22} />
                             </div>
-                            <h3 className="font-headline font-semibold text-[18px] leading-[1.3] tracking-[-0.005em] text-on-surface m-0">{title}</h3>
+                            <h3 className="font-headline font-semibold text-[18px] leading-[1.3] tracking-[-0.005em] text-on-surface m-0">
+                                {title}
+                            </h3>
                             <p className="font-body font-normal text-[14px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
                         </div>
                     ))}
@@ -206,7 +217,11 @@ function FeatureGrid() {
 
 function Testimonials() {
     const items = [
-        { quote: 'I sketched a string quartet on a train ride. Notion would have made me cry.', name: 'Maya Okafor', role: 'Composer, RNCM' },
+        {
+            quote: 'I sketched a string quartet on a train ride. Notion would have made me cry.',
+            name: 'Maya Okafor',
+            role: 'Composer, RNCM',
+        },
         { quote: 'Finally, an editor where input feels like writing, not wrestling.', name: 'Daniel Park', role: 'Film scorer' },
         { quote: 'My students stop asking how to make a sharp and just write music.', name: 'Prof. Anya Reyes', role: 'Theory faculty' },
     ]
@@ -222,17 +237,24 @@ function Testimonials() {
                 <div className="grid grid-cols-3 gap-6">
                     {items.map((t) => (
                         <figure key={t.name} className="bg-surface-container-lowest rounded-lg p-7 flex flex-col gap-5 m-0">
-                            <span aria-hidden className="font-serif font-bold text-[56px] leading-[0.7] text-primary">&ldquo;</span>
+                            <span aria-hidden className="font-serif font-bold text-[56px] leading-[0.7] text-primary">
+                                &ldquo;
+                            </span>
                             <blockquote className="font-serif font-normal italic text-[17px] leading-[1.45] text-on-surface m-0">
                                 {t.quote}
                             </blockquote>
                             <figcaption className="flex items-center gap-3 mt-auto">
                                 <span className="w-9 h-9 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center font-display font-semibold text-[14px] leading-none">
-                                    {t.name.split(' ').map((s) => s[0]).join('')}
+                                    {t.name
+                                        .split(' ')
+                                        .map((s) => s[0])
+                                        .join('')}
                                 </span>
                                 <div className="flex flex-col gap-0.5">
                                     <span className="font-body font-semibold text-[14px] leading-[1.2] text-on-surface">{t.name}</span>
-                                    <span className="font-body font-normal text-[12px] leading-[1.2] text-on-surface-variant">{t.role}</span>
+                                    <span className="font-body font-normal text-[12px] leading-[1.2] text-on-surface-variant">
+                                        {t.role}
+                                    </span>
                                 </div>
                             </figcaption>
                         </figure>
@@ -245,9 +267,36 @@ function Testimonials() {
 
 function PricingTeaser({ onGetStarted }: { onGetStarted: () => void }) {
     const tiers = [
-        { name: 'Tinkerer', price: 'Free', sub: 'forever', bullets: ['30 sec recording / day', 'Up to 3 active scores', 'Real-instrument playback', 'Export to PDF & MusicXML'], cta: 'Start tinkering', emphasis: false },
-        { name: 'Hobbyist', price: '$15', sub: '/ month', bullets: ['10 min recording / day', 'Unlimited scores', 'Full instrument library', 'Lossless audio export', 'Priority support'], cta: 'Try Hobbyist free', emphasis: true },
-        { name: 'Professional', price: '$99', sub: '/ month', bullets: ['Unlimited recording', 'Everything in Hobbyist', 'Engraver-grade layout controls', 'Parts & score generation', 'Collaborator seats'], cta: 'Go Professional', emphasis: false },
+        {
+            name: 'Tinkerer',
+            price: 'Free',
+            sub: 'forever',
+            bullets: ['30 sec recording / day', 'Up to 3 active scores', 'Real-instrument playback', 'Export to PDF & MusicXML'],
+            cta: 'Start tinkering',
+            emphasis: false,
+        },
+        {
+            name: 'Hobbyist',
+            price: '$15',
+            sub: '/ month',
+            bullets: ['10 min recording / day', 'Unlimited scores', 'Full instrument library', 'Lossless audio export', 'Priority support'],
+            cta: 'Try Hobbyist free',
+            emphasis: true,
+        },
+        {
+            name: 'Professional',
+            price: '$99',
+            sub: '/ month',
+            bullets: [
+                'Unlimited recording',
+                'Everything in Hobbyist',
+                'Engraver-grade layout controls',
+                'Parts & score generation',
+                'Collaborator seats',
+            ],
+            cta: 'Go Professional',
+            emphasis: false,
+        },
     ]
     return (
         <section id="pricing" className="py-22 px-8 bg-surface-container-lowest">
@@ -315,7 +364,8 @@ function FinalCTA({ onGetStarted }: { onGetStarted: () => void }) {
             <div className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_50%,rgba(0,219,233,0.18),transparent_70%)] pointer-events-none" />
             <div className="max-w-190 mx-auto text-center relative z-2 flex flex-col gap-5 items-center">
                 <h2 className="font-display font-bold text-[56px] leading-none tracking-[-0.04em] text-on-surface m-0">
-                    The score is waiting.<br />
+                    The score is waiting.
+                    <br />
                     <em className="font-serif font-normal">Go write it.</em>
                 </h2>
                 <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
@@ -336,11 +386,17 @@ function CookieBanner() {
     useEffect(() => {
         try {
             if (localStorage.getItem('sheemu:cookies') === 'ok') setDismissed(true)
-        } catch {}
+        } catch {
+            // localStorage unavailable (private mode, disabled cookies) — leave banner visible
+        }
     }, [])
     if (dismissed) return null
     const dismiss = () => {
-        try { localStorage.setItem('sheemu:cookies', 'ok') } catch {}
+        try {
+            localStorage.setItem('sheemu:cookies', 'ok')
+        } catch {
+            // localStorage unavailable — dismissal won't persist, but still hide for this session
+        }
         setDismissed(true)
     }
     return (
@@ -354,7 +410,10 @@ function CookieBanner() {
                 </span>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
                     We use a few cookies to remember your scores and improve the editor.{' '}
-                    <Link href="#" className="text-primary underline">Read more</Link>.
+                    <Link href="#" className="text-primary underline">
+                        Read more
+                    </Link>
+                    .
                 </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">

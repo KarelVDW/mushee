@@ -87,9 +87,7 @@ function FormPanel({
 
                 <form onSubmit={onSubmit} className="flex flex-col gap-5 flex-1">
                     <div className="flex flex-col gap-4.5 flex-1 justify-center">
-                        {isSignup && (
-                            <TextField label="Your name" value={name ?? ''} onChange={onNameChange} placeholder="Anya Mokri" />
-                        )}
+                        {isSignup && <TextField label="Your name" value={name ?? ''} onChange={onNameChange} placeholder="Anya Mokri" />}
                         <TextField label="Email" value={email} onChange={onEmailChange} placeholder="you@email.com" type="email" />
                         <TextField
                             label="Password"
@@ -114,9 +112,7 @@ function FormPanel({
                                 </Link>
                             </div>
                         )}
-                        {error && (
-                            <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>
-                        )}
+                        {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
                     </div>
 
                     <div className="flex flex-col gap-3.5 pt-2">
@@ -146,9 +142,7 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
             href={href}
             className={[
                 'no-underline font-body font-medium text-[14px] leading-none -mb-2.25 pb-2 whitespace-nowrap',
-                active
-                    ? 'text-on-surface border-b-2 border-primary-container'
-                    : 'text-on-surface-variant border-b-2 border-transparent',
+                active ? 'text-on-surface border-b-2 border-primary-container' : 'text-on-surface-variant border-b-2 border-transparent',
             ].join(' ')}>
             {label}
         </Link>
@@ -170,9 +164,5 @@ function SwitchModeRow({ mode }: { mode: AuthMode }) {
 }
 
 export function AuthShell({ children }: { children: ReactNode }) {
-    return (
-        <div className="min-h-screen flex items-center justify-center p-8 bg-surface">
-            {children}
-        </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center p-8 bg-surface">{children}</div>
 }

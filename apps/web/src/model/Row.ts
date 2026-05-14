@@ -6,12 +6,14 @@ import { RowLayout } from './layout/RowLayout'
 import type { Measure } from './Measure'
 import { Score } from './Score'
 
-
 export class Row {
     private _layout: RowLayout | null = null
     private _measures: Measure[] = []
 
-    constructor(readonly score: Score, readonly index: number) {}
+    constructor(
+        readonly score: Score,
+        readonly index: number,
+    ) {}
 
     get measures(): Measure[] {
         return this._measures
@@ -30,7 +32,7 @@ export class Row {
     }
 
     canFit(measure: Measure): boolean {
-        return this._measures.length < MAX_MEASURES_PER_ROW && (this.width + measure.minimalWidth) <= SCORE_WIDTH
+        return this._measures.length < MAX_MEASURES_PER_ROW && this.width + measure.minimalWidth <= SCORE_WIDTH
     }
 
     addMeasure(measure: Measure) {
@@ -50,7 +52,6 @@ export class Row {
         return this._measures.length === 0
     }
 
-
     get layout(): RowLayout {
         this._layout ||= new RowLayout(this)
         return this._layout
@@ -58,6 +59,6 @@ export class Row {
 
     invalidateLayout() {
         this._layout = null
-        this.measures.forEach(m => m.invalidateLayout())
+        this.measures.forEach((m) => m.invalidateLayout())
     }
 }

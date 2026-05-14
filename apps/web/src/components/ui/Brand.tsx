@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 interface WordmarkProps {
     size?: number
@@ -107,19 +107,14 @@ export function Eyebrow({ children, className, style }: { children: ReactNode; c
 
 export function PageTitle({ children, italic = false }: { children: ReactNode; italic?: boolean }) {
     return (
-        <h1
-            className={`font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0 ${italic ? 'italic' : ''}`}>
+        <h1 className={`font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0 ${italic ? 'italic' : ''}`}>
             {children}
         </h1>
     )
 }
 
 export function ModalTitle({ children }: { children: ReactNode }) {
-    return (
-        <h2 className="font-display font-bold text-[28px] leading-[1.05] tracking-tight text-on-surface m-0">
-            {children}
-        </h2>
-    )
+    return <h2 className="font-display font-bold text-[28px] leading-[1.05] tracking-tight text-on-surface m-0">{children}</h2>
 }
 
 export function SubHeadline({ children }: { children: ReactNode }) {

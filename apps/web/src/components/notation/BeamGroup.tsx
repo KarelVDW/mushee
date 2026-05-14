@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo } from 'react'
 
-import type { Beam } from '@/model';
+import type { Beam } from '@/model'
 
 export const BeamGroup = memo(function BeamGroup({ beam }: { beam: Beam; layoutId: string }) {
     const segments = [beam.layout.primary, ...beam.layout.secondaries]

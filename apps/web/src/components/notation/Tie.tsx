@@ -37,10 +37,5 @@ function segmentPath({ startX, startY, endX, endY }: TieSegment, direction: 1 | 
     const cpX = (startX + endX) / 2
     const outerCpY = (startY + endY) / 2 + cp1 * direction
     const innerCpY = (startY + endY) / 2 + cp2 * direction
-    return [
-        `M ${startX} ${startY}`,
-        `Q ${cpX} ${outerCpY} ${endX} ${endY}`,
-        `Q ${cpX} ${innerCpY} ${startX} ${startY}`,
-        'Z',
-    ].join(' ')
+    return [`M ${startX} ${startY}`, `Q ${cpX} ${outerCpY} ${endX} ${endY}`, `Q ${cpX} ${innerCpY} ${startX} ${startY}`, 'Z'].join(' ')
 }

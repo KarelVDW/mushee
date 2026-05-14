@@ -2,15 +2,7 @@
 
 import { useState } from 'react'
 
-import {
-    DialogPanel,
-    DialogScrim,
-    Eyebrow,
-    Icon,
-    PrimaryButton,
-    TertiaryButton,
-    TextField,
-} from '@/components/ui'
+import { DialogPanel, DialogScrim, Eyebrow, Icon, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 
 interface DeleteAccountDialogProps {
     email?: string
@@ -45,9 +37,7 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
 
     const labelEl = (
         <>
-            Type{' '}
-            <span className="font-mono font-medium text-[13px] leading-none text-on-surface">{PHRASE}</span>{' '}
-            to confirm
+            Type <span className="font-mono font-medium text-[13px] leading-none text-on-surface">{PHRASE}</span> to confirm
         </>
     )
 
@@ -90,28 +80,14 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                                 {LOSS_ITEMS.map(([icon, text]) => (
                                     <div key={text} className="flex items-center gap-2.5">
                                         <Icon name={icon} size={16} />
-                                        <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface">
-                                            {text}
-                                        </span>
+                                        <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface">{text}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <TextField
-                            label={labelEl}
-                            value={typed}
-                            onChange={setTyped}
-                            placeholder={PHRASE}
-                            autoFocus
-                        />
-                        <TextField
-                            label="Your password"
-                            value={pw}
-                            onChange={setPw}
-                            type="password"
-                            placeholder="••••••••••••"
-                        />
+                        <TextField label={labelEl} value={typed} onChange={setTyped} placeholder={PHRASE} autoFocus />
+                        <TextField label="Your password" value={pw} onChange={setPw} type="password" placeholder="••••••••••••" />
 
                         <label className="flex items-start gap-2.5 cursor-pointer">
                             <input

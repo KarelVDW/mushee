@@ -1,4 +1,3 @@
-
 import type {
     BarlineType,
     ClefType,
@@ -20,8 +19,7 @@ import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
 
 export class MeasureSerializer {
-    constructor(readonly measure: Measure) {
-    }
+    constructor(readonly measure: Measure) {}
 
     serialize() {
         const entries: MxmlMeasureEntry[] = []
@@ -44,7 +42,12 @@ export class MeasureSerializer {
                 ...(clefChanged && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
                 ...(timeSignatureChanged && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
                 ...(this.measure.keySignature && {
-                    key: [{ fifths: this.measure.keySignature.fifths, ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }) }],
+                    key: [
+                        {
+                            fifths: this.measure.keySignature.fifths,
+                            ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }),
+                        },
+                    ],
                 }),
                 ...(includeTranspose && {
                     transpose: { chromatic: instrument.chromaticTranspose, diatonic: instrument.diatonicTranspose },
@@ -147,8 +150,7 @@ export class MeasureSerializer {
 }
 
 export class ScoreSerializer {
-    constructor(readonly score: Score) {
-    }
+    constructor(readonly score: Score) {}
 
     toInput(): ScorePartwise {
         const measures = this.score.measures.map((measure) => new MeasureSerializer(measure).serialize())

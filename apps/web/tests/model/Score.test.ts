@@ -1,8 +1,7 @@
+import { makeScore, pitched } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
-import { makeScore, pitched } from '@test/helpers'
-
 import { Duration } from '@/model/Duration'
 import { Instrument } from '@/model/Instrument'
 import { KeySignature } from '@/model/KeySignature'
@@ -45,7 +44,8 @@ describe('Score', () => {
     describe('removeLastMeasure', () => {
         it('removes the last measure and re-applies the end barline', () => {
             const score = makeScore(2)
-            const lastBefore = score.lastMeasure!
+            const lastBefore = score.lastMeasure
+            if (!lastBefore) throw new Error('expected lastMeasure')
             score.removeLastMeasure()
             expect(score.measures).not.toContain(lastBefore)
             expect(score.lastMeasure?.endBarline).toBe('end')
@@ -111,14 +111,19 @@ describe('Score', () => {
 
         it('rejects empty value list', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            expect(() => score.replace([m.firstNote!], [])).toThrow()
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
+            expect(() => score.replace([target], [])).toThrow()
         })
 
         it('replaces a single rest with a pitched quarter note', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            const target = m.firstNote!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
             const value = pitched('C', 4)
             const newNotes = score.replace([target], [value])
             expect(newNotes.length).toBeGreaterThan(0)
@@ -129,7 +134,8 @@ describe('Score', () => {
         it('extends across measure boundary if values exceed targets', () => {
             const score = makeScore(2)
             const m1 = score.measures[0]
-            const target = m1.firstNote!
+            const target = m1.firstNote
+            if (!target) throw new Error('expected firstNote')
             // single quarter rest target, replace with a whole note (4 beats)
             const longValue = new Note({ duration: new Duration({ type: 'w' }) })
             score.replace([target], [longValue])
@@ -164,7 +170,9 @@ describe('Score', () => {
         it('flushDirty returns measures map for non-structure changes', () => {
             const score = makeScore(2)
             score.clearDirty()
-            score.markMeasureDirty(score.firstMeasure!)
+            const first = score.firstMeasure
+            if (!first) throw new Error('expected firstMeasure')
+            score.markMeasureDirty(first)
             const result = score.flushDirty()
             expect(result?.measures).toBeDefined()
         })
@@ -183,9 +191,12 @@ describe('Score', () => {
     describe('setInstrument', () => {
         it('preserves tie pairings across transposition', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
             score.replace(
-                [m.firstNote!],
+                [target],
                 [
                     new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' }),
                     new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'stop' }),
@@ -199,25 +210,45 @@ describe('Score', () => {
 
         it('preserves sounding pitch (concert C → trumpet writes D = sounds C)', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            score.replace([m.firstNote!], [pitched('C', 5)])
-            const soundingBefore = m.firstNote!.pitch!.toMidi() + score.instrument.chromaticTranspose
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
+            score.replace([target], [pitched('C', 5)])
+            const noteBefore = m.firstNote
+            if (!noteBefore) throw new Error('expected firstNote')
+            const pitchBefore = noteBefore.pitch
+            if (!pitchBefore) throw new Error('expected pitch')
+            const soundingBefore = pitchBefore.toMidi() + score.instrument.chromaticTranspose
             score.setInstrument(Instrument.Trumpet)
-            const soundingAfter = m.firstNote!.pitch!.toMidi() + score.instrument.chromaticTranspose
+            const noteAfter = m.firstNote
+            if (!noteAfter) throw new Error('expected firstNote')
+            const pitchAfter = noteAfter.pitch
+            if (!pitchAfter) throw new Error('expected pitch')
+            const soundingAfter = pitchAfter.toMidi() + score.instrument.chromaticTranspose
             expect(soundingAfter).toBe(soundingBefore)
             // Trumpet writes D5 to sound C5
-            expect(m.firstNote!.pitch!.name).toBe('D')
-            expect(m.firstNote!.pitch!.octave).toBe(5)
+            expect(pitchAfter.name).toBe('D')
+            expect(pitchAfter.octave).toBe(5)
         })
 
         it('round-trips: piano → trumpet → piano restores the original note', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            score.replace([m.firstNote!], [pitched('F', 4)])
-            const before = m.firstNote!.pitch!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
+            score.replace([target], [pitched('F', 4)])
+            const noteBefore = m.firstNote
+            if (!noteBefore) throw new Error('expected firstNote')
+            const before = noteBefore.pitch
+            if (!before) throw new Error('expected pitch')
             score.setInstrument(Instrument.Trumpet)
             score.setInstrument(Instrument.Piano)
-            const after = m.firstNote!.pitch!
+            const noteAfter = m.firstNote
+            if (!noteAfter) throw new Error('expected firstNote')
+            const after = noteAfter.pitch
+            if (!after) throw new Error('expected pitch')
             expect(after.name).toBe(before.name)
             expect(after.octave).toBe(before.octave)
             expect(after.alter).toBe(before.alter)
@@ -225,7 +256,8 @@ describe('Score', () => {
 
         it('transposes the key signature', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
             m.setKeySignature(new KeySignature(0))
             score.setInstrument(Instrument.Trumpet)
             // Concert C major (0) → trumpet writes D major (2 fifths)
@@ -234,24 +266,42 @@ describe('Score', () => {
 
         it('does nothing when switching to the same instrument', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            score.replace([m.firstNote!], [pitched('C', 5)])
-            const before = m.firstNote!.pitch!
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
+            score.replace([target], [pitched('C', 5)])
+            const noteBefore = m.firstNote
+            if (!noteBefore) throw new Error('expected firstNote')
+            const before = noteBefore.pitch
+            if (!before) throw new Error('expected pitch')
             score.setInstrument(Instrument.Piano)
-            expect(m.firstNote!.pitch).toBe(before)
+            const noteAfter = m.firstNote
+            if (!noteAfter) throw new Error('expected firstNote')
+            expect(noteAfter.pitch).toBe(before)
         })
 
         it('does not transpose when both instruments share the same transposition', () => {
             const score = makeScore(1)
-            const m = score.firstMeasure!
-            score.replace([m.firstNote!], [pitched('C', 5)])
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const target = m.firstNote
+            if (!target) throw new Error('expected firstNote')
+            score.replace([target], [pitched('C', 5)])
             score.setInstrument(Instrument.Trumpet)
-            const afterTrumpet = m.firstNote!.pitch!
+            const noteTrumpet = m.firstNote
+            if (!noteTrumpet) throw new Error('expected firstNote')
+            const afterTrumpet = noteTrumpet.pitch
+            if (!afterTrumpet) throw new Error('expected pitch')
             // Soprano sax is also B♭ (same chromatic/diatonic as trumpet)
             score.setInstrument(Instrument.SopranoSaxophone)
-            expect(m.firstNote!.pitch!.name).toBe(afterTrumpet.name)
-            expect(m.firstNote!.pitch!.octave).toBe(afterTrumpet.octave)
-            expect(m.firstNote!.pitch!.alter).toBe(afterTrumpet.alter)
+            const noteSax = m.firstNote
+            if (!noteSax) throw new Error('expected firstNote')
+            const afterSax = noteSax.pitch
+            if (!afterSax) throw new Error('expected pitch')
+            expect(afterSax.name).toBe(afterTrumpet.name)
+            expect(afterSax.octave).toBe(afterTrumpet.octave)
+            expect(afterSax.alter).toBe(afterTrumpet.alter)
         })
     })
 })

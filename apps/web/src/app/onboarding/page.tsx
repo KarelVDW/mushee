@@ -3,17 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { type ReactNode, useState } from 'react'
 
-import {
-    Chip,
-    Eyebrow,
-    Icon,
-    ModalTitle,
-    PrimaryButton,
-    SubHeadline,
-    TertiaryButton,
-    TextField,
-    Wordmark,
-} from '@/components/ui'
+import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
 import { emailOtp, useSession } from '@/lib/auth-client'
 
 // Mic permission uses the real browser API. Email verification is visual until
@@ -31,8 +21,18 @@ const BACKGROUNDS: [string, string, string][] = [
 ]
 
 const PRIMARY_INSTRUMENTS = [
-    'Piano', 'Guitar', 'Violin', 'Cello', 'Flute', 'Clarinet',
-    'Voice', 'Trumpet', 'Drums', 'Bass', 'Other', "I don't play (yet)",
+    'Piano',
+    'Guitar',
+    'Violin',
+    'Cello',
+    'Flute',
+    'Clarinet',
+    'Voice',
+    'Trumpet',
+    'Drums',
+    'Bass',
+    'Other',
+    "I don't play (yet)",
 ]
 
 const REFERRAL_SOURCES: [string, string][] = [
@@ -58,20 +58,44 @@ interface PlanTier {
 
 const PLAN_TIERS: PlanTier[] = [
     {
-        id: 'free', name: 'Sketch', icon: 'feather', tagline: 'For trying it out.',
-        priceMonthly: 0, priceYearly: 0,
+        id: 'free',
+        name: 'Sketch',
+        icon: 'feather',
+        tagline: 'For trying it out.',
+        priceMonthly: 0,
+        priceYearly: 0,
         features: ['30 seconds of recording / day', '3 scores in your library', 'Hum-to-notation transcription', 'Export as PDF'],
     },
     {
-        id: 'pro', name: 'Composer', icon: 'sparkles', tagline: 'For regular writing.',
-        priceMonthly: 8, priceYearly: 80,
-        features: ['10 minutes of recording / day', 'Unlimited scores', 'MIDI + MusicXML export', 'Shareable score links', 'Editor themes & playback styles'],
+        id: 'pro',
+        name: 'Composer',
+        icon: 'sparkles',
+        tagline: 'For regular writing.',
+        priceMonthly: 8,
+        priceYearly: 80,
+        features: [
+            '10 minutes of recording / day',
+            'Unlimited scores',
+            'MIDI + MusicXML export',
+            'Shareable score links',
+            'Editor themes & playback styles',
+        ],
         popular: true,
     },
     {
-        id: 'studio', name: 'Studio', icon: 'gem', tagline: 'For teaching & teams.',
-        priceMonthly: 18, priceYearly: 180,
-        features: ['Unlimited recording', 'Everything in Composer', 'Up to 5 collaborators per score', 'Custom staff templates', 'Priority support'],
+        id: 'studio',
+        name: 'Studio',
+        icon: 'gem',
+        tagline: 'For teaching & teams.',
+        priceMonthly: 18,
+        priceYearly: 180,
+        features: [
+            'Unlimited recording',
+            'Everything in Composer',
+            'Up to 5 collaborators per score',
+            'Custom staff templates',
+            'Priority support',
+        ],
     },
 ]
 
@@ -130,7 +154,7 @@ export default function OnboardingPage() {
         setVerifying(true)
         const { error } = await emailOtp.verifyEmail({ email: sessionEmail, otp: code })
         if (error) {
-            setOtpError(error.message ?? 'That code didn\'t work. Try again or request a new one.')
+            setOtpError(error.message ?? "That code didn't work. Try again or request a new one.")
             setVerifying(false)
             return
         }
@@ -164,14 +188,22 @@ export default function OnboardingPage() {
 
     const canAdvance = (() => {
         switch (step) {
-            case 0: return verified
-            case 1: return micState === 'granted'
-            case 2: return name.trim().length > 0
-            case 3: return !!background
-            case 4: return instruments.length > 0
-            case 5: return !!source
-            case 6: return true
-            default: return true
+            case 0:
+                return verified
+            case 1:
+                return micState === 'granted'
+            case 2:
+                return name.trim().length > 0
+            case 3:
+                return !!background
+            case 4:
+                return instruments.length > 0
+            case 5:
+                return !!source
+            case 6:
+                return true
+            default:
+                return true
         }
     })()
 
@@ -202,9 +234,8 @@ export default function OnboardingPage() {
                         title="Verify your email."
                         subtitle={
                             <>
-                                We sent a 6-digit code to{' '}
-                                <strong className="text-on-surface">{userEmail}</strong>. Enter it
-                                below to continue — this step protects your scores.
+                                We sent a 6-digit code to <strong className="text-on-surface">{userEmail}</strong>. Enter it below to
+                                continue — this step protects your scores.
                             </>
                         }>
                         {!verified ? (
@@ -218,11 +249,7 @@ export default function OnboardingPage() {
                                         autoFocus
                                     />
                                 </div>
-                                {otpError && (
-                                    <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
-                                        {otpError}
-                                    </span>
-                                )}
+                                {otpError && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{otpError}</span>}
                                 <div className="flex gap-3 items-center flex-wrap">
                                     <PrimaryButton
                                         emphasis="pop"
@@ -259,13 +286,10 @@ export default function OnboardingPage() {
                                     micState === 'granted'
                                         ? 'bg-primary-container text-on-primary-container'
                                         : micState === 'denied'
-                                            ? 'bg-error-container text-on-error-container'
-                                            : 'bg-surface-container text-on-surface',
+                                          ? 'bg-error-container text-on-error-container'
+                                          : 'bg-surface-container text-on-surface',
                                 ].join(' ')}>
-                                <Icon
-                                    name={micState === 'granted' ? 'check' : micState === 'denied' ? 'mic-off' : 'mic'}
-                                    size={22}
-                                />
+                                <Icon name={micState === 'granted' ? 'check' : micState === 'denied' ? 'mic-off' : 'mic'} size={22} />
                             </span>
                             <div className="flex flex-col gap-1.5 flex-1">
                                 <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
@@ -290,11 +314,7 @@ export default function OnboardingPage() {
                                     onClick={() => void requestMic()}
                                     disabled={micState === 'requesting'}
                                     icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                                    {micState === 'denied'
-                                        ? 'Try again'
-                                        : micState === 'requesting'
-                                            ? 'Asking…'
-                                            : 'Allow microphone'}
+                                    {micState === 'denied' ? 'Try again' : micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
                                 </PrimaryButton>
                             )}
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
@@ -311,7 +331,9 @@ export default function OnboardingPage() {
                 )}
 
                 {!done && step === 3 && (
-                    <StepShell title="Where are you in your musical life?" subtitle="We tune the editor's defaults and tutorials to your level — pick the closest match.">
+                    <StepShell
+                        title="Where are you in your musical life?"
+                        subtitle="We tune the editor's defaults and tutorials to your level — pick the closest match.">
                         <div className="grid grid-cols-2 gap-3">
                             {BACKGROUNDS.map(([k, t, b]) => (
                                 <OptionCard key={k} active={background === k} onClick={() => setBackground(k)} title={t} body={b} />
@@ -321,7 +343,9 @@ export default function OnboardingPage() {
                 )}
 
                 {!done && step === 4 && (
-                    <StepShell title="Which instruments do you play?" subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
+                    <StepShell
+                        title="Which instruments do you play?"
+                        subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
                         <div className="flex flex-wrap gap-2">
                             {PRIMARY_INSTRUMENTS.map((i) => (
                                 <Chip key={i} size="md" active={instruments.includes(i)} onClick={() => toggleInstrument(i)}>
@@ -333,7 +357,9 @@ export default function OnboardingPage() {
                 )}
 
                 {!done && step === 5 && (
-                    <StepShell title="How did you find Sheemu?" subtitle="Helps us know what's working — entirely optional, no wrong answers.">
+                    <StepShell
+                        title="How did you find Sheemu?"
+                        subtitle="Helps us know what's working — entirely optional, no wrong answers.">
                         <div className="grid grid-cols-2 gap-2">
                             {REFERRAL_SOURCES.map(([k, label]) => (
                                 <button
@@ -342,9 +368,7 @@ export default function OnboardingPage() {
                                     onClick={() => setSource(k)}
                                     className={[
                                         'text-left border-0 rounded-md px-4 py-3 cursor-pointer font-body font-medium text-[14px] leading-[1.3]',
-                                        source === k
-                                            ? 'bg-primary-soft text-on-primary-soft'
-                                            : 'bg-surface-container-low text-on-surface',
+                                        source === k ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-low text-on-surface',
                                     ].join(' ')}>
                                     {label}
                                 </button>
@@ -380,7 +404,8 @@ export default function OnboardingPage() {
                         </div>
                         <ModalTitle>You&apos;re all set, {name.split(' ')[0] || 'there'}.</ModalTitle>
                         <SubHeadline>
-                            Your library is ready on <strong>{PLAN_TIERS.find((p) => p.id === tier)?.name}</strong>. Start a fresh score, or take the editor for a spin.
+                            Your library is ready on <strong>{PLAN_TIERS.find((p) => p.id === tier)?.name}</strong>. Start a fresh score, or
+                            take the editor for a spin.
                         </SubHeadline>
                         <div className="flex gap-3 mt-2">
                             <PrimaryButton emphasis="pop" icon="arrow-right" onClick={finish}>
@@ -439,9 +464,7 @@ function OptionCard({ active, onClick, title, body }: { active?: boolean; onClic
             type="button"
             className={[
                 'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-sheemu',
-                active
-                    ? 'bg-primary-soft text-on-primary-soft'
-                    : 'bg-surface-container-lowest text-on-surface editorial-shadow',
+                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface editorial-shadow',
             ].join(' ')}>
             <div className="flex flex-col gap-1">
                 <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>
@@ -461,11 +484,13 @@ function OptionCard({ active, onClick, title, body }: { active?: boolean; onClic
 
 function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
     return (
-        <div
-            role="radiogroup"
-            aria-label="Billing cadence"
-            className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
-            {([['monthly', 'Monthly'], ['yearly', 'Yearly · save 17%']] as const).map(([k, label]) => {
+        <div role="radiogroup" aria-label="Billing cadence" className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
+            {(
+                [
+                    ['monthly', 'Monthly'],
+                    ['yearly', 'Yearly · save 17%'],
+                ] as const
+            ).map(([k, label]) => {
                 const active = value === k
                 return (
                     <button
@@ -499,9 +524,7 @@ function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active:
             aria-pressed={active}
             className={[
                 'relative text-left border-0 rounded-lg px-4.5 pt-5 pb-4.5 cursor-pointer flex flex-col gap-3.5 transition-all duration-160 ease-sheemu',
-                active
-                    ? 'bg-primary-soft text-on-primary-soft'
-                    : 'bg-surface-container-lowest text-on-surface editorial-shadow',
+                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface editorial-shadow',
             ].join(' ')}>
             {plan.popular && (
                 <span className="absolute -top-2.5 right-3.5 bg-secondary-container text-on-secondary-container font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
@@ -522,9 +545,7 @@ function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active:
                 </div>
             </div>
             <div className="flex items-baseline gap-1.5">
-                <span className="font-display italic font-normal text-[32px] leading-none tracking-[-0.02em]">
-                    {price.amount}
-                </span>
+                <span className="font-display italic font-normal text-[32px] leading-none tracking-[-0.02em]">{price.amount}</span>
                 <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{price.cadence}</span>
             </div>
             {showSavings && <Eyebrow className={active ? '' : 'text-primary'}>Save ${savings}/yr</Eyebrow>}
