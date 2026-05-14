@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { type FormEvent, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { type FormEvent, useEffect, useState } from 'react'
 
 import { AuthShell, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
+import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
 
 type Stage = 'request' | 'sent' | 'set-new' | 'done'
 const STAGES: Stage[] = ['request', 'sent', 'set-new', 'done']
@@ -20,31 +21,81 @@ function scorePassword(pw: string): number {
     return Math.min(s, 4)
 }
 
-// Visual flow only — wire to backend reset endpoints when those land.
 export default function PasswordResetPage() {
     const router = useRouter()
-    const [stage, setStage] = useState<Stage>('request')
+    const searchParams = useSearchParams()
+    const tokenFromUrl = searchParams.get('token')
+    const errorFromUrl = searchParams.get('error')
+
+    const [stage, setStage] = useState<Stage>(tokenFromUrl ? 'set-new' : 'request')
     const [email, setEmail] = useState('')
     const [pw, setPw] = useState('')
     const [pw2, setPw2] = useState('')
     const [showPw, setShowPw] = useState(false)
     const [resent, setResent] = useState(false)
+    const [submitting, setSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(
+        errorFromUrl === 'INVALID_TOKEN'
+            ? 'That reset link is invalid or has expired. Request a new one below.'
+            : null,
+    )
+
+    useEffect(() => {
+        if (errorFromUrl === 'INVALID_TOKEN') setStage('request')
+    }, [errorFromUrl])
 
     const pwScore = scorePassword(pw)
     const pwMatch = pw.length > 0 && pw === pw2
-    const canSetNew = pwScore >= 2 && pwMatch
+    const canSetNew = pwScore >= 2 && pwMatch && !!tokenFromUrl
     const stageIdx = STAGES.indexOf(stage)
 
     const onBackToSignIn = () => router.push('/login')
 
-    const handleRequest = (e: FormEvent) => {
-        e.preventDefault()
-        if (email) setStage('sent')
+    function callbackUrl(): string {
+        if (typeof window === 'undefined') return '/reset-password'
+        return `${window.location.origin}/reset-password`
     }
 
-    const handleSetNew = (e: FormEvent) => {
+    async function doRequestReset(addr: string) {
+        const { error } = await requestPasswordReset({
+            email: addr,
+            redirectTo: callbackUrl(),
+        })
+        if (error) {
+            setError(error.message ?? 'Could not send reset email.')
+            return false
+        }
+        return true
+    }
+
+    const handleRequest = async (e: FormEvent) => {
         e.preventDefault()
-        if (canSetNew) setStage('done')
+        if (!email || submitting) return
+        setError(null)
+        setSubmitting(true)
+        const ok = await doRequestReset(email)
+        setSubmitting(false)
+        if (ok) setStage('sent')
+    }
+
+    const handleResend = async () => {
+        if (!email || resent) return
+        const ok = await doRequestReset(email)
+        if (ok) setResent(true)
+    }
+
+    const handleSetNew = async (e: FormEvent) => {
+        e.preventDefault()
+        if (!canSetNew || !tokenFromUrl || submitting) return
+        setError(null)
+        setSubmitting(true)
+        const { error } = await resetPassword({ newPassword: pw, token: tokenFromUrl })
+        setSubmitting(false)
+        if (error) {
+            setError(error.message ?? 'Could not reset password.')
+            return
+        }
+        setStage('done')
     }
 
     return (
@@ -87,6 +138,12 @@ export default function PasswordResetPage() {
                             </Eyebrow>
                         </div>
 
+                        {error && (
+                            <div className="rounded-lg bg-error-container text-on-error-container px-3 py-2 font-body text-[13px]">
+                                {error}
+                            </div>
+                        )}
+
                         {stage === 'request' && (
                             <form onSubmit={handleRequest} className="flex flex-col gap-5 flex-1">
                                 <div className="flex flex-col gap-2 flex-1 justify-center">
@@ -97,8 +154,8 @@ export default function PasswordResetPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-3.5 pt-2">
-                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!email}>
-                                        Send reset link
+                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!email || submitting}>
+                                        {submitting ? 'Sending…' : 'Send reset link'}
                                     </PrimaryButton>
                                     <div className="flex justify-center">
                                         <TertiaryButton onClick={onBackToSignIn}>← Back to sign in</TertiaryButton>
@@ -121,7 +178,7 @@ export default function PasswordResetPage() {
                                         Don&apos;t see it? Check your spam folder, or{' '}
                                         <button
                                             type="button"
-                                            onClick={() => setResent(true)}
+                                            onClick={handleResend}
                                             className="bg-transparent border-0 p-0 text-primary cursor-pointer font-inherit underline">
                                             {resent ? 'sent again ✓' : 'resend the link'}
                                         </button>
@@ -129,9 +186,6 @@ export default function PasswordResetPage() {
                                     </span>
                                 </div>
                                 <div className="flex flex-col gap-3.5 pt-2">
-                                    <PrimaryButton size="lg" emphasis="pop" fullWidth onClick={() => setStage('set-new')}>
-                                        I have the link — continue
-                                    </PrimaryButton>
                                     <div className="flex justify-center">
                                         <TertiaryButton onClick={() => setStage('request')}>← Use a different email</TertiaryButton>
                                     </div>
@@ -188,8 +242,8 @@ export default function PasswordResetPage() {
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-3.5 pt-2">
-                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!canSetNew}>
-                                        Save new password
+                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!canSetNew || submitting}>
+                                        {submitting ? 'Saving…' : 'Save new password'}
                                     </PrimaryButton>
                                     <div className="flex justify-center">
                                         <TertiaryButton onClick={onBackToSignIn}>← Cancel</TertiaryButton>

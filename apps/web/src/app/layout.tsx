@@ -3,6 +3,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from "next/font/google";
 
+import { AuthGate } from "@/components/AuthGate";
+
 const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
@@ -45,7 +47,7 @@ export default function RootLayout({
       <body
         className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

@@ -19,13 +19,13 @@ export default function LoginPage() {
         setError(null)
         setLoading(true)
 
-        void signIn.email({ email, password }).then(({ error }) => {
+        void signIn.email({ email, password }).then(({ data, error }) => {
             if (error) {
                 setError(error.message ?? 'Login failed')
                 setLoading(false)
-            } else {
-                router.push('/scores')
+                return
             }
+            router.push(data?.user?.emailVerified ? '/scores' : '/onboarding')
         })
     }
 

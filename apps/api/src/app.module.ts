@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { CronModule } from './cron/cron.module';
+import { MailModule } from './mail/mail.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { ScoresModule } from './scores/scores.module';
 import { StorageModule } from './storage/storage.module';
@@ -26,6 +27,7 @@ import { StorageModule } from './storage/storage.module';
       process.env.MONGO_URI ?? 'mongodb://localhost:27017/mushee',
     ),
     ScheduleModule.forRoot(),
+    MailModule,
     AuthModule,
     ScoresModule,
     CacheModule,

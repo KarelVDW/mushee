@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { type FormEvent, useState } from 'react'
 
 import { AuthCard, AuthShell } from '@/components/ui'
-import { signUp } from '@/lib/auth-client'
+import { emailOtp, signUp } from '@/lib/auth-client'
 
 export default function SignupPage() {
     const router = useRouter()
@@ -25,7 +25,10 @@ export default function SignupPage() {
                 setError(error.message ?? 'Signup failed')
                 setLoading(false)
             } else {
-                router.push('/onboarding')
+                 void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(({ error }) => {
+                    if (!error) router.push('/onboarding')
+                 })
+                
             }
         })
     }

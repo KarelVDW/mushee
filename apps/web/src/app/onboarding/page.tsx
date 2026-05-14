@@ -14,7 +14,7 @@ import {
     TextField,
     Wordmark,
 } from '@/components/ui'
-import { useSession } from '@/lib/auth-client'
+import { emailOtp, useSession } from '@/lib/auth-client'
 
 // Mic permission uses the real browser API. Email verification is visual until
 // the backend sends/validates real codes — any 6-digit input is accepted. Collected
@@ -93,14 +93,17 @@ type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
 export default function OnboardingPage() {
     const router = useRouter()
-    const { data: session } = useSession()
-    const userEmail = session?.user?.email ?? 'your inbox'
+    const { data: session, refetch } = useSession()
+    const sessionEmail = session?.user?.email ?? null
+    const verified = session?.user?.emailVerified ?? false
+    const userEmail = sessionEmail ?? 'your inbox'
 
     const [step, setStep] = useState(0)
 
     // Step 0 — verify email
     const [code, setCode] = useState('')
-    const [verified, setVerified] = useState(false)
+    const [otpError, setOtpError] = useState<string | null>(null)
+    const [verifying, setVerifying] = useState(false)
     const [resending, setResending] = useState(false)
     const [resent, setResent] = useState(false)
 
@@ -121,17 +124,30 @@ export default function OnboardingPage() {
         setInstruments((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
     }
 
-    // Visual stub — any 6 digits "verifies". Wire to real verification endpoint
-    // once the backend issues codes.
-    const submitCode = () => {
-        if (/^\d{6}$/.test(code)) setVerified(true)
+    const submitCode = async () => {
+        if (!/^\d{6}$/.test(code) || !sessionEmail || verifying) return
+        setOtpError(null)
+        setVerifying(true)
+        const { error } = await emailOtp.verifyEmail({ email: sessionEmail, otp: code })
+        if (error) {
+            setOtpError(error.message ?? 'That code didn\'t work. Try again or request a new one.')
+            setVerifying(false)
+            return
+        }
+        setVerifying(false)
+        await refetch()
     }
-    const resendCode = () => {
+    const resendCode = async () => {
+        if (!sessionEmail || resending) return
+        setOtpError(null)
         setResending(true)
-        setTimeout(() => {
-            setResending(false)
-            setResent(true)
-        }, 600)
+        const { error } = await emailOtp.sendVerificationOtp({ email: sessionEmail, type: 'email-verification' })
+        setResending(false)
+        if (error) {
+            setOtpError(error.message ?? 'Could not send a new code.')
+            return
+        }
+        setResent(true)
     }
 
     const requestMic = async () => {
@@ -202,14 +218,19 @@ export default function OnboardingPage() {
                                         autoFocus
                                     />
                                 </div>
+                                {otpError && (
+                                    <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
+                                        {otpError}
+                                    </span>
+                                )}
                                 <div className="flex gap-3 items-center flex-wrap">
                                     <PrimaryButton
                                         emphasis="pop"
-                                        disabled={!/^\d{6}$/.test(code)}
-                                        onClick={submitCode}>
-                                        Verify
+                                        disabled={!/^\d{6}$/.test(code) || verifying}
+                                        onClick={() => void submitCode()}>
+                                        {verifying ? 'Verifying…' : 'Verify'}
                                     </PrimaryButton>
-                                    <TertiaryButton onClick={resendCode}>
+                                    <TertiaryButton onClick={() => void resendCode()}>
                                         {resending ? 'Sending…' : resent ? 'Code sent again' : 'Resend code'}
                                     </TertiaryButton>
                                 </div>

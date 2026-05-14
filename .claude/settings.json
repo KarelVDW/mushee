@@ -9,6 +9,20 @@
       "Bash(pnpm test:recording)",
       "Bash(pnpm test *)",
       "Bash(pnpm build *)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(cat *.env*)",
+      "Bash(head *.env*)",
+      "Bash(tail *.env*)",
+      "Bash(less *.env*)",
+      "Bash(more *.env*)",
+      "Bash(xxd *.env*)",
+      "Bash(od *.env*)",
+      "Bash(strings *.env*)",
+      "Bash(printenv)",
+      "Bash(env)"
     ]
   }
 }

@@ -11,6 +11,9 @@ out/
 *~
 logs
 *.log
+.env
+.env.*
+!.env.example
 apps/api/debug/
 apps/api/.venv-crepe/
 apps/api/.venv-pesto/
