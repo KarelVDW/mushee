@@ -45,7 +45,7 @@ export class MidiPlayer {
                 promises.push(existing.ready)
                 continue
             }
-            const sf = new Soundfont(ctx, { instrument: instrument.presetName })
+            const sf = new Soundfont(ctx, { instrument: instrument.presetName, kit: 'FluidR3_GM' })
             const ready = sf.loaded()
             this.soundfonts.set(instrument.id, { sf, ready })
             promises.push(ready)
