@@ -5,12 +5,18 @@
 // Use <PrimaryButton> for the everyday filled button (no shadow); use
 // <PrimaryButton emphasis="pop"> for the rare hero moment.
 
-function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', disabled, emphasis = 'flat', fullWidth }) {
+function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', disabled, emphasis = 'flat', fullWidth, danger = false }) {
     const [hover, setHover] = useState(false)
     const big = size === 'lg'
-    const pop = emphasis === 'pop'
+    // Destructive variant: red fill, no magenta pop — destructive actions don't get
+    // the signature lift (that's reserved for things you *want* the user to tap).
+    const pop = emphasis === 'pop' && !danger
     const baseShadow = pop ? '3px 3px 0 0 var(--color-secondary-container)' : 'none'
     const hoverShadow = pop ? '5px 5px 0 0 var(--color-secondary-container)' : 'none'
+    const idleBg = danger ? 'var(--color-error-container)' : 'var(--color-primary-container)'
+    const hoverBg = danger ? 'var(--color-error)' : 'var(--color-primary)'
+    const idleFg = danger ? 'var(--color-on-error-container)' : 'var(--color-on-primary-container)'
+    const hoverFg = danger ? 'var(--color-on-error)' : 'var(--color-on-primary)'
     return (
         <button
             type={type}
@@ -19,8 +25,8 @@ function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', 
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                background: hover && !disabled ? 'var(--color-primary)' : 'var(--color-primary-container)',
-                color: hover && !disabled ? 'var(--color-on-primary)' : 'var(--color-on-primary-container)',
+                background: hover && !disabled ? hoverBg : idleBg,
+                color: hover && !disabled ? hoverFg : idleFg,
                 border: 0,
                 borderRadius: 9999,
                 padding: big ? '13px 26px' : '9px 18px',

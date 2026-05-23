@@ -48,7 +48,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 - **Sentence case** for everything in the UI: buttons, nav, labels, headings, dialogs.
 - Title Case is reserved for proper nouns (instrument names, score titles, people).
 - ALL-CAPS is used _only_ for the small `--type-label-*` schematic eyebrows — short tags like "How it works" or "Pricing" — at `0.12em` tracking.
-- Display headings use a hint of italic via Newsreader for warmth (e.g. "Write the music _in your head._"); sans-serif Space Grotesk does the structural work.
+- Display headings use a hint of italic via Newsreader for warmth (e.g. "Write the music _in your head._"); sans-serif Space Grotesk does the structural work. **Newsreader is reserved for marketing + auth surfaces** — the landing page, the auth split-panel, the final CTA, pull-quotes, testimonials. In-app chrome (Library, Editor, Settings page titles) stays in Space Grotesk and skips italic; warmth there is earned through copy, not letterforms.
 
 **Voice — first vs second person:**
 
@@ -127,12 +127,12 @@ A **white-on-white** layering system punctuated by two accent colors. Accents ar
 
 Four families, each with a clear job.
 
-| Family            | Role                 | Where                                                                                                                               |
-| ----------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700. |
-| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.               |
-| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_in your head._"), pull-quotes, testimonial copy. Optical-size variable.              |
-| **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.               |
+| Family            | Role                 | Where                                                                                                                                                                                   |
+| ----------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                     |
+| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                   |
+| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_in your head._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
+| **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.                                                                   |
 
 The wordmark is always **`Sheemu`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
 
@@ -150,6 +150,7 @@ Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline
 - Default: solid `surface` (#f6f6f6) — flat, never gradients.
 - The editor canvas: pure `#ffffff`, optionally with a 40px-grid `manuscript-canvas` dot texture at 15% `outline_variant`.
 - The hero and final-CTA sections may carry a single oversized soft blur — cyan or magenta at low opacity, blurred at 120px — pinned to one corner. This is the **only** place a colored haze is permitted, and it's used quietly.
+- **Marketing-emphasis surface (dark inversion).** Exactly one element per marketing surface may invert to `on-surface` (#2d2f2f) fill with `surface` text — used today for the "most picked" pricing tier. This is the only sanctioned dark surface in the system and it lives **strictly on copy / sales / advertising surfaces** (landing, pricing, in-product upsell cards). Never on app chrome or the editor.
 - **Forbidden:** purple/blue gradients, mesh gradients, hand-drawn illustrations, photographic full-bleeds in chrome.
 
 ### Animation

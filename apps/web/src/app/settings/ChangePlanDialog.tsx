@@ -155,8 +155,9 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                                         className={[
                                             'border-0 px-3.5 py-1.75 rounded-full cursor-pointer',
                                             'font-label font-semibold text-[12px] leading-none',
+                                            'transition-colors duration-150 ease-sheemu',
                                             active
-                                                ? 'bg-surface-container-lowest text-on-surface shadow-[0_1px_3px_rgba(45,47,47,0.08)]'
+                                                ? 'bg-primary-container text-on-primary-container'
                                                 : 'bg-transparent text-on-surface-variant',
                                         ].join(' ')}>
                                         {label}
@@ -180,7 +181,7 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                                             'flex flex-col gap-2.5',
                                             active
                                                 ? 'bg-primary-soft text-on-primary-soft'
-                                                : 'bg-surface-container-lowest text-on-surface shadow-[inset_0_0_0_1px_var(--color-outline-variant)]',
+                                                : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
                                         ].join(' ')}>
                                         {isCurrent && (
                                             <span className="absolute -top-2.5 right-3.5 bg-surface-container-high text-on-surface font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
@@ -191,7 +192,7 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                                             <Icon name={p.icon} size={18} />
                                             <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
                                         </div>
-                                        <span className="font-display italic font-normal text-[24px] leading-none tracking-[-0.02em]">
+                                        <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
                                             {planPrice(p, billing)}
                                         </span>
                                         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">

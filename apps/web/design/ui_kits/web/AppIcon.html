@@ -1,91 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>Sheemu — App icon</title>
-<link rel="stylesheet" href="../../colors_and_type.css" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-<style>
-  html, body { margin: 0; background: var(--color-surface); color: var(--color-on-surface); font-family: var(--font-body); }
-  main { padding: 64px 48px; display: flex; flex-direction: column; gap: 56px; max-width: 1080px; margin: 0 auto; }
-  .row { display: flex; align-items: flex-end; gap: 48px; flex-wrap: wrap; }
-  .specimen { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-  .label { font: 600 11px/1 var(--font-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-on-surface-variant); }
-  .swatch-row { display: flex; gap: 24px; flex-wrap: wrap; }
-  .hero { background: var(--color-surface-container-low); border-radius: 24px; padding: 64px; display: flex; align-items: center; justify-content: center; }
-</style>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script type="text/babel" src="Brand.jsx"></script>
-</head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-const { createRoot } = ReactDOM;
-function Page() {
-  return (
-    <main>
-      <header style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="label">App icon · v1</span>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontStyle: 'italic', fontSize: 44, letterSpacing: '-0.03em', margin: 0 }}>
-          The Sheemu S.
-        </h1>
-        <p style={{ font: '400 15px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0, maxWidth: 540 }}>
-          Letter rendered in <strong>primary-container</strong> with a single offset
-          drop-shadow in <strong>secondary-container</strong>.
-        </p>
-      </header>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Sheemu — App icon</title>
+        <link rel="stylesheet" href="../../colors_and_type.css" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: var(--color-surface);
+                color: var(--color-on-surface);
+                font-family: var(--font-body);
+            }
+            main {
+                padding: 64px 48px;
+                display: flex;
+                flex-direction: column;
+                gap: 56px;
+                max-width: 1080px;
+                margin: 0 auto;
+            }
+            .row {
+                display: flex;
+                align-items: flex-end;
+                gap: 48px;
+                flex-wrap: wrap;
+            }
+            .specimen {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .label {
+                font: 600 11px/1 var(--font-label);
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--color-on-surface-variant);
+            }
+            .swatch-row {
+                display: flex;
+                gap: 24px;
+                flex-wrap: wrap;
+            }
+            .hero {
+                background: var(--color-surface-container-low);
+                border-radius: 16px;
+                padding: 64px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+        <script
+            src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+            integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+            crossorigin="anonymous"></script>
+        <script
+            src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+            integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+            crossorigin="anonymous"></script>
+        <script
+            src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+            integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+            crossorigin="anonymous"></script>
+        <script type="text/babel" src="Brand.jsx"></script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="text/babel">
+            const { createRoot } = ReactDOM
+            function Page() {
+                return (
+                    <main>
+                        <header style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <span className="label">App icon · v1</span>
+                            <h1
+                                style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontWeight: 700,
+                                    fontSize: 48,
+                                    letterSpacing: '-0.03em',
+                                    margin: 0,
+                                }}>
+                                The Sheemu S.
+                            </h1>
+                            <p
+                                style={{
+                                    font: '400 15px/1.5 var(--font-body)',
+                                    color: 'var(--color-on-surface-variant)',
+                                    margin: 0,
+                                    maxWidth: 540,
+                                }}>
+                                Letter rendered in <strong>primary-container</strong> with a single offset drop-shadow in{' '}
+                                <strong>secondary-container</strong>.
+                            </p>
+                        </header>
 
-      <div className="hero">
-        <AppIcon size={240} />
-      </div>
+                        <div className="hero">
+                            <AppIcon size={240} />
+                        </div>
 
-      <section className="specimen">
-        <span className="label">Sizes</span>
-        <div className="row">
-          {[160, 96, 64, 40, 28].map((s) => (
-            <div key={s} className="specimen">
-              <AppIcon size={s} />
-              <span className="label">{s}px</span>
-            </div>
-          ))}
-        </div>
-      </section>
+                        <section className="specimen">
+                            <span className="label">Sizes</span>
+                            <div className="row">
+                                {[160, 96, 64, 40, 28].map((s) => (
+                                    <div key={s} className="specimen">
+                                        <AppIcon size={s} />
+                                        <span className="label">{s}px</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
 
-      <section className="specimen">
-        <span className="label">On surface variants</span>
-        <div className="swatch-row">
-          <div className="specimen">
-            <AppIcon size={96} background="var(--color-surface)" />
-            <span className="label">Surface</span>
-          </div>
-          <div className="specimen">
-            <AppIcon size={96} background="var(--color-surface-container-low)" />
-            <span className="label">Container-low</span>
-          </div>
-          <div className="specimen">
-            <AppIcon size={96} background="var(--color-surface-container-high)" />
-            <span className="label">Container-high</span>
-          </div>
-          <div className="specimen">
-            <AppIcon size={96} background="#1a1a1a" />
-            <span className="label">Dark</span>
-          </div>
-        </div>
-      </section>
+                        <section className="specimen">
+                            <span className="label">On surface variants</span>
+                            <div className="swatch-row">
+                                <div className="specimen">
+                                    <AppIcon size={96} background="var(--color-surface)" />
+                                    <span className="label">Surface</span>
+                                </div>
+                                <div className="specimen">
+                                    <AppIcon size={96} background="var(--color-surface-container-low)" />
+                                    <span className="label">Container-low</span>
+                                </div>
+                                <div className="specimen">
+                                    <AppIcon size={96} background="var(--color-surface-container-high)" />
+                                    <span className="label">Container-high</span>
+                                </div>
+                                <div className="specimen">
+                                    <AppIcon size={96} background="#1a1a1a" />
+                                    <span className="label">Dark</span>
+                                </div>
+                            </div>
+                        </section>
 
-      <section className="specimen">
-        <span className="label">In context</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--color-surface-container-lowest)', padding: '18px 24px', borderRadius: 12, boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)' }}>
-          <AppIcon size={40} />
-          <Wordmark size={28} />
-        </div>
-      </section>
-    </main>
-  );
-}
-createRoot(document.getElementById('root')).render(<Page />);
-</script>
-</body>
+                        <section className="specimen">
+                            <span className="label">In context</span>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 16,
+                                    background: 'var(--color-surface-container-lowest)',
+                                    padding: '18px 24px',
+                                    borderRadius: 12,
+                                    boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
+                                }}>
+                                <AppIcon size={40} />
+                                <Wordmark size={28} />
+                            </div>
+                        </section>
+                    </main>
+                )
+            }
+            createRoot(document.getElementById('root')).render(<Page />)
+        </script>
+    </body>
 </html>

@@ -109,7 +109,7 @@ function Eyebrow({ children, color = 'var(--color-on-surface-variant)', style })
         <span
             style={{
                 font: '600 11px/1 var(--font-label)',
-                letterSpacing: '0.1em',
+                letterSpacing: '0.12em',
                 textTransform: 'uppercase',
                 color,
                 ...style,
@@ -119,6 +119,10 @@ function Eyebrow({ children, color = 'var(--color-on-surface-variant)', style })
     )
 }
 
+// PageTitle — Space Grotesk by default; `italic` keeps Space Grotesk italic
+// for in-app section / page titles. Newsreader italic is RESERVED for marketing
+// + auth surfaces (landing hero, FinalCTA, AuthCard) where extra warmth earns
+// its keep — see README §Voice. In-app chrome stays structural.
 function PageTitle({ children, italic = false }) {
     return (
         <h1
@@ -126,7 +130,7 @@ function PageTitle({ children, italic = false }) {
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
                 fontStyle: italic ? 'italic' : 'normal',
-                fontSize: 44,
+                fontSize: 48,
                 lineHeight: 1,
                 letterSpacing: '-0.03em',
                 color: 'var(--color-on-surface)',
@@ -143,9 +147,9 @@ function ModalTitle({ children }) {
             style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
-                fontSize: 28,
+                fontSize: 32,
                 lineHeight: 1.05,
-                letterSpacing: '-0.025em',
+                letterSpacing: '-0.03em',
                 color: 'var(--color-on-surface)',
                 margin: 0,
             }}>

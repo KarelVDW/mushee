@@ -37,6 +37,7 @@ const ICON_ALIASES = {
     gem: 'diamond',
     lock: 'lock',
     'external-link': 'open_in_new',
+    infinity: 'all_inclusive',
 }
 
 function Icon({ name, size = 18, color = 'currentColor', style }) {

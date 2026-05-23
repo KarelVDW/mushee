@@ -62,6 +62,13 @@
     --radius-xl: 1rem;
     --radius-full: 9999px;
 
+    /* Shadows — atmospheric, never black */
+    --shadow-tonal: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+    --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06);
+    --shadow-offset-3: 3px 3px 0 0 #ff2079;
+    --shadow-offset-5: 5px 5px 0 0 #ff2079;
+    --shadow-cyan-3: 3px 3px 0 0 #00dbe9;
+
     /* Motion */
     --ease-sheemu: cubic-bezier(0.2, 0.8, 0.2, 1);
 

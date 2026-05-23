@@ -463,7 +463,7 @@ export default function ScoreEditorPage() {
                         <Icon name="arrow-left" size={20} />
                     </button>
                     <Wordmark size={22} />
-                    <div className="w-px h-6 bg-outline-variant/30" />
+                    <div className="w-px h-6 bg-outline-variant/15" />
                     <input
                         value={title}
                         onChange={(e) => {
@@ -471,7 +471,7 @@ export default function ScoreEditorPage() {
                             setTitle(v)
                             saveToApi({ title: v })
                         }}
-                        className="bg-transparent border-0 outline-0 font-display italic text-[22px] text-on-surface p-1 min-w-0 flex-1"
+                        className="bg-transparent border-0 outline-0 font-serif italic text-[22px] text-on-surface p-1 min-w-0 flex-1"
                     />
                     <button
                         type="button"

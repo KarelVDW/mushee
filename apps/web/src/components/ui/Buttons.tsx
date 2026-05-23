@@ -33,10 +33,12 @@ export function PrimaryButton({
     fullWidth = false,
 }: PrimaryButtonProps) {
     const big = size === 'lg'
-    const pop = emphasis === 'pop'
+    // Destructive variant: red fill, no magenta pop — the signature lift is reserved
+    // for actions you want the user to tap, not for ones you want them to think twice about.
+    const pop = emphasis === 'pop' && !danger
 
     const palette = danger
-        ? 'bg-secondary-container text-on-secondary hover:bg-secondary hover:text-on-secondary'
+        ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error'
         : 'bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary'
 
     const popStyles = pop

@@ -106,7 +106,6 @@ export default function ScoresPage() {
             <main className="flex-1 max-w-7xl mx-auto px-8 py-10 flex flex-col gap-6 w-full box-border">
                 <PageHeader
                     title="Your scores"
-                    italic
                     subtitle="A quiet shelf for everything you're working on."
                     right={
                         <div className="w-64">

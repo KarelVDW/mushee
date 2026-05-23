@@ -95,7 +95,6 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
             }}>
             <PageHeader
                 title="Your scores"
-                italic
                 subtitle="A quiet shelf for everything you're working on."
                 right={
                     <div style={{ width: 256 }}>
@@ -131,13 +130,13 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
                             style={{
                                 background: 'var(--color-surface-container-lowest)',
                                 borderRadius: 8,
-                                padding: 56,
+                                padding: '40px 32px',
                                 boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
-                                textAlign: 'center',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 12,
                                 alignItems: 'center',
+                                justifyContent: 'center',
                             }}>
                             <Icon name="search" size={32} color="var(--color-outline-variant)" />
                             <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>

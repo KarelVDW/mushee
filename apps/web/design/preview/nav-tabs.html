@@ -1,115 +1,174 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Tabs & nav</title>
-<link rel="stylesheet" href="../colors_and_type.css">
-<style>
-  html, body { margin: 0; background: var(--color-surface); }
-  .stack { width: 880px; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px; padding: 24px; }
+    <head>
+        <meta charset="utf-8" />
+        <title>Tabs & nav</title>
+        <link rel="stylesheet" href="../colors_and_type.css" />
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: var(--color-surface);
+            }
+            .stack {
+                width: 880px;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                gap: 28px;
+                padding: 24px;
+            }
 
-  /* Top nav — translucent sticky bar */
-  .nav {
-    background: rgba(246,246,246,0.85);
-    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    box-shadow: 0 0 24px 0 rgba(45,47,47,0.06);
-    border-radius: 12px;
-  }
-  .nav-inner {
-    padding: 18px 32px;
-    display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  }
-  .nav-left { display: flex; align-items: center; gap: 26px; }
-  .wm {
-    font-family: var(--font-display); font-style: italic; font-weight: 700;
-    font-size: 28px; letter-spacing: -0.04em; line-height: 1;
-    color: var(--color-on-surface);
-  }
-  .nav-items { display: flex; align-items: center; gap: 22px; margin-left: 16px; }
-  .nav-item {
-    background: transparent; border: 0; cursor: pointer;
-    font: 500 14px/1 var(--font-body);
-    color: var(--color-on-surface-variant);
-    border-bottom: 2px solid transparent;
-    padding-bottom: 4px; white-space: nowrap;
-  }
-  .nav-item:hover { color: var(--color-on-surface); }
-  .nav-item.active {
-    color: var(--color-on-surface);
-    border-bottom-color: var(--color-primary-container);
-    cursor: default;
-  }
+            /* Top nav — translucent sticky bar */
+            .nav {
+                background: rgba(246, 246, 246, 0.85);
+                -webkit-backdrop-filter: blur(16px);
+                backdrop-filter: blur(16px);
+                box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+                border-radius: 12px;
+            }
+            .nav-inner {
+                padding: 18px 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
+            }
+            .nav-left {
+                display: flex;
+                align-items: center;
+                gap: 26px;
+            }
+            .wm {
+                font-family: var(--font-display);
+                font-style: italic;
+                font-weight: 700;
+                font-size: 28px;
+                letter-spacing: -0.04em;
+                line-height: 1;
+                color: var(--color-on-surface);
+            }
+            .nav-items {
+                display: flex;
+                align-items: center;
+                gap: 22px;
+                margin-left: 16px;
+            }
+            .nav-item {
+                background: transparent;
+                border: 0;
+                cursor: pointer;
+                font: 500 14px/1 var(--font-body);
+                color: var(--color-on-surface-variant);
+                border-bottom: 2px solid transparent;
+                padding-bottom: 4px;
+                white-space: nowrap;
+            }
+            .nav-item:hover {
+                color: var(--color-on-surface);
+            }
+            .nav-item.active {
+                color: var(--color-on-surface);
+                border-bottom-color: var(--color-primary-container);
+                cursor: default;
+            }
 
-  .nav-right { display: flex; align-items: center; gap: 14px; }
-  .pop-btn {
-    background: var(--color-primary-container); color: var(--color-on-primary-container);
-    border: 0; border-radius: 9999px; padding: 9px 18px;
-    font: 600 13px/1 var(--font-label); letter-spacing: 0.01em;
-    box-shadow: 3px 3px 0 0 var(--color-secondary-container);
-    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .pop-btn .material-symbols-outlined { font-size: 16px; }
-  .avatar {
-    background: var(--color-surface-container); color: var(--color-on-surface);
-    border: 0; border-radius: 9999px; width: 36px; height: 36px;
-    cursor: pointer; font: 600 13px/1 var(--font-label);
-    display: inline-flex; align-items: center; justify-content: center;
-  }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+            .pop-btn {
+                background: var(--color-primary-container);
+                color: var(--color-on-primary-container);
+                border: 0;
+                border-radius: 9999px;
+                padding: 9px 18px;
+                font: 600 13px/1 var(--font-label);
+                letter-spacing: 0.01em;
+                box-shadow: 3px 3px 0 0 var(--color-secondary-container);
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .pop-btn .material-symbols-outlined {
+                font-size: 16px;
+            }
+            .avatar {
+                background: var(--color-surface-container);
+                color: var(--color-on-surface);
+                border: 0;
+                border-radius: 9999px;
+                width: 36px;
+                height: 36px;
+                cursor: pointer;
+                font: 600 13px/1 var(--font-label);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
 
-  /* Auth tabs — sit above a 1px hairline, active gets 2px cyan underline */
-  .auth-card {
-    background: var(--color-surface-container-lowest);
-    border-radius: 12px; padding: 28px;
-    box-shadow: 0 0 24px 0 rgba(45,47,47,0.06);
-  }
-  .tabs {
-    display: flex; align-items: flex-end; gap: 26px;
-    border-bottom: 1px solid rgba(172,173,173,0.2);
-    padding-bottom: 8px;
-  }
-  .tab {
-    background: transparent; border: 0; cursor: pointer;
-    font: 500 14px/1 var(--font-body);
-    color: var(--color-on-surface-variant);
-    border-bottom: 2px solid transparent;
-    margin-bottom: -9px; padding-bottom: 8px; white-space: nowrap;
-  }
-  .tab.active {
-    color: var(--color-on-surface);
-    border-bottom-color: var(--color-primary-container);
-  }
-</style>
-</head>
-<body>
-  <div class="stack">
+            /* Auth tabs — sit above a 1px hairline, active gets 2px cyan underline */
+            .auth-card {
+                background: var(--color-surface-container-lowest);
+                border-radius: 12px;
+                padding: 28px;
+                box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+            }
+            .tabs {
+                display: flex;
+                align-items: flex-end;
+                gap: 26px;
+                border-bottom: 1px solid rgba(172, 173, 173, 0.2);
+                padding-bottom: 8px;
+            }
+            .tab {
+                background: transparent;
+                border: 0;
+                cursor: pointer;
+                font: 500 14px/1 var(--font-body);
+                color: var(--color-on-surface-variant);
+                border-bottom: 2px solid transparent;
+                margin-bottom: -9px;
+                padding-bottom: 8px;
+                white-space: nowrap;
+            }
+            .tab.active {
+                color: var(--color-on-surface);
+                border-bottom-color: var(--color-primary-container);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="stack">
+            <!-- Top nav -->
+            <div class="nav">
+                <div class="nav-inner">
+                    <div class="nav-left">
+                        <span class="wm">Sheemu</span>
+                        <div class="nav-items">
+                            <button class="nav-item active">Library</button>
+                            <button class="nav-item">Editor</button>
+                        </div>
+                    </div>
+                    <div class="nav-right">
+                        <button class="pop-btn">
+                            <span>New score</span>
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                        <button class="avatar">AM</button>
+                    </div>
+                </div>
+            </div>
 
-    <!-- Top nav -->
-    <div class="nav">
-      <div class="nav-inner">
-        <div class="nav-left">
-          <span class="wm">Sheemu</span>
-          <div class="nav-items">
-            <button class="nav-item active">Library</button>
-            <button class="nav-item">Editor</button>
-          </div>
+            <!-- Auth tabs -->
+            <div class="auth-card">
+                <div class="tabs">
+                    <button class="tab active">Sign in</button>
+                    <button class="tab">Create account</button>
+                </div>
+            </div>
         </div>
-        <div class="nav-right">
-          <button class="pop-btn">
-            <span>New score</span>
-            <span class="material-symbols-outlined">add</span>
-          </button>
-          <button class="avatar">AM</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auth tabs -->
-    <div class="auth-card">
-      <div class="tabs">
-        <button class="tab active">Sign in</button>
-        <button class="tab">Create account</button>
-      </div>
-    </div>
-  </div>
-</body>
+    </body>
 </html>

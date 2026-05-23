@@ -16,7 +16,7 @@ If the user invokes this skill without any other guidance, ask them what they wa
 
 - Two accent colors only: cyan `#00DBE9` and magenta `#FF2079`. Use them sparingly; the rest of the system is white-on-white tonal layering.
 - **No 1px solid borders for sectioning.** Use surface tonal shifts to define regions.
-- Type stack: **Space Grotesk** for display + UI, **Manrope** for body copy at long-reading sizes, **Newsreader** italic for warm/literary moments, **Geist Mono** for code and numeric readouts.
+- Type stack: **Space Grotesk** for display + UI, **Manrope** for body copy at long-reading sizes, **Newsreader** italic for warm/literary moments **on marketing + auth surfaces only** (not in-app page titles), **Geist Mono** for code and numeric readouts.
 - The signature CTA treatment — flat magenta `3px 3px 0` drop-shadow that grows to `5px 5px 0` on `-2px` hover translate — is reserved for **one hero CTA per surface** (opt-in via `emphasis="pop"`). Don't apply it to every primary button.
 - Voice is plain, warm, and confident. Write the way a thoughtful musician would talk to another musician — no jargon, no hype, no SaaS clichés. "Sketch a piece," "hear it back," "your music belongs to you."
 - The score editor canvas is monochrome — pure white with charcoal `#2d2f2f` notes. No cyan or magenta inside.

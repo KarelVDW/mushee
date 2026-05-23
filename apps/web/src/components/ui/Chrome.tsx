@@ -44,8 +44,8 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                                     className={[
                                         'no-underline cursor-pointer font-body font-medium text-[14px] leading-none pb-1',
                                         active
-                                            ? 'text-on-surface border-b-2 border-primary-container'
-                                            : 'text-on-surface-variant border-b-2 border-transparent',
+                                            ? 'text-on-surface border-b-[3px] border-primary-container'
+                                            : 'text-on-surface-variant border-b-[3px] border-transparent',
                                     ].join(' ')}>
                                     {n.label}
                                 </Link>
@@ -99,7 +99,7 @@ export function Footer() {
             <div className="max-w-384 mx-auto px-8 flex justify-between items-center">
                 <Wordmark size={20} />
                 <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © 2026 Sheemu — built for composers.
+                    © 2026 Sheemu. Made for composers.
                 </span>
             </div>
         </footer>

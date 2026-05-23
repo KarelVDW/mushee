@@ -125,10 +125,9 @@ function TierCard({ plan, active, billing, onSelect }) {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                 <span
                     style={{
-                        fontFamily: 'var(--font-display)',
-                        fontStyle: 'italic',
-                        fontWeight: 400,
-                        fontSize: 32,
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600,
+                        fontSize: 28,
                         lineHeight: 1,
                         letterSpacing: '-0.02em',
                     }}>
@@ -176,9 +175,8 @@ function BillingToggle({ value, onChange }) {
                         aria-checked={active}
                         onClick={() => onChange(k)}
                         style={{
-                            background: active ? 'var(--color-surface-container-lowest)' : 'transparent',
-                            color: active ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-                            boxShadow: active ? '0 1px 3px rgba(45,47,47,0.08)' : 'none',
+                            background: active ? 'var(--color-primary-container)' : 'transparent',
+                            color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
                             border: 0,
                             padding: '7px 14px',
                             borderRadius: 9999,
@@ -257,7 +255,7 @@ function OptionCard({ active, onClick, title, body, icon }) {
                     <span
                         style={{
                             font: '400 13px/1.4 var(--font-body)',
-                            color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
+                            color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface-variant)',
                             opacity: 0.85,
                         }}>
                         {body}
@@ -635,6 +633,40 @@ function Onboarding({ onComplete, onSkip }) {
                     </div>
                 )}
 
+                {step === 5 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <ModalTitle>How did you find Sheemu?</ModalTitle>
+                        <SubHeadline>Helps us know what's working — entirely optional, no wrong answers.</SubHeadline>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                            {REFERRAL_SOURCES.map(([k, label]) => (
+                                <button
+                                    key={k}
+                                    onClick={() => setField('source', k)}
+                                    style={{
+                                        textAlign: 'left',
+                                        background: data.source === k ? 'var(--color-primary-soft)' : 'var(--color-surface-container-low)',
+                                        color: data.source === k ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                                        border: 0,
+                                        borderRadius: 8,
+                                        padding: '12px 16px',
+                                        cursor: 'pointer',
+                                        font: '500 14px/1.3 var(--font-body)',
+                                    }}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        {data.source && (
+                            <TextField
+                                label="Anything else? (optional)"
+                                value={data.sourceDetail}
+                                onChange={(v) => setField('sourceDetail', v)}
+                                placeholder={data.source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
+                            />
+                        )}
+                    </div>
+                )}
+
                 {step === 6 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -802,40 +834,6 @@ function Onboarding({ onComplete, onSkip }) {
                                     <SecondaryButton onClick={() => setField('checkout', 'idle')}>Try again</SecondaryButton>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {step === 5 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <ModalTitle>How did you find Sheemu?</ModalTitle>
-                        <SubHeadline>Helps us know what's working — entirely optional, no wrong answers.</SubHeadline>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            {REFERRAL_SOURCES.map(([k, label]) => (
-                                <button
-                                    key={k}
-                                    onClick={() => setField('source', k)}
-                                    style={{
-                                        textAlign: 'left',
-                                        background: data.source === k ? 'var(--color-primary-soft)' : 'var(--color-surface-container-low)',
-                                        color: data.source === k ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
-                                        border: 0,
-                                        borderRadius: 6,
-                                        padding: '12px 16px',
-                                        cursor: 'pointer',
-                                        font: '500 14px/1.3 var(--font-body)',
-                                    }}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                        {data.source && (
-                            <TextField
-                                label="Anything else? (optional)"
-                                value={data.sourceDetail}
-                                onChange={(v) => setField('sourceDetail', v)}
-                                placeholder={data.source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
-                            />
                         )}
                     </div>
                 )}

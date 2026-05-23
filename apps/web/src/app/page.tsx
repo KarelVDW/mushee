@@ -131,7 +131,7 @@ function HeroScreenshot() {
 function TrustStrip() {
     const names = ['Royal Conservatory', 'Berklee', 'Juilliard', 'RNCM', 'CalArts', 'Trinity Laban']
     return (
-        <section className="p-8 border-t border-b border-outline-variant">
+        <section className="p-8 bg-surface-container-low">
             <div className="max-w-320 mx-auto flex items-center justify-between gap-8 flex-wrap">
                 <span className="font-label font-semibold text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant whitespace-nowrap">
                     Trusted by composers at
@@ -159,7 +159,7 @@ function HowItWorks() {
             <div className="max-w-320 mx-auto">
                 <div className="mb-12">
                     <Eyebrow className="text-primary">How it works</Eyebrow>
-                    <h2 className="font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
+                    <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
                         From idea to score in three steps.
                     </h2>
                 </div>
@@ -191,7 +191,7 @@ function FeatureGrid() {
     return (
         <section id="features" className="py-22 px-8 bg-surface-container-lowest">
             <div className="max-w-320 mx-auto">
-                <h2 className="font-display font-bold italic text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
+                <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
                     Quiet tools, real notation.
                 </h2>
                 <p className="font-body font-normal text-[16px] leading-normal text-on-surface-variant max-w-140 m-0 mb-12">
@@ -230,7 +230,7 @@ function Testimonials() {
             <div className="max-w-320 mx-auto">
                 <div className="mb-12">
                     <Eyebrow className="text-secondary">Hear it from them</Eyebrow>
-                    <h2 className="font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
+                    <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
                         People who write a lot of notes.
                     </h2>
                 </div>
@@ -303,7 +303,7 @@ function PricingTeaser({ onGetStarted }: { onGetStarted: () => void }) {
             <div className="max-w-320 mx-auto">
                 <div className="mb-12 text-center">
                     <Eyebrow className="text-primary">Pricing</Eyebrow>
-                    <h2 className="font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
+                    <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
                         Pick the size that fits.
                     </h2>
                 </div>
@@ -314,25 +314,31 @@ function PricingTeaser({ onGetStarted }: { onGetStarted: () => void }) {
                             className={[
                                 'rounded-lg p-7 flex flex-col gap-4',
                                 t.emphasis
-                                    ? 'bg-on-surface text-surface shadow-[3px_3px_0_0_var(--color-secondary)]'
+                                    ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)'
                                     : 'bg-surface text-on-surface',
                             ].join(' ')}>
                             <div className="flex justify-between items-start">
                                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{t.name}</h3>
                                 {t.emphasis && (
-                                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary text-on-secondary px-2 py-1 rounded-sm">
+                                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-container text-on-secondary-container px-2.5 py-1.5 rounded-full">
                                         Most picked
                                     </span>
                                 )}
                             </div>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="font-display font-bold text-[40px] tracking-[-0.03em]">{t.price}</span>
-                                <span className="font-body font-medium text-[13px] leading-none opacity-70">{t.sub}</span>
+                                <span
+                                    className={[
+                                        'font-body font-medium text-[13px] leading-none',
+                                        t.emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant',
+                                    ].join(' ')}>
+                                    {t.sub}
+                                </span>
                             </div>
                             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
                                 {t.bullets.map((b) => (
                                     <li key={b} className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
-                                        <span className={t.emphasis ? 'text-tertiary' : 'text-primary'}>
+                                        <span className={t.emphasis ? 'text-primary-container' : 'text-primary'}>
                                             <Icon name="check" size={16} />
                                         </span>
                                         <span>{b}</span>
@@ -361,9 +367,9 @@ function PricingTeaser({ onGetStarted }: { onGetStarted: () => void }) {
 function FinalCTA({ onGetStarted }: { onGetStarted: () => void }) {
     return (
         <section className="py-24 px-8 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_50%,rgba(0,219,233,0.18),transparent_70%)] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] rounded-full bg-[rgba(0,219,233,0.18)] blur-[120px] pointer-events-none" />
             <div className="max-w-190 mx-auto text-center relative z-2 flex flex-col gap-5 items-center">
-                <h2 className="font-display font-bold text-[56px] leading-none tracking-[-0.04em] text-on-surface m-0">
+                <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
                     The score is waiting.
                     <br />
                     <em className="font-serif font-normal">Go write it.</em>
@@ -403,7 +409,7 @@ function CookieBanner() {
         <div
             role="dialog"
             aria-label="Cookie preferences"
-            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto bg-[rgba(255,255,255,0.96)] backdrop-blur-md rounded-lg px-5.5 py-4.5 shadow-[0_8px_28px_0_rgba(45,47,47,0.14),0_0_1px_0_rgba(45,47,47,0.2)] flex items-center gap-5 flex-wrap">
+            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto bg-[rgba(255,255,255,0.96)] backdrop-blur-md rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-55 flex flex-col gap-1.5">
                 <span className="font-label font-semibold text-[11px] leading-none tracking-[0.14em] uppercase text-on-surface-variant">
                     Cookies

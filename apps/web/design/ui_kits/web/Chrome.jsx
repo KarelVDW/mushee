@@ -34,7 +34,7 @@ function TopNav({ active = 'Library', user = 'Anya M.', onCreate, onSignOut, onN
                                     cursor: active === n ? 'default' : 'pointer',
                                     font: '500 14px/1 var(--font-body)',
                                     color: active === n ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-                                    borderBottom: active === n ? '2px solid var(--color-primary-container)' : '2px solid transparent',
+                                    borderBottom: active === n ? '3px solid var(--color-primary-container)' : '3px solid transparent',
                                     paddingBottom: 4,
                                     whiteSpace: 'nowrap',
                                     flexShrink: 0,
@@ -107,7 +107,7 @@ function Footer() {
                 }}>
                 <Wordmark size={20} />
                 <span style={{ font: '400 12px/1 var(--font-body)', color: 'var(--color-on-surface-variant)', whiteSpace: 'nowrap' }}>
-                    © 2026 Sheemu — built for composers.
+                    © 2026 Sheemu. Made for composers.
                 </span>
             </div>
         </footer>

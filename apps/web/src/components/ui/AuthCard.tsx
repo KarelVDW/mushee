@@ -42,7 +42,7 @@ function BrandPanel({ mode }: { mode: AuthMode }) {
         <section className="w-[42%] bg-surface-container-high p-12 flex flex-col justify-between relative overflow-hidden">
             <Wordmark size={32} />
             <div className="flex flex-col gap-4">
-                <h1 className="font-display font-normal italic text-[48px] leading-none tracking-[-0.02em] text-on-surface m-0">
+                <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
                     {isSignup ? (
                         <>
                             Compose
@@ -129,7 +129,7 @@ function FormPanel({
 
 function Tabs({ mode }: { mode: AuthMode }) {
     return (
-        <div className="flex items-end gap-6.5 border-b border-outline-variant/20 pb-2 mb-8">
+        <div className="flex items-end gap-6.5 pb-2 mb-8">
             <ModeTab href="/login" label="Sign in" active={mode === 'signin'} />
             <ModeTab href="/signup" label="Create account" active={mode === 'signup'} />
         </div>
@@ -141,8 +141,8 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
         <Link
             href={href}
             className={[
-                'no-underline font-body font-medium text-[14px] leading-none -mb-2.25 pb-2 whitespace-nowrap',
-                active ? 'text-on-surface border-b-2 border-primary-container' : 'text-on-surface-variant border-b-2 border-transparent',
+                'no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap',
+                active ? 'text-on-surface border-b-[3px] border-primary-container' : 'text-on-surface-variant border-b-[3px] border-transparent',
             ].join(' ')}>
             {label}
         </Link>

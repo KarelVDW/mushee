@@ -51,12 +51,12 @@ function AuthCard({ mode = 'signin', onSwitch, onSubmit }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <h1
                         style={{
-                            fontFamily: 'var(--font-display)',
+                            fontFamily: 'var(--font-serif)',
                             fontWeight: 400,
                             fontStyle: 'italic',
                             fontSize: 48,
                             lineHeight: 1,
-                            letterSpacing: '-0.02em',
+                            letterSpacing: '-0.01em',
                             color: 'var(--color-on-surface)',
                             margin: 0,
                         }}>
@@ -97,15 +97,7 @@ function AuthCard({ mode = 'signin', onSwitch, onSubmit }) {
                     zIndex: 2,
                 }}>
                 <div style={{ maxWidth: 360, width: '100%', margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'flex-end',
-                            gap: 26,
-                            borderBottom: '1px solid rgba(172,173,173,0.2)',
-                            paddingBottom: 8,
-                            marginBottom: 32,
-                        }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, paddingBottom: 8, marginBottom: 32 }}>
                         {[
                             ['signin', 'Sign in'],
                             ['signup', 'Create account'],
@@ -119,8 +111,7 @@ function AuthCard({ mode = 'signin', onSwitch, onSubmit }) {
                                     cursor: 'pointer',
                                     font: '500 14px/1 var(--font-body)',
                                     color: mode === m ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-                                    borderBottom: mode === m ? '2px solid var(--color-primary-container)' : '2px solid transparent',
-                                    marginBottom: -9,
+                                    borderBottom: mode === m ? '3px solid var(--color-primary-container)' : '3px solid transparent',
                                     paddingBottom: 8,
                                     whiteSpace: 'nowrap',
                                     flexShrink: 0,
@@ -255,12 +246,12 @@ function PasswordResetCard({ onBackToSignIn }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <h1
                         style={{
-                            fontFamily: 'var(--font-display)',
+                            fontFamily: 'var(--font-serif)',
                             fontWeight: 400,
                             fontStyle: 'italic',
                             fontSize: 48,
                             lineHeight: 1,
-                            letterSpacing: '-0.02em',
+                            letterSpacing: '-0.01em',
                             color: 'var(--color-on-surface)',
                             margin: 0,
                         }}>

@@ -98,23 +98,25 @@ export function AppIcon({ size = 96, rounded = true, background, className }: Ap
 export function Eyebrow({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
     return (
         <span
-            className={`font-label font-semibold text-[11px] leading-none tracking-widest uppercase text-on-surface-variant ${className ?? ''}`}
+            className={`font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant ${className ?? ''}`}
             style={style}>
             {children}
         </span>
     )
 }
 
+// Space Grotesk by default; `italic` keeps Space Grotesk italic for in-app titles.
+// Newsreader italic is reserved for marketing + auth surfaces — see DESIGN.md §Voice.
 export function PageTitle({ children, italic = false }: { children: ReactNode; italic?: boolean }) {
     return (
-        <h1 className={`font-display font-bold text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0 ${italic ? 'italic' : ''}`}>
+        <h1 className={`font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 ${italic ? 'italic' : ''}`}>
             {children}
         </h1>
     )
 }
 
 export function ModalTitle({ children }: { children: ReactNode }) {
-    return <h2 className="font-display font-bold text-[28px] leading-[1.05] tracking-tight text-on-surface m-0">{children}</h2>
+    return <h2 className="font-display font-bold text-[32px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0">{children}</h2>
 }
 
 export function SubHeadline({ children }: { children: ReactNode }) {

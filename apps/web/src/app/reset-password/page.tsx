@@ -111,7 +111,7 @@ function PasswordResetPageInner() {
                 <section className="w-[42%] bg-surface-container-high p-12 flex flex-col justify-between">
                     <Wordmark size={32} />
                     <div className="flex flex-col gap-4">
-                        <h1 className="font-display font-normal italic text-[48px] leading-none tracking-[-0.02em] text-on-surface m-0">
+                        <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
                             {stage === 'done' ? (
                                 <>
                                     You&apos;re

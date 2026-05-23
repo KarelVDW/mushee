@@ -1,9 +1,11 @@
 'use client'
 
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useId, useState } from 'react'
 
-import { Eyebrow } from './Brand'
 import { Icon } from './Icon'
+
+const LABEL_CLASS =
+    'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant cursor-text'
 
 interface TextFieldProps {
     label?: ReactNode
@@ -40,9 +42,14 @@ export function TextField({
     inputRef,
 }: TextFieldProps) {
     const [focused, setFocused] = useState(false)
+    const id = useId()
     return (
         <div className="flex flex-col gap-1.5">
-            {label && <Eyebrow>{label}</Eyebrow>}
+            {label && (
+                <label htmlFor={id} className={LABEL_CLASS}>
+                    {label}
+                </label>
+            )}
             <div
                 className={[
                     'relative flex items-center gap-1.5 bg-surface-container-low rounded-sm',
@@ -54,6 +61,7 @@ export function TextField({
                     </span>
                 )}
                 <input
+                    id={id}
                     ref={inputRef}
                     type={type}
                     value={value}
@@ -86,11 +94,17 @@ interface TextAreaProps {
 
 export function TextArea({ label, value, onChange, placeholder, rows = 4 }: TextAreaProps) {
     const [focused, setFocused] = useState(false)
+    const id = useId()
     return (
         <div className="flex flex-col gap-1.5">
-            {label && <Eyebrow>{label}</Eyebrow>}
+            {label && (
+                <label htmlFor={id} className={LABEL_CLASS}>
+                    {label}
+                </label>
+            )}
             <div className="relative bg-surface-container-low rounded-sm px-2.5">
                 <textarea
+                    id={id}
                     value={value}
                     placeholder={placeholder}
                     rows={rows}

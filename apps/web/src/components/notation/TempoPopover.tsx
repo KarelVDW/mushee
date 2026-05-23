@@ -85,7 +85,7 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPop
             role="dialog"
             aria-label="Set tempo"
             style={{ left: x, top: y }}
-            className="absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg bg-surface-container-lowest shadow-[0_8px_28px_0_rgba(45,47,47,0.12),0_0_1px_0_rgba(45,47,47,0.2)]"
+            className="glass-panel tonal-layer-glow absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg"
             onMouseDown={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
                 <Eyebrow>Tempo</Eyebrow>
@@ -105,7 +105,7 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPop
                     />
                     Tap along
                 </span>
-                <span className="font-display italic font-bold text-[20px] leading-[1.2] tracking-[-0.02em]">
+                <span className="font-serif italic font-normal text-[20px] leading-[1.2] tracking-[-0.01em]">
                     Click or tap the spacebar in tempo
                 </span>
             </button>

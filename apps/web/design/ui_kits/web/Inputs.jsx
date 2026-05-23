@@ -1,9 +1,30 @@
 // Input fields — animated cyan underline on focus.
+let __fieldIdCounter = 0
+function useFieldId() {
+    // Stable per-mount id without React 18.useId (which trips Babel in some setups).
+    const ref = React.useRef(null)
+    if (!ref.current) ref.current = `sheemu-field-${++__fieldIdCounter}`
+    return ref.current
+}
+
 function TextField({ label, value, onChange, type = 'text', placeholder, leftIcon, rightSlot, autoFocus, hint }) {
     const [focused, setFocused] = useState(false)
+    const id = useFieldId()
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {label && <Eyebrow>{label}</Eyebrow>}
+            {label && (
+                <label
+                    htmlFor={id}
+                    style={{
+                        font: '600 11px/1 var(--font-label)',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--color-on-surface-variant)',
+                        cursor: 'text',
+                    }}>
+                    {label}
+                </label>
+            )}
             <div
                 style={{
                     background: 'var(--color-surface-container-low)',
@@ -28,6 +49,7 @@ function TextField({ label, value, onChange, type = 'text', placeholder, leftIco
                     </span>
                 )}
                 <input
+                    id={id}
                     type={type}
                     value={value ?? ''}
                     placeholder={placeholder}
@@ -66,11 +88,25 @@ function TextField({ label, value, onChange, type = 'text', placeholder, leftIco
 
 function TextArea({ label, value, onChange, placeholder, rows = 4 }) {
     const [focused, setFocused] = useState(false)
+    const id = useFieldId()
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {label && <Eyebrow>{label}</Eyebrow>}
+            {label && (
+                <label
+                    htmlFor={id}
+                    style={{
+                        font: '600 11px/1 var(--font-label)',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--color-on-surface-variant)',
+                        cursor: 'text',
+                    }}>
+                    {label}
+                </label>
+            )}
             <div style={{ background: 'var(--color-surface-container-low)', borderRadius: 4, position: 'relative', padding: '0 10px' }}>
                 <textarea
+                    id={id}
                     value={value ?? ''}
                     placeholder={placeholder}
                     rows={rows}

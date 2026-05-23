@@ -518,8 +518,8 @@ function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Bill
                         className={[
                             'border-0 px-3.5 py-1.75 rounded-full cursor-pointer font-label font-semibold text-[12px] leading-none transition-all duration-150 ease-sheemu',
                             active
-                                ? 'bg-surface-container-lowest text-on-surface shadow-[0_1px_3px_rgba(45,47,47,0.08)]'
-                                : 'bg-transparent text-on-surface-variant shadow-none',
+                                ? 'bg-primary-container text-on-primary-container'
+                                : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
                         {label}
                     </button>
@@ -561,7 +561,7 @@ function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active:
                 </div>
             </div>
             <div className="flex items-baseline gap-1.5">
-                <span className="font-display italic font-normal text-[32px] leading-none tracking-[-0.02em]">{price.amount}</span>
+                <span className="font-mono font-semibold text-[28px] leading-none tracking-[-0.02em]">{price.amount}</span>
                 <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{price.cadence}</span>
             </div>
             {showSavings && <Eyebrow className={active ? '' : 'text-primary'}>Save ${savings}/yr</Eyebrow>}

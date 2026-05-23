@@ -41,7 +41,7 @@ function CookieBanner() {
                 WebkitBackdropFilter: 'blur(12px)',
                 borderRadius: 12,
                 padding: '18px 22px',
-                boxShadow: '0 8px 28px 0 rgba(45,47,47,0.14), 0 0 1px 0 rgba(45,47,47,0.2)',
+                boxShadow: 'var(--shadow-tonal)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 20,
@@ -214,7 +214,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
                     <div
                         style={{
                             background: 'var(--color-surface-container-low)',
-                            borderRadius: 6,
+                            borderRadius: 4,
                             padding: 12,
                             marginBottom: 12,
                             display: 'flex',
@@ -260,12 +260,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
 /* ─────────── Trust strip ─────────── */
 function TrustStrip() {
     return (
-        <section
-            style={{
-                padding: '32px 32px',
-                borderTop: '1px solid var(--color-outline-variant)',
-                borderBottom: '1px solid var(--color-outline-variant)',
-            }}>
+        <section style={{ padding: '32px 32px', background: 'var(--color-surface-container-low)' }}>
             <div
                 style={{
                     maxWidth: 1280,
@@ -316,7 +311,7 @@ function HowItWorks() {
                         style={{
                             fontFamily: 'var(--font-display)',
                             fontWeight: 700,
-                            fontSize: 44,
+                            fontSize: 48,
                             lineHeight: 1,
                             letterSpacing: '-0.03em',
                             color: 'var(--color-on-surface)',
@@ -359,8 +354,7 @@ function FeatureGrid() {
                     style={{
                         fontFamily: 'var(--font-display)',
                         fontWeight: 700,
-                        fontStyle: 'italic',
-                        fontSize: 44,
+                        fontSize: 48,
                         lineHeight: 1,
                         letterSpacing: '-0.03em',
                         margin: 0,
@@ -471,7 +465,7 @@ function Testimonials() {
                         style={{
                             fontFamily: 'var(--font-display)',
                             fontWeight: 700,
-                            fontSize: 44,
+                            fontSize: 48,
                             lineHeight: 1,
                             letterSpacing: '-0.03em',
                             color: 'var(--color-on-surface)',
@@ -589,7 +583,7 @@ function PricingTeaser({ onGetStarted }) {
                         style={{
                             fontFamily: 'var(--font-display)',
                             fontWeight: 700,
-                            fontSize: 44,
+                            fontSize: 48,
                             lineHeight: 1,
                             letterSpacing: '-0.03em',
                             color: 'var(--color-on-surface)',
@@ -603,6 +597,9 @@ function PricingTeaser({ onGetStarted }) {
                         <div
                             key={t.name}
                             style={{
+                                // The one place a dark surface is allowed: a single emphasised tier on
+                                // the marketing pricing surface. See README §Visual foundations
+                                // “Marketing-emphasis surface” — not for in-app chrome.
                                 background: t.emphasis ? 'var(--color-on-surface)' : 'var(--color-surface)',
                                 color: t.emphasis ? 'var(--color-surface)' : 'var(--color-on-surface)',
                                 borderRadius: 12,
@@ -610,7 +607,7 @@ function PricingTeaser({ onGetStarted }) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 16,
-                                boxShadow: t.emphasis ? '3px 3px 0 0 var(--color-secondary)' : 'none',
+                                boxShadow: t.emphasis ? 'var(--shadow-offset-3)' : 'none',
                             }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <h3 style={{ font: '600 20px/1 var(--font-headline)', letterSpacing: '-0.01em', margin: 0 }}>{t.name}</h3>
@@ -620,10 +617,10 @@ function PricingTeaser({ onGetStarted }) {
                                             font: '600 10px/1 var(--font-label)',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.12em',
-                                            background: 'var(--color-secondary)',
-                                            color: 'var(--color-on-secondary)',
-                                            padding: '4px 8px',
-                                            borderRadius: 4,
+                                            background: 'var(--color-secondary-container)',
+                                            color: 'var(--color-on-secondary-container)',
+                                            padding: '6px 10px',
+                                            borderRadius: 9999,
                                         }}>
                                         Most picked
                                     </span>
@@ -634,7 +631,13 @@ function PricingTeaser({ onGetStarted }) {
                                     style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, letterSpacing: '-0.03em' }}>
                                     {t.price}
                                 </span>
-                                <span style={{ font: '500 13px/1 var(--font-body)', opacity: 0.7 }}>{t.sub}</span>
+                                <span
+                                    style={{
+                                        font: '500 13px/1 var(--font-body)',
+                                        color: t.emphasis ? 'var(--color-inverse-on-surface)' : 'var(--color-on-surface-variant)',
+                                    }}>
+                                    {t.sub}
+                                </span>
                             </div>
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                                 {t.bullets.map((b) => (
@@ -649,7 +652,7 @@ function PricingTeaser({ onGetStarted }) {
                                         <Icon
                                             name="check"
                                             size={16}
-                                            color={t.emphasis ? 'var(--color-tertiary)' : 'var(--color-primary)'}
+                                            color={t.emphasis ? 'var(--color-primary-container)' : 'var(--color-primary)'}
                                         />
                                         <span>{b}</span>
                                     </li>
@@ -657,11 +660,11 @@ function PricingTeaser({ onGetStarted }) {
                             </ul>
                             <div style={{ marginTop: 'auto', paddingTop: 8 }}>
                                 {t.emphasis ? (
-                                    <PrimaryButton emphasis="pop" onClick={onGetStarted} style={{ width: '100%' }}>
+                                    <PrimaryButton emphasis="pop" fullWidth onClick={onGetStarted}>
                                         {t.cta}
                                     </PrimaryButton>
                                 ) : (
-                                    <SecondaryButton onClick={onGetStarted} style={{ width: '100%' }}>
+                                    <SecondaryButton fullWidth onClick={onGetStarted}>
                                         {t.cta}
                                     </SecondaryButton>
                                 )}
@@ -681,8 +684,14 @@ function FinalCTA({ onGetStarted }) {
             <div
                 style={{
                     position: 'absolute',
-                    inset: 0,
-                    background: 'radial-gradient(60% 80% at 50% 50%, rgba(0,219,233,0.18), transparent 70%)',
+                    top: '50%',
+                    left: '50%',
+                    width: 540,
+                    height: 540,
+                    transform: 'translate(-50%, -50%)',
+                    background: 'rgba(0,219,233,0.18)',
+                    borderRadius: '50%',
+                    filter: 'blur(120px)',
                     pointerEvents: 'none',
                 }}
             />
@@ -702,9 +711,9 @@ function FinalCTA({ onGetStarted }) {
                     style={{
                         fontFamily: 'var(--font-display)',
                         fontWeight: 700,
-                        fontSize: 56,
+                        fontSize: 48,
                         lineHeight: 1,
-                        letterSpacing: '-0.04em',
+                        letterSpacing: '-0.03em',
                         color: 'var(--color-on-surface)',
                         margin: 0,
                     }}>

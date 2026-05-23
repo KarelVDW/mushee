@@ -64,7 +64,7 @@ export default function SettingsPage() {
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
 
             <main className="flex-1 max-w-5xl mx-auto px-8 py-10 flex flex-col gap-8 w-full box-border">
-                <PageHeader title="Settings" italic subtitle="Tweak your profile, defaults, and account." />
+                <PageHeader title="Settings" subtitle="Tweak your profile, defaults, and account." />
 
                 <div className="grid grid-cols-[220px_1fr] gap-8 items-start">
                     <SideNav tab={tab} onTab={setTab} />

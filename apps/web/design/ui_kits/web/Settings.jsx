@@ -166,14 +166,14 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                         aria-checked={active}
                                         onClick={() => setBilling(k)}
                                         style={{
-                                            background: active ? 'var(--color-surface-container-lowest)' : 'transparent',
-                                            color: active ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-                                            boxShadow: active ? '0 1px 3px rgba(45,47,47,0.08)' : 'none',
+                                            background: active ? 'var(--color-primary-container)' : 'transparent',
+                                            color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
                                             border: 0,
                                             padding: '7px 14px',
                                             borderRadius: 9999,
                                             cursor: 'pointer',
                                             font: '600 12px/1 var(--font-label)',
+                                            transition: 'background 150ms var(--ease), color 150ms var(--ease)',
                                         }}>
                                         {label}
                                     </button>
@@ -201,7 +201,7 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: 10,
-                                            boxShadow: active ? 'none' : 'inset 0 0 0 1px var(--color-outline-variant)',
+                                            boxShadow: active ? 'none' : 'var(--shadow-tonal)',
                                         }}>
                                         {isCurrent && (
                                             <span
@@ -226,12 +226,11 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                         </div>
                                         <span
                                             style={{
-                                                fontFamily: 'var(--font-display)',
-                                                fontStyle: 'italic',
-                                                fontWeight: 400,
-                                                fontSize: 24,
+                                                fontFamily: 'var(--font-mono)',
+                                                fontWeight: 600,
+                                                fontSize: 22,
                                                 lineHeight: 1,
-                                                letterSpacing: '-0.02em',
+                                                letterSpacing: '-0.01em',
                                             }}>
                                             {settingsPlanPrice(p, billing)}
                                         </span>
@@ -415,7 +414,7 @@ function Switch({ checked, onChange, label }) {
                         height: 18,
                         borderRadius: 9999,
                         background: '#fff',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                        boxShadow: '0 1px 2px rgba(45,47,47,0.18)',
                         transform: checked ? 'translateX(18px)' : 'translateX(0)',
                         transition: 'transform 220ms var(--ease)',
                     }}
@@ -741,7 +740,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                 width: '100%',
                 boxSizing: 'border-box',
             }}>
-            <PageHeader title="Settings" italic subtitle="Tweak your profile, defaults, and account." />
+            <PageHeader title="Settings" subtitle="Tweak your profile, defaults, and account." />
 
             <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 32, alignItems: 'flex-start' }}>
                 {/* Side nav */}
@@ -924,12 +923,11 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                                                     <span
                                                         style={{
-                                                            fontFamily: 'var(--font-display)',
-                                                            fontStyle: 'italic',
-                                                            fontWeight: 400,
-                                                            fontSize: 28,
+                                                            fontFamily: 'var(--font-mono)',
+                                                            fontWeight: 600,
+                                                            fontSize: 26,
                                                             lineHeight: 1,
-                                                            letterSpacing: '-0.02em',
+                                                            letterSpacing: '-0.01em',
                                                             color: exhausted ? 'var(--color-error)' : 'var(--color-on-surface)',
                                                         }}>
                                                         {unlimited ? '∞' : fmt(recUsedSec)}

@@ -253,16 +253,16 @@ function TempoPopover({ bpm, onChange, onClose }) {
             ref={popRef}
             role="dialog"
             aria-label="Set tempo"
+            className="glass-panel"
             style={{
                 position: 'absolute',
                 top: 'calc(100% + 10px)',
                 right: 0,
-                background: 'var(--color-surface-container-lowest)',
                 borderRadius: 12,
                 padding: 16,
                 width: 360,
                 zIndex: 20,
-                boxShadow: '0 8px 28px 0 rgba(45,47,47,0.12), 0 0 1px 0 rgba(45,47,47,0.2)',
+                boxShadow: 'var(--shadow-tonal)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
@@ -316,12 +316,12 @@ function TempoPopover({ bpm, onChange, onClose }) {
                 </span>
                 <span
                     style={{
-                        fontFamily: 'var(--font-display)',
+                        fontFamily: 'var(--font-serif)',
                         fontStyle: 'italic',
-                        fontWeight: 700,
+                        fontWeight: 400,
                         fontSize: 20,
                         lineHeight: 1.2,
-                        letterSpacing: '-0.02em',
+                        letterSpacing: '-0.01em',
                     }}>
                     Click or tap the spacebar in tempo
                 </span>
@@ -837,7 +837,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                         <Icon name="arrow-left" size={20} />
                     </button>
                     <Wordmark size={22} />
-                    <div style={{ width: 1, height: 24, background: 'rgba(172,173,173,0.3)' }} />
+                    <div style={{ width: 1, height: 24, background: 'rgba(172,173,173,0.15)' }} />
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -845,7 +845,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                             background: 'transparent',
                             border: 0,
                             outline: 0,
-                            fontFamily: 'var(--font-display)',
+                            fontFamily: 'var(--font-serif)',
                             fontStyle: 'italic',
                             fontSize: 22,
                             color: 'var(--color-on-surface)',
