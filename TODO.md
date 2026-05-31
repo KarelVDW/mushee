@@ -36,11 +36,11 @@
 - [ ] Decide whether MongoDB is actually needed — Postgres+JSONB might collapse two DBs into one
 
 ### API hardening
-- [ ] Rate limiting (per-IP + per-user) — `@fastify/rate-limit`
-- [ ] Request body size limits (especially WebSocket audio chunks)
-- [ ] Structured input validation (`class-validator` + global ValidationPipe with `whitelist`/`forbidNonWhitelisted`) — DTO classes exist but have no validation decorators, no global pipe
-- [ ] Security headers (`@fastify/helmet`)
-- [ ] Audit AuthGuard coverage on every endpoint (recordings WebSocket especially) — scores/onboarding guarded; recordings WebSocket gateway has NO auth check
+- [x] Rate limiting (per-IP + per-user) — `@fastify/rate-limit`, keyed by session token else IP, 120/min (env-tunable), `/health` exempt
+- [x] Request body size limits (HTTP bodyLimit 5MB env-tunable; WebSocket `maxPayload` 2MB per frame on recordings gateway)
+- [x] Structured input validation (`class-validator` decorators on all DTOs + global ValidationPipe with `whitelist`/`forbidNonWhitelisted`/`transform`)
+- [x] Security headers (`@fastify/helmet`)
+- [x] Audit AuthGuard coverage on every endpoint — recordings WebSocket now validates better-auth session on connect (closes 1008 if unauthenticated); scores/onboarding already guarded
 
 ### Recording pipeline robustness
 - [ ] Per-recording timeout / max-length cap (defense in depth on top of credits)
@@ -94,7 +94,7 @@
 ## Observability
 - [ ] Sentry on API + web (error tracking + source maps)
 - [ ] Structured logging (pino) shipped to a log aggregator
-- [ ] Uptime monitoring (BetterStack / UptimeRobot) on `/health` endpoint + add `/health` if missing
+- [ ] Uptime monitoring (BetterStack / UptimeRobot) on `/health` endpoint — `/health` endpoint now exists (returns status/uptime/timestamp); external monitor still to wire up
 - [ ] Product analytics (PostHog is GDPR-friendly and self-hostable) for funnel: landing → signup → first score → first recording → upgrade
 - [ ] Stripe revenue dashboard / alerts
 
