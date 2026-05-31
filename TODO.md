@@ -22,15 +22,15 @@
 - [ ] Usage display on score list / settings page (X minutes left this month)
 
 ### Auth gaps
-- [ ] Email verification flow (better-auth supports it — needs SMTP + UI)
-- [ ] Password reset flow (forgot password → email → reset page)
-- [ ] Transactional email provider (Resend / Postmark / SES)
-- [ ] Account deletion endpoint (GDPR)
+- [x] Email verification flow (better-auth emailOTP plugin + SendGrid + signup UI)
+- [x] Password reset flow (better-auth reset + reset-password page)
+- [x] Transactional email provider (SendGrid via mail.service.ts)
+- [ ] Account deletion endpoint (GDPR) — UI dialog built (DeleteAccountDialog.tsx) but no backend endpoint yet
 
 ## High priority (safety / reliability)
 
 ### Database
-- [ ] Turn off `synchronize: true`, write proper TypeORM migrations
+- [ ] Turn off `synchronize: true`, write proper TypeORM migrations — still on in non-prod (app.module.ts), no migrations dir
 - [ ] Migration runner in deploy pipeline
 - [ ] Backup strategy for Postgres + Mongo (managed service or scheduled dumps)
 - [ ] Decide whether MongoDB is actually needed — Postgres+JSONB might collapse two DBs into one
@@ -38,15 +38,15 @@
 ### API hardening
 - [ ] Rate limiting (per-IP + per-user) — `@fastify/rate-limit`
 - [ ] Request body size limits (especially WebSocket audio chunks)
-- [ ] Structured input validation (`class-validator` + global ValidationPipe with `whitelist`/`forbidNonWhitelisted`)
+- [ ] Structured input validation (`class-validator` + global ValidationPipe with `whitelist`/`forbidNonWhitelisted`) — DTO classes exist but have no validation decorators, no global pipe
 - [ ] Security headers (`@fastify/helmet`)
-- [ ] Audit AuthGuard coverage on every endpoint (recordings WebSocket especially)
+- [ ] Audit AuthGuard coverage on every endpoint (recordings WebSocket especially) — scores/onboarding guarded; recordings WebSocket gateway has NO auth check
 
 ### Recording pipeline robustness
 - [ ] Per-recording timeout / max-length cap (defense in depth on top of credits)
 - [ ] Concurrent recording limit per user
-- [ ] Graceful FFmpeg failure handling
-- [ ] Decide which model ships in prod (basic-pitch / CREPE / YIN) and pin the choice; remove/feature-flag the others
+- [x] Graceful FFmpeg failure handling (AudioDecoder.ts — tolerates truncated input, handles exit codes)
+- [ ] Decide which model ships in prod (basic-pitch / CREPE / YIN) and pin the choice; remove/feature-flag the others — defaults to basic-pitch via PITCH_PROVIDER env, but all providers still shipped
 
 ### Testing
 - [ ] Unit tests for the credit ledger (this is where bugs cost money)
@@ -65,24 +65,24 @@
 - [ ] Secrets in a real secret store (Doppler / Vercel env / cloud provider)
 
 ## Marketing & SEO
-- [ ] Actual landing page at `/` (currently redirects to `/scores`) — hero, demo video/gif of transcription, pricing, FAQ, footer
-- [ ] Pricing page with the three tiers
+- [x] Actual landing page at `/` (full hero, features, testimonials, pricing teaser, CTA in page.tsx)
+- [ ] Pricing page with the three tiers — tiers shown on landing page but no dedicated `/pricing` route
 - [ ] Pages: About, Contact, Blog (optional), Changelog (optional)
-- [ ] `metadata` per route (title, description, OG, Twitter cards)
+- [ ] `metadata` per route (title, description, OG, Twitter cards) — only minimal root title/description in layout.tsx
 - [ ] `sitemap.xml` (Next.js `app/sitemap.ts`)
 - [ ] `robots.txt`
 - [ ] Structured data (JSON-LD: SoftwareApplication, FAQPage)
 - [ ] OG share image
-- [ ] Favicons / PWA manifest
+- [ ] Favicons / PWA manifest — favicon.ico exists, no PWA manifest / apple-touch-icon
 - [ ] Canonical URLs
 - [ ] Lighthouse pass (perf / a11y / SEO)
 
 ## Legal / compliance (blocker for EU launch)
 - [ ] Privacy Policy page
 - [ ] Terms of Service page
-- [ ] Cookie consent banner (GDPR) — needed if you add analytics
+- [x] Cookie consent banner (GDPR) — implemented in page.tsx with localStorage persistence
 - [ ] Data export endpoint (user can download their data)
-- [ ] Data deletion endpoint (right to be forgotten)
+- [ ] Data deletion endpoint (right to be forgotten) — UI dialog exists, no backend endpoint
 - [ ] DPA with subprocessors (Stripe, hosting, email provider, S3)
 - [ ] Decide on data residency (EU vs US bucket/DB)
 
@@ -102,11 +102,11 @@
 - [ ] **Abuse prevention**: signup CAPTCHA (hCaptcha/Turnstile) — transcription is compute-expensive
 - [ ] **Trial or free tier policy** — "all accounts paid" means no trial; consider a free trial to reduce signup friction, or a money-back window
 - [ ] **Refund / dunning policy** — failed-payment retry, grace period before downgrade
-- [ ] **Onboarding** — first-time user tutorial / sample score / "record this clip to try it"
-- [ ] **Empty states** — the empty `/scores` page should sell the feature, not just say "no scores"
+- [x] **Onboarding** — 7-step onboarding flow (verify email, mic permission, name, background, instruments, referral, plan) in onboarding/page.tsx
+- [x] **Empty states** — `/scores` has a "No scores yet" empty card with icon + CTA
 - [ ] **Browser/device support matrix** — getUserMedia requires HTTPS, decide on mobile recording
-- [ ] **Audio permission UX** — clear explainer before the browser prompt
-- [ ] **Account settings page** — change email/password, view plan, manage billing, delete account
+- [x] **Audio permission UX** — clear explainer in onboarding mic-permission step
+- [x] **Account settings page** — settings page with Profile/Editor/Notifications/Account tabs + change password/plan/delete dialogs (plan/billing flows are visual mocks pending backend)
 - [ ] **Admin/support tooling** — at minimum: look up a user, see their credits, comp credits, refund a charge
 - [ ] **Status page** (statuspage.io / instatus) once you have paying customers
 - [ ] **Support inbox** (support@ email + help docs)
