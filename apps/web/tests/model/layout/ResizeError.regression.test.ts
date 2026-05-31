@@ -45,7 +45,7 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < 16; i++) notes.push(sixteenth())
             m.addNotes(notes)
             for (const row of score.rows) {
-                expect(() => row.layout).not.toThrow()
+                expect(() => row.layout.width).not.toThrow()
             }
         })
 
@@ -58,7 +58,7 @@ describe('ResizeError regressions', () => {
                 m.addNotes(notes)
             }
             for (const row of score.rows) {
-                expect(() => row.layout).not.toThrow()
+                expect(() => row.layout.width).not.toThrow()
             }
         })
 
@@ -71,7 +71,7 @@ describe('ResizeError regressions', () => {
                 m.addNotes(notes)
             }
             for (const row of score.rows) {
-                expect(() => row.layout).not.toThrow()
+                expect(() => row.layout.width).not.toThrow()
             }
         })
 
@@ -83,7 +83,7 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < 24; i++) notes.push(tripletSixteenth())
             m.addNotes(notes)
             for (const row of score.rows) {
-                expect(() => row.layout).not.toThrow()
+                expect(() => row.layout.width).not.toThrow()
             }
         })
 
@@ -99,7 +99,7 @@ describe('ResizeError regressions', () => {
             expect(m.minimalWidth).toBeLessThan(SCORE_WIDTH)
             const firstRow = score.firstRow
             if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout).not.toThrow()
+            expect(() => firstRow.layout.width).not.toThrow()
         })
     })
 
@@ -122,7 +122,7 @@ describe('ResizeError regressions', () => {
                 m.addNotes(notes)
             }
             for (const m of score.measures) expect(() => m.layout).not.toThrow()
-            for (const row of score.rows) expect(() => row.layout).not.toThrow()
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
         })
     })
 
@@ -147,7 +147,7 @@ describe('ResizeError regressions', () => {
             expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
             const firstRow = score.firstRow
             if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout).not.toThrow()
+            expect(() => firstRow.layout.width).not.toThrow()
             expect(() => m.layout).not.toThrow()
         })
 
@@ -172,7 +172,7 @@ describe('ResizeError regressions', () => {
             expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
             const firstRow = score.firstRow
             if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout).not.toThrow()
+            expect(() => firstRow.layout.width).not.toThrow()
         })
     })
 
@@ -181,7 +181,7 @@ describe('ResizeError regressions', () => {
             const score = new Score()
             for (let i = 0; i < 5; i++) score.addMeasure().complete()
             score.removeLastMeasure()
-            for (const row of score.rows) expect(() => row.layout).not.toThrow()
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
         })
 
         it('Score.replace across measure boundaries does not throw', () => {
@@ -193,7 +193,7 @@ describe('ResizeError regressions', () => {
             if (!target) throw new Error('expected firstNote')
             const longNote = new Note({ duration: new Duration({ type: 'w' }) })
             expect(() => score.replace([target], [longNote])).not.toThrow()
-            for (const row of score.rows) expect(() => row.layout).not.toThrow()
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
         })
 
         it('per-note insertion still triggers row rebuild (regression)', () => {
@@ -218,7 +218,7 @@ describe('ResizeError regressions', () => {
             }).not.toThrow()
             // Each dense measure should now occupy its own row (canFit refuses pairing).
             // We don't pin the exact count, but every row must lay out cleanly.
-            for (const row of score.rows) expect(() => row.layout).not.toThrow()
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
         })
 
         it('densified measures end up split across rows (no row exceeds SCORE_WIDTH minimums)', () => {
@@ -230,6 +230,58 @@ describe('ResizeError regressions', () => {
             for (const row of score.rows) {
                 const totalMinimum = row.measures.reduce((s, m) => s + m.minimalWidth, 0)
                 expect(totalMinimum).toBeLessThanOrEqual(SCORE_WIDTH)
+            }
+        })
+    })
+
+    describe('last-row button-spacing boundary', () => {
+        // Regression: Row.canFit historically used SCORE_WIDTH (1000), but RowLayout
+        // reserves MEASURE_BUTTON_SPACING (30) on the last row for the +/- measure
+        // buttons. Measures whose minimums summed to 971-1000 packed onto the last
+        // row but threw ResizeError at layout time.
+        //
+        // Note: the existing `for (const row of score.rows) expect(() => row.layout)`
+        // pattern does NOT catch this — the RowLayout constructor is empty and the
+        // Resizer only runs when `measureData` is first read. Tests must hit a
+        // property that touches measureData (e.g. `.width`, `.getMeasureX`).
+        it('two measures whose minimums would sum into the button-spacing zone lay out cleanly', () => {
+            // Pre-fix: d1=10, d2=16 sharp 16ths produced minimums ≈ 405 + 567 = 972,
+            // which fit canFit's old SCORE_WIDTH check (≤ 1000) but blew RowLayout's
+            // last-row budget of 970, throwing ResizeError. Post-fix: canFit refuses
+            // the second measure on the same row, so it gets pushed to a new row.
+            const score = new Score()
+            const m1 = score.addMeasure()
+            for (let j = 0; j < 10; j++) m1.addNotes([sixteenthSharp()])
+            const m2 = score.addMeasure()
+            for (let j = 0; j < 16; j++) m2.addNotes([sixteenthSharp()])
+
+            // Reading `.width` forces the Resizer to run — the constructor alone is empty.
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            for (const m of score.measures) expect(() => m.layout.barline).not.toThrow()
+        })
+
+        it('three measures crossing the 970 boundary lay out cleanly', () => {
+            const score = new Score()
+            for (let i = 0; i < 3; i++) {
+                const m = score.addMeasure()
+                for (let j = 0; j < 13; j++) m.addNotes([sixteenthSharp()])
+            }
+            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            for (const m of score.measures) expect(() => m.layout.barline).not.toThrow()
+        })
+
+        it('every row totals at most the last-row budget after composition', () => {
+            // Once Row.canFit reserves MEASURE_BUTTON_SPACING, no row can be packed
+            // beyond what RowLayout will accept as the last row.
+            const score = new Score()
+            for (let i = 0; i < 6; i++) {
+                const m = score.addMeasure()
+                for (let j = 0; j < 12; j++) m.addNotes([sixteenthSharp()])
+            }
+            const budget = SCORE_WIDTH - 30
+            for (const row of score.rows) {
+                const totalMinimum = row.measures.reduce((s, m) => s + m.minimalWidth, 0)
+                expect(totalMinimum).toBeLessThanOrEqual(budget)
             }
         })
     })

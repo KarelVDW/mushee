@@ -1,18 +1,12 @@
 import { sumBy } from 'lodash-es'
 
-import {
-    MAX_MEASURES_PER_ROW,
-    MEASURE_BUTTON_SPACING,
-    NUM_STAFF_LINES,
-    SCORE_WIDTH,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 import type { LayoutBarline, LayoutLine } from '@/components/notation/types'
 
 import type { Measure } from '../Measure'
 import type { Row } from '../Row'
 import { Resizer, type Sizeable } from '../util/Resizer'
+import { availableRowWidth } from './rowWidth'
 
 export class RowLayout {
     readonly id = crypto.randomUUID()
@@ -28,7 +22,7 @@ export class RowLayout {
                 this._measureData = measureData
                 return measureData
             }
-            const totalWidth = SCORE_WIDTH - (this.row.score.lastRow === this.row ? MEASURE_BUTTON_SPACING : 0)
+            const totalWidth = availableRowWidth({ isLastRow: this.row.score.lastRow === this.row })
             const allowIncompleteRow = this.row.score.lastRow === this.row && measures.length <= 2
             const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : measures.length)
             const sizeableElements: Array<Sizeable & { measure: Measure }> = measures.map((measure) => ({

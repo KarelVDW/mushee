@@ -1,8 +1,9 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
 
 import { RowLayout } from './layout/RowLayout'
+import { availableRowWidth } from './layout/rowWidth'
 import type { Measure } from './Measure'
 import { Score } from './Score'
 
@@ -32,7 +33,7 @@ export class Row {
     }
 
     canFit(measure: Measure): boolean {
-        return this._measures.length < MAX_MEASURES_PER_ROW && this.width + measure.minimalWidth <= SCORE_WIDTH
+        return this._measures.length < MAX_MEASURES_PER_ROW && this.width + measure.minimalWidth <= availableRowWidth({ isLastRow: true })
     }
 
     addMeasure(measure: Measure) {
