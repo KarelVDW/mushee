@@ -278,6 +278,9 @@ export class RecordingEngine implements Tickable {
                     // Score notes are stored as written pitch; the mic captures sounding pitch.
                     // The server subtracts this from each detected MIDI to land in written-pitch space.
                     chromaticTranspose: this.options.score.instrument.chromaticTranspose,
+                    // Hint for the server's adaptive pitch profile (frequency window etc.).
+                    // Auto-detection from the audio remains authoritative.
+                    instrumentId: this.options.score.instrument.id,
                 }),
             )
         }

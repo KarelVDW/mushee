@@ -1,7 +1,11 @@
 import type { NoteEventTime } from '@spotify/basic-pitch';
 
 import { ExtractedNotes, ExtractOptions, NoteExtractor } from './NoteExtractor';
-import type { PitchProvider, PitchSession } from './providers/PitchProvider';
+import type {
+  PitchProvider,
+  PitchSession,
+  PitchTranscribeOptions,
+} from './providers/PitchProvider';
 
 /**
  * Provider-agnostic audio → notes pipeline. Hands the PCM samples to the
@@ -34,6 +38,7 @@ export class AudioConverter {
     samples: Float32Array,
     options: ExtractOptions,
     onPartial?: (extracted: ExtractedNotes) => void,
+    pitchOptions?: PitchTranscribeOptions,
   ): Promise<ExtractedNotes> {
     let final: ExtractedNotes = { raw: [], deduced: [] };
     const handle = (raw: NoteEventTime[]): void => {
@@ -42,6 +47,7 @@ export class AudioConverter {
     };
     const finalRaw = await this.provider.transcribe(
       samples,
+      pitchOptions,
       handle,
       this.session,
     );

@@ -11,7 +11,11 @@ import {
   viterbi,
   type ViterbiOptions,
 } from './pitchDecoder';
-import type { PitchProvider, PitchSession } from './PitchProvider';
+import type {
+  PitchProvider,
+  PitchSession,
+  PitchTranscribeOptions,
+} from './PitchProvider';
 
 /** CREPE was trained on 16 kHz mono audio. */
 const SAMPLE_RATE = 16000;
@@ -97,9 +101,18 @@ export class CrepeProvider implements PitchProvider {
 
   async transcribe(
     samples: Float32Array,
+    options?: PitchTranscribeOptions,
     onProgress?: (rawNotes: NoteEventTime[]) => void,
     session?: PitchSession,
   ): Promise<NoteEventTime[]> {
+    const segmentOpts: SegmentOptions = {
+      ...SEGMENT_OPTS,
+      ...(options?.minFreqHz !== undefined && { minFreqHz: options.minFreqHz }),
+      ...(options?.maxFreqHz !== undefined && { maxFreqHz: options.maxFreqHz }),
+      ...(options?.confidenceThreshold !== undefined && {
+        confidenceThreshold: options.confidenceThreshold,
+      }),
+    };
     const model = await this.loader.load();
     const sess =
       session instanceof CrepeSession ? session : new CrepeSession();
@@ -170,7 +183,7 @@ export class CrepeProvider implements PitchProvider {
       LOCAL_AVG_HALF_WIDTH,
     );
 
-    const notes = segmentNotes(cents, sess.confidence, numFrames, SEGMENT_OPTS);
+    const notes = segmentNotes(cents, sess.confidence, numFrames, segmentOpts);
     onProgress?.(notes);
     return notes;
   }

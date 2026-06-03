@@ -10,6 +10,27 @@ import type { NoteEventTime } from '@spotify/basic-pitch';
 export interface PitchSession {}
 
 /**
+ * Per-call tuning, supplied by the pipeline from the active `PipelineProfile`.
+ * Every field is optional; a provider falls back to its own defaults for any
+ * field left undefined, so omitting the argument entirely preserves the
+ * provider's historical behavior.
+ *
+ *  - `minFreqHz` / `maxFreqHz`: frequency window the provider should keep. The
+ *    single most important lever for adapting to register — whistles need a
+ *    high ceiling, bass voices a low floor.
+ *  - `confidenceThreshold`: voicing gate for the pitch-trajectory providers
+ *    (CREPE / PESTO).
+ *  - `onsetThreshold` / `frameThreshold`: basic-pitch note-gating thresholds.
+ */
+export interface PitchTranscribeOptions {
+  minFreqHz?: number;
+  maxFreqHz?: number;
+  confidenceThreshold?: number;
+  onsetThreshold?: number;
+  frameThreshold?: number;
+}
+
+/**
  * Provider-agnostic pitch transcriber. Implementations turn raw mono PCM into
  * a list of detected note events. Cleanup, monophonic selection, beat-grid
  * snapping etc. live downstream in `NoteExtractor` — providers should return
@@ -56,6 +77,7 @@ export interface PitchProvider {
    */
   transcribe(
     samples: Float32Array,
+    options?: PitchTranscribeOptions,
     onProgress?: (rawNotes: NoteEventTime[]) => void,
     session?: PitchSession,
   ): Promise<NoteEventTime[]>;

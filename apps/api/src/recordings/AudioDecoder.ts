@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-
 import ffmpegPath from 'ffmpeg-static';
 
 export interface DecodedAudio {
@@ -18,6 +17,14 @@ export interface DecodeOptions {
    * Defaults to true.
    */
   loudnorm?: boolean;
+
+  /**
+   * Cutoff for the causal high-pass that clears sub-bass rumble before pitch
+   * detection. Must sit below the lowest expected fundamental, so low-register
+   * sources (bass voice, tuba) need a lower value than the 80 Hz default — the
+   * profile picks this from the detected/expected range.
+   */
+  highpassHz?: number;
 }
 
 /**
@@ -43,11 +50,12 @@ export class AudioDecoder {
     targetSampleRate: number,
     opts?: DecodeOptions,
   ): Promise<DecodedAudio> {
-    // 80 Hz high-pass clears sub-bass rumble that the onset head otherwise
-    // misreads as low-pitch onsets. It's a causal IIR, so the prefix of its
-    // output is stable across re-runs with longer inputs. loudnorm is
-    // optional because it's a look-ahead filter and breaks that property.
-    const filters = ['highpass=f=80'];
+    // High-pass clears sub-bass rumble that the onset head otherwise misreads
+    // as low-pitch onsets. It's a causal IIR, so the prefix of its output is
+    // stable across re-runs with longer inputs. loudnorm is optional because
+    // it's a look-ahead filter and breaks that property.
+    const highpassHz = opts?.highpassHz ?? 80;
+    const filters = [`highpass=f=${highpassHz}`];
     if (opts?.loudnorm ?? true) filters.push('loudnorm=I=-16:TP=-3');
     const filterChain = filters.join(',');
 

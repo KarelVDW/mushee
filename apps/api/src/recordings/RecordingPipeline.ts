@@ -4,10 +4,14 @@ import { mkdir, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
 import { AudioConverter } from './AudioConverter';
-import { AudioDecoder, DecodedAudio } from './AudioDecoder';
+import { AudioDecoder } from './AudioDecoder';
 import type { MxmlMeasure } from './mxml.types';
 import { MxmlBuilder, PendingNote } from './MxmlBuilder';
 import { ExtractedNotes } from './NoteExtractor';
+import type { PipelineProfile } from './profiles/PipelineProfile';
+import { ProfileResolver } from './profiles/ProfileResolver';
+import type { PitchTranscribeOptions } from './providers/PitchProvider';
+import { ProviderRegistry } from './providers/ProviderRegistry';
 import { RecordingDebugRenderer } from './RecordingDebugRenderer';
 
 const DEFAULT_BPM = 120;
@@ -15,6 +19,11 @@ const DEFAULT_BEATS = 4;
 const DEFAULT_BEAT_TYPE = 4;
 const DEBOUNCE_MS = 1000;
 const STABLE_MARGIN_SEC = 0.4;
+/** Sample rate / high-pass for the coarse detection decode that picks a profile. */
+const DETECT_SAMPLE_RATE = 16000;
+const DETECT_HIGHPASS_HZ = 30;
+/** Minimum audio before we trust the pitch scan enough to lock a profile. */
+const DETECT_MIN_SEC = 1.2;
 const DEFAULT_DEBUG_DIR = resolve(
   process.cwd(),
   'debug',
@@ -71,12 +80,23 @@ export class RecordingPipeline {
   private debounceTimer: NodeJS.Timeout | null = null;
   private onUpdate: (update: ScoreUpdate) => void = () => {};
 
-  constructor(private readonly converter: AudioConverter) {}
+  // Resolved once, from the first ~1.2 s of audio (or on finalize), then locked
+  // for the session: which provider runs and with what frequency window /
+  // high-pass / thresholds. `converter` is built to match the chosen provider.
+  private profile: PipelineProfile | null = null;
+  private converter: AudioConverter | null = null;
+  private instrumentHint: string | undefined;
+
+  constructor(
+    private readonly registry: ProviderRegistry,
+    private readonly resolver: ProfileResolver,
+  ) {}
 
   setMeta(meta: {
     bpm?: number;
     timeSignature?: { beats: number; beatType: number } | null;
     chromaticTranspose?: number;
+    instrumentId?: string;
   }): void {
     if (meta.bpm) this.bpm = meta.bpm;
     if (meta.timeSignature) {
@@ -86,6 +106,7 @@ export class RecordingPipeline {
     if (typeof meta.chromaticTranspose === 'number') {
       this.chromaticTranspose = meta.chromaticTranspose;
     }
+    if (meta.instrumentId) this.instrumentHint = meta.instrumentId;
     this.builder = new MxmlBuilder({
       bpm: this.bpm,
       beats: this.beats,
@@ -162,13 +183,23 @@ export class RecordingPipeline {
     const buffer = Buffer.concat(this.chunks);
     const tConcat = Date.now();
 
-    let decoded: DecodedAudio;
+    // Lock the adaptive profile (provider + frequency window + high-pass) from
+    // the first audio before doing any real transcription. Until it resolves we
+    // emit nothing — the first real emission lands ~1.4 s in anyway, so this is
+    // invisible to the user.
+    if (!this.converter || !this.profile) {
+      await this.resolveProfile(buffer, isFinal);
+    }
+    const converter = this.converter;
+    const profile = this.profile;
+    if (!converter || !profile) return;
+
+    let decoded;
     try {
-      decoded = await this.decoder.decode(
-        buffer,
-        this.converter.provider.sampleRate,
-        { loudnorm: this.converter.provider.normalizeLoudness },
-      );
+      decoded = await this.decoder.decode(buffer, converter.provider.sampleRate, {
+        loudnorm: converter.provider.normalizeLoudness,
+        highpassHz: profile.highpassHz,
+      });
     } catch (err) {
       this.logger.debug(`Cannot decode buffer yet (${describeError(err)})`);
       return;
@@ -180,7 +211,7 @@ export class RecordingPipeline {
     let emitMs = 0;
     let emitCount = 0;
 
-    await this.converter.convert(
+    await converter.convert(
       decoded.samples,
       { bpm: this.bpm },
       (extracted) => {
@@ -189,6 +220,7 @@ export class RecordingPipeline {
         emitMs += Date.now() - t0;
         emitCount += 1;
       },
+      this.pitchOptions(profile),
     );
     const tEnd = Date.now();
 
@@ -200,6 +232,47 @@ export class RecordingPipeline {
         `total=${tEnd - tStart}ms ` +
         `(audioDur=${duration.toFixed(2)}s, bytes=${buffer.byteLength}, final=${isFinal})`,
     );
+  }
+
+  /**
+   * Run the coarse pitch scan on the current buffer and lock the resulting
+   * profile + matching converter. Returns whether a profile is now available.
+   * Waits for at least `DETECT_MIN_SEC` of audio unless this is the final pass.
+   */
+  private async resolveProfile(buffer: Buffer, isFinal: boolean): Promise<boolean> {
+    let detect;
+    try {
+      detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, {
+        loudnorm: false,
+        highpassHz: DETECT_HIGHPASS_HZ,
+      });
+    } catch (err) {
+      this.logger.debug(`Detection decode not ready (${describeError(err)})`);
+      return false;
+    }
+    if (!isFinal && detect.duration < DETECT_MIN_SEC) return false;
+
+    const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
+      instrumentId: this.instrumentHint,
+    });
+    this.profile = profile;
+    this.converter = new AudioConverter(this.registry.get(profile.providerName));
+    this.logger.log(
+      `Adaptive profile locked: ${profile.id} provider=${profile.providerName} ` +
+        `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
+        `hp=${profile.highpassHz.toFixed(0)}Hz (hint=${this.instrumentHint ?? 'none'})`,
+    );
+    return true;
+  }
+
+  private pitchOptions(profile: PipelineProfile): PitchTranscribeOptions {
+    return {
+      minFreqHz: profile.minFreqHz,
+      maxFreqHz: profile.maxFreqHz,
+      confidenceThreshold: profile.confidenceThreshold,
+      onsetThreshold: profile.onsetThreshold,
+      frameThreshold: profile.frameThreshold,
+    };
   }
 
   private emitFromExtracted(

@@ -17,3 +17,7 @@ logs
 apps/api/debug/
 apps/api/.venv-crepe/
 apps/api/.venv-pesto/
+# Recording-pipeline eval harness: large soundfont + generated audio corpus
+apps/api/scripts/eval/assets/
+apps/api/scripts/eval/.tmp/
+apps/api/scripts/fixtures/eval/

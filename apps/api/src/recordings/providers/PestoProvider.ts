@@ -11,7 +11,11 @@ import {
   viterbi,
   type ViterbiOptions,
 } from './pitchDecoder';
-import type { PitchProvider, PitchSession } from './PitchProvider';
+import type {
+  PitchProvider,
+  PitchSession,
+  PitchTranscribeOptions,
+} from './PitchProvider';
 
 /**
  * Layout parameters baked into the ONNX file by `fetch-pesto-model.sh`.
@@ -140,9 +144,18 @@ export class PestoProvider implements PitchProvider {
 
   async transcribe(
     samples: Float32Array,
+    options?: PitchTranscribeOptions,
     onProgress?: (rawNotes: NoteEventTime[]) => void,
     session?: PitchSession,
   ): Promise<NoteEventTime[]> {
+    const segmentOpts: SegmentOptions = {
+      ...this.segmentOpts,
+      ...(options?.minFreqHz !== undefined && { minFreqHz: options.minFreqHz }),
+      ...(options?.maxFreqHz !== undefined && { maxFreqHz: options.maxFreqHz }),
+      ...(options?.confidenceThreshold !== undefined && {
+        confidenceThreshold: options.confidenceThreshold,
+      }),
+    };
     const ortSession = await this.getSession();
     const sess =
       session instanceof PestoSession ? session : new PestoSession();
@@ -254,7 +267,7 @@ export class PestoProvider implements PitchProvider {
       cents,
       sess.confidence,
       sess.cachedFrames,
-      this.segmentOpts,
+      segmentOpts,
     );
     onProgress?.(notes);
     return notes;

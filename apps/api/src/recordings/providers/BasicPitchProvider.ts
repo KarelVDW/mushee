@@ -7,7 +7,7 @@ import {
 } from '@spotify/basic-pitch';
 
 import { BasicPitchModelLoader } from './BasicPitchModelLoader';
-import type { PitchProvider } from './PitchProvider';
+import type { PitchProvider, PitchTranscribeOptions } from './PitchProvider';
 
 /**
  * basic-pitch tuning. Defaults match Spotify's Python CLI rather than the
@@ -55,6 +55,7 @@ export class BasicPitchProvider implements PitchProvider {
 
   async transcribe(
     samples: Float32Array,
+    options?: PitchTranscribeOptions,
     onProgress?: (rawNotes: NoteEventTime[]) => void,
   ): Promise<NoteEventTime[]> {
     const model = await this.loader.load();
@@ -62,16 +63,21 @@ export class BasicPitchProvider implements PitchProvider {
     const frames: number[][] = [];
     const onsets: number[][] = [];
 
+    const minFreq = options?.minFreqHz ?? MIN_FREQ;
+    const maxFreq = options?.maxFreqHz ?? MAX_FREQ;
+    const onsetThreshold = options?.onsetThreshold ?? ONSET_THRESHOLD;
+    const frameThreshold = options?.frameThreshold ?? FRAME_THRESHOLD;
+
     const emitCurrent = (): NoteEventTime[] => {
       const rawEvents = outputToNotesPoly(
         frames,
         onsets,
-        ONSET_THRESHOLD,
-        FRAME_THRESHOLD,
+        onsetThreshold,
+        frameThreshold,
         MIN_NOTE_LEN_FRAMES,
         INFER_ONSETS,
-        MAX_FREQ,
-        MIN_FREQ,
+        maxFreq,
+        minFreq,
         MELODIA_TRICK,
         ENERGY_TOLERANCE,
       );

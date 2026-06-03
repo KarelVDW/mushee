@@ -18,6 +18,9 @@ interface RecordingMetaMessage {
   timeSignature: { beats: number; beatType: number } | null;
   /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
   chromaticTranspose?: number;
+  /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
+   *  adaptive profile's frequency window; auto-detection stays authoritative. */
+  instrumentId?: string;
 }
 
 interface RecordingEndMessage {
@@ -137,6 +140,7 @@ export class RecordingsGateway
         bpm: parsed.bpm,
         timeSignature: parsed.timeSignature,
         chromaticTranspose: parsed.chromaticTranspose,
+        instrumentId: parsed.instrumentId,
       });
     } else if (parsed.type === 'end') {
       void pipeline.finalize();
