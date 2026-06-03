@@ -221,6 +221,24 @@ export class Measure {
         return this._tempos.find((t) => t.beatPosition === beatPosition)
     }
 
+    /** The tempo marking in effect at `beatPosition` within this measure — the latest at or before it, if any. */
+    tempoAtOrBefore(beatPosition: number): Tempo | undefined {
+        let active: Tempo | undefined
+        for (const tempo of this._tempos) {
+            if (tempo.beatPosition <= beatPosition && (!active || tempo.beatPosition > active.beatPosition)) active = tempo
+        }
+        return active
+    }
+
+    /** The last (highest-beat) tempo marking in this measure — the one that carries into the next measure. */
+    get lastTempo(): Tempo | undefined {
+        let latest: Tempo | undefined
+        for (const tempo of this._tempos) {
+            if (!latest || tempo.beatPosition > latest.beatPosition) latest = tempo
+        }
+        return latest
+    }
+
     getNextNote(note?: Note): Note | null {
         if (!note) return this.firstNote
         const idx = this._notes.indexOf(note)

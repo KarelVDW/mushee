@@ -57,6 +57,11 @@ export class Note {
         return this.duration.effectiveBeats
     }
 
+    /** The tempo (BPM) sounding at this note — the active marking at or before it. */
+    get bpm(): number {
+        return this.measure.score.bpmAt(this)
+    }
+
     get tiesForward(): boolean {
         return this.tie === 'start' || this.tie === 'start-stop'
     }

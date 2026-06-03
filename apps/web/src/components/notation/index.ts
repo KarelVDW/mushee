@@ -3,6 +3,7 @@ export { Glyph } from './Glyph'
 export { getGlyphWidth } from './glyph-utils'
 export { getLineForY, getYForLine, getYForNote } from './note-utils'
 export { Score } from './Score'
+export { TempoPopover } from './TempoPopover'
 export type {
     DurationType,
     MxmlAttributes,

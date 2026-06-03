@@ -1,6 +1,8 @@
 'use client'
 
-import { type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@/components/notation'
+import { useRef, useState } from 'react'
+
+import { type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE, TempoPopover } from '@/components/notation'
 import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
@@ -47,8 +49,9 @@ interface ControlBarProps {
     onTieToggle: () => void
     rest: boolean
     onRestToggle: () => void
-    tempo: unknown
-    onTempoToggle: () => void
+    bpm: number
+    onTempoSet: (bpm: number) => void
+    tempoDisabled: boolean
     playbackState: 'stopped' | 'playing' | 'paused'
     onPlayToggle: () => void
     onStop: () => void
@@ -70,8 +73,9 @@ export function ControlBar({
     onTieToggle,
     rest,
     onRestToggle,
-    tempo,
-    onTempoToggle,
+    bpm,
+    onTempoSet,
+    tempoDisabled,
     playbackState,
     onPlayToggle,
     onStop,
@@ -112,9 +116,6 @@ export function ControlBar({
                 <ChipToggle active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
                     Tie
                 </ChipToggle>
-                <ChipToggle active={tempo !== undefined} onClick={onTempoToggle}>
-                    Tempo
-                </ChipToggle>
             </div>
 
             {/* CENTER — transport */}
@@ -139,8 +140,43 @@ export function ControlBar({
                 </TransportBtn>
             </div>
 
-            {/* RIGHT — reserved for future tempo readout / share quick-actions */}
-            <div className="flex justify-end items-center" />
+            {/* RIGHT — tempo readout / editor */}
+            <div className="flex justify-end items-center">
+                <TempoControl bpm={bpm} onSet={onTempoSet} disabled={tempoDisabled} />
+            </div>
+        </div>
+    )
+}
+
+// --- Tempo control ---
+
+interface TempoControlProps {
+    bpm: number
+    onSet: (bpm: number) => void
+    disabled: boolean
+}
+
+function TempoControl({ bpm, onSet, disabled }: TempoControlProps) {
+    const anchorRef = useRef<HTMLDivElement | null>(null)
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div ref={anchorRef} className="relative">
+            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
+                {bpm} bpm
+            </ChipToggle>
+            {open && (
+                <TempoPopover
+                    initialBpm={bpm}
+                    anchorRef={anchorRef}
+                    className="right-0 top-[calc(100%+0.5rem)]"
+                    onSubmit={(value) => {
+                        onSet(value)
+                        setOpen(false)
+                    }}
+                    onDismiss={() => setOpen(false)}
+                />
+            )}
         </div>
     )
 }

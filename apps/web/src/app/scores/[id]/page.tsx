@@ -183,12 +183,14 @@ export default function ScoreEditorPage() {
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
 
-    const handleTempoToggle = useCallback(() => {
-        if (!activeNote || !score) return
-        const existing = activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote))
-        score.setTempo(activeNote, existing ? undefined : 120)
-        saveToApi({ score })
-    }, [activeNote, score, saveToApi])
+    const handleTempoSet = useCallback(
+        (bpm: number) => {
+            if (!activeNote || !score) return
+            score.setTempo(activeNote, bpm)
+            saveToApi({ score })
+        },
+        [activeNote, score, saveToApi],
+    )
 
     const handleTempoChange = useCallback(
         (measureIndex: number, beatPosition: number, bpm: number) => {
@@ -494,8 +496,9 @@ export default function ScoreEditorPage() {
                 onTieToggle={handleTieToggle}
                 rest={activeNote?.isRest ?? false}
                 onRestToggle={handleRestToggle}
-                tempo={activeNote ? activeNote.measure.tempoAtBeat(activeNote.measure.beatOffsetOf(activeNote)) : undefined}
-                onTempoToggle={handleTempoToggle}
+                bpm={score.bpmAt(activeNote)}
+                onTempoSet={handleTempoSet}
+                tempoDisabled={!activeNote}
                 playbackState={playbackState}
                 onPlayToggle={handlePlayToggle}
                 onStop={stopAll}

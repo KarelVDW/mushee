@@ -5,11 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Eyebrow, PrimaryButton } from '../ui'
 
 interface TempoPopoverProps {
-    x: number
-    y: number
     initialBpm: number
     onSubmit: (bpm: number) => void
     onDismiss: () => void
+    /** Absolute position within the nearest positioned ancestor. Omit to position via `className` instead. */
+    x?: number
+    y?: number
+    /** Extra positioning/layout classes (e.g. `right-0 top-full`) when not using `x`/`y`. */
+    className?: string
+    /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
+    anchorRef?: { current: HTMLElement | null }
 }
 
 const MIN_BPM = 20
@@ -17,7 +22,7 @@ const MAX_BPM = 300
 const TAP_RESET_MS = 2000
 const TAP_WINDOW = 8
 
-export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPopoverProps) {
+export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className, anchorRef }: TempoPopoverProps) {
     const popRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const [taps, setTaps] = useState<number[]>([])
@@ -66,14 +71,15 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPop
 
     useEffect(() => {
         const onMouseDown = (e: MouseEvent) => {
-            if (popRef.current && !popRef.current.contains(e.target as Node)) onDismiss()
+            const target = e.target as Node
+            if (popRef.current && !popRef.current.contains(target) && !anchorRef?.current?.contains(target)) onDismiss()
         }
         const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
         return () => {
             clearTimeout(t)
             document.removeEventListener('mousedown', onMouseDown)
         }
-    }, [onDismiss])
+    }, [onDismiss, anchorRef])
 
     useEffect(() => {
         if (tappedBpm) setDraft(String(tappedBpm))
@@ -84,8 +90,8 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss }: TempoPop
             ref={popRef}
             role="dialog"
             aria-label="Set tempo"
-            style={{ left: x, top: y }}
-            className="glass-panel tonal-layer-glow absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg"
+            style={x !== undefined && y !== undefined ? { left: x, top: y } : undefined}
+            className={`glass-panel tonal-layer-glow absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center">
                 <Eyebrow>Tempo</Eyebrow>

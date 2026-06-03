@@ -12,6 +12,9 @@ import { TimeSignature } from './TimeSignature'
 import { MeasureSerializer } from './util/ScoreSerializer'
 
 export class Score {
+    /** Tempo assumed before any explicit marking — matches the playback engines' fallback. */
+    static readonly DEFAULT_BPM = 90
+
     readonly measures: Measure[] = []
     private _instrument: Instrument = Instrument.Piano
     private _layout: ScoreLayout | null = null
@@ -24,10 +27,12 @@ export class Score {
     private _structureChanged = false
     private _instrumentDirty = false
     private _rebuildingRows = false
+    private _tempoMap: number[] | null = null
 
     constructor(onChange?: () => void) {
         this.onChange = () => {
             this.invalidateLayout()
+            this._tempoMap = null
             onChange?.()
         }
     }
@@ -292,6 +297,34 @@ export class Score {
         else measure.setTempo(beat, bpm)
         this.markMeasureDirty(measure)
         this.onChange()
+    }
+
+    /**
+     * BPM in effect entering each measure, indexed by measure position. Built in a
+     * single pass and cached; the onChange wrapper clears it on any mutation, so
+     * reading the tempo at an arbitrary note (see {@link bpmAt}) never re-scans the
+     * whole score on every call.
+     */
+    private get tempoMap(): number[] {
+        if (this._tempoMap) return this._tempoMap
+        const map: number[] = []
+        let current = Score.DEFAULT_BPM
+        for (const measure of this.measures) {
+            map.push(current)
+            const latest = measure.lastTempo
+            if (latest) current = latest.bpm
+        }
+        this._tempoMap = map
+        return map
+    }
+
+    /** The tempo (BPM) sounding at `note`: the nearest marking at or before it, else the default. */
+    bpmAt(note: Note | null | undefined): number {
+        if (!note) return Score.DEFAULT_BPM
+        const measure = note.measure
+        const local = measure.tempoAtOrBefore(measure.beatOffsetOf(note))
+        if (local) return local.bpm
+        return this.tempoMap[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
     }
 
     replace(targets: Note[], values: Note[]) {
