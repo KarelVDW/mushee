@@ -36,6 +36,7 @@ export class BasicPitchProvider implements PitchProvider {
   readonly name = 'basic-pitch';
   readonly sampleRate = TARGET_SAMPLE_RATE;
   readonly normalizeLoudness = true;
+  readonly hasNativeOnsets = true;
 
   private readonly logger = new Logger(BasicPitchProvider.name);
   private readonly loader: BasicPitchModelLoader;

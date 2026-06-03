@@ -82,6 +82,7 @@ export class PestoProvider implements PitchProvider {
   // redundant and would break prefix-stability of the decoded samples
   // (same reasoning as the CREPE provider).
   readonly normalizeLoudness = false;
+  readonly hasNativeOnsets = false;
 
   private readonly logger = new Logger(PestoProvider.name);
   private readonly modelDir: string;

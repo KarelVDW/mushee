@@ -80,6 +80,7 @@ export class CrepeProvider implements PitchProvider {
   readonly name: string;
   readonly sampleRate = SAMPLE_RATE;
   readonly normalizeLoudness = false;
+  readonly hasNativeOnsets = false;
 
   private readonly logger = new Logger(CrepeProvider.name);
   private readonly loader: CrepeModelLoader;

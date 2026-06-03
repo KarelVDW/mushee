@@ -88,6 +88,11 @@ export function synthesize(truth: GroundTruth, opts: SynthOptions): Float32Array
         let amp = 1 / h; // sawtooth-ish rolloff
         if (opts.kind === 'whistle') {
           amp = h === 1 ? 1 : 0.06; // almost pure
+        } else if (h === 1) {
+          // Keep the fundamental prominent — real sung voice carries a strong
+          // fundamental; the formant filter must not bury it (an unrealistically
+          // thin fundamental was being masked by low-frequency room noise).
+          amp = 1;
         } else {
           amp *= formantGain(fh);
         }

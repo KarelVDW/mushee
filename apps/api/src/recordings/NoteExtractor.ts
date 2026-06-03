@@ -47,6 +47,13 @@ const OUTLIER_PITCH_DIFF_SEMITONES = 7;
 
 export interface ExtractOptions {
   bpm: number;
+  /**
+   * Audio onset times (seconds) from `OnsetDetector`. When supplied, a single
+   * sustained note that spans more than one onset is split back into the
+   * separate notes that were re-articulated — recovering repeated same-pitch
+   * notes the trajectory providers can't see. Omit to disable splitting.
+   */
+  onsetTimesSec?: number[];
 }
 
 export interface ExtractedNotes {
@@ -70,8 +77,46 @@ export class NoteExtractor {
     const monophonic = this.selectMonophonic(raw, options.bpm);
     const cleaned = this.filterPitchOutliers(monophonic);
     const merged = this.mergeAdjacent(cleaned, options.bpm);
-    const deduced = this.alignAndQuantize(merged, options.bpm);
+    const split = this.splitAtOnsets(merged, options.onsetTimesSec);
+    const deduced = this.alignAndQuantize(split, options.bpm);
     return { raw, deduced };
+  }
+
+  /**
+   * Split a note wherever an audio onset lands clearly inside it (a re-attack
+   * the pitch-trajectory providers smeared into one sustained note). Runs after
+   * merging so genuine fragments are first rejoined, then only truly
+   * re-articulated runs are separated. Each split keeps the parent's pitch and
+   * amplitude; the inter-onset margin avoids spurious slivers.
+   */
+  private splitAtOnsets(
+    notes: NoteEventTime[],
+    onsetTimesSec: number[] | undefined,
+  ): NoteEventTime[] {
+    if (!onsetTimesSec || onsetTimesSec.length === 0) return notes;
+    const MIN_SEGMENT_SEC = 0.06;
+    const result: NoteEventTime[] = [];
+    for (const note of notes) {
+      const end = note.startTimeSeconds + note.durationSeconds;
+      const interior = onsetTimesSec.filter(
+        (t) =>
+          t > note.startTimeSeconds + MIN_SEGMENT_SEC &&
+          t < end - MIN_SEGMENT_SEC,
+      );
+      if (interior.length === 0) {
+        result.push({ ...note });
+        continue;
+      }
+      const boundaries = [note.startTimeSeconds, ...interior, end];
+      for (let i = 0; i < boundaries.length - 1; i += 1) {
+        result.push({
+          ...note,
+          startTimeSeconds: boundaries[i],
+          durationSeconds: boundaries[i + 1] - boundaries[i],
+        });
+      }
+    }
+    return result;
   }
 
   /**
@@ -162,10 +207,17 @@ export class NoteExtractor {
       const prevEnd = prev.startTimeSeconds + prev.durationSeconds;
       const gapBeats = (note.startTimeSeconds - prevEnd) * beatsPerSecond;
       const pitchDiff = Math.abs(note.pitchMidi - prev.pitchMidi);
+      // Merge exists to rejoin a provider that split ONE held note into
+      // near-duplicate fragments — so only fire when at least one side is a
+      // genuine short fragment. Merging two full-length notes would eat real
+      // repeated notes / adjacent half-steps (the dominant recall loss).
+      const shortestBeats =
+        Math.min(prev.durationSeconds, note.durationSeconds) * beatsPerSecond;
       if (
         gapBeats < -MERGE_MAX_OVERLAP_BEATS ||
         gapBeats > MERGE_MAX_GAP_BEATS ||
-        pitchDiff > MERGE_MAX_PITCH_DIFF
+        pitchDiff > MERGE_MAX_PITCH_DIFF ||
+        shortestBeats >= MIN_DURATION_BEATS
       ) {
         result.push({ ...note });
         continue;

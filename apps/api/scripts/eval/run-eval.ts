@@ -105,6 +105,10 @@ async function main(): Promise<void> {
   const noHint = ['1', 'true', 'yes'].includes(
     (process.env.EVAL_NO_HINT ?? '').toLowerCase(),
   );
+  // Onset-split is on by default; EVAL_NO_ONSET_SPLIT=1 disables it for A/B.
+  const onsetSplit = !['1', 'true', 'yes'].includes(
+    (process.env.EVAL_NO_ONSET_SPLIT ?? '').toLowerCase(),
+  );
   const label = process.env.EVAL_LABEL ?? (adaptive ? 'adaptive' : providerName);
 
   const decoder = new AudioDecoder();
@@ -134,7 +138,7 @@ async function main(): Promise<void> {
         loudnorm: provider.normalizeLoudness,
         highpassHz: profile.highpassHz,
       });
-      const extracted = await new AudioConverter(provider).convert(
+      const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
         decoded.samples,
         { bpm },
         undefined,
@@ -160,7 +164,7 @@ async function main(): Promise<void> {
         loudnorm: provider.normalizeLoudness,
         highpassHz,
       });
-      const extracted = await new AudioConverter(provider).convert(
+      const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
         decoded.samples,
         { bpm },
         undefined,

@@ -46,13 +46,16 @@ export const CONDITIONS: Condition[] = [
   {
     id: 'room-mic',
     label: 'Room + condenser mic',
-    noise: { color: 'pink', amplitude: 0.006 },
+    noise: { color: 'pink', amplitude: 0.004 },
     postFilter: 'aecho=0.8:0.7:35:0.2,highpass=f=90,lowpass=f=9000',
   },
   {
     id: 'noisy-phone',
     label: 'Noisy phone mic',
-    noise: { color: 'pink', amplitude: 0.02 },
+    // Pink noise is low-frequency-dominant; kept moderate so a clearly-audible
+    // note still sits above the floor ("relative quality" input), rather than
+    // masking low fundamentals entirely.
+    noise: { color: 'pink', amplitude: 0.012 },
     postFilter: 'highpass=f=85,lowpass=f=7000',
   },
 ];

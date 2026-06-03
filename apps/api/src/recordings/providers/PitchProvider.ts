@@ -44,6 +44,15 @@ export interface PitchProvider {
   readonly sampleRate: number;
 
   /**
+   * Whether the provider already detects note onsets itself (basic-pitch has an
+   * onset head). Trajectory providers (CREPE/PESTO) segment only on pitch
+   * stability and set this false, so the pipeline applies its own amplitude
+   * re-attack splitting for them; providers with native onsets set it true to
+   * avoid double-splitting.
+   */
+  readonly hasNativeOnsets: boolean;
+
+  /**
    * Whether the audio decoder should apply ffmpeg's `loudnorm` filter before
    * handing samples in. Providers that depend on the prefix of decoded audio
    * being stable across passes (so that `transcribe` can cache per-frame
