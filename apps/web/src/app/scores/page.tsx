@@ -63,7 +63,8 @@ export default function ScoresPage() {
         // rests in 4/4, six eighth rests in 6/8).
         const score = new Score()
         score.seedInstrument(instrument)
-        score.addMeasure().complete()
+        const measure = score.addMeasure().complete()
+        score.setTempo(measure?.firstNote, 120)
         const emptyScore = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
 
         const created = await createScore(title, emptyScore)
