@@ -1,3 +1,4 @@
+import { Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
 import type { Measure } from './Measure'
 import { TimeSignatureWidth } from './width/TimeSignatureWidth'
@@ -40,6 +41,19 @@ export class TimeSignature {
     /** Total beats per measure in quarter-note units */
     get maxBeats(): number {
         return this.beatAmount * (4 / this.beatType)
+    }
+
+    get beatUnit(): Duration {
+        return Duration.fromBeats(4 / this.beatType)[0]
+    }
+
+    fillRests(filledBeats: number): Duration[] {
+        if (filledBeats >= this.maxBeats) return []
+        const unitBeats = this.beatUnit.beats
+        const nextBoundary = Math.ceil((filledBeats - 1e-6) / unitBeats) * unitBeats
+        const partial = Duration.fromBeats(nextBoundary - filledBeats)
+        const fullUnits = Math.round((this.maxBeats - nextBoundary) / unitBeats)
+        return [...partial, ...Array.from({ length: fullUnits }, () => this.beatUnit)]
     }
 
     /** String digits of the numerator, e.g. [4] or [1, 2] for 12/8 */

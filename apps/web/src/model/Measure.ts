@@ -5,7 +5,6 @@ import type { BarlineType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
 import { Clef } from './Clef'
-import { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
@@ -272,7 +271,7 @@ export class Measure {
 
     complete() {
         if (this.beats >= this.maxBeats) return
-        this.addNotes(Duration.fromBeats(this.maxBeats - this.beats).map((d) => new Note({ duration: d })))
+        this.addNotes(this._timeSignature.fillRests(this.beats).map((d) => new Note({ duration: d })))
         return this
     }
 

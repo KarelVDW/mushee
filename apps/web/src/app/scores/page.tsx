@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Footer, Icon, IconButton, PageHeader, PrimaryButton, TextField, TopNav } from '@/components/ui'
 import { createScore, deleteScore, listScores, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { Instrument } from '@/model'
+import { Instrument, Score } from '@/model'
+import { ScoreSerializer } from '@/model/util/ScoreSerializer'
 
 import { CreateScoreDialog } from './CreateScoreDialog'
 
@@ -57,37 +58,13 @@ export default function ScoresPage() {
     }, [search, fetchScores])
 
     async function handleCreate(title: string, instrument: Instrument) {
-        const emptyScore = {
-            partList: {
-                scoreParts: [
-                    {
-                        id: 'P1',
-                        partName: instrument.displayName,
-                        scoreInstrument: { id: 'P1-I1', instrumentName: instrument.displayName },
-                        midiInstrument: { id: 'P1-I1', midiProgram: instrument.gmProgram + 1 },
-                    },
-                ],
-            },
-            parts: [
-                {
-                    id: 'P1',
-                    measures: [
-                        {
-                            number: '1',
-                            entries: [
-                                {
-                                    _type: 'attributes',
-                                    divisions: 12,
-                                    clef: [{ sign: 'G', line: 2 }],
-                                    time: [{ beats: '4', beatType: '4' }],
-                                },
-                                { _type: 'note', duration: 48, voice: '1', type: 'whole' },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        }
+        // Build the starting score through the model so a new score opens with the
+        // same default measure as completing one in the editor (e.g. four quarter
+        // rests in 4/4, six eighth rests in 6/8).
+        const score = new Score()
+        score.seedInstrument(instrument)
+        score.addMeasure().complete()
+        const emptyScore = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
 
         const created = await createScore(title, emptyScore)
         router.push(`/scores/${created.id}`)
