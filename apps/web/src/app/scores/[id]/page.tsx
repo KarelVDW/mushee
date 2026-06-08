@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { type DurationType, Score as ScoreView } from '@/components/notation'
+import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { Icon, Pill, SecondaryButton, Wordmark } from '@/components/ui'
 import { getScore, loadScore, updateScore } from '@/lib/api'
@@ -187,6 +187,15 @@ export default function ScoreEditorPage() {
         (bpm: number) => {
             if (!activeNote || !score) return
             score.setTempo(activeNote, bpm)
+            saveToApi({ score })
+        },
+        [activeNote, score, saveToApi],
+    )
+
+    const handleClefSet = useCallback(
+        (type: ClefType) => {
+            if (!activeNote || !score) return
+            score.setClef(activeNote, type)
             saveToApi({ score })
         },
         [activeNote, score, saveToApi],
@@ -498,7 +507,9 @@ export default function ScoreEditorPage() {
                 onRestToggle={handleRestToggle}
                 bpm={score.bpmAt(activeNote)}
                 onTempoSet={handleTempoSet}
-                tempoDisabled={!activeNote}
+                clef={activeNote?.clef.type ?? 'treble'}
+                onClefSet={handleClefSet}
+                selectionDisabled={!activeNote}
                 playbackState={playbackState}
                 onPlayToggle={handlePlayToggle}
                 onStop={stopAll}

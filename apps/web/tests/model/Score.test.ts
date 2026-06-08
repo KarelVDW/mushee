@@ -304,4 +304,100 @@ describe('Score', () => {
             expect(afterSax.alter).toBe(afterTrumpet.alter)
         })
     })
+
+    describe('setClef', () => {
+        it('sets the leading clef when the active note is at beat 0', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setClef(m.firstNote, 'bass')
+            expect(m.clef.type).toBe('bass')
+        })
+
+        it('adds a mid-measure clef change at the active note beat', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.noteAtBeat(2)
+            score.setClef(note, 'alto')
+            expect(m.clef.type).toBe('treble')
+            expect(m.clefAtOrBefore(2).type).toBe('alto')
+        })
+
+        it('propagates a clef change forward to following measures (tempo-style)', () => {
+            const score = makeScore(2)
+            const first = score.firstMeasure
+            if (!first) throw new Error('expected firstMeasure')
+            score.setClef(first.firstNote, 'bass')
+            // Measure 2 carries the bass clef forward and so does not redundantly display it.
+            expect(score.measures[1].clef.type).toBe('bass')
+            expect(score.measures[1].showsClef).toBe(false)
+        })
+
+        it('stops propagation at the next explicit clef change', () => {
+            const score = makeScore(3)
+            score.setClef(score.measures[0].firstNote, 'bass')
+            score.setClef(score.measures[2].firstNote, 'alto')
+            expect(score.measures[0].clef.type).toBe('bass')
+            expect(score.measures[1].clef.type).toBe('bass') // carries from measure 0
+            expect(score.measures[2].clef.type).toBe('alto') // explicit boundary
+        })
+
+        it('repositions notes when the clef changes (same pitch, new staff line)', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.firstNote
+            if (!note) throw new Error('expected firstNote')
+            score.replace([note], [pitched('C', 4)])
+            const target = m.firstNote
+            if (!target) throw new Error('expected note')
+            const trebleLine = target.line
+            score.setClef(target, 'bass')
+            expect(target.line).toBe(trebleLine + 6) // +6 half-lines for bass
+        })
+
+        it('ignores a null note', () => {
+            const score = makeScore(1)
+            expect(() => score.setClef(null, 'bass')).not.toThrow()
+        })
+
+        it('demotes a leading clef to inherited when set back to the carried type', () => {
+            const score = makeScore(2)
+            const second = score.measures[1]
+            score.setClef(second.firstNote, 'bass') // explicit boundary on measure 2
+            expect(second.leadingClefExplicit).toBe(true)
+            expect(second.showsClef).toBe(true)
+            // Measure 2 carries treble from measure 1; setting it back to treble clears the boundary.
+            score.setClef(second.firstNote, 'treble')
+            expect(second.leadingClefExplicit).toBe(false)
+            expect(second.clef.type).toBe('treble')
+            expect(second.showsClef).toBe(false)
+        })
+
+        it('removes a mid-measure clef set to the clef already in effect there', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setClef(m.noteAtBeat(2), 'bass')
+            expect(m.clefAtBeat(2)?.type).toBe('bass')
+            // Active clef before beat 2 is the treble leading clef — setting beat 2 to treble drops it.
+            score.setClef(m.noteAtBeat(2), 'treble')
+            expect(m.clefAtBeat(2)).toBeUndefined()
+        })
+
+        it('stops drawing a mid-measure clef that became a no-op after the leading clef changed', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setClef(m.noteAtBeat(2), 'bass') // treble -> bass at beat 2
+            expect(m.midMeasureClefs).toHaveLength(1)
+            score.setClef(m.firstNote, 'bass') // leading becomes bass; the beat-2 bass is now a bass->bass no-op
+            expect(m.clef.type).toBe('bass')
+            expect(m.midMeasureClefs).toHaveLength(0) // not drawn / serialized
+            // The intent is not destroyed: reverting the leading clef re-exposes the mid-measure change.
+            score.setClef(m.firstNote, 'treble')
+            expect(m.midMeasureClefs.map((c) => c.type)).toEqual(['bass'])
+        })
+    })
 })

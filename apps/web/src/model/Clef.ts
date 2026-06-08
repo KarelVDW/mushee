@@ -1,15 +1,21 @@
+import { CLEF_LINE_OFFSET } from '@/components/notation/constants'
 import type { ClefType } from '@/components/notation/types'
 
 import { ClefLayout } from './layout/ClefLayout'
-import { Measure } from './Measure'
+import type { Measure } from './Measure'
+import { Pitch } from './Pitch'
 import { ClefWidth } from './width/ClefWidth'
 
 export class Clef {
-    private _measure: Measure | undefined
+    readonly id = crypto.randomUUID()
     private _layout: ClefLayout | null = null
     private _width: ClefWidth | null = null
 
-    constructor(readonly type: ClefType) {}
+    constructor(
+        readonly measure: Measure,
+        readonly beatPosition: number,
+        readonly type: ClefType,
+    ) {}
 
     get width() {
         if (!this._width) this._width = new ClefWidth(this)
@@ -21,13 +27,12 @@ export class Clef {
         return this._layout
     }
 
-    get measure() {
-        if (!this._measure) throw new Error('Clef is not assigned to measure')
-        return this._measure
+    lineFor(pitch: Pitch): number {
+        return pitch.line + CLEF_LINE_OFFSET[this.type]
     }
 
-    setMeasure(measure: Measure | undefined) {
-        this._measure = measure
+    pitchForLine(line: number): Pitch {
+        return Pitch.fromLine(line - CLEF_LINE_OFFSET[this.type])
     }
 
     invalidateLayout() {

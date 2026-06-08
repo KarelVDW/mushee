@@ -15,7 +15,7 @@ export class NoteLayout {
     readonly dots: { x: number; y: number }[] | undefined
 
     constructor(private note: Note) {
-        this.noteY = getYForNote(note.pitch ? note.pitch.line : note.duration.restLine)
+        this.noteY = getYForNote(note.line)
         this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
@@ -33,7 +33,7 @@ export class NoteLayout {
         // ledgerLines
         const ledgerLinePositions: number[] = []
         if (note.pitch) {
-            const noteLine = note.pitch.line
+            const noteLine = note.line
             if (noteLine < 1) {
                 for (let l = 0; l >= noteLine; l--) {
                     if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
@@ -78,7 +78,7 @@ export class NoteLayout {
         const numDots = note.duration.dots
         if (numDots && numDots > 0) {
             // If the note sits on a line (integer noteLine), shift dots up by half a space
-            const onLine = Number.isInteger(note.pitch ? note.pitch.line : note.duration.restLine)
+            const onLine = Number.isInteger(note.line)
             const dotY = onLine ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
             this.dots = []
             for (let i = 0; i < numDots; i++) {

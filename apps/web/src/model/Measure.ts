@@ -1,7 +1,7 @@
 import { compact, difference, sumBy } from 'lodash-es'
 
 import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH, MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
-import type { BarlineType } from '@/components/notation/types'
+import type { BarlineType, ClefType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
 import { Clef } from './Clef'
@@ -19,7 +19,8 @@ import { TupletFinder } from './util/TupletFinder'
 export class Measure {
     readonly id = crypto.randomUUID()
     private _notes: Note[] = []
-    private _clef: Clef
+    private _clefs: Clef[] = []
+    private _leadingExplicit = false
     private _showsClef: boolean = false
     private _timeSignature: TimeSignature
     private _showsTimeSignature: boolean = false
@@ -38,15 +39,18 @@ export class Measure {
 
     constructor(
         readonly score: Score,
-        clef: Clef,
+        clefType: ClefType,
         timeSignature: TimeSignature,
         value?: {
             keySignature?: KeySignature
             endBarline?: BarlineType
+            /** Marks the leading clef as an intentional change (carry-forward boundary), not an inherited one. */
+            leadingClefExplicit?: boolean
         },
     ) {
-        this._clef = clef
-        this._clef.setMeasure(this)
+        // The measure owns its clefs (like its tempos): the leading clef sits at beat 0, further clefs are mid-measure changes.
+        this._clefs = [new Clef(this, 0, clefType)]
+        this._leadingExplicit = value?.leadingClefExplicit ?? false
         this._timeSignature = timeSignature
         this._timeSignature.setMeasure(this)
         this._keySignature = value?.keySignature
@@ -55,12 +59,6 @@ export class Measure {
 
     get index(): number {
         return this.score.getIndexForMeasure(this)
-    }
-
-    setClef(clef: Clef) {
-        this._clef = clef
-        this._clef.setMeasure(this)
-        this.rebuildPhysicalElements()
     }
 
     setShowsClef(value: boolean) {
@@ -95,6 +93,8 @@ export class Measure {
     }
 
     beatOffsetOf(el: PhysicalElement): number {
+        // Clefs carry their own beat so mid-measure changes sort and space at the right position.
+        if (el instanceof Clef) return el.beatPosition
         const offset = this._beatOffsets.get(el)
         return offset ?? 0
     }
@@ -125,8 +125,104 @@ export class Measure {
         return note != null && this._noteSet.has(note)
     }
 
-    get clef() {
-        return this._clef
+    get clefs(): Clef[] {
+        return this._clefs
+    }
+
+    /** The leading clef shown at the start of the measure (the clef at beat 0). */
+    get clef(): Clef {
+        return this._clefs.find((c) => c.beatPosition === 0) ?? this._clefs[0]
+    }
+
+    clefAtBeat(beatPosition: number): Clef | undefined {
+        return this._clefs.find((c) => c.beatPosition === beatPosition)
+    }
+
+    /** The clef in effect at `beatPosition` within this measure — the latest at or before it. */
+    clefAtOrBefore(beatPosition: number): Clef {
+        let active = this.clef
+        for (const clef of this._clefs) {
+            if (clef.beatPosition <= beatPosition && clef.beatPosition >= active.beatPosition) active = clef
+        }
+        return active
+    }
+
+    /** The last (highest-beat) clef in the measure — the one carried into the next measure. */
+    get lastClef(): Clef {
+        let latest = this.clef
+        for (const clef of this._clefs) {
+            if (clef.beatPosition > latest.beatPosition) latest = clef
+        }
+        return latest
+    }
+
+    /** The clef in effect just before `beatPosition` (ignoring any clef exactly at it). */
+    clefBefore(beatPosition: number): Clef {
+        let active = this.clef
+        for (const clef of this._clefs) {
+            if (clef.beatPosition < beatPosition && clef.beatPosition >= active.beatPosition) active = clef
+        }
+        return active
+    }
+
+    /**
+     * Mid-measure clef changes that actually change the active clef, in beat order. A stored clef
+     * equal to the one already in effect before it (e.g. left behind when the leading clef is set to
+     * the same type) is a no-op: it is kept in `_clefs` so the intent re-emerges if context changes,
+     * but it is not drawn or serialized.
+     */
+    get midMeasureClefs(): Clef[] {
+        return this._clefs
+            .filter((c) => c.beatPosition > 0 && this.clefBefore(c.beatPosition).type !== c.type)
+            .sort((a, b) => a.beatPosition - b.beatPosition)
+    }
+
+    /** Whether the leading clef is an intentional change (a carry-forward boundary). */
+    get leadingClefExplicit(): boolean {
+        return this._leadingExplicit
+    }
+
+    addClef(beatPosition: number, type: ClefType) {
+        this._clefs.push(new Clef(this, beatPosition, type))
+    }
+
+    removeClef(beatPosition: number) {
+        this._clefs = this._clefs.filter((c) => c.beatPosition !== beatPosition)
+    }
+
+    /**
+     * Add or replace the clef at `beatPosition`. Beat 0 marks the leading clef as an explicit change.
+     * A mid-measure clef equal to the clef already in effect there is redundant, so it is removed instead.
+     */
+    setClef(beatPosition: number, type: ClefType) {
+        this.removeClef(beatPosition)
+        if (beatPosition > 0 && this.clefBefore(beatPosition).type === type) {
+            // Redundant mid-measure change — leave the position governed by the preceding clef.
+        } else {
+            this.addClef(beatPosition, type)
+            if (beatPosition === 0) this._leadingExplicit = true
+        }
+        this.invalidateNoteLayouts()
+        this.rebuildPhysicalElements()
+    }
+
+    /** Demote the leading clef to inherited (no longer a carry-forward boundary). */
+    makeLeadingClefInherited() {
+        this._leadingExplicit = false
+    }
+
+    /** Carry-forward: set the inherited leading clef without marking it explicit (used by Score). */
+    setLeadingClefType(type: ClefType) {
+        if (this.clef.type === type) return
+        this.removeClef(0)
+        this._clefs.unshift(new Clef(this, 0, type))
+        this.invalidateNoteLayouts()
+        this.rebuildPhysicalElements()
+    }
+
+    /** Invalidate every note's layout — their staff positions depend on the active clef. */
+    invalidateNoteLayouts() {
+        for (const note of this._notes) note.invalidateLayout()
     }
 
     get showsClef() {
@@ -320,8 +416,9 @@ export class Measure {
 
     private rebuildPhysicalElements() {
         this._physicalElements = compact([
-            this._showsClef ? this._clef : undefined,
+            this._showsClef ? this.clef : undefined,
             this._showsTimeSignature ? this._timeSignature : undefined,
+            ...this.midMeasureClefs,
             ...this._notes,
         ])
         const widthSum = sumBy(this._physicalElements, (el) => el.width.total) + this.barlineWidth

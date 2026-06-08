@@ -14,7 +14,7 @@ export class BeamFinder {
 
         const flushGroup = () => {
             if (currentNotes.length >= 2) {
-                const avgLine = currentNotes.reduce((sum, n) => sum + (n.pitch?.line ?? 0), 0) / currentNotes.length
+                const avgLine = currentNotes.reduce((sum, n) => sum + n.line, 0) / currentNotes.length
                 const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
                 const beam = new Beam(this.measure, currentNotes, stemDir)
                 this.beams.push(beam)

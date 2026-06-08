@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
-import { Clef } from '@/model/Clef'
 import { Measure } from '@/model/Measure'
 import { Row } from '@/model/Row'
 import { Score } from '@/model/Score'
@@ -19,7 +18,7 @@ describe('Row', () => {
     it('addMeasure appends and clears empty flag', () => {
         const score = new Score()
         const row = new Row(score, 0)
-        const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+        const m = new Measure(score, 'treble', new TimeSignature(4, 4))
         row.addMeasure(m)
         expect(row.isEmpty).toBe(false)
         expect(row.measures).toContain(m)
@@ -30,8 +29,8 @@ describe('Row', () => {
     it('width sums measure minimal widths', () => {
         const score = new Score()
         const row = new Row(score, 0)
-        const m1 = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
-        const m2 = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+        const m1 = new Measure(score, 'treble', new TimeSignature(4, 4))
+        const m2 = new Measure(score, 'treble', new TimeSignature(4, 4))
         row.addMeasure(m1)
         row.addMeasure(m2)
         expect(row.width).toBe(m1.minimalWidth + m2.minimalWidth)
@@ -41,7 +40,7 @@ describe('Row', () => {
         it('returns true when width + measure.minimalWidth fits and below MAX_MEASURES_PER_ROW', () => {
             const score = new Score()
             const row = new Row(score, 0)
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(row.canFit(m)).toBe(true)
         })
 
@@ -49,9 +48,9 @@ describe('Row', () => {
             const score = new Score()
             const row = new Row(score, 0)
             for (let i = 0; i < MAX_MEASURES_PER_ROW; i++) {
-                row.addMeasure(new Measure(score, new Clef('treble'), new TimeSignature(4, 4)))
+                row.addMeasure(new Measure(score, 'treble', new TimeSignature(4, 4)))
             }
-            const extra = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const extra = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(row.canFit(extra)).toBe(false)
         })
 
@@ -63,9 +62,9 @@ describe('Row', () => {
             // We can't directly force a measure to have a >1000 minimalWidth here without notes,
             // so just verify that 5 standard measures hit the count limit.
             for (let i = 0; i < MAX_MEASURES_PER_ROW; i++) {
-                row.addMeasure(new Measure(score, new Clef('treble'), new TimeSignature(4, 4)))
+                row.addMeasure(new Measure(score, 'treble', new TimeSignature(4, 4)))
             }
-            expect(row.canFit(new Measure(score, new Clef('treble'), new TimeSignature(4, 4)))).toBe(false)
+            expect(row.canFit(new Measure(score, 'treble', new TimeSignature(4, 4)))).toBe(false)
             expect(row.width).toBeLessThanOrEqual(SCORE_WIDTH)
         })
     })
@@ -73,8 +72,8 @@ describe('Row', () => {
     it('removeLastMeasure pops the last measure', () => {
         const score = new Score()
         const row = new Row(score, 0)
-        const a = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
-        const b = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+        const a = new Measure(score, 'treble', new TimeSignature(4, 4))
+        const b = new Measure(score, 'treble', new TimeSignature(4, 4))
         row.addMeasure(a)
         row.addMeasure(b)
         const removed = row.removeLastMeasure()

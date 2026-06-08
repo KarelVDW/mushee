@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { Clef } from '@/model/Clef'
 import { Duration } from '@/model/Duration'
 import { Measure } from '@/model/Measure'
 import { Note } from '@/model/Note'
@@ -18,7 +17,7 @@ const tripletEighth = () =>
 const quarter = () => new Note({ duration: new Duration({ type: 'q' }) })
 
 function freshMeasure() {
-    return new Measure(new Score(), new Clef('treble'), new TimeSignature(4, 4))
+    return new Measure(new Score(), 'treble', new TimeSignature(4, 4))
 }
 
 describe('TupletFinder', () => {

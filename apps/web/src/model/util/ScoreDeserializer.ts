@@ -1,3 +1,4 @@
+import { CLEF_DEFS } from '@/components/notation/constants'
 import type {
     BarlineType,
     ClefType,
@@ -10,7 +11,6 @@ import type {
     TieType,
 } from '@/components/notation/types'
 
-import { Clef } from '../Clef'
 import { Duration } from '../Duration'
 import { Instrument } from '../Instrument'
 import { KeySignature } from '../KeySignature'
@@ -19,6 +19,9 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+
+/** Default staff line per clef sign when MusicXML omits <line>. */
+const DEFAULT_CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 }
 
 export class ScoreDeserializer {
     constructor(readonly input: ScorePartwise) {}
@@ -40,23 +43,29 @@ export class ScoreDeserializer {
         const part = this.input.parts[0]
         if (!part) return score
 
-        let activeClef: Clef = new Clef('treble')
+        let activeClefType: ClefType = 'treble'
         let activeTimeSignature: TimeSignature = new TimeSignature(4, 4)
         for (let mi = 0; mi < part.measures.length; mi++) {
             const mxmlMeasure = part.measures[mi]
-            let clef: Clef | undefined
+            let leadingClefType: ClefType | undefined
             let timeSignature: TimeSignature | undefined
             let keySignature: KeySignature | undefined
             let endBarline: BarlineType | undefined
             let pendingTempo: number | undefined
             const notes: Note[] = []
             const tempos: Array<{ noteIndex: number; bpm: number }> = []
+            const clefChanges: Array<{ noteIndex: number; type: ClefType }> = []
 
             for (const entry of mxmlMeasure.entries) {
                 switch (entry._type) {
                     case 'attributes': {
                         const c = entry.clef?.[0]
-                        if (c) clef = ScoreDeserializer.mxmlClefToClef(c.sign, c.line)
+                        if (c) {
+                            const type = ScoreDeserializer.mxmlClefToType(c.sign, c.line, c.clefOctaveChange)
+                            // A clef before any notes is the measure's leading clef; after notes, a mid-measure change.
+                            if (notes.length === 0) leadingClefType = type
+                            else clefChanges.push({ noteIndex: notes.length, type })
+                        }
                         const t = entry.time?.[0]
                         if (t) timeSignature = new TimeSignature(Number(t.beats), Number(t.beatType))
                         const k = entry.key?.[0]
@@ -82,13 +91,28 @@ export class ScoreDeserializer {
                 }
             }
 
-            if (clef) activeClef = clef
+            if (leadingClefType) activeClefType = leadingClefType
             if (timeSignature) activeTimeSignature = timeSignature
-            const measure = new Measure(score, activeClef, activeTimeSignature, { keySignature, endBarline })
+            const measure = new Measure(score, activeClefType, activeTimeSignature, {
+                keySignature,
+                endBarline,
+                // A clef declared in this measure's attributes is an explicit carry-forward boundary.
+                leadingClefExplicit: leadingClefType !== undefined,
+            })
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
                 const note = notes[noteIndex]
                 if (note) measure.addTempo(measure.beatOffsetOf(note), bpm)
+            }
+            for (const { noteIndex, type } of clefChanges) {
+                const note = notes[noteIndex]
+                if (note) measure.addClef(measure.beatOffsetOf(note), type)
+                else if (notes.length > 0) {
+                    // A clef in trailing <attributes> (after the last note) applies to nothing in this
+                    // measure but carries forward — anchor it just past the last note so it becomes lastClef.
+                    const lastNote = notes[notes.length - 1]
+                    measure.addClef(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, type)
+                }
             }
             score.addMeasure(undefined, measure)
         }
@@ -162,9 +186,13 @@ export class ScoreDeserializer {
         }
     }
 
-    private static mxmlClefToClef(sign: string, line?: number): Clef {
-        const type: ClefType = sign === 'F' && (line === 4 || line === undefined) ? 'bass' : 'treble'
-        return new Clef(type)
+    private static mxmlClefToType(sign: string, line?: number, octaveChange?: number): ClefType {
+        const resolvedLine = line ?? DEFAULT_CLEF_LINE[sign] ?? 2
+        const oc = octaveChange ?? 0
+        for (const [type, def] of Object.entries(CLEF_DEFS)) {
+            if (def.sign === sign && def.line === resolvedLine && def.octaveChange === oc) return type as ClefType
+        }
+        return 'treble'
     }
 
     private static mxmlBarStyleToBarlineType(style: MxmlBarStyle): BarlineType {

@@ -25,12 +25,14 @@ export class Pitch {
         this.octave = value.octave
     }
 
+    /**
+     * Diatonic staff line in the treble reference frame (line 0 = C4, line 2 = G4).
+     * This is the pitch's intrinsic position; a clef's vertical offset is applied
+     * on top of it by {@link Clef.lineFor}.
+     */
     get line(): number {
-        const noteIndex = NOTE_INDEX[this.name]
         const baseIndex = this.octave * 7 - 28
-        const line = (baseIndex + noteIndex) / 2
-        // if (clef === 'bass') return line - 6
-        return line
+        return (baseIndex + NOTE_INDEX[this.name]) / 2
     }
 
     raised(): Pitch {

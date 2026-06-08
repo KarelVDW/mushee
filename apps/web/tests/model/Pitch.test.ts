@@ -35,6 +35,8 @@ describe('Pitch', () => {
         })
     })
 
+    // Clef-aware staff positions live on Clef.lineFor(pitch); see Clef.test.ts.
+
     describe('raised / lowered', () => {
         it('raised moves up half a line and returns a Pitch instance', () => {
             const p = new Pitch({ name: 'B', octave: 4 })

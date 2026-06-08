@@ -1,5 +1,6 @@
 import type { TieType } from '@/components/notation/types'
 
+import type { Clef } from './Clef'
 import { Duration } from './Duration'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
@@ -14,6 +15,7 @@ export class Note {
     readonly tie: TieType | undefined
     private _width: NoteWidth | null = null
     private _layout: NoteLayout | null = null
+    private _previewClef: Clef | undefined
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
         this.id = crypto.randomUUID()
@@ -62,6 +64,28 @@ export class Note {
         return this.measure.score.bpmAt(this)
     }
 
+    /**
+     * Render this note as if under `clef`, bypassing measure resolution. Used for
+     * detached preview notes (the editor's ghost note), which aren't part of a
+     * measure's note sequence and so have no beat from which to resolve a clef.
+     */
+    previewUnder(clef: Clef): this {
+        this._previewClef = clef
+        this._layout = null
+        return this
+    }
+
+    get clef(): Clef {
+        if (this._previewClef) return this._previewClef
+        return this.measure.clefAtOrBefore(this.measure.beatOffsetOf(this))
+    }
+
+    get line(): number {
+        if (!this.pitch) return this.duration.restLine
+        if (this._previewClef) return this._previewClef.lineFor(this.pitch)
+        return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
+    }
+
     get tiesForward(): boolean {
         return this.tie === 'start' || this.tie === 'start-stop'
     }
@@ -72,8 +96,7 @@ export class Note {
 
     get stemDir(): 'up' | 'down' {
         if (this.isRest) return 'up'
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.pitch!.line >= 3 ? 'down' : 'up'
+        return this.line >= 3 ? 'down' : 'up'
     }
 
     // --- Navigation ---

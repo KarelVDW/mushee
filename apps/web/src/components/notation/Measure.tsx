@@ -27,6 +27,13 @@ export const Measure = memo(function Measure({ measure, selectedNote, hoveredNot
                 </g>
             )}
 
+            {/* Mid-measure clef changes — laid out as physical elements, so notes shift to make room */}
+            {measure.midMeasureClefs.map((clef) => (
+                <g key={clef.id} transform={`translate(${measure.layout.getXForElement(clef)}, 0)`}>
+                    <Clef clef={clef} layoutId={clef.layout.id} />
+                </g>
+            ))}
+
             {measure.showsTimeSignature && (
                 <g transform={`translate(${measure.layout.getXForElement(measure.timeSignature)}, 0)`}>
                     <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />

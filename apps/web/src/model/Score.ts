@@ -1,6 +1,7 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
-import { Clef } from './Clef'
+import type { ClefType } from '@/components/notation/types'
+
 import { Duration } from './Duration'
 import { Instrument } from './Instrument'
 import { ScoreLayout } from './layout/ScoreLayout'
@@ -188,9 +189,9 @@ export class Score {
     addMeasure(index = this.measures.length, measure?: Measure) {
         if (!measure) {
             const previous = this.measures[index - 1]
-            const inheritedClef = previous?.clef ?? new Clef('treble')
+            const inheritedClefType = previous?.lastClef.type ?? 'treble'
             const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
-            measure = new Measure(this, inheritedClef, inheritedTimeSignature)
+            measure = new Measure(this, inheritedClefType, inheritedTimeSignature)
         }
         this.measures.splice(index, 0, measure)
         this._rebuildIndexMap()
@@ -241,10 +242,14 @@ export class Score {
         try {
             this._rows = []
             this._rowByMeasure.clear()
-            let prevClef: Clef | undefined
+            let prevClefType: ClefType | undefined
             let prevTimeSignature: TimeSignature | undefined
+            let activeClefType: ClefType = 'treble'
             for (const measure of this.measures) {
-                measure.setShowsClef(!prevClef || prevClef.type !== measure.clef.type)
+                if (measure.leadingClefExplicit) activeClefType = measure.clef.type
+                else measure.setLeadingClefType(activeClefType)
+
+                measure.setShowsClef(prevClefType === undefined || prevClefType !== measure.clef.type)
                 measure.setShowsTimeSignature(
                     !prevTimeSignature ||
                         prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
@@ -258,7 +263,8 @@ export class Score {
                 }
                 row.addMeasure(measure)
                 this._rowByMeasure.set(measure, row)
-                prevClef = measure.clef
+                activeClefType = measure.lastClef.type
+                prevClefType = activeClefType
                 prevTimeSignature = measure.timeSignature
             }
         } finally {
@@ -296,6 +302,20 @@ export class Score {
         if (bpm === undefined) measure.removeTempo(beat)
         else measure.setTempo(beat, bpm)
         this.markMeasureDirty(measure)
+        this.onChange()
+    }
+
+    setClef(note: Note | null | undefined, type: ClefType) {
+        if (!note) return
+        const measure = note.measure
+        const beat = measure.beatOffsetOf(note)
+        if (beat === 0) {
+            const carriedIn = this.getPreviousMeasure(measure)?.lastClef.type ?? 'treble'
+            if (type === carriedIn) measure.makeLeadingClefInherited()
+            else measure.setClef(0, type)
+        } else measure.setClef(beat, type)
+        this.markMeasureDirty(measure)
+        this._rebuildRows()
         this.onChange()
     }
 

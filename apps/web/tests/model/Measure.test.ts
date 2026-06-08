@@ -1,6 +1,7 @@
 import { defaults, makeScore, pitched, rest } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
+import type { ClefType } from '@/components/notation/types'
 import { Clef } from '@/model/Clef'
 import { Duration } from '@/model/Duration'
 import { KeySignature } from '@/model/KeySignature'
@@ -13,15 +14,16 @@ describe('Measure', () => {
     describe('construction', () => {
         it('attaches clef and time signature to the measure', () => {
             const score = new Score()
-            const { clef, timeSignature } = defaults()
-            const m = new Measure(score, clef, timeSignature)
-            expect(clef.measure).toBe(m)
+            const { clefType, timeSignature } = defaults()
+            const m = new Measure(score, clefType, timeSignature)
+            expect(m.clef.measure).toBe(m)
+            expect(m.clef.type).toBe(clefType)
             expect(timeSignature.measure).toBe(m)
         })
 
         it('starts with no notes, no tempos, no tuplets, no beams', () => {
             const score = new Score()
-            const m = new Measure(score, ...(Object.values(defaults()) as [Clef, TimeSignature]))
+            const m = new Measure(score, ...(Object.values(defaults()) as [ClefType, TimeSignature]))
             expect(m.notes).toEqual([])
             expect(m.tempos).toEqual([])
             expect(m.tuplets).toEqual([])
@@ -30,17 +32,17 @@ describe('Measure', () => {
 
         it('exposes optional key signature and end barline', () => {
             const score = new Score()
-            const { clef, timeSignature } = defaults()
+            const { clefType, timeSignature } = defaults()
             const k = new KeySignature(2)
-            const m = new Measure(score, clef, timeSignature, { keySignature: k, endBarline: 'end' })
+            const m = new Measure(score, clefType, timeSignature, { keySignature: k, endBarline: 'end' })
             expect(m.keySignature).toBe(k)
             expect(m.endBarline).toBe('end')
         })
 
         it('has a unique id', () => {
             const score = new Score()
-            const a = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
-            const b = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const a = new Measure(score, 'treble', new TimeSignature(4, 4))
+            const b = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(a.id).not.toBe(b.id)
         })
     })
@@ -48,21 +50,21 @@ describe('Measure', () => {
     describe('barline width', () => {
         it('returns 0 for none', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4), { endBarline: 'none' })
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'none' })
             expect(m.barlineWidth).toBe(0)
         })
 
         it('end barline is wider than single', () => {
             const score = new Score()
-            const single = new Measure(score, new Clef('treble'), new TimeSignature(4, 4), { endBarline: 'single' })
-            const end = new Measure(score, new Clef('treble'), new TimeSignature(4, 4), { endBarline: 'end' })
+            const single = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'single' })
+            const end = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'end' })
             expect(end.barlineWidth).toBeGreaterThan(single.barlineWidth)
         })
 
         it('defaults to single barline width when unset', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
-            const single = new Measure(score, new Clef('treble'), new TimeSignature(4, 4), { endBarline: 'single' })
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            const single = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'single' })
             expect(m.barlineWidth).toBe(single.barlineWidth)
         })
     })
@@ -78,7 +80,7 @@ describe('Measure', () => {
 
         it('maxBeats reflects time signature', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(3, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(3, 4))
             expect(m.maxBeats).toBe(3)
         })
     })
@@ -86,7 +88,7 @@ describe('Measure', () => {
     describe('addNotes / removeNotes / replaceNotes', () => {
         it('addNotes appends and assigns measure', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n = rest('q')
             m.addNotes([n])
             expect(m.notes).toContain(n)
@@ -95,7 +97,7 @@ describe('Measure', () => {
 
         it('addNotes at "start" prepends', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const a = rest('q')
             const b = rest('q')
             m.addNotes([a])
@@ -105,7 +107,7 @@ describe('Measure', () => {
 
         it('removeNotes detaches measure from removed notes', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n = rest('q')
             m.addNotes([n])
             m.removeNotes([n])
@@ -115,8 +117,8 @@ describe('Measure', () => {
 
         it('replaceNotes throws when targets are not in this measure', () => {
             const score = new Score()
-            const m1 = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
-            const m2 = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m1 = new Measure(score, 'treble', new TimeSignature(4, 4))
+            const m2 = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n = rest('q')
             m2.addNotes([n])
             expect(() => m1.replaceNotes([n], [rest('q')])).toThrow()
@@ -124,13 +126,13 @@ describe('Measure', () => {
 
         it('replaceNotes throws when targets is empty', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(() => m.replaceNotes([], [rest('q')])).toThrow()
         })
 
         it('replaceNotes preserves position of replacement', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const a = rest('q')
             const b = rest('q')
             const c = rest('q')
@@ -144,7 +146,7 @@ describe('Measure', () => {
     describe('beatOffsetOf and noteAtBeat', () => {
         it('beatOffsetOf returns cumulative beat positions', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n1 = rest('q') // 1 beat
             const n2 = rest('h') // 2 beats
             const n3 = rest('q') // 1 beat
@@ -156,7 +158,7 @@ describe('Measure', () => {
 
         it('noteAtBeat returns the note whose range contains the beat', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n1 = rest('q')
             const n2 = rest('h')
             const n3 = rest('q')
@@ -171,7 +173,7 @@ describe('Measure', () => {
     describe('navigation', () => {
         it('getNextNote / getPreviousNote', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n1 = rest('q')
             const n2 = rest('q')
             m.addNotes([n1, n2])
@@ -183,7 +185,7 @@ describe('Measure', () => {
 
         it('getNextNote without arg returns firstNote', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n = rest('q')
             m.addNotes([n])
             expect(m.getNextNote()).toBe(n)
@@ -193,7 +195,7 @@ describe('Measure', () => {
     describe('tempo management', () => {
         it('addTempo / removeTempo / setTempo', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.addTempo(0, 120)
             expect(m.tempos).toHaveLength(1)
             expect(m.tempoAtBeat(0)?.bpm).toBe(120)
@@ -205,10 +207,65 @@ describe('Measure', () => {
         })
     })
 
+    describe('clef management', () => {
+        it('seeds the leading clef at beat 0 from the constructor', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.clefs).toHaveLength(1)
+            expect(m.clef.type).toBe('treble')
+            expect(m.clef.beatPosition).toBe(0)
+        })
+
+        it('addClef appends a mid-measure clef change', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addClef(2, 'bass')
+            expect(m.clefs).toHaveLength(2)
+            expect(m.clefAtBeat(2)?.type).toBe('bass')
+        })
+
+        it('setClef(0) replaces the leading clef', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.setClef(0, 'bass')
+            expect(m.clefs).toHaveLength(1)
+            expect(m.clef.type).toBe('bass')
+        })
+
+        it('clefAtOrBefore returns the active clef at a beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addClef(2, 'bass')
+            expect(m.clefAtOrBefore(0).type).toBe('treble')
+            expect(m.clefAtOrBefore(1).type).toBe('treble')
+            expect(m.clefAtOrBefore(2).type).toBe('bass')
+            expect(m.clefAtOrBefore(3).type).toBe('bass')
+        })
+
+        it('lastClef is the highest-beat clef (carried into the next measure)', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.lastClef.type).toBe('treble')
+            m.addClef(2, 'bass')
+            expect(m.lastClef.type).toBe('bass')
+        })
+
+        it('includes mid-measure clefs in physical elements so notes make room', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            m.setClef(2, 'bass')
+            const clefsInLayout = m.physicalElements.filter((el) => el instanceof Clef)
+            // leading treble (shown on the only measure) + the mid-measure bass change
+            expect(clefsInLayout).toHaveLength(2)
+            expect(() => m.layout.getXForElement(m.clefAtBeat(2) as Clef)).not.toThrow()
+        })
+    })
+
     describe('complete()', () => {
         it('fills empty measure with rests up to maxBeats', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.complete()
             expect(m.beats).toBeCloseTo(4)
             expect(m.notes.every((n) => n.isRest)).toBe(true)
@@ -216,7 +273,7 @@ describe('Measure', () => {
 
         it('does nothing when already full', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.addNotes([new Note({ duration: new Duration({ type: 'w' }) })])
             const before = m.notes.length
             m.complete()
@@ -232,20 +289,20 @@ describe('Measure', () => {
             // Direct construction leaves minimalWidth at 0 — a latent footgun for any
             // code that consults minimalWidth before mutating the measure.
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(m.minimalWidth).toBe(0)
         })
 
         it('snaps to absolute minimum (SCORE_WIDTH / 5 = 200) after first rebuild', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.setEndBarline('single') // triggers rebuildPhysicalElements
             expect(m.minimalWidth).toBe(200)
         })
 
         it('grows with the number of notes when wide enough', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             // Add many notes to push above absolute minimum
             for (let i = 0; i < 16; i++) m.addNotes([pitched('C', 4, '16')])
             expect(m.minimalWidth).toBeGreaterThan(200)
@@ -253,7 +310,7 @@ describe('Measure', () => {
 
         it('updates when clef visibility toggles', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             for (let i = 0; i < 16; i++) m.addNotes([pitched('C', 4, '16')])
             const before = m.minimalWidth
             m.setShowsClef(true)
@@ -287,7 +344,7 @@ describe('Measure', () => {
     describe('hasNote / firstNote / lastNote', () => {
         it('hasNote tracks membership', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             const n = rest('q')
             expect(m.hasNote(n)).toBe(false)
             m.addNotes([n])
@@ -298,7 +355,7 @@ describe('Measure', () => {
 
         it('firstNote / lastNote reflect first and last entries', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(m.firstNote).toBeNull()
             const a = rest('q')
             const b = rest('q')
@@ -309,7 +366,7 @@ describe('Measure', () => {
 
         it('hasNote tolerates null/undefined', () => {
             const score = new Score()
-            const m = new Measure(score, new Clef('treble'), new TimeSignature(4, 4))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(m.hasNote(null)).toBe(false)
             expect(m.hasNote(undefined)).toBe(false)
         })

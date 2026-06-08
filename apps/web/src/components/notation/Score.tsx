@@ -5,7 +5,14 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 
 import { Barline } from './Barline'
-import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import {
+    MEASURE_BUTTON_GAP,
+    MEASURE_BUTTON_SIZE,
+    NUM_STAFF_LINES,
+    SCORE_WIDTH,
+    SPACE_ABOVE_STAFF,
+    STAVE_LINE_DISTANCE
+} from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
@@ -88,7 +95,7 @@ export const Score = memo(function Score({
         const bottomStaffY = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
         const y = Math.max(bottomStaffY, lowestY) + CURSOR_Y_OFFSET
         return { x, y }
-    }, [selectedNote])
+    }, [selectedNote, selectedNote?.layout.id])
 
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(
@@ -161,8 +168,9 @@ export const Score = memo(function Score({
             }
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
             const hoverLine = getLineForY(localY)
-            if ((hoverLine === note.pitch?.line && ghostNote) || note !== selectedNote) setGhostNote(null)
-            else setGhostNote(note.clone({ pitch: Pitch.fromLine(hoverLine) }))
+            // hoverLine is a rendered staff line; convert to a pitch under the note's active clef
+            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
+            else setGhostNote(note.clone({ pitch: note.clef.pitchForLine(hoverLine) }).previewUnder(note.clef))
         },
         [clientToSvg, selectedNote],
     )

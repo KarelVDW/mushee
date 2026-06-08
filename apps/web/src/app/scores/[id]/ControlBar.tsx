@@ -2,7 +2,17 @@
 
 import { useRef, useState } from 'react'
 
-import { type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE, TempoPopover } from '@/components/notation'
+import {
+    CLEF_DEFS,
+    ClefGlyph,
+    ClefPopover,
+    type ClefType,
+    type DurationType,
+    getGlyphWidth,
+    Glyph,
+    GLYPH_SCALE,
+    TempoPopover,
+} from '@/components/notation'
 import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
@@ -51,7 +61,9 @@ interface ControlBarProps {
     onRestToggle: () => void
     bpm: number
     onTempoSet: (bpm: number) => void
-    tempoDisabled: boolean
+    clef: ClefType
+    onClefSet: (clef: ClefType) => void
+    selectionDisabled: boolean
     playbackState: 'stopped' | 'playing' | 'paused'
     onPlayToggle: () => void
     onStop: () => void
@@ -75,7 +87,9 @@ export function ControlBar({
     onRestToggle,
     bpm,
     onTempoSet,
-    tempoDisabled,
+    clef,
+    onClefSet,
+    selectionDisabled,
     playbackState,
     onPlayToggle,
     onStop,
@@ -140,10 +154,44 @@ export function ControlBar({
                 </TransportBtn>
             </div>
 
-            {/* RIGHT — tempo readout / editor */}
-            <div className="flex justify-end items-center">
-                <TempoControl bpm={bpm} onSet={onTempoSet} disabled={tempoDisabled} />
+            {/* RIGHT — clef + tempo readout / editor */}
+            <div className="flex justify-end items-center gap-2">
+                <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} />
+                <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} />
             </div>
+        </div>
+    )
+}
+
+// --- Clef control ---
+
+interface ClefControlProps {
+    clef: ClefType
+    onSet: (clef: ClefType) => void
+    disabled: boolean
+}
+
+function ClefControl({ clef, onSet, disabled }: ClefControlProps) {
+    const anchorRef = useRef<HTMLDivElement | null>(null)
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div ref={anchorRef} className="relative">
+            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
+                <ClefGlyph type={clef} size={26} />
+            </ChipToggle>
+            {open && (
+                <ClefPopover
+                    active={clef}
+                    anchorRef={anchorRef}
+                    className="right-0 top-[calc(100%+0.5rem)]"
+                    onSelect={(type) => {
+                        onSet(type)
+                        setOpen(false)
+                    }}
+                    onDismiss={() => setOpen(false)}
+                />
+            )}
         </div>
     )
 }

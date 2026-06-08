@@ -1,3 +1,4 @@
+import { CLEF_DEFS } from '@/components/notation/constants'
 import type {
     BarlineType,
     ClefType,
@@ -25,9 +26,13 @@ export class MeasureSerializer {
         const entries: MxmlMeasureEntry[] = []
 
         const previousMeasure = this.measure.score.getPreviousMeasure(this.measure)
-        const previousClef = previousMeasure?.clef
+        // The clef entering this measure is the one *leaving* the previous measure (its last clef), so
+        // a clef carried forward across measures isn't re-emitted as a redundant change.
+        const previousClefType = previousMeasure?.lastClef.type
         const previousTimeSignature = previousMeasure?.timeSignature
-        const clefChanged = previousClef?.type !== this.measure.clef.type
+        // An explicit leading clef is a carry-forward boundary and must be emitted even when its type
+        // equals the carried-in clef, or the boundary is lost on reload (it would deserialize as inherited).
+        const clefChanged = this.measure.leadingClefExplicit || previousClefType !== this.measure.clef.type
         const timeSignatureChanged =
             previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
             previousTimeSignature?.beatType !== this.measure.timeSignature.beatType
@@ -55,8 +60,18 @@ export class MeasureSerializer {
             })
         }
 
+        // Mid-measure clef changes serialize as inline <attributes>, each emitted just before the first
+        // note at or after its beat — so a clef whose beat no longer coincides with a note start (after a
+        // note edit) is still written and re-anchors to that note on reload. The leading clef is above.
+        const midClefs = this.measure.midMeasureClefs
+        let nextClef = 0
+        const emitClef = (type: ClefType) =>
+            entries.push({ _type: 'attributes' as const, divisions: DIVISIONS, clef: [MeasureSerializer.clefToMxmlClef(type)] })
+
         for (const note of this.measure.notes) {
-            const tempoAtBeat = this.measure.tempoAtBeat(this.measure.beatOffsetOf(note))
+            const beat = this.measure.beatOffsetOf(note)
+            while (nextClef < midClefs.length && midClefs[nextClef].beatPosition <= beat) emitClef(midClefs[nextClef++].type)
+            const tempoAtBeat = this.measure.tempoAtBeat(beat)
             if (tempoAtBeat) {
                 entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
             }
@@ -84,6 +99,8 @@ export class MeasureSerializer {
                 }),
             })
         }
+        // Clef changes past the last note's beat still carry into the next measure — emit them so they round-trip.
+        while (nextClef < midClefs.length) emitClef(midClefs[nextClef++].type)
 
         if (this.measure.endBarline && this.measure.endBarline !== 'single') {
             entries.push({
@@ -108,8 +125,9 @@ export class MeasureSerializer {
         return MeasureSerializer.DURATION_TYPE_MAP[type]
     }
 
-    private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number } {
-        return clef === 'bass' ? { sign: 'F', line: 4 } : { sign: 'G', line: 2 }
+    private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number; clefOctaveChange?: number } {
+        const def = CLEF_DEFS[clef]
+        return { sign: def.sign, line: def.line, ...(def.octaveChange !== 0 && { clefOctaveChange: def.octaveChange }) }
     }
 
     private static barlineTypeToMxmlBarStyle(type: BarlineType): MxmlBarStyle {

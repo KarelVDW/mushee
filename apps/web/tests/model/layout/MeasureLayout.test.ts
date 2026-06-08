@@ -136,8 +136,8 @@ describe('MeasureLayout', () => {
     describe('orphan measure (no row)', () => {
         it('throws "Measure not part of a row" when computing layout', () => {
             const score = new Score()
-            const { clef, timeSignature } = defaults()
-            const orphan = new Measure(score, clef, timeSignature)
+            const { clefType, timeSignature } = defaults()
+            const orphan = new Measure(score, clefType, timeSignature)
             // Measure exists but Score never registered it, so no row.
             expect(() => orphan.layout).toThrow('Measure not part of a row')
         })
