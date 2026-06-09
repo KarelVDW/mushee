@@ -35,7 +35,13 @@ import type {
   PitchTranscribeOptions,
 } from '../../src/recordings/providers/PitchProvider';
 import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { scoreNotes, type Metrics, type EstNote } from './lib/metrics';
+import {
+  scoreNotes,
+  timingStats,
+  type Metrics,
+  type EstNote,
+  type MatchOptions,
+} from './lib/metrics';
 import { SCENARIOS, CONDITIONS } from './scenarios';
 import type { GroundTruth, Scenario } from './types';
 
@@ -98,6 +104,12 @@ async function main(): Promise<void> {
   const scenarioFilter = listEnv('EVAL_SCENARIOS');
   const conditionFilter = listEnv('EVAL_CONDITIONS');
   const outPath = process.env.EVAL_OUT ?? join(EVAL_ROOT, 'report.json');
+  // Onset window for the F1 match gate; separate, wider window for the timing
+  // diagnostic so late notes report their true error instead of being dropped.
+  const matchOpts: MatchOptions = {
+    onsetTolSec: numEnv('EVAL_ONSET_TOL') ?? 0.1,
+    timingTolSec: numEnv('EVAL_TIMING_TOL') ?? 0.3,
+  };
   // Adaptive mode runs the real resolver+registry (the production path).
   const adaptive = ['1', 'true', 'yes'].includes(
     (process.env.EVAL_ADAPTIVE ?? '').toLowerCase(),
@@ -215,7 +227,7 @@ async function main(): Promise<void> {
           scenario: scenario.id,
           melody,
           condition: condition.id,
-          metrics: scoreNotes(truth.notes, est),
+          metrics: scoreNotes(truth.notes, est, matchOpts),
         });
       }
     }
@@ -228,7 +240,9 @@ async function main(): Promise<void> {
     );
   }
 
-  // Aggregate per scenario.
+  // Aggregate per scenario. Timing is pooled across the scenario's matched
+  // notes (not a mean of per-clip means), so the bias/spread reflect the real
+  // distribution and aren't diluted by clips with few matches.
   const perScenario = scenarios.map((s) => {
     const rs = results.filter((r) => r.scenario === s.id);
     return {
@@ -241,16 +255,26 @@ async function main(): Promise<void> {
       recall: mean(rs.map((r) => r.metrics.recall)),
       octaveErrorRate: mean(rs.map((r) => r.metrics.octaveErrorRate)),
       medianPitchErr: mean(rs.map((r) => r.metrics.medianPitchErr)),
+      timing: timingStats(
+        rs.flatMap((r) => r.metrics.timing.onsetDeltasMs),
+        rs.flatMap((r) => r.metrics.timing.offsetDeltasMs),
+      ),
     };
   });
 
+  const overallTiming = timingStats(
+    results.flatMap((r) => r.metrics.timing.onsetDeltasMs),
+    results.flatMap((r) => r.metrics.timing.offsetDeltasMs),
+  );
   const overallF1 = mean(perScenario.map((s) => s.f1));
   const report = {
     label,
     mode: adaptive ? (noHint ? 'adaptive-no-hint' : 'adaptive') : 'fixed',
     provider: adaptive ? 'registry' : providerName,
     config: adaptive ? { adaptive: true } : { ...pitchOptions, highpassHz },
+    matchTol: matchOpts,
     overallF1,
+    overallTiming,
     perScenario,
     clips: results.map((r) => ({
       scenario: r.scenario,
@@ -274,6 +298,42 @@ async function main(): Promise<void> {
     );
   }
   console.log(`\nOVERALL mean F1 = ${overallF1.toFixed(3)}`);
+
+  // Timing diagnostic (signed ms over exact-pitch matches; + = pipeline late).
+  // bias/median = systematic offset (fixable by calibration); std = jitter
+  // (already absorbed by quantization); n = matched notes the stats rest on.
+  console.log(
+    `\n--- onset timing (signed ms, + = late, window ±${(matchOpts.timingTolSec * 1000).toFixed(0)}ms) ---`,
+  );
+  console.log(
+    'scenario'.padEnd(20) +
+      'bias'.padEnd(8) +
+      'median'.padEnd(8) +
+      'std'.padEnd(8) +
+      'mae'.padEnd(8) +
+      'offBias'.padEnd(9) +
+      'n',
+  );
+  for (const s of perScenario) {
+    const t = s.timing;
+    console.log(
+      s.scenario.padEnd(20) +
+        t.onsetBiasMs.toFixed(0).padEnd(8) +
+        t.onsetMedianMs.toFixed(0).padEnd(8) +
+        t.onsetStdMs.toFixed(0).padEnd(8) +
+        t.onsetMaeMs.toFixed(0).padEnd(8) +
+        t.offsetBiasMs.toFixed(0).padEnd(9) +
+        String(t.matched),
+    );
+  }
+  console.log(
+    `\nOVERALL onset bias=${overallTiming.onsetBiasMs.toFixed(1)}ms ` +
+      `median=${overallTiming.onsetMedianMs.toFixed(1)}ms ` +
+      `std=${overallTiming.onsetStdMs.toFixed(1)}ms ` +
+      `mae=${overallTiming.onsetMaeMs.toFixed(1)}ms ` +
+      `offsetBias=${overallTiming.offsetBiasMs.toFixed(1)}ms ` +
+      `(n=${overallTiming.matched})`,
+  );
   console.log(`Report written to ${outPath}`);
 }
 
