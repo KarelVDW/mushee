@@ -1,4 +1,14 @@
-import { IsObject, IsString, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDefined,
+  IsObject,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+
+import { ScorePartwiseDto } from './mxml.dto';
 
 export class CreateScoreDto {
   @IsString()
@@ -6,6 +16,9 @@ export class CreateScoreDto {
   @MaxLength(200)
   title: string;
 
+  @IsDefined()
   @IsObject()
-  score: Record<string, unknown>;
+  @ValidateNested()
+  @Type(() => ScorePartwiseDto)
+  score: ScorePartwiseDto;
 }

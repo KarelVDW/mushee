@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { instanceToPlain } from 'class-transformer';
 import { ILike, Repository } from 'typeorm';
 
 import { CacheService } from '../cache/cache.service';
@@ -30,7 +31,7 @@ export class ScoresService {
     const saved = await this.scoreRepo.save(score);
 
     // Put initial score data in MongoDB cache for immediate editing
-    await this.cacheService.upsert(saved.id, dto.score);
+    await this.cacheService.upsert(saved.id, instanceToPlain(dto.score));
 
     return saved;
   }
@@ -90,13 +91,23 @@ export class ScoresService {
     }
 
     if (dto.allMeasures) {
-      await this.cacheService.replaceAllMeasures(score.id, dto.allMeasures);
+      await this.cacheService.replaceAllMeasures(
+        score.id,
+        dto.allMeasures.map((measure) => instanceToPlain(measure)),
+      );
     } else if (dto.measures) {
-      await this.cacheService.updateMeasures(score.id, dto.measures);
+      const measures: Record<string, Record<string, unknown>> = {};
+      for (const [index, measure] of Object.entries(dto.measures)) {
+        measures[index] = instanceToPlain(measure);
+      }
+      await this.cacheService.updateMeasures(score.id, measures);
     }
 
     if (dto.partList) {
-      await this.cacheService.updatePartList(score.id, dto.partList);
+      await this.cacheService.updatePartList(
+        score.id,
+        instanceToPlain(dto.partList),
+      );
     }
 
     return score;
