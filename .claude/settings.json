@@ -81,7 +81,8 @@
       "Bash(EVAL_PROVIDER=basic-pitch EVAL_CONDITIONS=clean EVAL_SCENARIOS=trumpet-mid,violin-high,cello-low,voice-tenor,whistle-high,flute-high,tuba-verylow EVAL_OUT=/tmp/eval-timing-clean.json EVAL_LABEL=timing-clean-bp npx tsx scripts/eval/run-eval.ts)",
       "Bash(EVAL_ADAPTIVE=1 EVAL_CONDITIONS=clean EVAL_OUT=/tmp/eval-fix-clean.json EVAL_LABEL=fix-clean npx tsx scripts/eval/run-eval.ts)",
       "Bash(EVAL_ADAPTIVE=1 EVAL_CONDITIONS=room-mic,noisy-phone EVAL_OUT=/tmp/eval-fix-degraded.json EVAL_LABEL=fix-degraded npx tsx scripts/eval/run-eval.ts)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(node verify.cjs)"
     ],
     "deny": [
       "Read(**/.env)",

@@ -15,6 +15,7 @@ export function MeasureButton({
 }) {
     return (
         <g
+            data-export-exclude
             onClick={(e) => {
                 e.stopPropagation()
                 if (!disabled) onClick()

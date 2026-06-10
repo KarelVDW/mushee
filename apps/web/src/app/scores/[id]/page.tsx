@@ -18,6 +18,7 @@ import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { ControlBar } from './ControlBar'
+import { ExportMenu } from './ExportMenu'
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -29,6 +30,7 @@ export default function ScoreEditorPage() {
     const [error, setError] = useState<string | null>(null)
     const [activeNote, setActiveNote] = useState<Note | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const scoreAreaRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const tickerRef = useRef<Ticker | null>(null)
     const schedulerRef = useRef<ScoreScheduler | null>(null)
@@ -507,6 +509,7 @@ export default function ScoreEditorPage() {
                         <Pill>{score.instrument.displayName}</Pill>
                     </button>
                 </div>
+                <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
             </header>
             <ControlBar
                 accidental={activeNote?.pitch?.accidentalValue}
@@ -539,7 +542,7 @@ export default function ScoreEditorPage() {
                 onMetronomeToggle={() => setMetronome((m) => !m)}
             />
             <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6 bg-surface">
-                <div className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow">
+                <div ref={scoreAreaRef} className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow">
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}

@@ -229,11 +229,20 @@ export const Score = memo(function Score({
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
                     {/* Recording waveform — painted directly by RecordingEngine via ref */}
-                    <path ref={recordingWaveformRef} stroke="#1e3a8a" strokeWidth={2.5} strokeLinecap="square" fill="none" opacity={0.5} />
+                    <path
+                        ref={recordingWaveformRef}
+                        data-export-exclude
+                        stroke="#1e3a8a"
+                        strokeWidth={2.5}
+                        strokeLinecap="square"
+                        fill="none"
+                        opacity={0.5}
+                    />
 
                     {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
                     <rect
                         ref={playbackCursorRef}
+                        data-export-exclude
                         display="none"
                         y={SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 5}
                         width={3}
@@ -257,6 +266,7 @@ export const Score = memo(function Score({
                                 {selectedNote && selectedNote.measure === measure && cursorPos && (
                                     <g
                                         key={`cursor-${selectedNote.id}`}
+                                        data-export-exclude
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && (
                                             <g key={ghostNote.id} opacity={0.35}>
