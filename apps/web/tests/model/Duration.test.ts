@@ -57,6 +57,46 @@ describe('Duration', () => {
         expect(new Duration({ type: '16' }).flagGlyph('up')).toBe('flag16thUp')
     })
 
+    describe('tripletDivision', () => {
+        it('divides a quarter into three eighths in a 3:2 ratio spanning the same time', () => {
+            const divisions = new Duration({ type: 'q' }).tripletDivision()
+            expect(divisions).toHaveLength(3)
+            for (const d of divisions ?? []) {
+                expect(d.type).toBe('8')
+                expect(d.ratio).toEqual({ actualNotes: 3, normalNotes: 2 })
+            }
+            const total = (divisions ?? []).reduce((sum, d) => sum + d.effectiveBeats, 0)
+            expect(total).toBeCloseTo(1)
+        })
+
+        it('carries dots over, preserving the total length', () => {
+            const divisions = new Duration({ type: 'q', dots: 1 }).tripletDivision()
+            expect(divisions?.every((d) => d.dots === 1)).toBe(true)
+            const total = (divisions ?? []).reduce((sum, d) => sum + d.effectiveBeats, 0)
+            expect(total).toBeCloseTo(1.5)
+        })
+
+        it('returns null for a 16th — no shorter value exists', () => {
+            expect(new Duration({ type: '16' }).tripletDivision()).toBeNull()
+        })
+    })
+
+    describe('fromBeats with a tuplet ratio', () => {
+        it('decomposes ⅔ beat in 3:2 space into a quarter triplet', () => {
+            const ds = Duration.fromBeats(2 / 3, { actualNotes: 3, normalNotes: 2 })
+            expect(ds).toHaveLength(1)
+            expect(ds[0].type).toBe('q')
+            expect(ds[0].effectiveBeats).toBeCloseTo(2 / 3)
+        })
+
+        it('decomposes ⅙ beat in 3:2 space into a 16th triplet', () => {
+            const ds = Duration.fromBeats(1 / 6, { actualNotes: 3, normalNotes: 2 })
+            expect(ds).toHaveLength(1)
+            expect(ds[0].type).toBe('16')
+            expect(ds[0].effectiveBeats).toBeCloseTo(1 / 6)
+        })
+    })
+
     describe('fromBeats (greedy decomposition)', () => {
         it('returns empty array for 0 beats', () => {
             expect(Duration.fromBeats(0)).toEqual([])

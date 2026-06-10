@@ -1,6 +1,6 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
-import type { ClefType } from '@/components/notation/types'
+import type { ClefType, DurationType } from '@/components/notation/types'
 
 import { Duration } from './Duration'
 import { Instrument } from './Instrument'
@@ -11,6 +11,9 @@ import { Row } from './Row'
 import { Tie } from './Tie'
 import { TimeSignature } from './TimeSignature'
 import { MeasureSerializer } from './util/ScoreSerializer'
+
+/** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
+const BEAT_EPSILON = 0.001
 
 export class Score {
     /** Tempo assumed before any explicit marking — matches the playback engines' fallback. */
@@ -383,13 +386,64 @@ export class Score {
         return this.tempoMap[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
     }
 
+    /**
+     * Change a note's written duration (type and/or dots; omitted parts keep the
+     * note's current value). Inside a tuplet the change stays in the group's ratio
+     * and is clipped to the group's end — freed slot space is padded with tuplet
+     * rests by `replace` — so the group's span never changes. A change that covers
+     * the whole group from its first slot reads better as plain notation, so it
+     * leaves tuplet space. Returns the note to select next, or null without a note.
+     */
+    setDuration(note: Note | null | undefined, value: { type?: DurationType; dots?: number }): Note | null {
+        if (!note) return null
+        const ratio = note.duration.ratio
+        let durations = [new Duration({ type: value.type ?? note.duration.type, dots: value.dots ?? note.duration.dots, ratio })]
+        const tuplet = note.measure.tupletGroupOf(note)
+        if (tuplet) {
+            const index = tuplet.getIndex(note) ?? 0
+            const remainder = sumBy(tuplet.notes.slice(index), (n) => n.duration.effectiveBeats)
+            if (durations[0].effectiveBeats > remainder + BEAT_EPSILON) {
+                durations = index === 0 ? Duration.fromBeats(remainder) : Duration.fromBeats(remainder, ratio)
+            }
+        }
+        if (!durations.length) return null
+        const values = durations.map((d, i) => note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }))
+        return this.replace([note], values)[0] ?? null
+    }
+
+    /**
+     * Toggle the note between plain and triplet notation. A plain note becomes three
+     * notes of the next-shorter value (3:2) — its pitch on the first, rests after. A
+     * note inside a tuplet collapses the whole group back to plain notes of the same
+     * total length, carrying the selected note's pitch. Returns the note to select
+     * next, or null when nothing changed (no shorter value exists, or the group's
+     * length isn't representable in plain notes).
+     */
+    toggleTuplet(note: Note | null | undefined): Note | null {
+        if (!note) return null
+        const tuplet = note.measure.tupletGroupOf(note)
+        if (tuplet) {
+            const totalBeats = sumBy(tuplet.notes, (n) => n.duration.effectiveBeats)
+            const durations = Duration.fromBeats(totalBeats)
+            if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
+            const values = durations.map(
+                (d, i) => new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
+            )
+            return this.replace(tuplet.notes, values)[0] ?? null
+        }
+        const durations = note.duration.tripletDivision()
+        if (!durations) return null
+        const values = durations.map((d, i) => new Note({ duration: d, pitch: i === 0 ? note.pitch : undefined }))
+        return this.replace([note], values)[0] ?? null
+    }
+
     replace(targets: Note[], values: Note[]) {
         if (!targets.length) throw new Error('Replace targets can not be empty')
         if (!values.length) throw new Error('Replace values can not be empty')
         let targetBeats = sumBy(targets, (n) => n.duration.effectiveBeats)
         let valueBeats = sumBy(values, (n) => n.duration.effectiveBeats)
 
-        while (targetBeats < valueBeats) {
+        while (targetBeats < valueBeats - BEAT_EPSILON) {
             const lastTarget = targets[targets.length - 1]
             let nextNote = lastTarget.getNext()
             if (!nextNote) this.addMeasure().complete()
@@ -398,8 +452,11 @@ export class Score {
             targets = compact([...targets, nextNote])
             targetBeats += nextNote.duration.effectiveBeats
         }
-        if (targetBeats > valueBeats) {
-            values = [...values, ...Duration.fromBeats(targetBeats - valueBeats).map((d) => new Note({ duration: d }))]
+        if (targetBeats > valueBeats + BEAT_EPSILON) {
+            // The gap sits at the end of the replaced range — pad in that note's space:
+            // inside a tuplet it is a fraction no plain duration can express.
+            const ratio = targets[targets.length - 1].duration.ratio
+            values = [...values, ...Duration.fromBeats(targetBeats - valueBeats, ratio).map((d) => new Note({ duration: d }))]
             valueBeats += targetBeats - valueBeats
         }
         const measuresById = keyBy(
@@ -414,11 +471,11 @@ export class Score {
             const newNotes = []
             let freeBeats = sumBy(notes, (n) => n.duration.effectiveBeats)
             let remainderNotes: Note[] = []
-            while (freeBeats > 0) {
+            while (freeBeats > BEAT_EPSILON) {
                 const note = replaceValues.shift()
                 if (!note) break
                 const noteBeats = note.duration.effectiveBeats
-                if (note.duration.effectiveBeats <= freeBeats) {
+                if (noteBeats <= freeBeats + BEAT_EPSILON) {
                     newNotes.push(note)
                     freeBeats -= noteBeats
                 } else {

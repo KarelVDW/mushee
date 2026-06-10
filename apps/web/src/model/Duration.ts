@@ -101,14 +101,46 @@ export class Duration {
         }
     }
 
-    static fromBeats(beats: number): Duration[] {
+    /** The next-shorter note value, or null at the bottom of the supported range. */
+    private get shorterType(): DurationType | null {
+        switch (this.type) {
+            case 'w':
+                return 'h'
+            case 'h':
+                return 'q'
+            case 'q':
+                return '8'
+            case '8':
+                return '16'
+            case '16':
+                return null
+        }
+    }
+
+    /**
+     * This duration written as a triplet: three notes of the next-shorter value in a
+     * 3:2 ratio, together spanning the same time (dots carry over, so a dotted quarter
+     * becomes three dotted eighths). Null when no shorter value exists.
+     */
+    tripletDivision(): Duration[] | null {
+        const type = this.shorterType
+        if (!type) return null
+        return [0, 1, 2].map(() => new Duration({ type, dots: this.dots, ratio: { actualNotes: 3, normalNotes: 2 } }))
+    }
+
+    /**
+     * Greedily decompose a span of occupied time into durations. With a ratio the
+     * span is tuplet space (e.g. ⅔ beat inside a 3:2 triplet — inexpressible in
+     * plain values): the written equivalent is decomposed and the ratio re-attached.
+     */
+    static fromBeats(beats: number, ratio?: { actualNotes: number; normalNotes: number }): Duration[] {
         const result: Duration[] = []
-        let remaining = beats
+        let remaining = ratio ? beats * (ratio.actualNotes / ratio.normalNotes) : beats
         while (remaining > 0.001) {
             let matched = false
             for (const v of DURATION_VALUES) {
                 if (v.beats <= remaining + 0.001) {
-                    result.push(new Duration({ type: v.duration, dots: v.dots }))
+                    result.push(new Duration({ type: v.duration, dots: v.dots, ratio }))
                     remaining -= v.beats
                     matched = true
                     break

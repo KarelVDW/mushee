@@ -143,6 +143,149 @@ describe('Score', () => {
         })
     })
 
+    describe('setDuration', () => {
+        function scoreWithTriplet() {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m?.firstNote) throw new Error('expected firstNote')
+            const [note] = score.replace([m.firstNote], [pitched('C', 4)])
+            const first = score.toggleTuplet(note)
+            if (!first) throw new Error('expected triplet first note')
+            return { score, m, first }
+        }
+
+        it('changes a plain note like before (dots reset on type change)', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m?.firstNote) throw new Error('expected firstNote')
+            const newNote = score.setDuration(m.firstNote, { type: 'h', dots: 0 })
+            expect(newNote?.duration.type).toBe('h')
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('lengthening the 2nd triplet note stays in tuplet space, consuming the 3rd slot', () => {
+            const { score, m, first } = scoreWithTriplet()
+            const newNote = score.setDuration(m.notes[1], { type: 'q' })
+            expect(newNote?.duration.type).toBe('q')
+            expect(newNote?.duration.ratio).toEqual({ actualNotes: 3, normalNotes: 2 })
+            expect(m.tupletGroupOf(first)?.notes).toHaveLength(2) // eighth + quarter triplet
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('shortening the 2nd triplet note pads the freed slot space with a tuplet rest', () => {
+            const { score, m, first } = scoreWithTriplet()
+            const newNote = score.setDuration(m.notes[1], { type: '16' })
+            expect(newNote?.duration.type).toBe('16')
+            expect(newNote?.duration.ratio).toEqual({ actualNotes: 3, normalNotes: 2 })
+            const group = m.tupletGroupOf(first)
+            expect(group?.notes).toHaveLength(4) // 8th, 16th, 16th rest, 8th
+            expect(group?.notes[2].isRest).toBe(true)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('a duration that does not fit before the group end is clipped to the remaining slots', () => {
+            const { score, m, first } = scoreWithTriplet()
+            const newNote = score.setDuration(m.notes[2], { type: 'q' }) // last slot: only an eighth fits
+            expect(newNote?.duration.type).toBe('8')
+            expect(m.tupletGroupOf(first)?.notes).toHaveLength(3)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('a duration covering the whole group from its first slot leaves tuplet space', () => {
+            const { score, m, first } = scoreWithTriplet()
+            const newNote = score.setDuration(first, { type: 'h' })
+            expect(newNote?.duration.type).toBe('q') // group spanned a quarter
+            expect(newNote?.inTuplet).toBe(false)
+            expect(newNote?.pitch?.name).toBe('C')
+            expect(m.tuplets).toHaveLength(0)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('dotting a triplet note works in tuplet space', () => {
+            const { score, m, first } = scoreWithTriplet()
+            const newNote = score.setDuration(m.notes[1], { dots: 1 })
+            expect(newNote?.duration.dots).toBe(1)
+            const group = m.tupletGroupOf(first)
+            expect(group?.notes).toHaveLength(3) // 8th, dotted 8th, 16th rest
+            expect(group?.notes[2].duration.type).toBe('16')
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('returns null without a note', () => {
+            const score = makeScore(1)
+            expect(score.setDuration(null, { type: 'q' })).toBeNull()
+        })
+    })
+
+    describe('toggleTuplet', () => {
+        function scoreWithPitchedFirstNote() {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m?.firstNote) throw new Error('expected firstNote')
+            const [note] = score.replace([m.firstNote], [pitched('C', 4)])
+            return { score, m, note }
+        }
+
+        it('wraps a quarter note into a triplet of eighths (pitch first, rests after)', () => {
+            const { score, m, note } = scoreWithPitchedFirstNote()
+            const newNote = score.toggleTuplet(note)
+            if (!newNote) throw new Error('expected toggleTuplet to return a note')
+            expect(newNote.duration.type).toBe('8')
+            expect(newNote.duration.ratio).toEqual({ actualNotes: 3, normalNotes: 2 })
+            expect(newNote.pitch?.name).toBe('C')
+            const tuplet = m.tupletGroupOf(newNote)
+            expect(tuplet?.notes).toHaveLength(3)
+            expect(tuplet?.notes.slice(1).every((n) => n.isRest)).toBe(true)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('does not consume the note following the tuplet', () => {
+            const { score, m, note } = scoreWithPitchedFirstNote()
+            const following = m.notes[1]
+            score.toggleTuplet(note)
+            expect(m.notes).toContain(following)
+            expect(m.notes).toHaveLength(6) // 3 triplet notes + 3 original quarter rests
+        })
+
+        it('collapses the tuplet group back to a plain note of the same length', () => {
+            const { score, m, note } = scoreWithPitchedFirstNote()
+            const tripletNote = score.toggleTuplet(note)
+            const flattened = score.toggleTuplet(tripletNote)
+            if (!flattened) throw new Error('expected toggleTuplet to return a note')
+            expect(flattened.duration.type).toBe('q')
+            expect(flattened.duration.ratio).toEqual({ actualNotes: 1, normalNotes: 1 })
+            expect(flattened.pitch?.name).toBe('C')
+            expect(m.notes).toHaveLength(4)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('keeps a dotted duration: a dotted quarter becomes three dotted eighths', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m?.firstNote) throw new Error('expected firstNote')
+            const [dotted] = score.replace([m.firstNote], [new Note({ duration: new Duration({ type: 'q', dots: 1 }) })])
+            const newNote = score.toggleTuplet(dotted)
+            expect(newNote?.duration.type).toBe('8')
+            expect(newNote?.duration.dots).toBe(1)
+            expect(m.beats).toBeCloseTo(m.maxBeats)
+        })
+
+        it('returns null for a 16th note (no shorter value to divide into)', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m?.firstNote) throw new Error('expected firstNote')
+            const [sixteenth] = score.replace([m.firstNote], [pitched('C', 4, '16')])
+            const before = m.notes.length
+            expect(score.toggleTuplet(sixteenth)).toBeNull()
+            expect(m.notes).toHaveLength(before)
+        })
+
+        it('returns null without a note', () => {
+            const score = makeScore(1)
+            expect(score.toggleTuplet(null)).toBeNull()
+        })
+    })
+
     describe('totalNotes', () => {
         it('counts notes across all measures', () => {
             const score = makeScore(2)

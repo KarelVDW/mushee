@@ -13,7 +13,7 @@ import { MidiPlayer } from '@/lib/MidiPlayer'
 import { RecordingEngine, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
-import { Duration, Instrument, type Note, Pitch, Score } from '@/model'
+import { Instrument, type Note, Pitch, Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
@@ -149,7 +149,8 @@ export default function ScoreEditorPage() {
     const handleDurationChange = useCallback(
         (newDuration: DurationType) => {
             if (!activeNote || !score) return
-            const [newNote] = score.replace([activeNote], [activeNote.clone({ duration: new Duration({ type: newDuration }) })])
+            const newNote = score.setDuration(activeNote, { type: newDuration, dots: 0 })
+            if (!newNote) return
             setActiveNote(newNote)
             saveToApi({ score })
         },
@@ -158,15 +159,16 @@ export default function ScoreEditorPage() {
 
     const handleDotToggle = useCallback(() => {
         if (!activeNote || !score) return
-        const newDots = activeNote.duration.dots > 0 ? 0 : 1
-        const [newNote] = score.replace(
-            [activeNote],
-            [
-                activeNote.clone({
-                    duration: new Duration({ type: activeNote.duration.type, dots: newDots, ratio: activeNote.duration.ratio }),
-                }),
-            ],
-        )
+        const newNote = score.setDuration(activeNote, { dots: activeNote.duration.dots > 0 ? 0 : 1 })
+        if (!newNote) return
+        setActiveNote(newNote)
+        saveToApi({ score })
+    }, [activeNote, score, saveToApi])
+
+    const handleTupletToggle = useCallback(() => {
+        if (!activeNote || !score) return
+        const newNote = score.toggleTuplet(activeNote)
+        if (!newNote) return
         setActiveNote(newNote)
         saveToApi({ score })
     }, [activeNote, score, saveToApi])
@@ -514,6 +516,9 @@ export default function ScoreEditorPage() {
                 onDurationChange={handleDurationChange}
                 dotted={(activeNote?.duration.dots ?? 0) > 0}
                 onDotToggle={handleDotToggle}
+                tuplet={activeNote?.inTuplet ?? false}
+                tupletDisabled={!activeNote || (!activeNote.inTuplet && !activeNote.duration.tripletDivision())}
+                onTupletToggle={handleTupletToggle}
                 tie={activeNote?.tiesForward ?? false}
                 onTieToggle={handleTieToggle}
                 rest={activeNote?.isRest ?? false}

@@ -80,7 +80,8 @@
       "Bash(node -e \"const r=require\\('./scripts/fixtures/eval/report-v7-final.json'\\); const rows=r.clips.filter\\(c=>/voice-bass|whistle-mid/.test\\(c.scenario\\)\\); for\\(const c of rows\\) console.log\\(\\(c.scenario+'/'+c.melody+'/'+c.condition\\).padEnd\\(40\\),'F1='+c.f1.toFixed\\(2\\),'rec='+c.recall.toFixed\\(2\\),'est='+c.estCount,'ref='+c.refCount\\);\")",
       "Bash(EVAL_PROVIDER=basic-pitch EVAL_CONDITIONS=clean EVAL_SCENARIOS=trumpet-mid,violin-high,cello-low,voice-tenor,whistle-high,flute-high,tuba-verylow EVAL_OUT=/tmp/eval-timing-clean.json EVAL_LABEL=timing-clean-bp npx tsx scripts/eval/run-eval.ts)",
       "Bash(EVAL_ADAPTIVE=1 EVAL_CONDITIONS=clean EVAL_OUT=/tmp/eval-fix-clean.json EVAL_LABEL=fix-clean npx tsx scripts/eval/run-eval.ts)",
-      "Bash(EVAL_ADAPTIVE=1 EVAL_CONDITIONS=room-mic,noisy-phone EVAL_OUT=/tmp/eval-fix-degraded.json EVAL_LABEL=fix-degraded npx tsx scripts/eval/run-eval.ts)"
+      "Bash(EVAL_ADAPTIVE=1 EVAL_CONDITIONS=room-mic,noisy-phone EVAL_OUT=/tmp/eval-fix-degraded.json EVAL_LABEL=fix-degraded npx tsx scripts/eval/run-eval.ts)",
+      "Bash(npm test *)"
     ],
     "deny": [
       "Read(**/.env)",

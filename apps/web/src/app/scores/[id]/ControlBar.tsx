@@ -16,6 +16,7 @@ import {
     KeySignaturePopover,
     TempoPopover,
 } from '@/components/notation'
+import { TUPLET_NUMBER_SCALE } from '@/components/notation/constants'
 import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
@@ -48,6 +49,23 @@ function DurationIcon({ dur }: { dur: DurationType }) {
     )
 }
 
+// --- Tuplet icon ---
+
+function TupletIcon() {
+    const numWidth = getGlyphWidth('timeSig3', TUPLET_NUMBER_SCALE)
+    const gap = numWidth / 2 + 3
+    const y = 10
+    return (
+        <svg width={18} height={11} viewBox="0 0 32 20">
+            <rect x={1} y={y} width={1.5} height={5} fill="currentColor" />
+            <rect x={1} y={y} width={16 - gap - 1} height={1.5} fill="currentColor" />
+            <rect x={16 + gap} y={y} width={15 - gap} height={1.5} fill="currentColor" />
+            <rect x={29.5} y={y} width={1.5} height={5} fill="currentColor" />
+            <Glyph name="timeSig3" x={16 - numWidth / 2} y={y} scale={TUPLET_NUMBER_SCALE} fill="currentColor" />
+        </svg>
+    )
+}
+
 // --- ControlBar ---
 
 interface ControlBarProps {
@@ -58,6 +76,9 @@ interface ControlBarProps {
     onDurationChange: (duration: DurationType) => void
     dotted: boolean
     onDotToggle: () => void
+    tuplet: boolean
+    tupletDisabled: boolean
+    onTupletToggle: () => void
     tie: boolean
     onTieToggle: () => void
     rest: boolean
@@ -86,6 +107,9 @@ export function ControlBar({
     onDurationChange,
     dotted,
     onDotToggle,
+    tuplet,
+    tupletDisabled,
+    onTupletToggle,
     tie,
     onTieToggle,
     rest,
@@ -122,6 +146,9 @@ export function ControlBar({
                 />
                 <ChipToggle active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
                     ·
+                </ChipToggle>
+                <ChipToggle active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
+                    <TupletIcon />
                 </ChipToggle>
                 <ChipToggle active={rest} onClick={onRestToggle} ariaLabel="Rest">
                     <svg width={9} height={16} viewBox="0 0 16 30">

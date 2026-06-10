@@ -28,12 +28,7 @@ describe('TupletFinder', () => {
         expect(finder.tuplets).toHaveLength(0)
     })
 
-    it('groups three eighth-note triplets into one tuplet (incomplete-set fallback)', () => {
-        // NOTE: TupletFinder's completion check `totalDuration >= normalNotes - 0.001`
-        // compares accumulated beats against a *count* of normal notes. For 3:2 eighth
-        // triplets (3 notes totaling 1 beat, normalNotes=2), this never triggers — so
-        // the group is only emitted from the trailing incomplete-set push at end of
-        // iteration. Documenting actual behavior, not desired behavior.
+    it('groups three eighth-note triplets into one tuplet', () => {
         const m = freshMeasure()
         m.addNotes([tripletEighth(), tripletEighth(), tripletEighth()])
         const finder = new TupletFinder(m)
@@ -41,16 +36,34 @@ describe('TupletFinder', () => {
         expect(finder.tuplets[0].notes).toHaveLength(3)
     })
 
-    it('two consecutive triplet groups currently merge into one tuplet (KNOWN ISSUE)', () => {
-        // See note above: completion check is broken for typical tuplet ratios.
-        // Without an interrupting non-tuplet note, all consecutive triplet eighths
-        // fall into a single tuplet. Capturing this so a future fix can flip the
-        // assertion to `toHaveLength(2)`.
+    it('splits two consecutive triplet groups into separate tuplets', () => {
+        // A group is complete when it spans normalNotes of its base value (two eighths
+        // = 1 beat for a 3:2 eighth triplet), so back-to-back triplets don't merge.
         const m = freshMeasure()
         m.addNotes([tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth(), tripletEighth()])
         const finder = new TupletFinder(m)
+        expect(finder.tuplets).toHaveLength(2)
+        expect(finder.tuplets[0].notes).toHaveLength(3)
+        expect(finder.tuplets[1].notes).toHaveLength(3)
+    })
+
+    it('keeps a triplet with a subdivided first slot as one group', () => {
+        const sixteenth = () => new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 3, normalNotes: 2 } }) })
+        const m = freshMeasure()
+        m.addNotes([sixteenth(), sixteenth(), tripletEighth(), tripletEighth()])
+        const finder = new TupletFinder(m)
         expect(finder.tuplets).toHaveLength(1)
-        expect(finder.tuplets[0].notes).toHaveLength(6)
+        expect(finder.tuplets[0].notes).toHaveLength(4)
+    })
+
+    it('keeps a triplet with merged slots (eighth + quarter) as one group', () => {
+        const quarterTriplet = () =>
+            new Note({ duration: new Duration({ type: 'q', ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        const m = freshMeasure()
+        m.addNotes([tripletEighth(), quarterTriplet()])
+        const finder = new TupletFinder(m)
+        expect(finder.tuplets).toHaveLength(1)
+        expect(finder.tuplets[0].notes).toHaveLength(2)
     })
 
     it('non-tuplet note between triplets terminates the first group', () => {
