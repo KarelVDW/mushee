@@ -21,13 +21,11 @@ export class NoteLayout {
 
         let cursorX = note.width.paddingLeft
 
-        // accidental
-        if (note.pitch?.accidental) {
-            const accGlyph = note.pitch.accidentalGlyph
-            if (accGlyph) {
-                this.accidental = { x: cursorX, y: this.noteY, glyphName: accGlyph }
-                cursorX += getGlyphWidth(accGlyph) + note.width.gap
-            }
+        // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
+        const accGlyph = note.displayAccidentalGlyph
+        if (accGlyph) {
+            this.accidental = { x: cursorX, y: this.noteY, glyphName: accGlyph }
+            cursorX += getGlyphWidth(accGlyph) + note.width.gap
         }
 
         // ledgerLines

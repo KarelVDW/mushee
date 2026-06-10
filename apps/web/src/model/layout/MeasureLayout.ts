@@ -4,6 +4,7 @@ import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/compo
 import type { LayoutBarline } from '@/components/notation/types'
 
 import { Clef } from '../Clef'
+import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { PhysicalElement } from '../PhysicalElement'
 import { TimeSignature } from '../TimeSignature'
@@ -23,6 +24,7 @@ export class MeasureLayout {
             this.measure.physicalElements,
             (el) => this.measure.beatOffsetOf(el) ?? -1,
             (el) => !(el instanceof Clef),
+            (el) => !(el instanceof KeySignature),
             (el) => !(el instanceof TimeSignature),
         )
         const startOverhead = takeWhile(sortedElements, (el) => typeof el.beats !== 'number')

@@ -5,10 +5,11 @@ import type { BarlineType, ClefType } from '@/components/notation/types'
 
 import { Beam } from './Beam'
 import { Clef } from './Clef'
-import type { KeySignature } from './KeySignature'
+import { KeySignature } from './KeySignature'
 import { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
 import { PhysicalElement } from './PhysicalElement'
+import { Pitch } from './Pitch'
 import type { Score } from './Score'
 import { Tempo } from './Tempo'
 import { TimeSignature } from './TimeSignature'
@@ -24,7 +25,10 @@ export class Measure {
     private _showsClef: boolean = false
     private _timeSignature: TimeSignature
     private _showsTimeSignature: boolean = false
-    private _keySignature?: KeySignature
+    private _keySignatures: KeySignature[] = []
+    private _leadingKeyExplicit = false
+    private _showsKeySignature: boolean = false
+    private _accidentalGlyphs: Map<Note, string | undefined> | null = null
     private _endBarline?: BarlineType
     private _tempos: Tempo[] = []
     private _tuplets: Tuplet[] = []
@@ -42,18 +46,24 @@ export class Measure {
         clefType: ClefType,
         timeSignature: TimeSignature,
         value?: {
-            keySignature?: KeySignature
+            /** Number of sharps (+) / flats (−) for the leading key signature; default 0 (C major). */
+            keyFifths?: number
+            keyMode?: string
             endBarline?: BarlineType
             /** Marks the leading clef as an intentional change (carry-forward boundary), not an inherited one. */
             leadingClefExplicit?: boolean
+            /** Marks the leading key signature as an intentional change (carry-forward boundary). */
+            leadingKeyExplicit?: boolean
         },
     ) {
-        // The measure owns its clefs (like its tempos): the leading clef sits at beat 0, further clefs are mid-measure changes.
+        // The measure owns its clefs and key signatures (like its tempos): the leading one sits at beat 0,
+        // further ones are mid-measure changes.
         this._clefs = [new Clef(this, 0, clefType)]
         this._leadingExplicit = value?.leadingClefExplicit ?? false
+        this._keySignatures = [new KeySignature(this, 0, value?.keyFifths ?? 0, value?.keyMode)]
+        this._leadingKeyExplicit = value?.leadingKeyExplicit ?? false
         this._timeSignature = timeSignature
         this._timeSignature.setMeasure(this)
-        this._keySignature = value?.keySignature
         this._endBarline = value?.endBarline
     }
 
@@ -93,8 +103,8 @@ export class Measure {
     }
 
     beatOffsetOf(el: PhysicalElement): number {
-        // Clefs carry their own beat so mid-measure changes sort and space at the right position.
-        if (el instanceof Clef) return el.beatPosition
+        // Clefs and key signatures carry their own beat so mid-measure changes sort and space at the right position.
+        if (el instanceof Clef || el instanceof KeySignature) return el.beatPosition
         const offset = this._beatOffsets.get(el)
         return offset ?? 0
     }
@@ -203,6 +213,7 @@ export class Measure {
             if (beatPosition === 0) this._leadingExplicit = true
         }
         this.invalidateNoteLayouts()
+        this.invalidateKeyLayouts()
         this.rebuildPhysicalElements()
     }
 
@@ -217,6 +228,7 @@ export class Measure {
         this.removeClef(0)
         this._clefs.unshift(new Clef(this, 0, type))
         this.invalidateNoteLayouts()
+        this.invalidateKeyLayouts()
         this.rebuildPhysicalElements()
     }
 
@@ -225,8 +237,184 @@ export class Measure {
         for (const note of this._notes) note.invalidateLayout()
     }
 
+    /** Invalidate every key signature's layout — accidental staff positions depend on the active clef. */
+    invalidateKeyLayouts() {
+        for (const key of this._keySignatures) key.invalidateLayout()
+    }
+
+    /**
+     * Refresh key signatures' cached width and layout, then re-space the measure. Their drawn accidentals
+     * include cancellation naturals that depend on the *preceding* key, so this is re-run during row
+     * rebuilds (where carry-forward can change what each key cancels).
+     */
+    refreshKeySignatures() {
+        for (const key of this._keySignatures) key.invalidate()
+        this.rebuildPhysicalElements()
+    }
+
     get showsClef() {
         return this._showsClef
+    }
+
+    // --- Key signatures (parallels clefs: a leading key at beat 0 + optional mid-measure changes) ---
+
+    get keySignatures(): KeySignature[] {
+        return this._keySignatures
+    }
+
+    /** The leading key signature at the start of the measure (the key at beat 0). */
+    get keySignature(): KeySignature {
+        return this._keySignatures.find((k) => k.beatPosition === 0) ?? this._keySignatures[0]
+    }
+
+    keyAtBeat(beatPosition: number): KeySignature | undefined {
+        return this._keySignatures.find((k) => k.beatPosition === beatPosition)
+    }
+
+    /** The key signature in effect at `beatPosition` within this measure — the latest at or before it. */
+    keyAtOrBefore(beatPosition: number): KeySignature {
+        let active = this.keySignature
+        for (const key of this._keySignatures) {
+            if (key.beatPosition <= beatPosition && key.beatPosition >= active.beatPosition) active = key
+        }
+        return active
+    }
+
+    /** The last (highest-beat) key signature in the measure — the one carried into the next measure. */
+    get lastKey(): KeySignature {
+        let latest = this.keySignature
+        for (const key of this._keySignatures) {
+            if (key.beatPosition > latest.beatPosition) latest = key
+        }
+        return latest
+    }
+
+    /** The key signature in effect just before `beatPosition` (ignoring any key exactly at it). */
+    keyBefore(beatPosition: number): KeySignature {
+        let active = this.keySignature
+        for (const key of this._keySignatures) {
+            if (key.beatPosition < beatPosition && key.beatPosition >= active.beatPosition) active = key
+        }
+        return active
+    }
+
+    /**
+     * Mid-measure key changes that actually change the active key, in beat order. A stored key equal to
+     * the one already in effect before it is a no-op: kept in `_keySignatures` (so the intent re-emerges
+     * if context changes) but not drawn or serialized.
+     */
+    get midMeasureKeySignatures(): KeySignature[] {
+        return this._keySignatures
+            .filter((k) => k.beatPosition > 0 && this.keyBefore(k.beatPosition).fifths !== k.fifths)
+            .sort((a, b) => a.beatPosition - b.beatPosition)
+    }
+
+    /** Whether the leading key signature is an intentional change (a carry-forward boundary). */
+    get leadingKeyExplicit(): boolean {
+        return this._leadingKeyExplicit
+    }
+
+    addKeySignature(beatPosition: number, fifths: number, mode?: string) {
+        this._keySignatures.push(new KeySignature(this, beatPosition, fifths, mode))
+        // The accidental cache can already be built (NoteWidth reads displayed accidentals) — refresh it.
+        this.invalidateNoteAccidentals()
+    }
+
+    removeKeySignature(beatPosition: number) {
+        this._keySignatures = this._keySignatures.filter((k) => k.beatPosition !== beatPosition)
+        this.invalidateNoteAccidentals()
+    }
+
+    /**
+     * Add or replace the key signature at `beatPosition`. Beat 0 marks the leading key as an explicit change.
+     * A mid-measure key equal to the one already in effect there is redundant, so it is removed instead.
+     */
+    setKeySignature(beatPosition: number, fifths: number, mode?: string) {
+        this.removeKeySignature(beatPosition)
+        if (beatPosition > 0 && this.keyBefore(beatPosition).fifths === fifths) {
+            // Redundant mid-measure change — leave the position governed by the preceding key.
+        } else {
+            this.addKeySignature(beatPosition, fifths, mode)
+            if (beatPosition === 0) this._leadingKeyExplicit = true
+        }
+        this.invalidateNoteAccidentals()
+        this.rebuildPhysicalElements()
+    }
+
+    /** Demote the leading key signature to inherited (no longer a carry-forward boundary). */
+    makeLeadingKeyInherited() {
+        this._leadingKeyExplicit = false
+    }
+
+    /** Carry-forward: set the inherited leading key without marking it explicit (used by Score). */
+    setLeadingKey(fifths: number, mode?: string) {
+        if (this.keySignature.fifths === fifths && this.keySignature.mode === mode) return
+        this.removeKeySignature(0)
+        this._keySignatures.unshift(new KeySignature(this, 0, fifths, mode))
+        this.invalidateNoteAccidentals()
+        this.rebuildPhysicalElements()
+    }
+
+    setShowsKeySignature(value: boolean) {
+        if (this._showsKeySignature === value) return
+        this._showsKeySignature = value
+        this.rebuildPhysicalElements()
+    }
+
+    get showsKeySignature() {
+        return this._showsKeySignature
+    }
+
+    /** Re-key every key signature in the measure by a (chromatic, diatonic) interval — for instrument transposition. */
+    transposeKeySignatures(chromatic: number, diatonic: number) {
+        this._keySignatures = this._keySignatures.map(
+            (k) => new KeySignature(this, k.beatPosition, KeySignature.transposedFifths(k.fifths, chromatic, diatonic), k.mode),
+        )
+        this.invalidateNoteAccidentals()
+        this.rebuildPhysicalElements()
+    }
+
+    /**
+     * Displayed accidental glyph for a note in this measure, or undefined if none is drawn. Full
+     * measure-aware: a note shows an accidental when its alteration differs from what is currently in
+     * effect for its pitch — the key signature, overridden by any earlier accidental on the same
+     * (name, octave) in the bar. A mid-measure key change resets the carried accidentals.
+     */
+    accidentalGlyphFor(note: Note): string | undefined {
+        if (!this._accidentalGlyphs) this._accidentalGlyphs = this._computeAccidentals()
+        return this._accidentalGlyphs.get(note)
+    }
+
+    private _computeAccidentals(): Map<Note, string | undefined> {
+        const result = new Map<Note, string | undefined>()
+        const inEffect = new Map<string, number>() // "name+octave" -> alteration currently sounding in the bar
+        let keyFifths = this.keySignature.fifths
+        for (const note of this._notes) {
+            if (!note.pitch) {
+                result.set(note, undefined)
+                continue
+            }
+            const key = this.keyAtOrBefore(this.beatOffsetOf(note))
+            if (key.fifths !== keyFifths) {
+                inEffect.clear() // a new key signature cancels carried accidentals
+                keyFifths = key.fifths
+            }
+            const id = `${note.pitch.name}${note.pitch.octave}`
+            const prevailing = inEffect.has(id) ? (inEffect.get(id) as number) : key.alterForNote(note.pitch.name)
+            if (note.pitch.alter !== prevailing) {
+                result.set(note, Pitch.glyphForAlter(note.pitch.alter))
+                inEffect.set(id, note.pitch.alter)
+            } else {
+                result.set(note, undefined)
+            }
+        }
+        return result
+    }
+
+    /** Invalidate every note's accidental — display depends on the active key and prior notes in the bar. */
+    invalidateNoteAccidentals() {
+        this._accidentalGlyphs = null
+        for (const note of this._notes) note.invalidateWidth()
     }
 
     get timeSignature() {
@@ -235,10 +423,6 @@ export class Measure {
 
     get showsTimeSignature() {
         return this._showsTimeSignature
-    }
-
-    get keySignature() {
-        return this._keySignature
     }
 
     get endBarline() {
@@ -285,10 +469,6 @@ export class Measure {
         if (this._showsTimeSignature === value) return
         this._showsTimeSignature = value
         this.rebuildPhysicalElements()
-    }
-
-    setKeySignature(keySignature: KeySignature | undefined) {
-        this._keySignature = keySignature
     }
 
     setEndBarline(barLine: BarlineType | undefined) {
@@ -398,6 +578,9 @@ export class Measure {
             this._beatOffsets.set(note, beat)
             beat += note.duration.effectiveBeats
         }
+        // displayed accidentals depend on note order/content within the bar
+        this._accidentalGlyphs = null
+        for (const note of this._notes) note.invalidateWidth()
         // find tuplets
         const tupletFinder = new TupletFinder(this)
         this._tuplets = tupletFinder.tuplets
@@ -417,8 +600,10 @@ export class Measure {
     private rebuildPhysicalElements() {
         this._physicalElements = compact([
             this._showsClef ? this.clef : undefined,
+            this._showsKeySignature && this.keySignature.drawnAccidentals.length > 0 ? this.keySignature : undefined,
             this._showsTimeSignature ? this._timeSignature : undefined,
             ...this.midMeasureClefs,
+            ...this.midMeasureKeySignatures,
             ...this._notes,
         ])
         const widthSum = sumBy(this._physicalElements, (el) => el.width.total) + this.barlineWidth

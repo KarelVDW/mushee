@@ -14,6 +14,7 @@ import type {
 
 const DIVISIONS = 12 // divisions per quarter note
 
+import type { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 import { Score } from '../Score'
@@ -29,10 +30,14 @@ export class MeasureSerializer {
         // The clef entering this measure is the one *leaving* the previous measure (its last clef), so
         // a clef carried forward across measures isn't re-emitted as a redundant change.
         const previousClefType = previousMeasure?.lastClef.type
+        // Key/clef entering this measure is the one *leaving* the previous measure (its last one), so a
+        // value carried forward isn't re-emitted as a redundant change. Before measure 1, key defaults to C (0).
+        const previousKeyFifths = previousMeasure?.lastKey.fifths ?? 0
         const previousTimeSignature = previousMeasure?.timeSignature
-        // An explicit leading clef is a carry-forward boundary and must be emitted even when its type
-        // equals the carried-in clef, or the boundary is lost on reload (it would deserialize as inherited).
+        // An explicit leading clef/key is a carry-forward boundary and must be emitted even when it equals
+        // the carried-in value, or the boundary is lost on reload (it would deserialize as inherited).
         const clefChanged = this.measure.leadingClefExplicit || previousClefType !== this.measure.clef.type
+        const keyChanged = this.measure.leadingKeyExplicit || previousKeyFifths !== this.measure.keySignature.fifths
         const timeSignatureChanged =
             previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
             previousTimeSignature?.beatType !== this.measure.timeSignature.beatType
@@ -40,20 +45,13 @@ export class MeasureSerializer {
         const isFirstMeasure = previousMeasure === null
         const instrument = this.measure.score.instrument
         const includeTranspose = isFirstMeasure && (instrument.chromaticTranspose !== 0 || instrument.diatonicTranspose !== 0)
-        if (clefChanged || timeSignatureChanged || this.measure.keySignature || includeTranspose) {
+        if (clefChanged || keyChanged || timeSignatureChanged || includeTranspose) {
             entries.push({
                 _type: 'attributes' as const,
                 divisions: DIVISIONS,
                 ...(clefChanged && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
                 ...(timeSignatureChanged && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
-                ...(this.measure.keySignature && {
-                    key: [
-                        {
-                            fifths: this.measure.keySignature.fifths,
-                            ...(this.measure.keySignature.mode && { mode: this.measure.keySignature.mode }),
-                        },
-                    ],
-                }),
+                ...(keyChanged && { key: [MeasureSerializer.keyToMxmlKey(this.measure.keySignature)] }),
                 ...(includeTranspose && {
                     transpose: { chromatic: instrument.chromaticTranspose, diatonic: instrument.diatonicTranspose },
                 }),
@@ -67,10 +65,15 @@ export class MeasureSerializer {
         let nextClef = 0
         const emitClef = (type: ClefType) =>
             entries.push({ _type: 'attributes' as const, divisions: DIVISIONS, clef: [MeasureSerializer.clefToMxmlClef(type)] })
+        const midKeys = this.measure.midMeasureKeySignatures
+        let nextKey = 0
+        const emitKey = (key: KeySignature) =>
+            entries.push({ _type: 'attributes' as const, divisions: DIVISIONS, key: [MeasureSerializer.keyToMxmlKey(key)] })
 
         for (const note of this.measure.notes) {
             const beat = this.measure.beatOffsetOf(note)
             while (nextClef < midClefs.length && midClefs[nextClef].beatPosition <= beat) emitClef(midClefs[nextClef++].type)
+            while (nextKey < midKeys.length && midKeys[nextKey].beatPosition <= beat) emitKey(midKeys[nextKey++])
             const tempoAtBeat = this.measure.tempoAtBeat(beat)
             if (tempoAtBeat) {
                 entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
@@ -99,8 +102,9 @@ export class MeasureSerializer {
                 }),
             })
         }
-        // Clef changes past the last note's beat still carry into the next measure — emit them so they round-trip.
+        // Clef/key changes past the last note's beat still carry into the next measure — emit them so they round-trip.
         while (nextClef < midClefs.length) emitClef(midClefs[nextClef++].type)
+        while (nextKey < midKeys.length) emitKey(midKeys[nextKey++])
 
         if (this.measure.endBarline && this.measure.endBarline !== 'single') {
             entries.push({
@@ -128,6 +132,10 @@ export class MeasureSerializer {
     private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number; clefOctaveChange?: number } {
         const def = CLEF_DEFS[clef]
         return { sign: def.sign, line: def.line, ...(def.octaveChange !== 0 && { clefOctaveChange: def.octaveChange }) }
+    }
+
+    private static keyToMxmlKey(key: KeySignature): { fifths: number; mode?: string } {
+        return { fifths: key.fifths, ...(key.mode && { mode: key.mode }) }
     }
 
     private static barlineTypeToMxmlBarStyle(type: BarlineType): MxmlBarStyle {

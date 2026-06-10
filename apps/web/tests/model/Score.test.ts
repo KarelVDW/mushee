@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
 import { Instrument } from '@/model/Instrument'
-import { KeySignature } from '@/model/KeySignature'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
@@ -258,10 +257,10 @@ describe('Score', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            m.setKeySignature(new KeySignature(0))
+            m.setKeySignature(0, 0) // explicit C major on the leading key
             score.setInstrument(Instrument.Trumpet)
             // Concert C major (0) → trumpet writes D major (2 fifths)
-            expect(m.keySignature?.fifths).toBe(2)
+            expect(m.keySignature.fifths).toBe(2)
         })
 
         it('does nothing when switching to the same instrument', () => {
@@ -398,6 +397,132 @@ describe('Score', () => {
             // The intent is not destroyed: reverting the leading clef re-exposes the mid-measure change.
             score.setClef(m.firstNote, 'treble')
             expect(m.midMeasureClefs.map((c) => c.type)).toEqual(['bass'])
+        })
+    })
+
+    describe('setKeySignature', () => {
+        it('sets the leading key when the active note is at beat 0', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setKeySignature(m.firstNote, 2)
+            expect(m.keySignature.fifths).toBe(2)
+        })
+
+        it('adds a mid-measure key change at the active note beat', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setKeySignature(m.noteAtBeat(2), 1)
+            expect(m.keySignature.fifths).toBe(0)
+            expect(m.keyAtOrBefore(2).fifths).toBe(1)
+        })
+
+        it('propagates a key change forward to following measures', () => {
+            const score = makeScore(2)
+            score.setKeySignature(score.measures[0].firstNote, 3)
+            expect(score.measures[1].keySignature.fifths).toBe(3)
+            expect(score.measures[1].showsKeySignature).toBe(false) // carried, not redundantly displayed
+        })
+
+        it('stops propagation at the next explicit key change', () => {
+            const score = makeScore(3)
+            score.setKeySignature(score.measures[0].firstNote, 3)
+            score.setKeySignature(score.measures[2].firstNote, -2)
+            expect(score.measures[0].keySignature.fifths).toBe(3)
+            expect(score.measures[1].keySignature.fifths).toBe(3) // carries from measure 0
+            expect(score.measures[2].keySignature.fifths).toBe(-2) // explicit boundary
+        })
+
+        it('demotes a leading key to inherited when set back to the carried value', () => {
+            const score = makeScore(2)
+            const second = score.measures[1]
+            score.setKeySignature(second.firstNote, 2) // explicit boundary
+            expect(second.leadingKeyExplicit).toBe(true)
+            expect(second.showsKeySignature).toBe(true)
+            score.setKeySignature(second.firstNote, 0) // back to the carried C major
+            expect(second.leadingKeyExplicit).toBe(false)
+            expect(second.keySignature.fifths).toBe(0)
+            expect(second.showsKeySignature).toBe(false)
+        })
+
+        it('repositions accidentals without moving notes when the key changes', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.firstNote
+            if (!note) throw new Error('expected firstNote')
+            score.replace([note], [pitched('F', 5)]) // natural F
+            const target = m.firstNote
+            if (!target) throw new Error('expected note')
+            const lineBefore = target.line
+            expect(target.displayAccidentalGlyph).toBeUndefined() // C major: natural F shows nothing
+            score.setKeySignature(target, 1) // G major: F is now sharp by key
+            expect(target.line).toBe(lineBefore) // position unchanged
+            expect(target.displayAccidentalGlyph).toBe('accidentalNatural') // a natural is added
+        })
+
+        it('ignores a null note', () => {
+            const score = makeScore(1)
+            expect(() => score.setKeySignature(null, 2)).not.toThrow()
+        })
+
+        it('keeps a relative major↔minor change (same fifths, different mode) as an explicit boundary', () => {
+            const score = makeScore(2)
+            score.setKeySignature(score.measures[0].firstNote, 0, 'minor') // A minor (0 fifths)
+            score.setKeySignature(score.measures[1].firstNote, 0, 'major') // C major: same fifths, different mode
+            expect(score.measures[1].leadingKeyExplicit).toBe(true)
+            expect(score.measures[1].keySignature.mode).toBe('major')
+        })
+
+        describe('cancellation naturals', () => {
+            it('draws naturals for the old accidentals when switching back to C major', () => {
+                const score = makeScore(2)
+                score.setKeySignature(score.measures[0].firstNote, 1) // G major (F♯)
+                score.setKeySignature(score.measures[1].firstNote, 0) // back to C major
+                const second = score.measures[1]
+                const drawn = second.keySignature.drawnAccidentals
+                expect(drawn).toHaveLength(1)
+                expect(drawn[0].glyphName).toBe('accidentalNatural')
+                expect(drawn[0].name).toBe('F')
+                expect(second.showsKeySignature).toBe(true)
+                // The cancellation key is laid out (spaced) even though C major has no sharps/flats of its own.
+                expect(() => second.layout.getXForElement(second.keySignature)).not.toThrow()
+            })
+
+            it('draws no cancellation naturals when switching to a non-C key (D major → G major)', () => {
+                const score = makeScore(2)
+                score.setKeySignature(score.measures[0].firstNote, 2) // D major (F♯, C♯)
+                score.setKeySignature(score.measures[1].firstNote, 1) // G major (F♯)
+                const drawn = score.measures[1].keySignature.drawnAccidentals
+                expect(drawn.map((a) => [a.glyphName, a.name])).toEqual([['accidentalSharp', 'F']]) // just G major's F♯
+            })
+
+            it('draws no naturals when the key carries forward unchanged', () => {
+                const score = makeScore(2)
+                score.setKeySignature(score.measures[0].firstNote, 1) // G major, carries into measure 1
+                expect(score.measures[1].keySignature.drawnAccidentals.every((a) => a.glyphName !== 'accidentalNatural')).toBe(true)
+            })
+
+            it('draws naturals for a mid-measure change back to C major', () => {
+                const score = makeScore(1)
+                const m = score.firstMeasure
+                if (!m) throw new Error('expected firstMeasure')
+                score.setKeySignature(m.firstNote, 1) // leading G major
+                score.setKeySignature(m.noteAtBeat(2), 0) // mid-measure back to C
+                const midKey = m.keyAtBeat(2)
+                if (!midKey) throw new Error('expected mid-measure key')
+                expect(midKey.drawnAccidentals.map((a) => a.glyphName)).toEqual(['accidentalNatural'])
+            })
+
+            it('refreshes a later cancellation when an earlier key changes', () => {
+                const score = makeScore(2)
+                score.setKeySignature(score.measures[0].firstNote, 1) // G major
+                score.setKeySignature(score.measures[1].firstNote, 0) // C major cancels F♯
+                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(1) // 1 natural (caches layout)
+                score.setKeySignature(score.measures[0].firstNote, 2) // earlier key → D major (F♯, C♯)
+                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(2) // now cancels both
+            })
         })
     })
 })

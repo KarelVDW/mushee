@@ -2,6 +2,7 @@ import type { TieType } from '@/components/notation/types'
 
 import type { Clef } from './Clef'
 import { Duration } from './Duration'
+import type { KeySignature } from './KeySignature'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
@@ -35,6 +36,12 @@ export class Note {
     }
 
     invalidateLayout() {
+        this._layout = null
+    }
+
+    /** Clear cached width (and layout, which depends on it) — the displayed accidental, hence width, is key-dependent. */
+    invalidateWidth() {
+        this._width = null
         this._layout = null
     }
 
@@ -80,10 +87,25 @@ export class Note {
         return this.measure.clefAtOrBefore(this.measure.beatOffsetOf(this))
     }
 
+    /** The key signature in effect at this note (the active key at its beat). */
+    get keySignature(): KeySignature {
+        return this.measure.keyAtOrBefore(this.measure.beatOffsetOf(this))
+    }
+
     get line(): number {
         if (!this.pitch) return this.duration.restLine
         if (this._previewClef) return this._previewClef.lineFor(this.pitch)
         return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
+    }
+
+    /**
+     * The accidental glyph drawn for this note (key- and measure-aware), or undefined if none. A detached
+     * or preview note has no measure context, so it falls back to its pitch's own accidental.
+     */
+    get displayAccidentalGlyph(): string | undefined {
+        if (!this.pitch) return undefined
+        if (this._previewClef || !this._measure) return this.pitch.accidentalGlyph
+        return this.measure.accidentalGlyphFor(this)
     }
 
     get tiesForward(): boolean {

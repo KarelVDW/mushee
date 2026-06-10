@@ -109,14 +109,18 @@ export default function ScoreEditorPage() {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault()
                 if (activeNote) {
-                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.raised() })])
+                    const raised = activeNote.pitch?.raised()
+                    const pitch = raised ? activeNote.keySignature.spell(raised) : undefined
+                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch })])
                     setActiveNote(newNote)
                     saveToApi({ score })
                 }
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault()
                 if (activeNote) {
-                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.lowered() })])
+                    const lowered = activeNote.pitch?.lowered()
+                    const pitch = lowered ? activeNote.keySignature.spell(lowered) : undefined
+                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch })])
                     setActiveNote(newNote)
                     saveToApi({ score })
                 }
@@ -196,6 +200,15 @@ export default function ScoreEditorPage() {
         (type: ClefType) => {
             if (!activeNote || !score) return
             score.setClef(activeNote, type)
+            saveToApi({ score })
+        },
+        [activeNote, score, saveToApi],
+    )
+
+    const handleKeySet = useCallback(
+        (fifths: number) => {
+            if (!activeNote || !score) return
+            score.setKeySignature(activeNote, fifths)
             saveToApi({ score })
         },
         [activeNote, score, saveToApi],
@@ -494,7 +507,7 @@ export default function ScoreEditorPage() {
                 </div>
             </header>
             <ControlBar
-                accidental={activeNote?.pitch?.accidental}
+                accidental={activeNote?.pitch?.accidentalValue}
                 duration={activeNote?.duration.type}
                 accidentalDisabled={activeNote?.isRest ?? true}
                 onAccidentalChange={handleAccidentalChange}
@@ -509,6 +522,8 @@ export default function ScoreEditorPage() {
                 onTempoSet={handleTempoSet}
                 clef={activeNote?.clef.type ?? 'treble'}
                 onClefSet={handleClefSet}
+                keyFifths={activeNote?.keySignature.fifths ?? 0}
+                onKeySet={handleKeySet}
                 selectionDisabled={!activeNote}
                 playbackState={playbackState}
                 onPlayToggle={handlePlayToggle}

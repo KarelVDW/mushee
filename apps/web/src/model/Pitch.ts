@@ -47,6 +47,24 @@ export class Pitch {
         return new Pitch({ name: this.name, alter: Pitch.accidentalToAlter(accidental), accidental, octave: this.octave })
     }
 
+    /** SMuFL glyph name for a given alteration (0 → natural, shown only when it cancels a prior accidental). */
+    static glyphForAlter(alter: number): string | undefined {
+        switch (alter) {
+            case 0:
+                return 'accidentalNatural'
+            case 1:
+                return 'accidentalSharp'
+            case -1:
+                return 'accidentalFlat'
+            case 2:
+                return 'accidentalDoubleSharp'
+            case -2:
+                return 'accidentalDoubleFlat'
+            default:
+                return undefined
+        }
+    }
+
     static accidentalToAlter(accidental: string | undefined): number {
         switch (accidental) {
             case '#':
@@ -62,6 +80,15 @@ export class Pitch {
             default:
                 return 0
         }
+    }
+
+    /**
+     * The accidental token ('#', 'b', '##', 'bb', or undefined for natural) implied by this pitch's
+     * alteration — what the editor's accidental control reflects, independent of whether an accidental
+     * is actually drawn (a key-spelled note carries the alteration but no stored accidental glyph).
+     */
+    get accidentalValue(): string | undefined {
+        return Pitch.alterToAccidental(this.alter)
     }
 
     get accidentalGlyph(): string | undefined {
@@ -116,12 +143,13 @@ export class Pitch {
         return new Pitch({
             name: newName,
             alter: newAlter,
-            accidental: Pitch.alterToAccidentalGlyph(newAlter),
+            accidental: Pitch.alterToAccidental(newAlter),
             octave: newOctave,
         })
     }
 
-    private static alterToAccidentalGlyph(alter: number): string | undefined {
+    /** Accidental token for an alteration ('#', 'b', '##', 'bb', or undefined for natural). Inverse of accidentalToAlter. */
+    static alterToAccidental(alter: number): string | undefined {
         switch (alter) {
             case 1:
                 return '#'

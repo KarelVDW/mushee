@@ -168,9 +168,10 @@ export const Score = memo(function Score({
             }
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
             const hoverLine = getLineForY(localY)
-            // hoverLine is a rendered staff line; convert to a pitch under the note's active clef
+            // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
+            // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
             if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
-            else setGhostNote(note.clone({ pitch: note.clef.pitchForLine(hoverLine) }).previewUnder(note.clef))
+            else setGhostNote(note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }).previewUnder(note.clef))
         },
         [clientToSvg, selectedNote],
     )

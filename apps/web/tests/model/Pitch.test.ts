@@ -88,4 +88,17 @@ describe('Pitch', () => {
         expect(restored.name).toBe(original.name)
         expect(restored.octave).toBe(original.octave)
     })
+
+    describe('accidentalValue (control token from alteration)', () => {
+        it('derives from the alteration, not the stored accidental glyph', () => {
+            // A key-spelled note carries the alteration but no stored accidental.
+            expect(new Pitch({ name: 'F', octave: 4, alter: 1 }).accidentalValue).toBe('#')
+            expect(new Pitch({ name: 'B', octave: 4, alter: -1 }).accidentalValue).toBe('b')
+            expect(new Pitch({ name: 'C', octave: 4 }).accidentalValue).toBeUndefined()
+        })
+
+        it('matches the stored accidental for explicitly-altered notes', () => {
+            expect(new Pitch({ name: 'F', octave: 5, accidental: '#', alter: 1 }).accidentalValue).toBe('#')
+        })
+    })
 })

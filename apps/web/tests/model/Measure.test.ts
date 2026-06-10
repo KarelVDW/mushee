@@ -30,12 +30,12 @@ describe('Measure', () => {
             expect(m.beams).toEqual([])
         })
 
-        it('exposes optional key signature and end barline', () => {
+        it('exposes the leading key signature and end barline', () => {
             const score = new Score()
             const { clefType, timeSignature } = defaults()
-            const k = new KeySignature(2)
-            const m = new Measure(score, clefType, timeSignature, { keySignature: k, endBarline: 'end' })
-            expect(m.keySignature).toBe(k)
+            const m = new Measure(score, clefType, timeSignature, { keyFifths: 2, endBarline: 'end' })
+            expect(m.keySignature.fifths).toBe(2)
+            expect(m.keySignature.beatPosition).toBe(0)
             expect(m.endBarline).toBe('end')
         })
 
@@ -259,6 +259,85 @@ describe('Measure', () => {
             // leading treble (shown on the only measure) + the mid-measure bass change
             expect(clefsInLayout).toHaveLength(2)
             expect(() => m.layout.getXForElement(m.clefAtBeat(2) as Clef)).not.toThrow()
+        })
+    })
+
+    describe('key signature management', () => {
+        it('seeds a leading key (default C major) at beat 0 from the constructor', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.keySignatures).toHaveLength(1)
+            expect(m.keySignature.fifths).toBe(0)
+            expect(m.keySignature.beatPosition).toBe(0)
+        })
+
+        it('honours an explicit leading key from the constructor', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 2 })
+            expect(m.keySignature.fifths).toBe(2)
+        })
+
+        it('addKeySignature appends a mid-measure key change', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addKeySignature(2, -3)
+            expect(m.keyAtBeat(2)?.fifths).toBe(-3)
+        })
+
+        it('setKeySignature(0) replaces the leading key', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.setKeySignature(0, 1)
+            expect(m.keySignatures.filter((k) => k.beatPosition === 0)).toHaveLength(1)
+            expect(m.keySignature.fifths).toBe(1)
+        })
+
+        it('keyAtOrBefore returns the active key at a beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addKeySignature(2, 1)
+            expect(m.keyAtOrBefore(0).fifths).toBe(0)
+            expect(m.keyAtOrBefore(1).fifths).toBe(0)
+            expect(m.keyAtOrBefore(2).fifths).toBe(1)
+            expect(m.keyAtOrBefore(3).fifths).toBe(1)
+        })
+
+        it('lastKey is the highest-beat key (carried into the next measure)', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.lastKey.fifths).toBe(0)
+            m.addKeySignature(2, -2)
+            expect(m.lastKey.fifths).toBe(-2)
+        })
+
+        it('midMeasureKeySignatures excludes a change equal to the key already in effect', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
+            m.addKeySignature(2, 1) // same as leading G major → a no-op, not drawn
+            expect(m.midMeasureKeySignatures).toHaveLength(0)
+            m.addKeySignature(3, 2) // a real change
+            expect(m.midMeasureKeySignatures.map((k) => k.fifths)).toEqual([2])
+        })
+
+        it('includes a mid-measure key in physical elements so notes make room', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            m.setKeySignature(2, 3)
+            const keysInLayout = m.physicalElements.filter((el) => el instanceof KeySignature)
+            expect(keysInLayout.length).toBeGreaterThanOrEqual(1)
+            expect(() => m.layout.getXForElement(m.keyAtBeat(2) as KeySignature)).not.toThrow()
+        })
+
+        it('repositions key-signature accidentals when the clef changes', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            m.setKeySignature(0, 1) // G major: one sharp
+            const trebleY = m.keySignature.layout.accidentals[0].y
+            m.setClef(0, 'bass')
+            const bassY = m.keySignature.layout.accidentals[0].y
+            expect(bassY).not.toBe(trebleY) // the F# sits on a different line under the bass clef
         })
     })
 

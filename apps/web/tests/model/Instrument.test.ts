@@ -53,35 +53,20 @@ describe('Pitch.transposed', () => {
     })
 })
 
-describe('KeySignature.transposed', () => {
+describe('KeySignature.transposedFifths', () => {
     it('shifts C major (0 fifths) up to D major (2 fifths) via flute → trumpet', () => {
         // Flute (chromatic 0, diatonic 0) → Trumpet (chromatic -2, diatonic -1)
-        // delta = old - new = +2 chromatic, +1 diatonic
-        // expected fifths shift = 7*2 - 12*1 = 2
-        const ks = new KeySignature(0)
-        const transposed = ks.transposed(2, 1)
-        expect(transposed.fifths).toBe(2)
+        // delta = old - new = +2 chromatic, +1 diatonic; expected fifths shift = 7*2 - 12*1 = 2
+        expect(KeySignature.transposedFifths(0, 2, 1)).toBe(2)
     })
 
     it('shifts G major (1 sharp) for trumpet → French horn', () => {
-        // Trumpet (-2, -1) → French Horn (-7, -4)
-        // delta = old - new = (-2) - (-7) = 5 chromatic, (-1) - (-4) = 3 diatonic
-        // fifths shift = 7*5 - 12*3 = 35 - 36 = -1
-        const ks = new KeySignature(1)
-        const transposed = ks.transposed(5, 3)
-        expect(transposed.fifths).toBe(0)
+        // Trumpet (-2, -1) → French Horn (-7, -4): delta = 5 chromatic, 3 diatonic; shift = 7*5 - 12*3 = -1
+        expect(KeySignature.transposedFifths(1, 5, 3)).toBe(0)
     })
 
     it('octave transposition does not change the key signature', () => {
-        const ks = new KeySignature(-3)
-        const transposed = ks.transposed(12, 7)
-        expect(transposed.fifths).toBe(-3)
-    })
-
-    it('preserves mode', () => {
-        const ks = new KeySignature(2, 'major')
-        const transposed = ks.transposed(-2, -1)
-        expect(transposed.mode).toBe('major')
+        expect(KeySignature.transposedFifths(-3, 12, 7)).toBe(-3)
     })
 })
 

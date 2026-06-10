@@ -13,7 +13,6 @@ import type {
 
 import { Duration } from '../Duration'
 import { Instrument } from '../Instrument'
-import { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 import { Pitch } from '../Pitch'
@@ -44,17 +43,21 @@ export class ScoreDeserializer {
         if (!part) return score
 
         let activeClefType: ClefType = 'treble'
+        let activeKeyFifths = 0
+        let activeKeyMode: string | undefined
         let activeTimeSignature: TimeSignature = new TimeSignature(4, 4)
         for (let mi = 0; mi < part.measures.length; mi++) {
             const mxmlMeasure = part.measures[mi]
             let leadingClefType: ClefType | undefined
+            let leadingKeyFifths: number | undefined
+            let leadingKeyMode: string | undefined
             let timeSignature: TimeSignature | undefined
-            let keySignature: KeySignature | undefined
             let endBarline: BarlineType | undefined
             let pendingTempo: number | undefined
             const notes: Note[] = []
             const tempos: Array<{ noteIndex: number; bpm: number }> = []
             const clefChanges: Array<{ noteIndex: number; type: ClefType }> = []
+            const keyChanges: Array<{ noteIndex: number; fifths: number; mode?: string }> = []
 
             for (const entry of mxmlMeasure.entries) {
                 switch (entry._type) {
@@ -69,7 +72,13 @@ export class ScoreDeserializer {
                         const t = entry.time?.[0]
                         if (t) timeSignature = new TimeSignature(Number(t.beats), Number(t.beatType))
                         const k = entry.key?.[0]
-                        if (k) keySignature = new KeySignature(k.fifths, k.mode)
+                        if (k) {
+                            // A key before any notes is the measure's leading key; after notes, a mid-measure change.
+                            if (notes.length === 0) {
+                                leadingKeyFifths = k.fifths
+                                leadingKeyMode = k.mode
+                            } else keyChanges.push({ noteIndex: notes.length, fifths: k.fifths, mode: k.mode })
+                        }
                         break
                     }
                     case 'barline': {
@@ -92,12 +101,18 @@ export class ScoreDeserializer {
             }
 
             if (leadingClefType) activeClefType = leadingClefType
+            if (leadingKeyFifths !== undefined) {
+                activeKeyFifths = leadingKeyFifths
+                activeKeyMode = leadingKeyMode
+            }
             if (timeSignature) activeTimeSignature = timeSignature
             const measure = new Measure(score, activeClefType, activeTimeSignature, {
-                keySignature,
+                keyFifths: activeKeyFifths,
+                keyMode: activeKeyMode,
                 endBarline,
-                // A clef declared in this measure's attributes is an explicit carry-forward boundary.
+                // A clef/key declared in this measure's attributes is an explicit carry-forward boundary.
                 leadingClefExplicit: leadingClefType !== undefined,
+                leadingKeyExplicit: leadingKeyFifths !== undefined,
             })
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
@@ -112,6 +127,14 @@ export class ScoreDeserializer {
                     // measure but carries forward — anchor it just past the last note so it becomes lastClef.
                     const lastNote = notes[notes.length - 1]
                     measure.addClef(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, type)
+                }
+            }
+            for (const { noteIndex, fifths, mode } of keyChanges) {
+                const note = notes[noteIndex]
+                if (note) measure.addKeySignature(measure.beatOffsetOf(note), fifths, mode)
+                else if (notes.length > 0) {
+                    const lastNote = notes[notes.length - 1]
+                    measure.addKeySignature(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, fifths, mode)
                 }
             }
             score.addMeasure(undefined, measure)

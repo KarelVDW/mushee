@@ -64,15 +64,15 @@ export class Score {
             const targets: Note[] = []
             const values: Note[] = []
             for (const measure of this.measures) {
-                if (measure.keySignature) {
-                    measure.setKeySignature(measure.keySignature.transposed(deltaChromatic, deltaDiatonic))
-                }
+                measure.transposeKeySignatures(deltaChromatic, deltaDiatonic)
                 for (const note of measure.notes) {
                     targets.push(note)
                     values.push(note.clone(note.pitch ? { pitch: note.pitch.transposed(deltaChromatic, deltaDiatonic) } : {}))
                 }
             }
             if (targets.length > 0) this.replace(targets, values)
+            // Re-propagate the transposed key signatures forward (inherited leading keys follow the explicit ones).
+            this._rebuildRows()
         }
 
         this._instrument = instrument
@@ -189,9 +189,14 @@ export class Score {
     addMeasure(index = this.measures.length, measure?: Measure) {
         if (!measure) {
             const previous = this.measures[index - 1]
+            // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
             const inheritedClefType = previous?.lastClef.type ?? 'treble'
+            const inheritedKey = previous?.lastKey
             const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
-            measure = new Measure(this, inheritedClefType, inheritedTimeSignature)
+            measure = new Measure(this, inheritedClefType, inheritedTimeSignature, {
+                keyFifths: inheritedKey?.fifths ?? 0,
+                keyMode: inheritedKey?.mode,
+            })
         }
         this.measures.splice(index, 0, measure)
         this._rebuildIndexMap()
@@ -243,13 +248,24 @@ export class Score {
             this._rows = []
             this._rowByMeasure.clear()
             let prevClefType: ClefType | undefined
+            let prevKeyFifths: number | undefined
             let prevTimeSignature: TimeSignature | undefined
             let activeClefType: ClefType = 'treble'
+            let activeKeyFifths = 0
+            let activeKeyMode: string | undefined
             for (const measure of this.measures) {
                 if (measure.leadingClefExplicit) activeClefType = measure.clef.type
                 else measure.setLeadingClefType(activeClefType)
 
+                if (measure.leadingKeyExplicit) {
+                    activeKeyFifths = measure.keySignature.fifths
+                    activeKeyMode = measure.keySignature.mode
+                } else measure.setLeadingKey(activeKeyFifths, activeKeyMode)
+                // Cancellation naturals depend on the (now-finalized) preceding measure's key, so refresh here.
+                measure.refreshKeySignatures()
+
                 measure.setShowsClef(prevClefType === undefined || prevClefType !== measure.clef.type)
+                measure.setShowsKeySignature(prevKeyFifths === undefined || prevKeyFifths !== measure.keySignature.fifths)
                 measure.setShowsTimeSignature(
                     !prevTimeSignature ||
                         prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
@@ -260,11 +276,15 @@ export class Score {
                     row = new Row(this, this._rows.length)
                     this._rows.push(row)
                     measure.setShowsClef(true)
+                    measure.setShowsKeySignature(true)
                 }
                 row.addMeasure(measure)
                 this._rowByMeasure.set(measure, row)
                 activeClefType = measure.lastClef.type
+                activeKeyFifths = measure.lastKey.fifths
+                activeKeyMode = measure.lastKey.mode
                 prevClefType = activeClefType
+                prevKeyFifths = activeKeyFifths
                 prevTimeSignature = measure.timeSignature
             }
         } finally {
@@ -314,6 +334,22 @@ export class Score {
             if (type === carriedIn) measure.makeLeadingClefInherited()
             else measure.setClef(0, type)
         } else measure.setClef(beat, type)
+        this.markMeasureDirty(measure)
+        this._rebuildRows()
+        this.onChange()
+    }
+
+    setKeySignature(note: Note | null | undefined, fifths: number, mode?: string) {
+        if (!note) return
+        const measure = note.measure
+        const beat = measure.beatOffsetOf(note)
+        if (beat === 0) {
+            const carried = this.getPreviousMeasure(measure)?.lastKey
+            // Demote to inherited only when nothing changes; a relative major↔minor switch (same fifths,
+            // different mode) is still a real boundary and must be kept explicit so the mode is preserved.
+            if (fifths === (carried?.fifths ?? 0) && mode === carried?.mode) measure.makeLeadingKeyInherited()
+            else measure.setKeySignature(0, fifths, mode)
+        } else measure.setKeySignature(beat, fifths, mode)
         this.markMeasureDirty(measure)
         this._rebuildRows()
         this.onChange()

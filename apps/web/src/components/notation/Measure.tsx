@@ -5,6 +5,7 @@ import type { Measure as MeasureModel, Note } from '@/model'
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
+import { KeySignature } from './KeySignature'
 import { NoteGroup } from './NoteGroup'
 import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
@@ -31,6 +32,19 @@ export const Measure = memo(function Measure({ measure, selectedNote, hoveredNot
             {measure.midMeasureClefs.map((clef) => (
                 <g key={clef.id} transform={`translate(${measure.layout.getXForElement(clef)}, 0)`}>
                     <Clef clef={clef} layoutId={clef.layout.id} />
+                </g>
+            ))}
+
+            {measure.showsKeySignature && measure.keySignature.drawnAccidentals.length > 0 && (
+                <g transform={`translate(${measure.layout.getXForElement(measure.keySignature)}, 0)`}>
+                    <KeySignature keySignature={measure.keySignature} layoutId={measure.keySignature.layout.id} />
+                </g>
+            )}
+
+            {/* Mid-measure key changes — like mid-measure clefs, laid out so notes make room */}
+            {measure.midMeasureKeySignatures.map((key) => (
+                <g key={key.id} transform={`translate(${measure.layout.getXForElement(key)}, 0)`}>
+                    <KeySignature keySignature={key} layoutId={key.layout.id} />
                 </g>
             ))}
 

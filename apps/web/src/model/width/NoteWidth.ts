@@ -17,7 +17,8 @@ export class NoteWidth implements PhysicalWidth {
 
     constructor(note: Note) {
         let contentWidth = this.ledgerLineExtension * 2 + this.noteHeadWidth
-        if (note.pitch?.accidentalGlyph) contentWidth += this.gap + getGlyphWidth(note.pitch.accidentalGlyph)
+        const accidentalGlyph = note.displayAccidentalGlyph
+        if (accidentalGlyph) contentWidth += this.gap + getGlyphWidth(accidentalGlyph)
         if (note.duration.dots) contentWidth += this.gap + this.dotSpacing * note.duration.dots
         this.content = contentWidth
         this.total = this.paddingLeft + this.content + this.paddingRight

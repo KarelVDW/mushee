@@ -11,6 +11,9 @@ import {
     getGlyphWidth,
     Glyph,
     GLYPH_SCALE,
+    KeySignatureGlyph,
+    keySignatureLabel,
+    KeySignaturePopover,
     TempoPopover,
 } from '@/components/notation'
 import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
@@ -63,6 +66,8 @@ interface ControlBarProps {
     onTempoSet: (bpm: number) => void
     clef: ClefType
     onClefSet: (clef: ClefType) => void
+    keyFifths: number
+    onKeySet: (fifths: number) => void
     selectionDisabled: boolean
     playbackState: 'stopped' | 'playing' | 'paused'
     onPlayToggle: () => void
@@ -89,6 +94,8 @@ export function ControlBar({
     onTempoSet,
     clef,
     onClefSet,
+    keyFifths,
+    onKeySet,
     selectionDisabled,
     playbackState,
     onPlayToggle,
@@ -154,9 +161,10 @@ export function ControlBar({
                 </TransportBtn>
             </div>
 
-            {/* RIGHT — clef + tempo readout / editor */}
+            {/* RIGHT — clef + key + tempo readout / editor */}
             <div className="flex justify-end items-center gap-2">
                 <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} />
+                <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} />
                 <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} />
             </div>
         </div>
@@ -187,6 +195,39 @@ function ClefControl({ clef, onSet, disabled }: ClefControlProps) {
                     className="right-0 top-[calc(100%+0.5rem)]"
                     onSelect={(type) => {
                         onSet(type)
+                        setOpen(false)
+                    }}
+                    onDismiss={() => setOpen(false)}
+                />
+            )}
+        </div>
+    )
+}
+
+// --- Key signature control ---
+
+interface KeySignatureControlProps {
+    fifths: number
+    onSet: (fifths: number) => void
+    disabled: boolean
+}
+
+function KeySignatureControl({ fifths, onSet, disabled }: KeySignatureControlProps) {
+    const anchorRef = useRef<HTMLDivElement | null>(null)
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div ref={anchorRef} className="relative">
+            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${keySignatureLabel(fifths)}`}>
+                {fifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureGlyph fifths={fifths} size={24} />}
+            </ChipToggle>
+            {open && (
+                <KeySignaturePopover
+                    active={fifths}
+                    anchorRef={anchorRef}
+                    className="right-0 top-[calc(100%+0.5rem)]"
+                    onSelect={(value) => {
+                        onSet(value)
                         setOpen(false)
                     }}
                     onDismiss={() => setOpen(false)}
