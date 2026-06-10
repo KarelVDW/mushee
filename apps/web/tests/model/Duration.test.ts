@@ -43,11 +43,27 @@ describe('Duration', () => {
         expect(new Duration({ type: '8' }).hasSecondaryBeam).toBe(false)
     })
 
-    it('returns correct rest and notehead glyphs', () => {
+    it('returns correct rest glyphs for every type', () => {
         expect(new Duration({ type: 'w' }).restGlyph).toBe('restWhole')
+        expect(new Duration({ type: 'h' }).restGlyph).toBe('restHalf')
+        expect(new Duration({ type: 'q' }).restGlyph).toBe('restQuarter')
+        expect(new Duration({ type: '8' }).restGlyph).toBe('rest8th')
         expect(new Duration({ type: '16' }).restGlyph).toBe('rest16th')
+    })
+
+    it('returns correct notehead glyphs (whole, half, and filled for the rest)', () => {
         expect(new Duration({ type: 'w' }).noteheadGlyph).toBe('noteheadWhole')
+        expect(new Duration({ type: 'h' }).noteheadGlyph).toBe('noteheadHalf')
         expect(new Duration({ type: 'q' }).noteheadGlyph).toBe('noteheadBlack')
+        expect(new Duration({ type: '8' }).noteheadGlyph).toBe('noteheadBlack')
+    })
+
+    it('restLine sits a line higher for a whole rest than for shorter rests', () => {
+        expect(new Duration({ type: 'w' }).restLine).toBe(4)
+        expect(new Duration({ type: 'h' }).restLine).toBe(3)
+        expect(new Duration({ type: 'q' }).restLine).toBe(3)
+        expect(new Duration({ type: '8' }).restLine).toBe(3)
+        expect(new Duration({ type: '16' }).restLine).toBe(3)
     })
 
     it('flagGlyph returns flag only for 8th/16th, undefined otherwise', () => {
@@ -55,6 +71,7 @@ describe('Duration', () => {
         expect(new Duration({ type: '8' }).flagGlyph('up')).toBe('flag8thUp')
         expect(new Duration({ type: '8' }).flagGlyph('down')).toBe('flag8thDown')
         expect(new Duration({ type: '16' }).flagGlyph('up')).toBe('flag16thUp')
+        expect(new Duration({ type: '16' }).flagGlyph('down')).toBe('flag16thDown')
     })
 
     describe('tripletDivision', () => {
@@ -74,6 +91,13 @@ describe('Duration', () => {
             expect(divisions?.every((d) => d.dots === 1)).toBe(true)
             const total = (divisions ?? []).reduce((sum, d) => sum + d.effectiveBeats, 0)
             expect(total).toBeCloseTo(1.5)
+        })
+
+        it('divides each supported value into three of the next-shorter value', () => {
+            expect(new Duration({ type: 'w' }).tripletDivision()?.every((d) => d.type === 'h')).toBe(true)
+            expect(new Duration({ type: 'h' }).tripletDivision()?.every((d) => d.type === 'q')).toBe(true)
+            expect(new Duration({ type: 'q' }).tripletDivision()?.every((d) => d.type === '8')).toBe(true)
+            expect(new Duration({ type: '8' }).tripletDivision()?.every((d) => d.type === '16')).toBe(true)
         })
 
         it('returns null for a 16th — no shorter value exists', () => {
@@ -125,6 +149,19 @@ describe('Duration', () => {
             const ds = Duration.fromBeats(0.25)
             expect(ds).toHaveLength(1)
             expect(ds[0].type).toBe('16')
+        })
+
+        it('stops when the remainder is too small to match any value', () => {
+            // 0.1 beat is below the smallest value (16th = 0.25) but above the 0.001 loop guard,
+            // so no value matches and decomposition halts with nothing produced.
+            expect(Duration.fromBeats(0.1)).toEqual([])
+        })
+
+        it('drops a sub-16th remainder left after a larger match', () => {
+            // 1.1 beats yields a quarter (1.0); the leftover 0.1 matches nothing and is dropped.
+            const ds = Duration.fromBeats(1.1)
+            expect(ds).toHaveLength(1)
+            expect(ds[0].type).toBe('q')
         })
     })
 })

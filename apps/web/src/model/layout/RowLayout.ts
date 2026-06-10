@@ -44,6 +44,7 @@ export class RowLayout {
     }
 
     get width(): number {
+        /* v8 ignore next -- defensive: measureData is keyed by exactly this.row.measures, so the lookup and ?? 0 fallback always hit */
         return sumBy(this.row.measures, (m) => this.measureData.get(m)?.width ?? 0)
     }
 
@@ -62,6 +63,7 @@ export class RowLayout {
     getMeasureForX(x: number): Measure | null {
         for (const measure of this.row.measures) {
             const data = this.measureData.get(measure)
+            /* v8 ignore next -- defensive: measureData is keyed by exactly this.row.measures, so data is always present */
             if (!data) continue
             if (x >= data.measureX && x < data.measureX + data.width) return measure
         }

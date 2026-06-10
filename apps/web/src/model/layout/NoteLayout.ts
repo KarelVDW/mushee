@@ -34,11 +34,13 @@ export class NoteLayout {
             const noteLine = note.line
             if (noteLine < 1) {
                 for (let l = 0; l >= noteLine; l--) {
+                    /* v8 ignore else -- l is integer-stepped from 0, so l % 1 === 0 is always true */
                     if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
                 }
             }
             if (noteLine > 5) {
                 for (let l = 6; l <= noteLine; l++) {
+                    /* v8 ignore else -- l is integer-stepped from 6, so l % 1 === 0 is always true */
                     if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
                 }
             }

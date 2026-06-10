@@ -1,0 +1,130 @@
+{
+  "partList": {
+    "scoreParts": [
+      {
+        "id": "P1",
+        "partName": "Piano",
+        "scoreInstrument": {
+          "id": "P1-I1",
+          "instrumentName": "Piano"
+        },
+        "midiInstrument": {
+          "id": "P1-I1",
+          "midiProgram": 1
+        }
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "P1",
+      "measures": [
+        {
+          "number": "1",
+          "entries": [
+            {
+              "_type": "attributes",
+              "divisions": 12,
+              "clef": [
+                {
+                  "sign": "G",
+                  "line": 2
+                }
+              ],
+              "time": [
+                {
+                  "beats": "4",
+                  "beatType": "4"
+                }
+              ]
+            },
+            {
+              "_type": "direction",
+              "sound": {
+                "tempo": 120
+              }
+            },
+            {
+              "_type": "note",
+              "pitch": {
+                "step": "C",
+                "octave": 5
+              },
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "pitch": {
+                "step": "D",
+                "octave": 5
+              },
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "pitch": {
+                "step": "E",
+                "octave": 5
+              },
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "pitch": {
+                "step": "F",
+                "octave": 5
+              },
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            }
+          ]
+        },
+        {
+          "number": "2",
+          "entries": [
+            {
+              "_type": "note",
+              "rest": {},
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "rest": {},
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "rest": {},
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "note",
+              "rest": {},
+              "duration": 12,
+              "voice": "1",
+              "type": "quarter"
+            },
+            {
+              "_type": "barline",
+              "location": "right",
+              "barStyle": "light-heavy"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -50,6 +50,13 @@ describe('Tuplet', () => {
         expect(tuplet.hasNote(tripletEighth())).toBe(false)
     })
 
+    it('layout is lazily created once and cached on repeated access', () => {
+        const { tuplet } = setup()
+        const l1 = tuplet.layout
+        const l2 = tuplet.layout
+        expect(l2).toBe(l1)
+    })
+
     it('invalidateLayout clears cached layout', () => {
         const { tuplet } = setup()
         const l1 = tuplet.layout

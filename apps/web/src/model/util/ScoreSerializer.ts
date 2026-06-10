@@ -146,6 +146,7 @@ export class MeasureSerializer {
                 return 'light-heavy'
             case 'none':
                 return 'none'
+            /* v8 ignore next 2 -- only reachable for 'single', but the caller guards `endBarline !== 'single'`, so this default never runs */
             default:
                 return 'regular'
         }

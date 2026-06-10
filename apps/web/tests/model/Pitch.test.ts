@@ -71,7 +71,28 @@ describe('Pitch', () => {
     it('accidentalGlyph maps to font glyph names', () => {
         expect(new Pitch({ name: 'C', octave: 4, accidental: '#' }).accidentalGlyph).toBe('accidentalSharp')
         expect(new Pitch({ name: 'C', octave: 4, accidental: 'b' }).accidentalGlyph).toBe('accidentalFlat')
+        expect(new Pitch({ name: 'C', octave: 4, accidental: '##' }).accidentalGlyph).toBe('accidentalDoubleSharp')
+        expect(new Pitch({ name: 'C', octave: 4, accidental: 'bb' }).accidentalGlyph).toBe('accidentalDoubleFlat')
+        expect(new Pitch({ name: 'C', octave: 4, accidental: 'n' }).accidentalGlyph).toBe('accidentalNatural')
         expect(new Pitch({ name: 'C', octave: 4 }).accidentalGlyph).toBeUndefined()
+    })
+
+    it('glyphForAlter maps an alteration to the matching glyph, undefined out of range', () => {
+        expect(Pitch.glyphForAlter(0)).toBe('accidentalNatural')
+        expect(Pitch.glyphForAlter(1)).toBe('accidentalSharp')
+        expect(Pitch.glyphForAlter(-1)).toBe('accidentalFlat')
+        expect(Pitch.glyphForAlter(2)).toBe('accidentalDoubleSharp')
+        expect(Pitch.glyphForAlter(-2)).toBe('accidentalDoubleFlat')
+        expect(Pitch.glyphForAlter(3)).toBeUndefined()
+    })
+
+    it('alterToAccidental maps an alteration to its token, undefined for natural/out of range', () => {
+        expect(Pitch.alterToAccidental(1)).toBe('#')
+        expect(Pitch.alterToAccidental(-1)).toBe('b')
+        expect(Pitch.alterToAccidental(2)).toBe('##')
+        expect(Pitch.alterToAccidental(-2)).toBe('bb')
+        expect(Pitch.alterToAccidental(0)).toBeUndefined()
+        expect(Pitch.alterToAccidental(3)).toBeUndefined()
     })
 
     it('toMidi computes correct MIDI numbers', () => {
@@ -82,11 +103,57 @@ describe('Pitch', () => {
         expect(new Pitch({ name: 'F', octave: 4, alter: 1 }).toMidi()).toBe(66)
     })
 
+    it('toMidi treats an unknown step name as zero semitones from the octave base', () => {
+        // SEMITONES has no entry for 'X', so it contributes 0 — (4+1)*12 = 60.
+        expect(new Pitch({ name: 'X', octave: 4 }).toMidi()).toBe(60)
+    })
+
     it('fromLine round-trips with line for natural notes', () => {
         const original = new Pitch({ name: 'B', octave: 4 })
         const restored = Pitch.fromLine(original.line)
         expect(restored.name).toBe(original.name)
         expect(restored.octave).toBe(original.octave)
+    })
+
+    describe('transposed', () => {
+        it('shifts letter step and octave for a plain interval (up a major second)', () => {
+            // C4 up a major 2nd → D4, natural (chromatic +2, diatonic +1).
+            const d = new Pitch({ name: 'C', octave: 4 }).transposed(2, 1)
+            expect(d.name).toBe('D')
+            expect(d.octave).toBe(4)
+            expect(d.alter).toBe(0)
+            expect(d.accidental).toBeUndefined()
+            expect(d.toMidi()).toBe(new Pitch({ name: 'C', octave: 4 }).toMidi() + 2)
+        })
+
+        it('derives the alter from the mismatch between chromatic and diatonic shift', () => {
+            // C4 up a chromatic semitone but no letter change → C#4 (chromatic +1, diatonic 0).
+            const cSharp = new Pitch({ name: 'C', octave: 4 }).transposed(1, 0)
+            expect(cSharp.name).toBe('C')
+            expect(cSharp.octave).toBe(4)
+            expect(cSharp.alter).toBe(1)
+            expect(cSharp.accidental).toBe('#')
+        })
+
+        it('crosses an octave boundary downward', () => {
+            // C4 down a perfect octave → C3 (chromatic -12, diatonic -7).
+            const c3 = new Pitch({ name: 'C', octave: 4 }).transposed(-12, -7)
+            expect(c3.name).toBe('C')
+            expect(c3.octave).toBe(3)
+            expect(c3.alter).toBe(0)
+        })
+
+        it('preserves the existing alteration in the resulting MIDI', () => {
+            // F#4 up a major 2nd → G#4 (chromatic +2, diatonic +1).
+            const gSharp = new Pitch({ name: 'F', octave: 4, alter: 1 }).transposed(2, 1)
+            expect(gSharp.name).toBe('G')
+            expect(gSharp.alter).toBe(1)
+            expect(gSharp.accidental).toBe('#')
+        })
+
+        it('throws for an unknown step name', () => {
+            expect(() => new Pitch({ name: 'H', octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
+        })
     })
 
     describe('accidentalValue (control token from alteration)', () => {

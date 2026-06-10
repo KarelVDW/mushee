@@ -45,6 +45,13 @@ describe('Beam', () => {
         expect(beam.hasNote(eighth())).toBe(false)
     })
 
+    it('layout is lazily created once and cached on repeated access', () => {
+        const { beam } = setup()
+        const l1 = beam.layout
+        const l2 = beam.layout
+        expect(l2).toBe(l1)
+    })
+
     it('invalidateLayout clears cached BeamLayout', () => {
         const { beam } = setup()
         const l1 = beam.layout

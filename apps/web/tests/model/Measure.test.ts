@@ -7,6 +7,7 @@ import { Duration } from '@/model/Duration'
 import { KeySignature } from '@/model/KeySignature'
 import { Measure } from '@/model/Measure'
 import { Note } from '@/model/Note'
+import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
 import { TimeSignature } from '@/model/TimeSignature'
 
@@ -232,6 +233,16 @@ describe('Measure', () => {
             expect(m.clef.type).toBe('bass')
         })
 
+        it('clef falls back to the first stored clef when none sits at beat 0', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addClef(2, 'bass') // a mid-measure clef
+            m.removeClef(0) // drop the leading clef so nothing remains at beat 0
+            // The getter falls back to the first remaining clef rather than throwing.
+            expect(m.clef).toBe(m.clefs[0])
+            expect(m.clef.beatPosition).toBe(2)
+        })
+
         it('clefAtOrBefore returns the active clef at a beat', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
@@ -290,6 +301,23 @@ describe('Measure', () => {
             m.setKeySignature(0, 1)
             expect(m.keySignatures.filter((k) => k.beatPosition === 0)).toHaveLength(1)
             expect(m.keySignature.fifths).toBe(1)
+        })
+
+        it('setKeySignature drops a mid-measure change equal to the key already in effect', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 1 }) // leading G major
+            m.setKeySignature(2, 1) // same as the carried-in G major → redundant, not stored at beat 2
+            expect(m.keyAtBeat(2)).toBeUndefined()
+            expect(m.midMeasureKeySignatures).toHaveLength(0)
+        })
+
+        it('keySignature falls back to the first stored key when none sits at beat 0', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addKeySignature(2, 2) // a mid-measure key
+            m.removeKeySignature(0) // drop the leading key so nothing remains at beat 0
+            expect(m.keySignature).toBe(m.keySignatures[0])
+            expect(m.keySignature.beatPosition).toBe(2)
         })
 
         it('keyAtOrBefore returns the active key at a beat', () => {
@@ -448,6 +476,180 @@ describe('Measure', () => {
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(m.hasNote(null)).toBe(false)
             expect(m.hasNote(undefined)).toBe(false)
+        })
+
+        it('lastNote is null on an empty measure', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.lastNote).toBeNull()
+        })
+    })
+
+    describe('index', () => {
+        it('reports the measure position within its score', () => {
+            const score = makeScore(3)
+            expect(score.measures[0].index).toBe(0)
+            expect(score.measures[2].index).toBe(2)
+        })
+    })
+
+    describe('noteAtBeat returning null', () => {
+        it('returns null when no note begins at or before the beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addNotes([rest('q')])
+            // The first note sits at beat 0; a negative beat precedes every note.
+            expect(m.noteAtBeat(-1)).toBeNull()
+        })
+
+        it('returns null on an empty measure', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.noteAtBeat(0)).toBeNull()
+        })
+    })
+
+    describe('beamOf', () => {
+        it('returns the beam group a beamed note belongs to, undefined otherwise', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            // Two consecutive eighths beam together.
+            const a = pitched('C', 5, '8')
+            const b = pitched('D', 5, '8')
+            m.addNotes([a, b])
+            const beam = m.beamOf(a)
+            expect(beam).toBeDefined()
+            expect(beam?.notes).toContain(a)
+            expect(beam?.notes).toContain(b)
+            // A note not in this measure has no beam here.
+            expect(m.beamOf(pitched('E', 5, '8'))).toBeUndefined()
+        })
+    })
+
+    describe('midMeasure ordering', () => {
+        it('sorts multiple mid-measure clef changes by beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            // Insert out of beat order; midMeasureClefs must return them sorted.
+            m.addClef(3, 'alto')
+            m.addClef(1, 'bass')
+            expect(m.midMeasureClefs.map((c) => c.beatPosition)).toEqual([1, 3])
+            expect(m.midMeasureClefs.map((c) => c.type)).toEqual(['bass', 'alto'])
+        })
+
+        it('sorts multiple mid-measure key changes by beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addKeySignature(3, -2) // out of order
+            m.addKeySignature(1, 2)
+            expect(m.midMeasureKeySignatures.map((k) => k.beatPosition)).toEqual([1, 3])
+            expect(m.midMeasureKeySignatures.map((k) => k.fifths)).toEqual([2, -2])
+        })
+    })
+
+    describe('accidentals across a mid-measure key change', () => {
+        it('clears carried accidentals when a new key takes effect mid-bar', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            // F# (explicit accidental) in C major, then a mid-measure switch to a key, then F again.
+            const fSharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, octave: 5 }) })
+            const a = pitched('A', 4, 'q')
+            const fAfterKey = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 0, octave: 5 }) })
+            const b = pitched('B', 4, 'q')
+            m.addNotes([fSharp, a, fAfterKey, b])
+            m.addKeySignature(2, 1) // G major at beat 2: F is sharp by key
+            // First F shows a sharp (differs from C-major natural).
+            expect(m.accidentalGlyphFor(fSharp)).toBe('accidentalSharp')
+            // The key change at beat 2 resets the carried sharp; the natural F after it now differs
+            // from the G-major key (which expects F#), so it shows a natural.
+            expect(m.accidentalGlyphFor(fAfterKey)).toBe('accidentalNatural')
+        })
+    })
+
+    describe('showsTimeSignature', () => {
+        it('reflects the visibility flag', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.showsTimeSignature).toBe(false)
+            m.setShowsTimeSignature(true)
+            expect(m.showsTimeSignature).toBe(true)
+        })
+    })
+
+    describe('barlineWidth double', () => {
+        it('a double barline is two thin lines plus a gap', () => {
+            const score = new Score()
+            const single = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'single' })
+            const double = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'double' })
+            expect(double.barlineWidth).toBeGreaterThan(single.barlineWidth)
+            // Two thin lines + gap = exactly 2 * single + gap.
+            expect(double.barlineWidth).toBe(single.barlineWidth * 2 + (double.barlineWidth - single.barlineWidth * 2))
+        })
+    })
+
+    describe('setTimeSignature', () => {
+        it('replaces the time signature and re-binds it to the measure', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.maxBeats).toBe(4)
+            const threeFour = new TimeSignature(3, 4)
+            m.setTimeSignature(threeFour)
+            expect(m.timeSignature).toBe(threeFour)
+            expect(m.timeSignature.measure).toBe(m)
+            expect(m.maxBeats).toBe(3)
+        })
+    })
+
+    describe('tempo lookup', () => {
+        it('tempoAtOrBefore returns the latest marking at or before a beat, undefined when none precede', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addTempo(0, 90)
+            m.addTempo(2, 120)
+            expect(m.tempoAtOrBefore(0)?.bpm).toBe(90)
+            expect(m.tempoAtOrBefore(1)?.bpm).toBe(90)
+            expect(m.tempoAtOrBefore(2)?.bpm).toBe(120)
+            expect(m.tempoAtOrBefore(3)?.bpm).toBe(120)
+        })
+
+        it('tempoAtOrBefore is undefined when no marking precedes the beat', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addTempo(2, 120)
+            expect(m.tempoAtOrBefore(1)).toBeUndefined()
+        })
+
+        it('lastTempo is the highest-beat marking, undefined when there are none', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(m.lastTempo).toBeUndefined()
+            m.addTempo(0, 90)
+            m.addTempo(3, 60)
+            m.addTempo(1, 120) // out of order; lastTempo must still be the beat-3 marking
+            expect(m.lastTempo?.bpm).toBe(60)
+            expect(m.lastTempo?.beatPosition).toBe(3)
+        })
+    })
+
+    describe('getNext / getPrevious', () => {
+        it('getNext delegates to the score and returns the following measure', () => {
+            const score = makeScore(2)
+            const [a, b] = score.measures
+            expect(a.getNext()).toBe(b)
+            expect(b.getNext()).toBeNull()
+            expect(b.getPrevious()).toBe(a)
+        })
+    })
+
+    describe('replaceNotes guard', () => {
+        it('throws when a target belongs to this measure but is not in its note list', () => {
+            const score = new Score()
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+            m.addNotes([rest('q')])
+            // A note whose measure is set to m (passes the ownership check) but was never added to _notes.
+            const orphan = rest('q')
+            orphan.setMeasure(m)
+            expect(() => m.replaceNotes([orphan], [rest('q')])).toThrow('Cannot find startIndex for replace')
         })
     })
 })

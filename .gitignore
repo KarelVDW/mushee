@@ -6,6 +6,11 @@ build/
 out/
 .eslintcache
 *.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+.cov-model/
+.cov-tmp/
 .DS_Store
 .vscode/
 *~

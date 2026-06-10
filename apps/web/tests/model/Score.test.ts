@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest'
 import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
 import { Instrument } from '@/model/Instrument'
+import { Measure } from '@/model/Measure'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
+import { TimeSignature } from '@/model/TimeSignature'
 
 describe('Score', () => {
     describe('addMeasure', () => {
@@ -78,6 +80,12 @@ describe('Score', () => {
             const score = makeScore(2)
             expect(score.getNextMeasure()).toBe(score.firstMeasure)
         })
+
+        it('getNextMeasure returns null for a measure not in the index map', () => {
+            const score = makeScore(1)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(score.getNextMeasure(stray)).toBeNull()
+        })
     })
 
     describe('row layout reactions', () => {
@@ -140,6 +148,43 @@ describe('Score', () => {
             score.replace([target], [longValue])
             // the score shouldn't lose total beats; both measures still complete
             expect(m1.beats).toBeCloseTo(m1.maxBeats)
+        })
+
+        it('appends a new measure when the replacement overruns the only measure', () => {
+            const score = makeScore(1)
+            expect(score.measures).toHaveLength(1)
+            const target = score.measures[0].lastNote // last quarter rest, only 1 free beat after it
+            if (!target) throw new Error('expected last note')
+            // A whole note (4 beats) overruns the last beat of the only measure, forcing a new measure.
+            score.replace([target], [new Note({ duration: new Duration({ type: 'w' }) })])
+            expect(score.measures.length).toBeGreaterThan(1)
+            expect(score.measures[0].beats).toBeCloseTo(score.measures[0].maxBeats)
+            expect(score.lastMeasure?.beats).toBeCloseTo(score.lastMeasure?.maxBeats ?? 0)
+        })
+
+        it('splits an overrunning note into a remainder of several tied durations in the next bar', () => {
+            const score = makeScore(2)
+            const m1 = score.measures[0]
+            const m2 = score.measures[1]
+            const lastOfM1 = m1.lastNote
+            if (!lastOfM1) throw new Error('expected last note of measure 1')
+            // Reshape the tail of measure 1 to end on a 16th note (0.25 free beat at the boundary).
+            score.replace([lastOfM1], [new Note({ duration: new Duration({ type: '8', dots: 1 }) }), new Note({ duration: new Duration({ type: '16' }) })])
+            const sixteenth = m1.lastNote
+            if (!sixteenth) throw new Error('expected 16th note')
+            expect(sixteenth.duration.type).toBe('16')
+            // Replace that 16th with a half note (2 beats): 0.25 fills measure 1, the 1.75-beat remainder
+            // lands in measure 2 and must decompose into a dotted-quarter tied to a sixteenth.
+            score.replace([sixteenth], [new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 5 }) })])
+            expect(m1.beats).toBeCloseTo(m1.maxBeats)
+            expect(m2.beats).toBeCloseTo(m2.maxBeats)
+            // Measure 2 opens with the multi-part remainder: a dotted quarter tied onward, then a sixteenth.
+            const head = m2.firstNote
+            expect(head?.duration.type).toBe('q')
+            expect(head?.duration.dots).toBe(1)
+            expect(head?.tie).toBe('start')
+            expect(head?.pitch?.name).toBe('C')
+            expect(m2.notes[1]?.duration.type).toBe('16')
         })
     })
 
@@ -666,6 +711,268 @@ describe('Score', () => {
                 score.setKeySignature(score.measures[0].firstNote, 2) // earlier key → D major (F♯, C♯)
                 expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(2) // now cancels both
             })
+        })
+    })
+
+    describe('seedInstrument', () => {
+        it('sets the instrument without marking the score dirty', () => {
+            const score = makeScore(1)
+            score.clearDirty()
+            score.seedInstrument(Instrument.Flute)
+            expect(score.instrument).toBe(Instrument.Flute)
+            // Unlike setInstrument, seeding is for deserialization and leaves nothing to flush.
+            expect(score.flushDirty()).toBeNull()
+        })
+    })
+
+    describe('firstRow / lastRow', () => {
+        it('expose the first and last composed rows', () => {
+            const score = makeScore(MAX_MEASURES_PER_ROW + 1)
+            expect(score.firstRow).toBe(score.rows[0])
+            expect(score.lastRow).toBe(score.rows[score.rows.length - 1])
+            expect(score.firstRow).not.toBe(score.lastRow)
+        })
+
+        it('are null on an empty score', () => {
+            const score = new Score()
+            expect(score.firstRow).toBeNull()
+            expect(score.lastRow).toBeNull()
+        })
+    })
+
+    describe('addMeasure at an interior index', () => {
+        it('inserting before an existing measure gives the new measure a single end barline', () => {
+            const score = makeScore(1)
+            const original = score.firstMeasure
+            if (!original) throw new Error('expected firstMeasure')
+            const inserted = score.addMeasure(0)
+            expect(score.measures[0]).toBe(inserted)
+            expect(score.measures[1]).toBe(original)
+            // The inserted measure is no longer last, so it carries a single barline; the tail keeps "end".
+            expect(inserted.endBarline).toBe('single')
+            expect(score.lastMeasure?.endBarline).toBe('end')
+        })
+
+        it('accepts a pre-built measure instead of synthesizing one', () => {
+            const score = makeScore(1)
+            const prebuilt = new Measure(score, 'treble', new TimeSignature(3, 4))
+            const result = score.addMeasure(score.measures.length, prebuilt)
+            // The supplied measure object is appended directly rather than a freshly inherited one.
+            expect(result).toBe(prebuilt)
+            expect(score.lastMeasure).toBe(prebuilt)
+            // Its own time signature is kept (time is not rewritten by row carry-forward).
+            expect(prebuilt.timeSignature.beatAmount).toBe(3)
+            expect(prebuilt.index).toBe(1)
+        })
+    })
+
+    describe('measure lookup guards', () => {
+        it('getIndexForMeasure throws for a measure not in this score', () => {
+            const score = makeScore(1)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(() => score.getIndexForMeasure(stray)).toThrow('Measure not part of this score')
+        })
+
+        it('getRowForMeasure throws for a measure that is not part of any row', () => {
+            const score = makeScore(1)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(() => score.getRowForMeasure(stray)).toThrow('Measure not part of a row')
+        })
+    })
+
+    describe('tempo', () => {
+        it('setTempo on a note adds a marking that bpmAt reads back', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.firstNote
+            if (!note) throw new Error('expected firstNote')
+            score.setTempo(note, 132)
+            expect(m.tempoAtBeat(0)?.bpm).toBe(132)
+            expect(score.bpmAt(note)).toBe(132)
+        })
+
+        it('setTempo with undefined removes the marking at the note beat', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.firstNote
+            if (!note) throw new Error('expected firstNote')
+            score.setTempo(note, 132)
+            expect(m.tempoAtBeat(0)).toBeDefined()
+            score.setTempo(note, undefined)
+            expect(m.tempoAtBeat(0)).toBeUndefined()
+        })
+
+        it('setTempo is a no-op for a null note', () => {
+            const score = makeScore(1)
+            expect(() => score.setTempo(null, 100)).not.toThrow()
+        })
+
+        it('bpmAt returns the default when given no note', () => {
+            const score = makeScore(1)
+            expect(score.bpmAt(null)).toBe(Score.DEFAULT_BPM)
+        })
+
+        it('bpmAt defaults to DEFAULT_BPM with no markings anywhere', () => {
+            const score = makeScore(2)
+            const note = score.measures[1].firstNote
+            expect(score.bpmAt(note)).toBe(Score.DEFAULT_BPM)
+        })
+
+        it('bpmAt carries a previous measure tempo forward via the tempo map', () => {
+            const score = makeScore(2)
+            const first = score.measures[0].firstNote
+            score.setTempo(first, 144) // marking only in measure 0
+            const laterNote = score.measures[1].firstNote
+            if (!laterNote) throw new Error('expected note in measure 1')
+            // Measure 1 has no local marking; the BPM entering it carries from measure 0.
+            expect(score.bpmAt(laterNote)).toBe(144)
+        })
+
+        it('a local mid-measure marking overrides the carried-forward tempo', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            score.setTempo(m.firstNote, 100) // beat 0
+            const midNote = m.noteAtBeat(2)
+            score.setTempo(midNote, 180) // beat 2
+            // Reading at the beat-2 note returns the nearest marking at/before it.
+            expect(score.bpmAt(midNote)).toBe(180)
+            // Reading at beat 0 still returns the earlier marking.
+            expect(score.bpmAt(m.firstNote)).toBe(100)
+        })
+    })
+
+    describe('replace across a measure boundary', () => {
+        it('splits a value note that overruns the bar: the overflow is tied into the next measure', () => {
+            const score = makeScore(2)
+            const m1 = score.measures[0]
+            const m2 = score.measures[1]
+            const lastOfM1 = m1.lastNote // the quarter rest at beat 3
+            if (!lastOfM1) throw new Error('expected last note of measure 1')
+            // A half note (2 beats) placed in the final beat of measure 1 must straddle into measure 2.
+            const newNotes = score.replace([lastOfM1], [pitched('C', 5, 'h')])
+            expect(newNotes.length).toBeGreaterThan(0)
+            // Beat totals are preserved in both measures.
+            expect(m1.beats).toBeCloseTo(m1.maxBeats)
+            expect(m2.beats).toBeCloseTo(m2.maxBeats)
+            // The tail of measure 1 is the start of a tie...
+            const m1Tail = m1.lastNote
+            expect(m1Tail?.tie).toBe('start')
+            expect(m1Tail?.pitch?.name).toBe('C')
+            // ...continued by the head of measure 2 carrying the same pitch.
+            const m2Head = m2.firstNote
+            expect(m2Head?.pitch?.name).toBe('C')
+        })
+    })
+
+    describe('cross-row ties', () => {
+        it('records a tie that spans two rows on both endpoint notes', () => {
+            const score = makeScore(MAX_MEASURES_PER_ROW + 1) // measure index 3 ends row 0, index 4 starts row 1
+            const rowEndMeasure = score.measures[MAX_MEASURES_PER_ROW - 1]
+            const nextRowMeasure = score.measures[MAX_MEASURES_PER_ROW]
+            // Sanity: the two measures are genuinely on different rows.
+            expect(score.getRowForMeasure(rowEndMeasure)).not.toBe(score.getRowForMeasure(nextRowMeasure))
+            const lastNote = rowEndMeasure.lastNote
+            if (!lastNote) throw new Error('expected last note of row-ending measure')
+            // Make the final note of the row-ending measure tie forward into the next row.
+            const [tieStart] = score.replace([lastNote], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' })])
+            const tie = score.getTieByNote(tieStart)
+            if (!tie) throw new Error('expected a tie')
+            expect(tie.note).toBe(tieStart)
+            // Because the endpoints sit on different rows, the tie is also indexed on the next note.
+            expect(score.getTieByNote(tie.nextNote)).toBe(tie)
+            expect(score.getRowForMeasure(tie.note.measure)).not.toBe(score.getRowForMeasure(tie.nextNote.measure))
+        })
+
+        it('a tie-forward note at the very end of the score records no tie (no next note)', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const lastNote = m.lastNote
+            if (!lastNote) throw new Error('expected last note')
+            const [tieStart] = score.replace([lastNote], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' })])
+            // It ties forward but there is nothing after it, so no Tie is created.
+            expect(score.getTieByNote(tieStart)).toBeUndefined()
+        })
+    })
+
+    describe('flushDirty instrument changes', () => {
+        it('emits a partList when the instrument changed', () => {
+            const score = makeScore(1)
+            score.clearDirty()
+            score.setInstrument(Instrument.Trumpet)
+            const result = score.flushDirty()
+            expect(result?.partList).toBeDefined()
+            const scoreParts = (result?.partList as { scoreParts: Array<Record<string, unknown>> }).scoreParts
+            expect(scoreParts[0].partName).toBe('Trumpet')
+            const midi = scoreParts[0].midiInstrument as { midiProgram: number }
+            // gmProgram is 0-indexed here, +1 in MusicXML.
+            expect(midi.midiProgram).toBe(Instrument.Trumpet.gmProgram + 1)
+        })
+
+        it('emits only a partList (no measure entries) when the instrument changes on an empty score', () => {
+            const score = new Score()
+            // No measures means no notes to transpose, so nothing is marked measure-dirty.
+            score.setInstrument(Instrument.Trumpet)
+            expect(score.instrument).toBe(Instrument.Trumpet)
+            const result = score.flushDirty()
+            expect(result?.partList).toBeDefined()
+            expect(result?.measures).toBeUndefined()
+            expect(result?.allMeasures).toBeUndefined()
+        })
+
+        it('skips a dirty measure that is no longer part of the score index', () => {
+            const score = makeScore(1)
+            score.clearDirty()
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            // markMeasureDirty accepts any measure; one that was never added has no index.
+            score.markMeasureDirty(stray)
+            const result = score.flushDirty()
+            // The only dirty measure has no index, so the measures map is present but empty.
+            expect(result?.measures).toEqual({})
+        })
+    })
+
+    describe('empty-score edge cases', () => {
+        it('firstMeasure and lastMeasure are null', () => {
+            const score = new Score()
+            expect(score.firstMeasure).toBeNull()
+            expect(score.lastMeasure).toBeNull()
+        })
+
+        it('getPreviousMeasure returns null for a measure with no index', () => {
+            const score = makeScore(1)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            expect(score.getPreviousMeasure(stray)).toBeNull()
+        })
+    })
+
+    describe('removeLastMeasure with an empty trailing measure', () => {
+        it('does not crash when the new last measure has no notes', () => {
+            const score = new Score()
+            const first = score.addMeasure() // not completed: no notes
+            const second = score.addMeasure() // not completed: no notes
+            expect(first.notes).toHaveLength(0)
+            // Removing the last measure leaves `first` (which has no notes) as the new last measure;
+            // the tie-cleanup path must tolerate the absence of a trailing note.
+            expect(() => score.removeLastMeasure()).not.toThrow()
+            expect(score.lastMeasure).toBe(first)
+            expect(score.measures).not.toContain(second)
+        })
+    })
+
+    describe('bpmAt caching', () => {
+        it('returns the cached tempo map on a second read without mutation', () => {
+            const score = makeScore(2)
+            score.setTempo(score.measures[0].firstNote, 110)
+            const laterNote = score.measures[1].firstNote
+            if (!laterNote) throw new Error('expected note')
+            const first = score.bpmAt(laterNote) // builds and caches the tempo map
+            const second = score.bpmAt(laterNote) // reads from cache
+            expect(first).toBe(110)
+            expect(second).toBe(110)
         })
     })
 })

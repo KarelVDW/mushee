@@ -19,16 +19,19 @@ export class BeamLayout {
 
     constructor(beam: Beam) {
         const firstStem = beam.firstNote.layout.getStem(beam.stemDir)
+        /* v8 ignore next -- defensive: NoteLayout.getStem always returns a stem, so this never fires */
         if (typeof firstStem === 'undefined') throw new Error('Beam note has no stem')
         const firstStemX = beam.measure.layout.getXForElement(beam.firstNote) + firstStem.x
 
         const lastStem = beam.lastNote.layout.getStem(beam.stemDir)
+        /* v8 ignore next -- defensive: NoteLayout.getStem always returns a stem, so this never fires */
         if (typeof lastStem === 'undefined') throw new Error('Beam note has no stem')
         const lastStemX = beam.measure.layout.getXForElement(beam.lastNote) + lastStem.x
 
         // slope
         const dx = lastStemX - firstStemX
         let slope = 0
+        /* v8 ignore next -- divide-by-zero guard: beam notes always occupy distinct x, so dx !== 0 */
         if (dx !== 0) {
             const rawSlope = (lastStem.y2 - firstStem.y2) / dx
             slope = Math.max(-BEAM_MAX_SLOPE, Math.min(BEAM_MAX_SLOPE, rawSlope / 2))
@@ -73,6 +76,7 @@ export class BeamLayout {
             if (!n.duration.hasSecondaryBeam) continue
 
             const stemX = n.measure.layout.getXForElement(n) + n.layout.getStem(beam.stemDir).x
+            /* v8 ignore next -- defensive: stemX is always a number (sum of two numbers), never undefined */
             if (typeof stemX === 'undefined') continue
             const yAtNote = beamY + (stemX - firstStemX) * slope
 

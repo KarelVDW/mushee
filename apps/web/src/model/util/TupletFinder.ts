@@ -31,6 +31,7 @@ export class TupletFinder {
 
             // Ratio changed — save current set and start fresh
             if (currentRatio && (currentRatio.actualNotes !== actualNotes || currentRatio.normalNotes !== normalNotes)) {
+                /* v8 ignore next -- currentRatio is set only alongside a non-empty currentNotes (both reset together), so this is always true here */
                 if (currentNotes.length > 0) {
                     this.tuplets.push(new Tuplet(this.measure, currentNotes))
                 }

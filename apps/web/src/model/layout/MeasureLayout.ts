@@ -22,6 +22,7 @@ export class MeasureLayout {
 
         const sortedElements = sortBy(
             this.measure.physicalElements,
+            /* v8 ignore next -- defensive: beatOffsetOf always returns a number, so the ?? -1 fallback is never taken */
             (el) => this.measure.beatOffsetOf(el) ?? -1,
             (el) => !(el instanceof Clef),
             (el) => !(el instanceof KeySignature),
@@ -79,6 +80,7 @@ export class MeasureLayout {
     getNoteForX(x: number) {
         for (const note of this.measure.notes) {
             const spacing = this._xMap.get(note)
+            /* v8 ignore next -- defensive: every note is a sizeable element, so it is always spaced */
             if (!spacing) continue
             if (x >= spacing.x && x < spacing.x + spacing.allottedWidth) return note
         }
@@ -90,6 +92,7 @@ export class MeasureLayout {
         const note = overshootIndex === -1 ? this.measure.notes.at(-1) : this.measure.notes[overshootIndex - 1] || this.measure.firstNote
         if (!note) return 0
         const spacing = this._xMap.get(note)
+        /* v8 ignore next -- defensive: every note is a sizeable element, so it is always spaced */
         if (!spacing) throw new Error('Note not spaced in measure')
         return spacing.x + (spacing.allottedWidth * (beat - this.measure.beatOffsetOf(note))) / note.duration.effectiveBeats
     }

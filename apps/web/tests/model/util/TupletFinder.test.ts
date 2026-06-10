@@ -74,6 +74,29 @@ describe('TupletFinder', () => {
         expect(finder.tuplets.length).toBeGreaterThanOrEqual(1)
     })
 
+    it('flushes an incomplete tuplet group when a plain (1:1) note follows', () => {
+        // Two triplet eighths sound 0.667 beats — short of the 1.0-beat span — so the group is still
+        // open when the quarter arrives. The 1:1 branch must push that partial group before continuing.
+        const m = freshMeasure()
+        m.addNotes([tripletEighth(), tripletEighth(), quarter()])
+        const finder = new TupletFinder(m)
+        expect(finder.tuplets).toHaveLength(1)
+        expect(finder.tuplets[0].notes).toHaveLength(2)
+    })
+
+    it('flushes an incomplete group when the ratio changes mid-stream', () => {
+        const quintupletSixteenth = () =>
+            new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        // Open 3:2 group (incomplete after two eighths), then a 5:4 note: the ratio change closes the
+        // first group and starts a fresh one.
+        const m = freshMeasure()
+        m.addNotes([tripletEighth(), tripletEighth(), quintupletSixteenth()])
+        const finder = new TupletFinder(m)
+        expect(finder.tuplets).toHaveLength(2)
+        expect(finder.tuplets[0].notes).toHaveLength(2)
+        expect(finder.tuplets[1].notes).toHaveLength(1)
+    })
+
     it('tupletByNote maps each tuplet note back to its tuplet', () => {
         const m = freshMeasure()
         const a = tripletEighth()

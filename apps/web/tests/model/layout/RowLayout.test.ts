@@ -1,10 +1,11 @@
 import { makeScore, pitched } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
-import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
+import { Row } from '@/model/Row'
 import { Score } from '@/model/Score'
 
 describe('RowLayout', () => {
@@ -67,6 +68,67 @@ describe('RowLayout', () => {
             expect(line.y1).toBe(line.y2)
             expect(line.x2).toBeGreaterThan(line.x1)
         }
+    })
+
+    describe('empty row', () => {
+        it('has zero width and no measure positions', () => {
+            const score = new Score()
+            const emptyRow = new Row(score, 0) // never given any measures
+            expect(emptyRow.measures).toHaveLength(0)
+            // measureData short-circuits on an empty row → width sums to 0.
+            expect(emptyRow.layout.width).toBe(0)
+        })
+
+        it('builds an empty measureData map (getMeasureX throws for any measure)', () => {
+            const score = makeScore(1)
+            const someMeasure = score.firstMeasure
+            if (!someMeasure) throw new Error('expected a measure')
+            const emptyRow = new Row(score, 0)
+            // getMeasureX directly consults measureData, forcing the empty-row early return
+            // to build (and cache) an empty map; the lookup then misses and throws.
+            expect(() => emptyRow.layout.getMeasureX(someMeasure)).toThrow('Measure not in this row')
+        })
+
+        it('still reports five staff lines spanning zero width', () => {
+            const score = new Score()
+            const emptyRow = new Row(score, 0)
+            const lines = emptyRow.layout.staffLines
+            expect(lines).toHaveLength(NUM_STAFF_LINES)
+            for (const line of lines) {
+                expect(line.x1).toBe(0)
+                expect(line.x2).toBe(0) // width is 0 on an empty row
+            }
+        })
+    })
+
+    describe('getMeasureWidth', () => {
+        it('returns a positive width for a measure in the row and throws for a stranger', () => {
+            const score = makeScore(2)
+            const row = score.firstRow
+            if (!row) throw new Error('expected firstRow')
+            const m1 = row.measures[0]
+            expect(row.layout.getMeasureWidth(m1)).toBeGreaterThan(0)
+
+            const otherScore = makeScore(1)
+            const stranger = otherScore.firstMeasure
+            if (!stranger) throw new Error('expected stranger measure')
+            expect(() => row.layout.getMeasureWidth(stranger)).toThrow('Measure not in this row')
+        })
+    })
+
+    describe('opening barline', () => {
+        it('spans the staff at the left edge of the row', () => {
+            const score = makeScore(1)
+            const row = score.firstRow
+            if (!row) throw new Error('expected firstRow')
+            const bar = row.layout.openingBarline
+            const expectedHeadroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
+            const expectedHeight = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
+            expect(bar.x).toBe(0)
+            expect(bar.y).toBe(expectedHeadroom)
+            expect(bar.height).toBe(expectedHeight)
+            expect(bar.type).toBe('single')
+        })
     })
 
     describe('overflowing measure (likely ResizeError trigger)', () => {

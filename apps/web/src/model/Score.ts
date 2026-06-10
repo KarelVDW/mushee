@@ -120,6 +120,7 @@ export class Score {
         try {
             nextNote = note.getNext()
         } catch {
+            /* v8 ignore next -- defensive: getNext only throws for a measure-less note; every note reaching here is attached to a measure */
             return
         }
         if (!nextNote) return
@@ -186,6 +187,7 @@ export class Score {
     getPreviousMeasure(measure: Measure): Measure | null {
         const measureIndex = this._indexByMeasure.get(measure)
         if (measureIndex === undefined || measureIndex < 1) return null
+        /* v8 ignore next -- defensive: measureIndex >= 1 here, so measureIndex - 1 is always a valid in-range index */
         return this.measures[measureIndex - 1] ?? null
     }
 
@@ -225,6 +227,7 @@ export class Score {
             this._rowByMeasure.delete(removed)
             this._indexByMeasure.delete(removed)
             const lastRow = last(this._rows)
+            /* v8 ignore next -- defensive: a measure present in `measures` is always assigned to a row, so when `removed` exists `_rows` is non-empty */
             if (lastRow) {
                 lastRow.removeLastMeasure()
                 if (lastRow.isEmpty) {
@@ -383,6 +386,7 @@ export class Score {
         const measure = note.measure
         const local = measure.tempoAtOrBefore(measure.beatOffsetOf(note))
         if (local) return local.bpm
+        /* v8 ignore next -- defensive: tempoMap has one entry per measure index, so the lookup is always defined for an in-score measure */
         return this.tempoMap[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
     }
 
@@ -400,14 +404,18 @@ export class Score {
         let durations = [new Duration({ type: value.type ?? note.duration.type, dots: value.dots ?? note.duration.dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {
+            /* v8 ignore next -- defensive: `note` came from this same tuplet, so getIndex always finds it */
             const index = tuplet.getIndex(note) ?? 0
             const remainder = sumBy(tuplet.notes.slice(index), (n) => n.duration.effectiveBeats)
             if (durations[0].effectiveBeats > remainder + BEAT_EPSILON) {
                 durations = index === 0 ? Duration.fromBeats(remainder) : Duration.fromBeats(remainder, ratio)
             }
         }
+        /* v8 ignore next -- defensive: durations starts with one element and is only re-decomposed from a positive remainder, so it is never empty */
         if (!durations.length) return null
+        /* v8 ignore next -- the tie-spread branch never fires: a tuplet clip always reduces to a single written duration (durations.length === 1) */
         const values = durations.map((d, i) => note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }))
+        /* v8 ignore next -- defensive: replace always returns at least one note for a non-empty target */
         return this.replace([note], values)[0] ?? null
     }
 
@@ -425,15 +433,19 @@ export class Score {
         if (tuplet) {
             const totalBeats = sumBy(tuplet.notes, (n) => n.duration.effectiveBeats)
             const durations = Duration.fromBeats(totalBeats)
+            /* v8 ignore next -- defensive: a tuplet group always spans 2× a plain note value, which decomposes exactly, so the sum always matches */
             if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
+            /* v8 ignore next 3 -- the tie-spread branch never fires: the collapsed group total is a single written duration (durations.length === 1) */
             const values = durations.map(
                 (d, i) => new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
             )
+            /* v8 ignore next -- defensive: replace always returns at least one note */
             return this.replace(tuplet.notes, values)[0] ?? null
         }
         const durations = note.duration.tripletDivision()
         if (!durations) return null
         const values = durations.map((d, i) => new Note({ duration: d, pitch: i === 0 ? note.pitch : undefined }))
+        /* v8 ignore next -- defensive: replace always returns at least one note */
         return this.replace([note], values)[0] ?? null
     }
 
@@ -448,6 +460,7 @@ export class Score {
             let nextNote = lastTarget.getNext()
             if (!nextNote) this.addMeasure().complete()
             nextNote = lastTarget.getNext()
+            /* v8 ignore next -- defensive: a measure was just appended and filled, so the next note always exists here */
             if (!nextNote) throw new Error('Trouble finding next note')
             targets = compact([...targets, nextNote])
             targetBeats += nextNote.duration.effectiveBeats
@@ -473,6 +486,7 @@ export class Score {
             let remainderNotes: Note[] = []
             while (freeBeats > BEAT_EPSILON) {
                 const note = replaceValues.shift()
+                /* v8 ignore next -- defensive: values are padded to cover the full target span, so they never run out before freeBeats does */
                 if (!note) break
                 const noteBeats = note.duration.effectiveBeats
                 if (noteBeats <= freeBeats + BEAT_EPSILON) {

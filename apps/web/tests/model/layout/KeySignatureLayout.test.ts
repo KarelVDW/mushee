@@ -49,4 +49,12 @@ describe('KeySignatureLayout', () => {
             expect(a.y).toBeLessThanOrEqual(BOTTOM + STAVE_LINE_DISTANCE)
         }
     })
+
+    it('produces no accidentals (and skips the octave-shift search) for C major with nothing to cancel', () => {
+        // fifths 0 with no preceding key → drawnAccidentals is empty → rawLines is empty → the
+        // octave-shift loop is skipped entirely and no accidental glyphs are laid out.
+        const m = bar('treble', 0)
+        expect(m.keySignature.drawnAccidentals).toHaveLength(0)
+        expect(m.keySignature.layout.accidentals).toHaveLength(0)
+    })
 })

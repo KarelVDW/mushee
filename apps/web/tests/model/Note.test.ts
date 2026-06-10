@@ -1,8 +1,18 @@
+import { clef, pitched, rest } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import { Duration } from '@/model/Duration'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
+import { Score } from '@/model/Score'
+
+/** Replace a measure's leading rest with a pitched note and return the live note that lands at beat 0. */
+function placeNote(score: Score, measureIndex: number, name: string, octave: number): Note {
+    const measure = score.measures[measureIndex]
+    const target = measure.firstNote as Note
+    const [placed] = score.replace([target], [pitched(name, octave)])
+    return placed
+}
 
 describe('Note', () => {
     it('has a unique id', () => {
@@ -82,6 +92,27 @@ describe('Note', () => {
         expect(cloned.pitch).toBeUndefined()
     })
 
+    it('clone with an explicit tie override replaces the tie', () => {
+        const original = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
+        expect(original.clone({ tie: 'stop' }).tie).toBe('stop')
+        // Explicit undefined clears the tie (the 'tie' in overrides branch, value undefined).
+        expect(original.clone({ tie: undefined }).tie).toBeUndefined()
+    })
+
+    it('clone with no overrides keeps duration, pitch and tie', () => {
+        const original = new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
+        const cloned = original.clone({})
+        expect(cloned.duration).toBe(original.duration)
+        expect(cloned.pitch).toBe(original.pitch)
+        expect(cloned.tie).toBe('start')
+        expect(cloned).not.toBe(original)
+    })
+
+    it('layout is cached between accesses until invalidated', () => {
+        const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        expect(n.layout).toBe(n.layout)
+    })
+
     it('lazily creates a single NoteWidth instance', () => {
         const n = new Note({ duration: new Duration() })
         expect(n.width).toBe(n.width)
@@ -93,5 +124,156 @@ describe('Note', () => {
         n.invalidateLayout()
         const l2 = n.layout
         expect(l1).not.toBe(l2)
+    })
+
+    it('invalidateWidth clears cached width and layout', () => {
+        const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        const w1 = n.width
+        const l1 = n.layout
+        n.invalidateWidth()
+        expect(n.width).not.toBe(w1)
+        expect(n.layout).not.toBe(l1)
+    })
+
+    describe('measure-resolved properties', () => {
+        it('bpm reads the active tempo from the owning score', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const note = score.measures[0].firstNote as Note
+            expect(note.bpm).toBe(Score.DEFAULT_BPM)
+            score.setTempo(note, 132)
+            expect(note.bpm).toBe(132)
+        })
+
+        it('clef resolves the active clef at the note position', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const note = score.measures[0].firstNote as Note
+            expect(note.clef.type).toBe('treble')
+            score.setClef(note, 'bass')
+            expect(note.clef.type).toBe('bass')
+        })
+
+        it('keySignature resolves the active key at the note position', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const note = score.measures[0].firstNote as Note
+            expect(note.keySignature.fifths).toBe(0)
+            score.setKeySignature(note, 2)
+            expect(note.keySignature.fifths).toBe(2)
+        })
+
+        it('line uses the active clef for a measure-attached pitched note', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const note = placeNote(score, 0, 'C', 4)
+            // Treble: C4 is on the formula line 0; the clef offset is 0.
+            expect(note.line).toBe(note.clef.lineFor(note.pitch as Pitch))
+            score.setClef(note, 'bass')
+            // Under bass clef the same pitch sits at a different staff line.
+            expect(note.line).toBe(note.clef.lineFor(note.pitch as Pitch))
+            expect(note.line).not.toBe((note.pitch as Pitch).line)
+        })
+
+        it('line falls back to the pitch line for a detached pitched note', () => {
+            const detached = pitched('C', 4)
+            expect(detached.line).toBe((detached.pitch as Pitch).line)
+        })
+
+        it('line of a rest uses the duration rest line, not a clef', () => {
+            const r = rest('w')
+            expect(r.line).toBe(r.duration.restLine)
+        })
+
+        it('displayAccidentalGlyph is measure-aware for an attached note', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const measure = score.measures[0]
+            const target = measure.firstNote as Note
+            const [placed] = score.replace([target], [pitched('C', 4)])
+            // C natural in C major draws no accidental.
+            expect(placed.displayAccidentalGlyph).toBeUndefined()
+            const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+            const [placedSharp] = score.replace([placed], [sharp])
+            expect(placedSharp.displayAccidentalGlyph).toBe('accidentalSharp')
+        })
+
+        it('displayAccidentalGlyph is undefined for a rest', () => {
+            const r = rest()
+            expect(r.displayAccidentalGlyph).toBeUndefined()
+        })
+
+        it('displayAccidentalGlyph falls back to the pitch glyph for a detached note', () => {
+            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: 'b', alter: -1 }) })
+            expect(detached.displayAccidentalGlyph).toBe('accidentalFlat')
+        })
+    })
+
+    describe('previewUnder', () => {
+        it('renders line and accidental under the supplied clef, bypassing measure resolution', () => {
+            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+            const bass = clef('bass')
+            const returned = note.previewUnder(bass)
+            expect(returned).toBe(note)
+            expect(note.clef).toBe(bass)
+            expect(note.line).toBe(bass.lineFor(note.pitch as Pitch))
+            // Preview note has no measure, so the accidental comes from the pitch itself.
+            expect(note.displayAccidentalGlyph).toBe('accidentalSharp')
+        })
+
+        it('clears cached layout so it re-renders under the preview clef', () => {
+            const note = pitched('C', 4)
+            const before = note.layout
+            note.previewUnder(clef('treble'))
+            expect(note.layout).not.toBe(before)
+        })
+    })
+
+    describe('navigation', () => {
+        it('getNext returns the following note within the same measure', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const first = score.measures[0].firstNote as Note
+            const second = first.getNext()
+            expect(second).toBe(score.measures[0].notes[1])
+        })
+
+        it('getNext crosses into the next measures first note', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            score.addMeasure().complete()
+            const lastOfFirst = score.measures[0].lastNote as Note
+            const next = lastOfFirst.getNext()
+            expect(next).toBe(score.measures[1].firstNote)
+        })
+
+        it('getNext returns null at the very end of the score', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const last = score.measures[0].lastNote as Note
+            expect(last.getNext()).toBeNull()
+        })
+
+        it('getPrevious returns the preceding note within the same measure', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const second = score.measures[0].notes[1]
+            expect(second.getPrevious()).toBe(score.measures[0].firstNote)
+        })
+
+        it('getPrevious crosses into the previous measures last note', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            score.addMeasure().complete()
+            const firstOfSecond = score.measures[1].firstNote as Note
+            expect(firstOfSecond.getPrevious()).toBe(score.measures[0].lastNote)
+        })
+
+        it('getPrevious returns null at the very start of the score', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const first = score.measures[0].firstNote as Note
+            expect(first.getPrevious()).toBeNull()
+        })
     })
 })

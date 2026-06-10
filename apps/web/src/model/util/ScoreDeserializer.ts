@@ -117,24 +117,31 @@ export class ScoreDeserializer {
             if (notes.length > 0) measure.addNotes(notes)
             for (const { noteIndex, bpm } of tempos) {
                 const note = notes[noteIndex]
+                /* v8 ignore else -- defensive: a tempo is only recorded with the index of a note pushed right after it, so `note` is always defined */
                 if (note) measure.addTempo(measure.beatOffsetOf(note), bpm)
             }
             for (const { noteIndex, type } of clefChanges) {
                 const note = notes[noteIndex]
                 if (note) measure.addClef(measure.beatOffsetOf(note), type)
-                else if (notes.length > 0) {
-                    // A clef in trailing <attributes> (after the last note) applies to nothing in this
-                    // measure but carries forward — anchor it just past the last note so it becomes lastClef.
-                    const lastNote = notes[notes.length - 1]
-                    measure.addClef(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, type)
+                else {
+                    // A clef in trailing <attributes> (after the last note) applies to nothing in this measure
+                    // but carries forward — anchor it just past the last note so it becomes lastClef.
+                    /* v8 ignore else -- defensive: a clef change is only recorded when notes exist, and notes never shrink, so notes.length > 0 always holds here */
+                    if (notes.length > 0) {
+                        const lastNote = notes[notes.length - 1]
+                        measure.addClef(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, type)
+                    }
                 }
             }
             for (const { noteIndex, fifths, mode } of keyChanges) {
                 const note = notes[noteIndex]
                 if (note) measure.addKeySignature(measure.beatOffsetOf(note), fifths, mode)
-                else if (notes.length > 0) {
-                    const lastNote = notes[notes.length - 1]
-                    measure.addKeySignature(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, fifths, mode)
+                else {
+                    /* v8 ignore else -- defensive: a key change is only recorded when notes exist, and notes never shrink, so notes.length > 0 always holds here */
+                    if (notes.length > 0) {
+                        const lastNote = notes[notes.length - 1]
+                        measure.addKeySignature(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, fifths, mode)
+                    }
                 }
             }
             score.addMeasure(undefined, measure)
