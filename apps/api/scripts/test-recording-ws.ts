@@ -11,7 +11,10 @@ import type {
   MxmlMeasure,
   MxmlMeasureEntry,
 } from '../src/recordings/mxml.types';
-import { RecordingsService } from '../src/recordings/recordings.service';
+import { usedProviderNames } from '../src/recordings/profiles/PipelineProfile';
+import { ProfileResolver } from '../src/recordings/profiles/ProfileResolver';
+import { ProviderRegistry } from '../src/recordings/providers/ProviderRegistry';
+import { RecordingPipeline } from '../src/recordings/RecordingPipeline';
 
 const PORT = Number(process.env.TEST_PORT ?? 4099);
 const BPM = 90;
@@ -35,15 +38,26 @@ function toBuffer(data: RawData): Buffer {
 }
 
 async function startServer(): Promise<() => Promise<void>> {
-  process.env.BASIC_PITCH_MODEL_DIR = resolve(__dirname, '../model');
-
-  const service = new RecordingsService();
-  service.onModuleInit();
+  // Drive the pipeline directly — this script exercises transcription, not
+  // the gateway's auth/credit/score checks.
+  const registry = new ProviderRegistry({
+    basicPitch:
+      process.env.BASIC_PITCH_MODEL_DIR ?? resolve(__dirname, '../model'),
+    crepeFull:
+      process.env.CREPE_FULL_MODEL_DIR ??
+      resolve(__dirname, '../model-crepe-full'),
+    crepeTiny:
+      process.env.CREPE_TINY_MODEL_DIR ??
+      resolve(__dirname, '../model-crepe-tiny'),
+    pesto: process.env.PESTO_MODEL_DIR ?? resolve(__dirname, '../model-pesto'),
+  });
+  const resolver = new ProfileResolver();
+  void registry.initAll(usedProviderNames());
 
   const wss = new WebSocketServer({ port: PORT, path: '/recording' });
   wss.on('connection', (client: WebSocket) => {
     console.log('[server] client connected');
-    const pipeline = service.createPipeline();
+    const pipeline = new RecordingPipeline(registry, resolver);
     pipeline.setOnUpdate((update) => {
       if (client.readyState !== client.OPEN) return;
       client.send(JSON.stringify({ type: 'score-update', ...update }));

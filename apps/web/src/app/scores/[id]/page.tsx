@@ -10,7 +10,7 @@ import { getScore, loadScore, updateScore } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
-import { RecordingEngine, type RecordingState } from '@/lib/RecordingEngine'
+import { RecordingEngine, type RecordingLimitInfo, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
 import { Instrument, type Note, Pitch, Score } from '@/model'
@@ -19,6 +19,10 @@ import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { ControlBar } from './ControlBar'
 import { ExportMenu } from './ExportMenu'
+import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
+
+// Why the recording was cut short (or refused) — drives which dialog shows.
+type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -44,6 +48,7 @@ export default function ScoreEditorPage() {
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
+    const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
 
     useEffect(() => {
         async function load() {
@@ -412,7 +417,10 @@ export default function ScoreEditorPage() {
             return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
         }
 
-        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/^http/, 'ws') + '/recording'
+        // Every recording belongs to a score; the gateway requires the id up front.
+        const wsUrl =
+            (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/^http/, 'ws') +
+            `/recording?scoreId=${encodeURIComponent(id)}`
 
         try {
             await engine.start({
@@ -437,6 +445,14 @@ export default function ScoreEditorPage() {
                         score.replace([measure.firstNote], notes)
                     }
                     saveToApi({ score })
+                },
+                onLimitReached: (info) => {
+                    stopAll()
+                    setRecordingHalt({ kind: 'limit', info })
+                },
+                onRecordingError: (code) => {
+                    stopAll()
+                    if (code === 'concurrent-recording') setRecordingHalt({ kind: 'concurrent' })
                 },
             })
         } catch (err) {
@@ -565,6 +581,15 @@ export default function ScoreEditorPage() {
                 onCancel={() => setInstrumentDialogOpen(false)}
                 onConfirm={handleInstrumentChange}
             />
+
+            {recordingHalt?.kind === 'limit' && (
+                <RecordingLimitDialog
+                    info={recordingHalt.info}
+                    onUpgrade={() => router.push('/settings')}
+                    onClose={() => setRecordingHalt(null)}
+                />
+            )}
+            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
         </div>
     )
 }

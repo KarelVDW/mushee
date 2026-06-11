@@ -129,6 +129,8 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
     const onStateChange = vi.fn()
     const onNeedNewMeasure = vi.fn()
     const onScoreUpdate = vi.fn()
+    const onLimitReached = vi.fn()
+    const onRecordingError = vi.fn()
     const resolvePosition = vi.fn(
         (measureIndex: number, beat: number): { x: number; rowY: number } | null => ({ x: measureIndex * 100 + beat * 10, rowY: 0 }),
     )
@@ -142,9 +144,22 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
         onStateChange,
         onNeedNewMeasure,
         onScoreUpdate,
+        onLimitReached,
+        onRecordingError,
         ...over,
     }
-    return { options, score, cursorEl, waveformEl, onStateChange, onNeedNewMeasure, onScoreUpdate, resolvePosition }
+    return {
+        options,
+        score,
+        cursorEl,
+        waveformEl,
+        onStateChange,
+        onNeedNewMeasure,
+        onScoreUpdate,
+        onLimitReached,
+        onRecordingError,
+        resolvePosition,
+    }
 }
 
 describe('RecordingEngine', () => {
@@ -347,6 +362,76 @@ describe('RecordingEngine', () => {
         socket().fire('message', { data: JSON.stringify({ type: 'other' }) })
         socket().fire('message', { data: JSON.stringify({ type: 'score-update' }) })
         expect(onScoreUpdate).not.toHaveBeenCalled()
+    })
+
+    it('forwards recording-limit messages to onLimitReached with the budget info', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, onLimitReached } = makeOptions()
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        socket().fire('message', {
+            data: JSON.stringify({
+                type: 'recording-limit',
+                planId: 'free',
+                planName: 'Sketch',
+                limitSeconds: 30,
+                usedSeconds: 30,
+            }),
+        })
+        expect(onLimitReached).toHaveBeenCalledWith({ planId: 'free', planName: 'Sketch', limitSeconds: 30, usedSeconds: 30 })
+    })
+
+    it('fills defaults for a recording-limit message with missing fields', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, onLimitReached } = makeOptions()
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-limit' }) })
+        expect(onLimitReached).toHaveBeenCalledWith({ planId: 'free', planName: '', limitSeconds: null, usedSeconds: 0 })
+    })
+
+    it('forwards recording-error messages to onRecordingError and ignores codeless ones', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, onRecordingError } = makeOptions()
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-error', code: 'concurrent-recording' }) })
+        expect(onRecordingError).toHaveBeenCalledWith('concurrent-recording')
+
+        onRecordingError.mockClear()
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-error' }) })
+        expect(onRecordingError).not.toHaveBeenCalled()
+    })
+
+    it('tolerates limit/error messages when the optional callbacks are not provided', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions({ onLimitReached: undefined, onRecordingError: undefined })
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        expect(() => {
+            socket().fire('message', { data: JSON.stringify({ type: 'recording-limit', limitSeconds: 30 }) })
+            socket().fire('message', { data: JSON.stringify({ type: 'recording-error', code: 'score-required' }) })
+        }).not.toThrow()
     })
 
     it('media recorder forwards non-empty chunks and drops empty ones', async () => {

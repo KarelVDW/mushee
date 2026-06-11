@@ -14,6 +14,18 @@ const WAVEFORM_MAX_RADIUS = ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
 const WAVEFORM_GAIN = 10
 export type RecordingState = 'idle' | 'countoff' | 'recording'
 
+/** Sent by the gateway when the daily recording budget runs out (or already had). */
+export interface RecordingLimitInfo {
+    planId: string
+    planName: string
+    /** Daily budget in seconds; `null` on unlimited tiers (never sent in practice). */
+    limitSeconds: number | null
+    usedSeconds: number
+}
+
+/** Reasons the gateway refuses a recording connection. */
+export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording'
+
 export interface ResolveRecordingPosition {
     (measureIndex: number, beat: number): { x: number; rowY: number } | null
 }
@@ -36,6 +48,10 @@ export interface RecordingOptions {
      * measure is `0`, which in the score lives at `startMeasureIndex + 1`).
      */
     onScoreUpdate?: (update: { measures: Record<number, MxmlMeasure> }) => void
+    /** Fired when the gateway reports the daily recording budget is spent. */
+    onLimitReached?: (info: RecordingLimitInfo) => void
+    /** Fired when the gateway refuses the recording (e.g. one already running). */
+    onRecordingError?: (code: RecordingErrorCode) => void
 }
 
 /**
@@ -262,9 +278,26 @@ export class RecordingEngine implements Tickable {
                 return
             }
             if (!msg || typeof msg !== 'object') return
-            const payload = msg as { type?: string; measures?: Record<number, MxmlMeasure> }
+            const payload = msg as {
+                type?: string
+                measures?: Record<number, MxmlMeasure>
+                code?: RecordingErrorCode
+                planId?: string
+                planName?: string
+                limitSeconds?: number | null
+                usedSeconds?: number
+            }
             if (payload.type === 'score-update' && payload.measures) {
                 this.options?.onScoreUpdate?.({ measures: payload.measures })
+            } else if (payload.type === 'recording-limit') {
+                this.options?.onLimitReached?.({
+                    planId: payload.planId ?? 'free',
+                    planName: payload.planName ?? '',
+                    limitSeconds: payload.limitSeconds ?? null,
+                    usedSeconds: payload.usedSeconds ?? 0,
+                })
+            } else if (payload.type === 'recording-error' && payload.code) {
+                this.options?.onRecordingError?.(payload.code)
             }
         })
 

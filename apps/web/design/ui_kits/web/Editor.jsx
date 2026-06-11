@@ -600,9 +600,60 @@ function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClo
                     {nextPlanName && (
                         <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                             Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
-                            immediately and your remaining minutes carry over.
+                            immediately.
                         </span>
                     )}
+                </div>
+            </DialogPanel>
+        </DialogScrim>
+    )
+}
+
+// Concurrent-recording dialog. Shown when the account already has a recording
+// in flight (another tab or device) — one recording at a time is a hard rule.
+// Single acknowledgment action; nothing in the current score is touched.
+function ConcurrentRecordingDialog({ onClose }) {
+    return (
+        <DialogScrim onDismiss={onClose}>
+            <DialogPanel
+                title="One recording at a time."
+                eyebrow="Your account already has a recording running — maybe in another tab, or on another device."
+                onClose={onClose}
+                width={480}
+                footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 14,
+                            background: 'var(--color-surface-container-low)',
+                            borderRadius: 10,
+                            padding: 16,
+                        }}>
+                        <span
+                            style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 9999,
+                                flexShrink: 0,
+                                background: 'var(--color-error-container)',
+                                color: 'var(--color-on-error-container)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                            <Icon name="mic" size={20} />
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                The mic is busy somewhere else
+                            </span>
+                            <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                                Finish or stop that session first, then hit record here. Nothing in this score was changed.
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </DialogPanel>
         </DialogScrim>
@@ -773,6 +824,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
     const [bpm, setBpm] = useState(120)
     const [title, setTitle] = useState(score?.title ?? 'Untitled composition')
     const [limitDialogOpen, setLimitDialogOpen] = useState(false)
+    const [concurrentDialogOpen, setConcurrentDialogOpen] = useState(false)
 
     const tier = EDITOR_TIERS[planId] ?? EDITOR_TIERS.free
     const limitSec = tier.dailyLimitSec
@@ -797,7 +849,13 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
         return () => clearInterval(id)
     }, [recording, exhausted])
 
-    const handleRecClick = () => {
+    // Shift-click simulates the gateway refusing the take because another
+    // session on the account is already recording (other tab / other device).
+    const handleRecClick = (e) => {
+        if (e?.shiftKey) {
+            setConcurrentDialogOpen(true)
+            return
+        }
         if (exhausted) {
             setLimitDialogOpen(true)
             return
@@ -901,6 +959,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                     }}
                 />
             )}
+            {concurrentDialogOpen && <ConcurrentRecordingDialog onClose={() => setConcurrentDialogOpen(false)} />}
             <div style={{ flex: 1, overflow: 'auto', padding: 32 }}>
                 <div
                     style={{

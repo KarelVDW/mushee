@@ -12,6 +12,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { ScoresModule } from './scores/scores.module';
 import { StorageModule } from './storage/storage.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { StorageModule } from './storage/storage.module';
     CacheModule,
     StorageModule,
     CronModule,
+    SubscriptionsModule,
     RecordingsModule,
   ],
   controllers: [HealthController],

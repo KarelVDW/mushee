@@ -1,10 +1,19 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { resolve } from 'path';
+import { Repository } from 'typeorm';
 
+import { Recording } from './entities/recording.entity';
 import { usedProviderNames } from './profiles/PipelineProfile';
 import { ProfileResolver } from './profiles/ProfileResolver';
 import { ProviderRegistry } from './providers/ProviderRegistry';
+import { RecordingCreditsService } from './recording-credits.service';
+import { RecordingLocksService } from './recording-locks.service';
 import { RecordingPipeline } from './RecordingPipeline';
+import {
+  RecordingSession,
+  RecordingSessionEvents,
+} from './RecordingSession';
 
 const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
 const DEFAULT_CREPE_FULL_DIR = resolve(process.cwd(), 'model-crepe-full');
@@ -21,7 +30,12 @@ export class RecordingsService implements OnModuleInit {
   private readonly registry: ProviderRegistry;
   private readonly resolver = new ProfileResolver();
 
-  constructor() {
+  constructor(
+    @InjectRepository(Recording)
+    private readonly recordingRepo: Repository<Recording>,
+    private readonly credits: RecordingCreditsService,
+    private readonly locks: RecordingLocksService,
+  ) {
     this.registry = new ProviderRegistry({
       basicPitch: process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR,
       crepeFull: process.env.CREPE_FULL_MODEL_DIR ?? DEFAULT_CREPE_FULL_DIR,
@@ -37,5 +51,31 @@ export class RecordingsService implements OnModuleInit {
 
   createPipeline(): RecordingPipeline {
     return new RecordingPipeline(this.registry, this.resolver);
+  }
+
+  /**
+   * Create a recording session for a user, or return `null` when the user
+   * already has one in flight — enforced across API instances via a
+   * Postgres lock. The returned session releases its slot when closed.
+   */
+  async createSession(
+    userId: string,
+    scoreId: string,
+    events: RecordingSessionEvents,
+  ): Promise<RecordingSession | null> {
+    const lock = await this.locks.acquire(userId);
+    if (!lock) {
+      this.logger.warn(`Rejected concurrent recording for user ${userId}`);
+      return null;
+    }
+    return new RecordingSession(
+      userId,
+      scoreId,
+      this.createPipeline(),
+      this.credits,
+      this.recordingRepo,
+      events,
+      lock,
+    );
   }
 }

@@ -9,8 +9,11 @@ import type { IncomingMessage } from 'http';
 import type { RawData, WebSocket } from 'ws';
 
 import { auth } from '../auth/auth';
-import type { RecordingPipeline } from './RecordingPipeline';
+import { ScoresService } from '../scores/scores.service';
+import type { RecordingCreditBalance } from './recording-credits.service';
+import { RecordingCreditsService } from './recording-credits.service';
 import { RecordingsService } from './recordings.service';
+import type { RecordingSession } from './RecordingSession';
 
 interface RecordingMetaMessage {
   type: 'meta';
@@ -29,11 +32,17 @@ interface RecordingEndMessage {
 
 type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage;
 
+/** Reasons a recording connection is refused; the client maps these to dialogs. */
+type RecordingErrorCode =
+  | 'score-required'
+  | 'score-not-found'
+  | 'concurrent-recording';
+
 /** Largest single WebSocket frame we accept (defense against memory abuse via
  *  oversized audio chunks). One ~1s PCM/Opus chunk is well under this. */
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
-/** Policy-violation close code (RFC 6455) — used to reject unauthenticated clients. */
+/** Policy-violation close code (RFC 6455) — used to reject unauthorized clients. */
 const WS_POLICY_VIOLATION = 1008;
 
 @WebSocketGateway({ path: '/recording', maxPayload: MAX_PAYLOAD_BYTES })
@@ -41,21 +50,26 @@ export class RecordingsGateway
   implements OnGatewayConnection<WebSocket>, OnGatewayDisconnect<WebSocket>
 {
   private readonly logger = new Logger(RecordingsGateway.name);
-  private readonly pipelines = new WeakMap<WebSocket, RecordingPipeline>();
+  private readonly sessions = new WeakMap<WebSocket, RecordingSession>();
 
-  constructor(private readonly recordingsService: RecordingsService) {}
+  constructor(
+    private readonly recordingsService: RecordingsService,
+    private readonly creditsService: RecordingCreditsService,
+    private readonly scoresService: ScoresService,
+  ) {}
 
   handleConnection(client: WebSocket, request: IncomingMessage): void {
-    // Session validation is async; buffer any frames that arrive before it
-    // resolves so the first audio chunks aren't dropped, then either flush
-    // them into the pipeline or discard them if the client is unauthorized.
+    // Session setup is async (auth, score ownership, credit balance); buffer
+    // any frames that arrive before it resolves so the first audio chunks
+    // aren't dropped, then either flush them into the session or discard them
+    // if the connection was rejected.
     const pending: Array<{ data: RawData; isBinary: boolean }> = [];
-    let pipeline: RecordingPipeline | null = null;
+    let session: RecordingSession | null = null;
     let closed = false;
 
     client.on('message', (data: RawData, isBinary: boolean) => {
-      if (pipeline) {
-        this.handleMessage(pipeline, data, isBinary);
+      if (session) {
+        this.handleMessage(session, data, isBinary);
       } else {
         pending.push({ data, isBinary });
       }
@@ -64,22 +78,14 @@ export class RecordingsGateway
       closed = true;
     });
 
-    void this.authenticate(request).then((user) => {
-      if (!user) {
-        this.logger.warn('Rejected unauthenticated recording connection');
-        client.close(WS_POLICY_VIOLATION, 'Unauthorized');
+    void this.openSession(client, request).then((created) => {
+      if (!created) return;
+      if (closed || client.readyState !== client.OPEN) {
+        void created.close();
         return;
       }
-      if (closed || client.readyState !== client.OPEN) return;
-
-      this.logger.log(`Recording client connected (user ${user.id})`);
-      const created = this.recordingsService.createPipeline();
-      created.setOnUpdate((update) => {
-        if (client.readyState !== client.OPEN) return;
-        client.send(JSON.stringify({ type: 'score-update', ...update }));
-      });
-      this.pipelines.set(client, created);
-      pipeline = created;
+      this.sessions.set(client, created);
+      session = created;
 
       for (const msg of pending) {
         this.handleMessage(created, msg.data, msg.isBinary);
@@ -89,15 +95,112 @@ export class RecordingsGateway
   }
 
   handleDisconnect(client: WebSocket): void {
-    const p = this.pipelines.get(client);
-    this.pipelines.delete(client);
-    if (p) {
-      void p.finalize().catch((err: unknown) => {
+    const session = this.sessions.get(client);
+    this.sessions.delete(client);
+    if (session) {
+      void session.close().catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
-        this.logger.warn(`Pipeline finalize on disconnect failed: ${message}`);
+        this.logger.warn(`Session close on disconnect failed: ${message}`);
       });
     }
     this.logger.log('Recording client disconnected');
+  }
+
+  /**
+   * Authenticate the connection and validate every recording precondition:
+   * a score the user owns, no recording already in flight, and daily credits
+   * left. Rejections notify the client with a typed message before closing.
+   */
+  private async openSession(
+    client: WebSocket,
+    request: IncomingMessage,
+  ): Promise<RecordingSession | null> {
+    const user = await this.authenticate(request);
+    if (!user) {
+      this.logger.warn('Rejected unauthenticated recording connection');
+      client.close(WS_POLICY_VIOLATION, 'Unauthorized');
+      return null;
+    }
+
+    const scoreId = this.scoreIdFrom(request);
+    if (!scoreId) {
+      this.logger.warn(`Rejected recording without scoreId (user ${user.id})`);
+      this.reject(client, 'score-required');
+      return null;
+    }
+
+    // Every recording belongs to a score; verify it exists and is the user's.
+    try {
+      await this.scoresService.findOne(user.id, scoreId);
+    } catch {
+      this.logger.warn(
+        `Rejected recording for inaccessible score ${scoreId} (user ${user.id})`,
+      );
+      this.reject(client, 'score-not-found');
+      return null;
+    }
+
+    const session = await this.recordingsService.createSession(user.id, scoreId, {
+      onUpdate: (update) => {
+        if (client.readyState !== client.OPEN) return;
+        client.send(JSON.stringify({ type: 'score-update', ...update }));
+      },
+      onLimitReached: (balance) => this.sendLimit(client, balance),
+    });
+    if (!session) {
+      this.reject(client, 'concurrent-recording');
+      return null;
+    }
+
+    // No credits left today — tell the client why before it streams anything.
+    const balance = await this.creditsService.balance(user.id);
+    if (balance.exhausted) {
+      this.logger.log(`Rejected recording with exhausted budget (user ${user.id})`);
+      await session.close();
+      this.sendLimit(client, balance);
+      client.close(WS_POLICY_VIOLATION, 'Daily recording limit reached');
+      return null;
+    }
+
+    try {
+      await session.open();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Failed to open recording session: ${message}`);
+      await session.close();
+      client.close(WS_POLICY_VIOLATION, 'Recording session failed');
+      return null;
+    }
+
+    this.logger.log(
+      `Recording client connected (user ${user.id}, score ${scoreId})`,
+    );
+    return session;
+  }
+
+  private scoreIdFrom(request: IncomingMessage): string | null {
+    const url = new URL(request.url ?? '', 'http://placeholder');
+    return url.searchParams.get('scoreId');
+  }
+
+  private reject(client: WebSocket, code: RecordingErrorCode): void {
+    if (client.readyState === client.OPEN) {
+      client.send(JSON.stringify({ type: 'recording-error', code }));
+    }
+    client.close(WS_POLICY_VIOLATION, code);
+  }
+
+  private sendLimit(client: WebSocket, balance: RecordingCreditBalance): void {
+    if (client.readyState !== client.OPEN) return;
+    client.send(
+      JSON.stringify({
+        type: 'recording-limit',
+        planId: balance.tier.id,
+        planName: balance.tier.name,
+        limitSeconds: balance.tier.dailyRecordingCredits,
+        usedSeconds: balance.used,
+      }),
+    );
   }
 
   private async authenticate(
@@ -116,12 +219,12 @@ export class RecordingsGateway
   }
 
   private handleMessage(
-    pipeline: RecordingPipeline,
+    session: RecordingSession,
     data: RawData,
     isBinary: boolean,
   ): void {
     if (isBinary) {
-      pipeline.appendChunk(this.toBuffer(data));
+      session.appendChunk(this.toBuffer(data));
       return;
     }
 
@@ -136,14 +239,14 @@ export class RecordingsGateway
     }
 
     if (parsed.type === 'meta') {
-      pipeline.setMeta({
+      session.setMeta({
         bpm: parsed.bpm,
         timeSignature: parsed.timeSignature,
         chromaticTranspose: parsed.chromaticTranspose,
         instrumentId: parsed.instrumentId,
       });
     } else if (parsed.type === 'end') {
-      void pipeline.finalize();
+      session.finalize();
     }
   }
 
