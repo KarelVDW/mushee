@@ -1,6 +1,6 @@
 import { TIE_Y_SHIFT } from '@/components/notation/constants'
 
-import type { Tie } from '../Tie'
+import type { Note } from '../Note'
 
 export interface TieSegment {
     rowIndex: number
@@ -10,58 +10,64 @@ export interface TieSegment {
     endY: number
 }
 
+export interface TieLayoutContext {
+    /** Curve direction: 1 bends down (stems up), −1 bends up. */
+    direction: 1 | -1
+    startRowIndex: number
+    endRowIndex: number
+    /** Width of the start note's row — a cross-row tie runs to the row's right edge. */
+    startRowWidth: number
+    /** Row-local x of the start note's right notehead edge / end note's left notehead edge. */
+    startX: number
+    startY: number
+    endX: number
+    endY: number
+}
+
+/**
+ * The curve(s) of one tie, in row-local coordinates. A tie crossing a row
+ * break renders as two segments, one per row. Built by ScoreLayout from the
+ * semantic tie pairing plus the endpoint geometry.
+ */
 export class TieLayout {
     readonly id = crypto.randomUUID()
     readonly direction: 1 | -1
     readonly segments: TieSegment[]
+    /** Input signature — ScoreLayout reuses the previous instance when it is unchanged. */
+    readonly contextSignature: string
 
-    constructor(tie: Tie) {
-        const beam = tie.note.measure.beamOf(tie.note)
-        this.direction = (beam?.stemDir ?? tie.note.stemDir) === 'up' ? 1 : -1
-        const yShift = TIE_Y_SHIFT * this.direction
+    constructor(
+        readonly note: Note,
+        readonly nextNote: Note,
+        context: TieLayoutContext,
+    ) {
+        this.direction = context.direction
+        const yShift = TIE_Y_SHIFT * context.direction
+        const startY = context.startY + yShift
+        const endY = context.endY + yShift
 
-        const startMeasure = tie.note.measure
-        const endMeasure = tie.nextNote.measure
-        const startRow = startMeasure.score.getRowForMeasure(startMeasure)
-        const endRow = endMeasure.score.getRowForMeasure(endMeasure)
-        const startMeasureX = startRow.layout.getMeasureX(startMeasure)
-        const endMeasureX = endRow.layout.getMeasureX(endMeasure)
-
-        const startXInStartMeasure = startMeasure.layout.getXForElement(tie.note) + tie.note.layout.noteX + tie.note.width.noteHeadWidth
-        const startY = tie.note.layout.noteY + yShift
-        const endXInEndMeasure = endMeasure.layout.getXForElement(tie.nextNote) + tie.nextNote.layout.noteX
-        const endY = tie.nextNote.layout.noteY + yShift
-
-        if (startRow === endRow) {
-            // Single segment drawn inside the start measure's group; convert endX to start-measure-local.
-            this.segments = [
-                {
-                    rowIndex: startRow.index,
-                    startX: startXInStartMeasure,
-                    startY,
-                    endX: endMeasureX - startMeasureX + endXInEndMeasure,
-                    endY,
-                },
-            ]
+        if (context.startRowIndex === context.endRowIndex) {
+            this.segments = [{ rowIndex: context.startRowIndex, startX: context.startX, startY, endX: context.endX, endY }]
         } else {
-            // Two segments. Each is expressed in its own measure's local coordinate system —
-            // seg 0 drawn inside the start measure's group, seg 1 inside the end measure's.
+            // Two segments: the first runs to the start row's right edge, the second starts at the end row's left edge.
             this.segments = [
-                {
-                    rowIndex: startRow.index,
-                    startX: startXInStartMeasure,
-                    startY,
-                    endX: startRow.layout.width - startMeasureX,
-                    endY: startY,
-                },
-                {
-                    rowIndex: endRow.index,
-                    startX: -endMeasureX,
-                    startY: endY,
-                    endX: endXInEndMeasure,
-                    endY,
-                },
+                { rowIndex: context.startRowIndex, startX: context.startX, startY, endX: context.startRowWidth, endY: startY },
+                { rowIndex: context.endRowIndex, startX: 0, startY: endY, endX: context.endX, endY },
             ]
         }
+        this.contextSignature = TieLayout.signatureFor(context)
+    }
+
+    static signatureFor(context: TieLayoutContext): string {
+        return [
+            context.direction,
+            context.startRowIndex,
+            context.endRowIndex,
+            context.startRowWidth,
+            context.startX,
+            context.startY,
+            context.endX,
+            context.endY,
+        ].join('|')
     }
 }

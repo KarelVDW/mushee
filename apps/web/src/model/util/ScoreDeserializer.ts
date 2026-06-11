@@ -82,7 +82,12 @@ export class ScoreDeserializer {
                         break
                     }
                     case 'barline': {
-                        if (entry.barStyle) endBarline = ScoreDeserializer.mxmlBarStyleToBarlineType(entry.barStyle)
+                        if (entry.barStyle) {
+                            const parsed = ScoreDeserializer.mxmlBarStyleToBarlineType(entry.barStyle)
+                            // 'single' is the implicit default everywhere in the model; keep it as undefined
+                            // so the positional defaults (e.g. the end-of-piece barline) still apply.
+                            endBarline = parsed === 'single' ? undefined : parsed
+                        }
                         break
                     }
                     case 'direction': {

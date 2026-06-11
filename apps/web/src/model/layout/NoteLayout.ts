@@ -2,58 +2,58 @@ import { getGlyphWidth, getYForNote } from '@/components/notation'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 
 import type { Note } from '../Note'
+import type { NoteWidth } from '../width/NoteWidth'
 
+/**
+ * The geometry of a single note: notehead, stem, flag, ledger lines,
+ * accidental, and dots. Context (the drawn accidental and the note's width)
+ * is passed in explicitly by the layout layer — for detached preview notes,
+ * by the note itself.
+ */
 export class NoteLayout {
     readonly id = crypto.randomUUID()
     readonly noteX: number
     readonly noteY: number
     readonly glyphName: string
+    readonly width: NoteWidth
     readonly flag: { glyphName: string; x: number; y: number; scale?: number } | undefined
     readonly stem: { x: number; y1: number; y2: number } | undefined
     readonly ledgerLines: { x1: number; y1: number; x2: number; y2: number }[]
     readonly accidental: { x: number; y: number; glyphName: string } | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
-    constructor(private note: Note) {
+    constructor(
+        note: Note,
+        context: { accidentalGlyph: string | undefined; width: NoteWidth },
+    ) {
+        const width = context.width
+        this.width = width
         this.noteY = getYForNote(note.line)
         this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
-        let cursorX = note.width.paddingLeft
+        let cursorX = width.paddingLeft
 
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
-        const accGlyph = note.displayAccidentalGlyph
-        if (accGlyph) {
-            this.accidental = { x: cursorX, y: this.noteY, glyphName: accGlyph }
-            cursorX += getGlyphWidth(accGlyph) + note.width.gap
+        if (context.accidentalGlyph) {
+            this.accidental = { x: cursorX, y: this.noteY, glyphName: context.accidentalGlyph }
+            cursorX += getGlyphWidth(context.accidentalGlyph) + width.gap
         }
 
         // ledgerLines
         const ledgerLinePositions: number[] = []
         if (note.pitch) {
             const noteLine = note.line
-            if (noteLine < 1) {
-                for (let l = 0; l >= noteLine; l--) {
-                    /* v8 ignore else -- l is integer-stepped from 0, so l % 1 === 0 is always true */
-                    if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
-                }
-            }
-            if (noteLine > 5) {
-                for (let l = 6; l <= noteLine; l++) {
-                    /* v8 ignore else -- l is integer-stepped from 6, so l % 1 === 0 is always true */
-                    if (l % 1 === 0) ledgerLinePositions.push(getYForNote(l))
-                }
-            }
+            for (let l = 0; l >= noteLine; l--) ledgerLinePositions.push(getYForNote(l))
+            for (let l = 6; l <= noteLine; l++) ledgerLinePositions.push(getYForNote(l))
         }
-        this.ledgerLines = note.pitch
-            ? ledgerLinePositions.map((ly) => ({
-                  x1: cursorX,
-                  y1: ly,
-                  x2: cursorX + note.width.noteHeadWidth + 2 * note.width.ledgerLineExtension,
-                  y2: ly,
-              }))
-            : []
-        cursorX += note.width.ledgerLineExtension
+        this.ledgerLines = ledgerLinePositions.map((ly) => ({
+            x1: cursorX,
+            y1: ly,
+            x2: cursorX + width.noteHeadWidth + 2 * width.ledgerLineExtension,
+            y2: ly,
+        }))
+        cursorX += width.ledgerLineExtension
 
         this.noteX = cursorX
 
@@ -66,13 +66,13 @@ export class NoteLayout {
                 this.flag = {
                     glyphName: flagName,
                     x: this.stem.x,
-                    y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * note.width.stemHeight,
+                    y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * width.stemHeight,
                     scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
                 }
             }
         }
 
-        cursorX += note.width.noteHeadWidth + note.width.ledgerLineExtension + note.width.gap
+        cursorX += width.noteHeadWidth + width.ledgerLineExtension + width.gap
 
         // dots
         const numDots = note.duration.dots
@@ -82,7 +82,7 @@ export class NoteLayout {
             const dotY = onLine ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
             this.dots = []
             for (let i = 0; i < numDots; i++) {
-                const offset = note.width.gap + note.width.dotSpacing
+                const offset = width.gap + width.dotSpacing
                 this.dots.push({ x: cursorX + offset, y: dotY })
                 cursorX += offset
             }
@@ -92,10 +92,10 @@ export class NoteLayout {
     getStem(stemDir: 'up' | 'down') {
         const stemX =
             stemDir === 'up'
-                ? this.noteX + this.note.width.noteHeadWidth - this.note.width.stemWidth / 2
-                : this.noteX + this.note.width.stemWidth / 2
+                ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2
+                : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'
-            ? { x: stemX, y1: this.noteY, y2: this.noteY - this.note.width.stemHeight }
-            : { x: stemX, y1: this.noteY, y2: this.noteY + this.note.width.stemHeight }
+            ? { x: stemX, y1: this.noteY, y2: this.noteY - this.width.stemHeight }
+            : { x: stemX, y1: this.noteY, y2: this.noteY + this.width.stemHeight }
     }
 }

@@ -17,11 +17,10 @@ describe('TimeSignatureLayout', () => {
         expect(ts.layout.bottomDigits).toHaveLength(1)
     })
 
-    it('cached layout returns the same instance until invalidated', () => {
+    it('caches the layout forever — TimeSignature is an immutable value object', () => {
         const ts = new TimeSignature(4, 4)
         const a = ts.layout
         expect(ts.layout).toBe(a)
-        ts.invalidateLayout()
-        expect(ts.layout).not.toBe(a)
+        expect(ts.layout).toBe(a)
     })
 })

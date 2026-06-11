@@ -1,9 +1,13 @@
 import { TempoLayout } from './layout/TempoLayout'
 import type { Measure } from './Measure'
 
+/**
+ * A tempo marking anchored in a measure. Immutable after construction; its
+ * layout is a constant, so it is cached forever (context-free).
+ */
 export class Tempo {
-    public id = crypto.randomUUID()
-    private _layout: TempoLayout | undefined
+    readonly id = crypto.randomUUID()
+    private _layout: TempoLayout | null = null
 
     constructor(
         readonly measure: Measure,
@@ -11,12 +15,8 @@ export class Tempo {
         readonly bpm: number,
     ) {}
 
-    get layout() {
-        this._layout ||= new TempoLayout(this)
+    get layout(): TempoLayout {
+        this._layout ||= new TempoLayout()
         return this._layout
-    }
-
-    invalidateLayout() {
-        this._layout = undefined
     }
 }

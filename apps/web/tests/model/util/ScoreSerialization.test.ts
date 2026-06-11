@@ -252,10 +252,8 @@ describe('barline serialization', () => {
     })
 
     it('parses each MusicXML bar-style back to the correct barline type on deserialize', () => {
-        // NOTE: Score.addMeasure forcibly resets the end barline of non-last measures to 'single'
-        // (and the last to 'end') as measures are appended, so a *round-trip* drops mid-score barlines.
-        // This is a known model limitation reported separately — see the agent report. Here we verify the
-        // deserializer's bar-style parsing directly by feeding a single measure per style.
+        // An explicit barline survives loading even on the last measure — Score.addMeasure only
+        // applies positional defaults to measures that carry no explicit style.
         const single = (style: 'light-light' | 'light-heavy' | 'none'): ScorePartwise => ({
             partList: { scoreParts: [{ id: 'P1', partName: 'Piano' }] },
             parts: [
@@ -274,14 +272,23 @@ describe('barline serialization', () => {
                 },
             ],
         })
-        // A single measure is the last measure, so addMeasure sets its barline to 'end' regardless of input —
-        // assert the parse via a two-measure DTO where the *first* measure's parsed style survives long enough
-        // to be observed before the second is appended would still be reset. So assert the deserializer parsed
-        // value indirectly: 'light-heavy' on the lone (last) measure yields 'end', which matches both parse and reset.
         expect(new ScoreDeserializer(single('light-heavy')).toScore().firstMeasure?.endBarline).toBe('end')
-        // 'light-light' and 'none' are parsed (exercising those branches) but then reset to 'end' on the last measure.
-        expect(new ScoreDeserializer(single('light-light')).toScore().firstMeasure?.endBarline).toBe('end')
-        expect(new ScoreDeserializer(single('none')).toScore().firstMeasure?.endBarline).toBe('end')
+        expect(new ScoreDeserializer(single('light-light')).toScore().firstMeasure?.endBarline).toBe('double')
+        expect(new ScoreDeserializer(single('none')).toScore().firstMeasure?.endBarline).toBe('none')
+    })
+
+    it('round-trips mid-score double/none barlines through serialize → deserialize', () => {
+        const score = makeScore(4)
+        score.measures[0].setEndBarline('double')
+        score.measures[1].setEndBarline('none')
+
+        const restored = new ScoreDeserializer(toInput(score)).toScore()
+        expect(restored.measures[0].endBarline).toBe('double')
+        expect(restored.measures[1].endBarline).toBe('none')
+        // Measure 2 had no explicit style → positional default (mid-score: single).
+        expect(restored.measures[2].endBarline).toBe('single')
+        // The last measure keeps the final barline.
+        expect(restored.measures[3].endBarline).toBe('end')
     })
 
     it('does not emit a barline entry for the default single barline', () => {

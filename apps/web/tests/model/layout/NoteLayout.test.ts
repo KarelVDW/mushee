@@ -34,16 +34,16 @@ describe('NoteLayout', () => {
     it('a stem-up flag sits above the notehead', () => {
         // C4 is at line 0 (< 3) → stem up → flag pulled up from the notehead.
         const n = new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
-        expect(n.layout.stem?.y2).toBe(n.layout.noteY - n.width.stemHeight)
-        expect(n.layout.flag?.y).toBe(n.layout.noteY - n.width.stemHeight)
+        expect(n.layout.stem?.y2).toBe(n.layout.noteY - n.layout.width.stemHeight)
+        expect(n.layout.flag?.y).toBe(n.layout.noteY - n.layout.width.stemHeight)
     })
 
     it('a stem-down flag sits below the notehead', () => {
         // D5 is at line 4 (>= 3) → stem down → flag pushed down from the notehead.
         const n = new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name: 'D', octave: 5 }) })
         expect(n.stemDir).toBe('down')
-        expect(n.layout.stem?.y2).toBe(n.layout.noteY + n.width.stemHeight)
-        expect(n.layout.flag?.y).toBe(n.layout.noteY + n.width.stemHeight)
+        expect(n.layout.stem?.y2).toBe(n.layout.noteY + n.layout.width.stemHeight)
+        expect(n.layout.flag?.y).toBe(n.layout.noteY + n.layout.width.stemHeight)
     })
 
     it('an undotted flag has no scale override', () => {

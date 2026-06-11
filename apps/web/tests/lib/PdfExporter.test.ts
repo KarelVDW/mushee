@@ -116,7 +116,7 @@ describe('PdfExporter', () => {
     it('paginates a tall score into multiple pages', async () => {
         // 40 measures => 10 rows (4 per row), which overflows one A4 page.
         const score = makeScore(40)
-        expect(score.rows.length).toBeGreaterThan(7)
+        expect(score.layout.rows.length).toBeGreaterThan(7)
         const exporter = new PdfExporter(score, fakeSvg())
         const blob = await exporter.toBlob('Long Etude')
 

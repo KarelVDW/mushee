@@ -1,7 +1,6 @@
-import { KeySignatureLayout } from './layout/KeySignatureLayout'
+import type { KeySignatureLayout } from './layout/KeySignatureLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
-import { KeySignatureWidth } from './width/KeySignatureWidth'
 
 /** Order of sharps and flats in key signatures */
 const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'] as const
@@ -37,14 +36,14 @@ export interface KeyAccidental {
 }
 
 /**
- * A key signature anchored in a measure, like a {@link Clef}: the leading key sits at beat 0, further
- * ones are mid-measure changes. Its identity for propagation is `fifths` (positive = sharps, negative =
- * flats); `mode` is carried for serialization but does not affect accidentals or rendering.
+ * A key signature anchored in a measure, like a {@link Clef}: the leading key sits at beat 0,
+ * further ones are mid-measure changes. Its identity for propagation is `fifths` (positive =
+ * sharps, negative = flats); `mode` is carried for serialization but does not affect accidentals
+ * or rendering. Its drawn form (cancellation naturals) depends on the *preceding* key, so its
+ * layout is context-dependent and lives in the layout layer (delegated below).
  */
 export class KeySignature {
     readonly id = crypto.randomUUID()
-    private _layout: KeySignatureLayout | null = null
-    private _width: KeySignatureWidth | null = null
 
     constructor(
         readonly measure: Measure,
@@ -53,24 +52,9 @@ export class KeySignature {
         readonly mode?: string,
     ) {}
 
-    get width() {
-        if (!this._width) this._width = new KeySignatureWidth(this)
-        return this._width
-    }
-
-    get layout() {
-        if (!this._layout) this._layout = new KeySignatureLayout(this)
-        return this._layout
-    }
-
-    invalidateLayout() {
-        this._layout = null
-    }
-
-    /** Clear cached width and layout — the drawn accidentals (incl. cancellation naturals) depend on context. */
-    invalidate() {
-        this._width = null
-        this._layout = null
+    /** Delegates into the current ScoreLayout — context-dependent, never cached here. */
+    get layout(): KeySignatureLayout {
+        return this.measure.layout.keyLayoutFor(this)
     }
 
     /** Fifths of the key in effect immediately before this one — the previous measure's last key, or the key earlier in this measure. */

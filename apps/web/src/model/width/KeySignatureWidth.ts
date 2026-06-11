@@ -1,6 +1,6 @@
 import { getGlyphWidth } from '@/components/notation'
 
-import type { KeySignature } from '../KeySignature'
+import type { KeyAccidental } from '../KeySignature'
 import { PhysicalWidth } from './PhysicalWidth'
 
 /** Horizontal gap between adjacent key-signature accidentals. */
@@ -12,9 +12,9 @@ export class KeySignatureWidth implements PhysicalWidth {
     readonly content: number
     readonly total: number
 
-    constructor(keySignature: KeySignature) {
-        const accidentals = keySignature.drawnAccidentals
-        if (accidentals.length === 0) {
+    /** `drawnAccidentals` is the key's contextual drawn form (own accidentals or cancellation naturals). */
+    constructor(drawnAccidentals: KeyAccidental[]) {
+        if (drawnAccidentals.length === 0) {
             // C major (no accidentals) occupies no horizontal space.
             this.paddingLeft = 0
             this.paddingRight = 0
@@ -24,7 +24,7 @@ export class KeySignatureWidth implements PhysicalWidth {
         }
         this.paddingLeft = 4
         this.paddingRight = 8
-        this.content = accidentals.reduce((sum, a) => sum + getGlyphWidth(a.glyphName) + ACCIDENTAL_GAP, 0)
+        this.content = drawnAccidentals.reduce((sum, a) => sum + getGlyphWidth(a.glyphName) + ACCIDENTAL_GAP, 0)
         this.total = this.paddingLeft + this.content + this.paddingRight
     }
 }

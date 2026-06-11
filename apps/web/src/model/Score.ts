@@ -7,42 +7,105 @@ import { Instrument } from './Instrument'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
-import { Row } from './Row'
-import { Tie } from './Tie'
 import { TimeSignature } from './TimeSignature'
+import { Derived } from './util/Derived'
 import { MeasureSerializer } from './util/ScoreSerializer'
 
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
 const BEAT_EPSILON = 0.001
 
+/**
+ * The score: an ordered list of measures plus the lead instrument. Purely
+ * semantic — row packing, ties-as-geometry, and all other ink live in the
+ * layout layer behind the `layout` gateway.
+ *
+ * Mutations flow through single choke points (`touch` for score-level ops,
+ * `measureChanged` for measure content) that bump `version`; all derived state
+ * recomputes lazily off that version (see ARCHITECTURE.md).
+ */
 export class Score {
     /** Tempo assumed before any explicit marking — matches the playback engines' fallback. */
     static readonly DEFAULT_BPM = 90
 
     readonly measures: Measure[] = []
+    private _version = 0
     private _instrument: Instrument = Instrument.Piano
-    private _layout: ScoreLayout | null = null
-    private _rows: Row[] = []
-    private _rowByMeasure: Map<Measure, Row> = new Map()
-    private _indexByMeasure: Map<Measure, number> = new Map()
-    private _tiesByNote: Map<Note, Tie> = new Map()
-    private onChange: () => void
+    private readonly _onChange?: () => void
+
+    // Persistence dirty-tracking (cleared by flushDirty)
     private _dirtyMeasures = new Set<Measure>()
     private _structureChanged = false
     private _instrumentDirty = false
-    private _rebuildingRows = false
-    private _tempoMap: number[] | null = null
+
+    private _layoutState: { version: number; layout: ScoreLayout } | null = null
+
+    private readonly _indexByMeasure = new Derived(
+        () => this._version,
+        () => new Map(this.measures.map((m, i) => [m, i])),
+    )
+
+    /** BPM in effect entering each measure, indexed by measure position. */
+    private readonly _tempoMap = new Derived(
+        () => this._version,
+        () => {
+            const map: number[] = []
+            let current = Score.DEFAULT_BPM
+            for (const measure of this.measures) {
+                map.push(current)
+                const latest = measure.lastTempo
+                if (latest) current = latest.bpm
+            }
+            return map
+        },
+    )
+
+    /** Tie connections: each tie-starting note mapped to the note it sustains into. */
+    private readonly _tiePartners = new Derived(
+        () => this._version,
+        () => {
+            const map = new Map<Note, Note>()
+            for (const measure of this.measures) {
+                for (const note of measure.notes) {
+                    if (!note.tiesForward) continue
+                    const next = this.nextNote(note)
+                    if (next) map.set(note, next)
+                }
+            }
+            return map
+        },
+    )
 
     constructor(onChange?: () => void) {
-        this.onChange = () => {
-            this.invalidateLayout()
-            this._tempoMap = null
-            onChange?.()
-        }
+        this._onChange = onChange
+    }
+
+    /** Version of the whole score's semantic content; any mutation moves it. */
+    get version(): number {
+        return this._version
+    }
+
+    /** Choke point for score-level mutations: bump the version and notify the owner. */
+    private touch() {
+        this._version++
+        this._onChange?.()
+    }
+
+    /** Choke point for measure-content mutations (called by Measure.touch). */
+    measureChanged(measure: Measure) {
+        this._version++
+        this._dirtyMeasures.add(measure)
     }
 
     get instrument(): Instrument {
         return this._instrument
+    }
+
+    /** The current layout snapshot, rebuilt lazily when the version moves (unchanged parts are reused). */
+    get layout(): ScoreLayout {
+        if (this._layoutState?.version !== this._version) {
+            this._layoutState = { version: this._version, layout: new ScoreLayout(this, this._layoutState?.layout) }
+        }
+        return this._layoutState.layout
     }
 
     /**
@@ -53,9 +116,9 @@ export class Score {
      * B♭4) becomes a flute written B♭4 (still sounds B♭4) — the audience hears
      * the same music; the trumpeter's "do" becomes the flutist's "si bémol".
      *
-     * The note rewrite goes through `replace` so tie tracking and layout state
-     * stay consistent. Note identities change — callers holding a Note ref
-     * (e.g. the editor's active note) need to re-resolve by position.
+     * The note rewrite goes through `replace` so tie tracking stays consistent.
+     * Note identities change — callers holding a Note ref (e.g. the editor's
+     * active note) need to re-resolve by position.
      */
     setInstrument(instrument: Instrument) {
         if (this._instrument === instrument) return
@@ -75,90 +138,17 @@ export class Score {
             }
             if (targets.length > 0) this.replace(targets, values)
             // Re-propagate the transposed key signatures forward (inherited leading keys follow the explicit ones).
-            this._rebuildRows()
+            this.propagateContext()
         }
 
         this._instrument = instrument
         this._instrumentDirty = true
-        this.onChange()
+        this.touch()
     }
 
     /** Set the initial instrument without marking the score dirty — for deserialization only. */
     seedInstrument(instrument: Instrument) {
         this._instrument = instrument
-    }
-
-    get layout() {
-        this._layout ||= new ScoreLayout(this)
-        return this._layout
-    }
-
-    get rows(): Row[] {
-        return this._rows
-    }
-
-    getRowForMeasure(measure: Measure) {
-        const row = this._rowByMeasure.get(measure)
-        if (!row) throw new Error('Measure not part of a row')
-        return row
-    }
-
-    getTieByNote(note: Note): Tie | undefined {
-        return this._tiesByNote.get(note)
-    }
-
-    private _removeTieEntriesFor(note: Note) {
-        const tie = this._tiesByNote.get(note)
-        if (!tie) return
-        this._tiesByNote.delete(tie.note)
-        this._tiesByNote.delete(tie.nextNote)
-    }
-
-    private _addTieEntryFor(note: Note) {
-        if (!note.tiesForward) return
-        let nextNote: Note | null
-        try {
-            nextNote = note.getNext()
-        } catch {
-            /* v8 ignore next -- defensive: getNext only throws for a measure-less note; every note reaching here is attached to a measure */
-            return
-        }
-        if (!nextNote) return
-        const tie = new Tie(note, nextNote)
-        this._tiesByNote.set(note, tie)
-        const startRow = this._rowByMeasure.get(tie.note.measure)
-        const endRow = this._rowByMeasure.get(tie.nextNote.measure)
-        if (startRow && endRow && startRow !== endRow) {
-            this._tiesByNote.set(nextNote, tie)
-        }
-    }
-
-    invalidateLayout() {
-        this._layout = null
-    }
-
-    markMeasureDirty(measure: Measure) {
-        this._dirtyMeasures.add(measure)
-    }
-
-    markStructureChanged() {
-        this._structureChanged = true
-    }
-
-    getIndexForMeasure(measure: Measure): number {
-        const index = this._indexByMeasure.get(measure)
-        if (index === undefined) throw new Error('Measure not part of this score')
-        return index
-    }
-
-    clearDirty() {
-        this._dirtyMeasures.clear()
-        this._structureChanged = false
-        this._instrumentDirty = false
-    }
-
-    get totalNotes(): number {
-        return this.measures.reduce((sum, m) => sum + m.notes.length, 0)
     }
 
     get firstMeasure(): Measure | null {
@@ -169,27 +159,41 @@ export class Score {
         return this.measures[this.measures.length - 1] ?? null
     }
 
-    get firstRow(): Row | null {
-        return this.rows[0] ?? null
+    getIndexForMeasure(measure: Measure): number {
+        const index = this._indexByMeasure.value.get(measure)
+        if (index === undefined) throw new Error('Measure not part of this score')
+        return index
     }
 
-    get lastRow(): Row | null {
-        return this.rows[this.rows.length - 1] ?? null
+    /** The note a tie-starting note sustains into, or null when it has no tie or no successor. */
+    tiePartner(note: Note): Note | null {
+        return this._tiePartners.value.get(note) ?? null
     }
+
+    // --- Navigation (the single traversal implementation; Note/Measure delegate here) ---
 
     getNextMeasure(measure?: Measure): Measure | null {
         if (!measure) return this.firstMeasure
-        const measureIndex = this._indexByMeasure.get(measure)
+        const measureIndex = this._indexByMeasure.value.get(measure)
         if (measureIndex === undefined) return null
         return this.measures[measureIndex + 1] ?? null
     }
 
     getPreviousMeasure(measure: Measure): Measure | null {
-        const measureIndex = this._indexByMeasure.get(measure)
+        const measureIndex = this._indexByMeasure.value.get(measure)
         if (measureIndex === undefined || measureIndex < 1) return null
-        /* v8 ignore next -- defensive: measureIndex >= 1 here, so measureIndex - 1 is always a valid in-range index */
-        return this.measures[measureIndex - 1] ?? null
+        return this.measures[measureIndex - 1]
     }
+
+    nextNote(note: Note): Note | null {
+        return note.measure.getNextNote(note) ?? this.getNextMeasure(note.measure)?.firstNote ?? null
+    }
+
+    previousNote(note: Note): Note | null {
+        return note.measure.getPreviousNote(note) ?? this.getPreviousMeasure(note.measure)?.lastNote ?? null
+    }
+
+    // --- Structure mutations ---
 
     addMeasure(index = this.measures.length, measure?: Measure) {
         if (!measure) {
@@ -204,122 +208,55 @@ export class Score {
             })
         }
         this.measures.splice(index, 0, measure)
-        this._rebuildIndexMap()
         const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
         const nextMeasure = this.measures[index + 1]
         if (nextMeasure) {
-            measure.setEndBarline('single')
+            // Mid-score insertion: default the new measure's barline, but never overwrite an
+            // explicit style it was built with (e.g. a double barline from a loaded score).
+            if (measure.endBarline === undefined) measure.setEndBarline('single')
         } else {
-            previousMeasure?.setEndBarline('single')
-            measure.setEndBarline('end')
+            // Appended at the end: the final barline moves to the new measure. Only the
+            // positional 'end' on the previous measure is demoted — an explicit double/none stays.
+            if (previousMeasure?.endBarline === 'end') previousMeasure.setEndBarline('single')
+            if (measure.endBarline === undefined) measure.setEndBarline('end')
         }
-        this._rebuildRows()
-        this._rebuildTies()
-        this.markStructureChanged()
-        this.onChange()
+        this.propagateContext()
+        this._structureChanged = true
+        this.touch()
         return measure
     }
 
     removeLastMeasure() {
-        const removed = this.measures.pop()
-        if (removed) {
-            for (const note of removed.notes) this._removeTieEntriesFor(note)
-            this._rowByMeasure.delete(removed)
-            this._indexByMeasure.delete(removed)
-            const lastRow = last(this._rows)
-            /* v8 ignore next -- defensive: a measure present in `measures` is always assigned to a row, so when `removed` exists `_rows` is non-empty */
-            if (lastRow) {
-                lastRow.removeLastMeasure()
-                if (lastRow.isEmpty) {
-                    this._rows.pop()
-                }
-            }
-            const newLastMeasure = last(this.measures)
-            const newLastNote = newLastMeasure && newLastMeasure.notes[newLastMeasure.notes.length - 1]
-            if (newLastNote) this._removeTieEntriesFor(newLastNote)
+        this.measures.pop()
+        const newLast = last(this.measures)
+        // The piece's final barline moves to the new last measure, but an explicit
+        // style (double/none/end) it already carries is preserved.
+        if (newLast && (newLast.endBarline === undefined || newLast.endBarline === 'single')) {
+            newLast.setEndBarline('end')
         }
-        last(this.measures)?.setEndBarline('end')
-        this.markStructureChanged()
-        this.onChange()
-    }
-
-    private _rebuildIndexMap() {
-        this._indexByMeasure.clear()
-        this.measures.forEach((m, i) => this._indexByMeasure.set(m, i))
-    }
-
-    private _rebuildRows() {
-        this._rebuildingRows = true
-        try {
-            this._rows = []
-            this._rowByMeasure.clear()
-            let prevClefType: ClefType | undefined
-            let prevKeyFifths: number | undefined
-            let prevTimeSignature: TimeSignature | undefined
-            let activeClefType: ClefType = 'treble'
-            let activeKeyFifths = 0
-            let activeKeyMode: string | undefined
-            for (const measure of this.measures) {
-                if (measure.leadingClefExplicit) activeClefType = measure.clef.type
-                else measure.setLeadingClefType(activeClefType)
-
-                if (measure.leadingKeyExplicit) {
-                    activeKeyFifths = measure.keySignature.fifths
-                    activeKeyMode = measure.keySignature.mode
-                } else measure.setLeadingKey(activeKeyFifths, activeKeyMode)
-                // Cancellation naturals depend on the (now-finalized) preceding measure's key, so refresh here.
-                measure.refreshKeySignatures()
-
-                measure.setShowsClef(prevClefType === undefined || prevClefType !== measure.clef.type)
-                measure.setShowsKeySignature(prevKeyFifths === undefined || prevKeyFifths !== measure.keySignature.fifths)
-                measure.setShowsTimeSignature(
-                    !prevTimeSignature ||
-                        prevTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
-                        prevTimeSignature.beatType !== measure.timeSignature.beatType,
-                )
-                let row = last(this._rows)
-                if (!row || !row.canFit(measure)) {
-                    row = new Row(this, this._rows.length)
-                    this._rows.push(row)
-                    measure.setShowsClef(true)
-                    measure.setShowsKeySignature(true)
-                }
-                row.addMeasure(measure)
-                this._rowByMeasure.set(measure, row)
-                activeClefType = measure.lastClef.type
-                activeKeyFifths = measure.lastKey.fifths
-                activeKeyMode = measure.lastKey.mode
-                prevClefType = activeClefType
-                prevKeyFifths = activeKeyFifths
-                prevTimeSignature = measure.timeSignature
-            }
-        } finally {
-            this._rebuildingRows = false
-        }
+        this._structureChanged = true
+        this.touch()
     }
 
     /**
-     * Called by a Measure when its minimalWidth changes. Re-runs row composition
-     * so that a measure that has grown past what its row can hold is pushed onto
-     * a new row (preventing ResizeError in RowLayout). Re-entry from inside
-     * _rebuildRows itself is suppressed.
+     * Eagerly propagate inherited leading clefs/keys forward across measures (semantic
+     * carry-forward — the serializer depends on it). Called by the score-level mutators
+     * that can change measure context; never a side effect of layout.
      */
-    onMeasureWidthChanged(measure: Measure) {
-        if (this._rebuildingRows) return
-        if (!this._indexByMeasure.has(measure)) return
-        this._rebuildRows()
-        this._rebuildTies()
-        this.invalidateLayout()
-    }
-
-    private _rebuildTies() {
-        this._tiesByNote.clear()
+    private propagateContext() {
+        let clefType: ClefType = 'treble'
+        let keyFifths = 0
+        let keyMode: string | undefined
         for (const measure of this.measures) {
-            for (const note of measure.notes) {
-                this._addTieEntryFor(note)
-            }
+            measure.applyInheritedClef(clefType)
+            measure.applyInheritedKey(keyFifths, keyMode)
+            clefType = measure.lastClef.type
+            keyFifths = measure.lastKey.fifths
+            keyMode = measure.lastKey.mode
         }
     }
+
+    // --- Content mutations ---
 
     setTempo(note: Note | null | undefined, bpm: number | undefined) {
         if (!note) return
@@ -327,8 +264,7 @@ export class Score {
         const beat = measure.beatOffsetOf(note)
         if (bpm === undefined) measure.removeTempo(beat)
         else measure.setTempo(beat, bpm)
-        this.markMeasureDirty(measure)
-        this.onChange()
+        this.touch()
     }
 
     setClef(note: Note | null | undefined, type: ClefType) {
@@ -340,9 +276,8 @@ export class Score {
             if (type === carriedIn) measure.makeLeadingClefInherited()
             else measure.setClef(0, type)
         } else measure.setClef(beat, type)
-        this.markMeasureDirty(measure)
-        this._rebuildRows()
-        this.onChange()
+        this.propagateContext()
+        this.touch()
     }
 
     setKeySignature(note: Note | null | undefined, fifths: number, mode?: string) {
@@ -356,28 +291,8 @@ export class Score {
             if (fifths === (carried?.fifths ?? 0) && mode === carried?.mode) measure.makeLeadingKeyInherited()
             else measure.setKeySignature(0, fifths, mode)
         } else measure.setKeySignature(beat, fifths, mode)
-        this.markMeasureDirty(measure)
-        this._rebuildRows()
-        this.onChange()
-    }
-
-    /**
-     * BPM in effect entering each measure, indexed by measure position. Built in a
-     * single pass and cached; the onChange wrapper clears it on any mutation, so
-     * reading the tempo at an arbitrary note (see {@link bpmAt}) never re-scans the
-     * whole score on every call.
-     */
-    private get tempoMap(): number[] {
-        if (this._tempoMap) return this._tempoMap
-        const map: number[] = []
-        let current = Score.DEFAULT_BPM
-        for (const measure of this.measures) {
-            map.push(current)
-            const latest = measure.lastTempo
-            if (latest) current = latest.bpm
-        }
-        this._tempoMap = map
-        return map
+        this.propagateContext()
+        this.touch()
     }
 
     /** The tempo (BPM) sounding at `note`: the nearest marking at or before it, else the default. */
@@ -387,7 +302,7 @@ export class Score {
         const local = measure.tempoAtOrBefore(measure.beatOffsetOf(note))
         if (local) return local.bpm
         /* v8 ignore next -- defensive: tempoMap has one entry per measure index, so the lookup is always defined for an in-score measure */
-        return this.tempoMap[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
+        return this._tempoMap.value[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
     }
 
     /**
@@ -503,15 +418,19 @@ export class Score {
                 }
             }
             measure.replaceNotes(notes, newNotes)
-            this.markMeasureDirty(measure)
             replaceValues = [...remainderNotes, ...replaceValues]
-            this.getRowForMeasure(measure).invalidateLayout()
             allNewNotes.push(...newNotes)
         }
-        for (const note of targets) this._removeTieEntriesFor(note)
-        for (const note of allNewNotes) this._addTieEntryFor(note)
-        this.onChange()
+        this.touch()
         return allNewNotes
+    }
+
+    // --- Persistence dirty-tracking ---
+
+    clearDirty() {
+        this._dirtyMeasures.clear()
+        this._structureChanged = false
+        this._instrumentDirty = false
     }
 
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
@@ -539,7 +458,7 @@ export class Score {
         } else if (this._dirtyMeasures.size > 0) {
             const measures: Record<string, unknown> = {}
             for (const measure of this._dirtyMeasures) {
-                const index = this._indexByMeasure.get(measure)
+                const index = this._indexByMeasure.value.get(measure)
                 if (index !== undefined) {
                     measures[String(index)] = new MeasureSerializer(measure).serialize()
                 }

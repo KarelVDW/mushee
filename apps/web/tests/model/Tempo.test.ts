@@ -15,19 +15,16 @@ describe('Tempo', () => {
         expect(t.bpm).toBe(120)
     })
 
-    it('layout is lazy and stable', () => {
+    it('has a unique id', () => {
+        const score = new Score()
+        const m = new Measure(score, 'treble', new TimeSignature(4, 4))
+        expect(new Tempo(m, 0, 120).id).not.toBe(new Tempo(m, 0, 120).id)
+    })
+
+    it('layout is context-free and cached forever (same instance on every read)', () => {
         const score = new Score()
         const m = new Measure(score, 'treble', new TimeSignature(4, 4))
         const t = new Tempo(m, 0, 120)
         expect(t.layout).toBe(t.layout)
-    })
-
-    it('invalidateLayout clears cached layout', () => {
-        const score = new Score()
-        const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-        const t = new Tempo(m, 0, 120)
-        const l1 = t.layout
-        t.invalidateLayout()
-        expect(t.layout).not.toBe(l1)
     })
 })

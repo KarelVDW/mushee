@@ -15,9 +15,9 @@ export class NoteWidth implements PhysicalWidth {
     readonly stemHeight = 35
     readonly stemWidth = 1.5
 
-    constructor(note: Note) {
+    /** `accidentalGlyph` is the accidental actually drawn for the note (measure- and key-aware), resolved by the layout layer. */
+    constructor(note: Note, accidentalGlyph: string | undefined) {
         let contentWidth = this.ledgerLineExtension * 2 + this.noteHeadWidth
-        const accidentalGlyph = note.displayAccidentalGlyph
         if (accidentalGlyph) contentWidth += this.gap + getGlyphWidth(accidentalGlyph)
         if (note.duration.dots) contentWidth += this.gap + this.dotSpacing * note.duration.dots
         this.content = contentWidth

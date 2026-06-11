@@ -38,11 +38,6 @@ describe('Note', () => {
         expect(plain.inTuplet).toBe(false)
     })
 
-    it('beats matches duration.effectiveBeats', () => {
-        const n = new Note({ duration: new Duration({ type: 'h' }) })
-        expect(n.beats).toBe(2)
-    })
-
     it('tiesForward / tiesBack reflect tie type', () => {
         expect(new Note({ duration: new Duration(), tie: 'start' }).tiesForward).toBe(true)
         expect(new Note({ duration: new Duration(), tie: 'start' }).tiesBack).toBe(false)
@@ -108,41 +103,45 @@ describe('Note', () => {
         expect(cloned).not.toBe(original)
     })
 
-    it('layout is cached between accesses until invalidated', () => {
-        const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
-        expect(n.layout).toBe(n.layout)
-    })
+    describe('layout', () => {
+        it('a detached note caches a standalone layout snapshot', () => {
+            const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            expect(n.layout).toBe(n.layout)
+        })
 
-    it('lazily creates a single NoteWidth instance', () => {
-        const n = new Note({ duration: new Duration() })
-        expect(n.width).toBe(n.width)
-    })
+        it('a detached rest lays out without a pitch (rest glyph, no accidental)', () => {
+            const r = rest('w')
+            expect(r.layout.glyphName).toBe(r.duration.restGlyph)
+            expect(r.layout.accidental).toBeUndefined()
+        })
 
-    it('invalidateLayout clears cached layout', () => {
-        const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
-        const l1 = n.layout
-        n.invalidateLayout()
-        const l2 = n.layout
-        expect(l1).not.toBe(l2)
-    })
-
-    it('invalidateWidth clears cached width and layout', () => {
-        const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
-        const w1 = n.width
-        const l1 = n.layout
-        n.invalidateWidth()
-        expect(n.width).not.toBe(w1)
-        expect(n.layout).not.toBe(l1)
-    })
-
-    describe('measure-resolved properties', () => {
-        it('bpm reads the active tempo from the owning score', () => {
+        it('an attached note delegates into the score layout and stays stable without mutation', () => {
             const score = new Score()
             score.addMeasure().complete()
             const note = score.measures[0].firstNote as Note
-            expect(note.bpm).toBe(Score.DEFAULT_BPM)
+            expect(note.layout).toBe(note.layout)
+        })
+
+        it('an attached note gets a new layout after its measure changes', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const m = score.measures[0]
+            const note = m.firstNote as Note
+            const before = note.layout
+            m.setTempo(0, 120) // any content change rebuilds the measure layout
+            expect(note.layout).not.toBe(before)
+            expect(note.layout.id).not.toBe(before.id)
+        })
+    })
+
+    describe('measure-resolved properties', () => {
+        it('the sounding tempo comes from score.bpmAt', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const note = score.measures[0].firstNote as Note
+            expect(score.bpmAt(note)).toBe(Score.DEFAULT_BPM)
             score.setTempo(note, 132)
-            expect(note.bpm).toBe(132)
+            expect(score.bpmAt(note)).toBe(132)
         })
 
         it('clef resolves the active clef at the note position', () => {
@@ -185,27 +184,22 @@ describe('Note', () => {
             expect(r.line).toBe(r.duration.restLine)
         })
 
-        it('displayAccidentalGlyph is measure-aware for an attached note', () => {
+        it('the drawn accidental is measure-aware for an attached note', () => {
             const score = new Score()
             score.addMeasure().complete()
             const measure = score.measures[0]
             const target = measure.firstNote as Note
             const [placed] = score.replace([target], [pitched('C', 4)])
             // C natural in C major draws no accidental.
-            expect(placed.displayAccidentalGlyph).toBeUndefined()
+            expect(placed.layout.accidental).toBeUndefined()
             const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
             const [placedSharp] = score.replace([placed], [sharp])
-            expect(placedSharp.displayAccidentalGlyph).toBe('accidentalSharp')
+            expect(placedSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
         })
 
-        it('displayAccidentalGlyph is undefined for a rest', () => {
-            const r = rest()
-            expect(r.displayAccidentalGlyph).toBeUndefined()
-        })
-
-        it('displayAccidentalGlyph falls back to the pitch glyph for a detached note', () => {
+        it('the drawn accidental falls back to the pitch glyph for a detached note', () => {
             const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: 'b', alter: -1 }) })
-            expect(detached.displayAccidentalGlyph).toBe('accidentalFlat')
+            expect(detached.layout.accidental?.glyphName).toBe('accidentalFlat')
         })
     })
 
@@ -218,14 +212,16 @@ describe('Note', () => {
             expect(note.clef).toBe(bass)
             expect(note.line).toBe(bass.lineFor(note.pitch as Pitch))
             // Preview note has no measure, so the accidental comes from the pitch itself.
-            expect(note.displayAccidentalGlyph).toBe('accidentalSharp')
+            expect(note.layout.accidental?.glyphName).toBe('accidentalSharp')
         })
 
-        it('clears cached layout so it re-renders under the preview clef', () => {
+        it('clears the cached detached layout so it re-renders under the preview clef', () => {
             const note = pitched('C', 4)
             const before = note.layout
-            note.previewUnder(clef('treble'))
-            expect(note.layout).not.toBe(before)
+            note.previewUnder(clef('bass'))
+            const after = note.layout
+            expect(after).not.toBe(before)
+            expect(after.noteY).not.toBe(before.noteY) // the line really moved
         })
     })
 

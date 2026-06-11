@@ -1,12 +1,15 @@
 import { Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
-import type { Measure } from './Measure'
 import { TimeSignatureWidth } from './width/TimeSignatureWidth'
 
+/**
+ * An immutable value object (no measure reference, no identity): instances are
+ * shared freely across measures, so its layout and width — which depend only on
+ * the digits — are cached forever.
+ */
 export class TimeSignature {
     readonly beatAmount: number
     readonly beatType: number
-    private _measure: Measure | undefined
     private _layout: TimeSignatureLayout | null = null
     private _width: TimeSignatureWidth | null = null
 
@@ -15,27 +18,18 @@ export class TimeSignature {
         this.beatType = beatType
     }
 
-    get width() {
-        if (!this._width) this._width = new TimeSignatureWidth(this)
+    get width(): TimeSignatureWidth {
+        this._width ||= new TimeSignatureWidth(this)
         return this._width
     }
 
-    get layout() {
-        if (!this._layout) this._layout = new TimeSignatureLayout(this)
+    get layout(): TimeSignatureLayout {
+        this._layout ||= new TimeSignatureLayout(this)
         return this._layout
     }
 
-    invalidateLayout() {
-        this._layout = null
-    }
-
-    get measure() {
-        if (!this._measure) throw new Error('TimeSignature is not assigned to a measure')
-        return this._measure
-    }
-
-    setMeasure(measure: Measure | undefined) {
-        this._measure = measure
+    equals(other: TimeSignature): boolean {
+        return this.beatAmount === other.beatAmount && this.beatType === other.beatType
     }
 
     /** Total beats per measure in quarter-note units */

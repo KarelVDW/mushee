@@ -8,15 +8,20 @@ import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
 import { NoteWidth } from './width/NoteWidth'
 
+/**
+ * A note or rest. Content (duration, pitch, tie) is immutable — edits replace
+ * notes via `Score.replace` — but a note migrates between measures, so the
+ * measure link uses attach/detach (the only class that does; see
+ * ARCHITECTURE.md).
+ */
 export class Note {
     readonly id: string
     private _measure: Measure | undefined
     readonly duration: Duration
     readonly pitch: Pitch | undefined
     readonly tie: TieType | undefined
-    private _width: NoteWidth | null = null
-    private _layout: NoteLayout | null = null
     private _previewClef: Clef | undefined
+    private _detachedLayout: NoteLayout | null = null
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
         this.id = crypto.randomUUID()
@@ -25,24 +30,18 @@ export class Note {
         this.tie = value.tie
     }
 
-    get width() {
-        if (!this._width) this._width = new NoteWidth(this)
-        return this._width
-    }
-
-    get layout() {
-        if (!this._layout) this._layout = new NoteLayout(this)
-        return this._layout
-    }
-
-    invalidateLayout() {
-        this._layout = null
-    }
-
-    /** Clear cached width (and layout, which depends on it) — the displayed accidental, hence width, is key-dependent. */
-    invalidateWidth() {
-        this._width = null
-        this._layout = null
+    /**
+     * The note's layout. Attached notes delegate into the current ScoreLayout;
+     * a detached note (the editor's ghost/preview note) gets a standalone
+     * snapshot, cached forever since its content and preview clef are fixed.
+     */
+    get layout(): NoteLayout {
+        if (this._measure) return this._measure.layout.noteLayoutFor(this)
+        this._detachedLayout ||= new NoteLayout(this, {
+            accidentalGlyph: this.pitch?.accidentalGlyph,
+            width: new NoteWidth(this, this.pitch?.accidentalGlyph),
+        })
+        return this._detachedLayout
     }
 
     get measure() {
@@ -62,15 +61,6 @@ export class Note {
         return this.duration.ratio.actualNotes !== 1
     }
 
-    get beats() {
-        return this.duration.effectiveBeats
-    }
-
-    /** The tempo (BPM) sounding at this note — the active marking at or before it. */
-    get bpm(): number {
-        return this.measure.score.bpmAt(this)
-    }
-
     /**
      * Render this note as if under `clef`, bypassing measure resolution. Used for
      * detached preview notes (the editor's ghost note), which aren't part of a
@@ -78,7 +68,7 @@ export class Note {
      */
     previewUnder(clef: Clef): this {
         this._previewClef = clef
-        this._layout = null
+        this._detachedLayout = null
         return this
     }
 
@@ -98,16 +88,6 @@ export class Note {
         return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
     }
 
-    /**
-     * The accidental glyph drawn for this note (key- and measure-aware), or undefined if none. A detached
-     * or preview note has no measure context, so it falls back to its pitch's own accidental.
-     */
-    get displayAccidentalGlyph(): string | undefined {
-        if (!this.pitch) return undefined
-        if (this._previewClef || !this._measure) return this.pitch.accidentalGlyph
-        return this.measure.accidentalGlyphFor(this)
-    }
-
     get tiesForward(): boolean {
         return this.tie === 'start' || this.tie === 'start-stop'
     }
@@ -121,20 +101,14 @@ export class Note {
         return this.line >= 3 ? 'down' : 'up'
     }
 
-    // --- Navigation ---
+    // --- Navigation (thin delegates; the traversal lives on Score) ---
 
     getNext(): Note | null {
-        const nextInMeasure = this.measure.getNextNote(this)
-        if (nextInMeasure) return nextInMeasure
-        const nextMeasure = this.measure.getNext()
-        return nextMeasure?.getNextNote() ?? null
+        return this.measure.score.nextNote(this)
     }
 
     getPrevious(): Note | null {
-        const prevInMeasure = this.measure.getPreviousNote(this)
-        if (prevInMeasure) return prevInMeasure
-        const prevMeasure = this.measure.getPrevious()
-        return prevMeasure?.lastNote ?? null
+        return this.measure.score.previousNote(this)
     }
 
     clone(overrides: { duration?: Duration; pitch?: Pitch; tie?: TieType }) {

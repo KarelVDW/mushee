@@ -19,9 +19,9 @@ describe('Tuplet', () => {
         const b = tripletEighth()
         const c = tripletEighth()
         m.addNotes([a, b, c])
-        // TupletFinder runs in recompute()
+        // TupletFinder derives the group lazily from the measure's notes.
         const tuplet = m.tuplets[0]
-        return { measure: m, a, b, c, tuplet }
+        return { score, measure: m, a, b, c, tuplet }
     }
 
     it('exposes constructor inputs', () => {
@@ -44,23 +44,17 @@ describe('Tuplet', () => {
         expect(tuplet.getIndex(tripletEighth())).toBeNull()
     })
 
-    it('hasNote', () => {
-        const { a, tuplet } = setup()
-        expect(tuplet.hasNote(a)).toBe(true)
-        expect(tuplet.hasNote(tripletEighth())).toBe(false)
+    it('layout delegates into the score layout and is stable without mutation', () => {
+        const { tuplet } = setup()
+        expect(tuplet.layout).toBe(tuplet.layout)
     })
 
-    it('layout is lazily created once and cached on repeated access', () => {
-        const { tuplet } = setup()
-        const l1 = tuplet.layout
-        const l2 = tuplet.layout
-        expect(l2).toBe(l1)
-    })
-
-    it('invalidateLayout clears cached layout', () => {
-        const { tuplet } = setup()
-        const l1 = tuplet.layout
-        tuplet.invalidateLayout()
-        expect(tuplet.layout).not.toBe(l1)
+    it('a measure mutation produces a fresh tuplet group with a fresh layout', () => {
+        const { measure, tuplet } = setup()
+        const layoutBefore = tuplet.layout
+        measure.addNotes([new Note({ duration: new Duration({ type: 'q' }) })])
+        const after = measure.tuplets[0]
+        expect(after).not.toBe(tuplet) // groups are re-derived per measure version
+        expect(after.layout).not.toBe(layoutBefore)
     })
 })

@@ -24,28 +24,33 @@ describe('TimeSignature', () => {
         expect(ts.beatTypeDigits).toEqual(['8'])
     })
 
-    it('lazily creates a single TimeSignatureWidth instance', () => {
-        const ts = new TimeSignature(4, 4)
-        const w1 = ts.width
-        const w2 = ts.width
-        expect(w1).toBe(w2)
+    describe('equals (value-object identity)', () => {
+        it('is true for the same digits', () => {
+            expect(new TimeSignature(3, 4).equals(new TimeSignature(3, 4))).toBe(true)
+        })
+
+        it('is false when the numerator differs', () => {
+            expect(new TimeSignature(3, 4).equals(new TimeSignature(4, 4))).toBe(false)
+        })
+
+        it('is false when the denominator differs', () => {
+            expect(new TimeSignature(3, 4).equals(new TimeSignature(3, 8))).toBe(false)
+        })
     })
 
-    it('measure getter throws when measure is unset', () => {
-        const ts = new TimeSignature(4, 4)
-        expect(() => ts.measure).toThrow('TimeSignature is not assigned to a measure')
+    it('is shared across measures as a value object (no measure reference)', () => {
+        const score = new Score()
+        const a = score.addMeasure()
+        const b = score.addMeasure() // inherits the previous measure's time signature
+        expect(b.timeSignature).toBe(a.timeSignature)
     })
 
-    it('setMeasure assigns the measure and the getter returns it', () => {
+    it('lazily creates a single TimeSignatureWidth instance (cached forever)', () => {
         const ts = new TimeSignature(4, 4)
-        const measure = new Score().addMeasure()
-        ts.setMeasure(measure)
-        expect(ts.measure).toBe(measure)
-        ts.setMeasure(undefined)
-        expect(() => ts.measure).toThrow('TimeSignature is not assigned to a measure')
+        expect(ts.width).toBe(ts.width)
     })
 
-    it('lazily creates a single TimeSignatureLayout instance', () => {
+    it('lazily creates a single TimeSignatureLayout instance (cached forever)', () => {
         const ts = new TimeSignature(4, 4)
         expect(ts.layout).toBe(ts.layout)
     })
@@ -76,13 +81,5 @@ describe('TimeSignature', () => {
             expect(rests.reduce((sum, d) => sum + d.beats, 0)).toBeCloseTo(1.5)
             expect(rests.map((d) => d.type)).toEqual(['8', 'q'])
         })
-    })
-
-    it('invalidateLayout clears the cached layout', () => {
-        const ts = new TimeSignature(4, 4)
-        const l1 = ts.layout
-        ts.invalidateLayout()
-        const l2 = ts.layout
-        expect(l1).not.toBe(l2)
     })
 })

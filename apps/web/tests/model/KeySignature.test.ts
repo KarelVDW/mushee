@@ -1,4 +1,4 @@
-import { key } from '@test/helpers'
+import { key, makeScore } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import { KeySignature } from '@/model/KeySignature'
@@ -68,6 +68,69 @@ describe('KeySignature', () => {
             const accidentals = key(-2).accidentals
             expect(accidentals.map((a) => a.name)).toEqual(['B', 'E'])
             expect(accidentals.every((a) => a.glyphName === 'accidentalFlat')).toBe(true)
+        })
+
+        it('accidentalsForFifths is the static equivalent', () => {
+            expect(KeySignature.accidentalsForFifths(0)).toEqual([])
+            expect(KeySignature.accidentalsForFifths(2).map((a) => a.name)).toEqual(['F', 'C'])
+            expect(KeySignature.accidentalsForFifths(-1).map((a) => [a.glyphName, a.name])).toEqual([['accidentalFlat', 'B']])
+        })
+    })
+
+    describe('precedingFifths', () => {
+        it('is 0 for the leading key of the first measure (nothing carries in)', () => {
+            const score = makeScore(1)
+            expect(score.measures[0].keySignature.precedingFifths).toBe(0)
+        })
+
+        it('is the previous measure last key for a leading key', () => {
+            const score = makeScore(2)
+            score.setKeySignature(score.measures[0].firstNote, 2) // D major in measure 0
+            score.setKeySignature(score.measures[1].firstNote, 1) // explicit G major in measure 1
+            expect(score.measures[1].keySignature.precedingFifths).toBe(2)
+        })
+
+        it('is the key earlier in the same measure for a mid-measure key', () => {
+            const score = makeScore(1)
+            const m = score.measures[0]
+            score.setKeySignature(m.firstNote, 1) // leading G major
+            score.setKeySignature(m.noteAtBeat(2), -1) // mid-measure F major
+            const midKey = m.keyAtBeat(2)
+            if (!midKey) throw new Error('expected mid-measure key')
+            expect(midKey.precedingFifths).toBe(1)
+        })
+    })
+
+    describe('drawnAccidentals (context-aware)', () => {
+        it('a non-C key draws its own accidentals', () => {
+            expect(key(2).drawnAccidentals.map((a) => a.glyphName)).toEqual(['accidentalSharp', 'accidentalSharp'])
+        })
+
+        it('C major with nothing before it draws nothing', () => {
+            expect(key(0).drawnAccidentals).toEqual([])
+        })
+
+        it('a switch to C major draws one cancellation natural per preceding accidental', () => {
+            const score = makeScore(2)
+            score.setKeySignature(score.measures[0].firstNote, -2) // B♭ major (B♭, E♭)
+            score.setKeySignature(score.measures[1].firstNote, 0) // back to C major
+            const drawn = score.measures[1].keySignature.drawnAccidentals
+            expect(drawn.map((a) => [a.glyphName, a.name])).toEqual([
+                ['accidentalNatural', 'B'],
+                ['accidentalNatural', 'E'],
+            ])
+        })
+    })
+
+    describe('layout (delegates into the score layout)', () => {
+        it('is stable without mutation and rebuilt after a relevant change', () => {
+            const score = makeScore(1)
+            const m = score.measures[0]
+            score.setKeySignature(m.firstNote, 1)
+            const before = m.keySignature.layout
+            expect(m.keySignature.layout).toBe(before)
+            m.setClef(0, 'bass') // the key draws on different lines under a new clef
+            expect(m.keySignature.layout).not.toBe(before)
         })
     })
 

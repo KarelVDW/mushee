@@ -1,20 +1,21 @@
 import { memo } from 'react'
 
-import type { Beam, Note } from '@/model'
+import type { Note } from '@/model'
+import type { BeamLayout } from '@/model/layout/BeamLayout'
 
 import { DOT_RADIUS } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {
     note: Note
-    beam?: Beam
+    beam?: BeamLayout
     color?: string
     layoutId: string
 }
 
 export const NoteGroup = memo(function NoteGroup({ note, beam, color }: NoteGroupProps) {
-    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
-    const beamStem = beam?.layout.getStem(note)
+    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines, width } = note.layout
+    const beamStem = beam?.getStem(note)
     const stem = beamStem ?? originalStem
     return (
         <>
@@ -27,7 +28,7 @@ export const NoteGroup = memo(function NoteGroup({ note, beam, color }: NoteGrou
             {accidental && <Glyph name={accidental.glyphName} x={accidental.x} y={accidental.y} />}
 
             {/* Stem */}
-            {stem && <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke="#000" strokeWidth={note.width.stemWidth} />}
+            {stem && <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke="#000" strokeWidth={width.stemWidth} />}
 
             {/* Flag (8th, 16th notes) */}
             {!beam && flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}

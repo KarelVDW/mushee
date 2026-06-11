@@ -1,14 +1,20 @@
-import { Beam } from '../Beam'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 
+export interface BeamGroup {
+    notes: Note[]
+    stemDir: 'up' | 'down'
+}
+
+/**
+ * Groups a measure's beamable notes (eighths/sixteenths) into beam groups:
+ * runs unbroken by rests, beat boundaries, or tuplet edges, each with the stem
+ * direction the group shares. Pure grouping — the geometry is BeamLayout's job.
+ */
 export class BeamFinder {
-    readonly beams: Beam[] = []
-    readonly beamByNote = new Map<Note, Beam>()
+    readonly groups: BeamGroup[] = []
 
     constructor(private measure: Measure) {
-        this.beams = []
-        this.beamByNote = new Map()
         let currentNotes: Note[] = []
         let beat = 0
 
@@ -16,11 +22,7 @@ export class BeamFinder {
             if (currentNotes.length >= 2) {
                 const avgLine = currentNotes.reduce((sum, n) => sum + n.line, 0) / currentNotes.length
                 const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
-                const beam = new Beam(this.measure, currentNotes, stemDir)
-                this.beams.push(beam)
-                for (const n of currentNotes) {
-                    this.beamByNote.set(n, beam)
-                }
+                this.groups.push({ notes: currentNotes, stemDir })
             }
             currentNotes = []
         }

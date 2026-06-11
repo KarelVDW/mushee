@@ -1,82 +1,170 @@
-import { defaults, makeScore, pitched, rest } from '@test/helpers'
+import { makeScore, pitched, rest } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
+import {
+    BARLINE_GAP,
+    BARLINE_THICK_WIDTH,
+    BARLINE_THIN_WIDTH,
+    NUM_STAFF_LINES,
+    SPACE_ABOVE_STAFF,
+    STAVE_LINE_DISTANCE,
+} from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
+import type { KeySignature } from '@/model/KeySignature'
+import { MeasureLayout, type MeasureLayoutContext } from '@/model/layout/MeasureLayout'
 import { Measure } from '@/model/Measure'
 import { Note } from '@/model/Note'
+import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
+import { TimeSignature } from '@/model/TimeSignature'
+import { KeySignatureWidth } from '@/model/width/KeySignatureWidth'
+import type { NoteWidth } from '@/model/width/NoteWidth'
+
+/** A registered measure inside a fresh score (no notes unless added). */
+function registeredMeasure(): { score: Score; m: Measure } {
+    const score = new Score()
+    return { score, m: score.addMeasure() }
+}
+
+function tripletEighth(): Note {
+    return new Note({
+        duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+        pitch: new Pitch({ name: 'C', octave: 4 }),
+    })
+}
 
 describe('MeasureLayout', () => {
     it('builds a layout for a default 4/4 measure with rests', () => {
         const score = makeScore(1)
         const m = score.firstMeasure
         if (!m) throw new Error('expected firstMeasure')
-        expect(() => m.layout).not.toThrow()
-        expect(m.layout.measureX).toBeGreaterThanOrEqual(0)
+        expect(m.layout.measureX).toBe(0)
         expect(m.layout.measureWidth).toBeGreaterThan(0)
+        expect(m.layout.rowIndex).toBe(0)
     })
 
-    it('positions notes in measure-relative coordinates', () => {
-        const score = new Score()
-        const m = score.addMeasure()
+    it('positions notes left to right in measure-relative coordinates', () => {
+        const { m } = registeredMeasure()
         m.addNotes([rest('q'), rest('q'), rest('q'), rest('q')])
         const layout = m.layout
-        const firstNote = m.firstNote
-        if (!firstNote) throw new Error('expected firstNote')
-        const lastNote = m.lastNote
-        if (!lastNote) throw new Error('expected lastNote')
-        const firstX = layout.getXForElement(firstNote)
-        const lastX = layout.getXForElement(lastNote)
-        expect(lastX).toBeGreaterThan(firstX)
+        const xs = m.notes.map((n) => layout.getXForElement(n))
+        for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1])
     })
 
     it('throws "Element not spaced in measure" for unknown elements', () => {
         const score = makeScore(1)
         const m = score.firstMeasure
         if (!m) throw new Error('expected firstMeasure')
-        const stranger = rest('q')
-        expect(() => m.layout.getXForElement(stranger)).toThrow('Element not spaced in measure')
+        expect(() => m.layout.getXForElement(rest('q'))).toThrow('Element not spaced in measure')
     })
 
-    it('getNoteForX returns the note whose range contains x', () => {
-        const score = makeScore(1)
-        const m = score.firstMeasure
-        if (!m) throw new Error('expected firstMeasure')
-        const firstNote = m.firstNote
-        if (!firstNote) throw new Error('expected firstNote')
-        const x = m.layout.getXForElement(firstNote)
-        expect(m.layout.getNoteForX(x)).toBe(firstNote)
-    })
-
-    it('getNoteForX returns null when x is outside any note range', () => {
-        const score = makeScore(1)
-        const m = score.firstMeasure
-        if (!m) throw new Error('expected firstMeasure')
-        expect(m.layout.getNoteForX(-1)).toBeNull()
-        expect(m.layout.getNoteForX(99999)).toBeNull()
-    })
-
-    it('getXForBeat is monotonically non-decreasing across the measure', () => {
-        const score = makeScore(1)
-        const m = score.firstMeasure
-        if (!m) throw new Error('expected firstMeasure')
-        const layout = m.layout
-        let prev = -Infinity
-        for (let beat = 0; beat <= m.maxBeats; beat += 0.25) {
-            const x = layout.getXForBeat(beat)
-            expect(x).toBeGreaterThanOrEqual(prev - 0.0001)
-            prev = x
-        }
-    })
-
-    describe('barline', () => {
-        it('returns a barline with positive height for default end barline', () => {
+    describe('leading elements', () => {
+        it('places clef, drawn key signature, and time signature in order at the measure start', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
+            score.setKeySignature(m.firstNote, 2)
+            const layout = m.layout
+            const keyWidth = new KeySignatureWidth(m.keySignature.drawnAccidentals).total
+            expect(layout.getXForElement(m.clef)).toBe(0)
+            expect(layout.getXForElement(m.keySignature)).toBe(m.clef.width.total)
+            expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total + keyWidth)
+        })
+
+        it('skips a C-major key signature even when the shows-flag is set', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            expect(m.layout.showsKeySignature).toBe(true)
+            expect(m.keySignature.drawnAccidentals).toHaveLength(0)
+            // Nothing is drawn, so the key occupies no slot.
+            expect(() => m.layout.getXForElement(m.keySignature)).toThrow('Element not spaced in measure')
+            // The time signature follows the clef directly.
+            expect(m.layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total)
+        })
+
+        it('omits clef and time signature for a mid-row measure with unchanged context', () => {
+            const score = makeScore(2)
+            const m = score.measures[1]
+            expect(() => m.layout.getXForElement(m.clef)).toThrow('Element not spaced in measure')
+            expect(() => m.layout.getXForElement(m.timeSignature)).toThrow('Element not spaced in measure')
+        })
+    })
+
+    describe('getNoteForX', () => {
+        it('returns the note whose allotted range contains x, or null outside any range', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const firstNote = m.firstNote
+            if (!firstNote) throw new Error('expected firstNote')
+            expect(m.layout.getNoteForX(m.layout.getXForElement(firstNote))).toBe(firstNote)
+            expect(m.layout.getNoteForX(-1)).toBeNull()
+            expect(m.layout.getNoteForX(99999)).toBeNull()
+        })
+    })
+
+    describe('getXForBeat', () => {
+        it('is monotonically non-decreasing across the measure', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            let prev = -Infinity
+            for (let beat = 0; beat <= m.maxBeats; beat += 0.25) {
+                const x = m.layout.getXForBeat(beat)
+                expect(x).toBeGreaterThanOrEqual(prev - 0.0001)
+                prev = x
+            }
+        })
+
+        it('returns 0 for a measure with no notes', () => {
+            const { m } = registeredMeasure()
+            expect(m.notes).toHaveLength(0)
+            expect(m.layout.getXForBeat(0)).toBe(0)
+        })
+
+        it('interpolates linearly within the note containing the beat', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+            const layout = m.layout
+            const second = m.notes[1]
+            const x2 = layout.getXForElement(second)
+            expect(layout.getXForBeat(2)).toBeCloseTo(x2)
+            // Beat 3 is halfway through the second half note (beats 2-4).
+            const width2 = layout.getXForBeat(4) - x2 // beat 4 = end of the note's allotted span
+            expect(layout.getXForBeat(3)).toBeCloseTo(x2 + width2 / 2)
+        })
+
+        it('clamps a beat past the last note onto the last note', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+            const layout = m.layout
+            // Beat 5 overshoots every note → anchored to the last note, interpolating past it.
+            expect(layout.getXForBeat(5)).toBeGreaterThan(layout.getXForBeat(4))
+        })
+
+        it('falls back to the first note for a beat before the measure start', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const firstNote = m.firstNote
+            if (!firstNote) throw new Error('expected firstNote')
+            const x = m.layout.getXForBeat(-1)
+            expect(x).toBeLessThan(m.layout.getXForElement(firstNote))
+            expect(Number.isFinite(x)).toBe(true)
+        })
+    })
+
+    describe('barline', () => {
+        it('spans the staff at the right edge for the default single barline', () => {
+            const score = makeScore(2)
+            const m = score.measures[0] // 'single' end barline
             const bar = m.layout.barline
             if (!bar) throw new Error('expected barline')
-            expect(bar.height).toBeGreaterThan(0)
+            expect(bar.type).toBe('single')
+            expect(bar.x).toBeCloseTo(m.layout.measureWidth - BARLINE_THIN_WIDTH)
+            expect(bar.y).toBe(SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE)
+            expect(bar.height).toBe((NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE)
         })
 
         it('returns null when endBarline is "none"', () => {
@@ -91,152 +179,179 @@ describe('MeasureLayout', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            m.setEndBarline(undefined) // exercise the `?? 'single'` fallback (nullish branch)
+            m.setEndBarline(undefined)
             const bar = m.layout.barline
             if (!bar) throw new Error('expected barline')
             expect(bar.type).toBe('single')
         })
 
-        it('uses an explicitly set barline type', () => {
+        it('uses an explicitly set barline type and reserves its width', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            m.setEndBarline('double') // non-nullish left side of `??`
+            m.setEndBarline('double')
             const bar = m.layout.barline
             if (!bar) throw new Error('expected barline')
             expect(bar.type).toBe('double')
-            // The barline sits at the right edge of the measure content (minus the barline width).
-            expect(bar.x).toBeCloseTo(m.layout.measureWidth - m.barlineWidth)
+            expect(bar.x).toBeCloseTo(m.layout.measureWidth - MeasureLayout.barlineWidth('double'))
         })
     })
 
-    describe('with shown clef and time signature', () => {
-        it('builds a layout when clef and time signature are visible', () => {
-            const score = makeScore(1)
-            const m = score.firstMeasure
-            if (!m) throw new Error('expected firstMeasure')
-            // First measure of first row already shows them via _rebuildRows.
-            expect(m.showsClef).toBe(true)
-            expect(m.showsTimeSignature).toBe(true)
-            expect(() => m.layout).not.toThrow()
-            expect(m.layout.getXForElement(m.clef)).toBeGreaterThanOrEqual(0)
-            expect(m.layout.getXForElement(m.timeSignature)).toBeGreaterThan(m.layout.getXForElement(m.clef))
+    describe('barlineWidth', () => {
+        it('maps each barline type to its drawn width', () => {
+            expect(MeasureLayout.barlineWidth('none')).toBe(0)
+            expect(MeasureLayout.barlineWidth('single')).toBe(BARLINE_THIN_WIDTH)
+            expect(MeasureLayout.barlineWidth('double')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH)
+            expect(MeasureLayout.barlineWidth('end')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH)
+            expect(MeasureLayout.barlineWidth(undefined)).toBe(BARLINE_THIN_WIDTH)
         })
     })
 
-    describe('crowded measures (potential ResizeError sources)', () => {
-        it('handles a measure full of 16th notes without throwing', () => {
-            const score = new Score()
-            const m = score.addMeasure()
-            // Replace the rests added by complete() with 16 sixteenth notes
-            const sixteenths: Note[] = []
-            for (let i = 0; i < 16; i++) sixteenths.push(pitched('C', 4, '16'))
-            m.addNotes(sixteenths)
-            expect(() => m.layout).not.toThrow()
-        })
-
-        it('handles many sixteenths with accidentals', () => {
-            const score = new Score()
-            const m = score.addMeasure()
-            const basePitch = pitched('C', 4).pitch
-            if (!basePitch) throw new Error('expected pitch')
-            const sharpPitch = basePitch.withAccidental('#')
-            const sixteenths: Note[] = []
-            for (let i = 0; i < 16; i++) {
-                sixteenths.push(
-                    new Note({
-                        duration: new Duration({ type: '16' }),
-                        pitch: sharpPitch,
-                    }),
-                )
-            }
-            m.addNotes(sixteenths)
-            expect(() => m.layout).not.toThrow()
-        })
-    })
-
-    describe('getXForBeat edge cases', () => {
-        it('returns 0 for a measure with no notes', () => {
-            const score = new Score()
-            const m = score.addMeasure() // bare measure: no auto-filled rests
-            expect(m.notes).toHaveLength(0)
-            expect(m.layout.getXForBeat(0)).toBe(0)
-        })
-
-        it('falls back to the first note for a beat before the measure start', () => {
-            const score = makeScore(1)
-            const m = score.firstMeasure
-            if (!m) throw new Error('expected firstMeasure')
-            const firstNote = m.firstNote
-            if (!firstNote) throw new Error('expected firstNote')
-            // A negative beat makes the first note "overshoot" (offset 0 > -1), so overshootIndex
-            // is 0 and notes[-1] is undefined → the `|| firstNote` fallback is taken. The result
-            // interpolates from the first note's x with a negative offset (beat < its start).
-            const x = m.layout.getXForBeat(-1)
-            expect(x).toBeLessThan(m.layout.getXForElement(firstNote))
-            expect(Number.isFinite(x)).toBe(true)
-        })
-    })
-
-    describe('mid-measure key signature (child element folded into preceding note)', () => {
-        it('spaces a mid-measure key change alongside the note at its beat', () => {
-            const score = new Score()
-            const m = score.addMeasure()
+    describe('mid-measure elements', () => {
+        it('folds a mid-measure key change in just before the note at its beat', () => {
+            const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
-            // A key change to 2 sharps at beat 2 draws accidentals and has no `beats`, so it
-            // folds in as a child element of the preceding note slot.
             m.setKeySignature(2, 2)
-            const midKey = m.midMeasureKeySignatures[0]
+            const midKey = m.keyAtBeat(2)
             if (!midKey) throw new Error('expected a mid-measure key signature')
             const layout = m.layout
-            const noteAtTwo = m.notes[1]
-            expect(layout.getXForElement(midKey)).toBeLessThanOrEqual(layout.getXForElement(noteAtTwo))
+            expect(layout.getXForElement(midKey)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
+            expect(layout.getXForElement(midKey)).toBeLessThanOrEqual(layout.getXForElement(m.notes[1]))
         })
-    })
 
-    describe('mid-measure clef (child element folded into preceding note)', () => {
-        it('spaces a mid-measure clef and the note that follows it at the same beat', () => {
-            const score = new Score()
-            const m = score.addMeasure()
+        it('places a mid-measure clef directly before the note that shares its beat', () => {
+            const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'q'), pitched('D', 4, 'q'), pitched('E', 4, 'q'), pitched('F', 4, 'q')])
-            // A clef change at beat 2 has no `beats`, so it folds into the preceding sizeable
-            // element as a child (lines 41-42) and is x-positioned within that slot (lines 62-66).
             m.setClef(2, 'bass')
-            const midClef = m.midMeasureClefs[0]
+            const midClef = m.clefAtBeat(2)
             if (!midClef) throw new Error('expected a mid-measure clef')
-
             const layout = m.layout
-            const clefX = layout.getXForElement(midClef)
-            // The clef sits within the measure, to the right of the first note.
-            const firstNote = m.firstNote
-            if (!firstNote) throw new Error('expected firstNote')
-            expect(clefX).toBeGreaterThan(layout.getXForElement(firstNote))
-            // The note at beat 2 is placed immediately after the clef glyph (child width reclaimed).
-            const noteAtTwo = m.notes[2]
-            expect(layout.getXForElement(noteAtTwo)).toBeGreaterThanOrEqual(clefX)
+            expect(layout.getXForElement(midClef)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
+            expect(layout.getXForElement(m.notes[2])).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
         })
 
-        it('places the mid-measure clef before the note that shares its beat', () => {
-            const score = new Score()
-            const m = score.addMeasure()
+        it('orders a clef before a key signature at the same beat', () => {
+            const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
             m.setClef(2, 'bass')
-            const midClef = m.midMeasureClefs[0]
-            if (!midClef) throw new Error('expected a mid-measure clef')
+            m.setKeySignature(2, 2)
+            const midClef = m.clefAtBeat(2)
+            const midKey = m.keyAtBeat(2)
+            if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             const layout = m.layout
-            // Clef and the beat-2 note occupy the same slot; the clef glyph comes first.
-            const noteAtTwo = m.notes[1]
-            expect(layout.getXForElement(midClef)).toBeLessThanOrEqual(layout.getXForElement(noteAtTwo))
+            expect(layout.getXForElement(midClef)).toBeLessThan(layout.getXForElement(midKey))
+            expect(layout.getXForElement(midKey)).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
+        })
+
+        it('orders mid-measure elements at different beats by beat', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, 'q'), pitched('D', 4, 'q'), pitched('E', 4, 'q'), pitched('F', 4, 'q')])
+            m.setClef(1, 'bass')
+            m.setKeySignature(2, 2)
+            const midClef = m.clefAtBeat(1)
+            const midKey = m.keyAtBeat(2)
+            if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
+            expect(m.layout.getXForElement(midClef)).toBeLessThan(m.layout.getXForElement(midKey))
+        })
+
+        it('a mid-measure clef in an empty measure joins the leading run', () => {
+            const { m } = registeredMeasure()
+            m.setClef(2, 'bass')
+            const midClef = m.clefAtBeat(2)
+            if (!midClef) throw new Error('expected a mid-measure clef')
+            // Leading run: leading clef, time signature, then the homeless mid clef.
+            expect(m.layout.getXForElement(midClef)).toBe(m.clef.width.total + m.timeSignature.width.total)
+        })
+
+        it('a mid-measure element past the last note folds into the final note slot', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+            m.setClef(3, 'bass')
+            const midClef = m.clefAtBeat(3)
+            if (!midClef) throw new Error('expected a mid-measure clef')
+            expect(m.layout.getXForElement(midClef)).toBeGreaterThan(m.layout.getXForElement(m.notes[1]))
         })
     })
 
-    describe('orphan measure (no row)', () => {
-        it('throws "Measure not part of a row" when computing layout', () => {
-            const score = new Score()
-            const { clefType, timeSignature } = defaults()
-            const orphan = new Measure(score, clefType, timeSignature)
-            // Measure exists but Score never registered it, so no row.
-            expect(() => orphan.layout).toThrow('Measure not part of a row')
+    describe('note, key, and tuplet layout lookups', () => {
+        it('noteLayoutFor returns the note layout that Note.layout delegates to', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            const note = m.notes[0]
+            expect(m.layout.noteLayoutFor(note)).toBe(note.layout)
+            expect(() => m.layout.noteLayoutFor(rest('q'))).toThrow('Note not part of this measure layout')
+        })
+
+        it('keyLayoutFor returns layouts for the leading and mid-measure keys', () => {
+            const { score, m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+            score.setKeySignature(m.firstNote, 1)
+            m.setKeySignature(2, 3)
+            const midKey = m.keyAtBeat(2)
+            if (!midKey) throw new Error('expected a mid-measure key')
+            expect(m.layout.keyLayoutFor(m.keySignature).accidentals).toHaveLength(1)
+            expect(m.layout.keyLayoutFor(midKey).accidentals).toHaveLength(3)
+            expect(midKey.layout).toBe(m.layout.keyLayoutFor(midKey))
+        })
+
+        it('keyLayoutFor throws for a key signature from another measure', () => {
+            const score = makeScore(2)
+            const stranger = score.measures[1].keySignature
+            expect(() => score.measures[0].layout.keyLayoutFor(stranger)).toThrow('Key signature not part of this measure layout')
+        })
+
+        it('tupletLayoutFor returns the tuplet layout and throws for strangers', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([tripletEighth(), tripletEighth(), tripletEighth()])
+            const tuplet = m.tuplets[0]
+            if (!tuplet) throw new Error('expected a tuplet')
+            expect(m.layout.tupletLayoutFor(tuplet)).toBe(tuplet.layout)
+
+            const { m: other } = registeredMeasure()
+            other.addNotes([tripletEighth(), tripletEighth(), tripletEighth()])
+            const strangerTuplet = other.tuplets[0]
+            if (!strangerTuplet) throw new Error('expected a tuplet')
+            expect(() => m.layout.tupletLayoutFor(strangerTuplet)).toThrow('Tuplet not part of this measure layout')
+        })
+
+        it('beamFor maps beamed notes to their beam and others to undefined', () => {
+            const { m } = registeredMeasure()
+            m.addNotes([pitched('C', 4, '8'), pitched('C', 4, '8'), pitched('C', 4, 'q')])
+            const layout = m.layout
+            expect(layout.beams).toHaveLength(1)
+            expect(layout.beamFor(m.notes[0])).toBe(layout.beams[0])
+            expect(layout.beamFor(m.notes[1])).toBe(layout.beams[0])
+            expect(layout.beamFor(m.notes[2])).toBeUndefined()
+        })
+    })
+
+    describe('explicit-context guards (direct construction)', () => {
+        function bareContext(): MeasureLayoutContext {
+            return {
+                x: 0,
+                width: 300,
+                rowIndex: 0,
+                showsClef: false,
+                showsKeySignature: false,
+                showsTimeSignature: false,
+                accidentals: new Map<Note, string | undefined>(),
+                noteWidths: new Map<Note, NoteWidth>(),
+                keyWidths: new Map<KeySignature, KeySignatureWidth>(),
+                reuseSignature: 'direct-test',
+            }
+        }
+
+        it('throws when a note width is missing from the context', () => {
+            const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
+            m.addNotes([rest('q')])
+            expect(() => new MeasureLayout(m, bareContext())).toThrow('Note width missing from layout context')
+        })
+
+        it('throws when a drawn key signature width is missing from the context', () => {
+            const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
+            const context = { ...bareContext(), showsKeySignature: true }
+            expect(() => new MeasureLayout(m, context)).toThrow('Key signature width missing from layout context')
         })
     })
 })

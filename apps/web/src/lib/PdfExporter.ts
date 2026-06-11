@@ -67,7 +67,7 @@ export class PdfExporter {
     private composePages(image: HTMLImageElement, pointsPerUnit: number, title: string): HTMLCanvasElement[] {
         const layout = this.score.layout
         const rowStride = layout.rowHeight + layout.rowGap
-        const rowCount = this.score.rows.length
+        const rowCount = layout.rows.length
         const pixelsPerUnit = pointsPerUnit * RASTER_SCALE
         const rowsPerPage = (firstPage: boolean) => {
             const usableUnits = (PAGE_HEIGHT - MARGIN * 2 - (firstPage ? TITLE_BLOCK_HEIGHT : 0)) / pointsPerUnit

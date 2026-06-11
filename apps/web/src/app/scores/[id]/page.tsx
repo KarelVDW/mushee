@@ -359,8 +359,8 @@ export default function ScoreEditorPage() {
 
         const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
             const measure = score.measures[pos.measureIndex]
-            const row = score.getRowForMeasure(measure)
-            const measureX = row.layout.getMeasureX(measure)
+            const row = score.layout.rowFor(measure)
+            const measureX = row.getMeasureX(measure)
             return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
         }
 
@@ -407,8 +407,8 @@ export default function ScoreEditorPage() {
         const resolvePosition = (measureIndex: number, beat: number) => {
             const measure = score.measures[measureIndex]
             if (!measure) return null
-            const row = score.getRowForMeasure(measure)
-            const measureX = row.layout.getMeasureX(measure)
+            const row = score.layout.rowFor(measure)
+            const measureX = row.getMeasureX(measure)
             return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
         }
 

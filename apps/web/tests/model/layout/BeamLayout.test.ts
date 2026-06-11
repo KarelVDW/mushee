@@ -17,7 +17,7 @@ function beamFrom(notes: Note[]) {
     const score = new Score()
     const measure = score.addMeasure()
     measure.addNotes(notes)
-    const beam = measure.beams[0]
+    const beam = measure.layout.beams[0]
     if (!beam) throw new Error('expected a beam to form')
     return { score, measure, beam }
 }
@@ -28,7 +28,7 @@ describe('BeamLayout', () => {
         const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
         expect(beam.stemDir).toBe('up')
 
-        const { primary } = beam.layout
+        const { primary } = beam
         // x2 is to the right of x1: the beam spans from first to last stem.
         expect(primary.x2).toBeGreaterThan(primary.x1)
         // Up-stem beams carry positive thickness (dirSign = +1).
@@ -40,7 +40,7 @@ describe('BeamLayout', () => {
         const { beam } = beamFrom([eighth('E', 5), eighth('E', 5)])
         expect(beam.stemDir).toBe('down')
 
-        const { primary } = beam.layout
+        const { primary } = beam
         expect(primary.x2).toBeGreaterThan(primary.x1)
         // Down-stem beams carry negative thickness (dirSign = -1).
         expect(primary.thickness).toBe(-BEAM_WIDTH)
@@ -48,7 +48,7 @@ describe('BeamLayout', () => {
 
     it('primary beam x endpoints match the first/last stem x positions', () => {
         const { measure, beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
-        const { primary } = beam.layout
+        const { primary } = beam
 
         const first = beam.firstNote
         const last = beam.lastNote
@@ -64,7 +64,7 @@ describe('BeamLayout', () => {
 
     it('a level beam (equal pitches) has zero slope: primary y1 === y2', () => {
         const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
-        const { primary } = beam.layout
+        const { primary } = beam
         expect(primary.y2).toBeCloseTo(primary.y1)
     })
 
@@ -72,7 +72,7 @@ describe('BeamLayout', () => {
         // First note low (C4), second higher (A4) → with up stems the beam tilts.
         const { beam } = beamFrom([eighth('C', 4), eighth('A', 4)])
         expect(beam.stemDir).toBe('up')
-        const { primary } = beam.layout
+        const { primary } = beam
 
         const dx = primary.x2 - primary.x1
         const slope = (primary.y2 - primary.y1) / dx
@@ -84,7 +84,7 @@ describe('BeamLayout', () => {
     it('clamps a steep pitch jump to the maximum beam slope', () => {
         // An extreme jump (C4 → C6, both up-stemmable region) would over-tilt without clamping.
         const { beam } = beamFrom([eighth('C', 4), eighth('B', 4)])
-        const { primary } = beam.layout
+        const { primary } = beam
         const dx = primary.x2 - primary.x1
         const slope = Math.abs((primary.y2 - primary.y1) / dx)
         expect(slope).toBeLessThanOrEqual(BEAM_MAX_SLOPE + 1e-9)
@@ -92,11 +92,11 @@ describe('BeamLayout', () => {
 
     it('getStem returns repositioned stems whose y2 lies on the beam line', () => {
         const { measure, beam } = beamFrom([eighth('C', 4), eighth('A', 4)])
-        const { primary } = beam.layout
+        const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
 
         for (const n of beam.notes) {
-            const stem = beam.layout.getStem(n)
+            const stem = beam.getStem(n)
             if (!stem) throw new Error('expected stem from beam layout')
             // The repositioned stem tip sits exactly on the primary beam line. The stored
             // stem.x is note-relative, so reconstruct the absolute beam x to evaluate the line.
@@ -112,20 +112,20 @@ describe('BeamLayout', () => {
 
     it('getStem returns undefined for a note not in the beam', () => {
         const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
-        expect(beam.layout.getStem(eighth('C', 4))).toBeUndefined()
+        expect(beam.getStem(eighth('C', 4))).toBeUndefined()
     })
 
     it('raises an up-beam so every stem reaches it (no stem pokes above the beam)', () => {
         // A descending up-stem group forces the beamFirstY adjustment branch (stemDir up).
-        const { beam } = beamFrom([eighth('A', 4), eighth('C', 4)])
+        const { measure, beam } = beamFrom([eighth('A', 4), eighth('C', 4)])
         expect(beam.stemDir).toBe('up')
-        const { primary } = beam.layout
+        const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
 
         for (const n of beam.notes) {
             const original = n.layout.getStem('up')
             if (!original) throw new Error('expected stem')
-            const stemX = beam.measure.layout.getXForElement(n) + original.x
+            const stemX = measure.layout.getXForElement(n) + original.x
             const beamY = primary.y1 + (stemX - primary.x1) * slope
             // Up-stems point upward (smaller y). The beam must sit at or above every stem tip.
             expect(beamY).toBeLessThanOrEqual(original.y2 + 1e-6)
@@ -135,15 +135,15 @@ describe('BeamLayout', () => {
     it('lowers a down-beam so every stem reaches it (no stem pokes below the beam)', () => {
         // A descending down-stem group: the later (lower) note's natural stem tip sits below
         // the halved-slope beam line, forcing the beamFirstY downward adjustment (stemDir down).
-        const { beam } = beamFrom([eighth('E', 5), eighth('C', 5)])
+        const { measure, beam } = beamFrom([eighth('E', 5), eighth('C', 5)])
         expect(beam.stemDir).toBe('down')
-        const { primary } = beam.layout
+        const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
 
         for (const n of beam.notes) {
             const original = n.layout.getStem('down')
             if (!original) throw new Error('expected stem')
-            const stemX = beam.measure.layout.getXForElement(n) + original.x
+            const stemX = measure.layout.getXForElement(n) + original.x
             const beamY = primary.y1 + (stemX - primary.x1) * slope
             // Down-stems point downward (larger y). The beam must sit at or below every stem tip.
             expect(beamY).toBeGreaterThanOrEqual(original.y2 - 1e-6)
@@ -153,7 +153,7 @@ describe('BeamLayout', () => {
     describe('secondary (sixteenth) beams', () => {
         it('two sixteenths produce one full secondary beam offset from the primary', () => {
             const { beam } = beamFrom([sixteenth('C', 4), sixteenth('C', 4)])
-            const { primary, secondaries } = beam.layout
+            const { primary, secondaries } = beam
             expect(secondaries).toHaveLength(1)
 
             const sec = secondaries[0]
@@ -169,7 +169,7 @@ describe('BeamLayout', () => {
         it('down-beam secondary sits above the primary by one level stride', () => {
             const { beam } = beamFrom([sixteenth('E', 5), sixteenth('E', 5)])
             expect(beam.stemDir).toBe('down')
-            const { primary, secondaries } = beam.layout
+            const { primary, secondaries } = beam
             expect(secondaries).toHaveLength(1)
             // dirSign = -1 → beamY = beamFirstY - STRIDE.
             expect(secondaries[0].y1).toBeCloseTo(primary.y1 - BEAM_LEVEL_STRIDE)
@@ -180,7 +180,7 @@ describe('BeamLayout', () => {
             // not the first note (i !== 0) → partial stub points left (partialDir = -1).
             const { beam } = beamFrom([eighth('C', 4), sixteenth('C', 4)])
             expect(beam.notes).toHaveLength(2)
-            const { secondaries } = beam.layout
+            const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
 
             const stub = secondaries[0]
@@ -193,7 +193,7 @@ describe('BeamLayout', () => {
             // the first note (i === 0) → partial stub points right (partialDir = +1).
             const { beam } = beamFrom([sixteenth('C', 4), eighth('C', 4)])
             expect(beam.notes).toHaveLength(2)
-            const { secondaries } = beam.layout
+            const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
 
             const stub = secondaries[0]
@@ -203,7 +203,7 @@ describe('BeamLayout', () => {
         it('partial-beam y endpoints follow the beam slope', () => {
             // A sloped group with a trailing partial: stub y2 offset = partialDir * length * slope.
             const { beam } = beamFrom([eighth('C', 4), sixteenth('G', 4)])
-            const { primary, secondaries } = beam.layout
+            const { primary, secondaries } = beam
             const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
             expect(secondaries).toHaveLength(1)
             const stub = secondaries[0]
@@ -216,7 +216,7 @@ describe('BeamLayout', () => {
             // eighth ends the run. segStart !== stemX so the else-branch (full segment) is taken.
             const { measure, beam } = beamFrom([sixteenth('C', 4), sixteenth('C', 4), eighth('C', 4)])
             expect(beam.notes).toHaveLength(3)
-            const { secondaries } = beam.layout
+            const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
 
             const sec = secondaries[0]
@@ -234,7 +234,7 @@ describe('BeamLayout', () => {
 
         it('eighth notes alone produce no secondary beams', () => {
             const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
-            expect(beam.layout.secondaries).toHaveLength(0)
+            expect(beam.secondaries).toHaveLength(0)
         })
     })
 })

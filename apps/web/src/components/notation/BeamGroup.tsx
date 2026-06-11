@@ -1,9 +1,9 @@
 import { memo } from 'react'
 
-import type { Beam } from '@/model'
+import type { BeamLayout } from '@/model/layout/BeamLayout'
 
-export const BeamGroup = memo(function BeamGroup({ beam }: { beam: Beam; layoutId: string }) {
-    const segments = [beam.layout.primary, ...beam.layout.secondaries]
+export const BeamGroup = memo(function BeamGroup({ beam }: { beam: BeamLayout; layoutId: string }) {
+    const segments = [beam.primary, ...beam.secondaries]
 
     return (
         <g>

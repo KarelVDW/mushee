@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Note, Pitch, Score as ScoreModel } from '@/model'
+import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
 import { Barline } from './Barline'
 import {
@@ -79,16 +80,17 @@ export const Score = memo(function Score({
         return () => observer.disconnect()
     }, [])
 
-    // Compute layouts for all rows
+    // The current layout snapshot (rebuilt lazily by the model when the score changed)
+    const layout = score.layout
     const showMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
-    const rows = score.rows ?? []
-    const totalHeight = score.layout?.totalHeight ?? 0
+    const rows = layout.rows
+    const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / SCORE_WIDTH) : 0
 
     // Cursor indicator position (row-local coordinates)
     const cursorPos = useMemo(() => {
         if (!selectedNote) return null
-        const x = selectedNote.layout.noteX + selectedNote.width.noteHeadWidth / 2
+        const x = selectedNote.layout.noteX + selectedNote.layout.width.noteHeadWidth / 2
         let lowestY = selectedNote.layout.noteY
         const stem = selectedNote.layout.stem
         if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
@@ -153,13 +155,13 @@ export const Score = memo(function Score({
                 return
             }
             const localY = pt.y - score.layout.getYForRow(row)
-            const measure = row.layout.getMeasureForX(pt.x)
+            const measure = row.getMeasureForX(pt.x)
             if (!measure) {
                 if (hoveredNote) setHoveredNote(null)
                 if (ghostNote) setGhostNote(null)
                 return
             }
-            const localX = pt.x - row.layout.getMeasureX(measure)
+            const localX = pt.x - row.getMeasureX(measure)
             const note = measure.layout.getNoteForX(localX)
             if (!note) {
                 if (hoveredNote) setHoveredNote(null)
@@ -202,17 +204,18 @@ export const Score = memo(function Score({
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
-        if (rows.length === 0 || !showMeasureButtons || !score.layout || !score.lastRow) return null
-        const lastMeasure = score.lastRow.measures[score.lastRow.measures.length - 1]
+        const lastRow = rows[rows.length - 1]
+        if (!lastRow || !showMeasureButtons) return null
+        const lastMeasure = lastRow.measures[lastRow.measures.length - 1]
         const barline = lastMeasure?.layout.barline
         if (!barline) return null
-        const measureX = score.lastRow.layout.getMeasureX(lastMeasure)
+        const measureX = lastRow.getMeasureX(lastMeasure)
         const staffCenterY = barline.y + barline.height / 2
-        const x = measureX + barline.x + lastMeasure.barlineWidth + 10
+        const x = measureX + barline.x + MeasureLayoutModel.barlineWidth(lastMeasure.endBarline) + 10
         const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
         const topY = staffCenterY - btnTotalHeight / 2
         return { x, topY }
-    }, [rows, showMeasureButtons, score.layout])
+    }, [rows, showMeasureButtons])
 
     const lastRowIndex = rows.length - 1
 
@@ -251,11 +254,11 @@ export const Score = memo(function Score({
                         rx={1.5}
                     />
 
-                    {score.rows.map((row) =>
+                    {rows.map((row) =>
                         row.measures.map((measure) => (
                             <g
                                 key={measure.id}
-                                transform={`translate(${row.layout.getMeasureX(measure)}, ${score.layout.getYForRow(row)})`}>
+                                transform={`translate(${row.getMeasureX(measure)}, ${layout.getYForRow(row)})`}>
                                 <Measure
                                     measure={measure}
                                     selectedNote={selectedNote ?? undefined}
@@ -290,29 +293,29 @@ export const Score = memo(function Score({
                                                     score.getIndexForMeasure(tempo.measure),
                                                     tempo.beatPosition,
                                                     tempo.bpm,
-                                                    row.layout.getMeasureX(tempo.measure) +
+                                                    row.getMeasureX(tempo.measure) +
                                                         tempo.measure.layout.getXForBeat(tempo.beatPosition),
-                                                    score.layout.getYForRow(row) + tempo.layout.y,
+                                                    layout.getYForRow(row) + tempo.layout.y,
                                                 )
                                             }
                                         />
                                     </g>
                                 ))}
 
-                                {measure.notes.map((note) => {
-                                    const tie = score.getTieByNote(note)
-                                    if (!tie) return null
-                                    return <Tie key={note.id} tie={tie} layoutId={tie.layout.id} rowIndex={row.index} />
-                                })}
                             </g>
                         )),
                     )}
 
                     {rows.map((row, ri) => (
-                        <g key={row.measures.map((m) => m.id).join('-')} transform={`translate(0, ${score.layout.getYForRow(row)})`}>
-                            <StaffLines lines={row.layout.staffLines} />
+                        <g key={row.id} transform={`translate(0, ${layout.getYForRow(row)})`}>
+                            <StaffLines lines={row.staffLines} />
 
-                            <Barline layout={row.layout.openingBarline} />
+                            <Barline layout={row.openingBarline} />
+
+                            {/* Ties are laid out in row-local coordinates; each renders only the segments on this row */}
+                            {layout.ties.map((tie) => (
+                                <Tie key={`${tie.note.id}-${row.id}`} layout={tie} layoutId={tie.id} rowIndex={row.index} />
+                            ))}
 
                             {ri === lastRowIndex && measureButtonPos && onAddMeasure && (
                                 <MeasureButton

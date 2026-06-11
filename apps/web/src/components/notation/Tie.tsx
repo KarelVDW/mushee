@@ -1,7 +1,6 @@
 import { memo } from 'react'
 
-import type { TieSegment } from '@/model/layout/TieLayout'
-import type { Tie as TieModel } from '@/model/Tie'
+import type { TieLayout, TieSegment } from '@/model/layout/TieLayout'
 
 /** Outer bezier control point Y offset (thinner edge of tie) */
 const TIE_CP1 = 8
@@ -9,13 +8,13 @@ const TIE_CP1 = 8
 const TIE_CP2 = 12
 
 interface TieProps {
-    tie: TieModel
+    layout: TieLayout
     layoutId: string
     rowIndex: number
 }
 
-export const Tie = memo(function Tie({ tie, rowIndex }: TieProps) {
-    const { segments, direction } = tie.layout
+export const Tie = memo(function Tie({ layout, rowIndex }: TieProps) {
+    const { segments, direction } = layout
     return (
         <>
             {segments

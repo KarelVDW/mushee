@@ -1,193 +1,141 @@
-import { makeScore, pitched } from '@test/helpers'
+import { makeScore } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
-import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
-import { Duration } from '@/model/Duration'
-import { Note } from '@/model/Note'
-import { Pitch } from '@/model/Pitch'
-import { Row } from '@/model/Row'
+import {
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_SPACING,
+    NUM_STAFF_LINES,
+    SCORE_WIDTH,
+    SPACE_ABOVE_STAFF,
+    STAVE_LINE_DISTANCE,
+} from '@/components/notation/constants'
+import { RowLayout, type RowLayoutContext } from '@/model/layout/RowLayout'
+import { Measure } from '@/model/Measure'
 import { Score } from '@/model/Score'
+import { TimeSignature } from '@/model/TimeSignature'
+
+/** A bare measure (RowLayout only uses measures as identities + minimal-width keys). */
+function bareMeasure(): Measure {
+    return new Measure(new Score(), 'treble', new TimeSignature(4, 4))
+}
+
+function context(measures: Measure[], widths: number[], overrides?: Partial<RowLayoutContext>): RowLayoutContext {
+    return {
+        index: 0,
+        isLastRow: true,
+        measures,
+        minimalWidths: new Map(measures.map((m, i) => [m, widths[i]])),
+        ...overrides,
+    }
+}
 
 describe('RowLayout', () => {
-    it('lays out a single-measure row without throwing', () => {
-        const score = makeScore(1)
-        const row = score.firstRow
-        if (!row) throw new Error('expected firstRow')
-        expect(() => row.layout).not.toThrow()
+    it('a non-last row stretches to the full score width', () => {
+        const score = makeScore(MAX_MEASURES_PER_ROW + 1)
+        expect(score.layout.rows[0].isLastRow).toBe(false)
+        expect(score.layout.rows[0].width).toBe(SCORE_WIDTH)
     })
 
-    it('width sums to SCORE_WIDTH minus button spacing for last row', () => {
-        const score = makeScore(1)
-        const row = score.firstRow
-        if (!row) throw new Error('expected firstRow')
-        // Last row with ≤2 measures uses incomplete-row layout (maximumWidth mode).
-        // Otherwise it expands to fill SCORE_WIDTH.
-        expect(row.layout.width).toBeGreaterThan(0)
-        expect(row.layout.width).toBeLessThanOrEqual(SCORE_WIDTH)
+    it('a full last row stretches to the score width minus the button reserve', () => {
+        const score = makeScore(3)
+        const row = score.layout.rows[0]
+        expect(row.isLastRow).toBe(true)
+        expect(row.width).toBe(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
     })
 
-    it('measure x-positions are non-decreasing along the row', () => {
+    it('an incomplete last row (≤2 measures) keeps natural widths instead of stretching', () => {
+        const score = makeScore(1)
+        const row = score.layout.rows[0]
+        // One near-empty measure at the default width: budget / MAX_MEASURES_PER_ROW.
+        expect(row.width).toBeCloseTo((SCORE_WIDTH - MEASURE_BUTTON_SPACING) / MAX_MEASURES_PER_ROW)
+        expect(row.width).toBeLessThan(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
+    })
+
+    it('measures tile the row: each x is the previous x plus its width', () => {
         const score = makeScore(MAX_MEASURES_PER_ROW)
-        const row = score.firstRow
-        if (!row) throw new Error('expected firstRow')
-        const layout = row.layout
-        let prev = -Infinity
+        const row = score.layout.rows[0]
+        let cursor = 0
         for (const m of row.measures) {
-            const x = layout.getMeasureX(m)
-            expect(x).toBeGreaterThanOrEqual(prev)
-            prev = x
+            expect(row.getMeasureX(m)).toBeCloseTo(cursor)
+            cursor += row.getMeasureWidth(m)
         }
+        expect(cursor).toBeCloseTo(row.width)
     })
 
-    it('getMeasureX throws for a measure that is not in this row', () => {
-        const score = makeScore(MAX_MEASURES_PER_ROW + 1) // forces second row
-        const row1 = score.rows[0]
-        const m2 = score.rows[1].measures[0]
-        expect(() => row1.layout.getMeasureX(m2)).toThrow('Measure not in this row')
+    it('getMeasureX and getMeasureWidth throw for a measure not in this row', () => {
+        const score = makeScore(MAX_MEASURES_PER_ROW + 1)
+        const row0 = score.layout.rows[0]
+        const otherRowMeasure = score.layout.rows[1].measures[0]
+        expect(() => row0.getMeasureX(otherRowMeasure)).toThrow('Measure not in this row')
+        expect(() => row0.getMeasureWidth(otherRowMeasure)).toThrow('Measure not in this row')
     })
 
-    it('getMeasureForX returns the right measure for a given x', () => {
+    it('getMeasureForX returns the measure whose span contains x, or null outside the row', () => {
         const score = makeScore(2)
-        const row = score.firstRow
-        if (!row) throw new Error('expected firstRow')
-        const m1 = row.measures[0]
-        const m2 = row.measures[1]
-        const m1x = row.layout.getMeasureX(m1)
-        const m2x = row.layout.getMeasureX(m2)
-        expect(row.layout.getMeasureForX(m1x)).toBe(m1)
-        expect(row.layout.getMeasureForX(m2x + 1)).toBe(m2)
-        expect(row.layout.getMeasureForX(-100)).toBeNull()
+        const row = score.layout.rows[0]
+        const [m0, m1] = row.measures
+        expect(row.getMeasureForX(0)).toBe(m0)
+        expect(row.getMeasureForX(row.getMeasureX(m1) + 1)).toBe(m1)
+        expect(row.getMeasureForX(-1)).toBeNull()
+        expect(row.getMeasureForX(row.width + 1)).toBeNull()
     })
 
-    it('staff lines: 5 horizontal lines spanning row width', () => {
+    it('draws the staff lines across the full row width at the staff positions', () => {
         const score = makeScore(1)
-        const row = score.firstRow
-        if (!row) throw new Error('expected firstRow')
-        expect(row.layout.staffLines).toHaveLength(5)
-        for (const line of row.layout.staffLines) {
-            expect(line.y1).toBe(line.y2)
-            expect(line.x2).toBeGreaterThan(line.x1)
-        }
-    })
-
-    describe('empty row', () => {
-        it('has zero width and no measure positions', () => {
-            const score = new Score()
-            const emptyRow = new Row(score, 0) // never given any measures
-            expect(emptyRow.measures).toHaveLength(0)
-            // measureData short-circuits on an empty row → width sums to 0.
-            expect(emptyRow.layout.width).toBe(0)
-        })
-
-        it('builds an empty measureData map (getMeasureX throws for any measure)', () => {
-            const score = makeScore(1)
-            const someMeasure = score.firstMeasure
-            if (!someMeasure) throw new Error('expected a measure')
-            const emptyRow = new Row(score, 0)
-            // getMeasureX directly consults measureData, forcing the empty-row early return
-            // to build (and cache) an empty map; the lookup then misses and throws.
-            expect(() => emptyRow.layout.getMeasureX(someMeasure)).toThrow('Measure not in this row')
-        })
-
-        it('still reports five staff lines spanning zero width', () => {
-            const score = new Score()
-            const emptyRow = new Row(score, 0)
-            const lines = emptyRow.layout.staffLines
-            expect(lines).toHaveLength(NUM_STAFF_LINES)
-            for (const line of lines) {
-                expect(line.x1).toBe(0)
-                expect(line.x2).toBe(0) // width is 0 on an empty row
-            }
+        const row = score.layout.rows[0]
+        const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
+        expect(row.staffLines).toHaveLength(NUM_STAFF_LINES)
+        row.staffLines.forEach((line, i) => {
+            expect(line.y1).toBe(headroom + i * STAVE_LINE_DISTANCE)
+            expect(line.y2).toBe(line.y1)
+            expect(line.x1).toBe(0)
+            expect(line.x2).toBe(row.width)
         })
     })
 
-    describe('getMeasureWidth', () => {
-        it('returns a positive width for a measure in the row and throws for a stranger', () => {
-            const score = makeScore(2)
-            const row = score.firstRow
-            if (!row) throw new Error('expected firstRow')
-            const m1 = row.measures[0]
-            expect(row.layout.getMeasureWidth(m1)).toBeGreaterThan(0)
-
-            const otherScore = makeScore(1)
-            const stranger = otherScore.firstMeasure
-            if (!stranger) throw new Error('expected stranger measure')
-            expect(() => row.layout.getMeasureWidth(stranger)).toThrow('Measure not in this row')
-        })
+    it('draws a single opening barline spanning the staff at the left edge', () => {
+        const score = makeScore(1)
+        const bar = score.layout.rows[0].openingBarline
+        expect(bar.x).toBe(0)
+        expect(bar.y).toBe(SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE)
+        expect(bar.height).toBe((NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE)
+        expect(bar.type).toBe('single')
     })
 
-    describe('opening barline', () => {
-        it('spans the staff at the left edge of the row', () => {
-            const score = makeScore(1)
-            const row = score.firstRow
-            if (!row) throw new Error('expected firstRow')
-            const bar = row.layout.openingBarline
-            const expectedHeadroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
-            const expectedHeight = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
-            expect(bar.x).toBe(0)
-            expect(bar.y).toBe(expectedHeadroom)
-            expect(bar.height).toBe(expectedHeight)
-            expect(bar.type).toBe('single')
-        })
+    it('a measure without a registered minimal width is allotted the plain default', () => {
+        const m = bareMeasure()
+        const row = new RowLayout({ index: 0, isLastRow: true, measures: [m], minimalWidths: new Map() })
+        expect(row.getMeasureWidth(m)).toBeCloseTo((SCORE_WIDTH - MEASURE_BUTTON_SPACING) / MAX_MEASURES_PER_ROW)
     })
 
-    describe('overflowing measure (likely ResizeError trigger)', () => {
-        it('throws ResizeError when a single measure cannot fit within SCORE_WIDTH', () => {
-            // To trigger this, a measure needs minimalWidth > SCORE_WIDTH (1000).
-            // 4/4 of 16th notes with double-sharp accidentals: 16 notes is normally tight.
-            // We push by adding many dotted+accidental notes via raw Duration manipulation.
-            const score = new Score()
-            const m = score.addMeasure()
-            // Replace m's auto-completed rests with custom large set: many 16th notes with accidentals.
-            // 16 sixteenths * (8+1+1+8+1+10+8) ≈ a lot; padding alone (8 each) + notehead (10)
-            // = ~25 each → 16 × 25 = 400. With accidentals (~20 each more) = 720. Still fits.
-            // To definitely overflow, stuff in 64 sixteenths via tuplets won't work either —
-            // they fit in beats. We instead verify the *non-throwing* path here and rely on
-            // explicit Resizer tests for the overflow math.
-            const notes: Note[] = []
-            for (let i = 0; i < 16; i++) {
-                notes.push(
-                    new Note({
-                        duration: new Duration({ type: '16' }),
-                        pitch: new Pitch({ name: 'C', octave: 4, accidental: '##' }),
-                    }),
-                )
-            }
-            m.addNotes(notes)
-            // Should still lay out without throwing — just confirm RowLayout path runs.
-            const row = score.firstRow
-            if (!row) throw new Error('expected firstRow')
-            expect(() => row.layout).not.toThrow()
+    describe('matches (reuse check across ScoreLayout rebuilds)', () => {
+        const a = bareMeasure()
+        const b = bareMeasure()
+        const ctx = context([a, b], [200, 250])
+        const row = new RowLayout(ctx)
+
+        it('matches an identical context', () => {
+            expect(row.matches(context([a, b], [200, 250]))).toBe(true)
         })
 
-        it('lays out 4 measures full of 16th notes (worst-case dense row)', () => {
-            const score = new Score()
-            for (let i = 0; i < MAX_MEASURES_PER_ROW; i++) {
-                const m = score.addMeasure()
-                for (let j = 0; j < 16; j++) m.addNotes([pitched('C', 4, '16')])
-            }
-            // Each row will receive whatever measures fit; assert no throw.
-            expect(() => {
-                for (const row of score.rows) void row.layout
-            }).not.toThrow()
-        })
-    })
-
-    describe('incomplete row (≤2 measures on last row)', () => {
-        it('uses maximumWidth mode and does not stretch to full width', () => {
-            const score = makeScore(1)
-            const row = score.firstRow
-            if (!row) throw new Error('expected firstRow')
-            // With one measure and minimum 200, layout width should equal at least 200
-            // but not necessarily the full SCORE_WIDTH minus button.
-            expect(row.layout.width).toBeGreaterThanOrEqual(200)
+        it('rejects a different row index', () => {
+            expect(row.matches(context([a, b], [200, 250], { index: 1 }))).toBe(false)
         })
 
-        it('two measures on last row: still uses incomplete-row mode', () => {
-            const score = makeScore(2)
-            const row = score.firstRow
-            if (!row) throw new Error('expected firstRow')
-            expect(() => row.layout).not.toThrow()
+        it('rejects a flipped isLastRow', () => {
+            expect(row.matches(context([a, b], [200, 250], { isLastRow: false }))).toBe(false)
+        })
+
+        it('rejects a different measure count', () => {
+            expect(row.matches(context([a], [200]))).toBe(false)
+        })
+
+        it('rejects different measure identities', () => {
+            expect(row.matches(context([a, bareMeasure()], [200, 250]))).toBe(false)
+        })
+
+        it('rejects a changed minimal width', () => {
+            expect(row.matches(context([a, b], [200, 300]))).toBe(false)
         })
     })
 })

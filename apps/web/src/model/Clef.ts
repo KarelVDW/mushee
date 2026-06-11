@@ -6,6 +6,12 @@ import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
 import { ClefWidth } from './width/ClefWidth'
 
+/**
+ * A clef anchored in a measure: the leading clef sits at beat 0, further ones
+ * are mid-measure changes. Immutable after construction; its layout and width
+ * depend only on `type`, so they are cached forever (context-free, see
+ * ARCHITECTURE.md).
+ */
 export class Clef {
     readonly id = crypto.randomUUID()
     private _layout: ClefLayout | null = null
@@ -17,13 +23,13 @@ export class Clef {
         readonly type: ClefType,
     ) {}
 
-    get width() {
-        if (!this._width) this._width = new ClefWidth(this)
+    get width(): ClefWidth {
+        this._width ||= new ClefWidth(this)
         return this._width
     }
 
-    get layout() {
-        if (!this._layout) this._layout = new ClefLayout(this)
+    get layout(): ClefLayout {
+        this._layout ||= new ClefLayout(this)
         return this._layout
     }
 
@@ -33,9 +39,5 @@ export class Clef {
 
     pitchForLine(line: number): Pitch {
         return Pitch.fromLine(line - CLEF_LINE_OFFSET[this.type])
-    }
-
-    invalidateLayout() {
-        this._layout = null
     }
 }

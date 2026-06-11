@@ -1,25 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
-import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, SCORE_WIDTH } from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
 import { Note } from '@/model/Note'
 import { Pitch } from '@/model/Pitch'
 import { Score } from '@/model/Score'
 
 /**
- * Regression suite for ResizeError. Each test exercises a layout path that has
- * historically triggered or could trigger:
- *     `throw new ResizeError()`  ('Container too small')
- * inside Resizer (apps/web/src/model/util/Resizer.ts).
- *
- * The two callers are:
- *  - RowLayout: distributes SCORE_WIDTH among measures (each `minimum = measure.minimalWidth`)
- *  - MeasureLayout: distributes content width among notes (each `minimum = note.width.total`)
- *
- * RowLayout throws when `Σ measure.minimalWidth > SCORE_WIDTH` (or > maximumWidth in
- * incomplete-row mode). MeasureLayout throws when `Σ note.width.total > contentWidth`.
- * The latter should never happen if Measure._minimalWidth correctly reflects element
- * widths, since RowLayout always allots at least minimalWidth to each measure.
+ * Regression suite for ResizeError ('Container too small', thrown by Resizer).
+ * Historically the model's eagerly-maintained row composition could go stale
+ * against measure widths (densifying after row assignment, button-spacing
+ * boundary, etc.). The packing now lives in ScoreLayout and recomputes per
+ * version, so these scenarios must always lay out cleanly — each test builds a
+ * historical trigger and asserts the layout resolves without throwing and
+ * within the row budgets.
  */
 
 const sixteenth = (octave = 4) => new Note({ duration: new Duration({ type: '16' }), pitch: new Pitch({ name: 'C', octave }) })
@@ -36,6 +30,12 @@ const tripletSixteenth = () =>
         pitch: new Pitch({ name: 'C', octave: 4 }),
     })
 
+/** Force every row's geometry to resolve; throws if any Resizer overflows. */
+function layOutAllRows(score: Score) {
+    for (const row of score.layout.rows) void row.width
+    for (const m of score.measures) void m.layout.barline
+}
+
 describe('ResizeError regressions', () => {
     describe('row-level overflow', () => {
         it('does not throw when a single measure is filled with 16 sixteenths (4/4)', () => {
@@ -44,9 +44,7 @@ describe('ResizeError regressions', () => {
             const notes: Note[] = []
             for (let i = 0; i < 16; i++) notes.push(sixteenth())
             m.addNotes(notes)
-            for (const row of score.rows) {
-                expect(() => row.layout.width).not.toThrow()
-            }
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
         it('does not throw with 4 measures of 16 sixteenths each (max-density row)', () => {
@@ -57,9 +55,7 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) notes.push(sixteenth())
                 m.addNotes(notes)
             }
-            for (const row of score.rows) {
-                expect(() => row.layout.width).not.toThrow()
-            }
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
         it('does not throw with sixteenths + accidentals (wider notes)', () => {
@@ -70,9 +66,7 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) notes.push(sixteenthSharp())
                 m.addNotes(notes)
             }
-            for (const row of score.rows) {
-                expect(() => row.layout.width).not.toThrow()
-            }
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
         it('does not throw when a triplet packs more sixteenths into a beat', () => {
@@ -82,38 +76,26 @@ describe('ResizeError regressions', () => {
             const notes: Note[] = []
             for (let i = 0; i < 24; i++) notes.push(tripletSixteenth())
             m.addNotes(notes)
-            for (const row of score.rows) {
-                expect(() => row.layout.width).not.toThrow()
-            }
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('handles a measure whose minimalWidth approaches SCORE_WIDTH', () => {
+        it('handles a measure whose width approaches SCORE_WIDTH (alone on its row)', () => {
             const score = new Score()
             const m = score.addMeasure()
-            // Add many wide notes (sharp 16ths) until just under SCORE_WIDTH
-            const notes: Note[] = []
-            // Practical max for a 4/4 measure: 16 sixteenths = 4 beats. Width ~ 16*40 + clef + timesig + barline ≈ 700.
-            // Should comfortably fit.
-            for (let i = 0; i < 16; i++) notes.push(sixteenthSharp())
-            m.addNotes(notes)
-            expect(m.minimalWidth).toBeLessThan(SCORE_WIDTH)
-            const firstRow = score.firstRow
-            if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout.width).not.toThrow()
+            for (let i = 0; i < 16; i++) m.addNotes([sixteenthSharp()])
+            const row = score.layout.rowFor(m)
+            expect(row.measures).toEqual([m])
+            expect(row.width).toBeLessThanOrEqual(SCORE_WIDTH)
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
     })
 
     describe('measure-level overflow (note widths exceed measure content area)', () => {
         it('densifying measures after row assignment splits rows correctly (regression)', () => {
-            // Historical bug: Score.addMeasure() ran _rebuildRows() while each measure was
-            // empty (minimalWidth = absolute floor of 200), so canFit happily packed up to
-            // four per row. The caller then mutated each measure with addNotes(...), which
-            // recomputed _minimalWidth but did NOT signal Score to re-evaluate row
-            // composition. RowLayout's Resizer then threw ResizeError ("Container too
-            // small") on the next layout access.
-            //
-            // Fix: Measure.rebuildPhysicalElements now calls Score.onMeasureWidthChanged
-            // whenever _minimalWidth changes, prompting a row rebuild.
+            // Historical bug: rows were composed while each measure was still empty
+            // (minimal width = absolute floor), then addNotes(...) widened the measures
+            // without re-evaluating row composition → ResizeError on layout access.
+            // Packing now recomputes lazily per version, so the dense measures split.
             const score = new Score()
             for (let i = 0; i < 8; i++) {
                 const m = score.addMeasure()
@@ -121,13 +103,13 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) notes.push(sixteenthSharp())
                 m.addNotes(notes)
             }
-            for (const m of score.measures) expect(() => m.layout).not.toThrow()
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            expect(score.layout.rows.length).toBeGreaterThan(1)
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
     })
 
-    describe('mutation paths that historically caused stale minimalWidth', () => {
-        it('replacing notes recomputes minimalWidth so layout fits', () => {
+    describe('mutation paths that historically caused stale row composition', () => {
+        it('replacing notes re-packs so layout fits', () => {
             const score = new Score()
             const m = score.addMeasure()
             // Start sparse
@@ -137,42 +119,32 @@ describe('ResizeError regressions', () => {
                 new Note({ duration: new Duration({ type: 'q' }) }),
                 new Note({ duration: new Duration({ type: 'q' }) }),
             ])
-            const before = m.minimalWidth
             // Now densify by replacing a quarter rest with 4 sharp 16ths
             const target = m.firstNote
             if (!target) throw new Error('expected firstNote')
             const replacements: Note[] = []
             for (let i = 0; i < 4; i++) replacements.push(sixteenthSharp())
             m.replaceNotes([target], replacements)
-            expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
-            const firstRow = score.firstRow
-            if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout.width).not.toThrow()
-            expect(() => m.layout).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('removing notes shrinks minimalWidth (or stays at absolute minimum)', () => {
+        it('removing every note still lays out (empty-measure path)', () => {
             const score = new Score()
             const m = score.addMeasure()
             const dense: Note[] = []
             for (let i = 0; i < 16; i++) dense.push(sixteenthSharp())
             m.addNotes(dense)
-            const denseWidth = m.minimalWidth
+            expect(() => layOutAllRows(score)).not.toThrow()
             m.removeNotes(dense)
-            // Empty measure → absolute minimum
-            expect(m.minimalWidth).toBeLessThanOrEqual(denseWidth)
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('toggling endBarline updates minimalWidth without breaking layout', () => {
+        it('toggling endBarline re-packs without breaking layout', () => {
             const score = new Score()
             const m = score.addMeasure()
             for (let i = 0; i < 12; i++) m.addNotes([sixteenthSharp()])
-            const before = m.minimalWidth
             m.setEndBarline('end')
-            expect(m.minimalWidth).toBeGreaterThanOrEqual(before)
-            const firstRow = score.firstRow
-            if (!firstRow) throw new Error('expected firstRow')
-            expect(() => firstRow.layout.width).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
     })
 
@@ -181,7 +153,7 @@ describe('ResizeError regressions', () => {
             const score = new Score()
             for (let i = 0; i < 5; i++) score.addMeasure().complete()
             score.removeLastMeasure()
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
         it('Score.replace across measure boundaries does not throw', () => {
@@ -193,18 +165,17 @@ describe('ResizeError regressions', () => {
             if (!target) throw new Error('expected firstNote')
             const longNote = new Note({ duration: new Duration({ type: 'w' }) })
             expect(() => score.replace([target], [longNote])).not.toThrow()
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('per-note insertion still triggers row rebuild (regression)', () => {
-            // Same as above but interleaving addNotes calls. Confirms that the per-note
-            // path also signals Score correctly — not just bulk addNotes.
+        it('per-note insertion still re-packs correctly (regression)', () => {
+            // Interleaved addNotes calls: every increment must be reflected in the next layout read.
             const score = new Score()
             for (let i = 0; i < 8; i++) {
                 const m = score.addMeasure()
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
-            for (const m of score.measures) expect(() => m.layout).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
         it('5 dense measures lay out without throwing (minimal repro of fixed bug)', () => {
@@ -213,76 +184,56 @@ describe('ResizeError regressions', () => {
                 const m = score.addMeasure()
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
-            expect(() => {
-                for (const m of score.measures) void m.layout
-            }).not.toThrow()
-            // Each dense measure should now occupy its own row (canFit refuses pairing).
-            // We don't pin the exact count, but every row must lay out cleanly.
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('densified measures end up split across rows (no row exceeds SCORE_WIDTH minimums)', () => {
+        it('densified measures end up split across rows within the score width', () => {
             const score = new Score()
             for (let i = 0; i < 5; i++) {
                 const m = score.addMeasure()
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
-            for (const row of score.rows) {
-                const totalMinimum = row.measures.reduce((s, m) => s + m.minimalWidth, 0)
-                expect(totalMinimum).toBeLessThanOrEqual(SCORE_WIDTH)
+            expect(score.layout.rows.length).toBeGreaterThan(1)
+            for (const row of score.layout.rows) {
+                expect(row.width).toBeLessThanOrEqual(SCORE_WIDTH)
             }
         })
     })
 
     describe('last-row button-spacing boundary', () => {
-        // Regression: Row.canFit historically used SCORE_WIDTH (1000), but RowLayout
-        // reserves MEASURE_BUTTON_SPACING (30) on the last row for the +/- measure
-        // buttons. Measures whose minimums summed to 971-1000 packed onto the last
-        // row but threw ResizeError at layout time.
-        //
-        // Note: the existing `for (const row of score.rows) expect(() => row.layout)`
-        // pattern does NOT catch this — the RowLayout constructor is empty and the
-        // Resizer only runs when `measureData` is first read. Tests must hit a
-        // property that touches measureData (e.g. `.width`, `.getMeasureX`).
+        // Regression: row fitting historically used SCORE_WIDTH, but the last row
+        // reserves MEASURE_BUTTON_SPACING for the +/- measure buttons. Measures whose
+        // minimums summed into that reserve packed onto the row but threw at layout time.
+        // Packing now always reserves the button space while fitting.
         it('two measures whose minimums would sum into the button-spacing zone lay out cleanly', () => {
-            // Pre-fix: d1=10, d2=16 sharp 16ths produced minimums ≈ 405 + 567 = 972,
-            // which fit canFit's old SCORE_WIDTH check (≤ 1000) but blew RowLayout's
-            // last-row budget of 970, throwing ResizeError. Post-fix: canFit refuses
-            // the second measure on the same row, so it gets pushed to a new row.
             const score = new Score()
             const m1 = score.addMeasure()
             for (let j = 0; j < 10; j++) m1.addNotes([sixteenthSharp()])
             const m2 = score.addMeasure()
             for (let j = 0; j < 16; j++) m2.addNotes([sixteenthSharp()])
-
-            // Reading `.width` forces the Resizer to run — the constructor alone is empty.
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
-            for (const m of score.measures) expect(() => m.layout.barline).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('three measures crossing the 970 boundary lay out cleanly', () => {
+        it('three measures crossing the budget boundary lay out cleanly', () => {
             const score = new Score()
             for (let i = 0; i < 3; i++) {
                 const m = score.addMeasure()
                 for (let j = 0; j < 13; j++) m.addNotes([sixteenthSharp()])
             }
-            for (const row of score.rows) expect(() => row.layout.width).not.toThrow()
-            for (const m of score.measures) expect(() => m.layout.barline).not.toThrow()
+            expect(() => layOutAllRows(score)).not.toThrow()
         })
 
-        it('every row totals at most the last-row budget after composition', () => {
-            // Once Row.canFit reserves MEASURE_BUTTON_SPACING, no row can be packed
-            // beyond what RowLayout will accept as the last row.
+        it('the last row never exceeds its button-reserving budget', () => {
             const score = new Score()
             for (let i = 0; i < 6; i++) {
                 const m = score.addMeasure()
                 for (let j = 0; j < 12; j++) m.addNotes([sixteenthSharp()])
             }
-            const budget = SCORE_WIDTH - 30
-            for (const row of score.rows) {
-                const totalMinimum = row.measures.reduce((s, m) => s + m.minimalWidth, 0)
-                expect(totalMinimum).toBeLessThanOrEqual(budget)
-            }
+            const rows = score.layout.rows
+            const lastRow = rows[rows.length - 1]
+            expect(lastRow.isLastRow).toBe(true)
+            expect(lastRow.width).toBeLessThanOrEqual(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
+            for (const row of rows) expect(row.width).toBeLessThanOrEqual(SCORE_WIDTH)
         })
     })
 })
