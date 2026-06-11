@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { ChipToggle, Eyebrow, Icon } from '@/components/ui'
+import { ChipToggle, Eyebrow, Icon, showToast } from '@/components/ui'
 import { PdfExporter } from '@/lib/PdfExporter'
 import type { Score } from '@/model'
 import { MidiExporter } from '@/model/util/MidiExporter'
@@ -79,6 +79,7 @@ export function ExportMenu({ score, title, getSvg }: ExportMenuProps) {
                 setOpen(false)
             } catch (err) {
                 console.error(`Export to ${format} failed`, err)
+                showToast(`The ${FORMATS.find((f) => f.format === format)?.label ?? format} export failed. Please try again.`)
             } finally {
                 setBusy(null)
             }

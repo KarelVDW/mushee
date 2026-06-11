@@ -3,5 +3,7 @@ export { AppIcon, Eyebrow, ModalTitle, PageTitle, Pill, SubHeadline, Wordmark } 
 export { IconButton, PrimaryButton, SecondaryButton, TertiaryButton, ToggleButton } from './Buttons'
 export { DialogPanel, DialogScrim, Footer, PageHeader, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, TransportBtn } from './Controls'
+export { Alert, ErrorScreen } from './Feedback'
 export { Icon } from './Icon'
 export { Chip, TextArea, TextField } from './Inputs'
+export { dismissToast, showToast, Toaster } from './Toast'

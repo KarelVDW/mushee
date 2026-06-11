@@ -5,11 +5,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
-import { Icon, Pill, SecondaryButton, Wordmark } from '@/components/ui'
-import { getScore, loadScore, updateScore } from '@/lib/api'
+import { ErrorScreen, Icon, Pill, showToast, Wordmark } from '@/components/ui'
+import { ApiError, NetworkError } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
+import { useScoreDocument, useUpdateScore } from '@/lib/queries'
 import { RecordingEngine, type RecordingLimitInfo, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
@@ -30,8 +31,6 @@ export default function ScoreEditorPage() {
     const [score, setScore] = useState<Score | null>(null)
     const [title, setTitle] = useState('Untitled composition')
     const [, setUpdatedAt] = useState(0)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [activeNote, setActiveNote] = useState<Note | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const scoreAreaRef = useRef<HTMLDivElement>(null)
@@ -50,24 +49,19 @@ export default function ScoreEditorPage() {
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
 
+    const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
+    const { mutate: saveScore } = useUpdateScore(id)
+
+    // The query owns fetching; this effect turns the fetched document into the
+    // live, mutable Score instance the editor works on.
     useEffect(() => {
-        async function load() {
-            try {
-                const [meta, data] = await Promise.all([getScore(id), loadScore(id)])
-                setTitle(meta.title)
-                const deserializer = new ScoreDeserializer(data as unknown as ScorePartwise)
-                const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
-                setScore(s)
-                setActiveNote(s.firstMeasure?.firstNote ?? null)
-            } catch (err) {
-                console.log(err)
-                setError('Failed to load score')
-            } finally {
-                setLoading(false)
-            }
-        }
-        void load()
-    }, [id])
+        if (!scoreDocument) return
+        setTitle(scoreDocument.meta.title)
+        const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
+        const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
+        setScore(s)
+        setActiveNote(s.firstMeasure?.firstNote ?? null)
+    }, [scoreDocument])
 
     const saveToApi = useCallback(
         (changes: { title?: string; score?: Score }) => {
@@ -86,10 +80,10 @@ export default function ScoreEditorPage() {
                     if (dirty?.allMeasures) body.allMeasures = dirty.allMeasures
                     if (dirty?.partList) body.partList = dirty.partList
                 }
-                if (body.title !== undefined || body.measures || body.allMeasures || body.partList) void updateScore(id, body)
+                if (body.title !== undefined || body.measures || body.allMeasures || body.partList) saveScore(body)
             }, 2000)
         },
-        [id],
+        [saveScore],
     )
 
     const handleNoteChange = useCallback(
@@ -457,6 +451,7 @@ export default function ScoreEditorPage() {
             })
         } catch (err) {
             console.error('Recording failed to start', err)
+            showToast("Recording couldn't start. Check your microphone permission and connection, then try again.")
             stopAll()
             return
         }
@@ -473,24 +468,32 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', handleKeyDown)
     }, [handleKeyDown])
 
-    if (loading) {
+    if (loadError) {
+        const serverDown = loadError instanceof NetworkError
+        const notFound = loadError instanceof ApiError && loadError.status === 404
+        return (
+            <ErrorScreen
+                title={serverDown ? "Can't reach the server" : notFound ? 'Score not found' : "This score couldn't be loaded"}
+                message={
+                    serverDown
+                        ? 'Sheemu could not connect to its server, so this score can’t be opened right now. Check your internet connection, or try again in a moment.'
+                        : notFound
+                          ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
+                          : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
+                }
+                onRetry={notFound ? undefined : () => void refetch()}
+                onBack={() => router.push('/scores')}
+                backLabel="Back to library"
+            />
+        )
+    }
+
+    if (!score) {
         return (
             <div className="min-h-screen bg-surface flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-2">
                     <Wordmark size={28} />
                     <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Loading score…</span>
-                </div>
-            </div>
-        )
-    }
-
-    if (error || !score) {
-        return (
-            <div className="min-h-screen bg-surface flex items-center justify-center">
-                <div className="text-center flex flex-col items-center gap-4">
-                    <Wordmark size={28} />
-                    <p className="font-body font-normal text-[14px] leading-normal text-error m-0">{error ?? 'Score not found'}</p>
-                    <SecondaryButton onClick={() => router.push('/scores')}>← Back to library</SecondaryButton>
                 </div>
             </div>
         )

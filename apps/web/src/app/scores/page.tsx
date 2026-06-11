@@ -1,11 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 
-import { Footer, Icon, IconButton, PageHeader, PrimaryButton, TextField, TopNav } from '@/components/ui'
-import { createScore, deleteScore, listScores, type ScoreMeta } from '@/lib/api'
+import { Alert, ErrorScreen, Footer, Icon, IconButton, PageHeader, PrimaryButton, TextField, TopNav } from '@/components/ui'
+import { NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
+import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
+import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Instrument, Score } from '@/model'
 import { ScoreSerializer } from '@/model/util/ScoreSerializer'
 
@@ -31,33 +33,15 @@ function relativeTime(iso: string): string {
 export default function ScoresPage() {
     const router = useRouter()
     const { data: session } = useSession()
-    const [scores, setScores] = useState<ScoreMeta[]>([])
     const [search, setSearch] = useState('')
-    const [loading, setLoading] = useState(true)
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
-    const fetchScores = useCallback(async (query?: string) => {
-        setLoading(true)
-        try {
-            const data = await listScores(query)
-            setScores(data)
-        } finally {
-            setLoading(false)
-        }
-    }, [])
+    const debouncedSearch = useDebouncedValue(search, 300)
+    const { data: scores, isPending, error, refetch } = useScores(debouncedSearch || undefined)
+    const createMutation = useCreateScore()
+    const deleteMutation = useDeleteScore()
 
-    useEffect(() => {
-        void fetchScores()
-    }, [fetchScores])
-
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            void fetchScores(search || undefined)
-        }, 300)
-        return () => clearTimeout(timeout)
-    }, [search, fetchScores])
-
-    async function handleCreate(title: string, instrument: Instrument) {
+    function handleCreate(title: string, instrument: Instrument) {
         // Build the starting score through the model so a new score opens with the
         // same default measure as completing one in the editor (e.g. four quarter
         // rests in 4/4, six eighth rests in 6/8).
@@ -67,14 +51,27 @@ export default function ScoresPage() {
         score.setTempo(measure?.firstNote, 120)
         const emptyScore = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
 
-        const created = await createScore(title, emptyScore)
-        router.push(`/scores/${created.id}`)
+        createMutation.mutate(
+            { title, score: emptyScore },
+            { onSuccess: (created) => router.push(`/scores/${created.id}`) },
+        )
     }
 
-    async function handleDelete(id: string, title: string) {
+    function handleDelete(id: string, title: string) {
         if (!confirm(`Delete "${title}"?`)) return
-        await deleteScore(id)
-        setScores((prev) => prev.filter((s) => s.id !== id))
+        deleteMutation.mutate(id)
+    }
+
+    // Worst case: the very first load can't even reach the server — there is
+    // nothing useful to show, so explain it on a full page.
+    if (error instanceof NetworkError && scores === undefined) {
+        return (
+            <ErrorScreen
+                title="Can't reach the server"
+                message="Sheemu could not connect to its server, so your library can't be shown right now. Check your internet connection, or try again in a moment."
+                onRetry={() => void refetch()}
+            />
+        )
     }
 
     return (
@@ -101,13 +98,15 @@ export default function ScoresPage() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    {loading ? (
+                    {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
+                    {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
+                    {isPending && !error ? (
                         <EmptyCard>
                             <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
                                 Loading your scores…
                             </span>
                         </EmptyCard>
-                    ) : scores.length === 0 ? (
+                    ) : scores === undefined ? null : scores.length === 0 ? (
                         search ? (
                             <EmptyCard>
                                 <span className="text-outline-variant">
@@ -126,7 +125,7 @@ export default function ScoresPage() {
                                 key={score.id}
                                 score={score}
                                 onOpen={() => router.push(`/scores/${score.id}`)}
-                                onDelete={() => void handleDelete(score.id, score.title)}
+                                onDelete={() => handleDelete(score.id, score.title)}
                             />
                         ))
                     )}
@@ -138,7 +137,7 @@ export default function ScoresPage() {
                 onCancel={() => setCreateDialogOpen(false)}
                 onCreate={(title, instrument) => {
                     setCreateDialogOpen(false)
-                    void handleCreate(title, instrument)
+                    handleCreate(title, instrument)
                 }}
             />
 

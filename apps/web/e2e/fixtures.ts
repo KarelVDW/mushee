@@ -76,6 +76,10 @@ function readJson(route: Route): Record<string, unknown> {
 }
 
 async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
+    // Deleted scores must stay gone: the app refetches the list after a delete,
+    // and a stateless mock would resurrect the row.
+    const deletedIds = new Set<string>()
+
     await page.route('**/*', async (route) => {
         const req = route.request()
         const url = new URL(req.url())
@@ -109,6 +113,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
             }
             if (method === 'DELETE') {
                 mock.deletes.push(idMatch[1])
+                deletedIds.add(idMatch[1])
                 return json({})
             }
             return json(SCORE_META) // GET meta
@@ -121,7 +126,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 const { title } = body as { title?: string }
                 return json({ ...SCORE_META, id: 'e2e-created-1', title: title ?? MOCK_TITLE })
             }
-            return json([SCORE_META]) // list
+            return json([SCORE_META].filter((s) => !deletedIds.has(s.id))) // list
         }
 
         return json({})

@@ -5,6 +5,8 @@ import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google
 
 import { AuthGate } from '@/components/AuthGate'
 
+import { Providers } from './providers'
+
 const newsreader = Newsreader({
     variable: '--font-newsreader',
     subsets: ['latin'],
@@ -45,7 +47,9 @@ export default function RootLayout({
                 />
             </head>
             <body className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
-                <AuthGate>{children}</AuthGate>
+                <Providers>
+                    <AuthGate>{children}</AuthGate>
+                </Providers>
             </body>
         </html>
     )

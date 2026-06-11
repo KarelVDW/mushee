@@ -1,17 +1,57 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
+/** The server responded, but with an error status. */
+export class ApiError extends Error {
+    constructor(
+        readonly status: number,
+        message: string,
+    ) {
+        super(message)
+        this.name = 'ApiError'
+    }
+
+    /** Client errors (bad request, not found, …) are final — retrying won't change the answer. */
+    get isClientError(): boolean {
+        return this.status >= 400 && this.status < 500
+    }
+}
+
+/** The server could not be reached at all (down, offline, DNS, CORS). */
+export class NetworkError extends Error {
+    constructor(cause?: unknown) {
+        super('Could not reach the server', { cause })
+        this.name = 'NetworkError'
+    }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${API_URL}${path}`, {
-        ...init,
-        credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json',
-            ...init?.headers,
-        },
-    })
+    let res: Response
+    try {
+        res = await fetch(`${API_URL}${path}`, {
+            ...init,
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                ...init?.headers,
+            },
+        })
+    } catch (err) {
+        throw new NetworkError(err)
+    }
 
     if (!res.ok) {
-        throw new Error(`API error: ${res.status} ${res.statusText}`)
+        // Prefer the server's message when it sends one ({ message } or { error }).
+        let message = `API error: ${res.status} ${res.statusText}`
+        try {
+            const body: unknown = await res.clone().json()
+            if (body && typeof body === 'object') {
+                const detail = (body as { message?: unknown; error?: unknown }).message ?? (body as { error?: unknown }).error
+                if (typeof detail === 'string' && detail) message = detail
+            }
+        } catch {
+            // Non-JSON error body — keep the status-line message.
+        }
+        throw new ApiError(res.status, message)
     }
 
     return res.json() as Promise<T>

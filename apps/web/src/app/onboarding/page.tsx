@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation'
 import { type ReactNode, useState } from 'react'
 
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
-import { type OnboardingPatch, patchOnboarding } from '@/lib/api'
+import { type OnboardingPatch } from '@/lib/api'
 import { emailOtp, useSession } from '@/lib/auth-client'
+import { usePatchOnboarding } from '@/lib/queries'
 
 const BACKGROUNDS: [string, string, string][] = [
     ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
@@ -113,6 +114,7 @@ type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
 export default function OnboardingPage() {
     const router = useRouter()
+    const patchMutation = usePatchOnboarding()
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
     const verified = session?.user?.emailVerified ?? false
@@ -220,11 +222,9 @@ export default function OnboardingPage() {
 
     const next = () => {
         const patch = patchForStep(step)
-        if (patch) {
-            void patchOnboarding(patch).catch(() => {
-                // Swallow — onboarding persistence is best-effort and shouldn't block progress.
-            })
-        }
+        // Persistence is best-effort and never blocks progress; a failure
+        // surfaces as a toast through the global mutation error handler.
+        if (patch) patchMutation.mutate(patch)
         if (step === STEP_COUNT - 1) {
             setDone(true)
             return
