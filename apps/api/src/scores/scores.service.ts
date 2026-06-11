@@ -115,7 +115,18 @@ export class ScoresService {
 
   async remove(userId: string, id: string): Promise<void> {
     const score = await this.findOne(userId, id);
+    await this.removeScore(score);
+  }
 
+  /** Delete every score a user owns, including cache entries and stored files. */
+  async removeAllForUser(userId: string): Promise<void> {
+    const scores = await this.scoreRepo.find({ where: { userId } });
+    for (const score of scores) {
+      await this.removeScore(score);
+    }
+  }
+
+  private async removeScore(score: Score): Promise<void> {
     await this.cacheService.deleteByScoreId(score.id);
 
     if (score.storageKey) {

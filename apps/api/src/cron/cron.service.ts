@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+import { AccountService } from '../account/account.service';
 import { CacheService } from '../cache/cache.service';
 import { ScoresService } from '../scores/scores.service';
 import { StorageService } from '../storage/storage.service';
@@ -10,10 +11,23 @@ export class CronService {
   private readonly logger = new Logger(CronService.name);
 
   constructor(
+    private readonly accountService: AccountService,
     private readonly cacheService: CacheService,
     private readonly scoresService: ScoresService,
     private readonly storageService: StorageService,
   ) {}
+
+  /**
+   * Permanently delete accounts whose 7-day deletion grace period has
+   * passed. Hourly, so a purge lands close to the promised moment.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async purgeDeletedAccounts(): Promise<void> {
+    const purged = await this.accountService.purgeExpired();
+    if (purged > 0) {
+      this.logger.log(`Purged ${purged} account(s) past their grace period`);
+    }
+  }
 
   /**
    * Every 10 minutes, find cached scores that haven't been updated
@@ -51,7 +65,7 @@ export class CronService {
         this.logger.log(`Flushed score ${score.id} (${score.title}) to storage`);
       } catch (error) {
         this.logger.error(
-          `Failed to flush score ${cached.scoreId}: ${error}`,
+          `Failed to flush score ${cached.scoreId}: ${String(error)}`,
         );
       }
     }

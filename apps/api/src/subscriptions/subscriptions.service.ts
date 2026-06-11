@@ -16,4 +16,9 @@ export class SubscriptionsService {
     const subscription = await this.repo.findOneBy({ userId });
     return SubscriptionTier.byId(subscription?.tierId);
   }
+
+  /** Remove the user's subscription row (account purge). */
+  async deleteForUser(userId: string): Promise<void> {
+    await this.repo.delete({ userId });
+  }
 }

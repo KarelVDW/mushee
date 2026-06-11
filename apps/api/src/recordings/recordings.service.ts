@@ -78,4 +78,11 @@ export class RecordingsService implements OnModuleInit {
       lock,
     );
   }
+
+  /** Delete all recording data for a user (account purge): sessions, usage, lock. */
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.recordingRepo.delete({ userId });
+    await this.credits.deleteAllForUser(userId);
+    await this.locks.deleteAllForUser(userId);
+  }
 }

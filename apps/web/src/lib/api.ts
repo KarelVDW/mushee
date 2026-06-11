@@ -98,6 +98,30 @@ export function deleteScore(id: string): Promise<void> {
     return api(`/scores/${id}`, { method: 'DELETE' })
 }
 
+export interface AccountDeletionStatus {
+    pending: boolean
+    requestedAt?: string
+    /** End of the 7-day grace period; the account is permanently deleted after this. */
+    purgeAfter?: string
+}
+
+/** Soft-delete: starts the grace period and signs the user out everywhere. */
+export function requestAccountDeletion(password: string): Promise<AccountDeletionStatus> {
+    return api('/account/delete', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+    })
+}
+
+export function getAccountDeletionStatus(): Promise<AccountDeletionStatus> {
+    return api('/account/deletion')
+}
+
+export function reactivateAccount(): Promise<AccountDeletionStatus> {
+    // Fastify rejects an empty body when Content-Type is application/json.
+    return api('/account/reactivate', { method: 'POST', body: '{}' })
+}
+
 export interface OnboardingPatch {
     background?: string
     instruments?: string[]

@@ -26,6 +26,8 @@ function makeQueryClient() {
         },
         mutationCache: new MutationCache({
             onError: (error, _variables, _context, mutation) => {
+                // Mutations whose UI renders the error inline opt out of the toast.
+                if (mutation.meta?.silentError) return
                 // A mutation's own message ("Could not delete the score…") reads better
                 // than the generic network/API phrasing, so it wins when provided.
                 const metaMessage = mutation.meta?.errorMessage

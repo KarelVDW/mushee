@@ -152,7 +152,9 @@ export default function SettingsPage() {
                                         <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
                                     </div>
                                 </Section>
-                                <Section title="Delete account" subtitle="This permanently removes your scores. We can't undo it.">
+                                <Section
+                                    title="Delete account"
+                                    subtitle="Deactivates your account today; after 7 days everything is permanently deleted.">
                                     <div>
                                         <TertiaryButton danger onClick={() => setDeleteOpen(true)}>
                                             Delete my account

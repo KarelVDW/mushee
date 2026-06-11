@@ -54,6 +54,11 @@ export class RecordingCreditsService {
     return this.toBalance(tier, rows[0].creditsUsed);
   }
 
+  /** Remove all usage rows for a user (account purge). */
+  async deleteAllForUser(userId: string): Promise<void> {
+    await this.usageRepo.delete({ userId });
+  }
+
   private toBalance(
     tier: SubscriptionTier,
     used: number,

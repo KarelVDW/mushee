@@ -10,6 +10,8 @@ import {
     loadScore,
     type OnboardingPatch,
     patchOnboarding,
+    reactivateAccount,
+    requestAccountDeletion,
     type ScoreMeta,
     updateScore,
 } from './api'
@@ -88,5 +90,21 @@ export function usePatchOnboarding() {
     return useMutation({
         mutationFn: (patch: OnboardingPatch) => patchOnboarding(patch),
         meta: { errorMessage: "Couldn't save your onboarding answers. Please try again." },
+    })
+}
+
+/** Soft-deletes the account (7-day grace period) after password re-auth. */
+export function useRequestAccountDeletion() {
+    return useMutation({
+        mutationFn: (password: string) => requestAccountDeletion(password),
+        // The dialog shows wrong-password feedback inline; a toast would double up.
+        meta: { silentError: true },
+    })
+}
+
+export function useReactivateAccount() {
+    return useMutation({
+        mutationFn: () => reactivateAccount(),
+        meta: { errorMessage: "Couldn't reactivate your account. Please try again." },
     })
 }

@@ -23,5 +23,6 @@ import { RecordingsService } from './recordings.service';
     RecordingCreditsService,
     RecordingLocksService,
   ],
+  exports: [RecordingsService],
 })
 export class RecordingsModule {}

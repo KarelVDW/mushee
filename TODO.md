@@ -25,7 +25,7 @@
 - [x] Email verification flow (better-auth emailOTP plugin + SendGrid + signup UI)
 - [x] Password reset flow (better-auth reset + reset-password page)
 - [x] Transactional email provider (SendGrid via mail.service.ts)
-- [ ] Account deletion endpoint (GDPR) — UI dialog built (DeleteAccountDialog.tsx) but no backend endpoint yet
+- [x] Account deletion (GDPR) — soft delete with 7-day grace period (account module), reactivation prompt at login, hourly purge cron deletes user + all data after the window
 
 ## High priority (safety / reliability)
 

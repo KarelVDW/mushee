@@ -36,4 +36,9 @@ export class OnboardingService {
     }
     return this.repo.save(this.repo.create({ userId, ...patch }));
   }
+
+  /** Remove the user's onboarding answers (account purge). */
+  async deleteForUser(userId: string): Promise<void> {
+    await this.repo.delete({ userId });
+  }
 }
