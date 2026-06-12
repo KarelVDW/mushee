@@ -1,0 +1,8 @@
+import { InitialSchema1781203417001 } from './1781203417001-InitialSchema';
+
+/**
+ * All migrations, in order. New migrations (pnpm migration:generate) must be
+ * added here — they are imported explicitly instead of glob-loaded so the
+ * list works identically for the CLI and the app, in ts and compiled dist.
+ */
+export const migrations = [InitialSchema1781203417001];

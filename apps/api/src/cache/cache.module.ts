@@ -1,15 +1,11 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CacheService } from './cache.service';
-import { CachedScore, CachedScoreSchema } from './cached-score.schema';
+import { CachedScore } from './entities/cached-score.entity';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: CachedScore.name, schema: CachedScoreSchema },
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([CachedScore])],
   providers: [CacheService],
   exports: [CacheService],
 })

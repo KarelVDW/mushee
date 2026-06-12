@@ -5,9 +5,9 @@ Two Playwright suites cover the web app:
 | Suite | Config | Backend | Command |
 | --- | --- | --- | --- |
 | **Mocked editor** | `playwright.config.ts` | None — API + auth are intercepted with `page.route` | `pnpm test:e2e` |
-| **Full-stack smoke** | `playwright.fullstack.config.ts` | Real `@mushee/api` + Postgres + Mongo | `pnpm test:e2e:smoke` |
+| **Full-stack smoke** | `playwright.fullstack.config.ts` | Real `@mushee/api` + Postgres | `pnpm test:e2e:smoke` |
 
-> Default dev ports (web `3000`, api `4000`, postgres `5432`, mongo `27017`) are assumed
+> Default dev ports (web `3000`, api `4000`, postgres `5432`) are assumed
 > to be in use by another project, so everything here runs on **alternate ports**.
 
 ## Mocked editor suite (default)
@@ -44,19 +44,18 @@ Runs against a **real, already-running** stack. It does not start anything itsel
 — bring the stack up first, then run the suite. Every test auto-skips if the web
 app isn't reachable, so it's safe to run anywhere.
 
-1. Start databases on alternate ports (so they don't clash with the other project):
+1. Start the database on an alternate port (so it doesn't clash with the other project):
 
    ```bash
    docker run -d --name mushee-e2e-pg  -e POSTGRES_USER=mushee -e POSTGRES_PASSWORD=mushee -e POSTGRES_DB=mushee -p 5532:5432 postgres:17-alpine
-   docker run -d --name mushee-e2e-mongo -p 27117:27017 mongo:8
    ```
 
-2. Start the API on port 4100, pointed at those databases (see `apps/api/.env.development`
-   for the variables — typically `DATABASE_URL`, `MONGO_URL`, `PORT`).
+2. Start the API on port 4100, pointed at that database (see `apps/api/.env.development`
+   for the variables — `POSTGRES_HOST`/`POSTGRES_PORT`/..., `PORT`). Pending
+   TypeORM migrations run automatically on boot.
 
    ```bash
-   cd apps/api && PORT=4100 DATABASE_URL=postgres://mushee:mushee@localhost:5532/mushee \
-     MONGO_URL=mongodb://localhost:27117/mushee pnpm dev
+   cd apps/api && PORT=4100 POSTGRES_PORT=5532 pnpm dev
    ```
 
 3. Start the web app on port 3100, pointed at the API:

@@ -30,10 +30,10 @@
 ## High priority (safety / reliability)
 
 ### Database
-- [ ] Turn off `synchronize: true`, write proper TypeORM migrations — still on in non-prod (app.module.ts), no migrations dir
-- [ ] Migration runner in deploy pipeline
-- [ ] Backup strategy for Postgres + Mongo (managed service or scheduled dumps)
-- [ ] Decide whether MongoDB is actually needed — Postgres+JSONB might collapse two DBs into one
+- [x] Turn off `synchronize: true`, write proper TypeORM migrations — shared data source in `src/database/data-source.ts`, initial migration generated, `pnpm migration:generate/run/revert` scripts
+- [x] Migration runner — `migrationsRun: true` runs pending migrations on app boot; deploy pipelines can also call `pnpm migration:run` explicitly
+- [ ] Backup strategy for Postgres (managed service or scheduled dumps)
+- [x] Decide whether MongoDB is actually needed — it wasn't; score edit cache ported to Postgres `cached_scores` (JSONB), Mongo removed from the stack
 
 ### API hardening
 - [x] Rate limiting (per-IP + per-user) — `@fastify/rate-limit`, keyed by session token else IP, 120/min (env-tunable), `/health` exempt

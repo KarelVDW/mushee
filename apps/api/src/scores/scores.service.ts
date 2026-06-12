@@ -30,7 +30,7 @@ export class ScoresService {
     });
     const saved = await this.scoreRepo.save(score);
 
-    // Put initial score data in MongoDB cache for immediate editing
+    // Put initial score data in the edit cache for immediate editing
     await this.cacheService.upsert(saved.id, instanceToPlain(dto.score));
 
     return saved;
@@ -56,13 +56,12 @@ export class ScoresService {
   }
 
   /**
-   * Load a score for editing. Reads from MongoDB cache if available,
+   * Load a score for editing. Reads from the edit cache if available,
    * otherwise reads MusicXML from storage, converts to JSON, and caches it.
    */
   async load(userId: string, id: string): Promise<Record<string, unknown>> {
     const score = await this.findOne(userId, id);
 
-    // Check if already cached in MongoDB
     const cached = await this.cacheService.findByScoreId(score.id);
     if (cached) {
       return cached.data;
@@ -72,7 +71,6 @@ export class ScoresService {
     const musicxml = await this.storageService.read(score.storageKey);
     const scoreData = this.musicxmlToJson(musicxml);
 
-    // Cache in MongoDB for editing
     await this.cacheService.upsert(score.id, scoreData);
 
     return scoreData;

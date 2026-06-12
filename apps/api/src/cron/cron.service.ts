@@ -32,7 +32,7 @@ export class CronService {
   /**
    * Every 10 minutes, find cached scores that haven't been updated
    * in the last 10 minutes. Convert them to MusicXML, write to storage,
-   * and remove from MongoDB cache.
+   * and remove from the edit cache.
    */
   @Cron(CronExpression.EVERY_10_MINUTES)
   async flushStaleScores(): Promise<void> {
