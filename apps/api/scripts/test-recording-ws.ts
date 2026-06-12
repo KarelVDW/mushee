@@ -43,9 +43,6 @@ async function startServer(): Promise<() => Promise<void>> {
   const registry = new ProviderRegistry({
     basicPitch:
       process.env.BASIC_PITCH_MODEL_DIR ?? resolve(__dirname, '../model'),
-    crepeFull:
-      process.env.CREPE_FULL_MODEL_DIR ??
-      resolve(__dirname, '../model-crepe-full'),
     crepeTiny:
       process.env.CREPE_TINY_MODEL_DIR ??
       resolve(__dirname, '../model-crepe-tiny'),

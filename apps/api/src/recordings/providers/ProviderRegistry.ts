@@ -8,7 +8,6 @@ import type { PitchProvider } from './PitchProvider';
 
 export interface ProviderModelDirs {
   basicPitch: string;
-  crepeFull: string;
   crepeTiny: string;
   pesto: string;
 }
@@ -30,9 +29,6 @@ export class ProviderRegistry {
     }
     if (existsSync(dirs.crepeTiny)) {
       this.providers.set('crepe-tiny', new CrepeProvider(dirs.crepeTiny, 'crepe-tiny'));
-    }
-    if (existsSync(dirs.crepeFull)) {
-      this.providers.set('crepe-full', new CrepeProvider(dirs.crepeFull, 'crepe-full'));
     }
     if (existsSync(dirs.pesto)) {
       this.providers.set('pesto', new PestoProvider(dirs.pesto));

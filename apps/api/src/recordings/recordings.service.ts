@@ -16,7 +16,6 @@ import {
 } from './RecordingSession';
 
 const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
-const DEFAULT_CREPE_FULL_DIR = resolve(process.cwd(), 'model-crepe-full');
 const DEFAULT_CREPE_TINY_DIR = resolve(process.cwd(), 'model-crepe-tiny');
 const DEFAULT_PESTO_DIR = resolve(process.cwd(), 'model-pesto');
 
@@ -38,7 +37,6 @@ export class RecordingsService implements OnModuleInit {
   ) {
     this.registry = new ProviderRegistry({
       basicPitch: process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR,
-      crepeFull: process.env.CREPE_FULL_MODEL_DIR ?? DEFAULT_CREPE_FULL_DIR,
       crepeTiny: process.env.CREPE_TINY_MODEL_DIR ?? DEFAULT_CREPE_TINY_DIR,
       pesto: process.env.PESTO_MODEL_DIR ?? DEFAULT_PESTO_DIR,
     });

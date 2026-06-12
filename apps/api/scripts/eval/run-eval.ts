@@ -13,7 +13,7 @@
  *   tsx scripts/eval/run-eval.ts
  *
  * Env:
- *   EVAL_PROVIDER     basic-pitch | crepe-tiny | crepe-full | pesto  (default basic-pitch)
+ *   EVAL_PROVIDER     basic-pitch | crepe-tiny | pesto  (default basic-pitch)
  *   EVAL_MIN_FREQ, EVAL_MAX_FREQ, EVAL_CONFIDENCE, EVAL_HIGHPASS
  *   EVAL_ONSET, EVAL_FRAME           (basic-pitch note gates)
  *   EVAL_SCENARIOS, EVAL_CONDITIONS  comma-separated id filters
@@ -50,16 +50,12 @@ const DETECT_SR = 16000;
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
   basicPitch: resolve(process.cwd(), 'model'),
-  crepeFull: resolve(process.cwd(), 'model-crepe-full'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
   pesto: resolve(process.cwd(), 'model-pesto'),
 };
 
 function buildProvider(name: string): PitchProvider {
   switch (name) {
-    case 'crepe':
-    case 'crepe-full':
-      return new CrepeProvider(MODELS.crepeFull, 'crepe-full');
     case 'crepe-tiny':
       return new CrepeProvider(MODELS.crepeTiny, 'crepe-tiny');
     case 'pesto':
@@ -131,7 +127,6 @@ async function main(): Promise<void> {
   if (adaptive) {
     const registry = new ProviderRegistry({
       basicPitch: MODELS.basicPitch,
-      crepeFull: MODELS.crepeFull,
       crepeTiny: MODELS.crepeTiny,
       pesto: MODELS.pesto,
     });
