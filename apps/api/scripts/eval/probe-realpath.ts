@@ -35,7 +35,6 @@ const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
   basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-  pesto: resolve(process.cwd(), 'model-pesto'),
 };
 const STEP_SEMITONE: Record<string, number> = {
   C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11,
@@ -165,7 +164,6 @@ async function main(): Promise<void> {
   const registry = new ProviderRegistry({
     basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
-    pesto: MODELS.pesto,
   });
   await registry.initAll();
   const resolver = new ProfileResolver();

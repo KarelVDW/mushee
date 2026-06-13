@@ -19,7 +19,7 @@ export interface PitchSession {}
  *    single most important lever for adapting to register — whistles need a
  *    high ceiling, bass voices a low floor.
  *  - `confidenceThreshold`: voicing gate for the pitch-trajectory providers
- *    (CREPE / PESTO).
+ *    (CREPE).
  *  - `onsetThreshold` / `frameThreshold`: basic-pitch note-gating thresholds.
  */
 export interface PitchTranscribeOptions {
@@ -45,7 +45,7 @@ export interface PitchProvider {
 
   /**
    * Whether the provider already detects note onsets itself (basic-pitch has an
-   * onset head). Trajectory providers (CREPE/PESTO) segment only on pitch
+   * onset head). Trajectory providers (CREPE) segment only on pitch
    * stability and set this false, so the pipeline applies its own amplitude
    * re-attack splitting for them; providers with native onsets set it true to
    * avoid double-splitting.

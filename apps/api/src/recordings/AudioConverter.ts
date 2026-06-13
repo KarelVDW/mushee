@@ -32,7 +32,7 @@ export class AudioConverter {
   ) {
     this.extractor = extractor ?? new NoteExtractor();
     this.session = provider.createSession();
-    // Only providers without native onset detection (CREPE/PESTO) need the
+    // Only providers without native onset detection (CREPE) need the
     // amplitude re-attack splitter; basic-pitch already emits onsets, so adding
     // it there would double-split and hurt precision.
     this.onsetDetector =

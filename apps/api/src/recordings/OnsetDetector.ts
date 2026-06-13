@@ -1,5 +1,5 @@
 /**
- * Re-attack detector. The monophonic pitch-trajectory providers (CREPE/PESTO)
+ * Re-attack detector. The monophonic pitch-trajectory providers (CREPE)
  * segment only on pitch stability, so two repeated same-pitch notes read as one
  * sustained note — a recall loss. This finds note re-articulations from the
  * audio amplitude envelope so `NoteExtractor` can split a sustained run back

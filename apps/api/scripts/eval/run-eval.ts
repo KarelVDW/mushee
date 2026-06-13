@@ -13,7 +13,7 @@
  *   tsx scripts/eval/run-eval.ts
  *
  * Env:
- *   EVAL_PROVIDER     basic-pitch | crepe-tiny | pesto  (default basic-pitch)
+ *   EVAL_PROVIDER     basic-pitch | crepe-tiny  (default basic-pitch)
  *   EVAL_MIN_FREQ, EVAL_MAX_FREQ, EVAL_CONFIDENCE, EVAL_HIGHPASS
  *   EVAL_ONSET, EVAL_FRAME           (basic-pitch note gates)
  *   EVAL_SCENARIOS, EVAL_CONDITIONS  comma-separated id filters
@@ -29,7 +29,6 @@ import { AudioDecoder } from '../../src/recordings/AudioDecoder';
 import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
 import { BasicPitchProvider } from '../../src/recordings/providers/BasicPitchProvider';
 import { CrepeProvider } from '../../src/recordings/providers/CrepeProvider';
-import { PestoProvider } from '../../src/recordings/providers/PestoProvider';
 import type {
   PitchProvider,
   PitchTranscribeOptions,
@@ -51,15 +50,12 @@ const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
   basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-  pesto: resolve(process.cwd(), 'model-pesto'),
 };
 
 function buildProvider(name: string): PitchProvider {
   switch (name) {
     case 'crepe-tiny':
       return new CrepeProvider(MODELS.crepeTiny, 'crepe-tiny');
-    case 'pesto':
-      return new PestoProvider(MODELS.pesto);
     case 'basic-pitch':
     default:
       return new BasicPitchProvider(MODELS.basicPitch);
@@ -128,7 +124,6 @@ async function main(): Promise<void> {
     const registry = new ProviderRegistry({
       basicPitch: MODELS.basicPitch,
       crepeTiny: MODELS.crepeTiny,
-      pesto: MODELS.pesto,
     });
     await registry.initAll();
     const resolver = new ProfileResolver();

@@ -34,7 +34,7 @@ function band(id: string): PipelineProfile {
 /**
  * Map the detected median fundamental to a register band. Boundaries chosen so
  * piccolo / whistling (median ≳ 1.3 kHz, with notes reaching above the
- * CREPE/PESTO ~1997 Hz ceiling) land in the basic-pitch `very-high` band, while
+ * CREPE ~1997 Hz ceiling) land in the basic-pitch `very-high` band, while
  * everything the trajectory providers can fully cover routes to them.
  */
 function bandFor(medianHz: number): PipelineProfile {
@@ -105,7 +105,7 @@ export class ProfileResolver {
     id: string,
   ): PipelineProfile {
     const isTrajectory = base.providerName !== 'basic-pitch';
-    // The CREPE/PESTO trajectory providers can't see above their ~1997 Hz
+    // The CREPE trajectory provider can't see above its ~1997 Hz
     // ceiling, so cap their window there rather than demoting the whole clip to
     // the (much weaker) basic-pitch — the band router already sends sources
     // whose register sits above the ceiling to the basic-pitch `very-high` band.

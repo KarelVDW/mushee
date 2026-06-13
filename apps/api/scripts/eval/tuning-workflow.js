@@ -20,7 +20,7 @@ const BANDS = [
 ];
 
 // Only basic-pitch reaches above ~1997 Hz, so the very-high band fixes it.
-const PROVIDERS = ['basic-pitch', 'crepe-tiny', 'pesto'];
+const PROVIDERS = ['basic-pitch', 'crepe-tiny'];
 
 const F1_SCHEMA = {
   type: 'object',
@@ -75,7 +75,7 @@ const bandResults = await pipeline(
 
 phase('Tune');
 // For each band's winning provider, sweep a couple of gating thresholds and
-// keep the best. basic-pitch tunes onset/frame; crepe/pesto tune confidence.
+// keep the best. basic-pitch tunes onset/frame; crepe tunes confidence.
 const tuned = await parallel(
   bandResults.filter(Boolean).map((br) => async () => {
     const { band, best } = br;

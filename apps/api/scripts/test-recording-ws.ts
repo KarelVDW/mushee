@@ -46,7 +46,6 @@ async function startServer(): Promise<() => Promise<void>> {
     crepeTiny:
       process.env.CREPE_TINY_MODEL_DIR ??
       resolve(__dirname, '../model-crepe-tiny'),
-    pesto: process.env.PESTO_MODEL_DIR ?? resolve(__dirname, '../model-pesto'),
   });
   const resolver = new ProfileResolver();
   void registry.initAll(usedProviderNames());

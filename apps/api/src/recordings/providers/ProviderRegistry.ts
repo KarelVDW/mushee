@@ -3,13 +3,11 @@ import { existsSync } from 'fs';
 
 import { BasicPitchProvider } from './BasicPitchProvider';
 import { CrepeProvider } from './CrepeProvider';
-import { PestoProvider } from './PestoProvider';
 import type { PitchProvider } from './PitchProvider';
 
 export interface ProviderModelDirs {
   basicPitch: string;
   crepeTiny: string;
-  pesto: string;
 }
 
 /**
@@ -29,9 +27,6 @@ export class ProviderRegistry {
     }
     if (existsSync(dirs.crepeTiny)) {
       this.providers.set('crepe-tiny', new CrepeProvider(dirs.crepeTiny, 'crepe-tiny'));
-    }
-    if (existsSync(dirs.pesto)) {
-      this.providers.set('pesto', new PestoProvider(dirs.pesto));
     }
     if (!this.providers.has('basic-pitch')) {
       throw new Error(

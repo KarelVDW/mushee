@@ -2,7 +2,7 @@ import type { NoteEventTime } from '@spotify/basic-pitch';
 
 /**
  * Shared decoding utilities used by every per-frame-activation provider
- * (CREPE, PESTO, …). Each provider runs its own model to produce a
+ * (CREPE, …). Each provider runs its own model to produce a
  * `[frames, numBins]` activation matrix; everything from there — Viterbi
  * smoothing, sub-bin pitch refinement, run segmentation — is provider-agnostic
  * and lives here.
@@ -208,8 +208,7 @@ export function segmentNotes(
 }
 
 /** Per-frame zero-mean / unit-variance normalization, matching what most
- *  pitch CNNs (CREPE, etc.) expect on raw windows. PESTO does this internally
- *  inside the ONNX graph so it doesn't call this. */
+ *  pitch CNNs (CREPE, etc.) expect on raw windows. */
 export function normalizeFrame(window: Float32Array): Float32Array {
   let mean = 0;
   for (let i = 0; i < window.length; i++) mean += window[i];

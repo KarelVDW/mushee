@@ -14,7 +14,7 @@ Architecture:
   Providers: crepe-tiny (CREPE, monophonic pitch TRAJECTORY via Viterbi over per-frame
   activations, NO explicit onset detection) used for low/mid/high; basic-pitch (polyphonic
   CNN WITH onset+frame heads) used only very-high (>~1997Hz, e.g. whistle/piccolo).
-- Segmentation: crepe/pesto in providers/pitchDecoder.ts segmentNotes() cuts the smoothed
+- Segmentation: crepe in providers/pitchDecoder.ts segmentNotes() cuts the smoothed
   pitch trajectory into notes by confidence threshold + pitch stability (pitchBinToleranceCents),
   with minFramesPerNote. It has NO amplitude/onset re-articulation detection, so two repeated
   same-pitch notes read as ONE sustained note.

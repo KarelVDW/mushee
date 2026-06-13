@@ -20,7 +20,7 @@ export interface PipelineProfile {
   highpassHz: number;
   minFreqHz: number;
   maxFreqHz: number;
-  /** Voicing gate for CREPE / PESTO. */
+  /** Voicing gate for CREPE. */
   confidenceThreshold?: number;
   /** basic-pitch note gates. */
   onsetThreshold?: number;
@@ -32,7 +32,7 @@ export const GLOBAL_MIN_FREQ_HZ = 55;
 export const GLOBAL_MAX_FREQ_HZ = 4500;
 
 /**
- * CREPE/PESTO trajectory models top out near ~1997 Hz; only basic-pitch's CNN
+ * CREPE trajectory models top out near ~1997 Hz; only basic-pitch's CNN
  * spans the full MIDI 21–108 (~4186 Hz). Any window reaching above this must
  * therefore use basic-pitch.
  */
@@ -45,7 +45,7 @@ export const TRAJECTORY_MODEL_CEILING_HZ = 1900;
  *
  * Provider + threshold choices come from the tuning workflow's per-band sweep
  * over the eval corpus (scripts/eval): the monophonic trajectory providers
- * (CREPE/PESTO) beat the polyphonic basic-pitch by a wide margin on sustained
+ * (CREPE) beat the polyphonic basic-pitch by a wide margin on sustained
  * single-pitch input (F1 ~0.71–0.74 vs ~0.50–0.58) within their ~1997 Hz
  * ceiling. Above that ceiling only basic-pitch's CNN reaches, so the very-high
  * band (piccolo, whistling) stays on basic-pitch. The resolver also falls back
@@ -62,9 +62,6 @@ export const PROFILE_BANDS: PipelineProfile[] = [
   },
   {
     id: 'mid', // trumpet, clarinet, tenor/alto voice, harmonica
-    // pesto edged crepe-tiny on the mid probe (0.72 vs 0.68) but collapses on
-    // double-reed timbres that route here by median (bassoon 0.54 vs 0.75), so
-    // crepe-tiny is the more uniform choice across the band.
     providerName: 'crepe-tiny',
     highpassHz: 70,
     minFreqHz: 90,
@@ -80,7 +77,7 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     confidenceThreshold: 0.5,
   },
   {
-    id: 'very-high', // piccolo, whistling — above the CREPE/PESTO ceiling
+    id: 'very-high', // piccolo, whistling — above the CREPE ceiling
     providerName: 'basic-pitch',
     highpassHz: 300,
     minFreqHz: 500,
