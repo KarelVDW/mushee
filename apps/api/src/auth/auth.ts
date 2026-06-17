@@ -7,16 +7,16 @@ import { mailService } from '../mail/mail.service';
 const pool = new Pool({
   connectionString:
     process.env.POSTGRES_URL ??
-    `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5432'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
+    `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5632'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
 });
 
 const trustedOrigins = [
   ...(process.env.TRUSTED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? []),
-  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3200'] : []),
 ];
 
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:4000',
+  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:4200',
   trustedOrigins,
   database: pool,
   emailAndPassword: {

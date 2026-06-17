@@ -413,7 +413,7 @@ export default function ScoreEditorPage() {
 
         // Every recording belongs to a score; the gateway requires the id up front.
         const wsUrl =
-            (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/^http/, 'ws') +
+            (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200').replace(/^http/, 'ws') +
             `/recording?scoreId=${encodeURIComponent(id)}`
 
         try {

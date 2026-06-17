@@ -11,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test'
  * up yourself (see e2e/README.md), then run `pnpm test:e2e:smoke`. The spec
  * auto-skips every test if the web app at E2E_WEB_URL isn't reachable.
  */
-const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3100'
+const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3300'
 
 export default defineConfig({
     testDir: './e2e',

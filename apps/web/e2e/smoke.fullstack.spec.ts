@@ -13,7 +13,7 @@ import { expect, test } from '@playwright/test'
  *       E2E_SESSION_TOKEN=... pnpm test:e2e:smoke
  */
 
-const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3100'
+const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3300'
 const SESSION_TOKEN = process.env.E2E_SESSION_TOKEN
 
 let reachable: boolean | null = null

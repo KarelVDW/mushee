@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOnboarding, updateScore } from '@/lib/api'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
 function okResponse(body: unknown): Response {
     return {

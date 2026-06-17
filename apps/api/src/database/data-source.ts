@@ -23,7 +23,7 @@ import { migrations } from './migrations';
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   host: process.env.POSTGRES_HOST ?? 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT ?? '5432', 10),
+  port: parseInt(process.env.POSTGRES_PORT ?? '5632', 10),
   username: process.env.POSTGRES_USER ?? 'mushee',
   password: process.env.POSTGRES_PASSWORD ?? 'mushee',
   database: process.env.POSTGRES_DB ?? 'mushee',

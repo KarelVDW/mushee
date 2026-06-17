@@ -32,7 +32,7 @@ async function signUp() {
   const res = await fetch(`${API}/api/auth/sign-up/email`, {
     method: 'POST',
     // Dev trustedOrigins includes the web app origin; better-auth rejects POSTs without one.
-    headers: { 'Content-Type': 'application/json', origin: 'http://localhost:3000' },
+    headers: { 'Content-Type': 'application/json', origin: 'http://localhost:3200' },
     body: JSON.stringify({ email, password: 'verify-password-1', name: 'Rec Verify' }),
   });
   if (!res.ok) throw new Error(`sign-up failed: ${res.status} ${await res.text()}`);

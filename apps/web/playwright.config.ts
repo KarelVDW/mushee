@@ -3,14 +3,14 @@ import { defineConfig, devices } from '@playwright/test'
 /**
  * E2E config for the mocked-API editor suite.
  *
- * The web app is started on an ALTERNATE port (3100) so it doesn't collide with a
- * dev server already running on the default 3000. All backend traffic (scores API +
+ * The web app is started on an ALTERNATE port (3300) so it doesn't collide with the
+ * mushee dev server running on 3200. All backend traffic (scores API +
  * better-auth) is pointed at a dead origin (localhost:4999) and intercepted with
  * `page.route` in the tests — no real API, Postgres, or Mongo is required.
  *
  * The full-stack smoke suite lives in `playwright.fullstack.config.ts`.
  */
-const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100)
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3300)
 const MOCK_API_URL = 'http://localhost:4999'
 
 export default defineConfig({

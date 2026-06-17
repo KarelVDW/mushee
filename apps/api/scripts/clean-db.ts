@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const database = process.env.POSTGRES_DB ?? 'mushee';
   const client = new Client({
     host,
-    port: parseInt(process.env.POSTGRES_PORT ?? '5432', 10),
+    port: parseInt(process.env.POSTGRES_PORT ?? '5632', 10),
     user: process.env.POSTGRES_USER ?? 'mushee',
     password: process.env.POSTGRES_PASSWORD ?? 'mushee',
     database,

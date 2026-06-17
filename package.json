@@ -13,7 +13,7 @@
         "lint": "eslint --fix",
         "format": "prettier --write .",
         "type-check": "pnpm -r type-check",
-        "pgweb": "pgweb --host localhost --port 5432 --user mushee --pass mushee --db mushee --ssl disable"
+        "pgweb": "pgweb --host localhost --port 5632 --user mushee --pass mushee --db mushee --ssl disable --listen 8632"
     },
     "devDependencies": {
         "@eslint/js": "^9.21.0",

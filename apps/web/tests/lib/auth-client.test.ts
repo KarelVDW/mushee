@@ -25,7 +25,7 @@ describe('auth-client', () => {
 
         expect(createAuthClient).toHaveBeenCalledTimes(1)
         const config = createAuthClient.mock.calls[0][0] as { baseURL?: string; plugins?: unknown[] }
-        expect(config.baseURL).toBe(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000')
+        expect(config.baseURL).toBe(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200')
         expect(emailOTPClient).toHaveBeenCalled()
         expect(config.plugins).toContainEqual({ id: 'email-otp' })
 

@@ -223,7 +223,7 @@ async function persistToDatabase(
 
   const pg = new PgClient({
     host: process.env.POSTGRES_HOST ?? 'localhost',
-    port: Number(process.env.POSTGRES_PORT ?? 5432),
+    port: Number(process.env.POSTGRES_PORT ?? 5632),
     user: process.env.POSTGRES_USER ?? 'mushee',
     password: process.env.POSTGRES_PASSWORD ?? 'mushee',
     database: process.env.POSTGRES_DB ?? 'mushee',

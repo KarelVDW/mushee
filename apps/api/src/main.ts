@@ -50,7 +50,7 @@ async function bootstrap() {
   /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3200',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
@@ -63,7 +63,7 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 4000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 4200, '0.0.0.0');
 }
 
 void bootstrap();

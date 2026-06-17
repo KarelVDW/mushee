@@ -7,12 +7,13 @@ Two Playwright suites cover the web app:
 | **Mocked editor** | `playwright.config.ts` | None — API + auth are intercepted with `page.route` | `pnpm test:e2e` |
 | **Full-stack smoke** | `playwright.fullstack.config.ts` | Real `@mushee/api` + Postgres | `pnpm test:e2e:smoke` |
 
-> Default dev ports (web `3000`, api `4000`, postgres `5432`) are assumed
-> to be in use by another project, so everything here runs on **alternate ports**.
+> The e2e suites run on their own ports (web `3300`, api `4300`, postgres `5532`),
+> kept distinct from the main mushee dev stack (web `3200`, api `4200`, postgres
+> `5632`) so you can run the tests while a dev server is up.
 
 ## Mocked editor suite (default)
 
-Self-contained: starts the web app on **port 3100** and intercepts every backend
+Self-contained: starts the web app on **port 3300** and intercepts every backend
 call. No database or API server is required.
 
 ```bash
@@ -35,7 +36,7 @@ described in that file if the serializer format changes).
 ### Override the web port
 
 ```bash
-E2E_WEB_PORT=3200 pnpm test:e2e
+E2E_WEB_PORT=3400 pnpm test:e2e
 ```
 
 ## Full-stack smoke suite
@@ -44,24 +45,24 @@ Runs against a **real, already-running** stack. It does not start anything itsel
 — bring the stack up first, then run the suite. Every test auto-skips if the web
 app isn't reachable, so it's safe to run anywhere.
 
-1. Start the database on an alternate port (so it doesn't clash with the other project):
+1. Start the database on the e2e port (so it doesn't clash with the main dev db):
 
    ```bash
    docker run -d --name mushee-e2e-pg  -e POSTGRES_USER=mushee -e POSTGRES_PASSWORD=mushee -e POSTGRES_DB=mushee -p 5532:5432 postgres:17-alpine
    ```
 
-2. Start the API on port 4100, pointed at that database (see `apps/api/.env.development`
+2. Start the API on port 4300, pointed at that database (see `apps/api/.env.development`
    for the variables — `POSTGRES_HOST`/`POSTGRES_PORT`/..., `PORT`). Pending
    TypeORM migrations run automatically on boot.
 
    ```bash
-   cd apps/api && PORT=4100 POSTGRES_PORT=5532 pnpm dev
+   cd apps/api && PORT=4300 POSTGRES_PORT=5532 pnpm dev
    ```
 
-3. Start the web app on port 3100, pointed at the API:
+3. Start the web app on port 3300, pointed at the API:
 
    ```bash
-   cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:4100 next dev -p 3100
+   cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:4300 next dev -p 3300
    ```
 
 4. Run the smoke:
@@ -77,6 +78,6 @@ account):
 
 ```bash
 E2E_SESSION_TOKEN=<better-auth.session_token> \
-E2E_WEB_URL=http://localhost:3100 \
+E2E_WEB_URL=http://localhost:3300 \
 pnpm --filter @mushee/web test:e2e:smoke
 ```
