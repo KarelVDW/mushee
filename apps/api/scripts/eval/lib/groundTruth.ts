@@ -5,6 +5,11 @@ export function midiToHz(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+/** Frequency in Hz -> fractional MIDI note number. Inverse of midiToHz. */
+export function hzToMidi(hz: number): number {
+  return 69 + 12 * Math.log2(hz / 440);
+}
+
 /**
  * Resolve a register-agnostic melody to absolute, timed notes at the given
  * root. Notes are laid out back-to-back (no rests) starting at t=0. This is the

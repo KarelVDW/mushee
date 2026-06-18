@@ -61,6 +61,12 @@ const SEGMENT_OPTS: SegmentOptions = {
   maxFreqHz: 1100,
   minFramesPerNote: 4, // ≈ 80 ms at HOP_SIZE = 320
   pitchBinToleranceCents: 50,
+  // Semitone-merge segmentation with temporal smoothing: boundaries fall on
+  // semitone changes and brief transition/vibrato frames are absorbed. Validated
+  // to lift real sung/hummed F1 markedly while holding the synthetic-instrument
+  // corpus; far steadier than running-median on expressive monophonic input.
+  mode: 'semitone',
+  smoothFrames: 4,
 };
 
 /** Per-recording state for the CREPE provider. */
@@ -113,6 +119,15 @@ export class CrepeProvider implements PitchProvider {
       ...(options?.confidenceThreshold !== undefined && {
         confidenceThreshold: options.confidenceThreshold,
       }),
+      ...(options?.minFramesPerNote !== undefined && {
+        minFramesPerNote: options.minFramesPerNote,
+      }),
+      ...(options?.pitchBinToleranceCents !== undefined && {
+        pitchBinToleranceCents: options.pitchBinToleranceCents,
+      }),
+      ...(options?.segmentMode !== undefined && { mode: options.segmentMode }),
+      ...(options?.smoothFrames !== undefined && { smoothFrames: options.smoothFrames }),
+      ...(options?.tuningCorrect !== undefined && { tuningCorrect: options.tuningCorrect }),
     };
     const model = await this.loader.load();
     const sess =

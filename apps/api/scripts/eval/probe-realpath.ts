@@ -23,21 +23,19 @@ import { join, resolve } from 'path';
 
 import ffmpegPath from 'ffmpeg-static';
 
-import type { MxmlMeasure } from '../../src/recordings/mxml.types';
 import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
 import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { RecordingPipeline } from '../../src/recordings/RecordingPipeline';
-import { scoreNotes, type EstNote } from './lib/metrics';
+import { scoreNotes, timingStats, type Metrics } from './lib/metrics';
+import { runThroughPipeline } from './lib/pipelineRun';
+import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import { SCENARIOS } from './scenarios';
 import type { GroundTruth } from './types';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
+const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
   basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-};
-const STEP_SEMITONE: Record<string, number> = {
-  C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11,
 };
 
 /** Re-encode a WAV buffer to webm/opus, exactly the container MediaRecorder streams. */
@@ -65,108 +63,116 @@ function encodeWebmOpus(wav: Buffer): Promise<Buffer> {
   });
 }
 
-/** Walk the emitted MusicXML measures back into onset/duration/pitch notes. */
-function measuresToNotes(
-  measures: Record<number, MxmlMeasure>,
-  beatsPerMeasure: number,
-  bpm: number,
-  chromaticTranspose: number,
-): EstNote[] {
-  const indices = Object.keys(measures).map(Number).sort((a, b) => a - b);
-  let divisions = 12;
-  for (const idx of indices) {
-    for (const e of measures[idx].entries) {
-      if (e._type === 'attributes' && e.divisions) divisions = e.divisions;
-    }
-  }
-  const notes: EstNote[] = [];
-  const secPerBeat = 60 / bpm;
-  let pending: EstNote | null = null;
-
-  for (const idx of indices) {
-    const measureStartBeat = idx * beatsPerMeasure;
-    let cursorBeat = 0;
-    for (const e of measures[idx].entries) {
-      if (e._type !== 'note') continue;
-      const durBeats = e.duration / divisions;
-      if (e.rest) {
-        cursorBeat += durBeats;
-        continue;
-      }
-      const onsetSec = (measureStartBeat + cursorBeat) * secPerBeat;
-      const midi =
-        e.pitch != null
-          ? (e.pitch.octave + 1) * 12 +
-            STEP_SEMITONE[e.pitch.step] +
-            (e.pitch.alter ?? 0) +
-            chromaticTranspose
-          : 0;
-      const hasStart = e.tie?.some((t) => t.type === 'start') ?? false;
-      const hasStop = e.tie?.some((t) => t.type === 'stop') ?? false;
-      if (!hasStop) {
-        // standalone or first of a tie chain
-        if (pending) notes.push(pending);
-        pending = { onsetSec, durSec: durBeats * secPerBeat, midi };
-        if (!hasStart) {
-          notes.push(pending);
-          pending = null;
-        }
-      } else if (pending) {
-        // continuation of a tie chain
-        pending.durSec += durBeats * secPerBeat;
-        if (!hasStart) {
-          notes.push(pending);
-          pending = null;
-        }
-      }
-      cursorBeat += durBeats;
-    }
-  }
-  if (pending) notes.push(pending);
-  return notes;
+function boolEnv(key: string): boolean {
+  return ['1', 'true', 'yes'].includes((process.env[key] ?? '').toLowerCase());
 }
 
-async function runThroughPipeline(
+function median(xs: number[]): number {
+  if (!xs.length) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** bpm from onset times (median IOI ≈ one beat) — simulates a user who set a
+ *  tempo matching their performance. */
+function bpmFromOnsets(onsets: number[]): number {
+  const iois: number[] = [];
+  for (let i = 1; i < onsets.length; i += 1) {
+    const d = onsets[i] - onsets[i - 1];
+    if (d > 0.05) iois.push(d);
+  }
+  const med = median(iois);
+  return med ? Math.max(50, Math.min(200, 60 / med)) : 120;
+}
+
+/**
+ * Drive the REAL recorded corpus (fixtures/eval-real) through the full
+ * production pipeline — chunked decode, profile-lock-from-prefix, stable-margin,
+ * dedup, AND the MusicXML quantization round-trip — once per codec (wav control
+ * vs. webm/opus, the browser's MediaRecorder container). Aggregates mean F1 and
+ * pooled timing per dataset so it's directly comparable to run-eval's batch F1
+ * (which scores the raw deduced notes, skipping the streaming + quantization
+ * path). A drop here vs. the batch number localizes the real-world loss.
+ *
+ *   EVAL_REAL=1 tsx scripts/eval/probe-realpath.ts [dataset,dataset,...]
+ */
+async function runRealCorpus(
   registry: ProviderRegistry,
   resolver: ProfileResolver,
-  audio: Buffer,
-  bpm: number,
-  beats: number,
-  instrumentId: string,
-): Promise<EstNote[]> {
-  const pipeline = new RecordingPipeline(registry, resolver);
-  pipeline.setMeta({
-    bpm,
-    timeSignature: { beats, beatType: 4 },
-    chromaticTranspose: 0,
-    instrumentId,
-  });
-  const acc: Record<number, MxmlMeasure> = {};
-  pipeline.setOnUpdate((u) => {
-    for (const [k, v] of Object.entries(u.measures)) acc[Number(k)] = v;
-  });
-  // Stream in ~100 ms-equivalent byte slices, like MediaRecorder.start(100);
-  // the pipeline concatenates before decoding so the slicing is cosmetic.
-  const CHUNKS = 12;
-  const size = Math.ceil(audio.byteLength / CHUNKS);
-  for (let o = 0; o < audio.byteLength; o += size) {
-    pipeline.appendChunk(audio.subarray(o, Math.min(o + size, audio.byteLength)));
+): Promise<void> {
+  const filter = (process.argv[2] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const datasets = discoverRealDatasets(REAL_ROOT).filter(
+    (d) => !filter.length || filter.includes(d.id),
+  );
+  if (!datasets.length) {
+    console.log(`No real datasets under ${REAL_ROOT} (run fetch-vocadito.ts first).`);
+    return;
   }
-  await pipeline.finalize();
-  return measuresToNotes(acc, beats, bpm, 0);
+
+  // webm/opus was shown codec-neutral; default to wav-only for speed, add webm
+  // back with EVAL_WEBM=1. Matched tempo (EVAL_MATCH_TEMPO=1) simulates a user
+  // who set a tempo fitting their performance instead of the dataset's nominal.
+  const codecs: Array<'wav' | 'webm'> = boolEnv('EVAL_WEBM') ? ['wav', 'webm'] : ['wav'];
+  const matchTempo = boolEnv('EVAL_MATCH_TEMPO');
+
+  console.log(`\nmatchTempo=${matchTempo} codecs=${codecs.join(',')}`);
+  console.log(
+    `${'dataset'.padEnd(22)}${'input'.padEnd(7)}` +
+      `${'F1@.1'.padEnd(8)}${'F1@.2'.padEnd(8)}${'onsetBias'.padEnd(11)}clips`,
+  );
+  for (const ds of datasets) {
+    const byCodec: Record<'wav' | 'webm', { f1_01: number[]; f1_02: number[]; m: Metrics[] }> = {
+      wav: { f1_01: [], f1_02: [], m: [] },
+      webm: { f1_01: [], f1_02: [], m: [] },
+    };
+    for (const clip of listRealClips(ds.dir)) {
+      let truth: GroundTruth;
+      let wav: Buffer;
+      try {
+        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8'));
+        wav = readFileSync(join(ds.dir, `${clip}__real.wav`));
+      } catch {
+        continue;
+      }
+      const bpm = matchTempo ? bpmFromOnsets(truth.notes.map((n) => n.onsetSec)) : truth.bpm;
+      for (const label of codecs) {
+        const audio = label === 'webm' ? await encodeWebmOpus(wav) : wav;
+        const est = await runThroughPipeline(registry, resolver, audio, bpm, 4, ds.instrumentId ?? '');
+        byCodec[label].f1_01.push(scoreNotes(truth.notes, est, { onsetTolSec: 0.1, timingTolSec: 0.3 }).f1);
+        byCodec[label].f1_02.push(scoreNotes(truth.notes, est, { onsetTolSec: 0.2, timingTolSec: 0.3 }).f1);
+        byCodec[label].m.push(scoreNotes(truth.notes, est));
+      }
+    }
+    for (const label of codecs) {
+      const b = byCodec[label];
+      const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
+      const t = timingStats(b.m.flatMap((m) => m.timing.onsetDeltasMs), b.m.flatMap((m) => m.timing.offsetDeltasMs));
+      console.log(
+        `${ds.id.padEnd(22)}${label.padEnd(7)}` +
+          `${mean(b.f1_01).toFixed(3).padEnd(8)}${mean(b.f1_02).toFixed(3).padEnd(8)}` +
+          `${t.onsetBiasMs.toFixed(1).padEnd(11)}${b.m.length}`,
+      );
+    }
+  }
 }
 
 async function main(): Promise<void> {
-  const scenarioIds = (process.argv[2] ?? 'voice-tenor,trumpet-mid,flute-high,cello-low')
-    .split(',').map((s) => s.trim()).filter(Boolean);
-  const melody = process.argv[3] ?? 'tune';
-
   const registry = new ProviderRegistry({
     basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();
   const resolver = new ProfileResolver();
+
+  if (boolEnv('EVAL_REAL')) {
+    await runRealCorpus(registry, resolver);
+    return;
+  }
+
+  const scenarioIds = (process.argv[2] ?? 'voice-tenor,trumpet-mid,flute-high,cello-low')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  const melody = process.argv[3] ?? 'tune';
 
   console.log(
     `\n${'scenario'.padEnd(16)}${'input'.padEnd(7)}` +

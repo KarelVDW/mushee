@@ -24,4 +24,6 @@ apps/api/.venv-crepe/
 # Recording-pipeline eval harness: large soundfont + generated audio corpus
 apps/api/scripts/eval/assets/
 apps/api/scripts/eval/.tmp/
+apps/api/scripts/eval/.cache/
 apps/api/scripts/fixtures/eval/
+apps/api/scripts/fixtures/eval-real/

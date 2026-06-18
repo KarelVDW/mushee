@@ -135,6 +135,34 @@ export interface SegmentOptions {
   minFramesPerNote: number;
   /** Cents window within which a frame counts as "same pitch" as the run's median. */
   pitchBinToleranceCents: number;
+  /**
+   * Segmentation strategy:
+   *  - 'median' (default): a run continues while frames stay within
+   *    pitchBinToleranceCents of the run's running median (legacy).
+   *  - 'semitone': round each frame to its nearest semitone, median-smooth the
+   *    per-frame pitch, then merge equal-semitone runs. Boundaries land on
+   *    semitone changes, which tracks discrete sung/whistled notes (and a
+   *    human's note-level hearing) more closely than median drift.
+   */
+  mode?: 'median' | 'semitone';
+  /**
+   * Semitone mode only: half-window (in frames) of the median smoother applied
+   * to the per-frame semitone track before merging runs. Larger absorbs brief
+   * pitch excursions / transition frames (fewer spurious notes, steadier
+   * boundaries) at the cost of blurring very short notes. Default 1 (3-frame).
+   */
+  smoothFrames?: number;
+  /**
+   * Semitone mode only: estimate the clip's systematic tuning offset (singers
+   * rarely sit at A=440) as the circular mean of the per-frame cents modulo a
+   * semitone, then quantize RELATIVE to it — what a human transcriber does by
+   * ear. Tested and OFF by default: ground-truth pitch is absolute (A=440), so
+   * re-centering to the singer's tuning shifts quantization away from the
+   * reference and increases disagreement — the ±1 errors are genuine drift
+   * around A=440, not a fixable offset. Enable with `true` only for
+   * tuning-relative scoring.
+   */
+  tuningCorrect?: boolean;
 }
 
 /**
@@ -149,6 +177,9 @@ export function segmentNotes(
   frames: number,
   opts: SegmentOptions,
 ): NoteEventTime[] {
+  if (opts.mode === 'semitone') {
+    return segmentNotesBySemitone(cents, confidence, frames, opts);
+  }
   const notes: NoteEventTime[] = [];
   let runStart = -1;
   let runCents: number[] = [];
@@ -201,6 +232,130 @@ export function segmentNotes(
     } else {
       runCents.push(c);
       if (conf > runMaxConf) runMaxConf = conf;
+    }
+  }
+  finalize(frames);
+  return notes;
+}
+
+/**
+ * Estimate a clip's systematic tuning offset in cents ([-50, 50]) as the
+ * circular mean of every voiced frame's cents modulo 100. Circular (period 100)
+ * so it's robust to wraparound near the semitone boundary; returns 0 when there
+ * is no voiced frame. A consistently flat/sharp singer lands at a nonzero
+ * offset; in-tune (A=440) material lands at ~0, making correction a no-op.
+ */
+function estimateTuningOffset(
+  cents: Float32Array,
+  frames: number,
+  isVoiced: (i: number) => boolean,
+): number {
+  let sumSin = 0;
+  let sumCos = 0;
+  let n = 0;
+  const twoPiOver100 = (2 * Math.PI) / 100;
+  for (let i = 0; i < frames; i++) {
+    if (!isVoiced(i)) continue;
+    let r = cents[i] % 100;
+    if (r < 0) r += 100;
+    const a = r * twoPiOver100;
+    sumSin += Math.sin(a);
+    sumCos += Math.cos(a);
+    n += 1;
+  }
+  if (n === 0) return 0;
+  let off = Math.atan2(sumSin / n, sumCos / n) / twoPiOver100; // [-50, 50]
+  if (off > 50) off -= 100;
+  if (off < -50) off += 100;
+  return off;
+}
+
+/**
+ * Alternative segmenter: quantize each voiced frame to its nearest semitone,
+ * median-smooth the per-frame semitone track to kill single-frame glitches, then
+ * emit a note per maximal run of equal semitone. Note boundaries therefore fall
+ * exactly on semitone changes — closer to how discrete notes are sung/whistled
+ * (and heard) than the running-median drift, which can blur a step or fragment
+ * vibrato. Voicing/band gating and minFramesPerNote match `segmentNotes`.
+ */
+export function segmentNotesBySemitone(
+  cents: Float32Array,
+  confidence: Float32Array,
+  frames: number,
+  opts: SegmentOptions,
+): NoteEventTime[] {
+  const isVoiced = (i: number): boolean => {
+    const hz = a4CentsToHz(cents[i]);
+    return (
+      confidence[i] >= opts.confidenceThreshold &&
+      hz >= opts.minFreqHz &&
+      hz <= opts.maxFreqHz
+    );
+  };
+
+  // Tuning offset (cents in [-50,50]): circular mean of voiced cents modulo a
+  // semitone. Quantizing relative to it re-centers a consistently flat/sharp
+  // singer so drift no longer flips notes across the semitone boundary.
+  const delta = opts.tuningCorrect === true ? estimateTuningOffset(cents, frames, isVoiced) : 0;
+
+  // Per-frame nearest semitone (tuning-corrected), or -1 when unvoiced / out of band.
+  const raw = new Int16Array(frames);
+  for (let i = 0; i < frames; i++) {
+    raw[i] = isVoiced(i) ? Math.round((cents[i] - delta) / 100) : -1;
+  }
+
+  // Median smoothing over a (2*half+1)-frame window of voiced frames (an
+  // unvoiced neighbor is replaced by the center so a lone voiced frame between
+  // gaps survives rather than being zeroed). Larger half absorbs brief
+  // transition/vibrato excursions before runs are merged.
+  const half = Math.max(1, opts.smoothFrames ?? 1);
+  const sm = new Int16Array(frames);
+  for (let i = 0; i < frames; i++) {
+    const b = raw[i];
+    if (b < 0) {
+      sm[i] = -1;
+      continue;
+    }
+    const window: number[] = [];
+    for (let k = -half; k <= half; k++) {
+      const v = raw[Math.min(frames - 1, Math.max(0, i + k))];
+      window.push(v < 0 ? b : v);
+    }
+    window.sort((x, y) => x - y);
+    sm[i] = window[window.length >> 1];
+  }
+
+  const notes: NoteEventTime[] = [];
+  let runStart = -1;
+  let runMidi = -2;
+  let runMaxConf = 0;
+  const finalize = (endIndex: number): void => {
+    if (runStart >= 0 && runMidi >= 0 && endIndex - runStart >= opts.minFramesPerNote) {
+      notes.push({
+        startTimeSeconds: (runStart * opts.hopSize) / opts.sampleRate,
+        durationSeconds: ((endIndex - runStart) * opts.hopSize) / opts.sampleRate,
+        pitchMidi: runMidi,
+        amplitude: runMaxConf,
+      });
+    }
+    runStart = -1;
+    runMidi = -2;
+    runMaxConf = 0;
+  };
+
+  for (let i = 0; i < frames; i++) {
+    const m = sm[i];
+    if (m < 0) {
+      finalize(i);
+      continue;
+    }
+    if (m !== runMidi) {
+      finalize(i);
+      runStart = i;
+      runMidi = m;
+      runMaxConf = confidence[i];
+    } else if (confidence[i] > runMaxConf) {
+      runMaxConf = confidence[i];
     }
   }
   finalize(frames);
