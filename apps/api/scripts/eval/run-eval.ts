@@ -41,12 +41,16 @@ import {
   type EstNote,
   type MatchOptions,
 } from './lib/metrics';
+import { discoverRealDatasets } from './lib/realCorpus';
 import { SCENARIOS, CONDITIONS } from './scenarios';
-import type { GroundTruth, Scenario } from './types';
+import type { Condition, GroundTruth, Scenario } from './types';
 
 const DETECT_SR = 16000;
 
-const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
+// Synthetic corpus (generate.ts) vs. real recorded corpus (fetch-*.ts). The
+// latter is selected with EVAL_REAL=1.
+const SYNTH_ROOT = resolve(__dirname, '../fixtures/eval');
+const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
   basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
@@ -72,6 +76,29 @@ function listEnv(key: string): string[] | undefined {
   return v ? v.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
 }
 
+function boolEnv(key: string): boolean {
+  return ['1', 'true', 'yes'].includes((process.env[key] ?? '').toLowerCase());
+}
+
+/**
+ * Real corpus (EVAL_REAL): datasets are discovered from fixtures/eval-real
+ * rather than the synthetic melody×register matrix. rootMidi is irrelevant for
+ * recorded clips (nothing is synthesized), so it's zeroed.
+ */
+function discoverRealScenarios(root: string): Scenario[] {
+  return discoverRealDatasets(root).map((d) => ({
+    id: d.id,
+    label: d.label,
+    kind: d.kind,
+    instrumentId: d.instrumentId,
+    rootMidi: 0,
+  }));
+}
+
+// Real clips ship as `<clip>__real.wav`; the harness's per-condition WAV lookup
+// reuses this single pseudo-condition (no synthetic degradation is applied).
+const REAL_CONDITION: Condition = { id: 'real', label: 'real recording' };
+
 interface ClipResult {
   scenario: string;
   melody: string;
@@ -95,7 +122,10 @@ async function main(): Promise<void> {
   const highpassHz = numEnv('EVAL_HIGHPASS') ?? 80;
   const scenarioFilter = listEnv('EVAL_SCENARIOS');
   const conditionFilter = listEnv('EVAL_CONDITIONS');
-  const outPath = process.env.EVAL_OUT ?? join(EVAL_ROOT, 'report.json');
+  // Real recorded corpus vs. the synthetic one; picks the fixtures root.
+  const realMode = boolEnv('EVAL_REAL');
+  const evalRoot = realMode ? REAL_ROOT : SYNTH_ROOT;
+  const outPath = process.env.EVAL_OUT ?? join(evalRoot, 'report.json');
   // Onset window for the F1 match gate; separate, wider window for the timing
   // diagnostic so late notes report their true error instead of being dropped.
   const matchOpts: MatchOptions = {
@@ -103,16 +133,10 @@ async function main(): Promise<void> {
     timingTolSec: numEnv('EVAL_TIMING_TOL') ?? 0.3,
   };
   // Adaptive mode runs the real resolver+registry (the production path).
-  const adaptive = ['1', 'true', 'yes'].includes(
-    (process.env.EVAL_ADAPTIVE ?? '').toLowerCase(),
-  );
-  const noHint = ['1', 'true', 'yes'].includes(
-    (process.env.EVAL_NO_HINT ?? '').toLowerCase(),
-  );
+  const adaptive = boolEnv('EVAL_ADAPTIVE');
+  const noHint = boolEnv('EVAL_NO_HINT');
   // Onset-split is on by default; EVAL_NO_ONSET_SPLIT=1 disables it for A/B.
-  const onsetSplit = !['1', 'true', 'yes'].includes(
-    (process.env.EVAL_NO_ONSET_SPLIT ?? '').toLowerCase(),
-  );
+  const onsetSplit = !boolEnv('EVAL_NO_ONSET_SPLIT');
   const label = process.env.EVAL_LABEL ?? (adaptive ? 'adaptive' : providerName);
 
   const decoder = new AudioDecoder();
@@ -180,17 +204,19 @@ async function main(): Promise<void> {
     };
   }
 
-  const scenarios = SCENARIOS.filter(
+  const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
+  const scenarios = allScenarios.filter(
     (s) => !scenarioFilter || scenarioFilter.includes(s.id),
   );
-  const conditions = CONDITIONS.filter(
+  const allConditions = realMode ? [REAL_CONDITION] : CONDITIONS;
+  const conditions = allConditions.filter(
     (c) => !conditionFilter || conditionFilter.includes(c.id),
   );
 
   const results: ClipResult[] = [];
 
   for (const scenario of scenarios) {
-    const dir = join(EVAL_ROOT, scenario.id);
+    const dir = join(evalRoot, scenario.id);
     if (!existsSync(dir)) continue;
     const truths = readdirSync(dir).filter((f) => f.endsWith('.truth.json'));
 

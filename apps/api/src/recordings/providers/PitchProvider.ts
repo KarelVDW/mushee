@@ -21,6 +21,11 @@ export interface PitchSession {}
  *  - `confidenceThreshold`: voicing gate for the pitch-trajectory providers
  *    (CREPE).
  *  - `onsetThreshold` / `frameThreshold`: basic-pitch note-gating thresholds.
+ *  - `minFramesPerNote`: shortest run (in provider frames) a trajectory provider
+ *    will commit as a note. Lower keeps brief notes (recall) at some risk of
+ *    noise; trajectory providers only.
+ *  - `pitchBinToleranceCents`: cents a frame may deviate from a run's running
+ *    median before it starts a new note; trajectory providers only.
  */
 export interface PitchTranscribeOptions {
   minFreqHz?: number;
@@ -28,6 +33,14 @@ export interface PitchTranscribeOptions {
   confidenceThreshold?: number;
   onsetThreshold?: number;
   frameThreshold?: number;
+  minFramesPerNote?: number;
+  pitchBinToleranceCents?: number;
+  /** Trajectory-provider note segmentation strategy ('median' | 'semitone'). */
+  segmentMode?: 'median' | 'semitone';
+  /** Semitone-mode median smoother half-window, in frames. */
+  smoothFrames?: number;
+  /** Semitone-mode per-clip tuning-offset correction; default on. */
+  tuningCorrect?: boolean;
 }
 
 /**

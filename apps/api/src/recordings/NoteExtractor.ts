@@ -6,8 +6,8 @@ import { NoteEventTime } from '@spotify/basic-pitch';
  */
 const STANDARD_DURATION_BEATS = [4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25];
 
-/** Below this length the note is treated as noise. In beats. */
-const MIN_DURATION_BEATS = 0.25;
+/** Default below this length a note is treated as noise. In beats. */
+const DEFAULT_MIN_DURATION_BEATS = 0.25;
 
 /**
  * When two notes overlap, the new one only displaces the active one if it's
@@ -28,14 +28,17 @@ const GRID_PENALTIES = [
   { divisor: 16, penalty: 0.2 }, // sixteenth beats
 ];
 
-/** Max time gap between two notes that are candidates for merging. In beats. */
-const MERGE_MAX_GAP_BEATS = 0.25;
-
 /** Max slight overlap the two notes may already have. In beats. */
 const MERGE_MAX_OVERLAP_BEATS = 0.1;
 
-/** Merge is allowed across this much pitch drift. */
-const MERGE_MAX_PITCH_DIFF = 1;
+/**
+ * The adaptive note-length floor engages only when the clip's median detected
+ * note is at least this long (seconds) — i.e. genuinely sustained singing,
+ * where wide vibrato/transition shatters held notes into spurious fragments.
+ * Below it the material is fast (rapid humming/runs) whose short notes are real,
+ * so the floor stays off to protect recall.
+ */
+const ADAPTIVE_FLOOR_MEDIAN_GATE_SEC = 0.45;
 
 /**
  * A note flanked by neighbors at least this many semitones away on both sides
@@ -46,14 +49,49 @@ const MERGE_MAX_PITCH_DIFF = 1;
 const OUTLIER_PITCH_DIFF_SEMITONES = 7;
 
 /**
- * Pitch-trajectory providers release a note early — confidence decays before
- * the next attack — so a legato note's measured length floor-snaps roughly a
- * grid step short of the next onset, leaving a spurious rest. When the gap from
- * a note's sounding end to the next onset is at most this, we treat it as that
- * release artifact and extend the note to fill the seam. Larger gaps are real
- * silence the player left and stay rests. In beats.
+ * Tunable post-processing knobs. Defaults reproduce the historical behavior, so
+ * `new NoteExtractor()` is unchanged; the eval harness overrides them to search
+ * for settings that generalize across real and synthetic corpora.
  */
-const SEAM_FILL_BEATS = 0.3;
+export interface NoteExtractorOptions {
+  /** Shortest note kept, in beats. Lower recovers brief notes (recall). */
+  minDurationBeats?: number;
+  /** Merge is allowed across at most this much pitch drift, in semitones. */
+  mergeMaxPitchDiff?: number;
+  /** Max time gap between two merge-candidate notes, in beats. */
+  mergeMaxGapBeats?: number;
+  /** Legato early-release gap filled to the next onset rather than left a rest. */
+  seamFillBeats?: number;
+  /**
+   * Finest onset-snap granularity, as the largest grid divisor allowed
+   * (1/divisor of a beat). The MusicXML notation grid bottoms out at the 16th
+   * note (quarter-beat, divisor 4), so onsets snapped finer than the notation
+   * can represent are re-rounded by the round-trip; capping here keeps the
+   * deduced notes and the rendered score in lock-step. Default 16 (legacy).
+   */
+  maxGridDivisor?: number;
+  /**
+   * Collapse a brief note that is flanked on both sides by the SAME pitch and
+   * sits within a tone of it (an A-B-A flutter) back into one sustained note —
+   * the signature of wide singer vibrato crossing a semitone boundary, which
+   * otherwise shatters one held note into spurious fragments. A real melody
+   * *progresses* (A-B-C) and is never touched. Value is the FLOOR for the
+   * excursion length to absorb, in SECONDS (vibrato is time-domain: ~80-150 ms
+   * half-cycles, tempo-independent); 0 disables. Default 0.15. With the adaptive
+   * prior on, the effective window rises toward the clip's note density.
+   */
+  vibratoMaxSec?: number;
+  /**
+   * Adaptive note-length prior. Note density is ~uniform within one recording,
+   * so estimate the median detected note length and scale the spurious-fragment
+   * thresholds to a fraction of it: sustained singing (long median) gets an
+   * aggressive floor that folds vibrato/transition flutter into the held note,
+   * while fast humming (short median) keeps its genuinely short notes. This is
+   * what lets ONE config serve both without a fixed constant. Fraction of the
+   * median treated as the noise floor; 0 disables. Default 0.4.
+   */
+  adaptiveFloorFraction?: number;
+}
 
 export interface ExtractOptions {
   bpm: number;
@@ -83,13 +121,113 @@ export interface ExtractedNotes {
  *     dotted eighth, eighth, sixteenth}
  */
 export class NoteExtractor {
+  private readonly minDurationBeats: number;
+  private readonly mergeMaxPitchDiff: number;
+  private readonly mergeMaxGapBeats: number;
+  private readonly seamFillBeats: number;
+  private readonly vibratoMaxSec: number;
+  private readonly adaptiveFloorFraction: number;
+  private readonly gridPenalties: typeof GRID_PENALTIES;
+
+  constructor(opts: NoteExtractorOptions = {}) {
+    this.minDurationBeats = opts.minDurationBeats ?? DEFAULT_MIN_DURATION_BEATS;
+    this.mergeMaxPitchDiff = opts.mergeMaxPitchDiff ?? 1;
+    this.mergeMaxGapBeats = opts.mergeMaxGapBeats ?? 0.25;
+    this.seamFillBeats = opts.seamFillBeats ?? 0.3;
+    this.vibratoMaxSec = opts.vibratoMaxSec ?? 0.15;
+    // Off by default: thorough evaluation showed the floor helps sustained
+    // singing only marginally while costing fast humming and sustained
+    // instruments more, so it ships as an opt-in tunable rather than a default.
+    this.adaptiveFloorFraction = opts.adaptiveFloorFraction ?? 0;
+    // Default caps onset snapping at the quarter-beat (16th-note) grid the
+    // MusicXML notation can actually represent, so the deduced notes survive the
+    // measure round-trip instead of being re-rounded into onset error.
+    const cap = opts.maxGridDivisor ?? 4;
+    this.gridPenalties = GRID_PENALTIES.filter((g) => g.divisor <= cap);
+  }
+
   extract(raw: NoteEventTime[], options: ExtractOptions): ExtractedNotes {
     const monophonic = this.selectMonophonic(raw, options.bpm);
     const cleaned = this.filterPitchOutliers(monophonic);
-    const merged = this.mergeAdjacent(cleaned, options.bpm);
+    // Remove pitch-transient artifacts (wide-vibrato flutter and portamento
+    // glide notes) before merging/quantizing — see suppressTransients.
+    const deflutter = this.suppressTransients(cleaned, options.bpm);
+    // Optional adaptive noise floor (off by default).
+    const floorSec = this.adaptiveFloorSec(deflutter);
+    const deshort = floorSec > 0
+      ? deflutter.filter((n) => n.durationSeconds >= floorSec)
+      : deflutter;
+    const merged = this.mergeAdjacent(deshort, options.bpm);
     const split = this.splitAtOnsets(merged, options.onsetTimesSec);
     const deduced = this.alignAndQuantize(split, options.bpm);
     return { raw, deduced };
+  }
+
+  /**
+   * Per-clip spurious-fragment floor (seconds) = a fraction of the median note
+   * length, clamped so it neither erases genuinely fast notes nor runs away on
+   * very sustained material. 0 when the adaptive prior is disabled or there are
+   * too few notes to estimate density.
+   */
+  private adaptiveFloorSec(notes: NoteEventTime[]): number {
+    if (this.adaptiveFloorFraction <= 0 || notes.length < 4) return 0;
+    const durs = notes.map((n) => n.durationSeconds).sort((a, b) => a - b);
+    const med = durs[durs.length >> 1];
+    // Only sustained material (long median) suffers vibrato/transition
+    // over-segmentation; fast notes (short median) are real and must be kept, so
+    // the floor stays OFF below the gate. This is what makes one config safe for
+    // both held singing and rapid humming.
+    if (med < ADAPTIVE_FLOOR_MEDIAN_GATE_SEC) return 0;
+    return Math.min(0.45, this.adaptiveFloorFraction * med);
+  }
+
+  /**
+   * Fold an A-B-A vibrato flutter back into one sustained A: a brief note
+   * (shorter than `vibratoMaxSec`) flanked by the SAME pitch within a tone, no
+   * real gap either side — wide vibrato crossing a semitone boundary. B and the
+   * returning A are absorbed into the held note. A true melody never returns
+   * A-B-A this briefly, so genuine notes are untouched.
+   *
+   * (A portamento-glide A-X-B drop was evaluated and rejected: a short
+   * between-neighbours note is indistinguishable by shape from a real passing
+   * tone in slow melodies, so dropping it regressed the instrument corpus. There
+   * is no shape-only rule that removes glide artifacts without eating real
+   * notes — that gap needs a learned model, not a heuristic.)
+   */
+  private suppressTransients(
+    notes: NoteEventTime[],
+    bpm: number,
+  ): NoteEventTime[] {
+    if (this.vibratoMaxSec <= 0 || notes.length < 3) return notes;
+    const beatsPerSecond = bpm / 60;
+    const maxGapBeats = MERGE_MAX_OVERLAP_BEATS + 0.1;
+    const out: NoteEventTime[] = [];
+    for (let i = 0; i < notes.length; i += 1) {
+      const cur = notes[i];
+      const prev = out[out.length - 1];
+      const next = notes[i + 1];
+      if (
+        prev &&
+        next &&
+        prev.pitchMidi === next.pitchMidi &&
+        Math.abs(cur.pitchMidi - prev.pitchMidi) <= 2 &&
+        cur.durationSeconds < this.vibratoMaxSec &&
+        (cur.startTimeSeconds - (prev.startTimeSeconds + prev.durationSeconds)) *
+          beatsPerSecond <
+          maxGapBeats &&
+        (next.startTimeSeconds - (cur.startTimeSeconds + cur.durationSeconds)) *
+          beatsPerSecond <
+          maxGapBeats
+      ) {
+        prev.amplitude = Math.max(prev.amplitude, cur.amplitude, next.amplitude);
+        prev.durationSeconds =
+          next.startTimeSeconds + next.durationSeconds - prev.startTimeSeconds;
+        i += 1; // consumed `next`
+        continue;
+      }
+      out.push({ ...cur });
+    }
+    return out;
   }
 
   /**
@@ -148,7 +286,7 @@ export class NoteExtractor {
 
     const result: NoteEventTime[] = [];
     for (const note of sorted) {
-      if (note.durationSeconds * beatsPerSecond < MIN_DURATION_BEATS / 2) {
+      if (note.durationSeconds * beatsPerSecond < this.minDurationBeats / 2) {
         continue;
       }
       if (result.length === 0) {
@@ -225,9 +363,9 @@ export class NoteExtractor {
         Math.min(prev.durationSeconds, note.durationSeconds) * beatsPerSecond;
       if (
         gapBeats < -MERGE_MAX_OVERLAP_BEATS ||
-        gapBeats > MERGE_MAX_GAP_BEATS ||
-        pitchDiff > MERGE_MAX_PITCH_DIFF ||
-        shortestBeats >= MIN_DURATION_BEATS
+        gapBeats > this.mergeMaxGapBeats ||
+        pitchDiff > this.mergeMaxPitchDiff ||
+        shortestBeats >= this.minDurationBeats
       ) {
         result.push({ ...note });
         continue;
@@ -313,7 +451,7 @@ export class NoteExtractor {
         (note.startTimeSeconds + note.durationSeconds) * beatsPerSecond;
 
       const snapStart = this.snapToGrid(startBeat);
-      const soundingBeats = Math.max(MIN_DURATION_BEATS, endBeat - snapStart);
+      const soundingBeats = Math.max(this.minDurationBeats, endBeat - snapStart);
 
       let maxAvailable = Number.POSITIVE_INFINITY;
       const next = notes[i + 1];
@@ -330,8 +468,8 @@ export class NoteExtractor {
       let durationBeats: number;
       if (
         Number.isFinite(maxAvailable) &&
-        maxAvailable >= MIN_DURATION_BEATS &&
-        maxAvailable - soundingBeats <= SEAM_FILL_BEATS
+        maxAvailable >= this.minDurationBeats &&
+        maxAvailable - soundingBeats <= this.seamFillBeats
       ) {
         durationBeats = maxAvailable;
       } else {
@@ -339,7 +477,7 @@ export class NoteExtractor {
           Math.min(soundingBeats, maxAvailable),
         );
       }
-      if (durationBeats < MIN_DURATION_BEATS) continue;
+      if (durationBeats < this.minDurationBeats) continue;
 
       result.push({
         ...note,
@@ -353,7 +491,7 @@ export class NoteExtractor {
   private snapToGrid(beats: number): number {
     let bestPos = Math.round(beats);
     let bestScore = Math.abs(beats - bestPos);
-    for (const { divisor, penalty } of GRID_PENALTIES) {
+    for (const { divisor, penalty } of this.gridPenalties) {
       const pos = Math.round(beats * divisor) / divisor;
       const score = Math.abs(beats - pos) + penalty;
       if (score < bestScore) {

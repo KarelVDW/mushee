@@ -10,15 +10,28 @@
  * rise back. Vibrato/tremolo ripple and noise never dip that far, so a held
  * note is not shattered (which would wreck the pipeline's high precision).
  */
+/** Tunable re-attack sensitivity; defaults reproduce the historical behavior. */
+export interface OnsetDetectorOptions {
+  /** Minimum spacing between detected onsets, in seconds. */
+  minIoiSec?: number;
+  /** Energy must fall below this fraction of the preceding peak to count as a gap. */
+  dipRatio?: number;
+  /** ...then rise back to this multiple of the trough to count as a re-attack. */
+  riseRatio?: number;
+}
+
 export class OnsetDetector {
   /** Frame hop for the envelope, in seconds (~10 ms). */
   private readonly hopSec = 0.01;
-  /** Minimum spacing between detected onsets, in seconds. */
-  private readonly minIoiSec = 0.09;
-  /** Energy must fall below this fraction of the preceding peak to count as a gap. */
-  private readonly dipRatio = 0.5;
-  /** ...then rise back to this multiple of the trough to count as a re-attack. */
-  private readonly riseRatio = 1.8;
+  private readonly minIoiSec: number;
+  private readonly dipRatio: number;
+  private readonly riseRatio: number;
+
+  constructor(opts: OnsetDetectorOptions = {}) {
+    this.minIoiSec = opts.minIoiSec ?? 0.09;
+    this.dipRatio = opts.dipRatio ?? 0.5;
+    this.riseRatio = opts.riseRatio ?? 1.8;
+  }
 
   /** Returns onset times in seconds (ascending), excluding the very first attack. */
   detect(samples: Float32Array, sampleRate: number): number[] {
