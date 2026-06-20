@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
@@ -14,13 +14,26 @@ import { useScoreDocument, useUpdateScore } from '@/lib/queries'
 import { RecordingEngine, type RecordingLimitInfo, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
-import { Instrument, type Note, Pitch, Score } from '@/model'
+import { Instrument, type Note, type Pitch, type Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
+import {
+    CHANGE_PITCH,
+    SET_ACCIDENTAL,
+    SET_CLEF,
+    SET_DURATION,
+    SET_KEY,
+    SET_TEMPO,
+    TOGGLE_DOT,
+    TOGGLE_REST,
+    TOGGLE_TIE,
+    TOGGLE_TUPLET,
+} from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { ControlBar } from './ControlBar'
 import { ExportMenu } from './ExportMenu'
 import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { ScoreManipulator } from './ScoreManipulator'
 
 // Why the recording was cut short (or refused) — drives which dialog shows.
 type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
@@ -28,10 +41,15 @@ type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'conc
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
-    const [score, setScore] = useState<Score | null>(null)
+    // The manipulator owns the active note + the live score and is the single dispatch
+    // point for every edit. It is a useSyncExternalStore source: re-render on selection or
+    // score changes, then read the current values straight off the instance.
+    const [manipulator] = useState(() => new ScoreManipulator())
+    useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
+    const score = manipulator.score
+    const activeNote = manipulator.selectedNote
+
     const [title, setTitle] = useState('Untitled composition')
-    const [, setUpdatedAt] = useState(0)
-    const [activeNote, setActiveNote] = useState<Note | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -51,17 +69,6 @@ export default function ScoreEditorPage() {
 
     const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
     const { mutate: saveScore } = useUpdateScore(id)
-
-    // The query owns fetching; this effect turns the fetched document into the
-    // live, mutable Score instance the editor works on.
-    useEffect(() => {
-        if (!scoreDocument) return
-        setTitle(scoreDocument.meta.title)
-        const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
-        const s = deserializer.toScore(() => setUpdatedAt(Date.now()))
-        setScore(s)
-        setActiveNote(s.firstMeasure?.firstNote ?? null)
-    }, [scoreDocument])
 
     const saveToApi = useCallback(
         (changes: { title?: string; score?: Score }) => {
@@ -86,162 +93,36 @@ export default function ScoreEditorPage() {
         [saveScore],
     )
 
-    const handleNoteChange = useCallback(
-        (note: Note, newPitch: Pitch) => {
-            if (!score) return
-            const [newNote] = score.replace([note], [note.clone({ pitch: newPitch })])
-            setActiveNote(newNote)
-            saveToApi({ score })
-        },
-        [score, saveToApi],
-    )
+    // The query owns fetching; this effect turns the fetched document into the live, mutable
+    // Score the manipulator works on, wiring its re-render hook and (debounced) autosave.
+    useEffect(() => {
+        if (!scoreDocument) return
+        setTitle(scoreDocument.meta.title)
+        const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
+        const s = deserializer.toScore(manipulator.onScoreChange)
+        manipulator.attach(s, () => saveToApi({ score: s }))
+    }, [scoreDocument, manipulator, saveToApi])
 
-    const handleKeyDown = useCallback(
-        (e: KeyboardEvent) => {
-            if (!score) return
-            if (e.key === 'ArrowRight') {
-                e.preventDefault()
-                const next = activeNote?.getNext()
-                if (next) setActiveNote(next)
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault()
-                const prev = activeNote?.getPrevious()
-                if (prev) setActiveNote(prev)
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault()
-                if (activeNote) {
-                    const raised = activeNote.pitch?.raised()
-                    const pitch = raised ? activeNote.keySignature.spell(raised) : undefined
-                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch })])
-                    setActiveNote(newNote)
-                    saveToApi({ score })
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault()
-                if (activeNote) {
-                    const lowered = activeNote.pitch?.lowered()
-                    const pitch = lowered ? activeNote.keySignature.spell(lowered) : undefined
-                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch })])
-                    setActiveNote(newNote)
-                    saveToApi({ score })
-                }
-            } else if (e.key === 'Backspace') {
-                e.preventDefault()
-                if (activeNote) {
-                    const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: undefined })])
-                    setActiveNote(newNote)
-                    saveToApi({ score })
-                }
-            }
-        },
-        [activeNote, score, saveToApi],
-    )
-
-    const handleAccidentalChange = useCallback(
-        (acc: string | undefined) => {
-            if (!activeNote || !score) return
-            const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: activeNote.pitch?.withAccidental(acc) })])
-            setActiveNote(newNote)
-            saveToApi({ score })
-        },
-        [activeNote, score, saveToApi],
-    )
-
-    const handleDurationChange = useCallback(
-        (newDuration: DurationType) => {
-            if (!activeNote || !score) return
-            const newNote = score.setDuration(activeNote, { type: newDuration, dots: 0 })
-            if (!newNote) return
-            setActiveNote(newNote)
-            saveToApi({ score })
-        },
-        [activeNote, score, saveToApi],
-    )
-
-    const handleDotToggle = useCallback(() => {
-        if (!activeNote || !score) return
-        const newNote = score.setDuration(activeNote, { dots: activeNote.duration.dots > 0 ? 0 : 1 })
-        if (!newNote) return
-        setActiveNote(newNote)
-        saveToApi({ score })
-    }, [activeNote, score, saveToApi])
-
-    const handleTupletToggle = useCallback(() => {
-        if (!activeNote || !score) return
-        const newNote = score.toggleTuplet(activeNote)
-        if (!newNote) return
-        setActiveNote(newNote)
-        saveToApi({ score })
-    }, [activeNote, score, saveToApi])
-
-    const handleTieToggle = useCallback(() => {
-        if (!activeNote || !score) return
-        const newTie = activeNote.tiesForward ? undefined : ('start' as const)
-        const [newNote] = score.replace([activeNote], [activeNote.clone({ tie: newTie })])
-        setActiveNote(newNote)
-        saveToApi({ score })
-    }, [activeNote, score, saveToApi])
-
-    const handleRestToggle = useCallback(() => {
-        if (!activeNote || !score) return
-        const newPitch = activeNote.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined
-        const [newNote] = score.replace([activeNote], [activeNote.clone({ pitch: newPitch })])
-        setActiveNote(newNote)
-        saveToApi({ score })
-    }, [activeNote, score, saveToApi])
-
-    const handleTempoSet = useCallback(
-        (bpm: number) => {
-            if (!activeNote || !score) return
-            score.setTempo(activeNote, bpm)
-            saveToApi({ score })
-        },
-        [activeNote, score, saveToApi],
-    )
-
-    const handleClefSet = useCallback(
-        (type: ClefType) => {
-            if (!activeNote || !score) return
-            score.setClef(activeNote, type)
-            saveToApi({ score })
-        },
-        [activeNote, score, saveToApi],
-    )
-
-    const handleKeySet = useCallback(
-        (fifths: number) => {
-            if (!activeNote || !score) return
-            score.setKeySignature(activeNote, fifths)
-            saveToApi({ score })
-        },
-        [activeNote, score, saveToApi],
-    )
-
+    // Listeners are thin: each maps a control-bar callback or mouse event to a manipulator
+    // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
+    // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
+    const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
+    const handleNoteSelect = useCallback((note: Note) => manipulator.select(note), [manipulator])
+    const handleAccidentalChange = useCallback((acc: string | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
+    const handleDurationChange = useCallback((duration: DurationType) => manipulator.run(SET_DURATION, duration), [manipulator])
+    const handleDotToggle = useCallback(() => manipulator.run(TOGGLE_DOT), [manipulator])
+    const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
+    const handleTieToggle = useCallback(() => manipulator.run(TOGGLE_TIE), [manipulator])
+    const handleRestToggle = useCallback(() => manipulator.run(TOGGLE_REST), [manipulator])
+    const handleTempoSet = useCallback((bpm: number) => manipulator.run(SET_TEMPO, bpm), [manipulator])
+    const handleClefSet = useCallback((type: ClefType) => manipulator.run(SET_CLEF, type), [manipulator])
+    const handleKeySet = useCallback((fifths: number) => manipulator.run(SET_KEY, fifths), [manipulator])
+    const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
+    const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
     const handleTempoChange = useCallback(
-        (measureIndex: number, beatPosition: number, bpm: number) => {
-            if (!score) return
-            const measure = score.measures[measureIndex]
-            if (!measure) return
-            score.setTempo(measure.noteAtBeat(beatPosition), bpm)
-            saveToApi({ score })
-        },
-        [score, saveToApi],
+        (measureIndex: number, beatPosition: number, bpm: number) => manipulator.setTempoAt(measureIndex, beatPosition, bpm),
+        [manipulator],
     )
-
-    const handleNoteSelect = useCallback((note: Note) => setActiveNote(note), [])
-
-    const handleAddMeasure = useCallback(() => {
-        if (!score) return
-        score.addMeasure().complete()
-        saveToApi({ score })
-    }, [score, saveToApi])
-
-    const handleRemoveMeasure = useCallback(() => {
-        if (!score) return
-        score.removeLastMeasure()
-        setActiveNote(score.lastMeasure?.lastNote || null)
-        saveToApi({ score })
-    }, [score, saveToApi])
 
     // Initialize playback components
     useEffect(() => {
@@ -273,7 +154,7 @@ export default function ScoreEditorPage() {
 
     // Lazy-load only the instruments the score needs (its own + woodblock for the metronome click).
     // Re-runs when the score's selected instrument changes — the picker mutates `score.instrument`
-    // in place but `setUpdatedAt` triggers a re-render that re-evaluates `score?.instrument.id`.
+    // in place, but the manipulator's onScoreChange re-render re-evaluates `score?.instrument.id`.
     useEffect(() => {
         if (!score) return
         const player = midiPlayerRef.current
@@ -302,20 +183,11 @@ export default function ScoreEditorPage() {
 
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
-            if (!score) return
             stopAll()
-            // Capture the active note's position; setInstrument rewrites all notes through `replace`,
-            // so the existing ref becomes stale. Re-resolve at the same (measure, index) afterwards.
-            const measureIdx = activeNote ? activeNote.measure.index : null
-            const noteIdx = activeNote ? activeNote.measure.notes.indexOf(activeNote) : null
-            score.setInstrument(instrument)
-            if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
-                setActiveNote(score.measures[measureIdx]?.notes[noteIdx] ?? null)
-            }
+            manipulator.setInstrument(instrument)
             setInstrumentDialogOpen(false)
-            saveToApi({ score })
         },
-        [score, activeNote, stopAll, saveToApi],
+        [manipulator, stopAll],
     )
 
     // Sync metronome toggle to the ticker. Skipped during recording — the recording flow
@@ -391,7 +263,7 @@ export default function ScoreEditorPage() {
         setPlaybackState('stopped')
 
         let measureIndex = activeNote.measure.index
-        setActiveNote(null)
+        manipulator.select(null)
         const startIndex = measureIndex
         score.addMeasure(measureIndex++).complete()
         saveToApi({ score })
@@ -458,15 +330,17 @@ export default function ScoreEditorPage() {
 
         midiPlayer.start()
         ticker.play(() => setRecordingState('idle'))
-    }, [score, activeNote, stopAll, saveToApi])
+    }, [manipulator, score, activeNote, stopAll, saveToApi])
 
+    // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
+    // container) mounts after the score loads, attaching the listener and focusing for capture.
     useEffect(() => {
         const el = containerRef.current
         if (!el) return
-        el.addEventListener('keydown', handleKeyDown)
+        el.addEventListener('keydown', manipulator.handleKeyDown)
         el.focus()
-        return () => el.removeEventListener('keydown', handleKeyDown)
-    }, [handleKeyDown])
+        return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
+    }, [manipulator, score])
 
     if (loadError) {
         const serverDown = loadError instanceof NetworkError
