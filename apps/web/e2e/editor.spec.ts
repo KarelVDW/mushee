@@ -32,10 +32,9 @@ test('renders the editor chrome and the engraved score', async ({ page }) => {
 })
 
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
-    const patch = page.waitForRequest(
-        (r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()),
-        { timeout: 8000 },
-    )
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
+        timeout: 8000,
+    })
 
     // The first note (C5) is auto-selected on load; the editor container is focused.
     await page.locator('div[tabindex="0"]').first().focus()
@@ -61,6 +60,47 @@ test('changing duration and toggling rest autosave the change', async ({ page })
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
+// Selection-highlight bands are the only translucent-blue rects on the score.
+const SELECTION_BANDS = 'svg rect[fill="rgba(30, 144, 255, 0.14)"]'
+
+test('shift+arrows range-select notes and a bulk edit applies to all of them', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    // The first note is selected on load, so exactly one note is highlighted.
+    await expect(bands).toHaveCount(1)
+
+    // Extend the selection across the first three pitched notes (C5 D5 E5).
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(bands).toHaveCount(3)
+
+    // A bulk action (raise pitch) edits every selected note and autosaves; the range stays selected.
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('ArrowUp')
+    await patch
+    await expect(bands).toHaveCount(3)
+
+    // Escape collapses the range back to a single note.
+    await page.keyboard.press('Escape')
+    await expect(bands).toHaveCount(1)
+})
+
+test('dragging across notes selects a contiguous range', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    await expect(bands).toHaveCount(1)
+
+    // Anchor the drag on the already-selected note's band, then drag rightward over its neighbours.
+    const start = await bands.first().boundingBox()
+    if (!start) throw new Error('expected a selection band to drag from')
+    const y = start.y + start.height / 2
+    await page.mouse.move(start.x + start.width / 2, y)
+    await page.mouse.down()
+    await page.mouse.move(start.x + start.width / 2 + 160, y, { steps: 12 })
+    await page.mouse.up()
+
+    expect(await bands.count()).toBeGreaterThanOrEqual(2)
+})
+
 test('clef and tempo popovers open from the control bar', async ({ page }) => {
     const clef = page.getByRole('button', { name: /^Clef:/ })
     await expect(clef).toHaveAttribute('aria-pressed', 'false')
@@ -80,7 +120,7 @@ test('exports MusicXML and MIDI as downloads', async ({ page }) => {
     await page.getByRole('button', { name: 'MusicXML' }).click()
     const xml = await xmlDownload
     expect(xml.suggestedFilename()).toMatch(/\.musicxml$/)
-    const xmlText = readFileSync((await xml.path()), 'utf8')
+    const xmlText = readFileSync(await xml.path(), 'utf8')
     expect(xmlText).toMatch(/<score-partwise|<note/)
 
     // MIDI
@@ -89,7 +129,7 @@ test('exports MusicXML and MIDI as downloads', async ({ page }) => {
     await page.getByRole('button', { name: 'MIDI' }).click()
     const midi = await midiDownload
     expect(midi.suggestedFilename()).toMatch(/\.mid$/)
-    const midiBytes = readFileSync((await midi.path()))
+    const midiBytes = readFileSync(await midi.path())
     expect(midiBytes.subarray(0, 4).toString('ascii')).toBe('MThd') // MIDI header chunk
 })
 
@@ -100,7 +140,7 @@ test('exports a PDF', async ({ page }) => {
     await page.getByRole('button', { name: 'PDF' }).click()
     const pdf = await pdfDownload
     expect(pdf.suggestedFilename()).toMatch(/\.pdf$/)
-    const bytes = readFileSync((await pdf.path()))
+    const bytes = readFileSync(await pdf.path())
     expect(bytes.subarray(0, 5).toString('ascii')).toBe('%PDF-')
 })
 
