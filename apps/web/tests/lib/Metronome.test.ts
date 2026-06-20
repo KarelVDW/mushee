@@ -101,6 +101,21 @@ describe('Metronome', () => {
         expect(scheduled).toHaveLength(4)
     })
 
+    it('startBeat begins ticking mid-measure so clicks stay aligned with audio', () => {
+        const { player, scheduled, raw } = fakePlayer()
+        const metro = new Metronome(player)
+        metro.score = makeScore(1) // 4/4 measure
+        metro.startBeat = 2
+        metro.reset()
+
+        raw.currentTime = 100
+        metro.tick()
+        // Beats 2 and 3 remain in the measure => 2 clicks, the first at the audio origin.
+        expect(scheduled).toHaveLength(2)
+        expect(scheduled[0].startTime).toBeCloseTo(0, 5)
+        expect(scheduled[1].startTime).toBeCloseTo(60 / 90, 5)
+    })
+
     it('schedules incrementally within the look-ahead window', () => {
         const { player, scheduled, raw } = fakePlayer()
         const metro = new Metronome(player)

@@ -13,6 +13,8 @@ export class Metronome implements Tickable {
     score: Score | null = null
     /** Measure index to begin ticking from. Default 0 = start of score. */
     startMeasureIndex = 0
+    /** Beat within the start measure to begin ticking from. Default 0 = downbeat. */
+    startBeat = 0
 
     private midiPlayer: MidiPlayer
     private measureIdx = 0
@@ -26,7 +28,7 @@ export class Metronome implements Tickable {
 
     reset() {
         this.measureIdx = this.startMeasureIndex
-        this.beat = 0
+        this.beat = this.startBeat
         this.nextClickTime = 0
         this.bpm = DEFAULT_BPM
 

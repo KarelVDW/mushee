@@ -257,6 +257,68 @@ describe('ScoreScheduler', () => {
         expect(() => scheduler.reset()).not.toThrow()
     })
 
+    it('startNote begins playback at the selected note, mid-measure', () => {
+        const { player, scheduled, raw } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const score = scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)])
+        scheduler.score = score
+        scheduler.startNote = score.measures[0].notes[2] // start at the E
+        scheduler.reset()
+
+        raw.currentTime = 100
+        scheduler.tick()
+
+        // Only the E and F sound; the first entry sits at time 0 and reports its true beat.
+        const eMidi = new Pitch({ name: 'E', octave: 4 }).toMidi()
+        expect(scheduled.map((n) => n.midi)).toEqual([eMidi, new Pitch({ name: 'F', octave: 4 }).toMidi()])
+        expect(scheduler.entries.map((e) => e.beat)).toEqual([2, 3])
+        expect(scheduler.entries[0].startTime).toBeCloseTo(0, 5)
+    })
+
+    it('startNote can begin in a later measure', () => {
+        const { player, scheduled, raw } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const score = scoreWithNotes([pitched('C', 4)], [pitched('D', 4)])
+        scheduler.score = score
+        scheduler.startNote = score.measures[1].notes[0]
+        scheduler.reset()
+
+        raw.currentTime = 100
+        scheduler.tick()
+        expect(scheduled.map((n) => n.midi)).toEqual([new Pitch({ name: 'D', octave: 4 }).toMidi()])
+        expect(scheduler.entries.map((e) => e.measureIndex)).toEqual([1])
+    })
+
+    it('startNote seeds the tempo prevailing at the start note (carried from an earlier marking)', () => {
+        const { player, raw } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const score = scoreWithNotes([pitched('C', 4), pitched('D', 4)], [pitched('E', 4), pitched('F', 4)])
+        score.measures[0].setTempo(0, 60) // carries into measure 1
+        scheduler.score = score
+        scheduler.startNote = score.measures[1].notes[0]
+        scheduler.reset()
+
+        raw.currentTime = 100
+        scheduler.tick()
+        // 60bpm carried forward => the start note's quarter lasts 1s.
+        expect(scheduler.entries[0].duration).toBeCloseTo(1, 5)
+    })
+
+    it('startNote from a different score is ignored (falls back to the top)', () => {
+        const { player, scheduled, raw } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        scheduler.score = scoreWithNotes([pitched('C', 4), pitched('D', 4)])
+        // A stale selection left over from another score must not redirect playback.
+        const otherScore = scoreWithNotes([pitched('G', 4)])
+        scheduler.startNote = otherScore.measures[0].notes[0]
+        scheduler.reset()
+
+        raw.currentTime = 100
+        scheduler.tick()
+        expect(scheduled).toHaveLength(2)
+        expect(scheduler.entries[0].measureIndex).toBe(0)
+    })
+
     it('reset() clears prior entries and re-reads tempo', () => {
         const { player, raw } = fakePlayer()
         const scheduler = new ScoreScheduler(player)

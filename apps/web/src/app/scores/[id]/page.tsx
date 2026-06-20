@@ -237,14 +237,19 @@ export default function ScoreEditorPage() {
             return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
         }
 
+        // Launching from a stop begins at the selected note (falling back to the top of the
+        // score when nothing is selected); resume/pause above keep their place instead.
         scheduler.score = score
+        scheduler.startNote = activeNote
         met.score = score
+        met.startMeasureIndex = activeNote?.measure.index ?? 0
+        met.startBeat = activeNote ? activeNote.measure.beatOffsetOf(activeNote) : 0
         cursor.bind(cursorEl, resolvePosition)
 
         midiPlayer?.start()
         ticker.play(() => setPlaybackState('stopped'))
         setPlaybackState('playing')
-    }, [score, playbackState])
+    }, [score, activeNote, playbackState])
 
     const handleRecordToggle = useCallback(async () => {
         if (!score || !activeNote) return
