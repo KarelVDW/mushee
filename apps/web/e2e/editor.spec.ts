@@ -101,6 +101,26 @@ test('dragging across notes selects a contiguous range', async ({ page }) => {
     expect(await bands.count()).toBeGreaterThanOrEqual(2)
 })
 
+test('copies a range and pastes it with the keyboard', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    await expect(bands).toHaveCount(1)
+
+    // Select the first two notes and copy them.
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(bands).toHaveCount(2)
+    await page.keyboard.press('ControlOrMeta+c')
+
+    // Move to a later note and paste; the pasted run (2 notes) becomes the selection and autosaves.
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('ControlOrMeta+v')
+    await patch
+    await expect(bands).toHaveCount(2)
+})
+
 test('clef and tempo popovers open from the control bar', async ({ page }) => {
     const clef = page.getByRole('button', { name: /^Clef:/ })
     await expect(clef).toHaveAttribute('aria-pressed', 'false')

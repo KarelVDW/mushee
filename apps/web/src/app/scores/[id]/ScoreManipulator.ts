@@ -36,6 +36,9 @@ export class ScoreManipulator {
     private _anchorNote: Note | null = null
     private _selectedNote: Note | null = null
     private _selectedNotes: Note[] = []
+    // Internal copy/paste buffer: detached note snapshots (no measure), frozen at copy time so
+    // later edits to the originals don't change what gets pasted.
+    private _clipboard: Note[] = []
     private _version = 0
     private readonly listeners = new Set<() => void>()
     private save: () => void = () => {}
@@ -164,8 +167,27 @@ export class ScoreManipulator {
         this.emit()
     }
 
-    /** Dispatch a keydown: shift+arrows extend the selection, Escape collapses it, else run a bound action. */
+    /**
+     * Dispatch a keydown: Cmd/Ctrl+C/V copy & paste, shift+arrows extend the selection, Escape
+     * collapses it, else run a bound action. Keys typed into form fields (the title / popover
+     * inputs) are left alone so they keep their native behavior.
+     */
     handleKeyDown = (e: KeyboardEvent): void => {
+        const target = e.target
+        if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+            return
+        }
+        if (e.metaKey || e.ctrlKey) {
+            const key = e.key.toLowerCase()
+            if (key === 'c') {
+                e.preventDefault()
+                this.copy()
+            } else if (key === 'v') {
+                e.preventDefault()
+                this.paste()
+            }
+            return
+        }
         if (e.shiftKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
             e.preventDefault()
             this.extendSelectionByStep(e.key === 'ArrowRight' ? 1 : -1)
@@ -181,6 +203,38 @@ export class ScoreManipulator {
         if (!action) return
         e.preventDefault()
         this.run(action)
+    }
+
+    // --- Clipboard ---
+
+    /** Whether {@link paste} would do anything (drives a future paste button's enabled state). */
+    get canPaste(): boolean {
+        return this._clipboard.length > 0
+    }
+
+    /** Snapshot the selected notes into the clipboard as detached clones. */
+    copy(): void {
+        this._clipboard = this._selectedNotes.map((note) => note.clone({}))
+    }
+
+    /**
+     * Paste the clipboard over the current selection: the selected run is replaced with fresh
+     * clones of the copied notes (beat-matched by `Score.replace` — extending over following notes
+     * or padding with rests as needed). The pasted notes become the new selection.
+     */
+    paste(): void {
+        const score = this._score
+        if (!score || !this._selectedNote || this._clipboard.length === 0) return
+        const targets = this._selectedNotes.length > 0 ? this._selectedNotes : [this._selectedNote]
+        const pasted = score.replace(
+            targets,
+            this._clipboard.map((note) => note.clone({})),
+        )
+        const first = pasted[0]
+        const last = pasted[pasted.length - 1]
+        if (first && last) this.setRange(first, last)
+        this.save()
+        this.emit()
     }
 
     // --- Structure (operate on the score as a whole, not the active note) ---
