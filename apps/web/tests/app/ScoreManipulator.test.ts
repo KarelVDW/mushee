@@ -115,3 +115,61 @@ describe('ScoreManipulator bulk actions', () => {
         expect(manipulator.selectedNotes).toHaveLength(1)
     })
 })
+
+describe('ScoreManipulator clipboard', () => {
+    const pitchNames = (notes: Note[]): Array<string | undefined> => notes.map((n) => n.pitch?.name)
+
+    it('reports nothing to paste until something is copied', () => {
+        const { manipulator } = setupPitched()
+        expect(manipulator.canPaste).toBe(false)
+        manipulator.copy()
+        expect(manipulator.canPaste).toBe(true)
+    })
+
+    it('copies a range and pastes it over the active note, overwriting forward', () => {
+        const { manipulator, notes } = setupPitched() // C5 D5 E5 F5
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1]) // copy C5 D5
+        manipulator.copy()
+
+        manipulator.select(notes[2]) // paste onto E5 (single selection) → overwrites E5 F5
+        manipulator.paste()
+
+        expect(pitchNames(allNotes(manipulator))).toEqual(['C', 'D', 'C', 'D'])
+        // The two pasted notes are the new selection.
+        expect(pitchNames(manipulator.selectedNotes)).toEqual(['C', 'D'])
+    })
+
+    it('replaces a selected range with the pasted clip', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0]) // copy a single note (C5)
+        manipulator.copy()
+
+        manipulator.select(notes[2])
+        manipulator.extendSelectionTo(notes[3]) // select E5 F5
+        manipulator.paste() // one copied beat replaces a two-beat selection → C5 + padding rest
+
+        const after = allNotes(manipulator)
+        expect(after[2]?.pitch?.name).toBe('C')
+        expect(after[3]?.isRest).toBe(true)
+    })
+
+    it('pastes independent clones — editing a paste does not change the clipboard', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.copy()
+        manipulator.select(notes[2])
+        manipulator.paste()
+        manipulator.run(RAISE_PITCH) // mutate the pasted note
+        manipulator.select(notes[1])
+        manipulator.paste() // clipboard is unaffected — still the original C5
+        expect(allNotes(manipulator)[1]?.pitch?.name).toBe('C')
+    })
+
+    it('does nothing when the clipboard is empty', () => {
+        const { manipulator } = setupPitched()
+        const before = pitchNames(allNotes(manipulator))
+        manipulator.paste()
+        expect(pitchNames(allNotes(manipulator))).toEqual(before)
+    })
+})
