@@ -22,6 +22,12 @@ export interface ScoreAction {
      * accidental token, bpm, clef, key, or pitch; parameterless actions ignore it.
      */
     execute: (score: Score, selectedNote: Note, arg?: unknown) => Note
+    /**
+     * When true and multiple notes are selected, the action is applied to every selected note
+     * (each independently). Only safe for 1:1 edits that preserve a note's duration/position —
+     * pitch and per-note state toggles — never for duration-changing edits, which would ripple.
+     */
+    bulk?: boolean
     /** Optional button content, derived from the current score + selection. */
     display?: (props: { score: Score; selectedNote: Note }) => ReactNode
     /** {@link KeyboardEvent.key} this action is bound to, if it is keyboard-triggerable. */
@@ -49,6 +55,7 @@ export const MOVE_NEXT: ScoreAction = {
 export const RAISE_PITCH: ScoreAction = {
     id: 'raise-pitch',
     label: 'Raise pitch',
+    bulk: true,
     defaultKey: 'ArrowUp',
     execute: (score, note) => {
         const raised = note.pitch?.raised()
@@ -61,6 +68,7 @@ export const RAISE_PITCH: ScoreAction = {
 export const LOWER_PITCH: ScoreAction = {
     id: 'lower-pitch',
     label: 'Lower pitch',
+    bulk: true,
     defaultKey: 'ArrowDown',
     execute: (score, note) => {
         const lowered = note.pitch?.lowered()
@@ -73,6 +81,7 @@ export const LOWER_PITCH: ScoreAction = {
 export const CLEAR_PITCH: ScoreAction = {
     id: 'clear-pitch',
     label: 'Clear pitch',
+    bulk: true,
     defaultKey: 'Backspace',
     execute: (score, note) => {
         const [newNote] = score.replace([note], [note.clone({ pitch: undefined })])
@@ -94,6 +103,7 @@ export const CHANGE_PITCH: ScoreAction = {
 export const SET_ACCIDENTAL: ScoreAction = {
     id: 'set-accidental',
     label: 'Set accidental',
+    bulk: true,
     execute: (score, note, arg) => {
         const accidental = arg as string | undefined
         const [newNote] = score.replace([note], [note.clone({ pitch: note.pitch?.withAccidental(accidental) })])
@@ -125,6 +135,7 @@ export const TOGGLE_TUPLET: ScoreAction = {
 export const TOGGLE_TIE: ScoreAction = {
     id: 'toggle-tie',
     label: 'Toggle tie',
+    bulk: true,
     execute: (score, note) => {
         const tie = note.tiesForward ? undefined : ('start' as const)
         const [newNote] = score.replace([note], [note.clone({ tie })])
@@ -135,6 +146,7 @@ export const TOGGLE_TIE: ScoreAction = {
 export const TOGGLE_REST: ScoreAction = {
     id: 'toggle-rest',
     label: 'Toggle rest',
+    bulk: true,
     execute: (score, note) => {
         const pitch = note.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined
         const [newNote] = score.replace([note], [note.clone({ pitch })])

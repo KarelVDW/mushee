@@ -107,7 +107,8 @@ export default function ScoreEditorPage() {
     // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
     // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
-    const handleNoteSelect = useCallback((note: Note) => manipulator.select(note), [manipulator])
+    const handleSelectionStart = useCallback((note: Note) => manipulator.select(note), [manipulator])
+    const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
     const handleAccidentalChange = useCallback((acc: string | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
     const handleDurationChange = useCallback((duration: DurationType) => manipulator.run(SET_DURATION, duration), [manipulator])
     const handleDotToggle = useCallback(() => manipulator.run(TOGGLE_DOT), [manipulator])
@@ -172,14 +173,15 @@ export default function ScoreEditorPage() {
 
     // Preview the selected note's pitch and stop any ongoing playback/recording.
     // The Note holds written pitch; convert to sounding before passing to the player.
+    // Skipped while a range is selected, so dragging across notes doesn't chatter.
     useEffect(() => {
         stopAll()
         const written = activeNote?.pitch?.toMidi()
         const player = midiPlayerRef.current
-        if (written === undefined || !player || !score) return
+        if (written === undefined || !player || !score || manipulator.selectedNotes.length > 1) return
         const sounding = written + score.instrument.chromaticTranspose
         player.preview(sounding, 0.75, score.instrument)
-    }, [activeNote, stopAll, score])
+    }, [activeNote, stopAll, score, manipulator])
 
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
@@ -440,9 +442,11 @@ export default function ScoreEditorPage() {
                         score={score}
                         layoutId={score.layout.id}
                         selectedNote={activeNote}
+                        selectedNotes={manipulator.selectedNotes}
                         playbackCursorRef={playbackCursorRef}
                         recordingWaveformRef={recordingWaveformRef}
-                        onNoteSelect={handleNoteSelect}
+                        onSelectionStart={handleSelectionStart}
+                        onSelectionExtend={handleSelectionExtend}
                         onNoteChange={handleNoteChange}
                         onAddMeasure={handleAddMeasure}
                         onRemoveMeasure={handleRemoveMeasure}

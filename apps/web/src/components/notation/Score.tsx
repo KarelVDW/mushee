@@ -6,14 +6,7 @@ import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
 import { Barline } from './Barline'
-import {
-    MEASURE_BUTTON_GAP,
-    MEASURE_BUTTON_SIZE,
-    NUM_STAFF_LINES,
-    SCORE_WIDTH,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE
-} from './constants'
+import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
@@ -34,9 +27,14 @@ interface ScoreProps {
     layoutId: string
     height?: number
     selectedNote?: Note | null
+    /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
+    selectedNotes?: Note[]
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
     recordingWaveformRef?: React.RefObject<SVGPathElement | null>
-    onNoteSelect?: (note: Note) => void
+    /** Begin a selection on `note` (plain click / drag start). */
+    onSelectionStart?: (note: Note) => void
+    /** Extend the selection to `note` (drag move / shift-click). */
+    onSelectionExtend?: (note: Note) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
@@ -47,9 +45,11 @@ interface ScoreProps {
 export const Score = memo(function Score({
     score,
     selectedNote,
+    selectedNotes,
     playbackCursorRef,
     recordingWaveformRef,
-    onNoteSelect,
+    onSelectionStart,
+    onSelectionExtend,
     onNoteChange,
     onAddMeasure,
     onRemoveMeasure,
@@ -58,9 +58,14 @@ export const Score = memo(function Score({
 }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
+    // Pointer-drag state for range selection: whether the button is down, and whether the pointer
+    // has moved onto a different note since mousedown (a drag, which suppresses the click action).
+    const pointerDownRef = useRef(false)
+    const dragMovedRef = useRef(false)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
     const [ghostNote, setGhostNote] = useState<Note | null>(null)
+    const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
     const [openPopover, setOpenPopover] = useState<{
         measureIndex: number
         beatPosition: number
@@ -140,43 +145,76 @@ export const Score = memo(function Score({
         [svgToContainer],
     )
 
+    // Resolve the note under a client point (row → measure → note), with the row-local Y.
+    const resolveHit = useCallback(
+        (clientX: number, clientY: number): { note: Note; localY: number } | null => {
+            const pt = clientToSvg(clientX, clientY)
+            if (!pt) return null
+            const row = score.layout.getRowForY(pt.y)
+            if (!row) return null
+            const measure = row.getMeasureForX(pt.x)
+            if (!measure) return null
+            const note = measure.layout.getNoteForX(pt.x - row.getMeasureX(measure))
+            if (!note) return null
+            return { note, localY: pt.y - score.layout.getYForRow(row) }
+        },
+        [clientToSvg, score],
+    )
+
     const handleMouseMove = useCallback(
         (e: React.MouseEvent<SVGSVGElement>) => {
-            const pt = clientToSvg(e.clientX, e.clientY)
-            if (!pt) {
+            const hit = resolveHit(e.clientX, e.clientY)
+            if (!hit) {
                 if (hoveredNote) setHoveredNote(null)
                 if (ghostNote) setGhostNote(null)
                 return
             }
-            const row = score.layout.getRowForY(pt.y)
-            if (!row) {
-                if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhostNote(null)
-                return
-            }
-            const localY = pt.y - score.layout.getYForRow(row)
-            const measure = row.getMeasureForX(pt.x)
-            if (!measure) {
-                if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhostNote(null)
-                return
-            }
-            const localX = pt.x - row.getMeasureX(measure)
-            const note = measure.layout.getNoteForX(localX)
-            if (!note) {
-                if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhostNote(null)
-                return
-            }
+            const { note, localY } = hit
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
+
+            // Button down: only once the pointer reaches a *different* note is it a drag — extend
+            // the selection then. Staying on the press note leaves the ghost intact so a press +
+            // release in place still commits a pitch change (below).
+            if (pointerDownRef.current) {
+                if (note.id !== selectedNote?.id) {
+                    if (ghostNote) setGhostNote(null)
+                    dragMovedRef.current = true
+                    onSelectionExtend?.(note)
+                }
+                return
+            }
+
             const hoverLine = getLineForY(localY)
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
             if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
             else setGhostNote(note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }).previewUnder(note.clef))
         },
-        [clientToSvg, selectedNote],
+        [resolveHit, hoveredNote, ghostNote, selectedNote, onSelectionExtend],
     )
+
+    const handleMouseDown = useCallback(
+        (e: React.MouseEvent<SVGSVGElement>) => {
+            if (openPopover) return
+            const hit = resolveHit(e.clientX, e.clientY)
+            if (!hit) return
+            pointerDownRef.current = true
+            dragMovedRef.current = false
+            // Shift extends the existing selection to the pressed note; a plain press starts a new one.
+            if (e.shiftKey) onSelectionExtend?.(hit.note)
+            else onSelectionStart?.(hit.note)
+        },
+        [openPopover, resolveHit, onSelectionStart, onSelectionExtend],
+    )
+
+    // A drag can end with the pointer outside the score, so listen on the window.
+    useEffect(() => {
+        const endDrag = () => {
+            pointerDownRef.current = false
+        }
+        window.addEventListener('mouseup', endDrag)
+        return () => window.removeEventListener('mouseup', endDrag)
+    }, [])
 
     const handleMouseLeave = useCallback(() => {
         setHoveredNote(null)
@@ -188,19 +226,14 @@ export const Score = memo(function Score({
             setOpenPopover(null)
             return
         }
-        if (!hoveredNote) return
-
+        // A drag selected a range — that's not a click, so don't also commit a pitch change.
+        if (dragMovedRef.current) return
+        // Clicking the active note at a different staff line commits the previewed (ghost) pitch.
         if (ghostNote?.pitch && selectedNote && onNoteChange) {
             setGhostNote(null)
             onNoteChange(selectedNote, ghostNote.pitch)
-            return
         }
-
-        if (hoveredNote.id !== selectedNote?.id) {
-            onNoteSelect?.(hoveredNote)
-            return
-        }
-    }, [openPopover, onNoteSelect, onNoteChange, ghostNote, hoveredNote, selectedNote])
+    }, [openPopover, ghostNote, selectedNote, onNoteChange])
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
@@ -220,7 +253,7 @@ export const Score = memo(function Score({
     const lastRowIndex = rows.length - 1
 
     return (
-        <div ref={containerRef} style={{ position: 'relative' }}>
+        <div ref={containerRef} className="relative select-none">
             {containerWidth > 0 && totalHeight > 0 && score.layout && (
                 <svg
                     ref={svgRef}
@@ -228,6 +261,7 @@ export const Score = memo(function Score({
                     height={scaledHeight}
                     viewBox={`0 0 ${SCORE_WIDTH} ${totalHeight}`}
                     xmlns="http://www.w3.org/2000/svg"
+                    onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
@@ -256,12 +290,10 @@ export const Score = memo(function Score({
 
                     {rows.map((row) =>
                         row.measures.map((measure) => (
-                            <g
-                                key={measure.id}
-                                transform={`translate(${row.getMeasureX(measure)}, ${layout.getYForRow(row)})`}>
+                            <g key={measure.id} transform={`translate(${row.getMeasureX(measure)}, ${layout.getYForRow(row)})`}>
                                 <Measure
                                     measure={measure}
-                                    selectedNote={selectedNote ?? undefined}
+                                    selectedNoteIds={selectedIds}
                                     hoveredNote={hoveredNote}
                                     layoutId={measure.layout.id}
                                 />
@@ -293,15 +325,13 @@ export const Score = memo(function Score({
                                                     score.getIndexForMeasure(tempo.measure),
                                                     tempo.beatPosition,
                                                     tempo.bpm,
-                                                    row.getMeasureX(tempo.measure) +
-                                                        tempo.measure.layout.getXForBeat(tempo.beatPosition),
+                                                    row.getMeasureX(tempo.measure) + tempo.measure.layout.getXForBeat(tempo.beatPosition),
                                                     layout.getYForRow(row) + tempo.layout.y,
                                                 )
                                             }
                                         />
                                     </g>
                                 ))}
-
                             </g>
                         )),
                     )}
