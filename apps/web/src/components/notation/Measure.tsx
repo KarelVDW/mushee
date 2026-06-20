@@ -5,6 +5,7 @@ import type { Measure as MeasureModel, Note } from '@/model'
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
+import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { KeySignature } from './KeySignature'
 import { NoteGroup } from './NoteGroup'
 import { TimeSignature } from './TimeSignature'
@@ -12,14 +13,21 @@ import { TupletBracket } from './TupletBracket'
 
 const CURSOR_COLOR = '#1e90ff'
 
+// Selection highlight band: a soft, rounded blue strip behind selected noteheads. Its height
+// spans the staff (matching the playback cursor); adjacent selected notes' bands abut into a
+// continuous run because each spans the full gap to the next note.
+const SELECTION_FILL = 'rgba(30, 144, 255, 0.14)'
+const SELECTION_BAND_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 6
+const SELECTION_BAND_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 12
+
 interface MeasureProps {
     measure: MeasureModel
-    selectedNote?: Note
+    selectedNoteIds?: ReadonlySet<string>
     hoveredNote?: Note | null
     layoutId: string
 }
 
-export const Measure = memo(function Measure({ measure, selectedNote, hoveredNote }: MeasureProps) {
+export const Measure = memo(function Measure({ measure, selectedNoteIds, hoveredNote }: MeasureProps) {
     const layout = measure.layout
     return (
         <>
@@ -55,12 +63,27 @@ export const Measure = memo(function Measure({ measure, selectedNote, hoveredNot
                 </g>
             )}
 
-            {measure.notes.map((note) => {
-                const isSelected = note === selectedNote
+            {measure.notes.map((note, i) => {
+                const isSelected = selectedNoteIds?.has(note.id) ?? false
                 const isHovered = !isSelected && note === hoveredNote
                 const beam = layout.beamFor(note)
+                const noteX = layout.getXForElement(note)
+                // Span the band to the next note so a run of selected notes reads as one strip;
+                // the last note in the measure just wraps its own notehead.
+                const nextNote = measure.notes[i + 1]
+                const bandWidth = (nextNote ? layout.getXForElement(nextNote) : noteX + note.layout.width.noteHeadWidth + 6) - noteX
                 return (
-                    <g key={note.id} transform={`translate(${layout.getXForElement(note)}, 0)`}>
+                    <g key={note.id} transform={`translate(${noteX}, 0)`}>
+                        {isSelected && (
+                            <rect
+                                x={0}
+                                y={SELECTION_BAND_Y}
+                                width={bandWidth}
+                                height={SELECTION_BAND_HEIGHT}
+                                rx={3}
+                                fill={SELECTION_FILL}
+                            />
+                        )}
                         <NoteGroup
                             note={note}
                             beam={beam}
