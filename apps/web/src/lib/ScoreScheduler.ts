@@ -17,6 +17,8 @@ export interface TimelineEntry {
 
 export class ScoreScheduler implements Tickable {
     score: Score | null = null
+    /** Note to begin playback from on the next pass. Null = start of score. */
+    startNote: Note | null = null
     readonly entries: TimelineEntry[] = []
 
     private midiPlayer: MidiPlayer
@@ -43,13 +45,20 @@ export class ScoreScheduler implements Tickable {
         this._done = false
         this.entries.length = 0
 
-        if (this.score) {
-            const firstMeasure = this.score.firstMeasure
-            if (firstMeasure) {
-                const tempo = firstMeasure.tempoAtBeat(0)
-                if (tempo) this.bpm = tempo.bpm
-            }
+        if (!this.score) return
+
+        // Start from the selected note when one is set, seeding the tempo prevailing there
+        // (it may carry over from an earlier measure); otherwise start at the top of the score.
+        const start = this.startNote
+        if (start && start.measure.score === this.score) {
+            this.measureIdx = start.measure.index
+            this.noteIdx = Math.max(0, start.measure.notes.indexOf(start))
+            this.bpm = this.score.bpmAt(start)
+            return
         }
+
+        const tempo = this.score.firstMeasure?.tempoAtBeat(0)
+        if (tempo) this.bpm = tempo.bpm
     }
 
     tick(): boolean {
