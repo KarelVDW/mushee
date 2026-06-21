@@ -63,15 +63,14 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
                 </g>
             )}
 
-            {measure.notes.map((note, i) => {
+            {measure.notes.map((note) => {
                 const isSelected = selectedNoteIds?.has(note.id) ?? false
                 const isHovered = !isSelected && note === hoveredNote
                 const beam = layout.beamFor(note)
                 const noteX = layout.getXForElement(note)
-                // Span the band to the next note so a run of selected notes reads as one strip;
-                // the last note in the measure just wraps its own notehead.
-                const nextNote = measure.notes[i + 1]
-                const bandWidth = (nextNote ? layout.getXForElement(nextNote) : noteX + note.layout.width.noteHeadWidth + 6) - noteX
+                // Span the band across the note's full allotted slot so a run of selected notes
+                // reads as one continuous strip, with the last note reaching the end barline.
+                const bandWidth = layout.getAllottedWidth(note)
                 return (
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (

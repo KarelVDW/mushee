@@ -222,6 +222,12 @@ export class MeasureLayout {
         return spacing.x
     }
 
+    getAllottedWidth(el: MeasureElement): number {
+        const spacing = this._xMap.get(el)
+        if (!spacing) throw new Error('Element not spaced in measure')
+        return spacing.allottedWidth
+    }
+
     getNoteForX(x: number): Note | null {
         for (const note of this.measure.notes) {
             const spacing = this._xMap.get(note)
