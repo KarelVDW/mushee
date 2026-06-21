@@ -37,6 +37,14 @@ export class BasicPitchProvider implements PitchProvider {
   readonly sampleRate = TARGET_SAMPLE_RATE;
   readonly normalizeLoudness = true;
   readonly hasNativeOnsets = true;
+  // Stateless: each pass re-runs the model on whatever it's given, so the
+  // pipeline feeds it only a trailing window rather than the whole recording.
+  readonly cachesAcrossPasses = false;
+  // basic-pitch frames the input into 2 s analysis windows that hop by
+  // AUDIO_N_SAMPLES − OVERLAP_LENGTH = (22050·2 − 256) − (30·256) = 36164 samples.
+  // A trailing window must start on that grid, else its block alignment (and the
+  // per-block time correction) drifts from a whole-buffer run and shifts onsets.
+  readonly windowAlignSamples = 36164;
 
   private readonly logger = new Logger(BasicPitchProvider.name);
   private readonly loader: BasicPitchModelLoader;
