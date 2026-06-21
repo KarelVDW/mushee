@@ -110,3 +110,45 @@ export async function runThroughPipeline(
   await pipeline.finalize();
   return measuresToNotes(acc, beats, bpm, 0);
 }
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((res) => setTimeout(res, ms));
+
+/**
+ * Like `runThroughPipeline`, but feeds the audio in many small chunks spaced out
+ * in wall-clock time so the pipeline's debounce fires repeatedly — exercising the
+ * INCREMENTAL multi-pass path (streaming decode + windowed transcription + the
+ * committed-note watermark), which the instant-feed variant collapses into one
+ * final pass. Set `RECORDING_DEBOUNCE_MS` low (e.g. 150) so passes accumulate
+ * quickly. Returns the final emitted notes after finalize.
+ */
+export async function runThroughPipelineStreaming(
+  registry: ProviderRegistry,
+  resolver: ProfileResolver,
+  audio: Buffer,
+  bpm: number,
+  beats: number,
+  instrumentId: string,
+  opts?: { chunks?: number; chunkDelayMs?: number },
+): Promise<EstNote[]> {
+  const pipeline = new RecordingPipeline(registry, resolver);
+  pipeline.setMeta({
+    bpm,
+    timeSignature: { beats, beatType: 4 },
+    chromaticTranspose: 0,
+    instrumentId,
+  });
+  const acc: Record<number, MxmlMeasure> = {};
+  pipeline.setOnUpdate((u) => {
+    for (const [k, v] of Object.entries(u.measures)) acc[Number(k)] = v;
+  });
+  const chunks = opts?.chunks ?? 60;
+  const delay = opts?.chunkDelayMs ?? 50;
+  const size = Math.ceil(audio.byteLength / chunks);
+  for (let o = 0; o < audio.byteLength; o += size) {
+    pipeline.appendChunk(audio.subarray(o, Math.min(o + size, audio.byteLength)));
+    await sleep(delay);
+  }
+  await pipeline.finalize();
+  return measuresToNotes(acc, beats, bpm, 0);
+}

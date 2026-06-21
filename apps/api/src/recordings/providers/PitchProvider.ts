@@ -74,6 +74,28 @@ export interface PitchProvider {
    */
   readonly normalizeLoudness: boolean;
 
+  /**
+   * Whether the provider caches per-frame state across `transcribe` calls within
+   * a session (via `PitchSession`) so that re-passing the whole growing buffer is
+   * already incremental. The pipeline uses this to decide how to feed audio:
+   *
+   *  - `true`  (e.g. CREPE): hand over the full decoded buffer every pass; the
+   *    provider only recomputes new frames. Its decode/segmentation rely on a
+   *    consistent absolute frame index, so it must NOT be fed a sliding window.
+   *  - `false` (e.g. basic-pitch): stateless and reprocesses everything it's
+   *    given, so the pipeline transcribes only a trailing window (committed audio
+   *    is never re-sent) and offsets the returned note times.
+   */
+  readonly cachesAcrossPasses: boolean;
+
+  /**
+   * Sample count the pipeline must snap a trailing window's start to (windowed
+   * providers only). Providers that frame the input into fixed analysis blocks
+   * produce block-position-dependent timing, so a window must begin on a block
+   * boundary for its notes to match a whole-buffer run. 1 = no constraint.
+   */
+  readonly windowAlignSamples: number;
+
   /** One-time setup (model load, backend init). Safe to call repeatedly. */
   init(): Promise<void>;
 
