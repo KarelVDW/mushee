@@ -104,6 +104,32 @@ describe('MeasureLayout', () => {
         })
     })
 
+    describe('getAllottedWidth', () => {
+        it("returns each note's slot width, with the last note's slot reaching the end barline", () => {
+            const { m } = registeredMeasure()
+            m.addNotes([rest('q'), rest('q'), rest('q'), rest('q')])
+            const layout = m.layout
+            const lastNote = m.notes.at(-1)
+            if (!lastNote) throw new Error('expected lastNote')
+            // Slots are contiguous: each note's slot ends where the next begins.
+            for (let i = 1; i < m.notes.length; i++) {
+                expect(layout.getXForElement(m.notes[i - 1]) + layout.getAllottedWidth(m.notes[i - 1])).toBeCloseTo(
+                    layout.getXForElement(m.notes[i]),
+                )
+            }
+            // The final slot runs all the way to the end barline.
+            const slotEnd = layout.getXForElement(lastNote) + layout.getAllottedWidth(lastNote)
+            expect(slotEnd).toBeCloseTo(layout.measureWidth - MeasureLayout.barlineWidth(m.endBarline))
+        })
+
+        it('throws "Element not spaced in measure" for unknown elements', () => {
+            const score = makeScore(1)
+            const m = score.firstMeasure
+            if (!m) throw new Error('expected firstMeasure')
+            expect(() => m.layout.getAllottedWidth(rest('q'))).toThrow('Element not spaced in measure')
+        })
+    })
+
     describe('getXForBeat', () => {
         it('is monotonically non-decreasing across the measure', () => {
             const score = makeScore(1)
