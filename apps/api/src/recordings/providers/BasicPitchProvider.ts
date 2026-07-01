@@ -1,12 +1,11 @@
 import { Logger } from '@nestjs/common';
 import {
-  BasicPitch,
   NoteEventTime,
   noteFramesToTime,
   outputToNotesPoly,
 } from '@spotify/basic-pitch';
 
-import { BasicPitchModelLoader } from './BasicPitchModelLoader';
+import type { ModelBackend } from './ModelBackend';
 import type { PitchProvider, PitchTranscribeOptions } from './PitchProvider';
 
 /**
@@ -47,15 +46,13 @@ export class BasicPitchProvider implements PitchProvider {
   readonly windowAlignSamples = 36164;
 
   private readonly logger = new Logger(BasicPitchProvider.name);
-  private readonly loader: BasicPitchModelLoader;
 
-  constructor(modelDir: string) {
-    this.loader = new BasicPitchModelLoader(modelDir);
-    this.logger.log(`basic-pitch model dir: ${modelDir}`);
+  constructor(private readonly backend: ModelBackend) {
+    this.logger.log('basic-pitch provider ready');
   }
 
   async init(): Promise<void> {
-    await this.loader.load();
+    await this.backend.warm('basic-pitch');
   }
 
   createSession(): undefined {
@@ -67,43 +64,29 @@ export class BasicPitchProvider implements PitchProvider {
     options?: PitchTranscribeOptions,
     onProgress?: (rawNotes: NoteEventTime[]) => void,
   ): Promise<NoteEventTime[]> {
-    const model = await this.loader.load();
-    const basicPitch = new BasicPitch(Promise.resolve(model));
-    const frames: number[][] = [];
-    const onsets: number[][] = [];
-
     const minFreq = options?.minFreqHz ?? MIN_FREQ;
     const maxFreq = options?.maxFreqHz ?? MAX_FREQ;
     const onsetThreshold = options?.onsetThreshold ?? ONSET_THRESHOLD;
     const frameThreshold = options?.frameThreshold ?? FRAME_THRESHOLD;
 
-    const emitCurrent = (): NoteEventTime[] => {
-      const rawEvents = outputToNotesPoly(
-        frames,
-        onsets,
-        onsetThreshold,
-        frameThreshold,
-        MIN_NOTE_LEN_FRAMES,
-        INFER_ONSETS,
-        maxFreq,
-        minFreq,
-        MELODIA_TRICK,
-        ENERGY_TOLERANCE,
-      );
-      const notes = noteFramesToTime(rawEvents);
-      onProgress?.(notes);
-      return notes;
-    };
+    // The backend runs only the model forward pass (framing + predict + the
+    // overlap-trim stitch); note decoding stays here for parity with the eval.
+    const { frames, onsets } = await this.backend.basicPitchForward(samples);
 
-    await basicPitch.evaluateModel(
-      samples,
-      (f, o) => {
-        frames.push(...f);
-        onsets.push(...o);
-        if (onProgress) emitCurrent();
-      },
-      () => {},
+    const rawEvents = outputToNotesPoly(
+      frames,
+      onsets,
+      onsetThreshold,
+      frameThreshold,
+      MIN_NOTE_LEN_FRAMES,
+      INFER_ONSETS,
+      maxFreq,
+      minFreq,
+      MELODIA_TRICK,
+      ENERGY_TOLERANCE,
     );
-    return emitCurrent();
+    const notes = noteFramesToTime(rawEvents);
+    onProgress?.(notes);
+    return notes;
   }
 }

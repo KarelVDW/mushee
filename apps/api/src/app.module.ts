@@ -21,8 +21,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
       ...dataSourceOptions,
       autoLoadEntities: true,
       // Schema changes go through migrations (pnpm migration:generate);
-      // pending ones run automatically on boot.
-      migrationsRun: true,
+      // pending ones run on boot via runMigrationsLocked() in main.ts, which
+      // serializes concurrent replicas — not TypeORM's lockless migrationsRun.
     }),
     ScheduleModule.forRoot(),
     MailModule,

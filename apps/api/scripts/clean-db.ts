@@ -3,7 +3,8 @@ import { Client } from 'pg';
 /**
  * Wipes the database by dropping the public schema: TypeORM-managed tables,
  * better-auth's tables, and the migrations table all go. Rebuild with
- * `pnpm migration:run` and `pnpm migrate`.
+ * `pnpm migration:run` (which now includes better-auth's schema), or run
+ * `pnpm db:reset` to clean + migrate + seed the demo data in one go.
  *
  * Connects with pg directly (same env defaults as src/database/data-source.ts)
  * rather than importing the data source: that would pull in the entity
@@ -33,7 +34,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`Dropped all tables in "${database}" at ${host}.`);
-  console.log('Recreate them with: pnpm migration:run && pnpm migrate');
+  console.log('Recreate them with: pnpm migration:run (or pnpm db:reset to also seed)');
 }
 
 main().catch((error) => {

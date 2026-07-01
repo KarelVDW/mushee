@@ -1,4 +1,8 @@
 services:
+  # Day-to-day development only needs this service (`pnpm dev:db`); the API and
+  # web app then run on the host via `pnpm dev`. `docker compose up` with no
+  # service names brings up the full backend stack instead (API on :3000 with
+  # remote inference), e.g. to test the production images.
   postgres:
     image: postgres:17-alpine
     environment:
@@ -9,6 +13,73 @@ services:
       - '5632:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mushee -d mushee']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # The three service images are tagged with the same names the k8s manifests
+  # reference, so `docker compose build` also produces the deployable images.
+  crepe-inference:
+    image: mushee/crepe-inference:latest
+    build:
+      context: .
+      dockerfile: apps/inference-crepe/Dockerfile
+    ports:
+      - '50051:50051'
+
+  basic-pitch-inference:
+    image: mushee/basic-pitch-inference:latest
+    build:
+      context: .
+      dockerfile: apps/inference-basic-pitch/Dockerfile
+    ports:
+      - '50052:50052'
+
+  api:
+    image: mushee/api:latest
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      crepe-inference:
+        condition: service_started
+      basic-pitch-inference:
+        condition: service_started
+    environment:
+      PORT: '3000'
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_USER: mushee
+      POSTGRES_PASSWORD: mushee
+      POSTGRES_DB: mushee
+      # Must match how the browser reaches this container.
+      BETTER_AUTH_URL: http://localhost:3000
+      # Local-only dummy; real deployments provide their own secret.
+      BETTER_AUTH_SECRET: local-compose-secret-not-for-prod
+      # Let the host-run web dev server (:3200) talk to this API.
+      CORS_ORIGIN: http://localhost:3200
+      TRUSTED_ORIGINS: http://localhost:3200
+      # Forward passes go to the per-model services; the API does no inference.
+      CREPE_INFERENCE_URL: crepe-inference:50051
+      BASIC_PITCH_INFERENCE_URL: basic-pitch-inference:50052
+      # Volume-backed local MusicXML storage (rclone treats a plain path as the
+      # local filesystem). Real deployments point this at a cloud remote.
+      RCLONE_REMOTE: /data/storage
+      # Migrations run on boot; this additionally seeds the demo accounts.
+      SEED_DEMO_DATA: 'true'
+    # Real auth/mail secrets (SendGrid etc.) come from an operator-provided env
+    # file; uncomment to use one locally.
+    # env_file:
+    #   - .env.docker
+    ports:
+      - '3000:3000'
+    volumes:
+      - storage_data:/data/storage
 
 volumes:
   postgres_data:
+  storage_data:

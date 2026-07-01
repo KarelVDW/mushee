@@ -1,37 +1,38 @@
 import { Logger } from '@nestjs/common';
-import { existsSync } from 'fs';
 
 import { BasicPitchProvider } from './BasicPitchProvider';
 import { CrepeProvider } from './CrepeProvider';
+import { LocalModelBackend } from './LocalModelBackend';
+import type { ModelBackend, ProviderModelDirs } from './ModelBackend';
 import type { PitchProvider } from './PitchProvider';
 
-export interface ProviderModelDirs {
-  basicPitch: string;
-  crepeTiny: string;
-}
+export type { ProviderModelDirs } from './ModelBackend';
 
 /**
  * Owns one instance of each available pitch provider, loaded once. The adaptive
  * pipeline picks a provider per recording (via the resolved `PipelineProfile`),
  * so they all need to be ready — but the underlying models are heavy, hence a
- * shared registry rather than per-session construction. Providers whose model
- * directory is missing are skipped; `get` falls back to basic-pitch.
+ * shared registry rather than per-session construction. Providers the backend
+ * can't serve are skipped; `get` falls back to basic-pitch.
+ *
+ * The forward pass runs through a `ModelBackend` — `LocalModelBackend` (TF.js,
+ * the default, used by dev + the eval harness) or a remote inference service.
+ * Pass `dirs` for local; pass a `backend` to override (e.g. remote).
  */
 export class ProviderRegistry {
   private readonly logger = new Logger(ProviderRegistry.name);
   private readonly providers = new Map<string, PitchProvider>();
 
-  constructor(dirs: ProviderModelDirs) {
-    if (existsSync(dirs.basicPitch)) {
-      this.providers.set('basic-pitch', new BasicPitchProvider(dirs.basicPitch));
+  constructor(dirs: ProviderModelDirs, backend?: ModelBackend) {
+    const modelBackend = backend ?? new LocalModelBackend(dirs);
+    if (modelBackend.available('basic-pitch')) {
+      this.providers.set('basic-pitch', new BasicPitchProvider(modelBackend));
     }
-    if (existsSync(dirs.crepeTiny)) {
-      this.providers.set('crepe-tiny', new CrepeProvider(dirs.crepeTiny, 'crepe-tiny'));
+    if (modelBackend.available('crepe-tiny')) {
+      this.providers.set('crepe-tiny', new CrepeProvider(modelBackend, 'crepe-tiny'));
     }
     if (!this.providers.has('basic-pitch')) {
-      throw new Error(
-        `ProviderRegistry: basic-pitch model dir not found at ${dirs.basicPitch}`,
-      );
+      throw new Error('ProviderRegistry: basic-pitch model unavailable from backend');
     }
     this.logger.log(`Registered providers: ${[...this.providers.keys()].join(', ')}`);
   }

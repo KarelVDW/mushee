@@ -1,0 +1,19 @@
+# LOCAL-ONLY LoadBalancer for the API, so the stack is reachable at a stable
+# http://localhost:3000 without kubectl port-forward. Docker Desktop's built-in
+# load balancer assigns EXTERNAL-IP=localhost on the service port.
+#
+# NOT for production: real clusters expose the API via an Ingress / managed LB,
+# not a raw per-service LoadBalancer — hence this lives in the local overlay and
+# the base `api` Service stays ClusterIP. Port 3000 matches BETTER_AUTH_URL.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-lb
+  labels: { app: api }
+spec:
+  type: LoadBalancer
+  selector: { app: api }
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

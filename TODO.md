@@ -58,10 +58,10 @@
 
 ### CI/CD
 - [ ] GitHub Actions: lint + typecheck + test on PR
-- [ ] Build pipeline producing deployable artifacts (Docker images for API)
+- [x] Build pipeline producing deployable artifacts (Docker images for API + inference services; `docker compose build`)
 - [ ] Deploy pipeline (API → Fly/Railway/Render/ECS; web → Vercel)
 - [ ] Environment management: dev / staging / prod with separate DBs and Stripe keys
-- [ ] `.env.example` checked in
+- [x] `.env.example` checked in (apps/api + apps/web)
 - [ ] Secrets in a real secret store (Doppler / Vercel env / cloud provider)
 
 ## Marketing & SEO

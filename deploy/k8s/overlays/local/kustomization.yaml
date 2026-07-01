@@ -1,0 +1,13 @@
+# LOCAL-ONLY overlay for Docker Desktop k8s: base + an ephemeral Postgres, a
+# dummy api-secrets Secret, a LoadBalancer on localhost:3000, and volume-backed
+# MusicXML storage. Deploy with: kubectl apply -k deploy/k8s/overlays/local
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - postgres.yaml
+  - secret.yaml
+  - api-lb.yaml
+  - storage-pvc.yaml
+patches:
+  - path: api-storage-patch.yaml

@@ -23,6 +23,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { AudioDecoder } from '../../src/recordings/AudioDecoder';
 import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
 import { BasicPitchProvider } from '../../src/recordings/providers/BasicPitchProvider';
+import { LocalModelBackend } from '../../src/recordings/providers/LocalModelBackend';
 import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
 import { runThroughPipelineStreaming } from './lib/pipelineRun';
 
@@ -75,7 +76,9 @@ async function main(): Promise<void> {
     loudnorm: true, highpassHz: 80,
   });
   const sr = 22050;
-  const bp = new BasicPitchProvider(MODELS.basicPitch);
+  const bp = new BasicPitchProvider(
+    new LocalModelBackend({ basicPitch: MODELS.basicPitch, crepeTiny: MODELS.crepeTiny }),
+  );
   await bp.init();
   console.log(`${'inputSec'.padEnd(10)}${'transcribeMs'.padEnd(14)}ms/sec`);
   for (const sec of [5, 10, 20, 30, 45, 60]) {

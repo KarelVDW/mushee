@@ -1,0 +1,12 @@
+# LOCAL-ONLY MusicXML storage: a hostpath-provisioned volume shared by the API
+# replicas (fine on Docker Desktop's single node). Real deployments use a cloud
+# rclone remote instead — see RCLONE_REMOTE in secret.yaml.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-storage
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi

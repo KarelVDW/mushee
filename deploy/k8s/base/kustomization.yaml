@@ -1,0 +1,10 @@
+# Production-shaped base: API (remote-inference mode) + the two per-model
+# inference services. Expects Secret/api-secrets and a Postgres to exist in the
+# cluster — see the root README's deployment section. For a self-contained
+# local stack use overlays/local instead.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - api.yaml
+  - crepe-inference.yaml
+  - basic-pitch-inference.yaml

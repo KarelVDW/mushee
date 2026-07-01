@@ -1,8 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { NoteEventTime } from '@spotify/basic-pitch';
-import * as tf from '@tensorflow/tfjs';
 
-import { CrepeModelLoader } from './CrepeModelLoader';
+import type { ModelBackend } from './ModelBackend';
 import {
   localCentsFromPath,
   normalizeFrame,
@@ -95,17 +94,18 @@ export class CrepeProvider implements PitchProvider {
   readonly windowAlignSamples = 1;
 
   private readonly logger = new Logger(CrepeProvider.name);
-  private readonly loader: CrepeModelLoader;
   private readonly centMapping: Float32Array = buildCentMapping();
 
-  constructor(modelDir: string, name = 'crepe') {
+  constructor(
+    private readonly backend: ModelBackend,
+    name = 'crepe',
+  ) {
     this.name = name;
-    this.loader = new CrepeModelLoader(modelDir);
-    this.logger.log(`${name} model dir: ${modelDir}`);
+    this.logger.log(`${name} provider ready`);
   }
 
   async init(): Promise<void> {
-    await this.loader.load();
+    await this.backend.warm('crepe-tiny');
   }
 
   createSession(): CrepeSession {
@@ -135,7 +135,6 @@ export class CrepeProvider implements PitchProvider {
       ...(options?.smoothFrames !== undefined && { smoothFrames: options.smoothFrames }),
       ...(options?.tuningCorrect !== undefined && { tuningCorrect: options.tuningCorrect }),
     };
-    const model = await this.loader.load();
     const sess =
       session instanceof CrepeSession ? session : new CrepeSession();
 
@@ -175,21 +174,25 @@ export class CrepeProvider implements PitchProvider {
     ) {
       const batchEnd = Math.min(batchStart + INFERENCE_BATCH, numFrames);
       const batchCount = batchEnd - batchStart;
-      const { actBatch, confBatch } = tf.tidy(() => {
-        const flat = new Float32Array(batchCount * FRAME_SIZE);
-        for (let f = 0; f < batchCount; f++) {
-          const start = (batchStart + f) * HOP_SIZE;
-          const window = samples.subarray(start, start + FRAME_SIZE);
-          flat.set(normalizeFrame(window), f * FRAME_SIZE);
+      // Framing stays here (the forward pass is the only thing the backend runs).
+      const flat = new Float32Array(batchCount * FRAME_SIZE);
+      for (let f = 0; f < batchCount; f++) {
+        const start = (batchStart + f) * HOP_SIZE;
+        const window = samples.subarray(start, start + FRAME_SIZE);
+        flat.set(normalizeFrame(window), f * FRAME_SIZE);
+      }
+      const actBatch = await this.backend.crepePredict(flat, batchCount);
+      // Confidence is the per-frame activation max — derived here so it never
+      // crosses the wire (it's a trivial reduction of `actBatch`).
+      const confBatch = new Float32Array(batchCount);
+      for (let f = 0; f < batchCount; f++) {
+        let max = -Infinity;
+        const base = f * NUM_BINS;
+        for (let b = 0; b < NUM_BINS; b++) {
+          if (actBatch[base + b] > max) max = actBatch[base + b];
         }
-        const input = tf.tensor2d(flat, [batchCount, FRAME_SIZE]);
-        const activation = model.predict(input) as tf.Tensor2D; // [batchCount, 360]
-        const conf = activation.max(1); // [batchCount]
-        return {
-          actBatch: activation.dataSync().slice() as Float32Array,
-          confBatch: conf.dataSync().slice() as Float32Array,
-        };
-      });
+        confBatch[f] = max;
+      }
       sess.activations.set(actBatch, batchStart * NUM_BINS);
       sess.confidence.set(confBatch, batchStart);
     }
