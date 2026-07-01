@@ -1,0 +1,7 @@
+# CREPE forward-pass service (CPU). Runs a plain-TF SavedModel (pre-converted
+# from the tfjs layers weights on the host — bit-identical, see crepe_saved_model/),
+# so the runtime needs ONLY tensorflow: tensorflowjs has no linux/arm64 dependency
+# resolution (jax / tensorflow-decision-forests), and it's not needed once the
+# model is a SavedModel. Isolated from the basic-pitch service's TF pin.
+tensorflow==2.19.0
+grpcio==1.80.0

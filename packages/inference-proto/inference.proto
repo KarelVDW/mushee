@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package mushee.inference.v1;
+
+// Pitch-model forward passes, factored out of the API so they can run in
+// separate, independently-scaled services. The API keeps all framing, caching,
+// segmentation, note extraction and MusicXML building — these RPCs do ONLY the
+// neural-net forward pass. Tensors are flat little-endian float32 bytes plus an
+// explicit shape, so no language-specific tensor encoding leaks across the wire.
+
+// ── CREPE ────────────────────────────────────────────────────────────────────
+// Forward pass only: framing (normalizeFrame), the activation cache, Viterbi and
+// segmentation stay in the API.
+service CrepeInference {
+  // Input: a batch of normalized analysis windows. Output: per-frame sigmoid
+  // activations. Confidence (row max) is derived API-side, so it isn't returned.
+  rpc Predict(CrepePredictRequest) returns (CrepePredictResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message CrepePredictRequest {
+  // Flat row-major [batchCount, frameSize] float32 (frameSize is 1024 today).
+  bytes frames = 1;
+  int32 batch_count = 2;
+  int32 frame_size = 3;
+}
+
+message CrepePredictResponse {
+  // Flat row-major [batchCount, numBins] float32 (numBins is 360 today).
+  bytes activations = 1;
+  int32 batch_count = 2;
+  int32 num_bins = 3;
+}
+
+// ── basic-pitch ────────────────────────────────────────────────────────────--
+// Replicates evaluateModel (2 s-window framing, per-window predict, overlap-trim
+// stitch) and returns the note + onset activation matrices. outputToNotesPoly
+// and note→time mapping stay in the API.
+service BasicPitchInference {
+  // Input: mono 22050 Hz PCM. Output: frames + onsets activation matrices [T,88].
+  rpc Forward(BasicPitchForwardRequest) returns (BasicPitchForwardResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message BasicPitchForwardRequest {
+  // Mono 22050 Hz PCM as flat float32 little-endian bytes.
+  bytes samples = 1;
+}
+
+message BasicPitchForwardResponse {
+  // frames and onsets are flat row-major [num_frames, num_pitches] float32.
+  bytes frames = 1;
+  bytes onsets = 2;
+  int32 num_frames = 3;
+  int32 num_pitches = 4; // 88
+}
+
+// ── shared ─────────────────────────────────────────────────────────────────--
+message HealthRequest {}
+message HealthResponse {
+  bool ready = 1;   // model loaded and warmed
+  string model = 2; // model identifier / version, for parity auditing
+}

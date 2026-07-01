@@ -11,6 +11,8 @@ import { WsAdapter } from '@nestjs/platform-ws';
 import type { FastifyRequest } from 'fastify';
 
 import { AppModule } from './app.module';
+import { seedDemoData } from './database/demo-seed';
+import { runMigrationsLocked } from './database/run-migrations';
 
 /** Cap on HTTP request bodies (score JSON). WebSocket audio chunks are
  *  capped separately via `maxPayload` on the recordings gateway. */
@@ -36,6 +38,10 @@ const rateLimitOptions = {
 };
 
 async function bootstrap() {
+  // Before anything connects: bring the schema up to date, exactly once even
+  // when many replicas boot together against a fresh database.
+  await runMigrationsLocked();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ bodyLimit: MAX_BODY_BYTES }),
@@ -62,6 +68,12 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Local/dev only: provision the demo accounts once migrations have run
+  // (module init above), so a fresh stack is usable straight after boot.
+  if (process.env.SEED_DEMO_DATA === 'true') {
+    await seedDemoData();
+  }
 
   await app.listen(process.env.PORT ?? 4200, '0.0.0.0');
 }

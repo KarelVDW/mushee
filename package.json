@@ -4,9 +4,13 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "setup": "docker compose up -d --wait postgres && pnpm db:reset",
         "dev": "pnpm -r --parallel dev",
         "dev:api": "pnpm --filter @mushee/api dev",
         "dev:web": "pnpm --filter @mushee/web dev",
+        "dev:db": "docker compose up -d --wait postgres",
+        "db:reset": "pnpm --filter @mushee/api db:reset",
+        "db:seed": "pnpm --filter @mushee/api db:seed",
         "build": "pnpm -r build",
         "build:api": "pnpm --filter @mushee/api build",
         "build:web": "pnpm --filter @mushee/web build",

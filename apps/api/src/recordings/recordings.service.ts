@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { Recording } from './entities/recording.entity';
 import { usedProviderNames } from './profiles/PipelineProfile';
 import { ProfileResolver } from './profiles/ProfileResolver';
+import { createModelBackend } from './providers/createModelBackend';
 import { ProviderRegistry } from './providers/ProviderRegistry';
 import { RecordingCreditsService } from './recording-credits.service';
 import { RecordingLocksService } from './recording-locks.service';
@@ -34,10 +35,13 @@ export class RecordingsService implements OnModuleInit {
     private readonly credits: RecordingCreditsService,
     private readonly locks: RecordingLocksService,
   ) {
-    this.registry = new ProviderRegistry({
+    const dirs = {
       basicPitch: process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR,
       crepeTiny: process.env.CREPE_TINY_MODEL_DIR ?? DEFAULT_CREPE_TINY_DIR,
-    });
+    };
+    // Forward pass runs locally (TF.js) or against per-model remote inference
+    // services, selected by env (CREPE_INFERENCE_URL / BASIC_PITCH_INFERENCE_URL).
+    this.registry = new ProviderRegistry(dirs, createModelBackend(dirs));
   }
 
   onModuleInit(): void {

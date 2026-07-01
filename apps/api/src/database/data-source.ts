@@ -17,8 +17,9 @@ import { migrations } from './migrations';
  * migrations are imported explicitly — no globs — so the same options work
  * from both ts (CLI via tsx) and compiled dist (production).
  *
- * Note: better-auth manages its own tables through a separate pg.Pool and its
- * own CLI; they are intentionally not covered by these migrations.
+ * Note: better-auth manages its own tables through a separate pg.Pool, but
+ * its schema is snapshotted into these migrations (BetterAuthSchema) so boot
+ * alone fully provisions a fresh database.
  */
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

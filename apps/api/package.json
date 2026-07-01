@@ -14,12 +14,17 @@
     "migration:run": "pnpm typeorm migration:run",
     "migration:revert": "pnpm typeorm migration:revert",
     "db:clean": "tsx --env-file=.env.development scripts/clean-db.ts",
+    "db:seed": "tsx --env-file=.env.development scripts/seed-demo.ts",
+    "db:reset": "pnpm db:clean && pnpm migration:run && pnpm db:seed",
     "test:recording": "tsx scripts/test-recording-ws.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/rate-limit": "^10.3.0",
+    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/proto-loader": "^0.8.1",
+    "@mushee/inference-proto": "workspace:^",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-fastify": "^11.0.0",

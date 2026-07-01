@@ -29,6 +29,7 @@ import { AudioDecoder } from '../../src/recordings/AudioDecoder';
 import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
 import { BasicPitchProvider } from '../../src/recordings/providers/BasicPitchProvider';
 import { CrepeProvider } from '../../src/recordings/providers/CrepeProvider';
+import { LocalModelBackend } from '../../src/recordings/providers/LocalModelBackend';
 import type {
   PitchProvider,
   PitchTranscribeOptions,
@@ -57,12 +58,16 @@ const MODELS = {
 };
 
 function buildProvider(name: string): PitchProvider {
+  const backend = new LocalModelBackend({
+    basicPitch: MODELS.basicPitch,
+    crepeTiny: MODELS.crepeTiny,
+  });
   switch (name) {
     case 'crepe-tiny':
-      return new CrepeProvider(MODELS.crepeTiny, 'crepe-tiny');
+      return new CrepeProvider(backend, 'crepe-tiny');
     case 'basic-pitch':
     default:
-      return new BasicPitchProvider(MODELS.basicPitch);
+      return new BasicPitchProvider(backend);
   }
 }
 

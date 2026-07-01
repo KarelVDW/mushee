@@ -1,0 +1,9 @@
+# basic-pitch forward-pass service (CPU). Isolated from the CREPE service: its
+# TF pin (2.15) differs from CREPE's (2.19), which is exactly why they're split.
+# Python 3.11 (a transitive build dep breaks on 3.12's removed pkgutil.ImpImporter).
+# setuptools<81 because resampy still imports pkg_resources at runtime.
+basic-pitch[tf]==0.4.0
+tensorflow==2.15.0
+grpcio==1.80.0
+numpy<2
+setuptools<81

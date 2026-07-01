@@ -1,0 +1,14 @@
+# Keep build contexts small and reproducible.
+**/node_modules
+**/.venv*
+**/dist
+**/*.tsbuildinfo
+**/.git
+**/debug
+**/fixtures/eval
+**/fixtures/eval-real
+**/*.log
+# Exclude the web app's source, but keep its package.json so pnpm can resolve the
+# workspace for --frozen-lockfile (the API image never builds web).
+apps/web
+!apps/web/package.json
