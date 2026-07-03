@@ -121,6 +121,40 @@ test('copies a range and pastes it with the keyboard', async ({ page }) => {
     await expect(bands).toHaveCount(2)
 })
 
+test('keyboard shortcuts dialog lists bindings and rebinding persists across a reload', async ({ page }) => {
+    await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+
+    // Defaults are listed with layout-aware key labels.
+    const nextNote = page.getByRole('button', { name: 'Change shortcut for Select next note' })
+    await expect(nextNote).toContainText('→')
+
+    // Record J as the new shortcut for "Toggle rest" (default: R).
+    await page.getByRole('button', { name: 'Change shortcut for Toggle rest' }).click()
+    await expect(page.getByText('Press a key…')).toBeVisible()
+    await page.keyboard.press('j')
+    const restBinding = page.getByRole('button', { name: 'Change shortcut for Toggle rest' })
+    await expect(restBinding).toContainText('J')
+    await page.getByRole('button', { name: 'Done' }).click()
+
+    // The editor regains focus; the new key toggles the selected note to a rest and autosaves.
+    const restToggle = page.getByRole('button', { name: 'Rest' })
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('j')
+    await patch
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
+
+    // The customization is stored in localStorage, so it survives a reload; the old key is dead.
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
+    const patchAfterReload = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('j')
+    await patchAfterReload
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('clef and tempo popovers open from the control bar', async ({ page }) => {
     const clef = page.getByRole('button', { name: /^Clef:/ })
     await expect(clef).toHaveAttribute('aria-pressed', 'false')

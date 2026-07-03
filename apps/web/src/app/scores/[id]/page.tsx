@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
-import { ErrorScreen, Icon, Pill, showToast, Wordmark } from '@/components/ui'
+import { ChipToggle, ErrorScreen, Icon, Pill, showToast, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
@@ -32,6 +32,7 @@ import {
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { ControlBar } from './ControlBar'
 import { ExportMenu } from './ExportMenu'
+import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { ScoreManipulator } from './ScoreManipulator'
 
@@ -65,6 +66,7 @@ export default function ScoreEditorPage() {
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
+    const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
 
     const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
@@ -341,13 +343,16 @@ export default function ScoreEditorPage() {
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts after the score loads, attaching the listener and focusing for capture.
+    // Suspended while a dialog is up so its keystrokes can't edit the score; when the dialog
+    // closes, re-attaching also puts focus back on the editor.
+    const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null
     useEffect(() => {
         const el = containerRef.current
-        if (!el) return
+        if (!el || dialogOpen) return
         el.addEventListener('keydown', manipulator.handleKeyDown)
         el.focus()
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
-    }, [manipulator, score])
+    }, [manipulator, score, dialogOpen])
 
     if (loadError) {
         const serverDown = loadError instanceof NetworkError
@@ -409,7 +414,12 @@ export default function ScoreEditorPage() {
                         <Pill>{score.instrument.displayName}</Pill>
                     </button>
                 </div>
-                <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
+                <div className="flex items-center gap-2 shrink-0">
+                    <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
+                        <Icon name="keyboard" size={16} />
+                    </ChipToggle>
+                    <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
+                </div>
             </header>
             <ControlBar
                 accidental={activeNote?.pitch?.accidentalValue}
@@ -467,6 +477,8 @@ export default function ScoreEditorPage() {
                 onCancel={() => setInstrumentDialogOpen(false)}
                 onConfirm={handleInstrumentChange}
             />
+
+            <KeyboardShortcutsDialog open={shortcutsOpen} keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />
 
             {recordingHalt?.kind === 'limit' && (
                 <RecordingLimitDialog

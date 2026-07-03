@@ -1,12 +1,13 @@
 import 'reflect-metadata';
+
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 import { AccountDeletion } from '../account/entities/account-deletion.entity';
 import { CachedScore } from '../cache/entities/cached-score.entity';
 import { UserOnboarding } from '../onboarding/entities/user-onboarding.entity';
 import { ActiveRecording } from '../recordings/entities/active-recording.entity';
-import { RecordingUsage } from '../recordings/entities/recording-usage.entity';
 import { Recording } from '../recordings/entities/recording.entity';
+import { RecordingUsage } from '../recordings/entities/recording-usage.entity';
 import { Score } from '../scores/entities/score.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { migrations } from './migrations';

@@ -30,8 +30,6 @@ export interface ScoreAction {
     bulk?: boolean
     /** Optional button content, derived from the current score + selection. */
     display?: (props: { score: Score; selectedNote: Note }) => ReactNode
-    /** {@link KeyboardEvent.key} this action is bound to, if it is keyboard-triggerable. */
-    defaultKey?: string
 }
 
 // --- Navigation ---
@@ -39,14 +37,12 @@ export interface ScoreAction {
 export const MOVE_PREVIOUS: ScoreAction = {
     id: 'move-previous',
     label: 'Select previous note',
-    defaultKey: 'ArrowLeft',
     execute: (_score, note) => note.getPrevious() ?? note,
 }
 
 export const MOVE_NEXT: ScoreAction = {
     id: 'move-next',
     label: 'Select next note',
-    defaultKey: 'ArrowRight',
     execute: (_score, note) => note.getNext() ?? note,
 }
 
@@ -56,7 +52,6 @@ export const RAISE_PITCH: ScoreAction = {
     id: 'raise-pitch',
     label: 'Raise pitch',
     bulk: true,
-    defaultKey: 'ArrowUp',
     execute: (score, note) => {
         const raised = note.pitch?.raised()
         const pitch = raised ? note.keySignature.spell(raised) : undefined
@@ -69,7 +64,6 @@ export const LOWER_PITCH: ScoreAction = {
     id: 'lower-pitch',
     label: 'Lower pitch',
     bulk: true,
-    defaultKey: 'ArrowDown',
     execute: (score, note) => {
         const lowered = note.pitch?.lowered()
         const pitch = lowered ? note.keySignature.spell(lowered) : undefined
@@ -82,7 +76,6 @@ export const CLEAR_PITCH: ScoreAction = {
     id: 'clear-pitch',
     label: 'Clear pitch',
     bulk: true,
-    defaultKey: 'Backspace',
     execute: (score, note) => {
         const [newNote] = score.replace([note], [note.clone({ pitch: undefined })])
         return newNote

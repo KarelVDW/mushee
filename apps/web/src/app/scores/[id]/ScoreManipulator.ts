@@ -1,12 +1,8 @@
+import { Keybindings } from '@/lib/Keybindings'
 import type { Instrument, Note, Score } from '@/model'
 
-import { SCORE_ACTIONS, type ScoreAction } from './actions'
-
-/** Keyboard shortcut → action, built once from the actions that declare a `defaultKey`. */
-const ACTIONS_BY_KEY = new Map<string, ScoreAction>()
-for (const action of SCORE_ACTIONS) {
-    if (action.defaultKey) ACTIONS_BY_KEY.set(action.defaultKey, action)
-}
+import type { ScoreAction } from './actions'
+import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 
 /** Guard so a malformed anchor/focus pair can never spin the range walk forever. */
 const MAX_RANGE = 100_000
@@ -42,6 +38,9 @@ export class ScoreManipulator {
     private _version = 0
     private readonly listeners = new Set<() => void>()
     private save: () => void = () => {}
+
+    /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
+    constructor(readonly keybindings: Keybindings<EditorCommand> = new Keybindings(EDITOR_COMMANDS)) {}
 
     // --- External store (for useSyncExternalStore) ---
 
@@ -168,41 +167,18 @@ export class ScoreManipulator {
     }
 
     /**
-     * Dispatch a keydown: Cmd/Ctrl+C/V copy & paste, shift+arrows extend the selection, Escape
-     * collapses it, else run a bound action. Keys typed into form fields (the title / popover
-     * inputs) are left alone so they keep their native behavior.
+     * Dispatch a keydown: resolve it against the keybindings and run the matching command.
+     * Keys typed into form fields (the title / popover inputs) are left alone so they keep
+     * their native behavior, as is any keystroke whose command declined it (returned `false`).
      */
     handleKeyDown = (e: KeyboardEvent): void => {
         const target = e.target
         if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
             return
         }
-        if (e.metaKey || e.ctrlKey) {
-            const key = e.key.toLowerCase()
-            if (key === 'c') {
-                e.preventDefault()
-                this.copy()
-            } else if (key === 'v') {
-                e.preventDefault()
-                this.paste()
-            }
-            return
-        }
-        if (e.shiftKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
-            e.preventDefault()
-            this.extendSelectionByStep(e.key === 'ArrowRight' ? 1 : -1)
-            return
-        }
-        if (e.key === 'Escape') {
-            if (this._selectedNotes.length <= 1) return
-            e.preventDefault()
-            this.collapseSelection()
-            return
-        }
-        const action = ACTIONS_BY_KEY.get(e.key)
-        if (!action) return
+        const command = this.keybindings.resolve(e)
+        if (!command || command.run(this) === false) return
         e.preventDefault()
-        this.run(action)
     }
 
     // --- Clipboard ---

@@ -5,9 +5,8 @@
 // the real WebSocket, asserts the credit bookkeeping in Postgres, cleans up.
 import { readFile } from 'fs/promises';
 import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
-
 import pg from 'pg';
+import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
 
 const API = process.env.API_URL ?? 'http://127.0.0.1:4000';

@@ -1,9 +1,15 @@
 import { makeScore, pitched } from '@test/helpers'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { RAISE_PITCH, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
+import { Keybindings, Shortcut } from '@/lib/Keybindings'
 import type { Note } from '@/model'
+
+beforeEach(() => {
+    localStorage.clear()
+})
 
 /** A one-measure score of four pitched quarter notes (C5 D5 E5 F5), attached to a manipulator. */
 function setupPitched(): { manipulator: ScoreManipulator; notes: Note[] } {
@@ -11,7 +17,8 @@ function setupPitched(): { manipulator: ScoreManipulator; notes: Note[] } {
     const measure = score.firstMeasure
     if (!measure) throw new Error('expected a measure')
     const notes = score.replace(measure.notes, [pitched('C', 5), pitched('D', 5), pitched('E', 5), pitched('F', 5)])
-    const manipulator = new ScoreManipulator()
+    // A platform-pinned keymap so Mod means Ctrl regardless of the machine running the tests.
+    const manipulator = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-shortcuts', isMac: false }))
     manipulator.attach(score, () => undefined)
     return { manipulator, notes }
 }
@@ -171,5 +178,75 @@ describe('ScoreManipulator clipboard', () => {
         const before = pitchNames(allNotes(manipulator))
         manipulator.paste()
         expect(pitchNames(allNotes(manipulator))).toEqual(before)
+    })
+})
+
+describe('ScoreManipulator keyboard dispatch', () => {
+    /** Run a synthetic keydown through the manipulator and report whether it consumed it. */
+    function press(manipulator: ScoreManipulator, init: KeyboardEventInit): boolean {
+        const event = new KeyboardEvent('keydown', { cancelable: true, ...init })
+        manipulator.handleKeyDown(event)
+        return event.defaultPrevented
+    }
+
+    it('runs the command bound to a keystroke and consumes it', () => {
+        const { manipulator, notes } = setupPitched()
+        expect(press(manipulator, { code: 'ArrowRight', key: 'ArrowRight' })).toBe(true)
+        expect(manipulator.selectedNote).toBe(notes[1])
+    })
+
+    it('matches on the physical key with exact modifiers', () => {
+        const { manipulator, notes } = setupPitched()
+        expect(press(manipulator, { code: 'ArrowRight', key: 'ArrowRight', metaKey: true })).toBe(false)
+        expect(manipulator.selectedNote).toBe(notes[0])
+    })
+
+    it('copies and pastes with the platform modifier', () => {
+        const { manipulator, notes } = setupPitched() // C5 D5 E5 F5
+        manipulator.select(notes[0])
+        expect(press(manipulator, { code: 'KeyC', key: 'c', ctrlKey: true })).toBe(true)
+        manipulator.select(notes[2])
+        expect(press(manipulator, { code: 'KeyV', key: 'v', ctrlKey: true })).toBe(true)
+        expect(allNotes(manipulator)[2]?.pitch?.name).toBe('C')
+    })
+
+    it('extends the selection with shift+arrows and collapses it with Escape', () => {
+        const { manipulator } = setupPitched()
+        press(manipulator, { code: 'ArrowRight', key: 'ArrowRight', shiftKey: true })
+        press(manipulator, { code: 'ArrowRight', key: 'ArrowRight', shiftKey: true })
+        expect(manipulator.selectedNotes).toHaveLength(3)
+        expect(press(manipulator, { code: 'Escape', key: 'Escape' })).toBe(true)
+        expect(manipulator.selectedNotes).toHaveLength(1)
+        // With nothing to collapse, Escape is left to the browser (it dismisses dialogs).
+        expect(press(manipulator, { code: 'Escape', key: 'Escape' })).toBe(false)
+    })
+
+    it('toggles the active note to a rest with the default R binding', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[1])
+        expect(press(manipulator, { code: 'KeyR', key: 'r' })).toBe(true)
+        expect(manipulator.selectedNote?.isRest).toBe(true)
+    })
+
+    it('dispatches to a rebound key and releases the old one', () => {
+        const { manipulator } = setupPitched()
+        const shortcut = Shortcut.fromEvent(new KeyboardEvent('keydown', { code: 'KeyJ', key: 'j' }))
+        if (!shortcut) throw new Error('expected a bindable shortcut')
+        manipulator.keybindings.rebind('toggle-rest', shortcut)
+
+        expect(press(manipulator, { code: 'KeyR', key: 'r' })).toBe(false)
+        expect(manipulator.selectedNote?.isRest).toBe(false)
+        expect(press(manipulator, { code: 'KeyJ', key: 'j' })).toBe(true)
+        expect(manipulator.selectedNote?.isRest).toBe(true)
+    })
+
+    it('leaves keys typed into form fields alone', () => {
+        const { manipulator, notes } = setupPitched()
+        const input = document.createElement('input')
+        input.addEventListener('keydown', manipulator.handleKeyDown)
+        const event = new KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight', cancelable: true })
+        input.dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(false)
+        expect(manipulator.selectedNote).toBe(notes[0])
     })
 })
