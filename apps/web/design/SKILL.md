@@ -20,5 +20,5 @@ If the user invokes this skill without any other guidance, ask them what they wa
 - The signature CTA treatment — flat magenta `3px 3px 0` drop-shadow that grows to `5px 5px 0` on `-2px` hover translate — is reserved for **one hero CTA per surface** (opt-in via `emphasis="pop"`). Don't apply it to every primary button.
 - Voice is plain, warm, and confident. Write the way a thoughtful musician would talk to another musician — no jargon, no hype, no SaaS clichés. "Sketch a piece," "hear it back," "your music belongs to you."
 - The score editor canvas is monochrome — pure white with charcoal `#2d2f2f` notes. No cyan or magenta inside.
-- Iconography is **Material Symbols Outlined** (loaded via Google Fonts in `colors_and_type.css`). No emoji.
+- Iconography is the **custom Sheemu glyph set** — inline SVGs on a 24px grid with 2px strokes, squared terminals, and mitered joins (registry in `web/src/components/ui/Icon.tsx`, mirrored in `ui_kits/web/Icon.jsx`). No icon fonts, no emoji.
 - No purple/blue gradients. No hand-drawn illustrations.

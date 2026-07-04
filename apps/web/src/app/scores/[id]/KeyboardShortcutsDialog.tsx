@@ -142,7 +142,7 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
             <div className="flex items-center gap-1">
                 {!editing && keybindings.isCustomized(command.id) && (
                     <IconButton
-                        icon="restart_alt"
+                        icon="rotate-ccw"
                         size={24}
                         ariaLabel={`Reset shortcut for ${command.label}`}
                         idleClassName="bg-transparent text-on-surface-variant opacity-0 group-hover:opacity-100 focus-visible:opacity-100"

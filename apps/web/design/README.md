@@ -12,7 +12,7 @@ This system encodes the visual + content vocabulary used to design and build for
 | ------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Production codebase | `web/` (mounted, read-only)              | Next 16 / React 19 / Tailwind v4. App router. The single product.                                                                           |
 | Color tokens        | `web/src/app/globals.css`                | M3-style palette with cyan + magenta accents.                                                                                               |
-| Type loader         | `web/src/app/layout.tsx`                 | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Material Symbols Outlined is loaded from Google Fonts CDN. |
+| Type loader         | `web/src/app/layout.tsx`                 | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
 | Notation glyphs     | `web/src/origin/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
@@ -219,7 +219,7 @@ A Sheemu card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`
 
 ## Iconography
 
-**Primary system: Material Symbols Outlined** (Google Fonts CDN). Variable font axes set to `wght 400`, `FILL 0`, `GRAD 0`, `opsz 24`. Used inline as `<span class="material-symbols-outlined">name</span>`, or via the `<Icon name="…">` helper in `ui_kits/web/Icon.jsx` (which also accepts Lucide-style aliases like `play`, `trash-2`, `arrow-right` and maps them to Material Symbols names). Common names: `search`, `edit`, `delete`, `close`, `visibility`, `visibility_off`, `arrow_forward`, `music_note`. Loaded in `colors_and_type.css` automatically.
+**Primary system: the custom Sheemu glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `web/src/components/ui/Icon.tsx` (used via `<Icon name="…" size={…}>`), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
 
 **Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`web/src/origin/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `web/` if you actually need to render notation.
 
