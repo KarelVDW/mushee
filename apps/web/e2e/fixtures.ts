@@ -103,6 +103,22 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
         // better-auth session lookup (path varies by client version).
         if (path.includes('get-session') || path.startsWith('/api/auth')) return json(SESSION)
 
+        if (path === '/billing/subscription') {
+            return json({
+                tierId: 'free',
+                tierName: 'Sketch',
+                status: null,
+                interval: null,
+                currentPeriodEnd: null,
+                cancelAtPeriodEnd: false,
+                billingConfigured: false,
+                betaMode: false,
+                credits: { limitSeconds: 30, usedSeconds: 0, remainingSeconds: 30 },
+            })
+        }
+
+        if (path === '/beta/status') return json({ betaMode: false, status: null, role: 'user' })
+
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
 
         const idMatch = path.match(/\/scores\/([^/]+)$/)
@@ -138,6 +154,13 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         const mock: ApiMock = { patches: [], creates: [], deletes: [] }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
+        // Pre-answer the GDPR consent banner so it never overlays the UI under test.
+        await context.addInitScript(() => {
+            window.localStorage.setItem(
+                'sheemu:consent',
+                JSON.stringify({ version: 1, analytics: false, decidedAt: '2026-01-01T00:00:00.000Z' }),
+            )
+        })
         await installApiMocks(page, mock)
         await use(mock)
     },
