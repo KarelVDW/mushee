@@ -16,7 +16,9 @@
     "db:clean": "tsx --env-file=.env.development scripts/clean-db.ts",
     "db:seed": "tsx --env-file=.env.development scripts/seed-demo.ts",
     "db:reset": "pnpm db:clean && pnpm migration:run && pnpm db:seed",
-    "test:recording": "tsx scripts/test-recording-ws.ts"
+    "test:recording": "tsx scripts/test-recording-ws.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
@@ -32,6 +34,7 @@
     "@nestjs/schedule": "^5.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.19",
+    "@polar-sh/sdk": "^0.47.1",
     "@sendgrid/mail": "^8.1.6",
     "@spotify/basic-pitch": "^1.0.1",
     "@tensorflow/tfjs": "^4.22.0",
@@ -54,6 +57,7 @@
     "@types/node": "^22.0.0",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.5"
   }
 }

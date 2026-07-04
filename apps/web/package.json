@@ -15,10 +15,13 @@
         "test:e2e:smoke": "playwright test --config=playwright.fullstack.config.ts"
     },
     "dependencies": {
+        "@polar-sh/sdk": "^0.47.1",
         "@tanstack/react-query": "^5.101.0",
         "better-auth": "^1.2.0",
         "lodash-es": "^4.17.23",
         "next": "16.1.6",
+        "posthog-js": "^1.396.6",
+        "posthog-node": "^5.39.4",
         "react": "19.2.3",
         "react-dom": "19.2.3",
         "smplr": "^0.20.0"
