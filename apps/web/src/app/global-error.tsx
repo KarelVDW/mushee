@@ -1,5 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
+
+import { captureException } from '@/lib/analytics'
+
 /**
  * Last-resort boundary: catches errors thrown by the root layout itself.
  * Must render its own <html>/<body> and cannot rely on app CSS being intact,
@@ -7,6 +11,9 @@
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
     console.error(error)
+    useEffect(() => {
+        captureException(error, { digest: error.digest, boundary: 'global' })
+    }, [error])
     return (
         <html lang="en">
             <body

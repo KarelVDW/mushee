@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 import { ErrorScreen } from '@/components/ui'
+import { captureException } from '@/lib/analytics'
 import { NetworkError } from '@/lib/api'
 
 /** Route-level boundary: catches errors thrown during render anywhere in the app. */
@@ -12,6 +13,7 @@ export default function ErrorBoundary({ error, reset }: { error: Error & { diges
 
     useEffect(() => {
         console.error(error)
+        captureException(error, { digest: error.digest, boundary: 'route' })
     }, [error])
 
     const serverDown = error instanceof NetworkError
