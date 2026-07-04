@@ -13,6 +13,7 @@ playwright-report/
 .cov-tmp/
 .DS_Store
 .vscode/
+.claude/worktrees/
 *~
 logs
 *.log
