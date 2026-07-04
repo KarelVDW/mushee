@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { BetaModule } from '../beta/beta.module';
 import { ScoresModule } from '../scores/scores.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { ActiveRecording } from './entities/active-recording.entity';
@@ -16,6 +17,7 @@ import { RecordingsService } from './recordings.service';
     TypeOrmModule.forFeature([Recording, RecordingUsage, ActiveRecording]),
     SubscriptionsModule,
     ScoresModule,
+    BetaModule,
   ],
   providers: [
     RecordingsGateway,
@@ -23,6 +25,6 @@ import { RecordingsService } from './recordings.service';
     RecordingCreditsService,
     RecordingLocksService,
   ],
-  exports: [RecordingsService],
+  exports: [RecordingsService, RecordingCreditsService],
 })
 export class RecordingsModule {}

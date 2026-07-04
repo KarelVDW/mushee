@@ -30,7 +30,12 @@ export async function seedDemoData(): Promise<void> {
     // rows already present and no-op.
     await client.query('SELECT pg_advisory_lock(727272)');
     for (const account of DEMO_ACCOUNTS) {
-      const userId = await ensureUser(client, account.email, account.name);
+      const userId = await ensureUser(
+        client,
+        account.email,
+        account.name,
+        account.role,
+      );
       await client.query(
         `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, $2)
          ON CONFLICT ("userId") DO UPDATE SET "tierId" = EXCLUDED."tierId", "updatedAt" = now()`,
@@ -57,11 +62,13 @@ export async function seedDemoData(): Promise<void> {
 }
 
 /** Find or create the user, returning its id. Email is marked verified so
- *  demo logins never hit the OTP flow. */
+ *  demo logins never hit the OTP flow, and beta status is pre-approved so
+ *  the demo accounts work even with BETA_MODE=true. */
 async function ensureUser(
   client: Client,
   email: string,
   name: string,
+  role?: 'admin',
 ): Promise<string> {
   const existing = await client.query<{ id: string }>(
     'SELECT id FROM "user" WHERE email = $1',
@@ -78,8 +85,12 @@ async function ensureUser(
   );
   if (rows.length === 0) throw new Error(`Demo user ${email} was not created`);
   await client.query(
-    'UPDATE "user" SET "emailVerified" = true WHERE id = $1',
-    [rows[0].id],
+    `UPDATE "user"
+     SET "emailVerified" = true,
+         "betaStatus" = CASE WHEN "betaStatus" IS NULL THEN NULL ELSE 'approved' END,
+         "role" = $2
+     WHERE id = $1`,
+    [rows[0].id, role ?? 'user'],
   );
   return rows[0].id;
 }

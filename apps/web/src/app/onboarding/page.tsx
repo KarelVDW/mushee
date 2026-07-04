@@ -4,9 +4,11 @@ import { useRouter } from 'next/navigation'
 import { type ReactNode, useState } from 'react'
 
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
+import { track } from '@/lib/analytics'
 import { type OnboardingPatch } from '@/lib/api'
 import { emailOtp, useSession } from '@/lib/auth-client'
-import { usePatchOnboarding } from '@/lib/queries'
+import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, type PlanTier } from '@/lib/plans'
+import { useBetaStatus, usePatchOnboarding, useStartCheckout } from '@/lib/queries'
 
 const BACKGROUNDS: [string, string, string][] = [
     ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
@@ -42,62 +44,6 @@ const REFERRAL_SOURCES: [string, string][] = [
     ['other', 'Somewhere else'],
 ]
 
-interface PlanTier {
-    id: 'free' | 'pro' | 'studio'
-    name: string
-    icon: string
-    tagline: string
-    priceMonthly: number
-    priceYearly: number
-    features: string[]
-    popular?: boolean
-}
-
-const PLAN_TIERS: PlanTier[] = [
-    {
-        id: 'free',
-        name: 'Sketch',
-        icon: 'feather',
-        tagline: 'For trying it out.',
-        priceMonthly: 0,
-        priceYearly: 0,
-        features: ['30 seconds of recording / day', '3 scores in your library', 'Hum-to-notation transcription', 'Export as PDF'],
-    },
-    {
-        id: 'pro',
-        name: 'Composer',
-        icon: 'sparkles',
-        tagline: 'For regular writing.',
-        priceMonthly: 8,
-        priceYearly: 80,
-        features: [
-            '10 minutes of recording / day',
-            'Unlimited scores',
-            'MIDI + MusicXML export',
-            'Shareable score links',
-            'Editor themes & playback styles',
-        ],
-        popular: true,
-    },
-    {
-        id: 'studio',
-        name: 'Studio',
-        icon: 'gem',
-        tagline: 'For teaching & teams.',
-        priceMonthly: 18,
-        priceYearly: 180,
-        features: [
-            'Unlimited recording',
-            'Everything in Composer',
-            'Up to 5 collaborators per score',
-            'Custom staff templates',
-            'Priority support',
-        ],
-    },
-]
-
-type Billing = 'monthly' | 'yearly'
-
 function formatPrice(plan: PlanTier, billing: Billing): { amount: string; cadence: string } {
     if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever' }
     if (billing === 'yearly') {
@@ -115,10 +61,14 @@ type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
+    const startCheckout = useStartCheckout()
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
     const verified = session?.user?.emailVerified ?? false
     const userEmail = sessionEmail ?? 'your inbox'
+    // During the closed beta, unapproved users end up on the waiting page.
+    const betaStatus = useBetaStatus({ enabled: BETA_MODE && !!session?.user })
+    const awaitingApproval = BETA_MODE && betaStatus.data?.status === 'pending'
 
     const [step, setStep] = useState(0)
 
@@ -226,14 +176,21 @@ export default function OnboardingPage() {
         // surfaces as a toast through the global mutation error handler.
         if (patch) patchMutation.mutate(patch)
         if (step === STEP_COUNT - 1) {
+            track('onboarding_completed', { tier: BETA_MODE ? 'beta' : tier })
+            // Paid pick → straight into Polar checkout; on failure (or beta
+            // mode, where plans can't be bought) fall through to the done screen.
+            if (!BETA_MODE && tier !== 'free') {
+                startCheckout.mutate({ tierId: tier, interval: billing }, { onError: () => setDone(true) })
+                return
+            }
             setDone(true)
             return
         }
         setStep((s) => Math.min(s + 1, STEP_COUNT - 1))
     }
     const back = () => setStep((s) => Math.max(s - 1, 0))
-    const skip = () => router.push('/scores')
-    const finish = () => router.push('/scores')
+    const skip = () => router.push(awaitingApproval ? '/beta' : '/scores')
+    const finish = () => router.push(awaitingApproval ? '/beta' : '/scores')
 
     return (
         <main className="min-h-screen bg-surface flex flex-col items-center px-6 py-8">
@@ -401,7 +358,7 @@ export default function OnboardingPage() {
                     </StepShell>
                 )}
 
-                {!done && step === 6 && (
+                {!done && step === 6 && !BETA_MODE && (
                     <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
                         <BillingToggle value={billing} onChange={setBilling} />
                         <div className="grid grid-cols-3 gap-3">
@@ -409,7 +366,41 @@ export default function OnboardingPage() {
                                 <TierCard key={p.id} plan={p} billing={billing} active={tier === p.id} onSelect={() => setTier(p.id)} />
                             ))}
                         </div>
-                        {/* TODO: hand off paid tiers to Polar checkout once that's wired up. */}
+                    </StepShell>
+                )}
+
+                {!done && step === 6 && BETA_MODE && (
+                    <StepShell
+                        title="You're on the Beta plan."
+                        subtitle="During the closed beta there's nothing to pick and nothing to pay — every account gets the same plan.">
+                        <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
+                            <span className="w-12 h-12 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                                <Icon name={BETA_PLAN.icon} size={22} />
+                            </span>
+                            <div className="flex flex-col gap-1.5">
+                                <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+                                    {BETA_PLAN.name} — {BETA_PLAN.tagline.toLowerCase()}
+                                </span>
+                                <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                                    {BETA_PLAN.features.map((f) => (
+                                        <li
+                                            key={f}
+                                            className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                                            <span className="mt-px opacity-80">
+                                                <Icon name="check" size={14} />
+                                            </span>
+                                            {f}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                        {awaitingApproval && (
+                            <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3.5 font-body font-normal text-[13px] leading-normal">
+                                One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you
+                                the moment it&apos;s approved.
+                            </div>
+                        )}
                     </StepShell>
                 )}
 
@@ -420,12 +411,22 @@ export default function OnboardingPage() {
                         </div>
                         <ModalTitle>You&apos;re all set, {name.split(' ')[0] || 'there'}.</ModalTitle>
                         <SubHeadline>
-                            Your library is ready on <strong>{PLAN_TIERS.find((p) => p.id === tier)?.name}</strong>. Start a fresh score, or
-                            take the editor for a spin.
+                            {awaitingApproval ? (
+                                <>
+                                    Your account is ready on the <strong>{BETA_PLAN.name}</strong> plan — it just needs a nod from us.
+                                    We&apos;ll email you the moment your beta access is approved.
+                                </>
+                            ) : (
+                                <>
+                                    Your library is ready on{' '}
+                                    <strong>{BETA_MODE ? BETA_PLAN.name : PLAN_TIERS.find((p) => p.id === tier)?.name}</strong>. Start a
+                                    fresh score, or take the editor for a spin.
+                                </>
+                            )}
                         </SubHeadline>
                         <div className="flex gap-3 mt-2">
                             <PrimaryButton emphasis="pop" icon="arrow-right" onClick={finish}>
-                                Open my library
+                                {awaitingApproval ? 'View my status' : 'Open my library'}
                             </PrimaryButton>
                         </div>
                     </div>

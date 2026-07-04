@@ -12,12 +12,13 @@ import {
 
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/user.decorator';
+import { BetaApprovalGuard } from '../beta/beta-approval.guard';
 import { CreateScoreDto } from './dto/create-score.dto';
 import { UpdateScoreDto } from './dto/update-score.dto';
 import { ScoresService } from './scores.service';
 
 @Controller('scores')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, BetaApprovalGuard)
 export class ScoresController {
   constructor(private readonly scoresService: ScoresService) {}
 

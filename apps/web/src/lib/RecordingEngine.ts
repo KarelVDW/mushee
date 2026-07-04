@@ -24,7 +24,7 @@ export interface RecordingLimitInfo {
 }
 
 /** Reasons the gateway refuses a recording connection. */
-export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording'
+export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
 
 export interface ResolveRecordingPosition {
     (measureIndex: number, beat: number): { x: number; rowY: number } | null

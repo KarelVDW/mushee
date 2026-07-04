@@ -12,6 +12,8 @@ type AuthMode = 'signin' | 'signup'
 
 interface AuthCardProps {
     mode: AuthMode
+    /** Optional banner above the form (e.g. closed-beta note). */
+    notice?: ReactNode
     name?: string
     email: string
     password: string
@@ -67,6 +69,7 @@ function BrandPanel({ mode }: { mode: AuthMode }) {
 
 function FormPanel({
     mode,
+    notice,
     name,
     email,
     password,
@@ -87,6 +90,11 @@ function FormPanel({
 
                 <form onSubmit={onSubmit} className="flex flex-col gap-5 flex-1">
                     <div className="flex flex-col gap-4.5 flex-1 justify-center">
+                        {notice && (
+                            <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body font-normal text-[13px] leading-normal">
+                                {notice}
+                            </div>
+                        )}
                         {isSignup && <TextField label="Your name" value={name ?? ''} onChange={onNameChange} placeholder="Anya Mokri" />}
                         <TextField label="Email" value={email} onChange={onEmailChange} placeholder="you@email.com" type="email" />
                         <TextField

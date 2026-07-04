@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import { Pool } from 'pg';
 
+import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config';
 import { mailService } from '../mail/mail.service';
 
 const pool = new Pool({
@@ -26,12 +27,51 @@ export const auth = betterAuth({
     },
   },
   user: {
+    // Surfaced on session.user so both API guards and the web app can gate
+    // on them without an extra round trip. Never client-writable.
+    additionalFields: {
+      role: { type: 'string', defaultValue: 'user', input: false },
+      betaStatus: { type: 'string', required: false, input: false },
+    },
     changeEmail: {
       enabled: true,
       sendChangeEmailVerification: async (
         { user, newEmail, url }: { user: { email: string }; newEmail: string; url: string; token: string },
       ) => {
         await mailService.sendChangeEmailVerification(user.email, url, newEmail);
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Stamp role + beta status onto the row before insert so the very
+        // first session already carries them.
+        before: (user) => {
+          const email = (user as { email?: string }).email ?? '';
+          return Promise.resolve({ data: { ...user, ...signupUserFields(email) } });
+        },
+        // Provision the subscription row (beta tier while the beta runs) and
+        // send the waitlist emails. Failures here must never block signup.
+        after: async (user) => {
+          try {
+            const tierId = isAdminEmail(user.email) ? 'studio' : signupTierId();
+            await pool.query(
+              `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, $2)
+               ON CONFLICT ("userId") DO NOTHING`,
+              [user.id, tierId],
+            );
+            const betaStatus = (user as { betaStatus?: string | null }).betaStatus;
+            if (isBetaMode() && betaStatus === 'pending') {
+              await mailService.sendBetaWaitlistEmail(user.email, user.name);
+              for (const admin of adminEmails()) {
+                await mailService.sendBetaSignupNotification(admin, user.email, user.name);
+              }
+            }
+          } catch (err) {
+            console.error('post-signup provisioning failed', err);
+          }
+        },
       },
     },
   },

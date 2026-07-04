@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
 import { ChipToggle, ErrorScreen, Icon, Pill, showToast, Wordmark } from '@/components/ui'
+import { track } from '@/lib/analytics'
 import { ApiError, NetworkError } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
@@ -328,6 +329,12 @@ export default function ScoreEditorPage() {
                 onRecordingError: (code) => {
                     stopAll()
                     if (code === 'concurrent-recording') setRecordingHalt({ kind: 'concurrent' })
+                    // Belt-and-braces: AuthGate keeps unapproved beta users off
+                    // this page, but the gateway enforces it too.
+                    if (code === 'beta-pending') {
+                        showToast('Your beta access is still awaiting approval.')
+                        router.push('/beta')
+                    }
                 },
             })
         } catch (err) {
@@ -337,6 +344,7 @@ export default function ScoreEditorPage() {
             return
         }
 
+        track('recording_started')
         midiPlayer.start()
         ticker.play(() => setRecordingState('idle'))
     }, [manipulator, score, activeNote, stopAll, saveToApi])

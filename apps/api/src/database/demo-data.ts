@@ -11,6 +11,8 @@ export interface DemoAccount {
   name: string;
   /** Subscription tier id; must exist in SubscriptionTier.all. */
   tierId: 'free' | 'pro' | 'studio';
+  /** Grants the admin panel (beta approvals). */
+  role?: 'admin';
   /** Fixed UUIDs of the demo scores this account owns (keys of DEMO_SCORES). */
   scoreIds: string[];
 }
@@ -25,6 +27,7 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     email: 'demo@mushee.local',
     name: 'Demo',
     tierId: 'studio',
+    role: 'admin',
     scoreIds: [
       '00000000-0000-4000-8000-000000000001',
       '00000000-0000-4000-8000-000000000002',

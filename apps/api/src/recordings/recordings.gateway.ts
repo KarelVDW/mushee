@@ -9,6 +9,7 @@ import type { IncomingMessage } from 'http';
 import type { RawData, WebSocket } from 'ws';
 
 import { auth } from '../auth/auth';
+import { BetaService } from '../beta/beta.service';
 import { ScoresService } from '../scores/scores.service';
 import type { RecordingCreditBalance } from './recording-credits.service';
 import { RecordingCreditsService } from './recording-credits.service';
@@ -36,7 +37,8 @@ type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage;
 type RecordingErrorCode =
   | 'score-required'
   | 'score-not-found'
-  | 'concurrent-recording';
+  | 'concurrent-recording'
+  | 'beta-pending';
 
 /** Largest single WebSocket frame we accept (defense against memory abuse via
  *  oversized audio chunks). One ~1s PCM/Opus chunk is well under this. */
@@ -56,6 +58,7 @@ export class RecordingsGateway
     private readonly recordingsService: RecordingsService,
     private readonly creditsService: RecordingCreditsService,
     private readonly scoresService: ScoresService,
+    private readonly betaService: BetaService,
   ) {}
 
   handleConnection(client: WebSocket, request: IncomingMessage): void {
@@ -119,6 +122,12 @@ export class RecordingsGateway
     if (!user) {
       this.logger.warn('Rejected unauthenticated recording connection');
       client.close(WS_POLICY_VIOLATION, 'Unauthorized');
+      return null;
+    }
+
+    if (await this.betaService.isAwaitingApproval(user.id)) {
+      this.logger.warn(`Rejected recording from unapproved beta user ${user.id}`);
+      this.reject(client, 'beta-pending');
       return null;
     }
 

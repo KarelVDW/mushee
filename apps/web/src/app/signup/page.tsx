@@ -4,7 +4,9 @@ import { useRouter } from 'next/navigation'
 import { type FormEvent, useState } from 'react'
 
 import { AuthCard, AuthShell } from '@/components/ui'
+import { track } from '@/lib/analytics'
 import { emailOtp, signUp } from '@/lib/auth-client'
+import { BETA_MODE } from '@/lib/plans'
 
 export default function SignupPage() {
     const router = useRouter()
@@ -25,6 +27,7 @@ export default function SignupPage() {
                 setError(error.message ?? 'Signup failed')
                 setLoading(false)
             } else {
+                track('signup_completed', { beta: BETA_MODE })
                 void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(({ error }) => {
                     if (!error) router.push('/onboarding')
                 })
@@ -36,6 +39,14 @@ export default function SignupPage() {
         <AuthShell>
             <AuthCard
                 mode="signup"
+                notice={
+                    BETA_MODE ? (
+                        <>
+                            <strong>Sheemu is in closed beta.</strong> Signing up puts you on the waitlist — we approve new accounts
+                            personally, usually within a day. Beta accounts record free for 5 minutes a day.
+                        </>
+                    ) : undefined
+                }
                 name={name}
                 email={email}
                 password={password}

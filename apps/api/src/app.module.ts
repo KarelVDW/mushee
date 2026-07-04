@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
+import { BetaModule } from './beta/beta.module';
+import { BillingModule } from './billing/billing.module';
 import { CacheModule } from './cache/cache.module';
 import { CronModule } from './cron/cron.module';
 import { dataSourceOptions } from './database/data-source';
@@ -35,6 +37,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     CronModule,
     SubscriptionsModule,
     RecordingsModule,
+    BetaModule,
+    BillingModule,
   ],
   controllers: [HealthController],
 })
