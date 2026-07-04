@@ -7,6 +7,13 @@ import type { Tickable } from './Ticker'
 
 const DEFAULT_BPM = 90
 const CHUNK_MS = 100
+/**
+ * Recording formats in preference order. Opus (Chrome: WebM, Firefox: Ogg) is
+ * what the transcription pipeline was tuned on; MP4/AAC is the only container
+ * Safari's MediaRecorder offers. The negotiated type travels with the `meta`
+ * frame so the server's ffmpeg decode doesn't have to guess the container.
+ */
+const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
 const STAFF_MIDDLE_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
 const WAVEFORM_MAX_RADIUS = ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
@@ -25,6 +32,19 @@ export interface RecordingLimitInfo {
 
 /** Reasons the gateway refuses a recording connection. */
 export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
+
+/**
+ * Thrown by {@link RecordingEngine.start} when the browser cannot capture audio
+ * at all — no `mediaDevices` (ancient browser) or an insecure (non-HTTPS)
+ * context, where the API is hidden. Distinct from a permission denial, which
+ * surfaces as a `NotAllowedError` DOMException from `getUserMedia` itself.
+ */
+export class RecordingUnsupportedError extends Error {
+    constructor() {
+        super('Audio capture is not available in this browser or context')
+        this.name = 'RecordingUnsupportedError'
+    }
+}
 
 export interface ResolveRecordingPosition {
     (measureIndex: number, beat: number): { x: number; rowY: number } | null
@@ -92,6 +112,9 @@ export class RecordingEngine implements Tickable {
      *   3. calling `midiPlayer.start()` and running the Ticker afterwards
      */
     async start(options: RecordingOptions): Promise<void> {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+            throw new RecordingUnsupportedError()
+        }
         this.options = options
         this.stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
@@ -301,6 +324,10 @@ export class RecordingEngine implements Tickable {
             }
         })
 
+        if (!this.stream) return
+        const mimeType = RecordingEngine.pickMimeType()
+        this.mediaRecorder = mimeType ? new MediaRecorder(this.stream, { mimeType }) : new MediaRecorder(this.stream)
+
         if (this.ws && this.ws.readyState === WebSocket.OPEN && this.options) {
             const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
             this.ws.send(
@@ -314,17 +341,27 @@ export class RecordingEngine implements Tickable {
                     // Hint for the server's adaptive pitch profile (frequency window etc.).
                     // Auto-detection from the audio remains authoritative.
                     instrumentId: this.options.score.instrument.id,
+                    // `null` = the browser's default container; the server probes it.
+                    mimeType,
                 }),
             )
         }
 
-        if (!this.stream) return
-        this.mediaRecorder = new MediaRecorder(this.stream)
         this.mediaRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return
             if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(e.data)
         }
         this.mediaRecorder.start(CHUNK_MS)
+    }
+
+    /**
+     * First candidate this browser can record. `null` when nothing matched or
+     * `isTypeSupported` is missing (pre-2021 Safari) — then the browser's
+     * default encoding is used and the server probes the container instead.
+     */
+    private static pickMimeType(): string | null {
+        if (typeof MediaRecorder.isTypeSupported !== 'function') return null
+        return MIME_TYPE_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null
     }
 
     private findActiveTempo(score: Score, measureIndex: number) {

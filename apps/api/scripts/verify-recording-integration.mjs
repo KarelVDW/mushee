@@ -294,8 +294,10 @@ async function main() {
 
   // 8. Pro tier gets the bigger budget: flip the user's subscription row.
   {
+    // Signup provisions a default subscription row, so upsert rather than insert.
     await db.query(
-      `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, 'pro')`,
+      `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, 'pro')
+       ON CONFLICT ("userId") DO UPDATE SET "tierId" = 'pro'`,
       [userId],
     );
     const c = connect(`/recording?scoreId=${scoreId}`, cookie);

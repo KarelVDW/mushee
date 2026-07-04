@@ -116,6 +116,9 @@ export class RecordingPipeline {
   private profile: PipelineProfile | null = null;
   private converter: AudioConverter | null = null;
   private instrumentHint: string | undefined;
+  // ffmpeg input-format hint derived from the client's negotiated MIME type.
+  // Undefined (unknown type / no meta) means ffmpeg probes the container.
+  private inputFormat: string | undefined;
 
   constructor(
     private readonly registry: ProviderRegistry,
@@ -127,6 +130,7 @@ export class RecordingPipeline {
     timeSignature?: { beats: number; beatType: number } | null;
     chromaticTranspose?: number;
     instrumentId?: string;
+    mimeType?: string | null;
   }): void {
     if (meta.bpm) this.bpm = meta.bpm;
     if (meta.timeSignature) {
@@ -137,6 +141,9 @@ export class RecordingPipeline {
       this.chromaticTranspose = meta.chromaticTranspose;
     }
     if (meta.instrumentId) this.instrumentHint = meta.instrumentId;
+    if (typeof meta.mimeType === 'string') {
+      this.inputFormat = AudioDecoder.inputFormatFor(meta.mimeType);
+    }
     this.builder = new MxmlBuilder({
       bpm: this.bpm,
       beats: this.beats,
@@ -235,6 +242,7 @@ export class RecordingPipeline {
       const decoder = new StreamingDecoder(provider.sampleRate, {
         highpassHz: profile.highpassHz,
         loudnorm: provider.normalizeLoudness,
+        inputFormat: this.inputFormat,
       });
       decoder.write(Buffer.concat(this.chunks));
       this.streamDecoder = decoder;
@@ -322,6 +330,7 @@ export class RecordingPipeline {
       detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, {
         loudnorm: false,
         highpassHz: DETECT_HIGHPASS_HZ,
+        inputFormat: this.inputFormat,
       });
     } catch (err) {
       this.logger.debug(`Detection decode not ready (${describeError(err)})`);

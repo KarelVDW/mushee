@@ -12,7 +12,7 @@ import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings, useUpdateScore } from '@/lib/queries'
-import { RecordingEngine, type RecordingLimitInfo, type RecordingState } from '@/lib/RecordingEngine'
+import { RecordingEngine, type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
 import { Instrument, type Note, type Pitch, type Score } from '@/model'
@@ -357,7 +357,13 @@ export default function ScoreEditorPage() {
             })
         } catch (err) {
             console.error('Recording failed to start', err)
-            showToast("Recording couldn't start. Check your microphone permission and connection, then try again.")
+            if (err instanceof RecordingUnsupportedError) {
+                showToast("This browser can't record audio. Use a recent Chrome, Edge, Firefox, or Safari over HTTPS.")
+            } else if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+                showToast('Microphone access was blocked. Allow the microphone for this site, then try again.')
+            } else {
+                showToast("Recording couldn't start. Check your microphone permission and connection, then try again.")
+            }
             stopAll()
             return
         }

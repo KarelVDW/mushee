@@ -25,6 +25,10 @@ interface RecordingMetaMessage {
   /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
    *  adaptive profile's frequency window; auto-detection stays authoritative. */
   instrumentId?: string;
+  /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
+   *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
+   *  the browser default was used and ffmpeg probes the container. */
+  mimeType?: string | null;
 }
 
 interface RecordingEndMessage {
@@ -253,6 +257,7 @@ export class RecordingsGateway
         timeSignature: parsed.timeSignature,
         chromaticTranspose: parsed.chromaticTranspose,
         instrumentId: parsed.instrumentId,
+        mimeType: parsed.mimeType,
       });
     } else if (parsed.type === 'end') {
       session.finalize();

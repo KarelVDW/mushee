@@ -2,7 +2,7 @@ import { makeScore } from '@test/helpers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { MidiPlayer } from '@/lib/MidiPlayer'
-import { RecordingEngine, type RecordingOptions } from '@/lib/RecordingEngine'
+import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
 import type { Score } from '@/model/Score'
 
 // Shape of the JSON `meta` frame the engine sends when streaming opens.
@@ -10,6 +10,7 @@ interface MetaFrame {
     type: string
     bpm: number
     timeSignature: { beats: number; beatType: number } | null
+    mimeType: string | null
 }
 
 // --- AudioContext stub (analyser pipeline) ---------------------------------
@@ -49,7 +50,10 @@ class FakeMediaRecorder {
     stop = vi.fn(() => {
         this.state = 'inactive'
     })
-    constructor(public stream: unknown) {
+    constructor(
+        public stream: unknown,
+        public options?: { mimeType?: string },
+    ) {
         rememberRecorder(this)
     }
 }
@@ -781,6 +785,90 @@ describe('RecordingEngine', () => {
         raw.currentTime = 1.1
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
+    })
+
+    it('start() throws RecordingUnsupportedError when mediaDevices is unavailable', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+
+        // Insecure context / ancient browser: navigator exists but mediaDevices doesn't.
+        vi.stubGlobal('navigator', {})
+        await expect(engine.start(options)).rejects.toBeInstanceOf(RecordingUnsupportedError)
+        expect(engine.state).toBe('idle')
+
+        // No navigator at all (defensive; e.g. a non-browser environment).
+        vi.stubGlobal('navigator', undefined)
+        await expect(engine.start(options)).rejects.toBeInstanceOf(RecordingUnsupportedError)
+        expect(engine.state).toBe('idle')
+    })
+
+    it('records with the first isTypeSupported()-approved format and announces it in meta', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        // A Safari-like browser: only MP4 recording is available.
+        class Mp4OnlyRecorder extends FakeMediaRecorder {
+            static isTypeSupported = vi.fn((type: string) => type === 'audio/mp4')
+        }
+        vi.stubGlobal('MediaRecorder', Mp4OnlyRecorder)
+
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+
+        // Preferred Opus flavors were probed first, in order.
+        expect(Mp4OnlyRecorder.isTypeSupported.mock.calls.map(([t]) => t)).toEqual([
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+        ])
+        expect(recorder().options).toEqual({ mimeType: 'audio/mp4' })
+        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
+        expect(meta.mimeType).toBe('audio/mp4')
+    })
+
+    it('falls back to the browser-default encoding when isTypeSupported is missing', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        // FakeMediaRecorder has no static isTypeSupported — pre-2021 Safari.
+
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(recorder().options).toBeUndefined()
+        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
+        expect(meta.mimeType).toBeNull()
+    })
+
+    it('falls back to the browser-default encoding when no candidate is supported', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        class NoFormatRecorder extends FakeMediaRecorder {
+            static isTypeSupported = vi.fn(() => false)
+        }
+        vi.stubGlobal('MediaRecorder', NoFormatRecorder)
+
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(recorder().options).toBeUndefined()
+        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
+        expect(meta.mimeType).toBeNull()
     })
 
     it('uses the active tempo when computing the countoff window', async () => {

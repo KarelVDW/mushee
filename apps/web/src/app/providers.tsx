@@ -4,6 +4,7 @@ import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react
 import { type ReactNode, useState } from 'react'
 
 import { AnalyticsProvider } from '@/components/AnalyticsProvider'
+import { BrowserSupportBanner } from '@/components/BrowserSupportBanner'
 import { CookieConsent } from '@/components/CookieConsent'
 import { showToast, Toaster } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
@@ -49,6 +50,7 @@ export function Providers({ children }: { children: ReactNode }) {
                 {children}
                 <Toaster />
                 <CookieConsent />
+                <BrowserSupportBanner />
             </AnalyticsProvider>
         </QueryClientProvider>
     )

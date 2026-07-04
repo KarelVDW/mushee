@@ -80,7 +80,11 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
     // and a stateless mock would resurrect the row.
     const deletedIds = new Set<string>()
 
-    await page.route('**/*', async (route) => {
+    // http(s) only: intercepting `**/*` would also catch blob: URLs, which
+    // WebKit cannot route — it blocks them outright, breaking e.g. the PDF
+    // exporter's SVG rasterization. blob:/data: are local anyway, so letting
+    // them bypass the mock keeps the suite just as hermetic.
+    await page.route(/^https?:\/\//, async (route) => {
         const req = route.request()
         const url = new URL(req.url())
         const isMockApi = url.hostname === 'localhost' && url.port === '4999'

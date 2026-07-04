@@ -30,7 +30,13 @@ export default defineConfig({
         trace: 'on-first-retry',
         actionTimeout: 10_000,
     },
-    projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+    projects: [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        // WebKit is the most behavior-divergent supported engine (Safari); running
+        // the mocked-API suite against it catches Safari-only breakage without
+        // needing a Mac-hosted real Safari.
+        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    ],
     webServer: {
         command: `next dev --turbopack -p ${WEB_PORT}`,
         url: `http://localhost:${WEB_PORT}`,

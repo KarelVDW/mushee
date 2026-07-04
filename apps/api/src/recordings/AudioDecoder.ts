@@ -18,12 +18,20 @@ function buildFilterChain(highpassHz: number, loudnorm: boolean): string {
   return filters.join(',');
 }
 
-/** ffmpeg args to decode an arbitrary container on stdin to mono f32le on stdout. */
-function decodeArgs(filterChain: string, targetSampleRate: number): string[] {
+/** ffmpeg args to decode an arbitrary container on stdin to mono f32le on stdout.
+ *  `inputFormat` (a demuxer name, e.g. 'webm'/'ogg'/'mp4') pins the container
+ *  instead of probing the pipe — probing a fragmented MP4 stream (Safari's
+ *  MediaRecorder output) is where auto-detection is least reliable. */
+function decodeArgs(
+  filterChain: string,
+  targetSampleRate: number,
+  inputFormat?: string,
+): string[] {
   return [
     '-hide_banner',
     '-loglevel',
     'error',
+    ...(inputFormat ? ['-f', inputFormat] : []),
     '-i',
     'pipe:0',
     '-af',
@@ -45,6 +53,15 @@ function resolveFfmpeg(): string {
   return ffmpegPath;
 }
 
+/** MediaRecorder base MIME type → ffmpeg demuxer name. A whitelist, not a
+ *  parse: the value ends up in a spawn argv, and anything unknown falls back
+ *  to ffmpeg's own container probing. */
+const INPUT_FORMATS: Record<string, string> = {
+  'audio/webm': 'webm', // Chrome/Edge (Opus)
+  'audio/ogg': 'ogg', // Firefox (Opus)
+  'audio/mp4': 'mp4', // Safari (AAC, fragmented)
+};
+
 export interface DecodeOptions {
   /**
    * Apply ffmpeg's `loudnorm` filter (~-16 LUFS, -3 dBFS true-peak ceiling).
@@ -63,6 +80,12 @@ export interface DecodeOptions {
    * profile picks this from the detected/expected range.
    */
   highpassHz?: number;
+
+  /**
+   * ffmpeg demuxer name ('webm', 'ogg', 'mp4', ...) when the container is known
+   * up front — skips probing the pipe. Omit to let ffmpeg auto-detect.
+   */
+  inputFormat?: string;
 }
 
 /**
@@ -80,6 +103,15 @@ export class AudioDecoder {
     this.ffmpeg = resolveFfmpeg();
   }
 
+  /**
+   * ffmpeg input-format hint for a MediaRecorder MIME type
+   * ('audio/webm;codecs=opus' → 'webm'). Undefined for unrecognized types —
+   * then ffmpeg probes the container itself.
+   */
+  static inputFormatFor(mimeType: string): string | undefined {
+    return INPUT_FORMATS[mimeType.split(';')[0].trim().toLowerCase()];
+  }
+
   decode(
     buffer: Buffer,
     targetSampleRate: number,
@@ -93,7 +125,10 @@ export class AudioDecoder {
     const filterChain = buildFilterChain(highpassHz, opts?.loudnorm ?? true);
 
     return new Promise<DecodedAudio>((resolve, reject) => {
-      const proc = spawn(this.ffmpeg, decodeArgs(filterChain, targetSampleRate));
+      const proc = spawn(
+        this.ffmpeg,
+        decodeArgs(filterChain, targetSampleRate, opts?.inputFormat),
+      );
 
       const outChunks: Buffer[] = [];
       const errChunks: Buffer[] = [];
@@ -140,6 +175,8 @@ export interface StreamingDecodeOptions {
   loudnorm?: boolean;
   /** See `DecodeOptions.highpassHz`. Defaults to 80. */
   highpassHz?: number;
+  /** See `DecodeOptions.inputFormat`. Omit to auto-detect. */
+  inputFormat?: string;
 }
 
 /**
@@ -176,7 +213,10 @@ export class StreamingDecoder {
       opts?.loudnorm ?? true,
     );
     this.buf = new Float32Array(sampleRate * 8); // ~8 s initial, grows as needed
-    this.proc = spawn(resolveFfmpeg(), decodeArgs(filterChain, sampleRate));
+    this.proc = spawn(
+      resolveFfmpeg(),
+      decodeArgs(filterChain, sampleRate, opts?.inputFormat),
+    );
 
     this.proc.stdout.on('data', (c: Buffer) => this.ingest(c));
     this.proc.stderr.on('data', (c: Buffer) => this.errChunks.push(c));
