@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
 
 import { ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
 import { PrimaryButton } from './Buttons'
@@ -24,11 +24,11 @@ export function TopNav({ user, onCreate }: TopNavProps) {
         .toUpperCase()
     const items: { label: string; href: string; match: (p: string) => boolean }[] = [
         { label: 'Library', href: '/scores', match: (p) => p === '/scores' || p === '/' },
-        { label: 'Editor', href: '/scores', match: (p) => p.startsWith('/scores/') },
+        { label: 'Settings', href: '/settings', match: (p) => p.startsWith('/settings') },
     ]
 
     return (
-        <nav className="sticky top-0 z-50 bg-surface/85 backdrop-blur-xl tonal-layer-glow">
+        <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div className="max-w-384 mx-auto px-8 py-4.5 flex items-center justify-between">
                 <div className="flex items-center gap-6.5">
                     <Link href="/scores" className="no-underline">
@@ -43,9 +43,10 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                                     href={n.href}
                                     className={[
                                         'no-underline cursor-pointer font-body font-medium text-[14px] leading-none pb-1',
+                                        'transition-colors duration-150 ease-sheemu',
                                         active
                                             ? 'text-on-surface border-b-[3px] border-primary-container'
-                                            : 'text-on-surface-variant border-b-[3px] border-transparent',
+                                            : 'text-on-surface-variant border-b-[3px] border-transparent hover:text-on-surface',
                                     ].join(' ')}>
                                     {n.label}
                                 </Link>
@@ -62,7 +63,12 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                     <button
                         onClick={() => router.push('/settings')}
                         title={user}
-                        className="bg-surface-container text-on-surface border-0 rounded-full w-9 h-9 cursor-pointer font-label font-semibold text-[13px] leading-none inline-flex items-center justify-center">
+                        aria-label="Account settings"
+                        className={[
+                            'bg-surface-container text-on-surface border-0 rounded-full w-9 h-9 cursor-pointer',
+                            'font-label font-semibold text-[13px] leading-none inline-flex items-center justify-center',
+                            'hover:bg-surface-container-highest transition-colors duration-150 ease-sheemu',
+                        ].join(' ')}>
                         {initials}
                     </button>
                 </div>
@@ -93,11 +99,16 @@ export function PageHeader({
     )
 }
 
-export function Footer() {
+interface FooterProps {
+    /** `app` (1536px) for authenticated chrome, `marketing` (1280px) to line up with public-page content. */
+    width?: 'app' | 'marketing'
+}
+
+export function Footer({ width = 'app' }: FooterProps) {
     const linkClass = 'font-body font-normal text-[12px] leading-none text-on-surface-variant no-underline hover:text-on-surface'
     return (
         <footer className="bg-surface py-6 border-t border-outline-variant/15">
-            <div className="max-w-384 mx-auto px-8 flex justify-between items-center gap-6 flex-wrap">
+            <div className={`${width === 'app' ? 'max-w-384' : 'max-w-320'} mx-auto px-8 flex justify-between items-center gap-6 flex-wrap`}>
                 <Wordmark size={20} />
                 <nav aria-label="Legal" className="flex items-center gap-5 flex-wrap">
                     <Link href="/privacy" className={linkClass}>
@@ -130,17 +141,51 @@ interface DialogScrimProps {
     onDismiss?: () => void
 }
 
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+
 export function DialogScrim({ children, onDismiss }: DialogScrimProps) {
+    const panelRef = useRef<HTMLDivElement>(null)
+
+    // Move focus into the dialog on open and hand it back to the trigger on close, so
+    // keyboard users never end up "behind" the scrim.
+    useEffect(() => {
+        const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        panelRef.current?.focus()
+        return () => previouslyFocused?.focus()
+    }, [])
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') {
+            onDismiss?.()
+            return
+        }
+        if (e.key !== 'Tab') return
+        // Cycle Tab within the dialog instead of letting it escape into the page behind.
+        const focusables = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE)
+        if (!focusables?.length) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+            e.preventDefault()
+            last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+        }
+    }
+
     return (
         <div onClick={onDismiss} className="fixed inset-0 z-100 bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
-            <div onClick={(e) => e.stopPropagation()}>{children}</div>
+            <div ref={panelRef} tabIndex={-1} onKeyDown={handleKeyDown} onClick={(e) => e.stopPropagation()} className="outline-none">
+                {children}
+            </div>
         </div>
     )
 }
 
 interface DialogPanelProps {
     title: ReactNode
-    eyebrow?: ReactNode
+    subtitle?: ReactNode
     children?: ReactNode
     footer?: ReactNode
     onClose?: () => void
@@ -148,19 +193,29 @@ interface DialogPanelProps {
     width?: number
 }
 
-export function DialogPanel({ title, eyebrow, children, footer, onClose, width = 560 }: DialogPanelProps) {
+export function DialogPanel({ title, subtitle, children, footer, onClose, width = 560 }: DialogPanelProps) {
+    const titleId = useId()
     return (
-        <div className="glass-panel rounded-xl tonal-layer-glow max-w-[90vw] max-h-[90vh] flex flex-col" style={{ width }}>
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90vh] flex flex-col"
+            style={{ width }}>
             <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                 <div className="flex flex-col gap-1.5">
-                    <ModalTitle>{title}</ModalTitle>
-                    {eyebrow && <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{eyebrow}</span>}
+                    <ModalTitle id={titleId}>{title}</ModalTitle>
+                    {subtitle && <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{subtitle}</span>}
                 </div>
                 {onClose && (
                     <button
                         onClick={onClose}
                         aria-label="Close"
-                        className="bg-transparent border-0 text-on-surface-variant cursor-pointer p-1">
+                        className={[
+                            'bg-transparent border-0 text-on-surface-variant cursor-pointer p-1 rounded-full',
+                            'hover:text-on-surface transition-colors duration-150 ease-sheemu',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                        ].join(' ')}>
                         <Icon name="x" size={20} />
                     </button>
                 )}

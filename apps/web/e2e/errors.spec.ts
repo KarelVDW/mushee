@@ -22,7 +22,7 @@ test('library shows a full-page error while the server is down and recovers on r
     // Server comes back: the override is removed, the fixture mock answers again.
     await page.unroute(API_PATTERN, refuse)
     await page.getByRole('button', { name: 'Try again' }).click()
-    await expect(page.getByRole('button', { name: MOCK_TITLE })).toBeVisible()
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
 })
 
 test('editor shows a full-page error while the server is down', async ({ page, apiMock }) => {

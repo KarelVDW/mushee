@@ -35,13 +35,13 @@ export default function BetaWaitingPage() {
                 <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
             </header>
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-2xl editorial-shadow px-12 py-10 flex flex-col gap-6">
+            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-12 py-10 flex flex-col gap-6">
                 {approved ? (
                     <>
-                        <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                             <Icon name="check" size={28} />
                         </div>
-                        <ModalTitle>You&apos;re in!</ModalTitle>
+                        <ModalTitle>You&apos;re in.</ModalTitle>
                         <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
                         <div>
                             <PrimaryButton emphasis="pop" icon="arrow-right" onClick={() => router.push('/scores')}>
@@ -60,7 +60,7 @@ export default function BetaWaitingPage() {
                         </SubHeadline>
 
                         <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                            <span className="w-12 h-12 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                            <span className="w-12 h-12 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
                                 <Icon name={BETA_PLAN.icon} size={22} />
                             </span>
                             <div className="flex flex-col gap-1.5">
@@ -87,7 +87,7 @@ export default function BetaWaitingPage() {
                                 {status.isFetching ? 'Checking…' : 'Check my status'}
                             </PrimaryButton>
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                This page checks automatically every half minute. Questions?{' '}
+                                This page checks automatically every 30 seconds. Questions?{' '}
                                 <a href="mailto:support@sheemu.app" className="text-primary underline">
                                     support@sheemu.app
                                 </a>

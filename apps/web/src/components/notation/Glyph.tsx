@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { BravuraFont } from '../../origin/fonts/bravura_glyphs'
-import { GLYPH_SCALE } from './constants'
+import { GLYPH_SCALE, NOTATION_INK } from './constants'
 import { outlineToSvgPath } from './glyph-utils'
 
 interface GlyphProps {
@@ -14,7 +14,7 @@ interface GlyphProps {
     fill?: string
 }
 
-export function Glyph({ name, x, y, scale = GLYPH_SCALE, fill = '#000' }: GlyphProps) {
+export function Glyph({ name, x, y, scale = GLYPH_SCALE, fill = NOTATION_INK }: GlyphProps) {
     const d = useMemo(() => {
         const glyph = BravuraFont.glyphs[name as keyof typeof BravuraFont.glyphs]
         if (!glyph) return ''

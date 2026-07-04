@@ -1,5 +1,21 @@
 import type { ClefSign, ClefType } from './types'
 
+/**
+ * Canvas ink — the sanctuary charcoal from DESIGN.md. Notation is drawn in this, never pure
+ * black. Kept as a literal (not a CSS var) so exported SVG/PDF snapshots stay correct
+ * outside the app's stylesheet.
+ */
+export const NOTATION_INK = '#2d2f2f'
+
+/**
+ * Interaction overlays inside the canvas (selection, input cursor, playback cursor, live
+ * recording waveform) share this one blue — deliberately neither brand accent, which are
+ * banned inside the editor. Overlay elements carry `data-export-exclude`, so exports never
+ * contain it.
+ */
+export const INTERACTION_BLUE = '#1e90ff'
+export const INTERACTION_BLUE_BAND = 'rgba(30, 144, 255, 0.14)'
+
 /** Pixels between adjacent staff lines */
 export const STAVE_LINE_DISTANCE = 10
 

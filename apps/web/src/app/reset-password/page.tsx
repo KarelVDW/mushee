@@ -4,22 +4,24 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type FormEvent, Suspense, useEffect, useState } from 'react'
 
-import { AuthShell, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField, Wordmark } from '@/components/ui'
+import {
+    Alert,
+    AuthShell,
+    Eyebrow,
+    Icon,
+    ModalTitle,
+    PasswordStrength,
+    PrimaryButton,
+    scorePassword,
+    SubHeadline,
+    TertiaryButton,
+    TextField,
+    Wordmark,
+} from '@/components/ui'
 import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
 
 type Stage = 'request' | 'sent' | 'set-new' | 'done'
 const STAGES: Stage[] = ['request', 'sent', 'set-new', 'done']
-
-const PW_LABELS = ['Too short', 'Weak', 'OK', 'Strong', 'Strong']
-function scorePassword(pw: string): number {
-    if (!pw) return 0
-    let s = 0
-    if (pw.length >= 8) s++
-    if (pw.length >= 12) s++
-    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++
-    if (/\d/.test(pw) || /[^A-Za-z0-9]/.test(pw)) s++
-    return Math.min(s, 4)
-}
 
 export default function PasswordResetPage() {
     return (
@@ -106,8 +108,8 @@ function PasswordResetPageInner() {
 
     return (
         <AuthShell>
-            <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-2xl editorial-shadow flex overflow-hidden min-h-145 relative">
-                <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-[rgba(0,219,233,0.18)] rounded-full blur-[96px] pointer-events-none" />
+            <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex overflow-hidden min-h-145 relative">
+                <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
                 <section className="w-[42%] bg-surface-container-high p-12 flex flex-col justify-between">
                     <Wordmark size={32} />
                     <div className="flex flex-col gap-4">
@@ -152,11 +154,7 @@ function PasswordResetPageInner() {
                             </Eyebrow>
                         </div>
 
-                        {error && (
-                            <div className="rounded-lg bg-error-container text-on-error-container px-3 py-2 font-body text-[13px]">
-                                {error}
-                            </div>
-                        )}
+                        {error && <Alert>{error}</Alert>}
 
                         {stage === 'request' && (
                             <form
@@ -176,7 +174,12 @@ function PasswordResetPageInner() {
                                         {submitting ? 'Sending…' : 'Send reset link'}
                                     </PrimaryButton>
                                     <div className="flex justify-center">
-                                        <TertiaryButton onClick={onBackToSignIn}>← Back to sign in</TertiaryButton>
+                                        <TertiaryButton onClick={onBackToSignIn}>
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <Icon name="arrow-left" size={13} />
+                                                Back to sign in
+                                            </span>
+                                        </TertiaryButton>
                                     </div>
                                 </div>
                             </form>
@@ -200,15 +203,20 @@ function PasswordResetPageInner() {
                                             onClick={() => {
                                                 void handleResend()
                                             }}
-                                            className="bg-transparent border-0 p-0 text-primary cursor-pointer font-inherit underline">
-                                            {resent ? 'sent again ✓' : 'resend the link'}
+                                            className="bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline">
+                                            {resent ? 'link sent again' : 'resend the link'}
                                         </button>
                                         .
                                     </span>
                                 </div>
                                 <div className="flex flex-col gap-3.5 pt-2">
                                     <div className="flex justify-center">
-                                        <TertiaryButton onClick={() => setStage('request')}>← Use a different email</TertiaryButton>
+                                        <TertiaryButton onClick={() => setStage('request')}>
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <Icon name="arrow-left" size={13} />
+                                                Use a different email
+                                            </span>
+                                        </TertiaryButton>
                                     </div>
                                 </div>
                             </div>
@@ -240,24 +248,8 @@ function PasswordResetPageInner() {
                                             </button>
                                         }
                                     />
-                                    <div className="flex items-center gap-2 -mt-2">
-                                        {[0, 1, 2, 3].map((i) => {
-                                            const filled = i < pwScore
-                                            const fillClass = !filled
-                                                ? 'bg-surface-container'
-                                                : pwScore <= 1
-                                                  ? 'bg-error-container'
-                                                  : pwScore === 2
-                                                    ? 'bg-secondary-soft'
-                                                    : 'bg-primary-container'
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className={`h-0.75 flex-1 rounded-[3px] transition-colors duration-200 ease-sheemu ${fillClass}`}
-                                                />
-                                            )
-                                        })}
-                                        <Eyebrow className="ml-1">{PW_LABELS[pwScore]}</Eyebrow>
+                                    <div className="-mt-2">
+                                        <PasswordStrength password={pw} />
                                     </div>
                                     <TextField
                                         label="Confirm password"
@@ -277,7 +269,7 @@ function PasswordResetPageInner() {
                                         {submitting ? 'Saving…' : 'Save new password'}
                                     </PrimaryButton>
                                     <div className="flex justify-center">
-                                        <TertiaryButton onClick={onBackToSignIn}>← Cancel</TertiaryButton>
+                                        <TertiaryButton onClick={onBackToSignIn}>Cancel</TertiaryButton>
                                     </div>
                                 </div>
                             </form>

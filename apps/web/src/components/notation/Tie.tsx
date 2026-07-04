@@ -2,6 +2,8 @@ import { memo } from 'react'
 
 import type { TieLayout, TieSegment } from '@/model/layout/TieLayout'
 
+import { NOTATION_INK } from './constants'
+
 /** Outer bezier control point Y offset (thinner edge of tie) */
 const TIE_CP1 = 8
 /** Inner bezier control point Y offset (thicker edge of tie) */
@@ -20,7 +22,7 @@ export const Tie = memo(function Tie({ layout, rowIndex }: TieProps) {
             {segments
                 .filter((segment) => segment.rowIndex === rowIndex)
                 .map((segment, i) => (
-                    <path key={i} d={segmentPath(segment, direction)} fill="#000" />
+                    <path key={i} d={segmentPath(segment, direction)} fill={NOTATION_INK} />
                 ))}
         </>
     )

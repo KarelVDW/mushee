@@ -30,7 +30,7 @@ export function LandingPage() {
             <FeatureGrid />
             <Pricing onGetStarted={() => onGetStarted('pricing')} />
             <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
-            <Footer />
+            <Footer width="marketing" />
         </div>
     )
 }
@@ -48,7 +48,7 @@ function LandingNav({
 }) {
     const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
     return (
-        <nav className="sticky top-0 z-50 bg-[rgba(246,246,246,0.85)] backdrop-blur-xl">
+        <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
             <div className="max-w-320 mx-auto px-8 py-5 flex justify-between items-center">
                 <Wordmark size={28} />
                 <div className="flex items-center gap-6">
@@ -62,7 +62,7 @@ function LandingNav({
                         Pricing
                     </a>
                     {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
-                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
+                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
                         {cta}
                     </PrimaryButton>
                 </div>
@@ -84,8 +84,7 @@ function Hero({
 }) {
     return (
         <section className="relative overflow-hidden pt-16 pb-20">
-            <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-[rgba(0,219,233,0.18)] rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute -bottom-[15%] -left-[5%] w-90 h-90 bg-[rgba(255,32,121,0.10)] rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
             <div className="max-w-320 mx-auto px-8 relative z-2 grid grid-cols-[1.05fr_1fr] gap-12 items-center">
                 <div className="flex flex-col gap-6">
                     <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Live audio-to-notation'}</Eyebrow>
@@ -221,7 +220,7 @@ function FeatureGrid() {
 
 function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
     return (
-        <section id="pricing" className="py-22 px-8 bg-surface-container-lowest">
+        <section id="pricing" className="py-22 px-8">
             <div className="max-w-320 mx-auto">
                 <div className="mb-12 text-center">
                     <Eyebrow className="text-primary">Pricing</Eyebrow>
@@ -261,12 +260,12 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
         <div
             className={[
                 'rounded-lg p-7 flex flex-col gap-4',
-                emphasis ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)' : 'bg-surface text-on-surface',
+                emphasis ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
             ].join(' ')}>
             <div className="flex justify-between items-start">
                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
                 {emphasis && (
-                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-container text-on-secondary-container px-2.5 py-1.5 rounded-full">
+                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-soft text-on-secondary-soft px-2.5 py-1.5 rounded-full">
                         Most picked
                     </span>
                 )}
@@ -295,7 +294,7 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
             </ul>
             <div className="mt-auto pt-2">
                 {emphasis ? (
-                    <PrimaryButton emphasis="pop" onClick={onGetStarted} fullWidth>
+                    <PrimaryButton onClick={onGetStarted} fullWidth>
                         {cta}
                     </PrimaryButton>
                 ) : (
@@ -311,7 +310,7 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
 function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void }) {
     return (
         <section className="py-24 px-8 relative overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] rounded-full bg-[rgba(0,219,233,0.18)] blur-[120px] pointer-events-none" />
+            <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
             <div className="max-w-190 mx-auto text-center relative z-2 flex flex-col gap-5 items-center">
                 <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
                     That melody in your head?

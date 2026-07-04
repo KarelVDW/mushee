@@ -45,15 +45,13 @@ export function CookieConsent() {
             <DialogScrim onDismiss={() => setSettingsOpen(false)}>
                 <DialogPanel
                     title="Cookie preferences"
-                    eyebrow="Choose what Sheemu may use. You can change this any time via 'Cookie settings' in the footer."
+                    subtitle="Choose what Sheemu may use. You can change this any time via 'Cookie settings' in the footer."
                     onClose={() => setSettingsOpen(false)}
                     width={520}
                     footer={
                         <>
                             <TertiaryButton onClick={() => decide(false)}>Essential only</TertiaryButton>
-                            <PrimaryButton emphasis="pop" onClick={() => decide(analyticsChoice)}>
-                                Save preferences
-                            </PrimaryButton>
+                            <PrimaryButton onClick={() => decide(analyticsChoice)}>Save preferences</PrimaryButton>
                         </>
                     }>
                     <div className="flex flex-col gap-5 pb-2">
@@ -94,7 +92,7 @@ export function CookieConsent() {
         <div
             role="dialog"
             aria-label="Cookie consent"
-            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto bg-[rgba(255,255,255,0.96)] backdrop-blur-md rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
+            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-55 flex flex-col gap-1.5">
                 <span className="font-label font-semibold text-[11px] leading-none tracking-[0.14em] uppercase text-on-surface-variant">
                     Cookies
@@ -108,12 +106,12 @@ export function CookieConsent() {
                     .
                 </p>
             </div>
+            {/* "Essential only" and "Accept all" carry equal visual weight — the GDPR-parity
+                the component promises. Only "Customize" steps back a level. */}
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <TertiaryButton onClick={() => setSettingsOpen(true)}>Customize</TertiaryButton>
                 <SecondaryButton onClick={() => decide(false)}>Essential only</SecondaryButton>
-                <PrimaryButton emphasis="pop" onClick={() => decide(true)}>
-                    Accept all
-                </PrimaryButton>
+                <SecondaryButton onClick={() => decide(true)}>Accept all</SecondaryButton>
             </div>
         </div>
     )

@@ -41,7 +41,7 @@ function DurationIcon({ dur }: { dur: DurationType }) {
     const stemX = noteX + nhWidth
     const stemY2 = noteY - ICON_STEM_HEIGHT
     return (
-        <svg width={10} height={18} viewBox="0 0 16 30">
+        <svg width={11} height={20} viewBox="0 0 16 30">
             {hasStem && <line x1={stemX} y1={noteY} x2={stemX} y2={stemY2} stroke="currentColor" strokeWidth={1.2} />}
             {flagName && <Glyph name={flagName} x={stemX} y={stemY2} fill="currentColor" />}
             <Glyph name={noteGlyph} x={noteX} y={noteY} fill="currentColor" />
@@ -66,9 +66,58 @@ function TupletIcon() {
     )
 }
 
-// --- ControlBar ---
+// --- Transport (lives in the editor header) ---
 
-interface ControlBarProps {
+interface TransportControlsProps {
+    playbackState: 'stopped' | 'playing' | 'paused'
+    onPlayToggle: () => void
+    onStop: () => void
+    recordingState: 'idle' | 'countoff' | 'recording'
+    onRecordToggle: () => void
+    metronome: boolean
+    onMetronomeToggle: () => void
+}
+
+export function TransportControls({
+    playbackState,
+    onPlayToggle,
+    onStop,
+    recordingState,
+    onRecordToggle,
+    metronome,
+    onMetronomeToggle,
+}: TransportControlsProps) {
+    const isRecording = recordingState !== 'idle'
+    const isPlaying = playbackState === 'playing'
+    const canStop = playbackState !== 'stopped' || isRecording
+
+    return (
+        <div className="flex items-center gap-2.5 shrink-0">
+            <TransportBtn size={30} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
+                <Icon name="square" size={12} />
+            </TransportBtn>
+            <TransportBtn
+                size={40}
+                tone="play"
+                active={isPlaying}
+                onClick={onPlayToggle}
+                ariaLabel={isPlaying ? 'Pause' : 'Play'}
+                disabled={isRecording}>
+                <Icon name={isPlaying ? 'pause' : 'play'} size={18} />
+            </TransportBtn>
+            <TransportBtn size={40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record">
+                <Icon name="circle" size={16} />
+            </TransportBtn>
+            <TransportBtn size={30} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
+                <Icon name="audio-lines" size={12} />
+            </TransportBtn>
+        </div>
+    )
+}
+
+// --- Note tool-dock (floats over the bottom of the score area) ---
+
+interface NoteToolDockProps {
     accidental: string | undefined
     duration: DurationType | undefined
     accidentalDisabled: boolean
@@ -90,16 +139,14 @@ interface ControlBarProps {
     keyFifths: number
     onKeySet: (fifths: number) => void
     selectionDisabled: boolean
-    playbackState: 'stopped' | 'playing' | 'paused'
-    onPlayToggle: () => void
-    onStop: () => void
-    recordingState: 'idle' | 'countoff' | 'recording'
-    onRecordToggle: () => void
-    metronome: boolean
-    onMetronomeToggle: () => void
 }
 
-export function ControlBar({
+/**
+ * The floating glass tool-dock from DESIGN.md: every selection-scoped edit control in one
+ * hand-held panel, hovering over the bottom of the score. Groups are separated by 1.5rem of
+ * space — no dividers — and the clef/key/tempo popovers open upward, away from the dock.
+ */
+export function NoteToolDock({
     accidental,
     duration,
     accidentalDisabled,
@@ -121,82 +168,53 @@ export function ControlBar({
     keyFifths,
     onKeySet,
     selectionDisabled,
-    playbackState,
-    onPlayToggle,
-    onStop,
-    recordingState,
-    onRecordToggle,
-    metronome,
-    onMetronomeToggle,
-}: ControlBarProps) {
-    const isRecording = recordingState !== 'idle'
-    const isPlaying = playbackState === 'playing'
-    const canStop = playbackState !== 'stopped' || isRecording
-    const playDisabled = isRecording
-
+}: NoteToolDockProps) {
     return (
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3.5 bg-surface-container-lowest tonal-layer-glow">
-            {/* LEFT — note input */}
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center pointer-events-none px-4">
+            <div
+                role="group"
+                aria-label="Note tools"
+                className="pointer-events-auto glass-panel tonal-layer-glow rounded-lg px-5 py-2.5 flex items-center justify-center flex-wrap gap-x-6 gap-y-2">
                 <Segmented
                     ariaLabel="Note duration"
                     value={duration}
                     onChange={(v) => v && onDurationChange(v)}
                     options={DURATIONS.map((d) => ({ value: d, label: <DurationIcon dur={d} /> }))}
                 />
-                <ChipToggle active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
-                    ·
-                </ChipToggle>
-                <ChipToggle active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
-                    <TupletIcon />
-                </ChipToggle>
-                <ChipToggle active={rest} onClick={onRestToggle} ariaLabel="Rest">
-                    <svg width={9} height={16} viewBox="0 0 16 30">
-                        <Glyph name="restQuarter" x={1} y={20} fill="currentColor" />
-                    </svg>
-                </ChipToggle>
+                <div className="flex items-center gap-1.5">
+                    <ChipToggle active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
+                        ·
+                    </ChipToggle>
+                    <ChipToggle active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
+                        <TupletIcon />
+                    </ChipToggle>
+                    <ChipToggle active={rest} onClick={onRestToggle} ariaLabel="Rest">
+                        <svg width={9} height={16} viewBox="0 0 16 30">
+                            <Glyph name="restQuarter" x={1} y={20} fill="currentColor" />
+                        </svg>
+                    </ChipToggle>
+                    <ChipToggle active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
+                        Tie
+                    </ChipToggle>
+                </div>
                 <Segmented
                     ariaLabel="Accidental"
                     value={accidental}
                     onChange={onAccidentalChange}
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
-                <ChipToggle active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
-                    Tie
-                </ChipToggle>
-            </div>
-
-            {/* CENTER — transport */}
-            <div className="flex items-center gap-3.5">
-                <TransportBtn size={36} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
-                    <Icon name="square" size={14} />
-                </TransportBtn>
-                <TransportBtn
-                    size={52}
-                    tone="play"
-                    active={isPlaying}
-                    onClick={onPlayToggle}
-                    ariaLabel={isPlaying ? 'Pause' : 'Play'}
-                    disabled={playDisabled}>
-                    <Icon name={isPlaying ? 'pause' : 'play'} size={24} />
-                </TransportBtn>
-                <TransportBtn size={68} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record">
-                    <Icon name="circle" size={28} />
-                </TransportBtn>
-                <TransportBtn size={36} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
-                    <Icon name="audio-lines" size={14} />
-                </TransportBtn>
-            </div>
-
-            {/* RIGHT — clef + key + tempo readout / editor */}
-            <div className="flex justify-end items-center gap-2">
-                <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} />
-                <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} />
-                <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} />
+                <div className="flex items-center gap-1.5">
+                    <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} />
+                    <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} />
+                    <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} />
+                </div>
             </div>
         </div>
     )
 }
+
+// Popovers open upward from the dock, clear of its glass panel.
+const POPOVER_POSITION = 'right-0 bottom-[calc(100%+0.75rem)]'
 
 // --- Clef control ---
 
@@ -219,7 +237,7 @@ function ClefControl({ clef, onSet, disabled }: ClefControlProps) {
                 <ClefPopover
                     active={clef}
                     anchorRef={anchorRef}
-                    className="right-0 top-[calc(100%+0.5rem)]"
+                    className={POPOVER_POSITION}
                     onSelect={(type) => {
                         onSet(type)
                         setOpen(false)
@@ -245,14 +263,18 @@ function KeySignatureControl({ fifths, onSet, disabled }: KeySignatureControlPro
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${keySignatureLabel(fifths)}`}>
+            <ChipToggle
+                active={open}
+                disabled={disabled}
+                onClick={() => setOpen((o) => !o)}
+                ariaLabel={`Key signature: ${keySignatureLabel(fifths)}`}>
                 {fifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureGlyph fifths={fifths} size={24} />}
             </ChipToggle>
             {open && (
                 <KeySignaturePopover
                     active={fifths}
                     anchorRef={anchorRef}
-                    className="right-0 top-[calc(100%+0.5rem)]"
+                    className={POPOVER_POSITION}
                     onSelect={(value) => {
                         onSet(value)
                         setOpen(false)
@@ -285,7 +307,7 @@ function TempoControl({ bpm, onSet, disabled }: TempoControlProps) {
                 <TempoPopover
                     initialBpm={bpm}
                     anchorRef={anchorRef}
-                    className="right-0 top-[calc(100%+0.5rem)]"
+                    className={POPOVER_POSITION}
                     onSubmit={(value) => {
                         onSet(value)
                         setOpen(false)

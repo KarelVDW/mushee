@@ -199,7 +199,7 @@ export default function OnboardingPage() {
                 {!done && step > 0 ? <TertiaryButton onClick={skip}>Skip for now</TertiaryButton> : <span />}
             </header>
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-2xl editorial-shadow px-12 py-10 flex flex-col gap-7">
+            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-12 py-10 flex flex-col gap-7">
                 {!done && <StepProgress step={step} total={STEP_COUNT} />}
 
                 {!done && step === 0 && (
@@ -224,10 +224,7 @@ export default function OnboardingPage() {
                                 </div>
                                 {otpError && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{otpError}</span>}
                                 <div className="flex gap-3 items-center flex-wrap">
-                                    <PrimaryButton
-                                        emphasis="pop"
-                                        disabled={!/^\d{6}$/.test(code) || verifying}
-                                        onClick={() => void submitCode()}>
+                                    <PrimaryButton disabled={!/^\d{6}$/.test(code) || verifying} onClick={() => void submitCode()}>
                                         {verifying ? 'Verifying…' : 'Verify'}
                                     </PrimaryButton>
                                     <TertiaryButton onClick={() => void resendCode()}>
@@ -255,7 +252,7 @@ export default function OnboardingPage() {
                         <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
                             <span
                                 className={[
-                                    'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-180 ease-sheemu',
+                                    'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-150 ease-sheemu',
                                     micState === 'granted'
                                         ? 'bg-primary-container text-on-primary-container'
                                         : micState === 'denied'
@@ -283,7 +280,6 @@ export default function OnboardingPage() {
                         <div className="flex gap-3 items-center flex-wrap">
                             {micState !== 'granted' && (
                                 <PrimaryButton
-                                    emphasis="pop"
                                     onClick={() => void requestMic()}
                                     disabled={micState === 'requesting'}
                                     icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
@@ -335,16 +331,7 @@ export default function OnboardingPage() {
                         subtitle="Helps us know what's working — entirely optional, no wrong answers.">
                         <div className="grid grid-cols-2 gap-2">
                             {REFERRAL_SOURCES.map(([k, label]) => (
-                                <button
-                                    key={k}
-                                    type="button"
-                                    onClick={() => setSource(k)}
-                                    className={[
-                                        'text-left border-0 rounded-md px-4 py-3 cursor-pointer font-body font-medium text-[14px] leading-[1.3]',
-                                        source === k ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-low text-on-surface',
-                                    ].join(' ')}>
-                                    {label}
-                                </button>
+                                <OptionCard key={k} active={source === k} onClick={() => setSource(k)} title={label} />
                             ))}
                         </div>
                         {source && (
@@ -374,7 +361,7 @@ export default function OnboardingPage() {
                         title="You're on the Beta plan."
                         subtitle="During the closed beta there's nothing to pick and nothing to pay — every account gets the same plan.">
                         <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                            <span className="w-12 h-12 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                            <span className="w-12 h-12 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
                                 <Icon name={BETA_PLAN.icon} size={22} />
                             </span>
                             <div className="flex flex-col gap-1.5">
@@ -434,7 +421,16 @@ export default function OnboardingPage() {
 
                 {!done && (
                     <div className="flex justify-between items-center pt-3">
-                        {step > 0 ? <TertiaryButton onClick={back}>← Back</TertiaryButton> : <span />}
+                        {step > 0 ? (
+                            <TertiaryButton onClick={back}>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Icon name="arrow-left" size={13} />
+                                    Back
+                                </span>
+                            </TertiaryButton>
+                        ) : (
+                            <span />
+                        )}
                         <PrimaryButton disabled={!canAdvance} icon="arrow-right" emphasis="pop" onClick={next}>
                             {step === STEP_COUNT - 1 ? 'Finish' : 'Continue'}
                         </PrimaryButton>
@@ -462,7 +458,7 @@ function StepProgress({ step, total }: { step: number; total: number }) {
                 <div
                     key={i}
                     className={[
-                        'h-1 rounded-sm flex-1 max-w-12 transition-colors duration-220 ease-sheemu',
+                        'h-1 rounded-sm flex-1 max-w-12 transition-colors duration-200 ease-sheemu',
                         i <= step ? 'bg-primary-container' : 'bg-surface-container',
                     ].join(' ')}
                 />
@@ -481,7 +477,8 @@ function OptionCard({ active, onClick, title, body }: { active?: boolean; onClic
             type="button"
             className={[
                 'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-sheemu',
-                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface editorial-shadow',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
             ].join(' ')}>
             <div className="flex flex-col gap-1">
                 <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>
@@ -540,11 +537,12 @@ function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active:
             type="button"
             aria-pressed={active}
             className={[
-                'relative text-left border-0 rounded-lg px-4.5 pt-5 pb-4.5 cursor-pointer flex flex-col gap-3.5 transition-all duration-160 ease-sheemu',
-                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface editorial-shadow',
+                'relative text-left border-0 rounded-lg px-4.5 pt-5 pb-4.5 cursor-pointer flex flex-col gap-3.5 transition-all duration-150 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
             ].join(' ')}>
             {plan.popular && (
-                <span className="absolute -top-2.5 right-3.5 bg-secondary-container text-on-secondary-container font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
+                <span className="absolute -top-2.5 right-3.5 bg-secondary-soft text-on-secondary-soft font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
                     Most picked
                 </span>
             )}

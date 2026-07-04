@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+import { Glyph, INTERACTION_BLUE } from '@/components/notation'
+
 /**
  * The hero demo: a looping re-creation of a real recording session in the
  * Sheemu editor — REC indicator running, waveform moving, and the notes of a
@@ -83,14 +85,12 @@ export function HeroDemo() {
                 {/* The staff, filling in as "you" play */}
                 <svg viewBox="0 0 640 165" width="100%">
                     {[0, 1, 2, 3, 4].map((i) => (
-                        <line key={i} x1={16} x2={624} y1={55 + i * 10} y2={55 + i * 10} stroke="#2d2f2f" strokeWidth={1} />
+                        <line key={i} x1={16} x2={624} y1={55 + i * 10} y2={55 + i * 10} stroke="var(--color-on-surface)" strokeWidth={1} />
                     ))}
                     {/* Barlines: two measures + final */}
-                    <line x1={358} x2={358} y1={55} y2={95} stroke="#2d2f2f" strokeWidth={1} />
-                    <line x1={624} x2={624} y1={55} y2={95} stroke="#2d2f2f" strokeWidth={1.6} />
-                    <text x={22} y={92} fontFamily="serif" fontSize={54} fill="#2d2f2f">
-                        𝄞
-                    </text>
+                    <line x1={358} x2={358} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1} />
+                    <line x1={624} x2={624} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1.6} />
+                    <Glyph name="gClef" x={26} y={85} fill="var(--color-on-surface)" />
 
                     {NOTES.map((note, i) => {
                         const visible = i < visibleNotes
@@ -109,7 +109,7 @@ export function HeroDemo() {
                                     cy={note.cy}
                                     rx={5.5}
                                     ry={4.2}
-                                    fill={isNewest ? '#005359' : '#2d2f2f'}
+                                    fill={isNewest ? INTERACTION_BLUE : 'var(--color-on-surface)'}
                                     transform={`rotate(-15 ${note.x} ${note.cy})`}
                                 />
                                 <line
@@ -117,10 +117,10 @@ export function HeroDemo() {
                                     x2={stemUp ? note.x + 5 : note.x - 5}
                                     y1={note.cy}
                                     y2={stemUp ? note.cy - 30 : note.cy + 30}
-                                    stroke={isNewest ? '#005359' : '#2d2f2f'}
+                                    stroke={isNewest ? INTERACTION_BLUE : 'var(--color-on-surface)'}
                                     strokeWidth={1.4}
                                 />
-                                {isNewest && <circle cx={note.x} cy={note.cy} r={11} fill="rgba(0,219,233,0.25)" />}
+                                {isNewest && <circle cx={note.x} cy={note.cy} r={11} fill={INTERACTION_BLUE} opacity={0.2} />}
                             </g>
                         )
                     })}
@@ -128,8 +128,8 @@ export function HeroDemo() {
                     {/* Playhead following the transcription */}
                     {recording && (
                         <g style={{ transform: `translateX(${playheadX}px)`, transition: 'transform 500ms cubic-bezier(0.2,0.8,0.2,1)' }}>
-                            <line x1={0} x2={0} y1={42} y2={108} stroke="#00dbe9" strokeWidth={2} />
-                            <circle cx={0} cy={42} r={3.5} fill="#00dbe9" />
+                            <line x1={0} x2={0} y1={42} y2={108} stroke={INTERACTION_BLUE} strokeWidth={2} />
+                            <circle cx={0} cy={42} r={3.5} fill={INTERACTION_BLUE} />
                         </g>
                     )}
                 </svg>

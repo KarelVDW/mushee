@@ -39,7 +39,7 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
         <DialogScrim>
             <DialogPanel
                 title="Your account is set to be deleted."
-                eyebrow={`Everything will be permanently deleted on ${purgeDate}.`}
+                subtitle={`Everything will be permanently deleted on ${purgeDate}.`}
                 width={520}
                 footer={
                     <>

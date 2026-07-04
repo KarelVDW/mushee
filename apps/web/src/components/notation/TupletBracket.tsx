@@ -2,7 +2,7 @@ import { memo } from 'react'
 
 import type { Tuplet } from '@/model'
 
-import { TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP, TUPLET_NUMBER_SCALE } from './constants'
+import { NOTATION_INK, TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP, TUPLET_NUMBER_SCALE } from './constants'
 import { Glyph } from './Glyph'
 
 export const TupletBracket = memo(function TupletBracket({ tuplet }: { tuplet: Tuplet; layoutId: string }) {
@@ -15,15 +15,15 @@ export const TupletBracket = memo(function TupletBracket({ tuplet }: { tuplet: T
             {bracketed && (
                 <>
                     {/* Left vertical tick */}
-                    <rect x={x1} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill="#000" />
+                    <rect x={x1} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill={NOTATION_INK} />
                     {/* Left horizontal line */}
-                    {centerX - numberHalfWidth > x1 && <rect x={x1} y={y} width={centerX - numberHalfWidth - x1} height={1} fill="#000" />}
+                    {centerX - numberHalfWidth > x1 && <rect x={x1} y={y} width={centerX - numberHalfWidth - x1} height={1} fill={NOTATION_INK} />}
                     {/* Right horizontal line */}
                     {x2 > centerX + numberHalfWidth && (
-                        <rect x={centerX + numberHalfWidth} y={y} width={x2 - (centerX + numberHalfWidth)} height={1} fill="#000" />
+                        <rect x={centerX + numberHalfWidth} y={y} width={x2 - (centerX + numberHalfWidth)} height={1} fill={NOTATION_INK} />
                     )}
                     {/* Right vertical tick */}
-                    <rect x={x2} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill="#000" />
+                    <rect x={x2} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill={NOTATION_INK} />
                 </>
             )}
 

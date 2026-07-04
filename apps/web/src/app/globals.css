@@ -90,10 +90,12 @@ body {
     font-family: var(--font-body);
 }
 
-/* Atmospheric Shadow — tinted with on_surface, never black. */
-.tonal-layer-glow,
+/* Atmospheric Shadows — tinted with on_surface, never black. */
+.tonal-layer-glow {
+    box-shadow: var(--shadow-tonal);
+}
 .editorial-shadow {
-    box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+    box-shadow: var(--shadow-editorial);
 }
 
 .manuscript-canvas {
@@ -105,42 +107,6 @@ body {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-}
-
-/* Input bottom-only animated stroke. */
-.input-field-container {
-    position: relative;
-}
-.input-field-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background-color: var(--color-primary-container);
-    transition:
-        width 0.3s var(--ease-sheemu),
-        left 0.3s var(--ease-sheemu);
-    transform: translateX(-50%);
-}
-.input-field-container:focus-within::after {
-    width: 100%;
-    left: 0;
-    transform: none;
-}
-.input-field {
-    border: none !important;
-    box-shadow: none !important;
-}
-.input-field:focus {
-    outline: none !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.ghost-border {
-    border: 1px solid rgba(172, 173, 173, 0.15);
 }
 
 @keyframes sheemu-spin {

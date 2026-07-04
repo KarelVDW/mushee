@@ -72,7 +72,7 @@ export function Toaster() {
                     key={toast.id}
                     className={[
                         'pointer-events-auto flex items-center gap-3 max-w-xl',
-                        'bg-surface-container-lowest/85 backdrop-blur-[12px] rounded-xl editorial-shadow',
+                        'bg-surface-container-lowest/85 backdrop-blur-[12px] rounded-lg editorial-shadow',
                         'pl-3 pr-2 py-2.5',
                     ].join(' ')}>
                     <span

@@ -3,20 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-import { DialogPanel, DialogScrim, Eyebrow, Icon, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
+import { DialogPanel, DialogScrim, Icon, PasswordStrength, PrimaryButton, scorePassword, TertiaryButton, TextField } from '@/components/ui'
 import { changePassword } from '@/lib/auth-client'
-
-const PW_LABELS = ['Too short', 'Weak', 'OK', 'Strong', 'Strong'] as const
-
-function scorePassword(pw: string): number {
-    if (!pw) return 0
-    let s = 0
-    if (pw.length >= 8) s++
-    if (pw.length >= 12) s++
-    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++
-    if (/\d/.test(pw) || /[^A-Za-z0-9]/.test(pw)) s++
-    return Math.min(s, 4)
-}
 
 interface ChangePasswordDialogProps {
     onCancel: () => void
@@ -70,20 +58,18 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title={saved ? 'Password updated.' : 'Change password'}
-                eyebrow={
+                subtitle={
                     saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'
                 }
                 onClose={saved ? undefined : onCancel}
                 width={480}
                 footer={
                     saved ? (
-                        <PrimaryButton emphasis="pop" onClick={onSuccess}>
-                            Done
-                        </PrimaryButton>
+                        <PrimaryButton onClick={onSuccess}>Done</PrimaryButton>
                     ) : (
                         <>
                             <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                            <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={() => void submit()}>
+                            <PrimaryButton disabled={!canSubmit} onClick={() => void submit()}>
                                 {submitting ? 'Updating…' : 'Update password'}
                             </PrimaryButton>
                         </>
@@ -116,24 +102,8 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
                             placeholder="••••••••••••"
                             rightSlot={eye}
                         />
-                        <div className="flex items-center gap-2 -mt-2">
-                            {[0, 1, 2, 3].map((i) => {
-                                const filled = i < pwScore
-                                const tone = !filled
-                                    ? 'bg-surface-container'
-                                    : pwScore <= 1
-                                      ? 'bg-error-container'
-                                      : pwScore === 2
-                                        ? 'bg-secondary-soft'
-                                        : 'bg-primary-container'
-                                return (
-                                    <div
-                                        key={i}
-                                        className={`h-0.75 flex-1 rounded-[3px] transition-colors duration-200 ease-sheemu ${tone}`}
-                                    />
-                                )
-                            })}
-                            <Eyebrow className="ml-1">{PW_LABELS[pwScore]}</Eyebrow>
+                        <div className="-mt-2">
+                            <PasswordStrength password={next} />
                         </div>
                         <TextField
                             label="Confirm new password"

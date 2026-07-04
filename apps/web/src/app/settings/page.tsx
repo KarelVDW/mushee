@@ -5,20 +5,17 @@ import { type ReactNode, useEffect, useState } from 'react'
 
 import {
     Alert,
-    Eyebrow,
     Footer,
     Icon,
     PageHeader,
     PrimaryButton,
     SecondaryButton,
     showToast,
-    Switch,
     TertiaryButton,
-    TextArea,
     TextField,
     TopNav,
 } from '@/components/ui'
-import { signOut, useSession } from '@/lib/auth-client'
+import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
 import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 
@@ -26,7 +23,7 @@ import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { ChangePlanDialog } from './ChangePlanDialog'
 import { DeleteAccountDialog } from './DeleteAccountDialog'
 
-type Tab = 'profile' | 'editor' | 'notifications' | 'account'
+type Tab = 'profile' | 'account'
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -34,15 +31,28 @@ export default function SettingsPage() {
     const [tab, setTab] = useState<Tab>('profile')
 
     const [name, setName] = useState(session?.user?.name ?? '')
-    const [email, setEmail] = useState(session?.user?.email ?? '')
-    const [bio, setBio] = useState('')
-    const [autosave, setAutosave] = useState(true)
-    const [metronome, setMetronome] = useState(false)
-    const [defaultBpm, setDefaultBpm] = useState(120)
-    const [emails, setEmails] = useState(true)
-    const [tips, setTips] = useState(true)
+    const [saving, setSaving] = useState(false)
     const [changePwOpen, setChangePwOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
+
+    // The session usually resolves after first render — sync the form once it does.
+    const sessionName = session?.user?.name
+    useEffect(() => {
+        if (sessionName !== undefined) setName(sessionName)
+    }, [sessionName])
+
+    async function handleSaveProfile() {
+        setSaving(true)
+        try {
+            const { error } = await updateUser({ name: name.trim() })
+            if (error) throw new Error(error.message ?? 'Update failed')
+            showToast('Profile updated.', 'info')
+        } catch {
+            showToast("Your profile couldn't be saved. Please try again.")
+        } finally {
+            setSaving(false)
+        }
+    }
 
     // Coming back from a successful Polar checkout: land on the account tab.
     useEffect(() => {
@@ -63,67 +73,40 @@ export default function SettingsPage() {
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
 
             <main className="flex-1 max-w-5xl mx-auto px-8 py-10 flex flex-col gap-8 w-full box-border">
-                <PageHeader title="Settings" subtitle="Tweak your profile, defaults, and account." />
+                <PageHeader title="Settings" subtitle="Tweak your profile and account." />
 
                 <div className="grid grid-cols-[220px_1fr] gap-8 items-start">
                     <SideNav tab={tab} onTab={setTab} />
                     <div className="flex flex-col gap-4">
                         {tab === 'profile' && (
-                            <Section title="Profile" subtitle="What collaborators see when you share a score.">
+                            <Section title="Profile" subtitle="How you appear across Sheemu.">
                                 <div className="flex items-center gap-4">
                                     <Avatar name={name || 'You'} />
-                                    <SecondaryButton>Change photo</SecondaryButton>
                                 </div>
                                 <TextField label="Display name" value={name} onChange={setName} />
-                                <TextField label="Email" value={email} onChange={setEmail} type="email" />
-                                <TextArea label="Short bio" value={bio} onChange={setBio} rows={3} />
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                                        Email
+                                    </span>
+                                    <span className="font-body font-normal text-[14px] leading-none text-on-surface py-1">
+                                        {session?.user?.email ?? '—'}
+                                    </span>
+                                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                                        Your sign-in email. Contact support to change it.
+                                    </span>
+                                </div>
                                 <div className="flex justify-end">
-                                    <PrimaryButton emphasis="pop">Save changes</PrimaryButton>
+                                    <PrimaryButton onClick={() => void handleSaveProfile()} disabled={saving || !name.trim()}>
+                                        {saving ? 'Saving…' : 'Save changes'}
+                                    </PrimaryButton>
                                 </div>
-                            </Section>
-                        )}
-
-                        {tab === 'editor' && (
-                            <Section title="Editor defaults" subtitle="Applied to every new score you create.">
-                                <Switch checked={autosave} onChange={setAutosave} label="Autosave changes as I edit" />
-                                <Switch checked={metronome} onChange={setMetronome} label="Show metronome by default" />
-                                <div className="flex flex-col gap-2">
-                                    <Eyebrow>Default tempo</Eyebrow>
-                                    <div className="flex gap-1.5">
-                                        {[60, 90, 120, 144].map((bpm) => {
-                                            const active = defaultBpm === bpm
-                                            return (
-                                                <button
-                                                    key={bpm}
-                                                    type="button"
-                                                    onClick={() => setDefaultBpm(bpm)}
-                                                    className={[
-                                                        'border-0 rounded-sm px-4 py-2 cursor-pointer',
-                                                        'font-mono font-medium text-[14px] leading-none',
-                                                        active
-                                                            ? 'bg-primary-container text-on-primary-container'
-                                                            : 'bg-surface-container-low text-on-surface',
-                                                    ].join(' ')}>
-                                                    {bpm} bpm
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </Section>
-                        )}
-
-                        {tab === 'notifications' && (
-                            <Section title="Notifications" subtitle="We keep these light. Promise.">
-                                <Switch checked={emails} onChange={setEmails} label="Product updates by email" />
-                                <Switch checked={tips} onChange={setTips} label="Occasional composition tips" />
                             </Section>
                         )}
 
                         {tab === 'account' && (
                             <>
                                 <BillingSection />
-                                <Section title="Password" subtitle="Last changed a while ago.">
+                                <Section title="Password" subtitle="Update the password you use to sign in.">
                                     <div>
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
                                     </div>
@@ -193,7 +176,7 @@ function BillingSection() {
     if (isPending) {
         return (
             <Section title="Plan & billing" subtitle="Loading your subscription…">
-                <div className="h-20 bg-surface-container-low rounded-[10px] animate-pulse" />
+                <div className="h-20 bg-surface-container-low rounded-md animate-pulse" />
             </Section>
         )
     }
@@ -228,8 +211,8 @@ function BillingSection() {
                     ? 'Sheemu is in closed beta — your plan is on the house. Paid plans arrive at launch.'
                     : `You're on the ${billing.tierName} plan. Payments are handled securely by Polar.`
             }>
-            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-[10px]">
-                <span className="w-11 h-11 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-md">
+                <span className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                     <Icon name={isBeta ? BETA_PLAN.icon : plan.icon} size={20} />
                 </span>
                 <div className="flex flex-col gap-0.5 flex-1">
@@ -237,9 +220,7 @@ function BillingSection() {
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{priceLine}</span>
                 </div>
                 {!isBeta && billing.billingConfigured && !billing.betaMode && (
-                    <PrimaryButton emphasis="pop" onClick={() => setChangePlanOpen(true)}>
-                        Change plan
-                    </PrimaryButton>
+                    <PrimaryButton onClick={() => setChangePlanOpen(true)}>Change plan</PrimaryButton>
                 )}
             </div>
 
@@ -302,8 +283,6 @@ function CreditsMeter({ limit, used }: { limit: number | null; used: number }) {
 function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
     const items: [Tab, string, string][] = [
         ['profile', 'Profile', 'user'],
-        ['editor', 'Editor defaults', 'sliders-horizontal'],
-        ['notifications', 'Notifications', 'bell'],
         ['account', 'Account', 'shield'],
     ]
     return (
@@ -319,7 +298,9 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'border-0 rounded-md px-3.5 py-2.5 text-left cursor-pointer',
                             'flex items-center gap-2.5',
                             'font-body font-medium text-[14px] leading-none',
-                            active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant',
+                            'transition-colors duration-150 ease-sheemu',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                            active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface',
                         ].join(' ')}>
                         <Icon name={icon} size={16} />
                         {label}
@@ -332,7 +313,7 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
 function Section({ title, subtitle, children }: { title: ReactNode; subtitle?: ReactNode; children: ReactNode }) {
     return (
-        <section className="bg-surface-container-lowest rounded-lg editorial-shadow p-7 flex flex-col gap-5">
+        <section className="bg-surface-container-lowest rounded-lg tonal-layer-glow p-7 flex flex-col gap-5">
             <div className="flex flex-col gap-1">
                 <h3 className="font-headline font-semibold text-[18px] leading-[1.2] text-on-surface m-0">{title}</h3>
                 {subtitle && <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">{subtitle}</span>}

@@ -35,7 +35,7 @@ export function ChangeInstrumentDialog({ open, current, onCancel, onConfirm }: C
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title="Change instrument"
-                eyebrow={`Currently ${current.displayName}.`}
+                subtitle={`Currently ${current.displayName}.`}
                 onClose={onCancel}
                 width={620}
                 footer={

@@ -106,14 +106,12 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className,
                 className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft">
                 <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
                     <span
-                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-[120ms] ease-sheemu"
+                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-sheemu"
                         style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
                     />
                     Tap along
                 </span>
-                <span className="font-serif italic font-normal text-[20px] leading-[1.2] tracking-[-0.01em]">
-                    Click or tap the spacebar in tempo
-                </span>
+                <span className="font-body font-medium text-[15px] leading-[1.3]">Click or tap the spacebar in tempo</span>
             </button>
 
             <div className="flex items-stretch gap-2">
@@ -133,9 +131,7 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className,
                     </span>
                     <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
                 </div>
-                <PrimaryButton onClick={commit} emphasis="pop">
-                    Set
-                </PrimaryButton>
+                <PrimaryButton onClick={commit}>Set</PrimaryButton>
             </div>
         </div>
     )

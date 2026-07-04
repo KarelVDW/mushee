@@ -24,16 +24,11 @@ export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialo
             setInstrument(Instrument.Piano)
             return
         }
+        // DialogScrim focuses its panel on mount; steal focus back to the title field
+        // right after, so typing can start immediately. (Escape is handled by the scrim.)
         const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 0)
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onCancel()
-        }
-        window.addEventListener('keydown', handleEsc)
-        return () => {
-            clearTimeout(focusTimer)
-            window.removeEventListener('keydown', handleEsc)
-        }
-    }, [open, onCancel])
+        return () => clearTimeout(focusTimer)
+    }, [open])
 
     if (!open) return null
 
@@ -49,13 +44,13 @@ export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialo
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title="New score"
-                eyebrow="Give it a name and pick a lead instrument."
+                subtitle="Give it a name and pick a lead instrument."
                 onClose={onCancel}
                 width={620}
                 footer={
                     <>
                         <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                        <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={submit}>
+                        <PrimaryButton disabled={!canSubmit} onClick={submit}>
                             Create score
                         </PrimaryButton>
                     </>
@@ -66,7 +61,6 @@ export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialo
                         value={title}
                         onChange={setTitle}
                         placeholder="Untitled composition"
-                        autoFocus
                         inputRef={titleInputRef}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && canSubmit) submit()

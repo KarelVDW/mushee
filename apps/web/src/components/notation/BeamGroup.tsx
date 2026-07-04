@@ -2,6 +2,8 @@ import { memo } from 'react'
 
 import type { BeamLayout } from '@/model/layout/BeamLayout'
 
+import { NOTATION_INK } from './constants'
+
 export const BeamGroup = memo(function BeamGroup({ beam }: { beam: BeamLayout; layoutId: string }) {
     const segments = [beam.primary, ...beam.secondaries]
 
@@ -11,7 +13,7 @@ export const BeamGroup = memo(function BeamGroup({ beam }: { beam: BeamLayout; l
                 <path
                     key={i}
                     d={`M${seg.x1} ${seg.y1} L${seg.x1} ${seg.y1 + seg.thickness} L${seg.x2} ${seg.y2 + seg.thickness} L${seg.x2} ${seg.y2} Z`}
-                    fill="#000"
+                    fill={NOTATION_INK}
                 />
             ))}
         </g>

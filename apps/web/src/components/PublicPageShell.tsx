@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-import { Footer, Wordmark } from '@/components/ui'
+import { Footer, Icon, Wordmark } from '@/components/ui'
 
 /**
  * Shared chrome for public content pages (privacy, terms, contact): slim nav
@@ -18,13 +18,16 @@ export function PublicPageShell({
 }) {
     return (
         <div className="bg-surface min-h-screen flex flex-col">
-            <nav className="sticky top-0 z-50 bg-[rgba(246,246,246,0.85)] backdrop-blur-xl">
+            <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
                 <div className="max-w-320 mx-auto px-8 py-5 flex justify-between items-center">
                     <Link href="/" className="no-underline">
                         <Wordmark size={28} />
                     </Link>
-                    <Link href="/" className="font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline">
-                        ← Back to sheemu
+                    <Link
+                        href="/"
+                        className="inline-flex items-center gap-1.5 font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline hover:text-on-surface transition-colors duration-150 ease-sheemu">
+                        <Icon name="arrow-left" size={14} />
+                        Back to Sheemu
                     </Link>
                 </div>
             </nav>
@@ -35,7 +38,7 @@ export function PublicPageShell({
                 )}
                 <article className="legal-prose mt-8">{children}</article>
             </main>
-            <Footer />
+            <Footer width="marketing" />
         </div>
     )
 }

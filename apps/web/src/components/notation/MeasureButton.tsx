@@ -22,7 +22,7 @@ export function MeasureButton({
             }}
             style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
             opacity={disabled ? 0.3 : 1}>
-            <rect x={x} y={y} width={size} height={size} rx={2} fill="white" stroke="#d1d5db" strokeWidth={0.75} />
+            <rect x={x} y={y} width={size} height={size} rx={2} fill="white" stroke="#dbdddd" strokeWidth={0.75} />
             <text
                 x={x + size / 2}
                 y={y + size / 2}
@@ -31,7 +31,7 @@ export function MeasureButton({
                 fontSize={size * 0.7}
                 fontFamily="system-ui, sans-serif"
                 fontWeight={500}
-                fill="#374151"
+                fill="#5a5c5c"
                 style={{ userSelect: 'none' }}>
                 {label}
             </text>

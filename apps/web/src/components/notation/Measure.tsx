@@ -5,18 +5,18 @@ import type { Measure as MeasureModel, Note } from '@/model'
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { INTERACTION_BLUE, INTERACTION_BLUE_BAND, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { KeySignature } from './KeySignature'
 import { NoteGroup } from './NoteGroup'
 import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
 
-const CURSOR_COLOR = '#1e90ff'
+const CURSOR_COLOR = INTERACTION_BLUE
 
 // Selection highlight band: a soft, rounded blue strip behind selected noteheads. Its height
 // spans the staff (matching the playback cursor); adjacent selected notes' bands abut into a
 // continuous run because each spans the full gap to the next note.
-const SELECTION_FILL = 'rgba(30, 144, 255, 0.14)'
+const SELECTION_FILL = INTERACTION_BLUE_BAND
 const SELECTION_BAND_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 6
 const SELECTION_BAND_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 12
 

@@ -5,6 +5,7 @@ import { type FormEvent, type ReactNode } from 'react'
 
 import { Wordmark } from './Brand'
 import { PrimaryButton, TertiaryButton } from './Buttons'
+import { Alert } from './Feedback'
 import { Icon } from './Icon'
 import { TextField } from './Inputs'
 
@@ -30,7 +31,7 @@ interface AuthCardProps {
 export function AuthCard(props: AuthCardProps) {
     const isSignup = props.mode === 'signup'
     return (
-        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-2xl editorial-shadow flex overflow-hidden min-h-145 relative">
+        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex overflow-hidden min-h-145 relative">
             <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
             <BrandPanel mode={props.mode} />
             <FormPanel {...props} isSignup={isSignup} />
@@ -120,7 +121,7 @@ function FormPanel({
                                 </Link>
                             </div>
                         )}
-                        {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
+                        {error && <Alert>{error}</Alert>}
                     </div>
 
                     <div className="flex flex-col gap-3.5 pt-2">

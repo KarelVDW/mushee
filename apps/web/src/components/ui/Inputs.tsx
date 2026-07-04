@@ -150,6 +150,7 @@ export function Chip({ active, onClick, children, ariaLabel, size = 'sm' }: Chip
             className={[
                 'inline-flex items-center gap-1.5 whitespace-nowrap leading-none rounded-full border-0',
                 'transition-colors duration-150 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 interactive ? 'cursor-pointer' : 'cursor-default',
                 palette,
                 sizing,

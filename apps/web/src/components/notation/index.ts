@@ -1,5 +1,5 @@
 export { ClefGlyph, ClefPopover } from './ClefPopover'
-export { CLEF_DEFS, GLYPH_SCALE } from './constants'
+export { CLEF_DEFS, GLYPH_SCALE, INTERACTION_BLUE, NOTATION_INK } from './constants'
 export { Glyph } from './Glyph'
 export { getGlyphWidth } from './glyph-utils'
 export { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from './KeySignaturePopover'

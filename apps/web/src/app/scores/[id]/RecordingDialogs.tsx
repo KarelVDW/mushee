@@ -46,7 +46,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title={`You've used today's ${fmtRecTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
-                eyebrow={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
+                subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
                 onClose={onClose}
                 width={480}
                 footer={
@@ -99,7 +99,7 @@ export function ConcurrentRecordingDialog({ onClose }: ConcurrentRecordingDialog
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title="One recording at a time."
-                eyebrow="Your account already has a recording running — maybe in another tab, or on another device."
+                subtitle="Your account already has a recording running — maybe in another tab, or on another device."
                 onClose={onClose}
                 width={480}
                 footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>

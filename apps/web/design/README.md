@@ -104,20 +104,20 @@ A **white-on-white** layering system punctuated by two accent colors. Accents ar
 | **`primary_container`**     | **`#00DBE9`** Cyan    | LOUD primary fill — CTAs, focus indicators, active tab underline.            |
 | `primary_soft`              | `#A6F2F7`             | QUIET cyan fill — feature-icon circles, BPM tap pad, large selectable cards. |
 | `primary`                   | `#00666d`             | Primary text on pale surfaces (links).                                       |
-| **`secondary_container`**   | **`#FF2079`** Magenta | The signature drop-shadow on the hero CTA, active genre/instrument chips.    |
+| **`secondary_container`**   | **`#FF2079`** Magenta | The signature drop-shadow on the hero CTA.                                   |
 | `secondary_soft`            | `#FFADBF`             | QUIET magenta fill — avatar initials, "you" tags, instrument pills.          |
 | `secondary`                 | `#b60052`             | Destructive text (Sign out, Delete).                                         |
 | `error` / `error_container` | `#b31b25` / `#fb5151` | Form errors.                                                                 |
 
 **The no-line rule.** Never use a 1px solid border to section UI. Define boundaries with **tonal shifts** between surfaces. A sidebar at `surface_container_low` against a `surface` background creates a "molded" lift, not a boxed-in feel. Only exception: `outline_variant` at 15% opacity ("ghost border") for accessibility-critical containers.
 
-**The sanctuary rule.** The score editor canvas is _strictly_ `#ffffff` with `#2d2f2f` notes. **No cyan, no magenta in the editor area.** That space stays monochrome for cognitive focus.
+**The sanctuary rule.** The score editor canvas is _strictly_ `#ffffff` with `#2d2f2f` ink (`NOTATION_INK`) — never pure black. **No cyan, no magenta in the editor area.** Transient interaction overlays (selection bands, cursors, live waveform) use the one sanctioned third color, `INTERACTION_BLUE` (`#1e90ff`), and are excluded from exports. Editor chrome is a single slim header (transport centred) plus the floating glass **tool-dock** of note tools over the bottom of the score; its popovers open upward.
 
 **The three-intensity accent rule.** Each accent comes in three intensities — pick by the size _and_ interactivity of the surface:
 
 1. **`*-container`** (`#00DBE9` / `#FF2079`) — **LOUD fill.** Reserved for interactive surfaces that should read as "the action": primary buttons, focus indicators, the active-tab underline, the magenta drop-shadow on the hero CTA. At most one or two on a surface.
 2. **`*-soft`** (`#A6F2F7` / `#FFADBF`) — **QUIET fill.** Used when the loud fill would dominate. Two cases:
-    - Small **non-clickable identity tags** — avatar initials, instrument pills, "you" badges, status chips. Magenta-container on these reads as a call to action when it shouldn't.
+    - Small **identity/status tags** — avatar initials, instrument pills, "you" badges, status chips, and the **active state of selectable chips**. Magenta-container on these reads as a call to action when it shouldn't — and its `on-` text fails WCAG AA at chip sizes.
     - **Large selectable / focusable surfaces** where the full neon would shout — onboarding option cards, feature-icon circles on the marketing surface, the BPM tap pad, multi-select chips at rest. Pair with `on-*-soft` for text and iconography (both clear WCAG AA on the soft fill).
 3. **bare `primary` / `secondary`** (`#00666d` / `#b60052`) — **ACCENT TEXT.** Foreground only — link text, eyebrow accents, step numbers, hover-darkened states on cyan/magenta-fill buttons, the destructive `Sign out` text. The neons themselves do not pass WCAG AA as text on white (cyan-on-white is ~1.6:1).
 
@@ -159,10 +159,14 @@ Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline
 - Durations: `150ms` (--t-quick) for hover color, `220ms` (--t-snap) for shadow lift, `300ms` (--t-flow) for tab/border-width transitions.
 - **Selected & hovered states must shift _away_ from the page background, not toward it.** Hovered list rows go from `surface_container_lowest` (#fff) up to `surface_container_high` (#e1e3e3) — never to `surface_container_low` (#f0f1f1), which is too close to the page's `surface` (#f6f6f6) and reads as blended. The same rule applies to split-panel layouts (auth, settings): the standout panel uses `surface_container_high`, not `low`, to register clearly against the page.
 
-**The signature interaction (reserved):** the hero CTA on each surface — opt-in via `emphasis="pop"` — translates `-2px` on hover and grows its magenta drop-shadow from `3px 3px` to `5px 5px`. Use this on **at most one or two key actions per surface** — typically the hero CTA, plus the "create" action in the top nav of authenticated views. Don't pop every primary button.
+**The signature interaction (reserved):** the hero CTA on each surface — opt-in via `emphasis="pop"` — translates `-2px` on hover and grows its magenta drop-shadow from `3px 3px` to `5px 5px`. Aim for **at most one pop visible per viewport**: the landing hero and final CTA, the "create" action in the top nav of authenticated views, a flow's single closing CTA. Dialog confirms, section actions, and utility buttons stay flat. Don't pop every primary button.
 
 - Input fields animate a **2px primary-cyan bar** from 0 → 100% width along the bottom on focus.
 - No bounces, no spring physics, no fade-up-on-scroll. Motion is sharp and quiet.
+
+### Focus
+
+Every interactive element carries the shared keyboard-focus ring: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary` — the dark teal reads on white and on both neon fills. Dialogs are built from `DialogScrim`/`DialogPanel`, which own the modal a11y contract (role/aria-modal/labelling, focus trap, Escape, focus restore).
 
 ### Hover & press states
 
@@ -171,7 +175,7 @@ Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline
 | Hero CTA (`emphasis="pop"`) | `-translate-y-[2px]`, shadow grows 3px→5px                                                                          | (no extra; it's already lifted) |
 | Standard primary button     | bg darkens slightly                                                                                                 | bg darkens further              |
 | Icon button                 | bg `surface_container_high` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)         | —                               |
-| List row                    | bg `surface_container_lowest` → `surface_container_low`, plus a 4px-wide cyan accent stripe slides in from the left | —                               |
+| List row                    | bg `surface_container_lowest` → `surface_container_high`, plus a 4px-wide cyan accent stripe slides in from the left | —                               |
 | Tab text                    | `on_surface_variant` → `on_surface`; active tab gains a 3px cyan underline                                          | —                               |
 | Sign-out / destructive text | `on_surface` → `secondary` (magenta)                                                                                | —                               |
 
@@ -198,7 +202,7 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 ### Transparency & blur
 
 - **Glassmorphism** is reserved for **floating tool-docks** and **dialog overlays**: `surface_container_lowest` at 85% opacity + `backdrop-filter: blur(12px)`. No other use.
-- The dialog scrim is `bg-on-surface/40 backdrop-blur-sm` — soft charcoal at 40% with a light blur.
+- The dialog scrim is `bg-on-surface/40 backdrop-blur-xs` (4px) — soft charcoal at 40% with a light blur.
 - The sticky top nav uses `surface_container_low/85` + `backdrop-blur-xl` — a barely-there glassy version of the sidebar tone.
 
 ### Corner radii
@@ -206,8 +210,8 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 | Token           | Value            | Usage                                                            |
 | --------------- | ---------------- | ---------------------------------------------------------------- |
 | `--radius-sm`   | `0.25rem` (4px)  | Input fields, control-bar buttons, score-row cells. The default. |
-| `--radius-md`   | `0.5rem` (8px)   | Cards, list rows, grouped-button ends.                           |
-| `--radius-lg`   | `0.75rem` (12px) | Tool-docks, modals, glass panels, marketing cards.               |
+| `--radius-md`   | `0.5rem` (8px)   | List rows, compact cards, grouped-button ends.                   |
+| `--radius-lg`   | `0.75rem` (12px) | Standalone cards, tool-docks, modals, glass panels.              |
 | `--radius-xl`   | `1rem` (16px)    | Full sheets, marketing hero tiles.                               |
 | `--radius-full` | `9999px`         | All primary buttons (capsule), chips, icon-only round buttons.   |
 

@@ -63,7 +63,7 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
         <DialogScrim onDismiss={stage === 'done' ? undefined : onCancel}>
             <DialogPanel
                 title={stage === 'done' ? 'Account scheduled for deletion.' : 'Delete your account?'}
-                eyebrow={
+                subtitle={
                     stage === 'done'
                         ? 'Signing you out…'
                         : 'Your account is deactivated today and permanently deleted after 7 days. Signing back in before then undoes it.'

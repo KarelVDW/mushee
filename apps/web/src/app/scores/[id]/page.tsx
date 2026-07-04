@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
 import type { ScorePartwise } from '@/components/notation/types'
-import { ChipToggle, ErrorScreen, Icon, Pill, showToast, Wordmark } from '@/components/ui'
+import { ChipToggle, ErrorScreen, Icon, showToast, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError, NetworkError } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
@@ -31,7 +31,7 @@ import {
     TOGGLE_TUPLET,
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
-import { ControlBar } from './ControlBar'
+import { NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
@@ -39,6 +39,30 @@ import { ScoreManipulator } from './ScoreManipulator'
 
 // Why the recording was cut short (or refused) — drives which dialog shows.
 type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
+
+const TITLE_TYPE = 'font-display font-medium text-[17px] leading-none tracking-[-0.01em]'
+
+// Sizes to its text via an invisible mirror span, so the instrument chip sits right next to
+// the title instead of a full-width input pushing it across the header.
+function TitleInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    return (
+        <div className="relative min-w-16 max-w-[40%] shrink-0">
+            <span aria-hidden className={`${TITLE_TYPE} invisible block overflow-hidden whitespace-pre px-2 py-2`}>
+                {value || ' '}
+            </span>
+            <input
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                aria-label="Score title"
+                className={[
+                    TITLE_TYPE,
+                    'absolute inset-0 w-full bg-transparent border-0 outline-0 text-on-surface px-2 py-2 rounded-sm',
+                    'hover:bg-surface-container focus:bg-surface-container transition-colors duration-150 ease-sheemu',
+                ].join(' ')}
+            />
+        </div>
+    )
+}
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -418,42 +442,82 @@ export default function ScoreEditorPage() {
     }
 
     return (
-        <div ref={containerRef} tabIndex={0} className="flex flex-col min-h-screen max-h-screen bg-surface text-on-surface outline-none">
-            <header className="flex items-center justify-between gap-4 px-6 py-3.5 bg-surface/85 backdrop-blur-xl tonal-layer-glow z-10">
-                <div className="flex items-center gap-4 min-w-0 flex-1">
+        <div
+            ref={containerRef}
+            tabIndex={0}
+            className="relative flex flex-col min-h-screen max-h-screen bg-surface text-on-surface outline-none">
+            <header className="flex items-center gap-4 px-5 py-2 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <button
                         onClick={() => router.push('/scores')}
                         aria-label="Back to library"
-                        className="bg-transparent border-0 cursor-pointer text-on-surface-variant p-1 inline-flex">
+                        className={[
+                            'bg-transparent border-0 cursor-pointer text-on-surface-variant p-1.5 -ml-1.5 inline-flex rounded-full',
+                            'hover:text-on-surface transition-colors duration-150 ease-sheemu',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                        ].join(' ')}>
                         <Icon name="arrow-left" size={20} />
                     </button>
-                    <Wordmark size={22} />
-                    <div className="w-px h-6 bg-outline-variant/15" />
-                    <input
+                    <Wordmark size={19} className="max-[52rem]:hidden" />
+                    <div className="w-px h-5 bg-outline-variant/15 max-[52rem]:hidden" />
+                    <TitleInput
                         value={title}
-                        onChange={(e) => {
-                            const v = e.target.value
+                        onChange={(v) => {
                             setTitle(v)
                             saveToApi({ title: v })
                         }}
-                        className="bg-transparent border-0 outline-0 font-serif italic text-[22px] text-on-surface p-1 min-w-0 flex-1"
                     />
                     <button
                         type="button"
                         onClick={() => setInstrumentDialogOpen(true)}
                         aria-label={`Change instrument (current: ${score.instrument.displayName})`}
-                        className="bg-transparent border-0 p-0 cursor-pointer">
-                        <Pill>{score.instrument.displayName}</Pill>
+                        className={[
+                            'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-2.5 py-1.5 cursor-pointer',
+                            'font-label font-semibold text-[11px] leading-none whitespace-nowrap',
+                            'bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
+                            'transition-colors duration-150 ease-sheemu',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                        ].join(' ')}>
+                        {score.instrument.displayName}
+                        <Icon name="sliders-horizontal" size={11} />
                     </button>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <TransportControls
+                    playbackState={playbackState}
+                    onPlayToggle={handlePlayToggle}
+                    onStop={stopAll}
+                    recordingState={recordingState}
+                    onRecordToggle={() => void handleRecordToggle()}
+                    metronome={metronome}
+                    onMetronomeToggle={() => setMetronome((m) => !m)}
+                />
+                <div className="flex items-center gap-2 flex-1 justify-end">
                     <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
                         <Icon name="keyboard" size={16} />
                     </ChipToggle>
                     <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
                 </div>
             </header>
-            <ControlBar
+            <div className="flex-1 overflow-y-auto min-h-0 px-8 pt-6 pb-32 bg-surface">
+                <div ref={scoreAreaRef} className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow manuscript-canvas">
+                    <ScoreView
+                        score={score}
+                        layoutId={score.layout.id}
+                        selectedNote={activeNote}
+                        selectedNotes={manipulator.selectedNotes}
+                        playbackCursorRef={playbackCursorRef}
+                        recordingWaveformRef={recordingWaveformRef}
+                        onSelectionStart={handleSelectionStart}
+                        onSelectionExtend={handleSelectionExtend}
+                        onNoteChange={handleNoteChange}
+                        onAddMeasure={handleAddMeasure}
+                        onRemoveMeasure={handleRemoveMeasure}
+                        canRemoveMeasure={score.measures.length > 1}
+                        onTempoChange={handleTempoChange}
+                    />
+                </div>
+            </div>
+            <NoteToolDock
                 accidental={activeNote?.pitch?.accidentalValue}
                 duration={activeNote?.duration.type}
                 accidentalDisabled={activeNote?.isRest ?? true}
@@ -475,33 +539,7 @@ export default function ScoreEditorPage() {
                 keyFifths={activeNote?.keySignature.fifths ?? 0}
                 onKeySet={handleKeySet}
                 selectionDisabled={!activeNote}
-                playbackState={playbackState}
-                onPlayToggle={handlePlayToggle}
-                onStop={stopAll}
-                recordingState={recordingState}
-                onRecordToggle={() => void handleRecordToggle()}
-                metronome={metronome}
-                onMetronomeToggle={() => setMetronome((m) => !m)}
             />
-            <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6 bg-surface">
-                <div ref={scoreAreaRef} className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow">
-                    <ScoreView
-                        score={score}
-                        layoutId={score.layout.id}
-                        selectedNote={activeNote}
-                        selectedNotes={manipulator.selectedNotes}
-                        playbackCursorRef={playbackCursorRef}
-                        recordingWaveformRef={recordingWaveformRef}
-                        onSelectionStart={handleSelectionStart}
-                        onSelectionExtend={handleSelectionExtend}
-                        onNoteChange={handleNoteChange}
-                        onAddMeasure={handleAddMeasure}
-                        onRemoveMeasure={handleRemoveMeasure}
-                        canRemoveMeasure={score.measures.length > 1}
-                        onTempoChange={handleTempoChange}
-                    />
-                </div>
-            </div>
 
             <ChangeInstrumentDialog
                 open={instrumentDialogOpen}

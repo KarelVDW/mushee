@@ -3,7 +3,21 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { Alert, ErrorScreen, Footer, Icon, IconButton, PageHeader, PrimaryButton, TextField, TopNav } from '@/components/ui'
+import { Glyph } from '@/components/notation'
+import {
+    Alert,
+    DialogPanel,
+    DialogScrim,
+    ErrorScreen,
+    Footer,
+    Icon,
+    IconButton,
+    PageHeader,
+    PrimaryButton,
+    TertiaryButton,
+    TextField,
+    TopNav,
+} from '@/components/ui'
 import { NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
@@ -35,6 +49,7 @@ export default function ScoresPage() {
     const { data: session } = useSession()
     const [search, setSearch] = useState('')
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
+    const [deleteTarget, setDeleteTarget] = useState<ScoreMeta | null>(null)
 
     const debouncedSearch = useDebouncedValue(search, 300)
     const { data: scores, isPending, error, refetch } = useScores(debouncedSearch || undefined)
@@ -57,9 +72,9 @@ export default function ScoresPage() {
         )
     }
 
-    function handleDelete(id: string, title: string) {
-        if (!confirm(`Delete "${title}"?`)) return
-        deleteMutation.mutate(id)
+    function handleDeleteConfirmed(score: ScoreMeta) {
+        deleteMutation.mutate(score.id)
+        setDeleteTarget(null)
     }
 
     // Worst case: the very first load can't even reach the server — there is
@@ -78,7 +93,7 @@ export default function ScoresPage() {
         <div className="bg-surface text-on-surface min-h-screen flex flex-col">
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => setCreateDialogOpen(true)} />
 
-            <main className="flex-1 max-w-7xl mx-auto px-8 py-10 flex flex-col gap-6 w-full box-border">
+            <main className="flex-1 max-w-384 mx-auto px-8 py-10 flex flex-col gap-6 w-full box-border">
                 <PageHeader
                     title="Your scores"
                     subtitle="A quiet shelf for everything you're working on."
@@ -89,47 +104,49 @@ export default function ScoresPage() {
                     }
                 />
 
-                {/* Column headers */}
-                <div className="grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-widest uppercase text-outline">
-                    <span>Title</span>
-                    <span>Created</span>
-                    <span>Updated</span>
-                    <span />
-                </div>
-
-                <div className="flex flex-col gap-3">
-                    {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
-                    {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
-                    {isPending && !error ? (
+                {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
+                {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
+                {isPending && !error ? (
+                    <EmptyCard>
+                        <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">Loading your scores…</span>
+                    </EmptyCard>
+                ) : scores === undefined ? null : scores.length === 0 ? (
+                    search ? (
                         <EmptyCard>
+                            <span className="text-outline-variant">
+                                <Icon name="search" size={32} />
+                            </span>
                             <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                                Loading your scores…
+                                No scores match &ldquo;{search}&rdquo;.
                             </span>
                         </EmptyCard>
-                    ) : scores === undefined ? null : scores.length === 0 ? (
-                        search ? (
-                            <EmptyCard>
-                                <span className="text-outline-variant">
-                                    <Icon name="search" size={32} />
-                                </span>
-                                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                                    No scores match &ldquo;{search}&rdquo;.
-                                </span>
-                            </EmptyCard>
-                        ) : (
-                            <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} />
-                        )
                     ) : (
-                        scores.map((score) => (
-                            <ScoreRow
-                                key={score.id}
-                                score={score}
-                                onOpen={() => router.push(`/scores/${score.id}`)}
-                                onDelete={() => handleDelete(score.id, score.title)}
-                            />
-                        ))
-                    )}
-                </div>
+                        <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} />
+                    )
+                ) : (
+                    <div role="table" aria-label="Your scores" className="flex flex-col gap-4">
+                        <div role="rowgroup">
+                            <div
+                                role="row"
+                                className="grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                                <span role="columnheader">Title</span>
+                                <span role="columnheader">Created</span>
+                                <span role="columnheader">Updated</span>
+                                <span role="columnheader" aria-label="Actions" />
+                            </div>
+                        </div>
+                        <div role="rowgroup" className="flex flex-col gap-3">
+                            {scores.map((score) => (
+                                <ScoreRow
+                                    key={score.id}
+                                    score={score}
+                                    onOpen={() => router.push(`/scores/${score.id}`)}
+                                    onDelete={() => setDeleteTarget(score)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </main>
 
             <CreateScoreDialog
@@ -140,6 +157,25 @@ export default function ScoresPage() {
                     handleCreate(title, instrument)
                 }}
             />
+
+            {deleteTarget && (
+                <DialogScrim onDismiss={() => setDeleteTarget(null)}>
+                    <DialogPanel
+                        title="Delete this score?"
+                        subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
+                        width={440}
+                        onClose={() => setDeleteTarget(null)}
+                        footer={
+                            <>
+                                <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
+                                <PrimaryButton danger onClick={() => handleDeleteConfirmed(deleteTarget)}>
+                                    Delete score
+                                </PrimaryButton>
+                            </>
+                        }
+                    />
+                </DialogScrim>
+            )}
 
             <Footer />
         </div>
@@ -161,9 +197,8 @@ function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
                 {[0, 1, 2, 3, 4].map((i) => (
                     <line key={i} x1={8} x2={112} y1={20 + i * 10} y2={20 + i * 10} stroke="var(--color-outline-variant)" strokeWidth={1} />
                 ))}
-                <text x={12} y={56} fontFamily="serif" fontSize={42} fill="var(--color-outline)">
-                    𝄞
-                </text>
+                {/* Real Bravura clef — the staff spacing above matches the notation grid (10px). */}
+                <Glyph name="gClef" x={16} y={50} fill="var(--color-outline)" />
             </svg>
             <div className="flex-1 flex flex-col gap-1.5 min-w-0">
                 <span className="font-body font-semibold text-[16px] leading-[1.3] text-on-surface">No scores yet.</span>
@@ -181,38 +216,46 @@ function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
 function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () => void; onDelete: () => void }) {
     return (
         <div
+            role="row"
             className={[
                 'group relative overflow-hidden',
                 'bg-surface-container-lowest hover:bg-surface-container-high',
                 'rounded-md px-6 py-4.5 editorial-shadow',
                 'grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 items-center',
-                'transition-colors duration-200 ease-sheemu',
+                'transition-colors duration-150 ease-sheemu',
             ].join(' ')}>
-            <div className="absolute left-0 top-0 bottom-0 w-0.75 bg-primary-container opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-sheemu" />
-            <button
-                onClick={onOpen}
-                type="button"
-                className={[
-                    'text-left bg-transparent border-0 p-0 cursor-pointer',
-                    'font-body font-medium text-[16px] leading-[1.3]',
-                    'text-on-surface group-hover:text-primary',
-                    'transition-colors duration-200 ease-sheemu',
-                ].join(' ')}>
-                {score.title}
-            </button>
-            <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{formatDate(score.createdAt)}</span>
-            <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{relativeTime(score.updatedAt)}</span>
-            <div className="flex gap-2 justify-end">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,transform] duration-150 ease-sheemu" />
+            <div role="cell">
+                <button
+                    onClick={onOpen}
+                    type="button"
+                    className={[
+                        'text-left bg-transparent border-0 p-0 cursor-pointer',
+                        'font-body font-medium text-[16px] leading-[1.3]',
+                        'text-on-surface group-hover:text-primary',
+                        'transition-colors duration-150 ease-sheemu',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
+                    ].join(' ')}>
+                    {score.title}
+                </button>
+            </div>
+            <span role="cell" className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
+                {formatDate(score.createdAt)}
+            </span>
+            <span role="cell" className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
+                {relativeTime(score.updatedAt)}
+            </span>
+            <div role="cell" className="flex gap-2 justify-end">
                 <IconButton
                     icon="pencil"
-                    ariaLabel="Edit"
+                    ariaLabel={`Edit ${score.title}`}
                     size={28}
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
                     onClick={onOpen}
                 />
                 <IconButton
                     icon="trash-2"
-                    ariaLabel="Delete"
+                    ariaLabel={`Delete ${score.title}`}
                     size={28}
                     hoverTone="magenta"
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"

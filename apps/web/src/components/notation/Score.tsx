@@ -6,7 +6,7 @@ import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
 import { Barline } from './Barline'
-import { MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
@@ -269,7 +269,7 @@ export const Score = memo(function Score({
                     <path
                         ref={recordingWaveformRef}
                         data-export-exclude
-                        stroke="#1e3a8a"
+                        stroke={INTERACTION_BLUE}
                         strokeWidth={2.5}
                         strokeLinecap="square"
                         fill="none"
@@ -284,7 +284,7 @@ export const Score = memo(function Score({
                         y={SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 5}
                         width={3}
                         height={(NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 10}
-                        fill="#3b82f6"
+                        fill={INTERACTION_BLUE}
                         rx={1.5}
                     />
 

@@ -91,7 +91,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                               : 'Updating your subscription…'
                           : 'Change plan'
                 }
-                eyebrow={
+                subtitle={
                     phase === 'choose'
                         ? 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
                         : undefined
@@ -219,7 +219,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                         />
                         <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
                             {needsCheckout
-                                ? "Hand-off to Polar's secure checkout in progress…"
+                                ? "Sending you to Polar's secure checkout…"
                                 : 'Talking to Polar to update your subscription.'}
                         </span>
                     </div>

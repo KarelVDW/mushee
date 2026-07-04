@@ -2,7 +2,7 @@ import { memo } from 'react'
 
 import type { Tempo } from '@/model/Tempo'
 
-import { GLYPH_SCALE } from './constants'
+import { GLYPH_SCALE, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 import { getGlyphWidth } from './glyph-utils'
 
@@ -33,7 +33,7 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
             }}
             style={{ cursor: 'pointer' }}>
             <rect x={-2} y={stemY2 - 2} width={nhWidth + 40} height={TEMPO_NOTE_STEM_HEIGHT + 4} fill="transparent" />
-            <line x1={stemX} y1={y} x2={stemX} y2={stemY2} stroke="#000" strokeWidth={1.2} />
+            <line x1={stemX} y1={y} x2={stemX} y2={stemY2} stroke={NOTATION_INK} strokeWidth={1.2} />
             <Glyph name="noteheadBlack" x={0} y={y} />
             <text
                 x={textX}
@@ -42,7 +42,7 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
                 fontFamily="system-ui, sans-serif"
                 fontWeight={600}
                 dominantBaseline="central"
-                fill="#000"
+                fill={NOTATION_INK}
                 style={{ userSelect: 'none' }}>
                 = {bpm}
             </text>

@@ -117,8 +117,12 @@ export function PageTitle({ children, italic = false }: { children: ReactNode; i
     )
 }
 
-export function ModalTitle({ children }: { children: ReactNode }) {
-    return <h2 className="font-display font-bold text-[32px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0">{children}</h2>
+export function ModalTitle({ children, id }: { children: ReactNode; id?: string }) {
+    return (
+        <h2 id={id} className="font-display font-bold text-[32px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0">
+            {children}
+        </h2>
+    )
 }
 
 export function SubHeadline({ children }: { children: ReactNode }) {

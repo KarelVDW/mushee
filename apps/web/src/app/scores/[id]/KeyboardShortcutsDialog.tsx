@@ -76,7 +76,7 @@ export function KeyboardShortcutsDialog({ open, keybindings, onClose }: Keyboard
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title="Keyboard shortcuts"
-                eyebrow="Click a shortcut to record a new one. Keys follow your keyboard layout."
+                subtitle="Click a shortcut to record a new one. Keys follow your keyboard layout."
                 onClose={onClose}
                 width={620}
                 footer={
@@ -95,9 +95,7 @@ export function KeyboardShortcutsDialog({ open, keybindings, onClose }: Keyboard
                                 Restore defaults
                             </TertiaryButton>
                         )}
-                        <PrimaryButton emphasis="pop" onClick={onClose}>
-                            Done
-                        </PrimaryButton>
+                        <PrimaryButton onClick={onClose}>Done</PrimaryButton>
                     </>
                 }>
                 <div className="overflow-y-auto min-h-0 flex flex-col gap-5 pb-2">
@@ -137,7 +135,7 @@ interface ShortcutRowProps {
 function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: ShortcutRowProps) {
     const shortcut = keybindings.shortcutFor(command.id)
     return (
-        <div className="group flex items-center justify-between gap-4 px-2.5 py-1 rounded-lg hover:bg-surface-container-low transition-colors duration-150">
+        <div className="group flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
             <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
             <div className="flex items-center gap-1">
                 {!editing && keybindings.isCustomized(command.id) && (
@@ -164,7 +162,7 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
                     aria-label={`Change shortcut for ${command.label}`}
                     className="bg-transparent border-0 p-0 cursor-pointer">
                     {editing ? (
-                        <span className="inline-flex items-center font-label font-semibold text-[11px] leading-none uppercase tracking-[0.04em] text-on-surface bg-primary-container/40 rounded-[0.25rem] px-2 py-1.5 animate-pulse">
+                        <span className="inline-flex items-center font-label font-semibold text-[11px] leading-none uppercase tracking-[0.04em] text-on-surface bg-primary-container/40 rounded-sm px-2 py-1.5 animate-pulse">
                             Press a key…
                         </span>
                     ) : shortcut ? (
@@ -190,7 +188,7 @@ function ShortcutKeys({ shortcut, layout, isMac }: { shortcut: Shortcut; layout:
                             +
                         </span>
                     )}
-                    <kbd className="inline-flex items-center justify-center font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-[0.25rem] px-1.5 py-1.5 min-w-6">
+                    <kbd className="inline-flex items-center justify-center font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1.5 min-w-6">
                         {part}
                     </kbd>
                 </Fragment>

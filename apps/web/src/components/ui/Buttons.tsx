@@ -41,9 +41,7 @@ export function PrimaryButton({
         ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error'
         : 'bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary'
 
-    const popStyles = pop
-        ? 'shadow-[3px_3px_0_0_var(--color-secondary-container)] hover:shadow-[5px_5px_0_0_var(--color-secondary-container)] hover:-translate-y-[2px]'
-        : ''
+    const popStyles = pop ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px]' : ''
 
     return (
         <button
@@ -56,8 +54,9 @@ export function PrimaryButton({
                 big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px]',
                 'leading-none',
                 'transition-[transform,box-shadow,background-color,color] duration-200 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
-                'disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0_0_var(--color-secondary-container)]',
+                'disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)',
                 palette,
                 popStyles,
                 fullWidth ? 'w-full' : '',
@@ -82,6 +81,7 @@ export function SecondaryButton({ children, onClick, size = 'md', type = 'button
                 big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px]',
                 'leading-none',
                 'transition-colors duration-150 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
                 fullWidth ? 'w-full' : '',
             ].join(' ')}>
@@ -106,6 +106,7 @@ export function TertiaryButton({ children, onClick, danger = false, type = 'butt
                 'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
                 'font-body font-medium text-[13px] leading-none',
                 'transition-colors duration-150 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
                 danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
             ].join(' ')}>
             {children}
@@ -139,6 +140,7 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
                 idleClassName ?? 'bg-surface-container',
                 hoverPalette,
                 'transition-colors duration-150 ease-sheemu',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
             ].join(' ')}
             style={{ width: size, height: size }}>
             <Icon name={icon} size={size <= 28 ? 14 : 16} />
@@ -161,6 +163,7 @@ export function ToggleButton({ active, tone = 'cyan', children, className, ...re
                 'inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
                 'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5',
                 'font-label font-semibold text-[12px] leading-none',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 active ? activePalette : 'bg-surface-container-low text-on-surface',
                 className ?? '',
             ].join(' ')}>
