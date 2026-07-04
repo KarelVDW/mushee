@@ -112,9 +112,19 @@ export interface BindableCommand {
     defaultShortcut: string | null
 }
 
-interface StoredOverride {
+/** One persisted deviation from a command's default; null in a {@link StoredShortcuts} map means "explicitly unbound". */
+export interface StoredOverride {
     keys: string
     label?: string
+}
+
+/**
+ * The serialized override set — the format persisted to localStorage and to the user's
+ * account settings (see `keyboardShortcuts` in the settings API).
+ */
+export interface StoredShortcuts {
+    version: 1
+    overrides: Record<string, StoredOverride | null>
 }
 
 export interface KeybindingsOptions {
@@ -141,6 +151,13 @@ export class Keybindings<C extends BindableCommand> {
     private byShortcut = new Map<string, C>()
     private _version = 0
     private readonly listeners = new Set<() => void>()
+
+    /**
+     * Notified after every user-made change with the full serialized override set (null when
+     * back on the defaults) — the hook for pushing customizations to the user's account.
+     * Not called by {@link hydrate}, whose data already lives at the source.
+     */
+    onDidChange?: (stored: StoredShortcuts | null) => void
 
     constructor(
         readonly commands: readonly C[],
@@ -218,6 +235,32 @@ export class Keybindings<C extends BindableCommand> {
         this.commit()
     }
 
+    /** The full override set in storage format, or null when every command is on its default. */
+    toStored(): StoredShortcuts | null {
+        if (this.overrides.size === 0) return null
+        const overrides: Record<string, StoredOverride | null> = {}
+        for (const [id, shortcut] of this.overrides) overrides[id] = shortcut ? { keys: shortcut.id, label: shortcut.label } : null
+        return { version: 1, overrides }
+    }
+
+    /**
+     * Replace the override set with one loaded from the user's account (cross-device sync),
+     * updating the localStorage copy to match. Subscribers are notified; {@link onDidChange}
+     * is not — the source already has this state.
+     */
+    hydrate(stored: StoredShortcuts | null): void {
+        this.overrides.clear()
+        try {
+            this.applyStored(stored)
+        } catch {
+            /* malformed data — whatever applied before the bad entry stands */
+        }
+        this.reindex()
+        this.persist()
+        this._version++
+        for (const listener of this.listeners) listener()
+    }
+
     /** Record an override, dropping it when it lands back on the command's own default. */
     private override(commandId: string, shortcut: Shortcut | null): void {
         const fallback = this.defaults.get(commandId) ?? null
@@ -231,6 +274,7 @@ export class Keybindings<C extends BindableCommand> {
         this.persist()
         this._version++
         for (const listener of this.listeners) listener()
+        this.onDidChange?.(this.toStored())
     }
 
     private reindex(): void {
@@ -244,13 +288,9 @@ export class Keybindings<C extends BindableCommand> {
     private persist(): void {
         // Tolerate unavailable localStorage (private mode) — customizations simply don't stick.
         try {
-            if (this.overrides.size === 0) {
-                localStorage.removeItem(this.storageKey)
-                return
-            }
-            const overrides: Record<string, StoredOverride | null> = {}
-            for (const [id, shortcut] of this.overrides) overrides[id] = shortcut ? { keys: shortcut.id, label: shortcut.label } : null
-            localStorage.setItem(this.storageKey, JSON.stringify({ version: 1, overrides }))
+            const stored = this.toStored()
+            if (stored === null) localStorage.removeItem(this.storageKey)
+            else localStorage.setItem(this.storageKey, JSON.stringify(stored))
         } catch {
             /* noop */
         }
@@ -260,15 +300,17 @@ export class Keybindings<C extends BindableCommand> {
         if (typeof window === 'undefined') return
         try {
             const raw = localStorage.getItem(this.storageKey)
-            if (!raw) return
-            const stored = JSON.parse(raw) as { overrides?: Record<string, StoredOverride | null> }
-            for (const [id, entry] of Object.entries(stored.overrides ?? {})) {
-                if (!this.defaults.has(id)) continue // the command no longer exists
-                if (entry === null) this.overrides.set(id, null)
-                else if (typeof entry.keys === 'string') this.overrides.set(id, Shortcut.parse(entry.keys, this.isMac, entry.label))
-            }
+            if (raw) this.applyStored(JSON.parse(raw) as StoredShortcuts)
         } catch {
             /* corrupted or unavailable storage — fall back to the defaults */
+        }
+    }
+
+    private applyStored(stored: StoredShortcuts | null): void {
+        for (const [id, entry] of Object.entries(stored?.overrides ?? {})) {
+            if (!this.defaults.has(id)) continue // the command no longer exists
+            if (entry === null) this.overrides.set(id, null)
+            else if (typeof entry.keys === 'string') this.overrides.set(id, Shortcut.parse(entry.keys, this.isMac, entry.label))
         }
     }
 }

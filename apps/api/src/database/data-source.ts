@@ -10,6 +10,7 @@ import { ActiveRecording } from '../recordings/entities/active-recording.entity'
 import { Recording } from '../recordings/entities/recording.entity';
 import { RecordingUsage } from '../recordings/entities/recording-usage.entity';
 import { Score } from '../scores/entities/score.entity';
+import { UserSettings } from '../settings/entities/user-settings.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { migrations } from './migrations';
 
@@ -39,6 +40,7 @@ export const dataSourceOptions: DataSourceOptions = {
     RecordingUsage,
     Score,
     UserOnboarding,
+    UserSettings,
     UserSubscription,
   ],
   migrations,

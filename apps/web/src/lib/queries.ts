@@ -13,11 +13,13 @@ import {
     getBetaStatus,
     getBillingState,
     getScore,
+    getSettings,
     listBetaSignups,
     listScores,
     loadScore,
     type OnboardingPatch,
     patchOnboarding,
+    putKeyboardShortcuts,
     reactivateAccount,
     requestAccountDeletion,
     resumeSubscription,
@@ -25,6 +27,7 @@ import {
     type ScoreMeta,
     updateScore,
 } from './api'
+import type { StoredShortcuts } from './Keybindings'
 
 export const scoreKeys = {
     all: ['scores'] as const,
@@ -100,6 +103,26 @@ export function usePatchOnboarding() {
     return useMutation({
         mutationFn: (patch: OnboardingPatch) => patchOnboarding(patch),
         meta: { errorMessage: "Couldn't save your onboarding answers. Please try again." },
+    })
+}
+
+export const settingsKeys = {
+    all: ['settings'] as const,
+}
+
+export function useSettings() {
+    return useQuery({
+        queryKey: settingsKeys.all,
+        queryFn: () => getSettings(),
+    })
+}
+
+export function useSaveKeyboardShortcuts() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (keyboardShortcuts: StoredShortcuts | null) => putKeyboardShortcuts(keyboardShortcuts),
+        onSuccess: (settings) => queryClient.setQueryData(settingsKeys.all, settings),
+        meta: { errorMessage: "Couldn't sync your keyboard shortcuts. They still apply on this device." },
     })
 }
 

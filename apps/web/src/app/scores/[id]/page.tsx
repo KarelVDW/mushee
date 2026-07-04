@@ -11,7 +11,7 @@ import { ApiError, NetworkError } from '@/lib/api'
 import { CursorManager } from '@/lib/CursorManager'
 import { Metronome } from '@/lib/Metronome'
 import { MidiPlayer } from '@/lib/MidiPlayer'
-import { useScoreDocument, useUpdateScore } from '@/lib/queries'
+import { useSaveKeyboardShortcuts, useScoreDocument, useSettings, useUpdateScore } from '@/lib/queries'
 import { RecordingEngine, type RecordingLimitInfo, type RecordingState } from '@/lib/RecordingEngine'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
 import { Ticker } from '@/lib/Ticker'
@@ -72,6 +72,24 @@ export default function ScoreEditorPage() {
 
     const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
     const { mutate: saveScore } = useUpdateScore(id)
+
+    // Keyboard shortcuts follow the account: adopt the server's override set once it loads
+    // (or push this device's up when the account has none yet), then mirror every change.
+    const { data: settings } = useSettings()
+    const { mutate: saveShortcuts } = useSaveKeyboardShortcuts()
+    const shortcutsSyncedRef = useRef(false)
+    useEffect(() => {
+        const keybindings = manipulator.keybindings
+        if (settings && !shortcutsSyncedRef.current) {
+            shortcutsSyncedRef.current = true
+            if (settings.keyboardShortcuts) keybindings.hydrate(settings.keyboardShortcuts)
+            else if (keybindings.hasCustomizations) saveShortcuts(keybindings.toStored())
+        }
+        keybindings.onDidChange = (stored) => saveShortcuts(stored)
+        return () => {
+            keybindings.onDidChange = undefined
+        }
+    }, [settings, manipulator, saveShortcuts])
 
     const saveToApi = useCallback(
         (changes: { title?: string; score?: Score }) => {

@@ -13,7 +13,8 @@ import {
  */
 @Entity('user_subscriptions')
 export class UserSubscription {
-  @PrimaryColumn()
+  /** References user.id (ON DELETE CASCADE). */
+  @PrimaryColumn({ type: 'text' })
   userId: string;
 
   @Column({ type: 'varchar', default: 'free' })
@@ -39,9 +40,9 @@ export class UserSubscription {
   @Column({ type: 'boolean', default: false })
   cancelAtPeriodEnd: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }

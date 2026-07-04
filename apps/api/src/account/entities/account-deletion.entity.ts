@@ -1,4 +1,10 @@
-import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryColumn,
+} from 'typeorm';
 
 /**
  * A pending account deletion. The row marks the user as soft-deleted;
@@ -6,11 +12,13 @@ import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
  * the purge cron permanently deletes the user and all their data.
  */
 @Entity('account_deletions')
+@Index('IDX_account_deletions_purgeAfter', ['purgeAfter'])
 export class AccountDeletion {
-  @PrimaryColumn()
+  /** References user.id (ON DELETE CASCADE). */
+  @PrimaryColumn({ type: 'text' })
   userId: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   requestedAt: Date;
 
   /** End of the grace period; the purge cron deletes everything after this. */

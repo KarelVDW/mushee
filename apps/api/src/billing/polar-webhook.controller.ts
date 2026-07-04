@@ -14,7 +14,7 @@ import { WebhookVerificationError } from './polar-webhooks';
 /**
  * Polar webhook receiver. Signature verification (standard-webhooks) needs
  * the exact raw bytes Polar sent, which main.ts preserves on `req.rawBody`
- * via a custom JSON content-type parser.
+ * via Nest's `rawBody` option.
  *
  * Configure in the Polar dashboard: <api-url>/billing/webhooks/polar with
  * the secret in POLAR_WEBHOOK_SECRET. Subscribe at least to the

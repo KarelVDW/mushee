@@ -6,7 +6,8 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
  */
 @Entity('recording_usage')
 export class RecordingUsage {
-  @PrimaryColumn()
+  /** References user.id (ON DELETE CASCADE). */
+  @PrimaryColumn({ type: 'text' })
   userId: string;
 
   /** UTC calendar day, `YYYY-MM-DD`. */

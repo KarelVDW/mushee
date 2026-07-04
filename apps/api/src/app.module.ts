@@ -14,6 +14,7 @@ import { MailModule } from './mail/mail.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { ScoresModule } from './scores/scores.module';
+import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
@@ -32,6 +33,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     AccountModule,
     OnboardingModule,
     ScoresModule,
+    SettingsModule,
     CacheModule,
     StorageModule,
     CronModule,

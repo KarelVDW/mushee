@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { type BindableCommand, Keybindings, Shortcut } from '@/lib/Keybindings'
+import { type BindableCommand, Keybindings, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
 
 const COMMANDS: BindableCommand[] = [
     { id: 'copy', defaultShortcut: 'Mod+KeyC' },
@@ -179,5 +179,74 @@ describe('Keybindings persistence', () => {
         const keybindings = makeKeybindings()
         expect(keybindings.resolve(keydown({ code: 'KeyZ', key: 'z' }))).toBeNull()
         expect(keybindings.hasCustomizations).toBe(false)
+    })
+})
+
+describe('Keybindings account sync', () => {
+    it('serializes the override set (rebinds with labels, explicit unbinds) and null for pure defaults', () => {
+        const keybindings = makeKeybindings()
+        expect(keybindings.toStored()).toBeNull()
+
+        keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
+        keybindings.unbind('left')
+        expect(keybindings.toStored()).toEqual({
+            version: 1,
+            overrides: { rest: { keys: 'KeyJ', label: 'j' }, left: null },
+        })
+    })
+
+    it('reports every change through onDidChange with the serialized set', () => {
+        const keybindings = makeKeybindings()
+        const changes: Array<StoredShortcuts | null> = []
+        keybindings.onDidChange = (stored) => changes.push(stored)
+
+        keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
+        keybindings.resetAll()
+        expect(changes).toHaveLength(2)
+        expect(changes[0]?.overrides.rest).toEqual({ keys: 'KeyJ', label: 'j' })
+        expect(changes[1]).toBeNull()
+    })
+
+    it('hydrate replaces local overrides with the account set and updates localStorage', () => {
+        const keybindings = makeKeybindings()
+        keybindings.rebind('copy', recorded({ code: 'KeyX', key: 'x' }))
+
+        let notified = 0
+        keybindings.subscribe(() => notified++)
+        keybindings.hydrate({ version: 1, overrides: { rest: { keys: 'KeyJ', label: 'j' }, left: null } })
+
+        expect(notified).toBe(1)
+        // The account set fully replaces the local one — the copy rebind is gone.
+        expect(keybindings.resolve(keydown({ code: 'KeyC', key: 'c', ctrlKey: true }))?.id).toBe('copy')
+        expect(keybindings.resolve(keydown({ code: 'KeyJ', key: 'j' }))?.id).toBe('rest')
+        expect(keybindings.shortcutFor('left')).toBeNull()
+        // A fresh instance reads the hydrated set back from localStorage.
+        expect(makeKeybindings().resolve(keydown({ code: 'KeyJ', key: 'j' }))?.id).toBe('rest')
+    })
+
+    it('hydrate does not echo into onDidChange', () => {
+        const keybindings = makeKeybindings()
+        const onDidChange = vi.fn()
+        keybindings.onDidChange = onDidChange
+        keybindings.hydrate({ version: 1, overrides: { left: null } })
+        expect(onDidChange).not.toHaveBeenCalled()
+    })
+
+    it('hydrate(null) puts every command back on its default', () => {
+        const keybindings = makeKeybindings()
+        keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
+        keybindings.hydrate(null)
+        expect(keybindings.hasCustomizations).toBe(false)
+        expect(keybindings.resolve(keydown({ code: 'KeyR', key: 'r' }))?.id).toBe('rest')
+        expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    })
+
+    it('hydrate skips unknown commands and survives malformed entries', () => {
+        const keybindings = makeKeybindings()
+        keybindings.hydrate({ version: 1, overrides: { ghost: { keys: 'KeyZ' }, left: null } })
+        expect(keybindings.resolve(keydown({ code: 'KeyZ', key: 'z' }))).toBeNull()
+        expect(keybindings.shortcutFor('left')).toBeNull()
+
+        expect(() => keybindings.hydrate({ version: 1, overrides: { rest: { keys: 'Bogus+KeyJ' } } })).not.toThrow()
     })
 })

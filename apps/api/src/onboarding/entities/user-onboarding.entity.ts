@@ -8,7 +8,8 @@ import {
 
 @Entity('user_onboarding')
 export class UserOnboarding {
-  @PrimaryColumn()
+  /** References user.id (ON DELETE CASCADE). */
+  @PrimaryColumn({ type: 'text' })
   userId: string;
 
   @Column({ type: 'varchar', nullable: true })
@@ -26,9 +27,9 @@ export class UserOnboarding {
   @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }

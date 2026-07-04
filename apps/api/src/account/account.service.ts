@@ -7,6 +7,7 @@ import { BillingService } from '../billing/billing.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
 import { RecordingsService } from '../recordings/recordings.service';
 import { ScoresService } from '../scores/scores.service';
+import { SettingsService } from '../settings/settings.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { AccountDeletion } from './entities/account-deletion.entity';
 
@@ -29,6 +30,7 @@ export class AccountService {
     private readonly recordingsService: RecordingsService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly onboardingService: OnboardingService,
+    private readonly settingsService: SettingsService,
     private readonly billingService: BillingService,
   ) {}
 
@@ -105,6 +107,7 @@ export class AccountService {
         await this.billingService.deletePolarCustomer(userId);
         await this.subscriptionsService.deleteForUser(userId);
         await this.onboardingService.deleteForUser(userId);
+        await this.settingsService.deleteForUser(userId);
 
         const ctx = await auth.$context;
         await ctx.internalAdapter.deleteUser(userId);

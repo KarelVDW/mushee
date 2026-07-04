@@ -1,3 +1,5 @@
+import type { StoredShortcuts } from './Keybindings'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
 /** The server responded, but with an error status. */
@@ -134,6 +136,24 @@ export function patchOnboarding(patch: OnboardingPatch): Promise<unknown> {
     return api('/onboarding', {
         method: 'PATCH',
         body: JSON.stringify(patch),
+    })
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
+
+export interface UserSettings {
+    /** Keyboard shortcut overrides in Keybindings' storage format; null = all defaults. */
+    keyboardShortcuts: StoredShortcuts | null
+}
+
+export function getSettings(): Promise<UserSettings> {
+    return api('/settings')
+}
+
+export function putKeyboardShortcuts(keyboardShortcuts: StoredShortcuts | null): Promise<UserSettings> {
+    return api('/settings/keyboard-shortcuts', {
+        method: 'PUT',
+        body: JSON.stringify({ keyboardShortcuts }),
     })
 }
 

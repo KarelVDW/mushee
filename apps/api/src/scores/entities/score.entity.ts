@@ -2,16 +2,19 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('scores')
+@Index('IDX_scores_userId_updatedAt', ['userId', 'updatedAt'])
 export class Score {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  /** References user.id (ON DELETE CASCADE). */
+  @Column({ type: 'text' })
   userId: string;
 
   @Column()
@@ -20,9 +23,9 @@ export class Score {
   @Column({ nullable: true })
   storageKey: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }
