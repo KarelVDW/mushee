@@ -94,10 +94,29 @@ export function PageHeader({
 }
 
 export function Footer() {
+    const linkClass = 'font-body font-normal text-[12px] leading-none text-on-surface-variant no-underline hover:text-on-surface'
     return (
         <footer className="bg-surface py-6 border-t border-outline-variant/15">
-            <div className="max-w-384 mx-auto px-8 flex justify-between items-center">
+            <div className="max-w-384 mx-auto px-8 flex justify-between items-center gap-6 flex-wrap">
                 <Wordmark size={20} />
+                <nav aria-label="Legal" className="flex items-center gap-5 flex-wrap">
+                    <Link href="/privacy" className={linkClass}>
+                        Privacy
+                    </Link>
+                    <Link href="/terms" className={linkClass}>
+                        Terms
+                    </Link>
+                    <Link href="/contact" className={linkClass}>
+                        Contact
+                    </Link>
+                    <button
+                        type="button"
+                        // Same event CookieConsent listens on (see openCookieSettings).
+                        onClick={() => window.dispatchEvent(new Event('sheemu:cookie-settings'))}
+                        className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}>
+                        Cookie settings
+                    </button>
+                </nav>
                 <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
                     © 2026 Sheemu. Made for composers.
                 </span>

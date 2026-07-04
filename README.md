@@ -94,10 +94,13 @@ re-migrates and re-seeds on boot.
 via a kustomize `images:` override). The cluster must provide:
 
 - `Secret/api-secrets` with `POSTGRES_*` (managed database), `BETTER_AUTH_SECRET`,
-  `BETTER_AUTH_URL`, `CORS_ORIGIN`/`TRUSTED_ORIGINS`, SendGrid vars, and
-  `RCLONE_REMOTE` + `RCLONE_CONFIG_<NAME>_*` vars for cloud MusicXML storage
-  (the API image ships rclone; a plain directory path also works if you mount a
-  volume). Do **not** set `SEED_DEMO_DATA` in production.
+  `BETTER_AUTH_URL`, `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `WEB_APP_URL`, SendGrid
+  vars, Polar vars (`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`,
+  `POLAR_SERVER`, `POLAR_PRODUCT_*`), beta switches (`BETA_MODE`,
+  `ADMIN_EMAILS`), and `RCLONE_REMOTE` + `RCLONE_CONFIG_<NAME>_*` vars for
+  cloud MusicXML storage (the API image ships rclone; a plain directory path
+  also works if you mount a volume). Do **not** set `SEED_DEMO_DATA` in
+  production. See `apps/api/.env.example` for the full annotated list.
 - A metrics-server, so the HPAs scale the inference services on CPU (Docker
   Desktop has none — HPAs stay at min replicas there).
 - An Ingress / managed LB for `Service/api` (the local overlay's
@@ -117,6 +120,45 @@ cd apps/api && CREPE_INFERENCE_URL=localhost:50051 BASIC_PITCH_INFERENCE_URL=loc
 ```
 
 (needs the eval fixtures — see `apps/api/scripts/eval/`).
+
+## Billing (Polar)
+
+Paid tiers are sold through [Polar](https://polar.sh) (merchant of record).
+One-time setup in the Polar dashboard:
+
+1. Create four subscription products — Composer monthly/yearly, Studio
+   monthly/yearly — and put their ids in `POLAR_PRODUCT_PRO_MONTHLY`,
+   `POLAR_PRODUCT_PRO_YEARLY`, `POLAR_PRODUCT_STUDIO_MONTHLY`,
+   `POLAR_PRODUCT_STUDIO_YEARLY`.
+2. Create an organization access token → `POLAR_ACCESS_TOKEN`
+   (`POLAR_SERVER=sandbox` while testing against sandbox.polar.sh).
+3. Add a webhook endpoint pointing at `<api-url>/billing/webhooks/polar`
+   (subscribe to at least the `subscription.*` and `customer.state_changed`
+   events) and put its secret in `POLAR_WEBHOOK_SECRET`.
+
+With those unset, billing degrades gracefully: `/billing/*` answers 503 and
+the web UI hides paid actions. Subscription state is mirrored into
+`user_subscriptions` by the webhook handler; checkout and the customer portal
+are Polar-hosted redirects.
+
+## Analytics (PostHog)
+
+Set `NEXT_PUBLIC_POSTHOG_KEY` (+ optionally `NEXT_PUBLIC_POSTHOG_HOST`,
+default EU cloud) on the web build to enable product analytics, session
+replay, and error tracking. Everything is gated behind the GDPR cookie
+banner: nothing is captured until the visitor opts in, and events are proxied
+through `/ingest` to dodge ad blockers. Unset = analytics fully off.
+
+## Closed beta
+
+Flip `BETA_MODE=true` on the API and `NEXT_PUBLIC_BETA_MODE=true` on the web
+app to run Sheemu as a closed beta: new signups land on the `beta` tier
+(5 min of recording/day), get a waitlist email, and must be approved before
+they can use the app. Approvals happen at `/admin` (accounts whose email is
+in `ADMIN_EMAILS` get the admin role at signup; the seeded
+`demo@mushee.local` account is an admin too) or via
+`POST /admin/beta/signups/:userId/approve`. Flip both vars back to `false`
+to open the doors — pending users are no longer gated.
 
 ## More docs
 

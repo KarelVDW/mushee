@@ -1,6 +1,6 @@
 import './globals.css'
 
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google'
 
 import { AuthGate } from '@/components/AuthGate'
@@ -28,9 +28,47 @@ const geistMono = Geist_Mono({
     subsets: ['latin'],
 })
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.app'
+
 export const metadata: Metadata = {
-    title: 'Sheemu',
-    description: 'Sheet music editor',
+    metadataBase: new URL(SITE_URL),
+    title: {
+        default: 'Sheemu — the fastest way to get a melody on the page',
+        template: '%s · Sheemu',
+    },
+    description:
+        'Sheemu turns what you play or sing into clean sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
+    applicationName: 'Sheemu',
+    keywords: [
+        'sheet music editor',
+        'music notation software',
+        'audio to sheet music',
+        'melody transcription',
+        'hum to notation',
+        'music transcription app',
+        'score editor',
+        'compose music online',
+    ],
+    openGraph: {
+        type: 'website',
+        siteName: 'Sheemu',
+        url: SITE_URL,
+        title: 'Sheemu — the fastest way to get a melody on the page',
+        description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Sheemu — the fastest way to get a melody on the page',
+        description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
+    },
+    robots: {
+        index: true,
+        follow: true,
+    },
+}
+
+export const viewport: Viewport = {
+    themeColor: '#f6f6f6',
 }
 
 export default function RootLayout({
