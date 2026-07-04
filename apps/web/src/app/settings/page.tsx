@@ -1,15 +1,17 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import {
+    Alert,
     Eyebrow,
     Footer,
     Icon,
     PageHeader,
     PrimaryButton,
     SecondaryButton,
+    showToast,
     Switch,
     TertiaryButton,
     TextArea,
@@ -17,13 +19,12 @@ import {
     TopNav,
 } from '@/components/ui'
 import { signOut, useSession } from '@/lib/auth-client'
+import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
+import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 
 import { ChangePasswordDialog } from './ChangePasswordDialog'
-import { type Billing, ChangePlanDialog, PLAN_TIERS, type PlanTier } from './ChangePlanDialog'
+import { ChangePlanDialog } from './ChangePlanDialog'
 import { DeleteAccountDialog } from './DeleteAccountDialog'
-
-// Settings is visual + light wiring. signOut and password change hit the real
-// backend; billing/plan flows remain visual demos until those endpoints exist.
 
 type Tab = 'profile' | 'editor' | 'notifications' | 'account'
 
@@ -41,18 +42,16 @@ export default function SettingsPage() {
     const [emails, setEmails] = useState(true)
     const [tips, setTips] = useState(true)
     const [changePwOpen, setChangePwOpen] = useState(false)
-    const [changePlanOpen, setChangePlanOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
-    const [planId, setPlanId] = useState<PlanTier['id']>('free')
-    const [billing, setBilling] = useState<Billing>('monthly')
 
-    const currentPlan = PLAN_TIERS.find((p) => p.id === planId) ?? PLAN_TIERS[0]
-    const currentPlanPrice =
-        currentPlan.priceMonthly === 0
-            ? 'Free'
-            : billing === 'yearly'
-              ? `$${currentPlan.priceYearly}/yr`
-              : `$${currentPlan.priceMonthly}/mo`
+    // Coming back from a successful Polar checkout: land on the account tab.
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('checkout') === 'success') {
+            setTab('account')
+            showToast('Payment confirmed — welcome to your new plan!', 'info')
+            window.history.replaceState(null, '', '/settings')
+        }
+    }, [])
 
     async function handleSignOut() {
         await signOut()
@@ -123,28 +122,27 @@ export default function SettingsPage() {
 
                         {tab === 'account' && (
                             <>
-                                {/* Plan + billing UI is wired but the Polar handshake is mocked until the backend exists. */}
-                                <Section title="Plan & billing" subtitle={`You're on the ${currentPlan.name} plan.`}>
-                                    <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-[10px]">
-                                        <span className="w-11 h-11 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
-                                            <Icon name={currentPlan.icon} size={20} />
-                                        </span>
-                                        <div className="flex flex-col gap-0.5 flex-1">
-                                            <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
-                                                {currentPlan.name}
-                                            </span>
-                                            <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                                                {currentPlanPrice}
-                                            </span>
-                                        </div>
-                                        <PrimaryButton emphasis="pop" onClick={() => setChangePlanOpen(true)}>
-                                            Change plan
-                                        </PrimaryButton>
-                                    </div>
-                                </Section>
+                                <BillingSection />
                                 <Section title="Password" subtitle="Last changed a while ago.">
                                     <div>
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
+                                    </div>
+                                </Section>
+                                <Section
+                                    title="Support"
+                                    subtitle="Stuck, found a bug, or want to say hi? We read everything.">
+                                    <div className="flex items-center gap-4">
+                                        <a
+                                            href="mailto:support@sheemu.app"
+                                            className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
+                                            <Icon name="mail" size={16} />
+                                            support@sheemu.app
+                                        </a>
+                                        <a
+                                            href="/contact"
+                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                            All contact options
+                                        </a>
                                     </div>
                                 </Section>
                                 <Section title="Sign out" subtitle="Log out of this browser.">
@@ -171,19 +169,6 @@ export default function SettingsPage() {
 
             {changePwOpen && <ChangePasswordDialog onCancel={() => setChangePwOpen(false)} onSuccess={() => setChangePwOpen(false)} />}
 
-            {changePlanOpen && (
-                <ChangePlanDialog
-                    currentPlanId={planId}
-                    currentBilling={billing}
-                    onCancel={() => setChangePlanOpen(false)}
-                    onChanged={({ planId: nextId, billing: nextBilling }) => {
-                        setPlanId(nextId)
-                        setBilling(nextBilling)
-                        setChangePlanOpen(false)
-                    }}
-                />
-            )}
-
             {deleteOpen && (
                 <DeleteAccountDialog
                     email={session?.user?.email}
@@ -194,6 +179,122 @@ export default function SettingsPage() {
                     }}
                 />
             )}
+        </div>
+    )
+}
+
+/** Live Polar-backed subscription state: plan, renewal, credits, actions. */
+function BillingSection() {
+    const { data: billing, isPending, isError, refetch } = useBillingState()
+    const portal = useBillingPortal()
+    const resume = useResumeSubscription()
+    const [changePlanOpen, setChangePlanOpen] = useState(false)
+
+    if (isPending) {
+        return (
+            <Section title="Plan & billing" subtitle="Loading your subscription…">
+                <div className="h-20 bg-surface-container-low rounded-[10px] animate-pulse" />
+            </Section>
+        )
+    }
+    if (isError || !billing) {
+        return (
+            <Section title="Plan & billing">
+                <Alert onRetry={() => void refetch()}>Couldn&apos;t load your subscription.</Alert>
+            </Section>
+        )
+    }
+
+    const isBeta = billing.tierId === 'beta'
+    const plan = planById(billing.tierId)
+    const hasSubscription = Boolean(billing.status)
+    const periodEnd = billing.currentPeriodEnd
+        ? new Date(billing.currentPeriodEnd).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+        : null
+
+    const priceLine = isBeta
+        ? 'Free during the beta'
+        : hasSubscription
+          ? `${planPrice(plan, billing.interval ?? 'monthly')}${
+                periodEnd ? (billing.cancelAtPeriodEnd ? ` · ends ${periodEnd}` : ` · renews ${periodEnd}`) : ''
+            }`
+          : 'Free'
+
+    return (
+        <Section
+            title="Plan & billing"
+            subtitle={
+                isBeta
+                    ? 'Sheemu is in closed beta — your plan is on the house. Paid plans arrive at launch.'
+                    : `You're on the ${billing.tierName} plan. Payments are handled securely by Polar.`
+            }>
+            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-[10px]">
+                <span className="w-11 h-11 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
+                    <Icon name={isBeta ? BETA_PLAN.icon : plan.icon} size={20} />
+                </span>
+                <div className="flex flex-col gap-0.5 flex-1">
+                    <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">{billing.tierName}</span>
+                    <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{priceLine}</span>
+                </div>
+                {!isBeta && billing.billingConfigured && !billing.betaMode && (
+                    <PrimaryButton emphasis="pop" onClick={() => setChangePlanOpen(true)}>
+                        Change plan
+                    </PrimaryButton>
+                )}
+            </div>
+
+            <CreditsMeter limit={billing.credits.limitSeconds} used={billing.credits.usedSeconds} />
+
+            {(hasSubscription || billing.cancelAtPeriodEnd) && (
+                <div className="flex items-center gap-3 flex-wrap">
+                    {billing.cancelAtPeriodEnd && (
+                        <SecondaryButton onClick={() => resume.mutate()} disabled={resume.isPending}>
+                            Resume subscription
+                        </SecondaryButton>
+                    )}
+                    <TertiaryButton onClick={() => portal.mutate()}>
+                        {portal.isPending ? 'Opening billing portal…' : 'Invoices & payment method'}
+                    </TertiaryButton>
+                </div>
+            )}
+
+            {!isBeta && !billing.billingConfigured && (
+                <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                    Billing isn&apos;t configured in this environment, so plan changes are disabled.
+                </p>
+            )}
+
+            {changePlanOpen && <ChangePlanDialog billing={billing} onClose={() => setChangePlanOpen(false)} />}
+        </Section>
+    )
+}
+
+/** Today's recording budget as a small meter (resets at midnight UTC). */
+function CreditsMeter({ limit, used }: { limit: number | null; used: number }) {
+    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+    if (limit === null) {
+        return (
+            <div className="flex items-center gap-2 font-body font-normal text-[13px] text-on-surface-variant">
+                <Icon name="infinity" size={16} />
+                Unlimited recording — {fmt(used)} used today.
+            </div>
+        )
+    }
+    const pct = Math.min(100, (used / limit) * 100)
+    return (
+        <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between font-body font-normal text-[12px] leading-none text-on-surface-variant">
+                <span>Recording today</span>
+                <span className="font-mono">
+                    {fmt(used)} / {fmt(limit)}
+                </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-surface-container overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)}>
+                <div
+                    className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'}
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
         </div>
     )
 }

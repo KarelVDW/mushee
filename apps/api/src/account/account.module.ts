@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { BillingModule } from '../billing/billing.module';
 import { OnboardingModule } from '../onboarding/onboarding.module';
 import { RecordingsModule } from '../recordings/recordings.module';
 import { ScoresModule } from '../scores/scores.module';
@@ -16,6 +17,7 @@ import { AccountDeletion } from './entities/account-deletion.entity';
     RecordingsModule,
     SubscriptionsModule,
     OnboardingModule,
+    BillingModule,
   ],
   controllers: [AccountController],
   providers: [AccountService],

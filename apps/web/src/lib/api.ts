@@ -136,3 +136,90 @@ export function patchOnboarding(patch: OnboardingPatch): Promise<unknown> {
         body: JSON.stringify(patch),
     })
 }
+
+// ── Billing (Polar) ─────────────────────────────────────────────────────────
+
+export interface BillingState {
+    tierId: 'free' | 'pro' | 'studio' | 'beta'
+    tierName: string
+    /** Polar subscription status ('active', 'trialing', …); null on free/beta. */
+    status: string | null
+    /** Billing cadence of the active subscription; null on free/beta. */
+    interval: 'monthly' | 'yearly' | null
+    currentPeriodEnd: string | null
+    cancelAtPeriodEnd: boolean
+    billingConfigured: boolean
+    betaMode: boolean
+    credits: {
+        limitSeconds: number | null
+        usedSeconds: number
+        remainingSeconds: number | null
+    }
+}
+
+export function getBillingState(): Promise<BillingState> {
+    return api('/billing/subscription')
+}
+
+/** Returns the Polar-hosted checkout URL to redirect the browser to. */
+export function createCheckout(tierId: 'pro' | 'studio', interval: 'monthly' | 'yearly'): Promise<{ url: string }> {
+    return api('/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ tierId, interval }),
+    })
+}
+
+/** Returns the Polar-hosted customer portal URL (invoices, payment method). */
+export function createBillingPortalSession(): Promise<{ url: string }> {
+    return api('/billing/portal', { method: 'POST', body: '{}' })
+}
+
+/** Switch tier/cadence on an existing subscription (prorated by Polar). */
+export function changePlan(tierId: 'pro' | 'studio', interval: 'monthly' | 'yearly'): Promise<BillingState> {
+    return api('/billing/change', {
+        method: 'POST',
+        body: JSON.stringify({ tierId, interval }),
+    })
+}
+
+export function cancelSubscription(): Promise<BillingState> {
+    return api('/billing/cancel', { method: 'POST', body: '{}' })
+}
+
+export function resumeSubscription(): Promise<BillingState> {
+    return api('/billing/resume', { method: 'POST', body: '{}' })
+}
+
+// ── Closed beta ─────────────────────────────────────────────────────────────
+
+export interface BetaStatus {
+    betaMode: boolean
+    /** null = account predates the beta (never gated). */
+    status: 'pending' | 'approved' | null
+    role: string
+}
+
+/** Fresh from the database — the waiting screen polls this to spot approval. */
+export function getBetaStatus(): Promise<BetaStatus> {
+    return api('/beta/status')
+}
+
+export interface BetaSignup {
+    id: string
+    name: string
+    email: string
+    status: 'pending' | 'approved'
+    createdAt: string
+}
+
+export function listBetaSignups(): Promise<BetaSignup[]> {
+    return api('/admin/beta/signups')
+}
+
+export function approveBetaSignup(userId: string): Promise<BetaSignup[]> {
+    return api(`/admin/beta/signups/${userId}/approve`, { method: 'POST', body: '{}' })
+}
+
+export function revokeBetaSignup(userId: string): Promise<BetaSignup[]> {
+    return api(`/admin/beta/signups/${userId}/revoke`, { method: 'POST', body: '{}' })
+}

@@ -3,133 +3,118 @@
 import { useState } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
-
-// Mock plan catalogue — mirrors the design system's Settings.jsx tiers.
-// Production would feed these from /api/polar/products.
-export interface PlanTier {
-    id: 'free' | 'pro' | 'studio'
-    name: string
-    icon: string
-    priceMonthly: number
-    priceYearly: number
-    features: string[]
-}
-
-export type Billing = 'monthly' | 'yearly'
-
-export const PLAN_TIERS: PlanTier[] = [
-    {
-        id: 'free',
-        name: 'Sketch',
-        icon: 'feather',
-        priceMonthly: 0,
-        priceYearly: 0,
-        features: ['30 sec recording / day', '3 scores', 'Transcription', 'PDF export'],
-    },
-    {
-        id: 'pro',
-        name: 'Composer',
-        icon: 'sparkles',
-        priceMonthly: 8,
-        priceYearly: 80,
-        features: ['10 min recording / day', 'Unlimited scores', 'MIDI + MusicXML', 'Shareable links', 'Editor themes'],
-    },
-    {
-        id: 'studio',
-        name: 'Studio',
-        icon: 'gem',
-        priceMonthly: 18,
-        priceYearly: 180,
-        features: ['Unlimited recording', 'Everything in Composer', '5 collaborators per score', 'Custom templates', 'Priority support'],
-    },
-]
-
-function planPrice(plan: PlanTier, billing: Billing): string {
-    if (plan.priceMonthly === 0) return 'Free'
-    if (billing === 'yearly') {
-        const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return `$${m}/mo · billed yearly`
-    }
-    return `$${plan.priceMonthly}/mo`
-}
+import { track } from '@/lib/analytics'
+import type { BillingState } from '@/lib/api'
+import { type Billing, PLAN_TIERS, planPrice, type PlanTier } from '@/lib/plans'
+import { useCancelSubscription, useChangePlan, useStartCheckout } from '@/lib/queries'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
 interface ChangePlanDialogProps {
-    currentPlanId: PlanTier['id']
-    currentBilling: Billing
-    onCancel: () => void
-    onChanged: (next: { planId: PlanTier['id']; billing: Billing }) => void
+    billing: BillingState
+    onClose: () => void
 }
 
-export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }: ChangePlanDialogProps) {
-    const [selected, setSelected] = useState<PlanTier['id']>(currentPlanId)
+/**
+ * Real Polar wiring:
+ * - free/beta → paid: POST /billing/checkout, then redirect to Polar's page.
+ * - paid → other paid tier/cadence: POST /billing/change (prorated in place).
+ * - paid → free: POST /billing/cancel (keeps access until the period ends).
+ */
+export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogProps) {
+    const currentBilling: Billing = state.interval ?? 'monthly'
+    const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
     const [billing, setBilling] = useState<Billing>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
 
-    const currentPlan = PLAN_TIERS.find((p) => p.id === currentPlanId) ?? PLAN_TIERS[0]
+    const startCheckout = useStartCheckout()
+    const changePlan = useChangePlan()
+    const cancelSubscription = useCancelSubscription()
+
+    const hasSubscription = Boolean(state.status)
+    const currentPlan = PLAN_TIERS.find((p) => p.id === state.tierId) ?? PLAN_TIERS[0]
     const nextPlan = PLAN_TIERS.find((p) => p.id === selected) ?? PLAN_TIERS[0]
-    const isSame = selected === currentPlanId && billing === currentBilling
+    const isSame = selected === state.tierId && (nextPlan.priceMonthly === 0 || billing === currentBilling)
     const isDowngrade = nextPlan.priceMonthly < currentPlan.priceMonthly
-    const isCancel = nextPlan.id === 'free' && currentPlan.id !== 'free'
+    const isCancel = nextPlan.id === 'free' && hasSubscription
+    const needsCheckout = nextPlan.priceMonthly > 0 && !hasSubscription
 
     const apply = () => {
-        if (isSame) return
-        // Mock: simulate the hand-off latency. Real wiring would POST to
-        // /api/polar/checkout for upgrades or PATCH /api/polar/subscription
-        // for downgrades / cancellation.
+        if (isSame || phase !== 'choose') return
         setPhase('redirecting')
-        const delay = isDowngrade || isCancel ? 900 : 1400
-        setTimeout(() => {
-            setPhase('done')
-            setTimeout(() => onChanged({ planId: selected, billing }), 900)
-        }, delay)
+        if (isCancel) {
+            track('subscription_cancel_started')
+            cancelSubscription.mutate(undefined, {
+                onSuccess: () => setPhase('done'),
+                onError: () => setPhase('choose'),
+            })
+        } else if (needsCheckout) {
+            track('checkout_started', { tierId: nextPlan.id, interval: billing })
+            startCheckout.mutate(
+                { tierId: nextPlan.id as 'pro' | 'studio', interval: billing },
+                // Success navigates away to Polar; only errors return here.
+                { onError: () => setPhase('choose') },
+            )
+        } else {
+            track('plan_change_started', { tierId: nextPlan.id, interval: billing })
+            changePlan.mutate(
+                { tierId: nextPlan.id as 'pro' | 'studio', interval: billing },
+                {
+                    onSuccess: () => setPhase('done'),
+                    onError: () => setPhase('choose'),
+                },
+            )
+        }
     }
 
     const ctaLabel = isSame
         ? 'No change'
         : isCancel
           ? 'Cancel subscription'
-          : isDowngrade
-            ? `Switch to ${nextPlan.name}`
-            : 'Continue to Polar checkout'
+          : needsCheckout
+            ? 'Continue to Polar checkout'
+            : `Switch to ${nextPlan.name}${billing === 'yearly' ? ' (yearly)' : ' (monthly)'}`
 
-    const locked = phase === 'redirecting' || phase === 'done'
+    const locked = phase !== 'choose'
 
     return (
-        <DialogScrim onDismiss={locked ? undefined : onCancel}>
+        <DialogScrim onDismiss={locked ? undefined : onClose}>
             <DialogPanel
                 title={
                     phase === 'done'
-                        ? 'Plan updated.'
+                        ? isCancel
+                            ? 'Cancellation scheduled.'
+                            : 'Plan updated.'
                         : phase === 'redirecting'
-                          ? isDowngrade || isCancel
-                              ? 'Updating your subscription…'
-                              : 'Redirecting to Polar…'
+                          ? needsCheckout
+                              ? 'Redirecting to Polar…'
+                              : 'Updating your subscription…'
                           : 'Change plan'
                 }
                 eyebrow={
-                    phase === 'done'
-                        ? `You're now on ${nextPlan.name}.`
-                        : phase === 'redirecting'
-                          ? undefined
-                          : 'Switch tiers, change billing cadence, or cancel. Payments are processed by Polar.'
+                    phase === 'choose'
+                        ? 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
+                        : undefined
                 }
-                onClose={locked ? undefined : onCancel}
+                onClose={locked ? undefined : onClose}
                 width={720}
                 footer={
                     phase === 'choose' ? (
                         <>
-                            <TertiaryButton onClick={onCancel}>Keep current plan</TertiaryButton>
+                            <TertiaryButton onClick={onClose}>Keep current plan</TertiaryButton>
                             <PrimaryButton
                                 emphasis="pop"
                                 disabled={isSame}
                                 danger={isCancel}
-                                icon={!isDowngrade && !isCancel ? 'external-link' : undefined}
+                                icon={needsCheckout ? 'external-link' : undefined}
                                 onClick={apply}>
                                 {ctaLabel}
                             </PrimaryButton>
                         </>
+                    ) : phase === 'done' ? (
+                        <PrimaryButton emphasis="pop" onClick={onClose}>
+                            Done
+                        </PrimaryButton>
                     ) : null
                 }>
                 {phase === 'choose' && (
@@ -169,7 +154,7 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                         <div className="grid grid-cols-3 gap-3">
                             {PLAN_TIERS.map((p) => {
                                 const active = selected === p.id
-                                const isCurrent = p.id === currentPlanId && billing === currentBilling
+                                const isCurrent = p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
                                 return (
                                     <button
                                         key={p.id}
@@ -214,13 +199,13 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
 
                         {isCancel && (
                             <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                You&apos;ll keep <strong>{currentPlan.name}</strong> features until your next billing date, then drop to
-                                Sketch. Scores beyond the 3-score limit become read-only — they&apos;re never deleted.
+                                You&apos;ll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then
+                                drop to Sketch. Your scores are never deleted.
                             </div>
                         )}
                         {isDowngrade && !isCancel && (
                             <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                Downgrade takes effect at the end of your current billing cycle. Polar will prorate any difference.
+                                The switch takes effect right away; Polar prorates the difference on your next invoice.
                             </div>
                         )}
                     </div>
@@ -233,9 +218,9 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                             style={{ animation: 'sheemu-spin 700ms linear infinite' }}
                         />
                         <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
-                            {isDowngrade || isCancel
-                                ? 'Talking to Polar to update your subscription.'
-                                : "Hand-off to Polar's secure checkout in progress…"}
+                            {needsCheckout
+                                ? "Hand-off to Polar's secure checkout in progress…"
+                                : 'Talking to Polar to update your subscription.'}
                         </span>
                     </div>
                 )}
@@ -247,8 +232,8 @@ export function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onCh
                         </span>
                         <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
                             {isCancel
-                                ? 'Subscription cancelled. We sent a confirmation to your email.'
-                                : 'Polar has the new plan on file. Receipt sent by email.'}
+                                ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
+                                : 'Polar has the new plan on file. Receipt follows by email.'}
                         </span>
                     </div>
                 )}

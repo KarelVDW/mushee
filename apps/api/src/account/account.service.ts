@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 
 import { auth } from '../auth/auth';
+import { BillingService } from '../billing/billing.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
 import { RecordingsService } from '../recordings/recordings.service';
 import { ScoresService } from '../scores/scores.service';
@@ -28,6 +29,7 @@ export class AccountService {
     private readonly recordingsService: RecordingsService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly onboardingService: OnboardingService,
+    private readonly billingService: BillingService,
   ) {}
 
   /**
@@ -100,6 +102,7 @@ export class AccountService {
       try {
         await this.scoresService.removeAllForUser(userId);
         await this.recordingsService.deleteAllForUser(userId);
+        await this.billingService.deletePolarCustomer(userId);
         await this.subscriptionsService.deleteForUser(userId);
         await this.onboardingService.deleteForUser(userId);
 

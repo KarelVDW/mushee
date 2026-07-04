@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 import { AccountDeletion } from '../account/entities/account-deletion.entity';
+import { ProcessedWebhookEvent } from '../billing/entities/processed-webhook-event.entity';
 import { CachedScore } from '../cache/entities/cached-score.entity';
 import { UserOnboarding } from '../onboarding/entities/user-onboarding.entity';
 import { ActiveRecording } from '../recordings/entities/active-recording.entity';
@@ -33,6 +34,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AccountDeletion,
     ActiveRecording,
     CachedScore,
+    ProcessedWebhookEvent,
     Recording,
     RecordingUsage,
     Score,

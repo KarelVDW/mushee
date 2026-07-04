@@ -49,6 +49,21 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new WsAdapter(app));
 
+  // Replace the JSON body parser with one that keeps the raw bytes on
+  // req.rawBody — Polar webhook signatures (standard-webhooks) are computed
+  // over the exact payload, so re-serialized JSON would never verify.
+  // Parsing still goes through fastify's own secure JSON parser.
+  const fastify = app.getHttpAdapter().getInstance();
+  const parseJson = fastify.getDefaultJsonParser('error', 'error');
+  fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'buffer' },
+    (req, body: Buffer, done) => {
+      (req as unknown as { rawBody: Buffer }).rawBody = body;
+      void parseJson(req, body.toString('utf8'), done);
+    },
+  );
+
   /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Nest's FastifyAdapter exposes a structurally-distinct Fastify instance type, so plugin refs need casting. */
   await app.register(fastifyCookie as any);
   await app.register(fastifyHelmet as any);

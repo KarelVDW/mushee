@@ -3,9 +3,8 @@
 import { useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { PLAN_TIERS } from '@/lib/plans'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
-
-import { PLAN_TIERS } from '../../settings/ChangePlanDialog'
 
 // Format seconds as M:SS (or just S"s" when under a minute).
 function fmtRecTime(sec: number): string {

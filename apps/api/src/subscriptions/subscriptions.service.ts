@@ -17,6 +17,25 @@ export class SubscriptionsService {
     return SubscriptionTier.byId(subscription?.tierId);
   }
 
+  async findForUser(userId: string): Promise<UserSubscription | null> {
+    return this.repo.findOneBy({ userId });
+  }
+
+  /**
+   * Create or update the user's subscription row. Used by the beta signup
+   * hook (tier 'beta') and by the Polar webhook handler (paid tiers).
+   */
+  async upsert(
+    userId: string,
+    changes: Partial<Omit<UserSubscription, 'userId' | 'createdAt' | 'updatedAt'>>,
+  ): Promise<UserSubscription> {
+    const existing = await this.repo.findOneBy({ userId });
+    const row = existing
+      ? this.repo.merge(existing, changes)
+      : this.repo.create({ userId, ...changes });
+    return this.repo.save(row);
+  }
+
   /** Remove the user's subscription row (account purge). */
   async deleteForUser(userId: string): Promise<void> {
     await this.repo.delete({ userId });
