@@ -1,3 +1,5 @@
+'use client'
+
 import type { CSSProperties, ReactNode } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 

@@ -433,7 +433,13 @@ export class RecordingPipeline {
     if (this.lastDuration <= 0 && !this.chunks.length) return;
     this.debugWritten = true;
 
-    const baseDir = process.env.RECORDINGS_DEBUG_DIR ?? DEFAULT_DEBUG_DIR;
+    // Raw audio is personal data: never persist it in production unless an
+    // operator explicitly opts in via RECORDINGS_DEBUG_DIR. The privacy
+    // policy promises audio is processed in memory only.
+    const baseDir =
+      process.env.RECORDINGS_DEBUG_DIR ??
+      (process.env.NODE_ENV === 'production' ? null : DEFAULT_DEBUG_DIR);
+    if (!baseDir) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const sessionDir = join(baseDir, stamp);
 
