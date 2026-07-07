@@ -115,6 +115,51 @@ body {
     }
 }
 
+/* Live recording waveform bars (RecordingWaveform.tsx). SVG rects: transform-box
+   makes scaleY grow from each bar's own center. */
+@keyframes waveform-bar-in {
+    from {
+        transform: scaleY(0);
+        opacity: 0;
+    }
+    to {
+        transform: scaleY(1);
+        opacity: 0.55;
+    }
+}
+@keyframes waveform-bar-sway {
+    0%,
+    100% {
+        transform: scaleY(1);
+    }
+    50% {
+        transform: scaleY(0.78);
+    }
+}
+/* Exit: grow to the full staff height (per-bar --waveform-burst factor), then fade —
+   the bar hands its pixels over to the note that replaced it. */
+@keyframes waveform-bar-out {
+    35% {
+        transform: scaleY(var(--waveform-burst, 2));
+        opacity: 0.55;
+    }
+    100% {
+        transform: scaleY(var(--waveform-burst, 2));
+        opacity: 0;
+    }
+}
+.waveform-bar {
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0.55;
+    animation:
+        waveform-bar-in 200ms var(--ease-sheemu),
+        waveform-bar-sway 1.4s ease-in-out 200ms infinite;
+}
+.waveform-bar-exit {
+    animation: waveform-bar-out 450ms var(--ease-sheemu) forwards;
+}
+
 /* Long-form articles (privacy policy, terms). Tonal, no hard rules. */
 .legal-prose {
     font-family: var(--font-body);

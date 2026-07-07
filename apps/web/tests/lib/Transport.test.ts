@@ -81,7 +81,6 @@ function recordingOptions(score: Score, over: Record<string, unknown> = {}) {
         score,
         startMeasureIndex: 0,
         cursorEl: svgRect(),
-        waveformEl: null,
         resolvePosition,
         wsUrl: 'ws://localhost/stream',
         onStateChange: vi.fn(),

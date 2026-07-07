@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
@@ -12,6 +13,7 @@ import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { getLineForY } from './note-utils'
 import { NoteGroup } from './NoteGroup'
+import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
 import { TempoPopover } from './TempoPopover'
@@ -30,7 +32,8 @@ interface ScoreProps {
     /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
     selectedNotes?: Note[]
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
-    recordingWaveformRef?: React.RefObject<SVGPathElement | null>
+    /** Live recording waveform bars; the layer subscribes to it directly. */
+    waveformStore?: RecordingWaveformStore
     /** Begin a selection on `note` (plain click / drag start). */
     onSelectionStart?: (note: Note) => void
     /** Extend the selection to `note` (drag move / shift-click). */
@@ -47,7 +50,7 @@ export const Score = memo(function Score({
     selectedNote,
     selectedNotes,
     playbackCursorRef,
-    recordingWaveformRef,
+    waveformStore,
     onSelectionStart,
     onSelectionExtend,
     onNoteChange,
@@ -265,16 +268,9 @@ export const Score = memo(function Score({
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleClick}>
-                    {/* Recording waveform — painted directly by RecordingEngine via ref */}
-                    <path
-                        ref={recordingWaveformRef}
-                        data-export-exclude
-                        stroke={INTERACTION_BLUE}
-                        strokeWidth={2.5}
-                        strokeLinecap="square"
-                        fill="none"
-                        opacity={0.5}
-                    />
+                    {/* Live recording waveform — its own store-subscribed layer, so
+                        sample-rate updates never re-render the score itself */}
+                    {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}
 
                     {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
                     <rect

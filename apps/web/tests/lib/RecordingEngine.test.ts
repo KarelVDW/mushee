@@ -121,9 +121,6 @@ function fakePlayer(currentTime = 0) {
 function svgRect(): SVGRectElement {
     return document.createElementNS('http://www.w3.org/2000/svg', 'rect')
 }
-function svgPath(): SVGPathElement {
-    return document.createElementNS('http://www.w3.org/2000/svg', 'path')
-}
 
 /**
  * Build options for a recording starting at `startMeasureIndex`. The score has
@@ -133,9 +130,9 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
     const measureCount = over.measureCount ?? 4
     const score: Score = (over.score as Score) ?? makeScore(measureCount)
     const cursorEl = svgRect()
-    const waveformEl = svgPath()
     const onStateChange = vi.fn()
     const onNeedNewMeasure = vi.fn()
+    const onSample = vi.fn()
     const onScoreUpdate = vi.fn()
     const onLimitReached = vi.fn()
     const onRecordingError = vi.fn()
@@ -146,11 +143,11 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
         score,
         startMeasureIndex: over.startMeasureIndex ?? 0,
         cursorEl,
-        waveformEl,
         resolvePosition,
         wsUrl: 'ws://localhost/stream',
         onStateChange,
         onNeedNewMeasure,
+        onSample,
         onScoreUpdate,
         onLimitReached,
         onRecordingError,
@@ -160,9 +157,9 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
         options,
         score,
         cursorEl,
-        waveformEl,
         onStateChange,
         onNeedNewMeasure,
+        onSample,
         onScoreUpdate,
         onLimitReached,
         onRecordingError,
@@ -243,10 +240,10 @@ describe('RecordingEngine', () => {
         expect(lastRecorder?.start).toHaveBeenCalledWith(100)
     })
 
-    it('moves the cursor during recording and samples the waveform', async () => {
+    it('moves the cursor during recording and emits an anchored amplitude sample', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
-        const { options, cursorEl, waveformEl, resolvePosition } = makeOptions()
+        const { options, cursorEl, onSample, resolvePosition } = makeOptions()
         await engine.start(options)
 
         // Force into recording.
@@ -256,7 +253,8 @@ describe('RecordingEngine', () => {
         await Promise.resolve()
 
         resolvePosition.mockClear()
-        // Make the analyser produce a non-zero RMS so the waveform path is non-empty.
+        onSample.mockClear()
+        // Make the analyser produce a non-zero RMS so the sample carries amplitude.
         analyser().sample = 200
         // A little past the countoff end => first recording measure, beat ~0.x.
         raw.currentTime = 2.8
@@ -264,14 +262,18 @@ describe('RecordingEngine', () => {
 
         expect(cursorEl.getAttribute('display')).toBe('')
         expect(resolvePosition).toHaveBeenCalled()
-        // Waveform path was painted with at least one stroke.
-        expect(waveformEl.getAttribute('d')).toMatch(/^M/)
+        expect(onSample).toHaveBeenCalledTimes(1)
+        const sample = onSample.mock.calls[0][0] as { measureIndex: number; beat: number; amp: number; timeMs: number }
+        expect(sample.measureIndex).toBe(0)
+        expect(sample.amp).toBeGreaterThan(0)
+        expect(sample.amp).toBeLessThanOrEqual(1)
+        expect(sample.timeMs).toBeGreaterThanOrEqual(0)
     })
 
-    it('records without a waveform element (waveformEl null)', async () => {
+    it('records without a sample consumer (onSample undefined)', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
-        const { options, cursorEl } = makeOptions({ waveformEl: null })
+        const { options, cursorEl } = makeOptions({ onSample: undefined })
         await engine.start(options)
         raw.currentTime = 3
         engine.tick()
@@ -280,30 +282,30 @@ describe('RecordingEngine', () => {
 
         analyser().sample = 200
         raw.currentTime = 2.8
-        // updateWaveform short-circuits on the missing waveform element; the cursor still moves.
+        // sampleAmplitude short-circuits without a consumer; the cursor still moves.
         expect(() => engine.tick()).not.toThrow()
         expect(cursorEl.getAttribute('display')).toBe('')
     })
 
-    it('downsamples waveform samples to the sample interval', async () => {
+    it('downsamples amplitude to the sample interval', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
-        const { options, waveformEl } = makeOptions()
+        const { options, onSample } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
         engine.tick()
         socket().fire('open')
         await Promise.resolve()
 
+        onSample.mockClear()
         analyser().sample = 200
         // Two very close ticks (< 1/30s apart in recording time) => second is skipped.
         raw.currentTime = 2.7
         engine.tick()
-        const after1 = waveformEl.getAttribute('d')
+        expect(onSample).toHaveBeenCalledTimes(1)
         raw.currentTime = 2.71 // 0.01s later, below the 1/30s interval
         engine.tick()
-        const after2 = waveformEl.getAttribute('d')
-        expect(after2).toBe(after1)
+        expect(onSample).toHaveBeenCalledTimes(1)
     })
 
     it('triggers onNeedNewMeasure as the cursor nears the end of the current measure', async () => {
@@ -603,80 +605,26 @@ describe('RecordingEngine', () => {
         expect(() => internal.paintCursor('#000')).not.toThrow()
     })
 
-    it('paints the waveform for a sample that spans into a later recording measure', async () => {
+    it('anchors a sample to a later recording measure once the take crosses into it', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
-        const { options, waveformEl, resolvePosition } = makeOptions({ startMeasureIndex: 0, measureCount: 6 })
+        const { options, onSample } = makeOptions({ startMeasureIndex: 0, measureCount: 6 })
         await engine.start(options)
         raw.currentTime = 3
         engine.tick()
         socket().fire('open')
         await Promise.resolve()
 
+        onSample.mockClear()
         analyser().sample = 200
         const countoffEnd = (4 * 60) / 90
-        // ~5 beats into the recording => second recording measure: the updateWaveform
-        // while-loop subtracts the first measure's beats and advances measureIndex.
+        // ~5 beats into the recording => second recording measure.
         raw.currentTime = countoffEnd + (5 * 60) / 90
         engine.tick()
-        const d = waveformEl.getAttribute('d') ?? ''
-        expect(d).toMatch(/^M/)
-        // The sample resolved to a later measure (index >= 1), proving the while-loop advanced.
-        const resolvedLaterMeasure = resolvePosition.mock.calls.some(([measureIndex]) => measureIndex >= 1)
-        expect(resolvedLaterMeasure).toBe(true)
-    })
-
-    it('skips waveform samples that fall beyond the available measures', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const { options, waveformEl } = makeOptions({ startMeasureIndex: 0, measureCount: 2 })
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        // Sample a valid in-range point first so there is an entry, then a far-off point.
-        analyser().sample = 200
-        const countoffEnd = (4 * 60) / 90
-        raw.currentTime = countoffEnd + (0.5 * 60) / 90
-        engine.tick()
-        const afterInRange = waveformEl.getAttribute('d')
-
-        // Now sample beyond all recording measures (handled by tick's own off-end guard),
-        // and force updateWaveform to also see an out-of-range sample by manipulating samples.
-        const internal = engine as unknown as { samples: { time: number; amp: number }[]; updateWaveform(): void }
-        internal.samples.push({ time: 9999, amp: 0.5 }) // far beyond all measures => continue
-        internal.updateWaveform()
-        // The out-of-range sample contributes nothing extra beyond the in-range stroke(s).
-        expect((waveformEl.getAttribute('d') ?? '').startsWith(afterInRange ?? '')).toBe(true)
-    })
-
-    it('skips waveform samples whose position cannot be resolved', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const resolvePosition = vi.fn(
-        (measureIndex: number, beat: number): { x: number; rowY: number } | null => ({ x: measureIndex * 100 + beat * 10, rowY: 0 }),
-    )
-        const { options, waveformEl } = makeOptions({ resolvePosition, measureCount: 4 })
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        // Record one in-range sample.
-        analyser().sample = 200
-        const countoffEnd = (4 * 60) / 90
-        raw.currentTime = countoffEnd + (0.5 * 60) / 90
-        engine.tick()
-
-        // Now make resolvePosition return null and force a waveform repaint.
-        resolvePosition.mockReturnValue(null)
-        const internal = engine as unknown as { updateWaveform(): void }
-        internal.updateWaveform()
-        // Every sample resolved to null => the path is cleared (no strokes).
-        expect(waveformEl.getAttribute('d')).toBe('')
+        expect(onSample).toHaveBeenCalledTimes(1)
+        const sample = onSample.mock.calls[0][0] as { measureIndex: number; beat: number }
+        expect(sample.measureIndex).toBe(1)
+        expect(sample.beat).toBeGreaterThanOrEqual(0)
     })
 
     it('beginStreaming returns immediately when the stream/options are gone', async () => {

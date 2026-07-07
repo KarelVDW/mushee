@@ -75,3 +75,26 @@ This file collects decisions made under uncertainty and other considerations, pe
 - RecordingEngine internals untouched (its 46-test suite still pins mic/WS behavior);
   the messiness addressed was the coordination layer. Waveform React-ification is
   task 4's follow-up.
+
+## Task 4 — waveform bars as animated React elements
+
+- RecordingEngine no longer paints SVG: it emits `WaveformSample`s (timeMs,
+  measureIndex, beat, amp 0..1) via `onSample`. A `RecordingWaveformStore`
+  (useSyncExternalStore) holds the bars; the `RecordingWaveform` component inside the
+  score SVG subscribes directly, so 30Hz samples re-render only that layer.
+- Positions resolve at render time from the live layout — bars stay glued to their
+  beat when rows reflow as measures fill.
+- **Brand colors**: bars alternate loud cyan `#00DBE9` / magenta `#FF2079` at 0.55
+  opacity, stable per-bar via a sequence number (array-index parity would flicker as
+  bars are removed). This contradicts the old sanctuary rule (no accents in canvas);
+  per the explicit request I carved a documented exception into DESIGN.md +
+  design/README.md (transient, export-excluded). Worth a designer sanity-check.
+- Animations (globals.css): enter = 200ms scaleY grow-in; idle = 1.4s gentle sway;
+  exit = grow to full staff height (per-bar `--waveform-burst` factor) then fade,
+  as the user suggested. `transform-box: fill-box` makes scaleY center on each bar.
+- **Removal trigger**: on each `score-update`, after replacing a measure's notes, bars
+  in that measure with beat < end-of-last-non-rest-note animate out. On take end
+  (state → idle) all remaining bars exit together; a new take resets the store.
+- Caveat: if CSS animations never run (e.g. forced-reduced-motion setups), exiting
+  bars rely on `onAnimationEnd` and could linger until the next take resets them —
+  accepted as negligible.

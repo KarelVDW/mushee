@@ -10,6 +10,7 @@ import { track } from '@/lib/analytics'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings, useUpdateScore } from '@/lib/queries'
 import { type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
 import { Transport } from '@/lib/Transport'
 import { Instrument, type Note, type Pitch, type Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
@@ -78,7 +79,9 @@ export default function ScoreEditorPage() {
     const saveRetryRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const transportRef = useRef<Transport | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
-    const recordingWaveformRef = useRef<SVGPathElement | null>(null)
+    // Live waveform bars: an external store so 30Hz mic samples re-render only
+    // the waveform layer inside the score SVG, never this page.
+    const [waveformStore] = useState(() => new RecordingWaveformStore())
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [metronome, setMetronome] = useState(false)
@@ -286,6 +289,7 @@ export default function ScoreEditorPage() {
 
         let measureIndex = activeNote.measure.index
         manipulator.select(null)
+        waveformStore.reset()
         const startIndex = measureIndex
         score.addMeasure(measureIndex++).complete()
         saveToApi({ score })
@@ -308,10 +312,22 @@ export default function ScoreEditorPage() {
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
-                waveformEl: recordingWaveformRef.current,
                 resolvePosition,
                 wsUrl,
-                onStateChange: setRecordingState,
+                onStateChange: (state) => {
+                    setRecordingState(state)
+                    // The take ended: whatever bars are still waiting for their
+                    // notes animate out together.
+                    if (state === 'idle') waveformStore.clearAll()
+                },
+                onSample: (sample) => {
+                    waveformStore.add({
+                        id: sample.timeMs,
+                        measureIndex: sample.measureIndex,
+                        beat: sample.beat,
+                        amp: sample.amp,
+                    })
+                },
                 onNeedNewMeasure: () => {
                     score.addMeasure(measureIndex++).complete()
                     saveToApi({ score })
@@ -324,6 +340,17 @@ export default function ScoreEditorPage() {
                         const notes = ScoreDeserializer.mxmlMeasureToNotes(mxmlMeasure)
                         if (!notes.length) continue
                         score.replace([measure.firstNote], notes)
+                        // The staff now shows real notes up to the end of the last
+                        // pitched note in this measure — their waveform bars have
+                        // done their job and can animate out.
+                        let beat = 0
+                        let coveredBeats = 0
+                        for (const note of notes) {
+                            const span = note.duration.effectiveBeats
+                            if (!note.isRest) coveredBeats = beat + span
+                            beat += span
+                        }
+                        if (coveredBeats > 0) waveformStore.clearCovered(absIndex, coveredBeats)
                     }
                     saveToApi({ score })
                 },
@@ -360,7 +387,7 @@ export default function ScoreEditorPage() {
         }
 
         track('recording_started')
-    }, [manipulator, score, activeNote, stopAll, saveToApi, id, router])
+    }, [manipulator, score, activeNote, stopAll, saveToApi, id, router, waveformStore])
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts after the score loads, attaching the listener and focusing for capture.
@@ -471,7 +498,7 @@ export default function ScoreEditorPage() {
                         selectedNote={activeNote}
                         selectedNotes={manipulator.selectedNotes}
                         playbackCursorRef={playbackCursorRef}
-                        recordingWaveformRef={recordingWaveformRef}
+                        waveformStore={waveformStore}
                         onSelectionStart={handleSelectionStart}
                         onSelectionExtend={handleSelectionExtend}
                         onNoteChange={handleNoteChange}

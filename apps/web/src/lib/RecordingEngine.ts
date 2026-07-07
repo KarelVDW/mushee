@@ -1,4 +1,3 @@
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@/components/notation/constants'
 import type { MxmlMeasure } from '@/components/notation/types'
 import type { Score } from '@/model/Score'
 
@@ -15,11 +14,21 @@ const CHUNK_MS = 100
  */
 const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
-const STAFF_MIDDLE_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
-const WAVEFORM_MAX_RADIUS = ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
-/** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to the staff. */
+/** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
 const WAVEFORM_GAIN = 10
 export type RecordingState = 'idle' | 'countoff' | 'recording'
+
+/** One amplitude sample, anchored to the score position it was captured at. */
+export interface WaveformSample {
+    /** Time since the recording (post-countoff) began, in ms. */
+    timeMs: number
+    /** Absolute measure index the sample falls in. */
+    measureIndex: number
+    /** Beat offset within that measure. */
+    beat: number
+    /** Normalized amplitude, 0..1. */
+    amp: number
+}
 
 /** Sent by the gateway when the daily recording budget runs out (or already had). */
 export interface RecordingLimitInfo {
@@ -55,13 +64,13 @@ export interface RecordingOptions {
     /** Index of the freshly inserted empty count-off measure. */
     startMeasureIndex: number
     cursorEl: SVGRectElement
-    /** Path element for the live audio-intensity waveform. */
-    waveformEl: SVGPathElement | null
     resolvePosition: ResolveRecordingPosition
     wsUrl: string
     onStateChange: (state: RecordingState) => void
     /** Fired when the cursor is about to run off the last available measure. */
     onNeedNewMeasure: () => void
+    /** Fired ~30×/s with a mic amplitude sample anchored to a score position. */
+    onSample?: (sample: WaveformSample) => void
     /**
      * Fired when the gateway streams back a score update. Measure keys are
      * 0-based indices relative to the recording start (i.e., the first recording
@@ -101,7 +110,7 @@ export class RecordingEngine implements Tickable {
     private analyserCtx: AudioContext | null = null
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
-    private samples: { time: number; amp: number }[] = []
+    private lastSampleTime = -Infinity
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
@@ -157,8 +166,7 @@ export class RecordingEngine implements Tickable {
         source.connect(this.analyser)
         this.analyserData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize))
 
-        this.samples = []
-        options.waveformEl?.setAttribute('d', '')
+        this.lastSampleTime = -Infinity
 
         this.paintCursor('#ef4444')
         this.moveCursor(options.startMeasureIndex, 0)
@@ -271,15 +279,16 @@ export class RecordingEngine implements Tickable {
             this.options.onNeedNewMeasure()
         }
 
-        this.sampleAmplitude(recordingElapsed)
+        this.sampleAmplitude(recordingElapsed, measureIndex, remaining)
 
         return false
     }
 
-    private sampleAmplitude(recordingElapsed: number): void {
-        if (!this.analyser || !this.analyserData || !this.options) return
-        const last = this.samples[this.samples.length - 1]
-        if (last && recordingElapsed - last.time < SAMPLE_INTERVAL_SEC) return
+    /** Meter the mic (RMS over the analyser window) and emit one anchored sample. */
+    private sampleAmplitude(recordingElapsed: number, measureIndex: number, beat: number): void {
+        if (!this.analyser || !this.analyserData || !this.options?.onSample) return
+        if (recordingElapsed - this.lastSampleTime < SAMPLE_INTERVAL_SEC) return
+        this.lastSampleTime = recordingElapsed
 
         this.analyser.getByteTimeDomainData(this.analyserData)
         let sumSquares = 0
@@ -288,36 +297,12 @@ export class RecordingEngine implements Tickable {
             sumSquares += v * v
         }
         const rms = Math.sqrt(sumSquares / this.analyserData.length)
-        this.samples.push({ time: recordingElapsed, amp: rms })
-        this.updateWaveform()
-    }
-
-    private updateWaveform(): void {
-        if (!this.options?.waveformEl) return
-        const parts: string[] = []
-        const measures = this.options.score.measures
-        const startIndex = this.options.startMeasureIndex
-
-        for (const sample of this.samples) {
-            const beatsIntoRecording = (sample.time * this.bpm) / 60
-            let remaining = beatsIntoRecording
-            let measureIndex = startIndex
-            while (measureIndex < measures.length) {
-                const m = measures[measureIndex]
-                if (remaining < m.maxBeats) break
-                remaining -= m.maxBeats
-                measureIndex++
-            }
-            if (measureIndex >= measures.length) continue
-
-            const pos = this.options.resolvePosition(measureIndex, remaining)
-            if (!pos) continue
-
-            const y = pos.rowY + STAFF_MIDDLE_Y
-            const r = Math.min(sample.amp * WAVEFORM_GAIN, 1) * WAVEFORM_MAX_RADIUS
-            parts.push(`M${pos.x} ${y - r}L${pos.x} ${y + r}`)
-        }
-        this.options.waveformEl.setAttribute('d', parts.join(''))
+        this.options.onSample({
+            timeMs: Math.round(recordingElapsed * 1000),
+            measureIndex,
+            beat,
+            amp: Math.min(rms * WAVEFORM_GAIN, 1),
+        })
     }
 
     private async beginStreaming(): Promise<void> {

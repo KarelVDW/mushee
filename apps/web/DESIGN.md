@@ -25,7 +25,7 @@ Note the WCAG consequence: a **selected chip is `secondary-soft`**, not loud mag
 
 ### The Sanctuary (score canvas)
 
-The editor canvas is strictly `#ffffff` with **`#2d2f2f` ink — never pure black** (`NOTATION_INK` in `src/components/notation/constants.ts`). No cyan, no magenta inside the canvas. Transient interaction overlays (selection bands, input cursor, playback cursor, live recording waveform) use the one sanctioned third color, `INTERACTION_BLUE` (`#1e90ff`) — deliberately neither brand accent, always `data-export-exclude`d so exports stay monochrome. The optional `manuscript-canvas` dot texture (40px grid, 15% `outline_variant`) may sit behind the staff.
+The editor canvas is strictly `#ffffff` with **`#2d2f2f` ink — never pure black** (`NOTATION_INK` in `src/components/notation/constants.ts`). No cyan, no magenta inside the canvas — with one sanctioned exception: the **live recording waveform** (`RecordingWaveform.tsx`) renders alternating cyan/magenta bars while a take is in flight; it is transient by nature and always `data-export-exclude`d. All other transient interaction overlays (selection bands, input cursor, playback cursor) use the one sanctioned third color, `INTERACTION_BLUE` (`#1e90ff`) — deliberately neither brand accent, always `data-export-exclude`d so exports stay monochrome. The optional `manuscript-canvas` dot texture (40px grid, 15% `outline_variant`) may sit behind the staff.
 
 ---
 
