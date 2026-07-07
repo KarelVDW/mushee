@@ -11,6 +11,7 @@ import { Recording } from '../recordings/entities/recording.entity';
 import { RecordingUsage } from '../recordings/entities/recording-usage.entity';
 import { Score } from '../scores/entities/score.entity';
 import { UserSettings } from '../settings/entities/user-settings.entity';
+import { SubscriptionTier } from '../subscriptions/entities/subscription-tier.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { migrations } from './migrations';
 import { postgresSsl } from './postgres-ssl';
@@ -51,6 +52,7 @@ export const dataSourceOptions: DataSourceOptions = {
     Recording,
     RecordingUsage,
     Score,
+    SubscriptionTier,
     UserOnboarding,
     UserSettings,
     UserSubscription,

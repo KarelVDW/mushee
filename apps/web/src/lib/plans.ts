@@ -1,9 +1,13 @@
 /**
- * The plan catalogue — single source of truth for every place that shows
- * tiers (landing pricing, onboarding, settings). Mirrors the API's
- * SubscriptionTier (apps/api/src/subscriptions/SubscriptionTier.ts) — keep
- * the two in sync. Prices are display-only; the amounts actually charged
- * come from the Polar products configured on the API.
+ * Display decoration for the subscription tiers: icons, taglines, display
+ * prices, marketing feature lines. The tiers themselves — names and
+ * entitlements — live in the database and are served by `GET /plans`
+ * (see `usePlans` in lib/queries.ts); in-app surfaces merge that data with
+ * this decoration by id. Only the marketing landing page renders straight
+ * from this static catalogue (it must work without the API), so keep the
+ * `dailyRecordingSeconds` fallbacks roughly in sync with the seeded tiers.
+ * Prices are display-only; the amounts actually charged come from the Polar
+ * products configured on the API.
  */
 
 export interface PlanTier {
@@ -13,6 +17,9 @@ export interface PlanTier {
     tagline: string
     priceMonthly: number
     priceYearly: number
+    /** Static fallback for the recording budget; the API value wins in-app. */
+    dailyRecordingSeconds: number | null
+    /** Marketing feature lines, excluding the recording budget (derived). */
     features: string[]
     popular?: boolean
 }
@@ -27,7 +34,8 @@ export const PLAN_TIERS: PlanTier[] = [
         tagline: 'For trying things out',
         priceMonthly: 0,
         priceYearly: 0,
-        features: ['30 sec of recording / day', 'Unlimited scores', 'Live audio-to-notation', 'Full editor'],
+        dailyRecordingSeconds: 30,
+        features: ['Unlimited scores', 'Live audio-to-notation', 'Full editor'],
     },
     {
         id: 'pro',
@@ -36,7 +44,8 @@ export const PLAN_TIERS: PlanTier[] = [
         tagline: 'For daily writers',
         priceMonthly: 8,
         priceYearly: 80,
-        features: ['10 min of recording / day', 'Everything in Sketch', 'Priority transcription', 'Early access to new features'],
+        dailyRecordingSeconds: 600,
+        features: ['Everything in Sketch', 'Priority transcription', 'Early access to new features'],
         popular: true,
     },
     {
@@ -46,7 +55,8 @@ export const PLAN_TIERS: PlanTier[] = [
         tagline: 'For heavy sessions',
         priceMonthly: 18,
         priceYearly: 180,
-        features: ['Unlimited recording', 'Everything in Composer', 'Priority support'],
+        dailyRecordingSeconds: null,
+        features: ['Everything in Composer', 'Priority support'],
     },
 ]
 
@@ -56,7 +66,8 @@ export const BETA_PLAN = {
     name: 'Beta',
     icon: 'sparkles',
     tagline: 'Free while the beta runs',
-    features: ['5 min of recording / day', 'Full editor', 'Direct line to the makers'],
+    dailyRecordingSeconds: 300,
+    features: ['Full editor', 'Direct line to the makers'],
 }
 
 /** Mirrors the API's BETA_MODE switch; set NEXT_PUBLIC_BETA_MODE=true to
@@ -65,6 +76,25 @@ export const BETA_MODE = process.env.NEXT_PUBLIC_BETA_MODE === 'true'
 
 export function planById(id: string | undefined | null): PlanTier {
     return PLAN_TIERS.find((p) => p.id === id) ?? PLAN_TIERS[0]
+}
+
+/** Human line for a daily recording budget in seconds; null = unlimited. */
+export function recordingBudgetLabel(seconds: number | null): string {
+    if (seconds === null) return 'Unlimited recording'
+    if (seconds < 60) return `${seconds} sec of recording / day`
+    return `${Math.round(seconds / 60)} min of recording / day`
+}
+
+/**
+ * The full feature list for a plan card: the recording budget first, then the
+ * marketing lines. Pass the API's `dailyRecordingCredits` when available so
+ * the shown budget is the one the server actually enforces.
+ */
+export function planFeatures(
+    plan: Pick<PlanTier, 'dailyRecordingSeconds' | 'features'>,
+    dailyRecordingSeconds: number | null = plan.dailyRecordingSeconds,
+): string[] {
+    return [recordingBudgetLabel(dailyRecordingSeconds), ...plan.features]
 }
 
 export function planPrice(plan: PlanTier, billing: Billing): string {

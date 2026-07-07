@@ -125,3 +125,25 @@ pitched notes' median) and locked for the whole take — emitted measures are fr
 server-side, so re-deciding later would leave earlier measures at a different octave.
 Trade-off: a first update with a single edge-of-range note can pick a ±1-octave-off
 shift; consistency was judged more important than a perfect late decision.
+
+## Task 6 — database-driven tiers
+
+- New `subscription_tiers` table (id, name, dailyRecordingCredits, sortOrder, sellable),
+  seeded by migration 1783641600000 with the four previously hard-coded tiers. The old
+  static `SubscriptionTier` class is gone; the entity replaces it, and
+  `SubscriptionsService` serves the catalogue from a 60s in-memory cache (tier lookups
+  run once per second per live take — they must not hit Postgres each tick, yet a
+  production re-tune still lands within a minute). Unknown/legacy tier ids still fall
+  back to `free`.
+- Public `GET /plans` exposes id/name/dailyRecordingCredits/sellable (same info as the
+  pricing page — no auth).
+- Web split: **entitlements** (names, budgets, which tiers exist) come from `usePlans()`;
+  **display decoration** (icons, taglines, display prices, marketing feature lines)
+  stays static in lib/plans.ts keyed by id. Onboarding, ChangePlanDialog, and the
+  recording-limit dialog now iterate the API's sellable tiers (static list bridges the
+  pre-fetch moment). The landing page stays fully static per the task ("valid for the
+  landing page"), with `dailyRecordingSeconds` fallbacks that should be kept roughly in
+  sync with the seed.
+- Known limit: a brand-new tier added only in the DB will show up in pickers with the
+  free tier's *display* decoration (icon/prices) until plans.ts learns about it — real
+  prices live in Polar config, which is code/env anyway. Documented in plans.ts header.

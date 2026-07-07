@@ -11,7 +11,6 @@ import { EntityManager, Repository } from 'typeorm';
 import { isBetaMode } from '../beta/beta-config';
 import { RecordingCreditsService } from '../recordings/recording-credits.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-import { SubscriptionTier } from '../subscriptions/SubscriptionTier';
 import { ProcessedWebhookEvent } from './entities/processed-webhook-event.entity';
 import { isBillingConfigured, polarClient } from './polar.client';
 import {
@@ -66,7 +65,7 @@ export class BillingService {
 
   async getState(userId: string): Promise<BillingState> {
     const row = await this.subscriptions.findForUser(userId);
-    const tier = SubscriptionTier.byId(row?.tierId);
+    const tier = await this.subscriptions.tierById(row?.tierId);
     const balance = await this.credits.balance(userId);
     return {
       tierId: tier.id,

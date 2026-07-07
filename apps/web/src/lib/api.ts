@@ -157,6 +157,22 @@ export function putKeyboardShortcuts(keyboardShortcuts: StoredShortcuts | null):
     })
 }
 
+// ── Plans (database-driven tier catalogue) ──────────────────────────────────
+
+export interface Plan {
+    id: string
+    name: string
+    /** Daily recording budget in seconds; null = unlimited. */
+    dailyRecordingCredits: number | null
+    /** Whether the plan appears in pickers (beta is assigned, never sold). */
+    sellable: boolean
+}
+
+/** The tier catalogue as the server knows it. Public — no session required. */
+export function listPlans(): Promise<Plan[]> {
+    return api('/plans')
+}
+
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
 
 export interface BillingState {

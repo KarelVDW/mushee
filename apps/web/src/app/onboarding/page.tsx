@@ -7,8 +7,8 @@ import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryBu
 import { track } from '@/lib/analytics'
 import { type OnboardingPatch } from '@/lib/api'
 import { emailOtp, useSession } from '@/lib/auth-client'
-import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, type PlanTier } from '@/lib/plans'
-import { useBetaStatus, usePatchOnboarding, useStartCheckout } from '@/lib/queries'
+import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, planById, planFeatures, type PlanTier } from '@/lib/plans'
+import { useBetaStatus, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
 
 const BACKGROUNDS: [string, string, string][] = [
     ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
@@ -62,6 +62,23 @@ export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
     const startCheckout = useStartCheckout()
+    // Tier names and recording budgets come from the database catalogue; the
+    // static entries decorate it and bridge the moment before it resolves.
+    const { data: apiPlans } = usePlans()
+    const displayPlans: PlanTier[] = apiPlans
+        ? apiPlans
+              .filter((p) => p.sellable)
+              .map((p) => ({
+                  ...planById(p.id),
+                  id: p.id as PlanTier['id'],
+                  name: p.name,
+                  dailyRecordingSeconds: p.dailyRecordingCredits,
+              }))
+        : PLAN_TIERS
+    const betaApiPlan = apiPlans?.find((p) => p.id === BETA_PLAN.id)
+    const betaPlan = betaApiPlan
+        ? { ...BETA_PLAN, name: betaApiPlan.name, dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits }
+        : BETA_PLAN
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
     const verified = session?.user?.emailVerified ?? false
@@ -352,7 +369,7 @@ export default function OnboardingPage() {
                     <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
                         <BillingToggle value={billing} onChange={setBilling} />
                         <div className="grid grid-cols-3 gap-3">
-                            {PLAN_TIERS.map((p) => (
+                            {displayPlans.map((p) => (
                                 <TierCard key={p.id} plan={p} billing={billing} active={tier === p.id} onSelect={() => setTier(p.id)} />
                             ))}
                         </div>
@@ -369,10 +386,10 @@ export default function OnboardingPage() {
                             </span>
                             <div className="flex flex-col gap-1.5">
                                 <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
-                                    {BETA_PLAN.name} — {BETA_PLAN.tagline.toLowerCase()}
+                                    {betaPlan.name} — {betaPlan.tagline.toLowerCase()}
                                 </span>
                                 <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                                    {BETA_PLAN.features.map((f) => (
+                                    {planFeatures(betaPlan).map((f) => (
                                         <li
                                             key={f}
                                             className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
@@ -403,13 +420,13 @@ export default function OnboardingPage() {
                         <SubHeadline>
                             {awaitingApproval ? (
                                 <>
-                                    Your account is ready on the <strong>{BETA_PLAN.name}</strong> plan — it just needs a nod from us.
+                                    Your account is ready on the <strong>{betaPlan.name}</strong> plan — it just needs a nod from us.
                                     We&apos;ll email you the moment your beta access is approved.
                                 </>
                             ) : (
                                 <>
                                     Your library is ready on{' '}
-                                    <strong>{BETA_MODE ? BETA_PLAN.name : PLAN_TIERS.find((p) => p.id === tier)?.name}</strong>. Start a
+                                    <strong>{BETA_MODE ? betaPlan.name : displayPlans.find((p) => p.id === tier)?.name}</strong>. Start a
                                     fresh score, or take the editor for a spin.
                                 </>
                             )}
@@ -568,7 +585,7 @@ function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active:
             </div>
             {showSavings && <Eyebrow className={active ? '' : 'text-primary'}>Save ${savings}/yr</Eyebrow>}
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
-                {plan.features.map((f) => (
+                {planFeatures(plan).map((f) => (
                     <li key={f} className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4]">
                         <span className="mt-px opacity-80">
                             <Icon name="check" size={14} />

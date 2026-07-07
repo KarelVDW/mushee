@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Eyebrow, Footer, Icon, PrimaryButton, SecondaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
-import { BETA_MODE, BETA_PLAN, PLAN_TIERS, type PlanTier } from '@/lib/plans'
+import { BETA_MODE, BETA_PLAN, PLAN_TIERS, planFeatures, type PlanTier } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
 
@@ -283,7 +283,7 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
                 </span>
             </div>
             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
-                {tier.features.map((f) => (
+                {planFeatures(tier).map((f) => (
                     <li key={f} className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
                         <span className={emphasis ? 'text-primary-container' : 'text-primary'}>
                             <Icon name="check" size={16} />

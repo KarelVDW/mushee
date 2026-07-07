@@ -15,6 +15,7 @@ import {
     getScore,
     getSettings,
     listBetaSignups,
+    listPlans,
     listScores,
     loadScore,
     type OnboardingPatch,
@@ -139,6 +140,22 @@ export function useReactivateAccount() {
     return useMutation({
         mutationFn: () => reactivateAccount(),
         meta: { errorMessage: "Couldn't reactivate your account. Please try again." },
+    })
+}
+
+// ── Plans (database-driven tier catalogue) ──────────────────────────────────
+
+/**
+ * The tier catalogue from the database (GET /plans). Entitlements — names and
+ * recording budgets — come from here; static display decoration (icons,
+ * taglines, prices) stays in lib/plans.ts keyed by id.
+ */
+export function usePlans() {
+    return useQuery({
+        queryKey: ['plans'],
+        queryFn: listPlans,
+        // The catalogue changes on the order of releases, not clicks.
+        staleTime: 5 * 60 * 1000,
     })
 }
 

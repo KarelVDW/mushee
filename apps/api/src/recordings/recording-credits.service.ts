@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { SubscriptionTier } from '../subscriptions/entities/subscription-tier.entity';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-import { SubscriptionTier } from '../subscriptions/SubscriptionTier';
 import { RecordingUsage } from './entities/recording-usage.entity';
 
 export interface RecordingCreditBalance {

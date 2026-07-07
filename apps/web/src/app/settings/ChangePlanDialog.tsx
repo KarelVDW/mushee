@@ -5,8 +5,8 @@ import { useState } from 'react'
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import type { BillingState } from '@/lib/api'
-import { type Billing, PLAN_TIERS, planPrice, type PlanTier } from '@/lib/plans'
-import { useCancelSubscription, useChangePlan, useStartCheckout } from '@/lib/queries'
+import { type Billing, PLAN_TIERS, planById, planFeatures, planPrice, type PlanTier } from '@/lib/plans'
+import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
@@ -31,9 +31,24 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
     const changePlan = useChangePlan()
     const cancelSubscription = useCancelSubscription()
 
+    // Tier identity (names, budgets, which tiers exist) comes from the
+    // database catalogue; the static entries only decorate it (icons, display
+    // prices) and bridge the moment before the query resolves.
+    const { data: apiPlans } = usePlans()
+    const plans: PlanTier[] = apiPlans
+        ? apiPlans
+              .filter((p) => p.sellable)
+              .map((p) => ({
+                  ...planById(p.id),
+                  id: p.id as PlanTier['id'],
+                  name: p.name,
+                  dailyRecordingSeconds: p.dailyRecordingCredits,
+              }))
+        : PLAN_TIERS
+
     const hasSubscription = Boolean(state.status)
-    const currentPlan = PLAN_TIERS.find((p) => p.id === state.tierId) ?? PLAN_TIERS[0]
-    const nextPlan = PLAN_TIERS.find((p) => p.id === selected) ?? PLAN_TIERS[0]
+    const currentPlan = plans.find((p) => p.id === state.tierId) ?? plans[0]
+    const nextPlan = plans.find((p) => p.id === selected) ?? plans[0]
     const isSame = selected === state.tierId && (nextPlan.priceMonthly === 0 || billing === currentBilling)
     const isDowngrade = nextPlan.priceMonthly < currentPlan.priceMonthly
     const isCancel = nextPlan.id === 'free' && hasSubscription
@@ -152,7 +167,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
-                            {PLAN_TIERS.map((p) => {
+                            {plans.map((p) => {
                                 const active = selected === p.id
                                 const isCurrent = p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
                                 return (
@@ -181,7 +196,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                                             {planPrice(p, billing)}
                                         </span>
                                         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-                                            {p.features.map((f) => (
+                                            {planFeatures(p).map((f) => (
                                                 <li
                                                     key={f}
                                                     className="flex items-start gap-1.5 font-body font-normal text-[12px] leading-[1.4]">

@@ -9,7 +9,7 @@ export const DEMO_PASSWORD = 'mushee-demo';
 export interface DemoAccount {
   email: string;
   name: string;
-  /** Subscription tier id; must exist in SubscriptionTier.all. */
+  /** Subscription tier id; must exist in the subscription_tiers table. */
   tierId: 'free' | 'pro' | 'studio';
   /** Grants the admin panel (beta approvals). */
   role?: 'admin';
@@ -20,7 +20,7 @@ export interface DemoAccount {
 /**
  * One account per tier, plus the main demo account. The main account is on
  * the Studio tier, whose `dailyRecordingCredits` is `null` — i.e. recording
- * is unlimited (see SubscriptionTier).
+ * is unlimited (see the subscription_tiers seed migration).
  */
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
