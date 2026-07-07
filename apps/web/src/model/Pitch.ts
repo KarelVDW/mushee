@@ -119,6 +119,12 @@ export class Pitch {
         return new Pitch({ name: INDEX_TO_NOTE[noteIndex], octave })
     }
 
+    /** The same pitch class, `octaves` whole octaves away — spelling and accidental preserved. */
+    octaveShifted(octaves: number): Pitch {
+        if (!octaves) return this
+        return new Pitch({ name: this.name, alter: this.alter, accidental: this.accidental, octave: this.octave + octaves })
+    }
+
     /**
      * Transpose by the given (chromatic, diatonic) interval. Convention matches
      * MusicXML's `<transpose>` element: the diatonic value shifts the letter

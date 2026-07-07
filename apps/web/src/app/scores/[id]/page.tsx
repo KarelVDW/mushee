@@ -288,6 +288,12 @@ export default function ScoreEditorPage() {
         stopAll()
 
         let measureIndex = activeNote.measure.index
+        // The clef the take records into: transcribed notes are octave-normalized
+        // onto its staff. Decided once, from the first update's notes, then locked
+        // for the take — emitted measures are frozen, so re-deciding would leave
+        // earlier measures an octave apart.
+        const recordingClef = activeNote.clef
+        let octaveShift: number | null = null
         manipulator.select(null)
         waveformStore.reset()
         const startIndex = measureIndex
@@ -337,8 +343,19 @@ export default function ScoreEditorPage() {
                         const absIndex = startIndex + Number(key)
                         const measure = score.measures[absIndex]
                         if (!measure?.firstNote) continue
-                        const notes = ScoreDeserializer.mxmlMeasureToNotes(mxmlMeasure)
+                        let notes = ScoreDeserializer.mxmlMeasureToNotes(mxmlMeasure)
                         if (!notes.length) continue
+                        // Recorded audio's absolute octave is arbitrary relative to
+                        // the staff (whistling sits 1-2 octaves up); pull the take
+                        // onto the clef the user is writing in.
+                        if (octaveShift === null) {
+                            const pitches = notes.flatMap((n) => (n.pitch ? [n.pitch] : []))
+                            if (pitches.length) octaveShift = recordingClef.octavesToCenter(pitches)
+                        }
+                        if (octaveShift) {
+                            const shift = octaveShift
+                            notes = notes.map((n) => (n.pitch ? n.clone({ pitch: n.pitch.octaveShifted(shift) }) : n))
+                        }
                         score.replace([measure.firstNote], notes)
                         // The staff now shows real notes up to the end of the last
                         // pitched note in this measure — their waveform bars have

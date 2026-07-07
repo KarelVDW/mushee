@@ -168,4 +168,21 @@ describe('Pitch', () => {
             expect(new Pitch({ name: 'F', octave: 5, accidental: '#', alter: 1 }).accidentalValue).toBe('#')
         })
     })
+
+    describe('octaveShifted (whole-octave transposition)', () => {
+        it('moves whole octaves while preserving spelling and accidental', () => {
+            const p = new Pitch({ name: 'F', octave: 5, accidental: '#', alter: 1 })
+            const down = p.octaveShifted(-2)
+            expect(down.name).toBe('F')
+            expect(down.octave).toBe(3)
+            expect(down.alter).toBe(1)
+            expect(down.accidental).toBe('#')
+            expect(down.toMidi()).toBe(p.toMidi() - 24)
+        })
+
+        it('returns the same instance for a zero shift', () => {
+            const p = new Pitch({ name: 'C', octave: 4 })
+            expect(p.octaveShifted(0)).toBe(p)
+        })
+    })
 })

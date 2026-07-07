@@ -84,4 +84,38 @@ describe('Clef', () => {
             }
         })
     })
+
+    describe('octavesToCenter (octave normalization for recorded audio)', () => {
+        const pitches = (...specs: Array<[string, number]>) => specs.map(([name, octave]) => new Pitch({ name, octave }))
+
+        it('returns 0 for an empty list', () => {
+            expect(clef('treble').octavesToCenter([])).toBe(0)
+        })
+
+        it('leaves pitches already centered on the staff alone', () => {
+            // B4 sits on the treble middle line.
+            expect(clef('treble').octavesToCenter(pitches(['B', 4]))).toBe(0)
+            expect(clef('treble').octavesToCenter(pitches(['G', 4], ['B', 4], ['D', 5]))).toBe(0)
+        })
+
+        it('pulls a whistled take (1-2 octaves high) down onto the treble staff', () => {
+            expect(clef('treble').octavesToCenter(pitches(['B', 6], ['C', 7], ['A', 6]))).toBe(-2)
+            expect(clef('treble').octavesToCenter(pitches(['B', 5], ['C', 6]))).toBe(-1)
+        })
+
+        it('lifts a low hummed take up onto the treble staff', () => {
+            expect(clef('treble').octavesToCenter(pitches(['B', 2], ['A', 2], ['C', 3]))).toBe(2)
+        })
+
+        it('centers on the clef actually in use, not on treble', () => {
+            // D3 sits on the bass middle line: a bass-range take needs no shift there…
+            expect(clef('bass').octavesToCenter(pitches(['D', 3], ['F', 3], ['B', 2]))).toBe(0)
+            // …while the same take on a treble staff comes up an octave or two.
+            expect(clef('treble').octavesToCenter(pitches(['D', 3], ['F', 3], ['B', 2]))).toBeGreaterThan(0)
+        })
+
+        it('decides by the median, so a single outlier cannot drag the take away', () => {
+            expect(clef('treble').octavesToCenter(pitches(['B', 4], ['A', 4], ['C', 5], ['C', 8]))).toBe(0)
+        })
+    })
 })

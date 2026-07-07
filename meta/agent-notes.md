@@ -98,3 +98,30 @@ This file collects decisions made under uncertainty and other considerations, pe
 - Caveat: if CSS animations never run (e.g. forced-reduced-motion setups), exiting
   bars rely on `onAnimationEnd` and could linger until the next take resets them —
   accepted as negligible.
+
+## Task 5 — recorded notes with extreme ledger lines
+
+Investigated the two requested options:
+
+**(a) Set the clef from the recording** — the backend already detects the register
+(adaptive profile lock) and could emit a clef, or the frontend could infer one from
+the incoming range. Rejected because: the clef is a deliberate user/instrument choice
+(a trumpet part stays in treble no matter how low you hum the idea); the backend's
+MxmlBuilder has no clef concept, and mid-take clef changes would fight the editor's
+clef controls; and it doesn't even solve the common case — whistling sits 1–2 octaves
+above *any* comfortable clef, so you'd still get ledger lines after a clef swap.
+
+**(b) Normalize the recording's octave to the current clef** — chosen. Octave error is
+inherent to how people capture ideas (whistling +1/+2 octaves, humming an octave low);
+users think in the staff they're looking at. The shift is whole octaves only, so the
+notation stays lossless in pitch-class/spelling; the sung contour is preserved exactly.
+
+Implementation: written-pitch space (server already applies chromaticTranspose), on the
+frontend where the clef is known. New model behavior (OO per house rules):
+`Pitch.octaveShifted(n)` and `Clef.octavesToCenter(pitches)` — the whole-octave shift
+that puts the *median* incoming pitch nearest the staff's middle line (line 3; one
+octave = 3.5 lines). The shift is decided at the take's FIRST score-update (from its
+pitched notes' median) and locked for the whole take — emitted measures are frozen
+server-side, so re-deciding later would leave earlier measures at a different octave.
+Trade-off: a first update with a single edge-of-range note can pick a ±1-octave-off
+shift; consistency was judged more important than a perfect late decision.
