@@ -5,6 +5,7 @@ import { Recording } from './entities/recording.entity';
 import type { RecordingCreditBalance } from './recording-credits.service';
 import { RecordingCreditsService } from './recording-credits.service';
 import type { RecordingLock } from './recording-locks.service';
+import type { RecordingArchiver } from './RecordingArchiver';
 import type { RecordingPipeline, ScoreUpdate } from './RecordingPipeline';
 
 export interface RecordingSessionEvents {
@@ -56,6 +57,8 @@ export class RecordingSession {
     private readonly events: RecordingSessionEvents,
     /** Cross-instance per-user slot; released exactly once when the session closes. */
     private readonly lock: RecordingLock,
+    /** Builds the storage archiver once the recording row (and thus its id) exists. */
+    private readonly createArchiver: (recordingId: string) => RecordingArchiver,
   ) {
     this.pipeline.setOnUpdate((update) => this.events.onUpdate(update));
   }
@@ -65,6 +68,13 @@ export class RecordingSession {
       this.recordings.create({ userId: this.userId, scoreId: this.scoreId }),
     );
     this.recordingId = recording.id;
+    // Attach the archiver before any audio flows (the gateway holds frames
+    // until open() resolves), so the very first chunk is archived too.
+    const archiver = this.createArchiver(recording.id);
+    this.pipeline.setArchiver(archiver);
+    await this.recordings.update(recording.id, {
+      storagePath: archiver.basePath,
+    });
   }
 
   setMeta(meta: Parameters<RecordingPipeline['setMeta']>[0]): void {

@@ -66,9 +66,10 @@ services:
       # Forward passes go to the per-model services; the API does no inference.
       CREPE_INFERENCE_URL: crepe-inference:50051
       BASIC_PITCH_INFERENCE_URL: basic-pitch-inference:50052
-      # Volume-backed local MusicXML storage (rclone treats a plain path as the
-      # local filesystem). Real deployments point this at a cloud remote.
-      RCLONE_REMOTE: /data/storage
+      # Volume-backed local blob storage (scores + recording archives). Real
+      # deployments set STORAGE_DRIVER=gcs and GCS_BUCKET instead.
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /data/storage
       # Migrations run on boot; this additionally seeds the demo accounts.
       SEED_DEMO_DATA: 'true'
     # Real auth/mail secrets (SendGrid etc.) come from an operator-provided env

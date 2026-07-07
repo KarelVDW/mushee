@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/terms' },
 }
 
-const LAST_UPDATED = '4 July 2026'
+const LAST_UPDATED = '8 July 2026'
 
 // NOTE: legal entity, governing law, and contact details are placeholders —
 // swap in the real company data before launch (see AFTERTHOUGHTS.md).
@@ -68,9 +68,12 @@ export default function TermsPage() {
             <h2>5. Your content</h2>
             <p>
                 The music you create or record in Sheemu is <strong>yours</strong>. You retain all rights to your scores and
-                recordings. You grant us the limited licence needed to operate the service — storing, processing (e.g. transcribing
-                your audio into notation), displaying the content back to you, and backing it up. We claim no other rights and never
-                use your music to train models or for marketing without your explicit permission.
+                recordings. You grant us the limited licence needed to operate and improve the service — storing your scores and
+                recordings (including the audio itself), processing them (e.g. transcribing your audio into notation), displaying
+                the content back to you, backing it up, and using your recordings internally to{' '}
+                <strong>improve our transcription technology</strong>. Your recordings are never published, shared with other
+                users, or sold, and we never use your music for marketing without your explicit permission. Deleting your account
+                deletes your recordings. See the <Link href="/privacy">privacy policy</Link> for details and how to object.
             </p>
             <p>
                 You are responsible for your content: don&apos;t upload or transcribe material that infringes someone else&apos;s

@@ -1,7 +1,5 @@
 import { Logger } from '@nestjs/common';
 import { NoteEventTime } from '@spotify/basic-pitch';
-import { mkdir, writeFile } from 'fs/promises';
-import { join, resolve } from 'path';
 
 import { AudioConverter } from './AudioConverter';
 import { AudioDecoder, StreamingDecoder } from './AudioDecoder';
@@ -12,6 +10,7 @@ import type { PipelineProfile } from './profiles/PipelineProfile';
 import { ProfileResolver } from './profiles/ProfileResolver';
 import type { PitchTranscribeOptions } from './providers/PitchProvider';
 import { ProviderRegistry } from './providers/ProviderRegistry';
+import type { RecordingArchiver } from './RecordingArchiver';
 import { RecordingDebugRenderer } from './RecordingDebugRenderer';
 
 const DEFAULT_BPM = 120;
@@ -35,21 +34,6 @@ const DETECT_SAMPLE_RATE = 16000;
 const DETECT_HIGHPASS_HZ = 30;
 /** Minimum audio before we trust the pitch scan enough to lock a profile. */
 const DETECT_MIN_SEC = 1.2;
-const DEFAULT_DEBUG_DIR = resolve(
-  process.cwd(),
-  'debug',
-  'recordings',
-);
-
-/**
- * Raw audio is personal data: the privacy policy promises it is processed in
- * memory only, so in production the debug bundle is disabled outright — even
- * an explicit RECORDINGS_DEBUG_DIR does not override it (fail closed).
- */
-function resolveDebugDir(): string | null {
-  if (process.env.NODE_ENV === 'production') return null;
-  return process.env.RECORDINGS_DEBUG_DIR ?? DEFAULT_DEBUG_DIR;
-}
 
 export interface ScoreUpdate {
   measures: Record<number, MxmlMeasure>;
@@ -78,15 +62,14 @@ export class RecordingPipeline {
 
   private readonly chunks: Buffer[] = [];
   private chunkBytes = 0;
-  // Debug bundles are the only consumer of the full encoded stream after the
-  // streaming decoder is live; when they're off, chunks are dropped once
-  // forwarded so memory doesn't grow with recording length.
-  private readonly debugDir = resolveDebugDir();
   private readonly emittedNotes: PendingNote[] = [];
   private readonly emittedKeys = new Set<string>();
   private lastRawNotes: NoteEventTime[] = [];
   private lastDuration = 0;
-  private debugWritten = false;
+  private archived = false;
+  // Set by the session once its recording row exists; archives the encoded
+  // audio (streamed chunk-by-chunk) and the debug bundle to blob storage.
+  private archiver: RecordingArchiver | null = null;
 
   // Long-lived decode for this session, spawned once the profile (and thus the
   // sample rate / high-pass / loudnorm) is locked. Null until then.
@@ -171,13 +154,19 @@ export class RecordingPipeline {
     this.onUpdate = cb;
   }
 
+  setArchiver(archiver: RecordingArchiver): void {
+    this.archiver = archiver;
+  }
+
   appendChunk(buffer: Buffer): void {
     if (!this.timings.firstChunkAt) this.timings.firstChunkAt = Date.now();
     this.chunkBytes += buffer.byteLength;
+    // Stream the encoded audio to storage as it arrives — never buffered
+    // toward a whole-take upload, so memory stays flat for any take length.
+    this.archiver?.appendAudio(buffer);
     // Encoded chunks are retained only while the decoder still needs them for
-    // its container-header seed (or indefinitely when the debug bundle wants
-    // the full stream).
-    if (!this.streamDecoder || this.debugDir) this.chunks.push(buffer);
+    // its container-header seed.
+    if (!this.streamDecoder) this.chunks.push(buffer);
     // Once the decoder is live, forward each chunk straight into it so the byte
     // is decoded once. Chunks buffered before the decoder spawned are fed in one
     // shot at spawn time (see `process`), so this only ever runs for new audio.
@@ -197,7 +186,7 @@ export class RecordingPipeline {
     }
     this.finalRequested = true;
     await this.kick();
-    await this.writeDebugBundle();
+    await this.archive();
     this.logTimings();
   }
 
@@ -270,9 +259,9 @@ export class RecordingPipeline {
       });
       decoder.write(Buffer.concat(this.chunks));
       this.streamDecoder = decoder;
-      // The decoder owns the bytes now; without a debug bundle the encoded
-      // stream never needs to be replayed, so stop holding on to it.
-      if (!this.debugDir) this.chunks.length = 0;
+      // The decoder owns the bytes now (and the archiver already streamed
+      // them out), so stop holding on to the encoded stream.
+      this.chunks.length = 0;
     }
 
     // On the final pass, flush ffmpeg (incl. any filter look-ahead tail) and take
@@ -464,55 +453,27 @@ export class RecordingPipeline {
     );
   }
 
-  private async writeDebugBundle(): Promise<void> {
-    if (this.debugWritten) return;
-    if (this.lastDuration <= 0 && !this.chunks.length) return;
-    this.debugWritten = true;
+  /**
+   * Close out the archive: finish the streaming audio upload and store the
+   * debug bundle (pitch plot, emitted score, session metadata) beside it.
+   * Idempotent — `finalize` can run more than once (end message + close).
+   */
+  private async archive(): Promise<void> {
+    if (this.archived || !this.archiver) return;
+    this.archived = true;
 
-    const baseDir = this.debugDir;
-    if (!baseDir) return;
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const sessionDir = join(baseDir, stamp);
-
-    try {
-      await mkdir(sessionDir, { recursive: true });
-    } catch (err) {
-      this.logger.warn(
-        `Failed to create debug dir ${sessionDir}: ${describeError(err)}`,
-      );
-      return;
-    }
-
-    if (this.chunks.length) {
-      const audio = Buffer.concat(this.chunks);
-      const audioPath = join(sessionDir, `audio${detectExtension(audio)}`);
-      try {
-        await writeFile(audioPath, audio);
-      } catch (err) {
-        this.logger.warn(
-          `Failed to write debug audio: ${describeError(err)}`,
-        );
-      }
-    }
-
+    let plotSvg: string | undefined;
     if (this.lastDuration > 0 || this.lastRawNotes.length) {
-      const svg = new RecordingDebugRenderer().render({
+      plotSvg = new RecordingDebugRenderer().render({
         rawNotes: this.lastRawNotes,
         deducedNotes: this.emittedNotes,
         durationSec: this.lastDuration,
         bpm: this.bpm,
         beatsPerMeasure: this.beats,
       });
-      const svgPath = join(sessionDir, 'plot.svg');
-      try {
-        await writeFile(svgPath, svg, 'utf8');
-      } catch (err) {
-        this.logger.warn(
-          `Failed to write debug image: ${describeError(err)}`,
-        );
-      }
     }
 
+    let scoreJson: string | undefined;
     if (this.emittedNotes.length) {
       const measures: Record<number, MxmlMeasure> = {};
       const indices = new Set(
@@ -523,62 +484,27 @@ export class RecordingPipeline {
       for (const idx of indices) {
         measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
       }
-      const scorePath = join(sessionDir, 'score.json');
-      try {
-        await writeFile(
-          scorePath,
-          JSON.stringify({ measures }, null, 2),
-          'utf8',
-        );
-      } catch (err) {
-        this.logger.warn(`Failed to write debug score: ${describeError(err)}`);
-      }
+      scoreJson = JSON.stringify({ measures }, null, 2);
     }
 
-    this.logger.log(`Wrote debug bundle: ${sessionDir}`);
+    await this.archiver.finalize({
+      plotSvg,
+      scoreJson,
+      sessionMeta: {
+        bpm: this.bpm,
+        beats: this.beats,
+        beatType: this.beatType,
+        chromaticTranspose: this.chromaticTranspose,
+        instrumentHint: this.instrumentHint ?? null,
+        profile: this.profile
+          ? { id: this.profile.id, provider: this.profile.providerName }
+          : null,
+        audioDurationSec: this.lastDuration,
+        emittedNoteCount: this.emittedNotes.length,
+        rawNotes: this.lastRawNotes,
+        emittedNotes: this.emittedNotes,
+        timings: this.timings,
+      },
+    });
   }
-}
-
-function detectExtension(buffer: Buffer): string {
-  if (buffer.length >= 4) {
-    if (
-      buffer[0] === 0x1a &&
-      buffer[1] === 0x45 &&
-      buffer[2] === 0xdf &&
-      buffer[3] === 0xa3
-    ) {
-      return '.webm';
-    }
-    if (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) {
-      return '.mp3';
-    }
-    if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) {
-      return '.mp3';
-    }
-    if (
-      buffer[0] === 0x4f &&
-      buffer[1] === 0x67 &&
-      buffer[2] === 0x67 &&
-      buffer[3] === 0x53
-    ) {
-      return '.ogg';
-    }
-    if (
-      buffer[0] === 0x52 &&
-      buffer[1] === 0x49 &&
-      buffer[2] === 0x46 &&
-      buffer[3] === 0x46
-    ) {
-      return '.wav';
-    }
-    if (
-      buffer[0] === 0x66 &&
-      buffer[1] === 0x4c &&
-      buffer[2] === 0x61 &&
-      buffer[3] === 0x43
-    ) {
-      return '.flac';
-    }
-  }
-  return '.bin';
 }

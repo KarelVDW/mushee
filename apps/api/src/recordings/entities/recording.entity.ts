@@ -26,6 +26,14 @@ export class Recording {
   @Column({ type: 'int', default: 0 })
   creditsSpent: number;
 
+  /**
+   * Blob-storage folder holding this recording's audio + debug bundle
+   * (`recordings/<userId>/<scoreId>/<id>`). Null for rows that predate
+   * audio archiving.
+   */
+  @Column({ type: 'text', nullable: true })
+  storagePath: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

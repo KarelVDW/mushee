@@ -21,6 +21,8 @@ logs
 .env.*
 !.env.example
 apps/api/debug/
+# Local blob-storage backend (STORAGE_DRIVER=local dev default)
+apps/api/storage/
 apps/api/.venv-crepe/
 apps/api/.venv-basicpitch/
 # Recording-pipeline eval harness: large soundfont + generated audio corpus

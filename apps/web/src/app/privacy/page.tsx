@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/privacy' },
 }
 
-const LAST_UPDATED = '4 July 2026'
+const LAST_UPDATED = '8 July 2026'
 
 // NOTE: contact details and the legal entity below are placeholders — swap in
 // the real company data before launch (see AFTERTHOUGHTS.md at the repo root).
@@ -53,11 +53,16 @@ export default function PrivacyPolicyPage() {
             <h3>Audio while recording</h3>
             <p>
                 When you press Record, audio from your microphone is streamed to our servers and{' '}
-                <strong>transcribed to notation in real time, in memory</strong>. The resulting notation is saved to your score; the
-                raw audio is <strong>not stored</strong> on our servers once transcription completes. We keep a record of{' '}
-                <em>how long</em> you recorded (for the daily recording budget of your plan), but not the sound itself. Capture only
-                happens while you have actively started a recording — never in the background. Legal basis:{' '}
-                <strong>performance of a contract</strong>.
+                <strong>transcribed to notation in real time</strong>. The resulting notation is saved to your score. The{' '}
+                <strong>recording itself is stored too</strong>, together with the transcription data derived from it, linked to
+                your account and the score you recorded into. We use these recordings to operate the service (so we can diagnose
+                a transcription that went wrong for you) and to <strong>improve our transcription technology</strong>. Your
+                recordings are never published, never shared with other users, and never sold. We also keep a record of{' '}
+                <em>how long</em> you recorded, for the daily recording budget of your plan. Capture only happens while you have
+                actively started a recording — never in the background. Your recordings are deleted when you delete your account.
+                Legal basis: <strong>performance of a contract</strong> for storing and transcribing your recordings;{' '}
+                <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving transcription quality — contact{' '}
+                <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a> to object to that use.
             </p>
 
             <h3>Payments</h3>
@@ -162,15 +167,16 @@ export default function PrivacyPolicyPage() {
                 <li>
                     <strong>Account deletion:</strong> deleting your account (Settings → Delete account) deactivates it immediately
                     and starts a 7-day grace period during which you can change your mind. After 7 days your account, scores,
-                    recordings history, subscription record, and onboarding answers are <strong>permanently and irreversibly
-                    deleted</strong>, and we ask Polar to delete your customer record.
+                    recordings (audio and history), subscription record, and onboarding answers are <strong>permanently and
+                    irreversibly deleted</strong>, and we ask Polar to delete your customer record.
                 </li>
                 <li>
                     <strong>Recording usage counters:</strong> per-day totals used to enforce your plan&apos;s recording budget;
                     deleted with your account.
                 </li>
                 <li>
-                    <strong>Raw audio:</strong> not retained (processed in memory during transcription only).
+                    <strong>Recorded audio:</strong> kept for as long as your account exists so we can diagnose and improve
+                    transcription; deleted with your account.
                 </li>
                 <li>
                     <strong>Invoices &amp; payment records:</strong> kept by Polar for as long as tax law requires.

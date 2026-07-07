@@ -188,7 +188,7 @@ function FeatureGrid() {
         [
             'shield',
             'Yours, privately',
-            'Your music belongs to you. Recording audio is transcribed in memory and never stored — only the notes remain.',
+            'Your music belongs to you. Recordings stay private to your account — never published, shared, or sold — and vanish when you delete it.',
         ],
     ]
     return (

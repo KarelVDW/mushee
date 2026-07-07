@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { resolve } from 'path';
 import { Repository } from 'typeorm';
 
+import { StorageService } from '../storage/storage.service';
 import { Recording } from './entities/recording.entity';
 import { usedProviderNames } from './profiles/PipelineProfile';
 import { ProfileResolver } from './profiles/ProfileResolver';
@@ -10,6 +11,7 @@ import { createModelBackend } from './providers/createModelBackend';
 import { ProviderRegistry } from './providers/ProviderRegistry';
 import { RecordingCreditsService } from './recording-credits.service';
 import { RecordingLocksService } from './recording-locks.service';
+import { RecordingArchiver } from './RecordingArchiver';
 import { RecordingPipeline } from './RecordingPipeline';
 import {
   RecordingSession,
@@ -34,6 +36,7 @@ export class RecordingsService implements OnModuleInit {
     private readonly recordingRepo: Repository<Recording>,
     private readonly credits: RecordingCreditsService,
     private readonly locks: RecordingLocksService,
+    private readonly storage: StorageService,
   ) {
     const dirs = {
       basicPitch: process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR,
@@ -76,11 +79,21 @@ export class RecordingsService implements OnModuleInit {
       this.recordingRepo,
       events,
       lock,
+      (recordingId) =>
+        new RecordingArchiver(
+          this.storage,
+          `recordings/${userId}/${scoreId}/${recordingId}`,
+        ),
     );
   }
 
-  /** Delete all recording data for a user (account purge): sessions, usage, lock. */
+  /**
+   * Delete all recording data for a user (account purge): archived audio,
+   * sessions, usage, lock. Storage goes first — if it fails the purge must
+   * report failure instead of dropping the rows that locate the audio.
+   */
   async deleteAllForUser(userId: string): Promise<void> {
+    await this.storage.deletePrefix(`recordings/${userId}/`);
     await this.recordingRepo.delete({ userId });
     await this.credits.deleteAllForUser(userId);
     await this.locks.deleteAllForUser(userId);

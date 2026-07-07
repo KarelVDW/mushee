@@ -23,11 +23,10 @@ RUN pnpm --filter @mushee/api build
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
-# rclone: the storage layer shells out to it for MusicXML files. Point
-# RCLONE_REMOTE at a real remote (configurable via RCLONE_CONFIG_<NAME>_* env
-# vars) or at a plain directory path for volume-backed local storage.
+# Blob storage runs in-process (GCS client or local filesystem — see
+# STORAGE_DRIVER); only CA certs are needed for outbound TLS.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends rclone ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo/apps/api
 # pnpm's node_modules is a symlink farm into /repo/node_modules/.pnpm; copying the

@@ -97,11 +97,12 @@ via a kustomize `images:` override). The cluster must provide:
   `BETTER_AUTH_URL`, `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `WEB_APP_URL`, SendGrid
   vars, Polar vars (`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`,
   `POLAR_SERVER`, `POLAR_PRODUCT_*`), beta switches (`BETA_MODE`,
-  `ADMIN_EMAILS`), and `RCLONE_REMOTE` + `RCLONE_CONFIG_<NAME>_*` vars for
-  cloud MusicXML storage (the API image ships rclone; a plain directory path
-  also works if you mount a volume). Do **not** set `SEED_DEMO_DATA` in
-  production (the API refuses to boot with it). See `apps/api/.env.example`
-  for the full annotated list.
+  `ADMIN_EMAILS`), and blob storage vars: `STORAGE_DRIVER=gcs` + `GCS_BUCKET`
+  (auth via workload identity / `GOOGLE_APPLICATION_CREDENTIALS`; optional
+  `GCS_PROJECT_ID`) for score MusicXML and recording archives —
+  `STORAGE_DRIVER=local` + `STORAGE_LOCAL_DIR` with a mounted volume also
+  works. Do **not** set `SEED_DEMO_DATA` in production (the API refuses to
+  boot with it). See `apps/api/.env.example` for the full annotated list.
 - Production hardening vars: `POSTGRES_SSL=require` (or `verify` +
   `POSTGRES_SSL_CA`) for TLS to a managed database, `TRUST_PROXY=1` so per-IP
   rate limiting sees real client addresses behind the ingress (the base
@@ -110,11 +111,11 @@ via a kustomize `images:` override). The cluster must provide:
   reaches the web middleware and every signed-in user bounces to `/login`.
   `POSTGRES_URL` may replace the `POSTGRES_*` parts; it is honored by TypeORM,
   better-auth, and the seeder alike.
-- **Backups**: the database is the only stateful component besides MusicXML
+- **Backups**: the database is the only stateful component besides blob
   storage. Enable your managed Postgres provider's automated backups /
-  point-in-time recovery *and test a restore once* before launch; version or
-  replicate the rclone bucket for the MusicXML files. Nothing in this repo
-  does this for you.
+  point-in-time recovery *and test a restore once* before launch; enable
+  object versioning (or replication) on the GCS bucket holding MusicXML and
+  recording archives. Nothing in this repo does this for you.
 - A metrics-server, so the HPAs scale the inference services on CPU (Docker
   Desktop has none — HPAs stay at min replicas there).
 - An Ingress / managed LB for `Service/api` (the local overlay's

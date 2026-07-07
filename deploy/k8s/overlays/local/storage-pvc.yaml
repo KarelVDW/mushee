@@ -1,6 +1,6 @@
-# LOCAL-ONLY MusicXML storage: a hostpath-provisioned volume shared by the API
-# replicas (fine on Docker Desktop's single node). Real deployments use a cloud
-# rclone remote instead — see RCLONE_REMOTE in secret.yaml.
+# LOCAL-ONLY blob storage: a hostpath-provisioned volume shared by the API
+# replicas (fine on Docker Desktop's single node). Real deployments use Google
+# Cloud Storage instead — see STORAGE_DRIVER in secret.yaml.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

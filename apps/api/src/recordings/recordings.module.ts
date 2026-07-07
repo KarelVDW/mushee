@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { BetaModule } from '../beta/beta.module';
 import { ScoresModule } from '../scores/scores.module';
+import { StorageModule } from '../storage/storage.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { ActiveRecording } from './entities/active-recording.entity';
 import { Recording } from './entities/recording.entity';
@@ -18,6 +19,7 @@ import { RecordingsService } from './recordings.service';
     SubscriptionsModule,
     ScoresModule,
     BetaModule,
+    StorageModule,
   ],
   providers: [
     RecordingsGateway,

@@ -1,68 +1,78 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { execa } from 'execa';
-import { readFile, writeFile } from 'fs/promises';
-import { file as tmpFile } from 'tmp-promise';
+import { resolve } from 'path';
+import type { Writable } from 'stream';
 
-/** A hung rclone (dead remote) must not stall requests indefinitely. */
-const RCLONE_TIMEOUT_MS = 60_000;
+import { GcsStorageProvider } from './gcs-storage.provider';
+import { LocalStorageProvider } from './local-storage.provider';
+import type { StorageProvider } from './storage-provider';
 
+const DEFAULT_LOCAL_DIR = resolve(process.cwd(), 'storage');
+
+/**
+ * Blob storage for user data (score MusicXML, recording audio + debug
+ * bundles), delegating to a {@link StorageProvider} picked from the
+ * environment:
+ *
+ * - `STORAGE_DRIVER=gcs` (or just `GCS_BUCKET` set): Google Cloud Storage,
+ *   authenticated via Application Default Credentials.
+ * - `STORAGE_DRIVER=local` (default): the filesystem under
+ *   `STORAGE_LOCAL_DIR` — a mounted volume in docker-compose/k8s-local.
+ */
 @Injectable()
-export class StorageService {
+export class StorageService implements StorageProvider {
   private readonly logger = new Logger(StorageService.name);
-  private readonly remote =
-    process.env.RCLONE_REMOTE ?? 'mushee-storage:mushee';
+  private readonly provider: StorageProvider;
 
-  /**
-   * Write content to remote storage via rclone.
-   */
-  async write(key: string, content: string): Promise<void> {
-    const { path, cleanup } = await tmpFile({ postfix: '.musicxml' });
-    try {
-      await writeFile(path, content, 'utf-8');
-      await execa('rclone', ['copyto', path, `${this.remote}/${key}`], {
-        timeout: RCLONE_TIMEOUT_MS,
-      });
-      this.logger.log(`Wrote ${key} to storage`);
-    } finally {
-      await cleanup();
-    }
+  constructor() {
+    this.provider = this.resolveProvider();
+    this.logger.log(`Storage backend: ${this.provider.name}`);
   }
 
-  /**
-   * Read content from remote storage via rclone.
-   */
-  async read(key: string): Promise<string> {
-    const { path, cleanup } = await tmpFile({ postfix: '.musicxml' });
-    try {
-      await execa('rclone', ['copyto', `${this.remote}/${key}`, path], {
-        timeout: RCLONE_TIMEOUT_MS,
-      });
-      return await readFile(path, 'utf-8');
-    } finally {
-      await cleanup();
-    }
-  }
-
-  /**
-   * Delete a file from remote storage via rclone. Already-absent files count
-   * as deleted; any other failure throws — swallowing it would orphan user
-   * files after an account purge reported success.
-   */
-  async delete(key: string): Promise<void> {
-    try {
-      await execa('rclone', ['deletefile', `${this.remote}/${key}`], {
-        timeout: RCLONE_TIMEOUT_MS,
-      });
-      this.logger.log(`Deleted ${key} from storage`);
-    } catch (error) {
-      // rclone exit codes 3/4 = directory/file not found.
-      const exitCode = (error as { exitCode?: number }).exitCode;
-      if (exitCode === 3 || exitCode === 4) {
-        this.logger.log(`${key} was already absent from storage`);
-        return;
+  private resolveProvider(): StorageProvider {
+    const driver =
+      process.env.STORAGE_DRIVER ?? (process.env.GCS_BUCKET ? 'gcs' : 'local');
+    if (driver === 'gcs') {
+      const bucket = process.env.GCS_BUCKET;
+      if (!bucket) {
+        throw new Error('STORAGE_DRIVER=gcs requires GCS_BUCKET to be set');
       }
-      this.logger.warn(`Failed to delete ${key}: ${String(error)}`);
-      throw error;
+      return new GcsStorageProvider(bucket, process.env.GCS_PROJECT_ID);
     }
+    if (driver !== 'local') {
+      throw new Error(`Unknown STORAGE_DRIVER: ${driver}`);
+    }
+    return new LocalStorageProvider(
+      process.env.STORAGE_LOCAL_DIR ?? DEFAULT_LOCAL_DIR,
+    );
+  }
+
+  get name(): string {
+    return this.provider.name;
+  }
+
+  async write(key: string, content: string | Buffer): Promise<void> {
+    await this.provider.write(key, content);
+    this.logger.log(`Wrote ${key} to storage`);
+  }
+
+  async read(key: string): Promise<string> {
+    return this.provider.read(key);
+  }
+
+  createWriteStream(
+    key: string,
+    options?: { contentType?: string },
+  ): Writable {
+    return this.provider.createWriteStream(key, options);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.provider.delete(key);
+    this.logger.log(`Deleted ${key} from storage`);
+  }
+
+  async deletePrefix(prefix: string): Promise<void> {
+    await this.provider.deletePrefix(prefix);
+    this.logger.log(`Deleted prefix ${prefix} from storage`);
   }
 }

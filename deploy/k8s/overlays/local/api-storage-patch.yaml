@@ -1,4 +1,4 @@
-# Mount the local storage PVC into the API pods at the path RCLONE_REMOTE
+# Mount the local storage PVC into the API pods at the path STORAGE_LOCAL_DIR
 # points to (see secret.yaml).
 apiVersion: apps/v1
 kind: Deployment
