@@ -1,5 +1,6 @@
 import { BetterAuthSchema1782864000000 } from './1782864000000-BetterAuthSchema';
 import { InitialSchema1783296000000 } from './1783296000000-InitialSchema';
+import { SubscriptionEventOrdering1783382400000 } from './1783382400000-SubscriptionEventOrdering';
 
 /**
  * All migrations, in order: better-auth's tables first so the app schema can
@@ -10,4 +11,5 @@ import { InitialSchema1783296000000 } from './1783296000000-InitialSchema';
 export const migrations = [
   BetterAuthSchema1782864000000,
   InitialSchema1783296000000,
+  SubscriptionEventOrdering1783382400000,
 ];

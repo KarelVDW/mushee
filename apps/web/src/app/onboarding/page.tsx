@@ -139,7 +139,10 @@ export default function OnboardingPage() {
             case 0:
                 return verified
             case 1:
-                return micState === 'granted'
+                // Denied still advances: the editor works fine without a mic
+                // (recording asks again later), and a desktop user with no
+                // microphone must not be walled out of the rest of onboarding.
+                return micState === 'granted' || micState === 'denied'
             case 2:
                 return name.trim().length > 0
             case 3:
@@ -271,7 +274,7 @@ export default function OnboardingPage() {
                                 <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
                                     {micState === 'granted' && "You're ready to record. Tap Continue."}
                                     {micState === 'denied' &&
-                                        "We can't enable audio capture without permission. Update site permissions in your browser, then try again."}
+                                        'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
                                     {micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
                                     {micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
                                 </span>

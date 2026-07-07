@@ -551,6 +551,35 @@ describe('Score', () => {
             score.clearDirty()
             expect(score.flushDirty()).toBeNull()
         })
+
+        it('redirty restores a failed measures flush so the next flush retries it', () => {
+            const score = makeScore(2)
+            score.clearDirty()
+            const first = score.firstMeasure
+            if (!first) throw new Error('expected firstMeasure')
+            first.setTempo(0, 120)
+            const failed = score.flushDirty()
+            expect(score.flushDirty()).toBeNull()
+            score.redirty(failed!)
+            const retried = score.flushDirty()
+            expect(Object.keys(retried?.measures ?? {})).toEqual(['0'])
+        })
+
+        it('redirty restores structure and instrument flushes', () => {
+            const score = makeScore(1)
+            score.clearDirty()
+            score.redirty({ allMeasures: [], partList: {} })
+            const retried = score.flushDirty()
+            expect(retried?.allMeasures).toHaveLength(1)
+            expect(retried?.partList).toBeDefined()
+        })
+
+        it('redirty ignores measure indices that no longer exist', () => {
+            const score = makeScore(1)
+            score.clearDirty()
+            score.redirty({ measures: { '5': {} } })
+            expect(score.flushDirty()).toBeNull()
+        })
     })
 
     describe('setInstrument', () => {

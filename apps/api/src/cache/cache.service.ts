@@ -75,6 +75,23 @@ export class CacheService {
   }
 
   /**
+   * Delete a cache row only if it hasn't been touched since `updatedAt`.
+   * Used by the flush cron so an edit landing between the flush read and
+   * this delete keeps its cache row (and gets flushed on a later run).
+   */
+  async deleteIfNotUpdatedSince(
+    scoreId: string,
+    updatedAt: Date,
+  ): Promise<void> {
+    await this.cachedScoreRepo
+      .createQueryBuilder()
+      .delete()
+      .where('"scoreId" = :scoreId', { scoreId })
+      .andWhere('"updatedAt" <= :updatedAt', { updatedAt })
+      .execute();
+  }
+
+  /**
    * Find all cached scores that have NOT been updated in the last `minutes` minutes.
    * These are considered stale and should be flushed to storage.
    */

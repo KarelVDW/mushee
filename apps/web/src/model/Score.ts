@@ -469,4 +469,22 @@ export class Score {
         this.clearDirty()
         return result
     }
+
+    /**
+     * Put a failed flush back on the dirty pile so the next flush retries it.
+     * flushDirty clears state before the save request settles; without this,
+     * a failed save silently drops those edits. Merging with edits made since
+     * is safe: a structure change subsumes per-measure dirt, and per-measure
+     * dirt is a set union.
+     */
+    redirty(flush: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> }): void {
+        if (flush.partList) this._instrumentDirty = true
+        if (flush.allMeasures) this._structureChanged = true
+        if (flush.measures) {
+            for (const key of Object.keys(flush.measures)) {
+                const measure = this.measures[Number(key)]
+                if (measure) this._dirtyMeasures.add(measure)
+            }
+        }
+    }
 }

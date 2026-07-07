@@ -37,8 +37,10 @@ export default function PrivacyPolicyPage() {
             <p>
                 When you create an account we store your <strong>name, email address, and a hash of your password</strong> (we never
                 store the password itself). We use this to operate your account, sign you in, and send you essential service email
-                such as verification codes and password resets. Legal basis: <strong>performance of a contract</strong> (Art. 6(1)(b)
-                GDPR).
+                such as verification codes and password resets. For each signed-in session we also record the{' '}
+                <strong>IP address and browser (user agent)</strong> it was started from, to secure your account and let us revoke
+                stolen sessions; these are deleted with the session. Legal basis: <strong>performance of a contract</strong> (Art.
+                6(1)(b) GDPR).
             </p>
 
             <h3>Your music</h3>
@@ -72,8 +74,9 @@ export default function PrivacyPolicyPage() {
             <h3>Analytics, session replay &amp; error tracking (opt-in)</h3>
             <p>
                 With your <strong>consent</strong> — and only with it — we use <strong>PostHog</strong> (hosted in the EU, Frankfurt)
-                to understand how Sheemu is used: which features get used (product &amp; web analytics), anonymized session replays
-                of rough edges in the interface (keystrokes and form inputs are masked), and reports of errors you run into. You give
+                to understand how Sheemu is used: which features get used (product &amp; web analytics), pseudonymous session replays
+                of rough edges in the interface — linked to your account id but never your name or email, with keystrokes and form
+                inputs masked — and reports of errors you run into. You give
                 or refuse this consent in the cookie banner and can change your mind any time via{' '}
                 <strong>Cookie settings</strong> in the footer. Refusing has no effect on how Sheemu works. Legal basis:{' '}
                 <strong>consent</strong> (Art. 6(1)(a) GDPR).
@@ -104,7 +107,7 @@ export default function PrivacyPolicyPage() {
                 </thead>
                 <tbody>
                     <tr>
-                        <td>better-auth.session_token</td>
+                        <td>__Secure-better-auth.session_token</td>
                         <td>Essential cookie</td>
                         <td>Keeps you signed in.</td>
                         <td>7 days</td>

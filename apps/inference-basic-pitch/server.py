@@ -11,6 +11,7 @@ repo's tfjs graph model was converted from. Equivalence to the in-process TF.js
 path is enforced by the parity gate before cutover.
 """
 
+import signal
 import os
 import sys
 import threading
@@ -92,6 +93,9 @@ def serve():
     pb_grpc.add_BasicPitchInferenceServicer_to_server(BasicPitchServicer(), server)
     server.add_insecure_port(f"[::]:{PORT}")
     server.start()
+    # Drain in-flight RPCs on SIGTERM (k8s pod rotation) instead of
+    # dropping them mid-forward-pass; new RPCs are refused immediately.
+    signal.signal(signal.SIGTERM, lambda *_: server.stop(grace=10))
     print(f"basic-pitch-inference listening on :{PORT}", flush=True)
     server.wait_for_termination()
 

@@ -41,6 +41,16 @@ const DEFAULT_DEBUG_DIR = resolve(
   'recordings',
 );
 
+/**
+ * Raw audio is personal data: the privacy policy promises it is processed in
+ * memory only, so in production the debug bundle is disabled outright — even
+ * an explicit RECORDINGS_DEBUG_DIR does not override it (fail closed).
+ */
+function resolveDebugDir(): string | null {
+  if (process.env.NODE_ENV === 'production') return null;
+  return process.env.RECORDINGS_DEBUG_DIR ?? DEFAULT_DEBUG_DIR;
+}
+
 export interface ScoreUpdate {
   measures: Record<number, MxmlMeasure>;
 }
@@ -67,6 +77,11 @@ export class RecordingPipeline {
   private readonly decoder = new AudioDecoder();
 
   private readonly chunks: Buffer[] = [];
+  private chunkBytes = 0;
+  // Debug bundles are the only consumer of the full encoded stream after the
+  // streaming decoder is live; when they're off, chunks are dropped once
+  // forwarded so memory doesn't grow with recording length.
+  private readonly debugDir = resolveDebugDir();
   private readonly emittedNotes: PendingNote[] = [];
   private readonly emittedKeys = new Set<string>();
   private lastRawNotes: NoteEventTime[] = [];
@@ -158,12 +173,21 @@ export class RecordingPipeline {
 
   appendChunk(buffer: Buffer): void {
     if (!this.timings.firstChunkAt) this.timings.firstChunkAt = Date.now();
-    this.chunks.push(buffer);
+    this.chunkBytes += buffer.byteLength;
+    // Encoded chunks are retained only while the decoder still needs them for
+    // its container-header seed (or indefinitely when the debug bundle wants
+    // the full stream).
+    if (!this.streamDecoder || this.debugDir) this.chunks.push(buffer);
     // Once the decoder is live, forward each chunk straight into it so the byte
     // is decoded once. Chunks buffered before the decoder spawned are fed in one
     // shot at spawn time (see `process`), so this only ever runs for new audio.
     this.streamDecoder?.write(buffer);
     this.scheduleProcess();
+  }
+
+  /** Seconds of audio decoded so far — the session's billing meter reads this. */
+  get audioDurationSec(): number {
+    return this.streamDecoder?.durationSec ?? 0;
   }
 
   async finalize(): Promise<void> {
@@ -218,7 +242,7 @@ export class RecordingPipeline {
   }
 
   private async process(isFinal: boolean): Promise<void> {
-    if (!this.chunks.length) return;
+    if (!this.chunkBytes) return;
 
     const tStart = Date.now();
 
@@ -246,6 +270,9 @@ export class RecordingPipeline {
       });
       decoder.write(Buffer.concat(this.chunks));
       this.streamDecoder = decoder;
+      // The decoder owns the bytes now; without a debug bundle the encoded
+      // stream never needs to be replayed, so stop holding on to it.
+      if (!this.debugDir) this.chunks.length = 0;
     }
 
     // On the final pass, flush ffmpeg (incl. any filter look-ahead tail) and take
@@ -422,7 +449,7 @@ export class RecordingPipeline {
   private logTimings(): void {
     const t = this.timings;
     if (!t.firstChunkAt) return;
-    const totalBytes = this.chunks.reduce((s, c) => s + c.byteLength, 0);
+    const totalBytes = this.chunkBytes;
     const relativeTo = (at: number): string =>
       at ? `${at - t.firstChunkAt}ms` : 'never';
     const avgPassMs = t.processCount
@@ -442,12 +469,7 @@ export class RecordingPipeline {
     if (this.lastDuration <= 0 && !this.chunks.length) return;
     this.debugWritten = true;
 
-    // Raw audio is personal data: never persist it in production unless an
-    // operator explicitly opts in via RECORDINGS_DEBUG_DIR. The privacy
-    // policy promises audio is processed in memory only.
-    const baseDir =
-      process.env.RECORDINGS_DEBUG_DIR ??
-      (process.env.NODE_ENV === 'production' ? null : DEFAULT_DEBUG_DIR);
+    const baseDir = this.debugDir;
     if (!baseDir) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const sessionDir = join(baseDir, stamp);

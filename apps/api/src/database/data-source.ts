@@ -13,6 +13,7 @@ import { Score } from '../scores/entities/score.entity';
 import { UserSettings } from '../settings/entities/user-settings.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { migrations } from './migrations';
+import { postgresSsl } from './postgres-ssl';
 
 /**
  * Single source of truth for the Postgres connection, shared by the Nest app
@@ -26,11 +27,22 @@ import { migrations } from './migrations';
  */
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.POSTGRES_HOST ?? 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT ?? '5632', 10),
-  username: process.env.POSTGRES_USER ?? 'mushee',
-  password: process.env.POSTGRES_PASSWORD ?? 'mushee',
-  database: process.env.POSTGRES_DB ?? 'mushee',
+  // POSTGRES_URL wins when set — better-auth and the seeder already read it,
+  // so TypeORM must too or the two halves of the app connect to different
+  // databases.
+  ...(process.env.POSTGRES_URL
+    ? { url: process.env.POSTGRES_URL }
+    : {
+        host: process.env.POSTGRES_HOST ?? 'localhost',
+        port: parseInt(process.env.POSTGRES_PORT ?? '5632', 10),
+        username: process.env.POSTGRES_USER ?? 'mushee',
+        password: process.env.POSTGRES_PASSWORD ?? 'mushee',
+        database: process.env.POSTGRES_DB ?? 'mushee',
+      }),
+  ssl: postgresSsl(),
+  // Per-replica pool cap; two pools run per replica (TypeORM + better-auth),
+  // so size against the server's max_connections before scaling replicas.
+  extra: { max: parseInt(process.env.POSTGRES_POOL_SIZE ?? '10', 10) },
   entities: [
     AccountDeletion,
     ActiveRecording,

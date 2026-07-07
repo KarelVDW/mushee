@@ -11,10 +11,21 @@ export interface RecordingSessionEvents {
   onUpdate(update: ScoreUpdate): void;
   /** Fired once when the user's daily credit budget runs out mid-recording. */
   onLimitReached(balance: RecordingCreditBalance): void;
+  /** Fired once when a hard session cap (duration/bytes) stops the take. */
+  onSessionCap?(reason: SessionCapReason): void;
 }
+
+export type SessionCapReason = 'max-duration' | 'max-bytes';
 
 /** Spend cadence: 1 credit per second of recording. */
 const METER_INTERVAL_MS = 1000;
+
+/** Hard per-session caps — defense in depth on top of credits, protecting the
+ *  process from unbounded memory on unlimited tiers (PCM grows ~320 MB/hour).
+ *  Env-tunable for load tests; the defaults comfortably exceed any real take. */
+const MAX_SESSION_SECONDS = Number(process.env.RECORDING_MAX_SECONDS) || 3600;
+const MAX_SESSION_ENCODED_BYTES =
+  Number(process.env.RECORDING_MAX_ENCODED_BYTES) || 128 * 1024 * 1024;
 
 /**
  * One recording session: ties a pipeline to the user and score it records
@@ -33,6 +44,8 @@ export class RecordingSession {
   private meterTimer: NodeJS.Timeout | null = null;
   private limitReached = false;
   private closed = false;
+  private bytesReceived = 0;
+  private meterStartedAt = 0;
 
   constructor(
     readonly userId: string,
@@ -60,6 +73,11 @@ export class RecordingSession {
 
   appendChunk(buffer: Buffer): void {
     if (this.limitReached || this.closed) return;
+    this.bytesReceived += buffer.byteLength;
+    if (this.bytesReceived > MAX_SESSION_ENCODED_BYTES) {
+      this.cap('max-bytes');
+      return;
+    }
     if (!this.meterTimer) this.startMeter();
     this.pipeline.appendChunk(buffer);
   }
@@ -101,6 +119,7 @@ export class RecordingSession {
   }
 
   private startMeter(): void {
+    this.meterStartedAt = Date.now();
     // Bill the first second immediately so sub-second recordings still cost 1.
     void this.spendTick();
     this.meterTimer = setInterval(() => void this.spendTick(), METER_INTERVAL_MS);
@@ -115,15 +134,29 @@ export class RecordingSession {
 
   private async spendTick(): Promise<void> {
     if (this.limitReached || this.closed) return;
+
+    // Bill whichever is further along: wall-clock seconds or seconds of audio
+    // actually decoded. Wall-clock alone lets a scripted client stream audio
+    // faster than real time and pay a fraction of it; audio alone would make
+    // a stalled decode free. The max of both is server-authoritative.
+    const wallSec = Math.ceil((Date.now() - this.meterStartedAt) / 1000) || 1;
+    const audioSec = Math.ceil(this.pipeline.audioDurationSec);
+    const targetSpend = Math.max(wallSec, audioSec, this.creditsSpent + 1);
+    if (Math.max(wallSec, audioSec) > MAX_SESSION_SECONDS) {
+      this.cap('max-duration');
+      return;
+    }
+
+    const toSpend = targetSpend - this.creditsSpent;
     let balance: RecordingCreditBalance;
     try {
-      balance = await this.credits.spend(this.userId, 1);
+      balance = await this.credits.spend(this.userId, toSpend);
     } catch (err) {
       // Don't kill a take over a transient DB hiccup; the next tick retries.
       this.logger.warn(`Credit spend failed: ${describeError(err)}`);
       return;
     }
-    this.creditsSpent += 1;
+    this.creditsSpent += toSpend;
     if (!balance.exhausted || this.limitReached || this.closed) return;
 
     this.limitReached = true;
@@ -132,6 +165,19 @@ export class RecordingSession {
       `Daily recording limit reached (user ${this.userId}, ${balance.used} credits used)`,
     );
     this.events.onLimitReached(balance);
+    this.finalize();
+  }
+
+  /** Stop the take at a hard cap: no more audio accepted, pipeline finalized
+   *  so the user keeps everything transcribed up to the cap. */
+  private cap(reason: SessionCapReason): void {
+    if (this.limitReached || this.closed) return;
+    this.limitReached = true;
+    this.stopMeter();
+    this.logger.warn(
+      `Recording capped (${reason}) after ${this.creditsSpent}s / ${this.bytesReceived} bytes (user ${this.userId})`,
+    );
+    this.events.onSessionCap?.(reason);
     this.finalize();
   }
 }

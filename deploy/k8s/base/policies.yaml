@@ -1,0 +1,64 @@
+# Availability + traffic policies.
+#
+# PodDisruptionBudgets: a node drain (cluster upgrade) must never evict every
+# replica of a service at once — recordings ride long-lived WebSockets on the
+# API, and the HPAs assume at least one inference pod is always serving.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: api }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: crepe-inference
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: crepe-inference }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: basic-pitch-inference
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: basic-pitch-inference }
+---
+# The inference services speak unauthenticated plaintext gRPC — restrict them
+# to the API pods so a compromised neighbour can't burn their CPU. (Inert on
+# clusters whose CNI doesn't enforce NetworkPolicy, e.g. Docker Desktop.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: crepe-inference-from-api-only
+spec:
+  podSelector:
+    matchLabels: { app: crepe-inference }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: api }
+      ports:
+        - port: 50051
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: basic-pitch-inference-from-api-only
+spec:
+  podSelector:
+    matchLabels: { app: basic-pitch-inference }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: api }
+      ports:
+        - port: 50052

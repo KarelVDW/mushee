@@ -8,3 +8,4 @@ resources:
   - api.yaml
   - crepe-inference.yaml
   - basic-pitch-inference.yaml
+  - policies.yaml

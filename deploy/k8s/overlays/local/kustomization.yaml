@@ -11,3 +11,12 @@ resources:
   - storage-pvc.yaml
 patches:
   - path: api-storage-patch.yaml
+  # Locally-built images can't be pulled from a registry; base sets Always
+  # for production safety.
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+    target:
+      kind: Deployment
+      name: api|crepe-inference|basic-pitch-inference

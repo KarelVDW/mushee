@@ -1,0 +1,79 @@
+# Gates every PR (and pushes to master) on the same checks that pass locally:
+# scoped lint, type-check, unit tests (incl. the 100% model coverage gate),
+# and both app builds. The API tests spawn real ffmpeg via ffmpeg-static —
+# no system packages needed.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Scoped to src: apps/api/scripts + generated proto files carry a large
+      # pre-existing lint baseline that is tracked separately.
+      - name: Lint
+        run: pnpm exec eslint apps/api/src apps/web/src
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Test (api)
+        run: pnpm --filter @mushee/api test
+
+      - name: Test (web, with coverage gate)
+        run: pnpm --filter @mushee/web test:coverage
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @mushee/web exec playwright install --with-deps chromium webkit
+
+      # Mocked suite only: fully self-contained (API calls intercepted),
+      # so no database or backend services are needed.
+      - name: E2E (mocked)
+        run: pnpm --filter @mushee/web test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

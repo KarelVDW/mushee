@@ -100,7 +100,21 @@ via a kustomize `images:` override). The cluster must provide:
   `ADMIN_EMAILS`), and `RCLONE_REMOTE` + `RCLONE_CONFIG_<NAME>_*` vars for
   cloud MusicXML storage (the API image ships rclone; a plain directory path
   also works if you mount a volume). Do **not** set `SEED_DEMO_DATA` in
-  production. See `apps/api/.env.example` for the full annotated list.
+  production (the API refuses to boot with it). See `apps/api/.env.example`
+  for the full annotated list.
+- Production hardening vars: `POSTGRES_SSL=require` (or `verify` +
+  `POSTGRES_SSL_CA`) for TLS to a managed database, `TRUST_PROXY=1` so per-IP
+  rate limiting sees real client addresses behind the ingress (the base
+  manifest sets this), and `COOKIE_DOMAIN=.your-domain` when the web app and
+  API live on different subdomains — without it the session cookie never
+  reaches the web middleware and every signed-in user bounces to `/login`.
+  `POSTGRES_URL` may replace the `POSTGRES_*` parts; it is honored by TypeORM,
+  better-auth, and the seeder alike.
+- **Backups**: the database is the only stateful component besides MusicXML
+  storage. Enable your managed Postgres provider's automated backups /
+  point-in-time recovery *and test a restore once* before launch; version or
+  replicate the rclone bucket for the MusicXML files. Nothing in this repo
+  does this for you.
 - A metrics-server, so the HPAs scale the inference services on CPU (Docker
   Desktop has none — HPAs stay at min replicas there).
 - An Ingress / managed LB for `Service/api` (the local overlay's

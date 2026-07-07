@@ -14,14 +14,19 @@ export async function runMigrationsLocked(): Promise<void> {
   const logger = new Logger('Migrations');
   const dataSource = new DataSource(dataSourceOptions);
   await initializeWithRetry(dataSource, logger);
+  // Advisory locks are session-scoped: lock and unlock must run on the SAME
+  // connection, so pin one QueryRunner instead of borrowing from the pool
+  // (where they could land on different sessions and the unlock would no-op).
+  const runner = dataSource.createQueryRunner();
   try {
-    await dataSource.query('SELECT pg_advisory_lock(727271)');
+    await runner.query('SELECT pg_advisory_lock(727271)');
     const applied = await dataSource.runMigrations({ transaction: 'each' });
     if (applied.length > 0) {
       logger.log(`Applied ${applied.length} migration(s): ${applied.map((m) => m.name).join(', ')}`);
     }
   } finally {
-    await dataSource.query('SELECT pg_advisory_unlock(727271)').catch(() => {});
+    await runner.query('SELECT pg_advisory_unlock(727271)').catch(() => {});
+    await runner.release().catch(() => {});
     await dataSource.destroy();
   }
 }

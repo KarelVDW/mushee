@@ -3,12 +3,14 @@ import { emailOTP } from 'better-auth/plugins/email-otp';
 import { Pool } from 'pg';
 
 import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config';
+import { postgresSsl } from '../database/postgres-ssl';
 import { mailService } from '../mail/mail.service';
 
 const pool = new Pool({
   connectionString:
     process.env.POSTGRES_URL ??
     `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5632'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
+  ssl: postgresSsl() || undefined,
 });
 
 const trustedOrigins = [
@@ -20,6 +22,21 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:4200',
   trustedOrigins,
   database: pool,
+  // Production serves web and API on different hosts of one site (e.g.
+  // sheemu.app + api.sheemu.app). The session cookie must be scoped to the
+  // shared parent domain or the web middleware never sees it. Set
+  // COOKIE_DOMAIN to that parent (e.g. '.sheemu.app'); leave unset for
+  // same-host dev.
+  ...(process.env.COOKIE_DOMAIN
+    ? {
+        advanced: {
+          crossSubDomainCookies: {
+            enabled: true,
+            domain: process.env.COOKIE_DOMAIN,
+          },
+        },
+      }
+    : {}),
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
@@ -85,6 +102,10 @@ export const auth = betterAuth({
     emailOTP({
       otpLength: 6,
       expiresIn: 600,
+      // A 6-digit code must not be guessable by hammering the verify
+      // endpoint; after this many wrong attempts the code is invalidated
+      // and a new one has to be requested.
+      allowedAttempts: 5,
       sendVerificationOTP: async ({ email, otp, type }) => {
         if (type !== 'email-verification') return;
         await mailService.sendVerificationCode(email, otp);

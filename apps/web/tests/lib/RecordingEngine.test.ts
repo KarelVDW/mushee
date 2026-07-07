@@ -44,11 +44,15 @@ const rememberRecorder = (recorder: FakeMediaRecorder): void => {
 class FakeMediaRecorder {
     state: 'inactive' | 'recording' = 'inactive'
     ondataavailable: ((e: { data: { size: number } }) => void) | null = null
+    onstop: (() => void) | null = null
     start = vi.fn((_ms?: number) => {
         this.state = 'recording'
     })
     stop = vi.fn(() => {
         this.state = 'inactive'
+        // A real MediaRecorder fires onstop after flushing its final chunk;
+        // the engine defers the socket close until then.
+        this.onstop?.()
     })
     constructor(
         public stream: unknown,
@@ -708,10 +712,12 @@ describe('RecordingEngine', () => {
         expect(lastRecorder).toBeNull()
     })
 
-    it('resolves beginStreaming on a socket error and skips meta when not OPEN', async () => {
+    it('surfaces a connection failure instead of recording into a dead socket', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
+        const onConnectionLost = vi.fn()
         const { options } = makeOptions()
+        options.onConnectionLost = onConnectionLost
         await engine.start(options)
         raw.currentTime = 3
         engine.tick()
@@ -720,9 +726,26 @@ describe('RecordingEngine', () => {
         socket().fire('error')
         await Promise.resolve()
         await Promise.resolve()
-        // No meta frame was sent (socket not OPEN), but a recorder was still created.
+        // No meta frame, no recorder — the user is told the connection failed.
         expect(socket().sent).toHaveLength(0)
-        expect(lastRecorder).not.toBeNull()
+        expect(lastRecorder).toBeNull()
+        expect(onConnectionLost).toHaveBeenCalled()
+    })
+
+    it('fires onConnectionLost when the socket closes mid-take', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const onConnectionLost = vi.fn()
+        const { options } = makeOptions()
+        options.onConnectionLost = onConnectionLost
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        expect(onConnectionLost).not.toHaveBeenCalled()
+        socket().fire('close')
+        expect(onConnectionLost).toHaveBeenCalledTimes(1)
     })
 
     it('sends a null timeSignature in meta when the start measure has none', async () => {

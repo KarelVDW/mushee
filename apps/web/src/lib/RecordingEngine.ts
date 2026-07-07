@@ -72,6 +72,12 @@ export interface RecordingOptions {
     onLimitReached?: (info: RecordingLimitInfo) => void
     /** Fired when the gateway refuses the recording (e.g. one already running). */
     onRecordingError?: (code: RecordingErrorCode) => void
+    /**
+     * Fired when the transcription connection can't be established or dies
+     * mid-take. Without surfacing this, the user keeps singing into a dead
+     * socket while the UI still looks live.
+     */
+    onConnectionLost?: () => void
 }
 
 /**
@@ -96,6 +102,9 @@ export class RecordingEngine implements Tickable {
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
     private samples: { time: number; amp: number }[] = []
+    /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
+     *  permission prompt) can detect it lost the race and release the stream. */
+    private lifecycle = 0
 
     constructor(midiPlayer: MidiPlayer) {
         this.midiPlayer = midiPlayer
@@ -115,8 +124,23 @@ export class RecordingEngine implements Tickable {
         if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
             throw new RecordingUnsupportedError()
         }
+        const token = ++this.lifecycle
         this.options = options
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+        let stream: MediaStream
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        } catch (err) {
+            if (this.lifecycle === token) this.options = null
+            throw err
+        }
+        if (this.lifecycle !== token) {
+            // stop() ran while the permission prompt was open; without this the
+            // stream is never stopped and the mic indicator stays lit.
+            stream.getTracks().forEach((t) => t.stop())
+            return
+        }
+        this.stream = stream
 
         const measure = options.score.measures[options.startMeasureIndex]
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
@@ -144,29 +168,48 @@ export class RecordingEngine implements Tickable {
     }
 
     stop(): void {
+        // Invalidate any start() still awaiting the permission prompt, even
+        // when nothing else is running yet.
+        this.lifecycle++
         if (this._state === 'idle') return
 
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-            try {
-                this.mediaRecorder.stop()
-            } catch {
-                // recorder already torn down by browser — nothing left to stop
-            }
-        }
+        const ws = this.ws
+        this.ws = null
+        const recorder = this.mediaRecorder
         this.mediaRecorder = null
+
+        // MediaRecorder.stop() flushes its final ≤100 ms chunk asynchronously
+        // (the ondataavailable handler holds its own reference to the socket),
+        // so only send `end` and close once that flush has happened — closing
+        // here would drop the last moments of every take.
+        let finished = false
+        const finish = () => {
+            if (finished) return
+            finished = true
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                    ws.send(JSON.stringify({ type: 'end' }))
+                } catch {
+                    // socket may have closed mid-send; close() below still runs
+                }
+            }
+            ws?.close()
+        }
+        if (recorder && recorder.state !== 'inactive') {
+            recorder.onstop = finish
+            // Safety net for browsers that never fire onstop.
+            setTimeout(finish, 1000)
+            try {
+                recorder.stop()
+            } catch {
+                finish()
+            }
+        } else {
+            finish()
+        }
 
         this.stream?.getTracks().forEach((t) => t.stop())
         this.stream = null
-
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            try {
-                this.ws.send(JSON.stringify({ type: 'end' }))
-            } catch {
-                // socket may have closed mid-send; close() below still runs
-            }
-        }
-        this.ws?.close()
-        this.ws = null
 
         this.analyserCtx?.close().catch(() => {})
         this.analyserCtx = null
@@ -279,20 +322,38 @@ export class RecordingEngine implements Tickable {
 
     private async beginStreaming(): Promise<void> {
         if (!this.stream || !this.options) return
+        const opts = this.options
 
+        let ws: WebSocket
         try {
-            this.ws = new WebSocket(this.options.wsUrl)
+            ws = new WebSocket(opts.wsUrl)
         } catch {
+            opts.onConnectionLost?.()
+            return
+        }
+        this.ws = ws
+
+        // A close while this socket is still the engine's and a take is live
+        // means the connection died under the user — surface it instead of
+        // letting them keep singing into a dead socket.
+        ws.addEventListener('close', () => {
+            if (this._state !== 'idle' && this.ws === ws) {
+                this.ws = null
+                opts.onConnectionLost?.()
+            }
+        })
+
+        await new Promise<void>((resolve) => {
+            ws.addEventListener('open', () => resolve(), { once: true })
+            ws.addEventListener('error', () => resolve(), { once: true })
+        })
+        if (ws.readyState !== WebSocket.OPEN) {
+            if (this.ws === ws) this.ws = null
+            opts.onConnectionLost?.()
             return
         }
 
-        await new Promise<void>((resolve) => {
-            if (!this.ws) return resolve()
-            this.ws.addEventListener('open', () => resolve(), { once: true })
-            this.ws.addEventListener('error', () => resolve(), { once: true })
-        })
-
-        this.ws.addEventListener('message', (event) => {
+        ws.addEventListener('message', (event) => {
             if (typeof event.data !== 'string') return
             let msg: unknown
             try {
@@ -347,9 +408,12 @@ export class RecordingEngine implements Tickable {
             )
         }
 
+        // Hold the socket directly (not via this.ws): stop() nulls this.ws
+        // before the recorder's final flush, and that last chunk must still
+        // reach the server.
         this.mediaRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(e.data)
+            if (ws.readyState === WebSocket.OPEN) ws.send(e.data)
         }
         this.mediaRecorder.start(CHUNK_MS)
     }

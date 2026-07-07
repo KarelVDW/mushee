@@ -102,6 +102,10 @@ export class AccountService {
     let purged = 0;
     for (const { userId } of due) {
       try {
+        const ctx = await auth.$context;
+        // Email needed after deleteUser: verification rows key on it (below).
+        const user = await ctx.internalAdapter.findUserById(userId);
+
         await this.scoresService.removeAllForUser(userId);
         await this.recordingsService.deleteAllForUser(userId);
         await this.billingService.deletePolarCustomer(userId);
@@ -109,8 +113,17 @@ export class AccountService {
         await this.onboardingService.deleteForUser(userId);
         await this.settingsService.deleteForUser(userId);
 
-        const ctx = await auth.$context;
         await ctx.internalAdapter.deleteUser(userId);
+
+        // The better-auth `verification` table (OTP codes, reset tokens) has
+        // no FK to the user — its identifiers embed the email address, so
+        // without this sweep a purged user's email lingers in expired rows.
+        if (user?.email) {
+          await this.deletionRepo.manager.query(
+            `DELETE FROM "verification" WHERE identifier LIKE '%' || $1 || '%'`,
+            [user.email],
+          );
+        }
 
         await this.deletionRepo.delete({ userId });
         purged++;

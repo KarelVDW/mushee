@@ -17,7 +17,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
     const { data: session, isPending } = useSession()
-    const betaStatus = useBetaStatus({ enabled: BETA_MODE && !!session?.user })
+    // Always fetch when signed in: the server's betaMode is the runtime truth,
+    // while BETA_MODE is baked in at build time — gating only on the build
+    // flag lets the two drift (e.g. API in beta mode, web image built without).
+    const betaStatus = useBetaStatus({ enabled: !!session?.user })
 
     const isPublic =
         PUBLIC_EXACT_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some((p) => pathname.startsWith(p))
@@ -34,7 +37,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
         // Closed beta: unapproved users wait on /beta instead of the app.
         if (
-            BETA_MODE &&
+            (BETA_MODE || betaStatus.data?.betaMode) &&
             betaStatus.data?.status === 'pending' &&
             !BETA_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))
         ) {

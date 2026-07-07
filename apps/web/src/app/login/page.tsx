@@ -24,7 +24,15 @@ export default function LoginPage() {
     const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
 
     function continueToApp(emailVerified: boolean) {
-        router.push(emailVerified ? '/scores' : '/onboarding')
+        if (!emailVerified) {
+            router.push('/onboarding')
+            return
+        }
+        // The auth middleware puts the originally requested path in ?next= so
+        // deep links survive the login bounce. Same-origin paths only — a full
+        // URL here would be an open redirect.
+        const next = new URLSearchParams(window.location.search).get('next')
+        router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/scores')
     }
 
     function handleSubmit(e: FormEvent) {

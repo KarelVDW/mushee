@@ -7,6 +7,7 @@ import type { NoteEventTime } from '@spotify/basic-pitch';
  * it. The recording pipeline creates one of these at session start, hands it
  * to every `transcribe` call for that session, and discards it on finalize.
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- deliberate marker interface: each provider declares its own session shape via `implements`
 export interface PitchSession {}
 
 /**

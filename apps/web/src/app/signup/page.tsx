@@ -28,9 +28,11 @@ export default function SignupPage() {
                 setLoading(false)
             } else {
                 track('signup_completed', { beta: BETA_MODE })
-                void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(({ error }) => {
-                    if (!error) router.push('/onboarding')
-                })
+                // The account exists at this point — never strand the user on a
+                // frozen form. Onboarding's verify-email step can re-send the
+                // code, so a failed initial send proceeds all the same.
+                const goToOnboarding = () => router.push('/onboarding')
+                void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
             }
         })
     }

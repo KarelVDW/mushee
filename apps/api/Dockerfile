@@ -34,5 +34,8 @@ WORKDIR /repo/apps/api
 # whole tree at the same path keeps every link (incl. @mushee/inference-proto,
 # whose inference.proto is resolved at runtime) valid.
 COPY --from=build /repo /repo
+# Run as the image's unprivileged user: the API shells out to ffmpeg on
+# untrusted audio, so a decoder exploit must not land as root.
+USER node
 EXPOSE 3000
 CMD ["node", "dist/main"]

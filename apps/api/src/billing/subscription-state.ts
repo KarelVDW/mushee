@@ -14,6 +14,8 @@ export interface SubscriptionSnapshot {
   customerId?: string;
   currentPeriodEnd?: Date | null;
   cancelAtPeriodEnd?: boolean;
+  /** Polar's `modified_at` — used to drop out-of-order webhook retries. */
+  modifiedAt?: Date | null;
 }
 
 export interface SubscriptionRowPatch {
@@ -24,6 +26,7 @@ export interface SubscriptionRowPatch {
   status: string | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  lastPolarEventAt: Date | null;
 }
 
 /** Statuses during which the customer keeps the paid tier. `past_due` keeps
@@ -57,6 +60,7 @@ export function patchFromSubscription(
       status: sub.status,
       currentPeriodEnd: sub.currentPeriodEnd ?? null,
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
+      lastPolarEventAt: sub.modifiedAt ?? null,
     };
   }
 
@@ -70,6 +74,7 @@ export function patchFromSubscription(
     status: sub.status,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    lastPolarEventAt: sub.modifiedAt ?? null,
   };
 }
 
@@ -106,6 +111,7 @@ export function patchFromCustomerState(
       status: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
+      lastPolarEventAt: null,
     };
   }
   return null;

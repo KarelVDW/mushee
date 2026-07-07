@@ -16,7 +16,7 @@ spec:
       containers:
         - name: crepe-inference
           image: mushee/crepe-inference:latest # build & push from apps/inference-crepe/Dockerfile
-          imagePullPolicy: IfNotPresent # use a locally-built image if present
+          imagePullPolicy: Always # local overlay patches this back for locally-built images
           ports:
             - containerPort: 50051
           env:

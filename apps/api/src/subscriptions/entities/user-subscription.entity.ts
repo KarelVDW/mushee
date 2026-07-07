@@ -40,6 +40,11 @@ export class UserSubscription {
   @Column({ type: 'boolean', default: false })
   cancelAtPeriodEnd: boolean;
 
+  /** `modified_at` of the newest Polar event applied — guards against Polar
+   *  retries landing out of order and resurrecting stale subscription state. */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastPolarEventAt: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

@@ -16,7 +16,7 @@ spec:
       containers:
         - name: basic-pitch-inference
           image: mushee/basic-pitch-inference:latest # build & push from apps/inference-basic-pitch/Dockerfile
-          imagePullPolicy: IfNotPresent # use a locally-built image if present
+          imagePullPolicy: Always # local overlay patches this back for locally-built images
           ports:
             - containerPort: 50052
           env:

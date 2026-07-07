@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
 import { isBetaMode } from '../beta/beta-config';
 import { RecordingCreditsService } from '../recordings/recording-credits.service';
@@ -198,28 +198,41 @@ export class BillingService {
     }
     const event = validateEvent(rawBody, headers, secret);
 
+    // Dedupe + apply in ONE transaction: if applying fails, the dedupe row
+    // rolls back with it, so Polar's retry gets a clean attempt instead of
+    // being swallowed as a "duplicate" of a delivery that never took effect.
     const deliveryId = headers['webhook-id'];
-    if (deliveryId && !(await this.markProcessed(deliveryId))) {
-      this.logger.log(`Skipping duplicate webhook delivery ${deliveryId}`);
-      return false;
+    let applied = false;
+    await this.webhookEvents.manager.transaction(async (em) => {
+      if (deliveryId && !(await this.markProcessed(deliveryId, em))) return;
+      await this.applyEvent(event as { type: string; data: unknown }, em);
+      applied = true;
+    });
+    if (!applied) {
+      this.logger.log(`Skipping duplicate webhook delivery ${deliveryId ?? ''}`);
     }
-
-    await this.applyEvent(event as { type: string; data: unknown });
-    return true;
+    return applied;
   }
 
   /** Insert the delivery id; false means we've already seen it. */
-  private async markProcessed(deliveryId: string): Promise<boolean> {
-    const result = await this.webhookEvents
+  private async markProcessed(
+    deliveryId: string,
+    em: EntityManager,
+  ): Promise<boolean> {
+    const result = await em
       .createQueryBuilder()
       .insert()
+      .into(ProcessedWebhookEvent)
       .values({ id: deliveryId })
       .orIgnore()
       .execute();
     return (result.identifiers?.length ?? 0) > 0;
   }
 
-  private async applyEvent(event: { type: string; data: unknown }): Promise<void> {
+  private async applyEvent(
+    event: { type: string; data: unknown },
+    em: EntityManager,
+  ): Promise<void> {
     switch (event.type) {
       case 'subscription.created':
       case 'subscription.active':
@@ -248,7 +261,20 @@ export class BillingService {
           );
           return;
         }
-        await this.subscriptions.upsert(userId, patch);
+        // Polar retries can arrive out of order; never let an older snapshot
+        // overwrite newer state (e.g. an old `active` after a `revoked`).
+        const existing = await this.subscriptions.findForUser(userId, em);
+        if (
+          existing?.lastPolarEventAt &&
+          sub.modifiedAt &&
+          sub.modifiedAt < existing.lastPolarEventAt
+        ) {
+          this.logger.log(
+            `${event.type}: stale event for user ${userId} (modified ${sub.modifiedAt.toISOString()} < applied ${existing.lastPolarEventAt.toISOString()}) — ignoring`,
+          );
+          return;
+        }
+        await this.subscriptions.upsert(userId, patch, em);
         this.logger.log(
           `${event.type}: user ${userId} → tier ${patch.tierId} (status ${patch.status})`,
         );
@@ -262,14 +288,14 @@ export class BillingService {
           activeSubscriptions: SubscriptionSnapshot[];
         };
         if (!state.externalId) return;
-        const row = await this.subscriptions.findForUser(state.externalId);
+        const row = await this.subscriptions.findForUser(state.externalId, em);
         const patch = patchFromCustomerState(
           state,
           (p) => tierForProduct(p),
           row?.tierId,
         );
         if (!patch) return;
-        await this.subscriptions.upsert(state.externalId, patch);
+        await this.subscriptions.upsert(state.externalId, patch, em);
         this.logger.log(
           `customer.state_changed: user ${state.externalId} → tier ${patch.tierId}`,
         );
@@ -282,15 +308,22 @@ export class BillingService {
     }
   }
 
-  /** Best-effort GDPR cleanup of the Polar customer when an account is purged. */
+  /** GDPR cleanup of the Polar customer when an account is purged. */
   async deletePolarCustomer(userId: string): Promise<void> {
     const polar = polarClient();
     if (!polar) return;
     try {
       await polar.customers.deleteExternal({ externalId: userId });
       this.logger.log(`Deleted Polar customer for purged account ${userId}`);
-    } catch {
-      // Customer may simply not exist (never checked out) — that's fine.
+    } catch (err: unknown) {
+      // Not existing is fine (the user never checked out). Anything else must
+      // fail the purge so the hourly cron retries — the privacy policy
+      // promises we ask Polar to delete the customer record.
+      const status =
+        (err as { statusCode?: number; status?: number }).statusCode ??
+        (err as { statusCode?: number; status?: number }).status;
+      if (status === 404) return;
+      throw err;
     }
   }
 

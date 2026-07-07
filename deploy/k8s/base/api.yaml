@@ -14,29 +14,49 @@ spec:
     metadata:
       labels: { app: api }
     spec:
+      # Recording sessions drain on SIGTERM (pipeline finalize + persist);
+      # give them time before the kubelet sends SIGKILL.
+      terminationGracePeriodSeconds: 60
       containers:
         - name: api
+          # Retag to your registry with an immutable tag via a kustomize
+          # `images:` override — do NOT deploy a mutable :latest to production
+          # (nodes cache it and rollouts silently keep running stale code).
+          # The local overlay patches pullPolicy back for locally-built images.
           image: mushee/api:latest # build & push from apps/api/Dockerfile
-          imagePullPolicy: IfNotPresent # use a locally-built image if present
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000 # `node` user in the image
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ['ALL'] }
           ports:
             - containerPort: 3000
           env:
             - { name: PORT, value: '3000' }
             - { name: CREPE_INFERENCE_URL, value: 'crepe-inference:50051' }
             - { name: BASIC_PITCH_INFERENCE_URL, value: 'basic-pitch-inference:50052' }
+            # Exactly one proxy hop (the ingress/LB) sits in front of the API;
+            # adjust if your topology differs so per-IP rate limiting keys on
+            # real client addresses.
+            - { name: TRUST_PROXY, value: '1' }
           # DB + auth + mail config from the cluster's existing secret/configmap.
           envFrom:
             - secretRef: { name: api-secrets } # POSTGRES_*, auth, SendGrid, etc.
           resources:
-            requests: { cpu: '250m', memory: 256Mi }
-            limits: { cpu: '1', memory: 512Mi }
+            requests: { cpu: '250m', memory: 512Mi }
+            # Headroom for recording sessions: decoded PCM grows ~320 MB/hour
+            # and the per-session cap (RECORDING_MAX_SECONDS) is 1 h by default.
+            limits: { cpu: '1', memory: 1Gi }
           readinessProbe:
-            tcpSocket: { port: 3000 }
+            httpGet: { path: /health, port: 3000 }
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            tcpSocket: { port: 3000 }
+            httpGet: { path: /health, port: 3000 }
             periodSeconds: 15
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service

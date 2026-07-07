@@ -62,6 +62,10 @@ function applyConsent(granted: boolean): void {
         posthog.startSessionRecording()
     } else {
         posthog.opt_out_capturing()
+        // Clear identifiers persisted while consent was granted (withdrawal
+        // must remove the ph_* cookie/localStorage, not just stop capture),
+        // then drop back to memory-only persistence.
+        posthog.reset()
         posthog.set_config({ persistence: 'memory', disable_session_recording: true })
     }
 }
@@ -72,11 +76,13 @@ export function track(event: string, properties?: Record<string, unknown>): void
     posthog.capture(event, properties)
 }
 
-/** Tie events to the signed-in account (id only + plan-level traits). */
+/** Tie events to the signed-in account. Id only — never email/name: the
+ *  privacy policy describes replays/analytics as pseudonymous, so the profile
+ *  must not carry direct identifiers. */
 export function identifyUser(user: { id: string; email?: string; name?: string }): void {
     if (!initialized) return
     if (posthog.get_distinct_id() === user.id) return
-    posthog.identify(user.id, { email: user.email, name: user.name })
+    posthog.identify(user.id)
 }
 
 /** On sign-out: unlink the device from the account. */

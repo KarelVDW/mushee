@@ -79,6 +79,7 @@ export default function ScoreEditorPage() {
     const containerRef = useRef<HTMLDivElement>(null)
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+    const saveRetryRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const tickerRef = useRef<Ticker | null>(null)
     const schedulerRef = useRef<ScoreScheduler | null>(null)
     const metronomeRef = useRef<Metronome | null>(null)
@@ -118,6 +119,7 @@ export default function ScoreEditorPage() {
     const saveToApi = useCallback(
         (changes: { title?: string; score?: Score }) => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+            if (saveRetryRef.current) clearTimeout(saveRetryRef.current)
             saveTimeoutRef.current = setTimeout(() => {
                 const body: {
                     title?: string
@@ -132,7 +134,17 @@ export default function ScoreEditorPage() {
                     if (dirty?.allMeasures) body.allMeasures = dirty.allMeasures
                     if (dirty?.partList) body.partList = dirty.partList
                 }
-                if (body.title !== undefined || body.measures || body.allMeasures || body.partList) saveScore(body)
+                if (body.title !== undefined || body.measures || body.allMeasures || body.partList) {
+                    saveScore(body, {
+                        onError: () => {
+                            // flushDirty cleared this state before the request
+                            // settled — put it back and retry, or these edits
+                            // are silently gone until an unrelated later edit.
+                            changes.score?.redirty(body)
+                            saveRetryRef.current = setTimeout(() => saveToApi(changes), 10_000)
+                        },
+                    })
+                }
             }, 2000)
         },
         [saveScore],
@@ -367,6 +379,10 @@ export default function ScoreEditorPage() {
                 onLimitReached: (info) => {
                     stopAll()
                     setRecordingHalt({ kind: 'limit', info })
+                },
+                onConnectionLost: () => {
+                    stopAll()
+                    showToast('The recording connection was lost. Notes transcribed so far are kept — try recording again.')
                 },
                 onRecordingError: (code) => {
                     stopAll()

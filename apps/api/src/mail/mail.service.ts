@@ -17,7 +17,9 @@ export class MailService {
 
   constructor() {
     const apiKey = process.env.SENDGRID_API_KEY;
-    this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@mushee.app';
+    // Fallback must match the canonical site domain (sheemu.app) — a mismatch
+    // breaks SPF/DKIM alignment and lands every verification code in spam.
+    this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@sheemu.app';
     this.fromName = process.env.SENDGRID_FROM_NAME ?? 'Sheemu';
     this.configured = Boolean(apiKey);
 
@@ -28,6 +30,12 @@ export class MailService {
         (sgMail as unknown as { client: { setDataResidency: (r: string) => void } })
           .client.setDataResidency('eu');
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      // Fail fast: without mail, signups dead-end at email verification and
+      // the dev fallback below would write OTP codes into production logs.
+      throw new Error(
+        'SENDGRID_API_KEY must be set in production — verification and password-reset emails cannot be delivered without it.',
+      );
     } else {
       this.logger.warn(
         'SENDGRID_API_KEY is not set — outgoing emails will be logged but not delivered.',

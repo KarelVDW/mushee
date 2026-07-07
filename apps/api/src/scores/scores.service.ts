@@ -134,12 +134,25 @@ export class ScoresService {
     await this.scoreRepo.remove(score);
   }
 
-  // TODO: implement actual MusicXML <-> JSON conversion
-  musicxmlToJson(musicxml: string): Record<string, unknown> {
-    return { raw: musicxml };
+  // TODO: implement actual MusicXML <-> JSON conversion.
+  // Until that exists, the storage round trip must be lossless: score JSON is
+  // persisted verbatim (serialized), and genuine MusicXML read from storage is
+  // wrapped as { raw } untouched. Never synthesize placeholder content here —
+  // the flush cron deletes the cached copy after writing, so a lossy
+  // conversion permanently destroys the score.
+  musicxmlToJson(content: string): Record<string, unknown> {
+    if (content.trimStart().startsWith('{')) {
+      try {
+        return JSON.parse(content) as Record<string, unknown>;
+      } catch {
+        // Not valid JSON after all — treat as raw MusicXML below.
+      }
+    }
+    return { raw: content };
   }
 
   jsonToMusicxml(json: Record<string, unknown>): string {
-    return (json.raw as string) ?? '<score-partwise></score-partwise>';
+    if (typeof json.raw === 'string') return json.raw;
+    return JSON.stringify(json);
   }
 }
