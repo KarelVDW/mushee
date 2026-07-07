@@ -9,7 +9,7 @@ import { BillingModule } from './billing/billing.module';
 import { CacheModule } from './cache/cache.module';
 import { CronModule } from './cron/cron.module';
 import { dataSourceOptions } from './database/data-source';
-import { HealthController } from './health.controller';
+import { HealthController } from './health/health.controller';
 import { MailModule } from './mail/mail.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecordingsModule } from './recordings/recordings.module';

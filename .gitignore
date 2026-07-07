@@ -21,6 +21,11 @@ logs
 .env.*
 !.env.example
 apps/api/debug/
+# Compiled test output (tests run via vitest/tsx, never tsc)
+apps/api/test/**/*.js
+apps/api/test/**/*.js.map
+apps/api/test/**/*.d.ts
+apps/api/test/**/*.d.ts.map
 # Local blob-storage backend (STORAGE_DRIVER=local dev default)
 apps/api/storage/
 apps/api/.venv-crepe/
