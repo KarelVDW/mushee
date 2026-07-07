@@ -8,13 +8,9 @@ import type { ScorePartwise } from '@/components/notation/types'
 import { ChipToggle, ErrorScreen, Icon, showToast, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError, NetworkError } from '@/lib/api'
-import { CursorManager } from '@/lib/CursorManager'
-import { Metronome } from '@/lib/Metronome'
-import { MidiPlayer } from '@/lib/MidiPlayer'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings, useUpdateScore } from '@/lib/queries'
-import { RecordingEngine, type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
-import { ScoreScheduler } from '@/lib/ScoreScheduler'
-import { Ticker } from '@/lib/Ticker'
+import { type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { Transport } from '@/lib/Transport'
 import { Instrument, type Note, type Pitch, type Score } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
@@ -80,12 +76,7 @@ export default function ScoreEditorPage() {
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
     const saveRetryRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-    const tickerRef = useRef<Ticker | null>(null)
-    const schedulerRef = useRef<ScoreScheduler | null>(null)
-    const metronomeRef = useRef<Metronome | null>(null)
-    const cursorRef = useRef<CursorManager | null>(null)
-    const midiPlayerRef = useRef<MidiPlayer | null>(null)
-    const recordingEngineRef = useRef<RecordingEngine | null>(null)
+    const transportRef = useRef<Transport | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const recordingWaveformRef = useRef<SVGPathElement | null>(null)
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
@@ -182,31 +173,14 @@ export default function ScoreEditorPage() {
         [manipulator],
     )
 
-    // Initialize playback components
+    // The Transport owns the shared clock and every playback/recording unit;
+    // this page only tells it which mode to enter.
     useEffect(() => {
-        const midiPlayer = new MidiPlayer()
-        const scheduler = new ScoreScheduler(midiPlayer)
-        const met = new Metronome(midiPlayer)
-        const cursor = new CursorManager(midiPlayer, scheduler)
-        const recordingEngine = new RecordingEngine(midiPlayer)
-        const ticker = new Ticker()
-
-        ticker.addTickable(scheduler)
-        ticker.addTickable(met)
-        ticker.addTickable(cursor)
-        ticker.addTickable(recordingEngine)
-
-        midiPlayerRef.current = midiPlayer
-        tickerRef.current = ticker
-        schedulerRef.current = scheduler
-        metronomeRef.current = met
-        cursorRef.current = cursor
-        recordingEngineRef.current = recordingEngine
-
+        const transport = new Transport()
+        transportRef.current = transport
         return () => {
-            ticker.stop()
-            recordingEngine.stop()
-            midiPlayer.dispose()
+            transportRef.current = null
+            transport.dispose()
         }
     }, [])
 
@@ -215,26 +189,26 @@ export default function ScoreEditorPage() {
     // in place, but the manipulator's onScoreChange re-render re-evaluates `score?.instrument.id`.
     useEffect(() => {
         if (!score) return
-        const player = midiPlayerRef.current
+        const player = transportRef.current?.midiPlayer
         if (!player) return
         void player.loadInstruments([score.instrument, Instrument.Woodblock])
     }, [score, score?.instrument.id])
 
     const stopAll = useCallback(() => {
-        tickerRef.current?.stop()
-        recordingEngineRef.current?.stop()
-        midiPlayerRef.current?.stop()
-        cursorRef.current?.hideCursor()
+        transportRef.current?.stop()
         setPlaybackState('stopped')
     }, [])
 
-    // Preview the selected note's pitch and stop any ongoing playback/recording.
+    // Selecting a note stops any ongoing playback/recording and previews its pitch.
     // The Note holds written pitch; convert to sounding before passing to the player.
     // Skipped while a range is selected, so dragging across notes doesn't chatter.
+    // A cleared selection changes nothing — the recording flow deselects as it
+    // starts, and stopping here would kill the take it is setting up.
     useEffect(() => {
+        if (!activeNote) return
         stopAll()
-        const written = activeNote?.pitch?.toMidi()
-        const player = midiPlayerRef.current
+        const written = activeNote.pitch?.toMidi()
+        const player = transportRef.current?.midiPlayer
         if (written === undefined || !player || !score || manipulator.selectedNotes.length > 1) return
         const sounding = written + score.instrument.chromaticTranspose
         player.preview(sounding, 0.75, score.instrument)
@@ -249,37 +223,25 @@ export default function ScoreEditorPage() {
         [manipulator, stopAll],
     )
 
-    // Sync metronome toggle to the ticker. Skipped during recording — the recording flow
-    // forces the metronome on; when recording ends this effect re-syncs to the user's toggle.
+    // Sync the metronome toggle to the transport. Recording is unaffected — a
+    // take always keeps its click; the toggle only governs playback passes.
     useEffect(() => {
-        const met = metronomeRef.current
-        const ticker = tickerRef.current
-        if (!met || !ticker) return
-        if (recordingState !== 'idle') return
-        if (metronome) ticker.addTickable(met)
-        else ticker.removeTickable(met)
-        met.startMeasureIndex = 0
-    }, [metronome, recordingState])
+        transportRef.current?.setMetronomeEnabled(metronome)
+    }, [metronome])
 
     const handlePlayToggle = useCallback(() => {
         if (!score) return
-        const midiPlayer = midiPlayerRef.current
-        const ticker = tickerRef.current
-        const scheduler = schedulerRef.current
-        const met = metronomeRef.current
-        const cursor = cursorRef.current
-        if (!ticker || !scheduler || !met || !cursor) return
+        const transport = transportRef.current
+        if (!transport) return
 
         if (playbackState === 'playing') {
-            ticker.stop()
-            midiPlayer?.pause()
+            transport.pause()
             setPlaybackState('paused')
             return
         }
 
         if (playbackState === 'paused') {
-            midiPlayer?.resume()
-            ticker.resume()
+            transport.resume()
             setPlaybackState('playing')
             return
         }
@@ -296,48 +258,37 @@ export default function ScoreEditorPage() {
 
         // Launching from a stop begins at the selected note (falling back to the top of the
         // score when nothing is selected); resume/pause above keep their place instead.
-        scheduler.score = score
-        scheduler.startNote = activeNote
-        met.score = score
-        met.startMeasureIndex = activeNote?.measure.index ?? 0
-        met.startBeat = activeNote ? activeNote.measure.beatOffsetOf(activeNote) : 0
-        cursor.bind(cursorEl, resolvePosition)
-
-        midiPlayer?.start()
-        ticker.play(() => setPlaybackState('stopped'))
+        transport.playScore({
+            score,
+            startNote: activeNote,
+            cursorEl,
+            resolvePosition,
+            onFinish: () => setPlaybackState('stopped'),
+        })
         setPlaybackState('playing')
     }, [score, activeNote, playbackState])
 
     const handleRecordToggle = useCallback(async () => {
         if (!score || !activeNote) return
-        const midiPlayer = midiPlayerRef.current
-        const ticker = tickerRef.current
-        const engine = recordingEngineRef.current
-        const met = metronomeRef.current
-        if (!ticker || !engine || !midiPlayer || !met) return
+        const transport = transportRef.current
+        if (!transport) return
 
-        if (engine.state !== 'idle') {
+        if (transport.isRecording) {
             stopAll()
             return
         }
 
+        const cursorEl = playbackCursorRef.current
+        if (!cursorEl) return
+
         // Stop any ongoing playback before beginning a recording session.
-        ticker.stop()
-        midiPlayer.stop()
-        setPlaybackState('stopped')
+        stopAll()
 
         let measureIndex = activeNote.measure.index
         manipulator.select(null)
         const startIndex = measureIndex
         score.addMeasure(measureIndex++).complete()
         saveToApi({ score })
-
-        met.score = score
-        met.startMeasureIndex = startIndex
-        ticker.addTickable(met)
-
-        const cursorEl = playbackCursorRef.current
-        if (!cursorEl) return
 
         const resolvePosition = (measureIndex: number, beat: number) => {
             const measure = score.measures[measureIndex]
@@ -353,7 +304,7 @@ export default function ScoreEditorPage() {
             `/recording?scoreId=${encodeURIComponent(id)}`
 
         try {
-            await engine.start({
+            await transport.record({
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
@@ -409,9 +360,7 @@ export default function ScoreEditorPage() {
         }
 
         track('recording_started')
-        midiPlayer.start()
-        ticker.play(() => setRecordingState('idle'))
-    }, [manipulator, score, activeNote, stopAll, saveToApi])
+    }, [manipulator, score, activeNote, stopAll, saveToApi, id, router])
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts after the score loads, attaching the listener and focusing for capture.

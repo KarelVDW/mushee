@@ -52,14 +52,12 @@ describe('Ticker', () => {
         expect(ticker.isPlaying).toBe(false)
     })
 
-    it('play() resets all tickables and schedules a frame', () => {
+    it('play() resets the given tickables and schedules a frame', () => {
         const ticker = new Ticker()
         const a = makeTickable()
         const b = makeTickable()
-        ticker.addTickable(a)
-        ticker.addTickable(b)
 
-        ticker.play(() => {})
+        ticker.play([a, b], () => {})
 
         expect(ticker.isPlaying).toBe(true)
         expect(a.resetCount).toBe(1)
@@ -71,10 +69,8 @@ describe('Ticker', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
         const b = makeTickable(false)
-        ticker.addTickable(a)
-        ticker.addTickable(b)
 
-        ticker.play(() => {})
+        ticker.play([a, b], () => {})
         fireFrame()
 
         expect(a.tickCount).toBe(1)
@@ -88,11 +84,9 @@ describe('Ticker', () => {
         const ticker = new Ticker()
         const a = makeTickable(true)
         const b = makeTickable(true)
-        ticker.addTickable(a)
-        ticker.addTickable(b)
         const onFinish = vi.fn()
 
-        ticker.play(onFinish)
+        ticker.play([a, b], onFinish)
         fireFrame()
 
         expect(onFinish).toHaveBeenCalledTimes(1)
@@ -101,12 +95,25 @@ describe('Ticker', () => {
         expect(frames).toHaveLength(0)
     })
 
+    it('a new play() replaces the previous set: stale tickables never tick again', () => {
+        const ticker = new Ticker()
+        const stale = makeTickable(false)
+        const fresh = makeTickable(false)
+
+        ticker.play([stale], () => {})
+        ticker.play([fresh], () => {})
+        fireFrame()
+
+        // The first pass's tickable is gone from the second pass.
+        expect(stale.tickCount).toBe(0)
+        expect(fresh.tickCount).toBe(1)
+    })
+
     it('does nothing inside a tick once stopped (guards against a late frame)', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
-        ticker.addTickable(a)
 
-        ticker.play(() => {})
+        ticker.play([a], () => {})
         ticker.stop()
         expect(ticker.isPlaying).toBe(false)
 
@@ -117,8 +124,7 @@ describe('Ticker', () => {
 
     it('stop() cancels the pending animation frame', () => {
         const ticker = new Ticker()
-        ticker.addTickable(makeTickable(false))
-        ticker.play(() => {})
+        ticker.play([makeTickable(false)], () => {})
 
         ticker.stop()
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
@@ -135,9 +141,8 @@ describe('Ticker', () => {
     it('resume() restarts the loop without resetting tickable state', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
-        ticker.addTickable(a)
 
-        ticker.play(() => {})
+        ticker.play([a], () => {})
         expect(a.resetCount).toBe(1)
         ticker.stop()
 
@@ -150,8 +155,7 @@ describe('Ticker', () => {
 
     it('resume() is a no-op while already playing', () => {
         const ticker = new Ticker()
-        ticker.addTickable(makeTickable(false))
-        ticker.play(() => {})
+        ticker.play([makeTickable(false)], () => {})
         const framesBefore = frames.length
 
         ticker.resume()
@@ -161,10 +165,9 @@ describe('Ticker', () => {
     it('play() while already playing stops the previous run first', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
-        ticker.addTickable(a)
 
-        ticker.play(() => {})
-        ticker.play(() => {})
+        ticker.play([a], () => {})
+        ticker.play([a], () => {})
 
         // stop() was called internally, cancelling the first frame.
         expect(cancelAnimationFrame).toHaveBeenCalled()
@@ -172,17 +175,29 @@ describe('Ticker', () => {
         expect(ticker.isPlaying).toBe(true)
     })
 
+    it('addTickable() joins the pass in flight', () => {
+        const ticker = new Ticker()
+        const a = makeTickable(false)
+        const late = makeTickable(false)
+
+        ticker.play([a], () => {})
+        ticker.addTickable(late)
+        fireFrame()
+
+        expect(late.tickCount).toBe(1)
+        // Joining does not reset — the caller aligns state itself (e.g. Metronome.syncTo).
+        expect(late.resetCount).toBe(0)
+    })
+
     it('removeTickable() removes the tickable and resets it', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
         const b = makeTickable(false)
-        ticker.addTickable(a)
-        ticker.addTickable(b)
 
+        ticker.play([a, b], () => {})
         ticker.removeTickable(a)
-        expect(a.resetCount).toBe(1)
+        expect(a.resetCount).toBe(2) // once by play, once by removal
 
-        ticker.play(() => {})
         fireFrame()
         // a was removed, so it never ticks.
         expect(a.tickCount).toBe(0)
@@ -192,7 +207,7 @@ describe('Ticker', () => {
     it('an empty ticker finishes immediately on the first frame', () => {
         const ticker = new Ticker()
         const onFinish = vi.fn()
-        ticker.play(onFinish)
+        ticker.play([], onFinish)
         fireFrame()
         // allDone stays true with no tickables.
         expect(onFinish).toHaveBeenCalledTimes(1)

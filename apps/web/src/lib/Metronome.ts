@@ -46,6 +46,31 @@ export class Metronome implements Tickable {
         }
     }
 
+    /**
+     * Fast-forward past clicks up to `elapsed` without scheduling them. Used
+     * when the metronome joins a pass already in flight (toggled on
+     * mid-playback) — without this, tick() would burst-schedule every click
+     * since the pass began.
+     */
+    syncTo(elapsed: number): void {
+        if (!this.score) return
+        while (this.nextClickTime <= elapsed) {
+            const measure = this.score.measures[this.measureIdx]
+            if (!measure) return
+            if (this.beat === 0) {
+                const tempo = measure.tempoAtBeat(0)
+                if (tempo) this.bpm = tempo.bpm
+            }
+            if (this.beat >= measure.maxBeats) {
+                this.measureIdx++
+                this.beat = 0
+                continue
+            }
+            this.beat++
+            this.nextClickTime += 60 / this.bpm
+        }
+    }
+
     tick(): boolean {
         if (!this.score) return true
         const elapsed = this.midiPlayer.currentTime

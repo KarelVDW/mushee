@@ -49,3 +49,29 @@ This file collects decisions made under uncertainty and other considerations, pe
 - DESIGN.md and design/README.md updated (they prescribed the floating dock; per standing
   feedback those docs must stay authoritative, so the rulebook changed with the code).
 - e2e invariants kept: `role=group[name="Note tools"]`, `role=group[name="Note duration"]`.
+- e2e suite could NOT be run in this session: the user's `next dev` (port 3200) holds
+  Next's dev lock, and a second dev instance of the same app dir refuses to boot.
+  Verified by type-check + full unit suite instead; run `pnpm -F @mushee/web e2e` once
+  the dev server is stopped.
+
+## Task 3 — transport restructure + replay-during-recording bug
+
+- **Root cause of the bug**: all four tick units (ScoreScheduler, Metronome,
+  CursorManager, RecordingEngine) were added to ONE shared Ticker at page mount and
+  never scoped per mode. Starting a recording called `ticker.play()`, which reset and
+  ran the scheduler too — still holding `score`/`startNote` from the last playback —
+  so existing notes replayed into the take.
+- **Fix**: new `Transport` class (src/lib/Transport.ts) owns MidiPlayer + Ticker + the
+  three units and assembles the tickables per mode: playback = scheduler + cursor
+  (+ metronome when toggled), recording = engine + metronome (always clicks).
+  `Ticker.play(tickables, onFinish)` now takes the pass's set explicitly — nothing
+  ambient survives between passes, so the bug is impossible by construction.
+- Secondary races fixed: (a) `Transport.record` bails after the mic prompt if stop()
+  ran meanwhile (no zombie clock/metronome pass); (b) the note-preview effect no longer
+  calls stopAll on selection *clear* — the recording flow deselects as it starts, and
+  the old unconditional stop could kill the take it was setting up (timing-dependent).
+- Metronome gained `syncTo(elapsed)` so toggling it on mid-playback doesn't
+  burst-schedule every elapsed click (previous latent bug).
+- RecordingEngine internals untouched (its 46-test suite still pins mic/WS behavior);
+  the messiness addressed was the coordination layer. Waveform React-ification is
+  task 4's follow-up.

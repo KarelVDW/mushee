@@ -6,7 +6,10 @@ export interface Tickable {
 }
 
 /**
- * Drives a rAF loop and fans out ticks to a mutable set of Tickable instances.
+ * Drives a rAF loop and fans out ticks to the Tickable instances of the
+ * current pass. Each `play` names exactly the units that pass consists of —
+ * there is no ambient set that survives across passes, so a unit can never
+ * tick in a mode it doesn't belong to.
  */
 export class Ticker {
     private tickables = new Set<Tickable>()
@@ -19,9 +22,10 @@ export class Ticker {
         return this._isPlaying
     }
 
-    play(onFinish: () => void) {
+    play(tickables: Iterable<Tickable>, onFinish: () => void) {
         this.stop()
         this.onFinish = onFinish
+        this.tickables = new Set(tickables)
 
         for (const t of this.tickables) t.reset()
 
@@ -65,6 +69,7 @@ export class Ticker {
         this.animationId = requestAnimationFrame(this.tick)
     }
 
+    /** Join `tickable` to the pass in flight (e.g. the metronome toggled on mid-playback). */
     addTickable(tickable: Tickable) {
         this.tickables.add(tickable)
     }
