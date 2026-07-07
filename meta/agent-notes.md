@@ -33,3 +33,19 @@ This file collects decisions made under uncertainty and other considerations, pe
   in-memory-only processing, which task 1 explicitly reverses.
 - Added `storagePath` column to `recordings` (migration 1783555200000) so each row
   points at its archive folder.
+
+## Task 2 — editor layout (endless-scroll canvas + tool dock rework)
+
+- **Canvas**: removed the scroll area's vertical padding (`pt-6 pb-32`) so the manuscript
+  canvas runs edge-to-edge between header and dock and `min-h-full` keeps it at least
+  viewport-height — the paper now reads as one endless scroll with no visible bottom edge.
+- **Dock**: considered a left vertical tool rail (scales best for many future tools, à la
+  MuseScore palettes) vs. an in-flow bottom bar. Chose the **in-flow bottom bar**: it keeps
+  every existing horizontal control component and the popovers-open-upward pattern, fixes
+  the overlap *by construction* (it's part of the flex column, not floating), and absorbs
+  button growth by wrapping into additional rows. A side rail would be a bigger visual
+  departure I didn't want to make without the designer in the loop — if tool count truly
+  explodes, revisit the rail; noted in master-todo.
+- DESIGN.md and design/README.md updated (they prescribed the floating dock; per standing
+  feedback those docs must stay authoritative, so the rulebook changed with the code).
+- e2e invariants kept: `role=group[name="Note tools"]`, `role=group[name="Note duration"]`.

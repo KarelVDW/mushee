@@ -514,7 +514,7 @@ export default function ScoreEditorPage() {
                     <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
                 </div>
             </header>
-            <div className="flex-1 overflow-y-auto min-h-0 px-8 pt-6 pb-32 bg-surface">
+            <div className="flex-1 overflow-y-auto min-h-0 px-8 bg-surface">
                 <div ref={scoreAreaRef} className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow manuscript-canvas">
                     <ScoreView
                         score={score}

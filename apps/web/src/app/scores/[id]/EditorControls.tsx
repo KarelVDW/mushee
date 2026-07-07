@@ -142,9 +142,11 @@ interface NoteToolDockProps {
 }
 
 /**
- * The floating glass tool-dock from DESIGN.md: every selection-scoped edit control in one
- * hand-held panel, hovering over the bottom of the score. Groups are separated by 1.5rem of
- * space — no dividers — and the clef/key/tempo popovers open upward, away from the dock.
+ * The tool dock from DESIGN.md: every selection-scoped edit control in one docked bar
+ * along the editor's bottom edge — the chrome mirror of the slim header, so it can never
+ * hang over the score. Groups are separated by 1.5rem of space — no dividers — and the
+ * clef/key/tempo popovers open upward, away from the dock. New tool groups wrap onto
+ * additional rows instead of overflowing.
  */
 export function NoteToolDock({
     accidental,
@@ -170,11 +172,11 @@ export function NoteToolDock({
     selectionDisabled,
 }: NoteToolDockProps) {
     return (
-        <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center pointer-events-none px-4">
+        <div className="shrink-0 z-20 px-4 py-2.5 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div
                 role="group"
                 aria-label="Note tools"
-                className="pointer-events-auto glass-panel tonal-layer-glow rounded-lg px-5 py-2.5 flex items-center justify-center flex-wrap gap-x-6 gap-y-2">
+                className="mx-auto flex items-center justify-center flex-wrap gap-x-6 gap-y-2">
                 <Segmented
                     ariaLabel="Note duration"
                     value={duration}
