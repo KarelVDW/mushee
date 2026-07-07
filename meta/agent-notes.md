@@ -147,3 +147,29 @@ shift; consistency was judged more important than a perfect late decision.
 - Known limit: a brand-new tier added only in the DB will show up in pickers with the
   free tier's *display* decoration (icon/prices) until plans.ts learns about it — real
   prices live in Polar config, which is code/env anyway. Documented in plans.ts header.
+
+## Task 7 — structure evaluation
+
+- Full details in [structure-report.md](structure-report.md). Three parallel surveys
+  (API / web / root+deploy) ran as subagents inheriting this session's Fable model.
+- Judgment calls: `ARCHITECTURE.md`, `DESIGN.md`, `design/`, `e2e/README.md` stay
+  colocated (living reference docs, not dev-to-dev communication); status/audit/handoff
+  docs moved to meta/. `verify-recording-integration.mjs` kept (documented verification
+  path) despite looking orphaned. `design/assets/icons/{file,globe,window}.svg` are
+  starter-SVG duplicates but live inside the protected design system — left alone.
+- No module graded *very messy*, so per the brief only small safe fixes were applied
+  (health module folder, dead files); billing/recordings/editor-page refactors are
+  ranked in the report + master-todo instead.
+
+## Task 8 — master-todo
+
+- meta/master-todo.md consolidates all open work into a phased beta-launch roadmap.
+  meta/TODO.md is now historical (most items shipped; Stripe items superseded by Polar).
+
+## End-of-run verification status
+
+- Every commit verified with type-check + full unit suites (API 49, web 919, model
+  coverage gate green). The Playwright e2e suites could NOT run in this session — the
+  user's `next dev` on :3200 holds Next's dev lock the whole time. **Run
+  `pnpm -F @mushee/web test:e2e` (and the fullstack smoke) before deploying** — the
+  editor-layout and waveform changes touch surfaces those suites pin.
