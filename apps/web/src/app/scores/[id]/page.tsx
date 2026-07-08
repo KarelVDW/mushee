@@ -507,8 +507,11 @@ export default function ScoreEditorPage() {
                     <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
                 </div>
             </header>
-            <div className="flex-1 overflow-y-auto min-h-0 px-8 bg-surface">
-                <div ref={scoreAreaRef} className="mx-auto max-w-240 min-h-full bg-surface-container-lowest p-10 tonal-layer-glow manuscript-canvas">
+            {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
+                even when the score is short, and a percentage min-height can't resolve
+                against a flex-sized (height-less) scroll container. */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-8 bg-surface flex flex-col">
+                <div ref={scoreAreaRef} className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-10 tonal-layer-glow manuscript-canvas">
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}
