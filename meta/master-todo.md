@@ -34,26 +34,32 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    webhook path should be live and tested before the switch ever flips.)
 7. **Flip and verify the beta flow**: `BETA_MODE=true` + `NEXT_PUBLIC_BETA_MODE=true`,
    `ADMIN_EMAILS` set; walk signup → waitlist → admin approval → recording once on prod.
-8. **`apps/api/.env.example` refresh** *(5 min, blocked for agents — env files are
-   permission-protected in sessions)*: remove `RCLONE_REMOTE`, add `STORAGE_DRIVER`,
-   `GCS_BUCKET`, `GCS_PROJECT_ID`, `STORAGE_LOCAL_DIR`, plus the hardening vars documented
-   in README § Deployment.
+8. ~~**`apps/api/.env.example` refresh**~~ — **done 2026-07-08** (env-file permission
+   rule lifted): `RCLONE_REMOTE` replaced by the `STORAGE_DRIVER`/`GCS_*`/
+   `STORAGE_LOCAL_DIR` block, Postgres TLS/pool vars added, and a new
+   production-hardening section (`TRUST_PROXY`, `COOKIE_DOMAIN`, `RATE_LIMIT_*`,
+   `MAX_BODY_BYTES`, `LOG_FORMAT`, `RECORDING_*` caps) with code-verified defaults.
+   The web `.env.example` was already in sync.
 
 ## Phase 2 — should land in the first beta weeks (safety & confidence)
 
 9. **Error tracking vendor** *(PR H18 open half)*: pick Sentry (or PostHog error tracking),
    add the DSN hook in `main.ts` + web `instrumentation.ts`. Without it, beta bug reports
    are anecdotes.
-10. **Run the full e2e + visual QA of the 2026-07-08 UI changes** — the docked tool dock,
-    endless-scroll canvas, waveform bars, and octave normalization shipped verified by unit
-    tests only (a running `next dev` held the port lock during that session). Run
-    `pnpm -F @mushee/web e2e` + the fullstack smoke, and record one real take end-to-end
-    (checks the streaming GCS archive too).
+10. **Visual QA + full-stack verification of the 2026-07-08 UI changes** — the mocked
+    Playwright suite is green on current HEAD (32/32, chromium + webkit, run 2026-07-08
+    after the module-cleanup commits) and the full-stack smoke passed after the
+    restructure. Still to do: eyeball the docked tool dock / endless-scroll canvas /
+    waveform bars / octave normalization in a browser, re-run the fullstack smoke
+    (`pnpm -F @mushee/web test:e2e:smoke`, needs the live stack per `e2e/README.md`),
+    and record one real take end-to-end (checks the streaming GCS archive too).
 11. **Recording-archive spot check in prod**: confirm `recordings/<user>/<score>/<id>/`
     objects appear, are playable, and that account deletion removes the prefix (GDPR
     promise in the updated policy).
-12. **PNG/maskable icons + favicon.ico** *(PR M17)* — needs designed assets; SVG-only
-    manifest today.
+12. ~~**PNG/maskable icons + favicon.ico** *(PR M17)*~~ — **done 2026-07-08**: rasterized
+    from the brand `icon.svg` (sharp): `public/icon-{192,512}.png`, maskable variants on
+    the surface color, `app/apple-icon.png`, PNG-encoded `app/favicon.ico` (16/32/48);
+    manifest lists all of them. Worth one designer glance at the maskable crop.
 13. **N-session recording load test** *(notes.md §4 has the follow-up backlog)*: extend
     `scripts/test-recording-ws.ts` to ramp N sessions, watch p95 pass latency + RSS,
     and baseline the per-pod ceiling before beta invites scale up.

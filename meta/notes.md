@@ -77,11 +77,10 @@ bug-fix logs were dropped; what remains is still-true reference material.
 2. `POSTGRES_SSL=require` (or `verify` + `POSTGRES_SSL_CA`) against managed
    Postgres; enable PITR/backups and rehearse one restore.
 3. Production `api-secrets` needs real Polar/beta/mail values; README
-   § Deployment lists every env var, including the ones still missing from
-   `apps/api/.env.example` (env files are permission-protected in agent
-   sessions): `POSTGRES_SSL*`, `POSTGRES_POOL_SIZE`, `TRUST_PROXY`,
-   `COOKIE_DOMAIN`, `RATE_LIMIT_*`, `MAX_BODY_BYTES`, `RECORDING_MAX_SECONDS`,
-   `RECORDING_MAX_ENCODED_BYTES`, `LOG_FORMAT`, `STORAGE_DRIVER`, `GCS_BUCKET`.
+   § Deployment and `apps/api/.env.example` (fully refreshed 2026-07-08) both
+   list every env var, including the hardening knobs (`POSTGRES_SSL*`,
+   `TRUST_PROXY`, `COOKIE_DOMAIN`, `RATE_LIMIT_*`, `RECORDING_*` caps,
+   `LOG_FORMAT`) and the storage block (`STORAGE_DRIVER`, `GCS_BUCKET`).
 
 ---
 
@@ -217,15 +216,15 @@ the practical per-pod ceiling, in priority order:
    (`pipeline/providers/crepe-provider.ts`, ~8.6 MB/min). The pipeline freezes
    committed audio and only re-transcribes a trailing window, so both buffers
    can drop everything behind the committed watermark (ring buffer / trim).
-   `RECORDING_MAX_SECONDS` (1 h) caps the growth, but 1 h ≈ 840 MB — a few
-   long unlimited-tier recordings still OOM a 512 Mi pod.
+   `RECORDING_MAX_SECONDS` (1 h) caps the growth, but 1 h ≈ 840 MB — two
+   concurrent long recordings can still OOM a pod at the current 1 Gi limit.
 2. **Cheap wins**: aligned `Buffer.copy` + `Float32Array` views instead of
    per-element `readFloatLE` loops (decoder ingest, `RemoteModelBackend.bytesToF32`;
    `unflatten` also builds `number[][]` garbage per pass — keep flat typed
    arrays if `outputToNotesPoly` tolerates row views). Lazy-`import()`
    `LocalModelBackend` so production pods don't pay TF.js memory/boot they never
-   use. Add an HPA for the `api` Deployment — only the inference services have
-   HPAs today.
+   use. ~~API HPA~~ — done 2026-07-08 (CPU 70% like inference, but with a 15-min
+   scale-down stabilization window since terminating a pod ends its live takes).
 3. **Event-loop DSP → worker pool**: per windowed pass, CREPE framing +
    Viterbi/segmentation, basic-pitch `outputToNotesPoly`, NoteExtractor,
    MxmlBuilder still run on the main thread (tens of ms per pass → roughly low
