@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const LAST_UPDATED = '8 July 2026'
 
 // NOTE: contact details and the legal entity below are placeholders — swap in
-// the real company data before launch (see AFTERTHOUGHTS.md at the repo root).
+// the real company data before launch (see meta/notes.md § Domain / legal placeholders).
 
 export default function PrivacyPolicyPage() {
     return (

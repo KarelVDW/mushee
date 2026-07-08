@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 // NOTE: all contact details below are placeholders — swap in the real
-// company data before launch (see AFTERTHOUGHTS.md).
+// company data before launch (see meta/notes.md § Domain / legal placeholders).
 
 const CHANNELS: { label: string; email: string; blurb: string }[] = [
     { label: 'Support', email: 'support@sheemu.app', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },

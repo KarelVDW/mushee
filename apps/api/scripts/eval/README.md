@@ -59,8 +59,8 @@ Both fixture trees are gitignored; regenerate them locally with the scripts belo
 |---|---|
 | `check-inference-parity.ts` | **Parity gate for the remote gRPC inference services** vs the in-process TF.js path — tensor diff + end-to-end pipeline. Referenced from the root README's inference section. |
 | `check-streaming.ts` | Streaming-decode correctness: `StreamingDecoder` vs one-shot decode PCM parity, windowed-transcription equivalence. |
-| `bench-streaming.ts` | Performance proof of the O(n²)→O(n) streaming change (see `meta/API-CONCURRENCY.md`). |
-| `measure-concurrency.ts` | Steady-state real-time factor of one session → sessions-per-core capacity estimate (see `meta/API-CONCURRENCY.md`). |
+| `bench-streaming.ts` | Performance proof of the O(n²)→O(n) streaming change (see `meta/notes.md` §4). |
+| `measure-concurrency.ts` | Steady-state real-time factor of one session → sessions-per-core capacity estimate (see `meta/notes.md` §4). |
 
 ### Diagnostics (rerunnable analysis tools for tuning passes)
 
@@ -78,4 +78,4 @@ Both fixture trees are gitignored; regenerate them locally with the scripts belo
   and acted on (tempo adoption shipped in `7a4ab0f`; the round-trip-loss
   measurement lives on in `diagnose-real.ts`).
 - Earlier: `brainstorm-workflow.js` / `tuning-workflow.js` deleted as orphaned
-  one-offs (see `meta/structure-report.md`).
+  one-offs (see git history of `meta/structure-report.md`).

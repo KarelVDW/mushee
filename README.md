@@ -185,6 +185,6 @@ to open the doors — pending users are no longer gated.
 - `apps/web/DESIGN.md` + `apps/web/design/` — design system (source of truth for web UI)
 - `apps/web/src/model/ARCHITECTURE.md` — score model/layout architecture
 - `apps/web/e2e/README.md` — e2e test suites
-- `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap),
-  `API-CONCURRENCY.md` (WebSocket-concurrency backlog), audit notes, and the
-  structure report
+- `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap) and
+  `notes.md` (launch runbooks, architecture decisions, known quirks, and the
+  WebSocket-concurrency backlog)

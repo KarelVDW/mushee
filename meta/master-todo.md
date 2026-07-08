@@ -1,10 +1,9 @@
 # Master TODO — roadmap to the beta launch
 
-Consolidated 2026-07-08 from every open item in `meta/TODO.md` (mostly superseded — Polar
-billing, credits, legal pages, CI, sitemap/robots all shipped since), `meta/AFTERTHOUGHTS.md`,
-`meta/PRODUCTION-READINESS.md` (open checkboxes B5/B6/M17/M19 + loose ends),
-`meta/API-CONCURRENCY.md`, `meta/structure-report.md`, and the one remaining code TODO.
-Ranked by importance toward **opening the closed beta**; items within a phase are ordered.
+Consolidated 2026-07-08 from every open item in the old meta docs (`TODO.md`,
+`AFTERTHOUGHTS.md`, `PRODUCTION-READINESS.md`, `API-CONCURRENCY.md`, `structure-report.md` —
+since merged into [notes.md](notes.md); full text in git history) and the one remaining code
+TODO. Ranked by importance toward **opening the closed beta**; items within a phase are ordered.
 
 ---
 
@@ -55,7 +54,7 @@ Ranked by importance toward **opening the closed beta**; items within a phase ar
     promise in the updated policy).
 12. **PNG/maskable icons + favicon.ico** *(PR M17)* — needs designed assets; SVG-only
     manifest today.
-13. **N-session recording load test** *(API-CONCURRENCY §0)*: extend
+13. **N-session recording load test** *(notes.md §4 has the follow-up backlog)*: extend
     `scripts/test-recording-ws.ts` to ramp N sessions, watch p95 pass latency + RSS,
     and baseline the per-pod ceiling before beta invites scale up.
 14. **GDPR data export endpoint** — the privacy policy grants portability; per-score
@@ -82,10 +81,11 @@ Ranked by importance toward **opening the closed beta**; items within a phase ar
 22. **Recordings product surface** (new possibility now audio is stored): a "my recordings"
     list with playback/delete would both add user value and strengthen the GDPR story.
 
-## Structure / refactor backlog (from meta/structure-report.md — no launch impact)
+## Structure / refactor backlog (no launch impact)
 
-**Cleared 2026-07-08** — the full backlog below was executed in one restructuring pass;
-`meta/structure-report.md` now reflects the post-pass state. Remaining follow-ups:
+**Cleared 2026-07-08** — the full backlog was executed in one restructuring pass (every
+module now grades clean; see notes.md §5 and git history of `meta/structure-report.md`).
+Remaining follow-ups:
 
 23. **Model weights in git** (~5 MB): provenance `SOURCE.md`s are in place; move to
     LFS / fetch-at-build only if the repo ever needs slimming (deliberate keep for now).
