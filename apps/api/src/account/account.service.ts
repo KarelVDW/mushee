@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 
-import { auth } from '../auth/auth';
+import { auth } from '../auth/auth.config';
 import { BillingService } from '../billing/billing.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
 import { RecordingsService } from '../recordings/recordings.service';

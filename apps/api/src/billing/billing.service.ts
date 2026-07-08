@@ -12,20 +12,20 @@ import { isBetaMode } from '../beta/beta-config';
 import { RecordingCreditsService } from '../recordings/recording-credits.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { ProcessedWebhookEvent } from './entities/processed-webhook-event.entity';
-import { isBillingConfigured, polarClient } from './polar.client';
+import { isBillingConfigured, polarClient } from './polar/client';
 import {
   BillingInterval,
   intervalForProduct,
   PaidTierId,
   productIdFor,
   tierForProduct,
-} from './polar-products';
-import { validateEvent, WebhookVerificationError } from './polar-webhooks';
+} from './polar/products';
 import {
   patchFromCustomerState,
   patchFromSubscription,
   SubscriptionSnapshot,
-} from './subscription-state';
+} from './polar/subscription-state';
+import { validateEvent, WebhookVerificationError } from './polar/webhook-verify';
 
 export interface BillingState {
   tierId: string;

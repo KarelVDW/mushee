@@ -11,12 +11,12 @@
  */
 
 import { execFileSync } from 'child_process';
-import { mkdirSync, writeFileSync, rmSync } from 'fs';
-import { resolve, join } from 'path';
+import { mkdirSync, rmSync,writeFileSync } from 'fs';
+import { join,resolve } from 'path';
 
 import { degrade } from './lib/degrade';
-import { melodyToMidi } from './lib/midi';
 import { melodyToTruth } from './lib/groundTruth';
+import { melodyToMidi } from './lib/midi';
 import { synthesize } from './lib/synth';
 import { floatToWav } from './lib/wav';
 import { MELODIES } from './melodies';

@@ -50,6 +50,7 @@
  */
 
 import { execFileSync } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import {
   copyFileSync,
   existsSync,
@@ -59,9 +60,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'fs';
-import { resolve, join } from 'path';
-
-import ffmpegPath from 'ffmpeg-static';
+import { join,resolve } from 'path';
 
 import type { GroundTruth, TruthNote } from './types';
 

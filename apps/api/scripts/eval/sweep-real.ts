@@ -12,13 +12,13 @@
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { AudioDecoder } from '../../src/recordings/AudioDecoder';
-import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/NoteExtractor';
-import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/OnsetDetector';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import type { PitchTranscribeOptions } from '../../src/recordings/providers/PitchProvider';
-import { scoreNotes, type EstNote } from './lib/metrics';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
+import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/pipeline/onset-detector';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import type { PitchTranscribeOptions } from '../../src/recordings/pipeline/providers/pitch-provider';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { type EstNote,scoreNotes } from './lib/metrics';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import type { GroundTruth, TruthNote } from './types';
 
@@ -67,7 +67,7 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 function lcsLen(a: number[], b: number[]): number {
-  const dp = new Array(b.length + 1).fill(0);
+  const dp: number[] = new Array<number>(b.length + 1).fill(0);
   for (let i = 1; i <= a.length; i += 1) {
     let prev = 0;
     for (let j = 1; j <= b.length; j += 1) {
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
       let truth: GroundTruth;
       let wav: Buffer;
       try {
-        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8'));
+        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8')) as GroundTruth;
         wav = readFileSync(join(ds.dir, `${clip}__real.wav`));
       } catch {
         continue;

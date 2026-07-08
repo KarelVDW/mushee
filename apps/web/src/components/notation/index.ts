@@ -1,9 +1,9 @@
 export { ClefGlyph, ClefPopover } from './ClefPopover'
 export { CLEF_DEFS, GLYPH_SCALE, INTERACTION_BLUE, NOTATION_INK } from './constants'
 export { Glyph } from './Glyph'
-export { getGlyphWidth } from './glyph-utils'
+export { getGlyphWidth } from './glyphUtils'
 export { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from './KeySignaturePopover'
-export { getLineForY, getYForLine, getYForNote } from './note-utils'
+export { getLineForY, getYForLine, getYForNote } from './noteUtils'
 export { Score } from './Score'
 export { TempoPopover } from './TempoPopover'
 export type {

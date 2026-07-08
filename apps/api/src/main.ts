@@ -11,8 +11,8 @@ import { WsAdapter } from '@nestjs/platform-ws';
 import type { FastifyRequest } from 'fastify';
 
 import { AppModule } from './app.module';
-import { seedDemoData } from './database/demo-seed';
 import { runMigrationsLocked } from './database/run-migrations';
+import { seedDemoData } from './database/seed/demo-seed';
 
 /** Cap on HTTP request bodies (score JSON). WebSocket audio chunks are
  *  capped separately via `maxPayload` on the recordings gateway. */

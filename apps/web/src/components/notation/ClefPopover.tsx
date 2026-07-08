@@ -5,8 +5,8 @@ import { useEffect, useRef } from 'react'
 import { Eyebrow } from '../ui'
 import { CLEF_CONFIG, CLEF_DEFS, clefOctaveMarker } from './constants'
 import { Glyph } from './Glyph'
-import { getGlyphWidth } from './glyph-utils'
-import { getYForLine } from './note-utils'
+import { getGlyphWidth } from './glyphUtils'
+import { getYForLine } from './noteUtils'
 import type { ClefType } from './types'
 
 // Clefs grouped into rows by sign family (G / C / F), matching how engravers present them.

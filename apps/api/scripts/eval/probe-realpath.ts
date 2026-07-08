@@ -18,14 +18,13 @@
  */
 
 import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import ffmpegPath from 'ffmpeg-static';
-
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { scoreNotes, timingStats, type Metrics } from './lib/metrics';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { type Metrics,scoreNotes, timingStats } from './lib/metrics';
 import { runThroughPipeline } from './lib/pipelineRun';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import { SCENARIOS } from './scenarios';
@@ -55,7 +54,7 @@ function encodeWebmOpus(wav: Buffer): Promise<Buffer> {
     proc.on('error', rej);
     proc.on('close', (code) => {
       const o = Buffer.concat(out);
-      if (!o.length) rej(new Error(`encode failed (${code}): ${Buffer.concat(err)}`));
+      if (!o.length) rej(new Error(`encode failed (${code}): ${Buffer.concat(err).toString()}`));
       else res(o);
     });
     proc.stdin.on('error', () => {});
@@ -130,7 +129,7 @@ async function runRealCorpus(
       let truth: GroundTruth;
       let wav: Buffer;
       try {
-        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8'));
+        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8')) as GroundTruth;
         wav = readFileSync(join(ds.dir, `${clip}__real.wav`));
       } catch {
         continue;
@@ -188,7 +187,7 @@ async function main(): Promise<void> {
     let truth: GroundTruth;
     let wav: Buffer;
     try {
-      truth = JSON.parse(readFileSync(join(dir, `${melody}.truth.json`), 'utf8'));
+      truth = JSON.parse(readFileSync(join(dir, `${melody}.truth.json`), 'utf8')) as GroundTruth;
       wav = readFileSync(join(dir, `${melody}__clean.wav`));
     } catch {
       console.log(`  ${id}: missing fixture (${melody}__clean.wav)`);

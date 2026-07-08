@@ -84,23 +84,35 @@ Ranked by importance toward **opening the closed beta**; items within a phase ar
 
 ## Structure / refactor backlog (from meta/structure-report.md — no launch impact)
 
-23. **billing module**: reorganize the 7 loose root files, disambiguate
-    `polar-webhooks.ts` vs `polar-webhook.controller.ts`, add service-level webhook tests
-    (idempotency + out-of-order) — payment-critical and currently untested at that layer.
-24. **recordings module split**: pure transcription pipeline vs Nest transport layer;
-    normalize file naming (PascalCase/kebab/camel mix); more unit coverage around
-    RecordingSession/gateway.
-25. **Editor page decomposition** (`scores/[id]/page.tsx`, ~570 lines) — extract the
-    recording flow + TitleInput; same treatment for `onboarding/page.tsx`.
-26. **scripts/eval index**: README describing each experiment script; prune superseded ones.
-27. **Inference proto stubs**: generate `inference_pb2*.py` at image build from
-    `packages/inference-proto/inference.proto` (today: two checked-in copies from
-    mismatched protoc versions).
-28. **Model weights in git** (~5 MB across `model/`, `model-crepe-tiny/`,
-    `crepe_saved_model/`): move to LFS or fetch-at-build; add provenance `SOURCE.md`s.
-29. Minor: `src/origin/` naming, compose/k8s env drift (`WEB_APP_URL`/`BETA_MODE` missing in
-    compose), `database/demo-*` → scripts, auth/mail service tests, webhook-events table
-    pruning is in place — revisit retention when volume is known.
+**Cleared 2026-07-08** — the full backlog below was executed in one restructuring pass;
+`meta/structure-report.md` now reflects the post-pass state. Remaining follow-ups:
+
+23. **Model weights in git** (~5 MB): provenance `SOURCE.md`s are in place; move to
+    LFS / fetch-at-build only if the repo ever needs slimming (deliberate keep for now).
+24. Webhook-events table pruning is in place — revisit retention when volume is known.
+25. More unit coverage around `RecordingSession`/gateway (the pipeline itself is eval-gated).
+
+<details><summary>Done 2026-07-08 (was items 23–29)</summary>
+
+- billing module reorganized (`polar/` lib subfolder; `polar-webhooks.ts` →
+  `polar/webhook-verify.ts`) + 22 BillingService tests (checkout guards, webhook
+  idempotency/out-of-order/stale-event handling, GDPR delete).
+- recordings module split: `pipeline/` (pure DSP) vs Nest transport at root; all
+  files kebab-case; module README.
+- `scores/[id]/page.tsx` 578→300 lines (TitleInput + useRecording/usePlayback/
+  useScoreAutosave hooks); `onboarding/page.tsx` 600→201 lines (data module +
+  controls + step components).
+- scripts/eval README + pruning (tempo-experiment.ts deleted); eval scripts joined
+  tsconfig/eslint coverage and were cleaned up; `eval:generate`/`eval:run`/
+  `verify:recording-integration` wired into package.json.
+- Inference proto stubs no longer committed — generated at image build (both
+  Dockerfiles already did) + `packages/inference-proto/generate-python.sh` for
+  host runs; single pinned toolchain.
+- Minor batch: `src/origin/` → `components/notation/fonts/`, compose/k8s env drift
+  fixed, `database/seed/` subfolder, `auth.ts` → `auth.config.ts`, auth-guard +
+  mail service tests, dead Mongo path removed from `test-recording-ws.ts`.
+
+</details>
 
 ## Deliberately NOT doing (decided, keep it that way unless revisited)
 

@@ -17,6 +17,9 @@
     "db:seed": "tsx --env-file=.env.development scripts/seed-demo.ts",
     "db:reset": "pnpm db:clean && pnpm migration:run && pnpm db:seed",
     "test:recording": "tsx scripts/test-recording-ws.ts",
+    "verify:recording-integration": "node scripts/verify-recording-integration.mjs",
+    "eval:generate": "tsx scripts/eval/generate.ts",
+    "eval:run": "tsx scripts/eval/run-eval.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

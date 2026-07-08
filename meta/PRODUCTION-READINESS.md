@@ -42,7 +42,7 @@ Reliability / crash risks:
 - **H1 — Unhandled rejection on WS connect can kill the replica.** The `openSession` chain
   at `apps/api/src/recordings/recordings.gateway.ts:88` has no `.catch`; DB error during
   connect → process crash; acquired recording lock never released on that path.
-- **H2 — No recording length/byte cap → OOM.** `RecordingPipeline.ts` retains every encoded
+- **H2 — No recording length/byte cap → OOM.** `pipeline/recording-pipeline.ts` retains every encoded
   chunk for the session lifetime; decoder buffer unbounded; unlimited-tier users can
   accumulate ~0.7 GB+/hour until the pod OOMs.
 - **H3 — No graceful shutdown.** `enableShutdownHooks()` never called; every rolling update
@@ -56,7 +56,7 @@ Billing correctness:
   apply is never retried (Polar retry swallowed as duplicate) — e.g. a dropped
   `subscription.revoked` leaves a paid tier active. Related: non-atomic subscription
   upsert (PK race), no out-of-order event guard.
-- **H6 — Credits meter wall-clock, not audio.** `RecordingSession.ts:103-136`: a scripted
+- **H6 — Credits meter wall-clock, not audio.** `recording-session.ts:103-136`: a scripted
   client streaming 20× real time pays 30 s of credits for 10 min of transcription; no WS
   ping/pong means a dead peer keeps burning the daily budget.
 

@@ -7,7 +7,7 @@ import {
 import { fromNodeHeaders } from 'better-auth/node';
 import type { IncomingHttpHeaders } from 'http';
 
-import { auth } from './auth';
+import { auth } from './auth.config';
 
 /** The request shape the auth layer works with: incoming headers, plus the
  *  user/session it stamps on for downstream guards and @CurrentUser. */

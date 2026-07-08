@@ -13,7 +13,7 @@ This system encodes the visual + content vocabulary used to design and build for
 | Production codebase | `web/` (mounted, read-only)              | Next 16 / React 19 / Tailwind v4. App router. The single product.                                                                           |
 | Color tokens        | `web/src/app/globals.css`                | M3-style palette with cyan + magenta accents.                                                                                               |
 | Type loader         | `web/src/app/layout.tsx`                 | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
-| Notation glyphs     | `web/src/origin/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
+| Notation glyphs     | `web/src/components/notation/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -227,7 +227,7 @@ A Sheemu card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`
 
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`chevron-*`, `menu`, `more-horizontal`, `settings`), editing (`copy`, `scissors`, `undo`, `redo`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`, `metronome`), files & sharing (`upload`, `file-music`, `folder`, `printer`, `share-2`, `send`), social (`user-plus`, `globe`, `heart`, `star`, `bookmark`), status (`alert-triangle`, `check-circle`, `help-circle`, `loader`, `zap`), billing (`credit-card`, `crown`, `gift`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
-**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`web/src/origin/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `web/` if you actually need to render notation.
+**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`web/src/components/notation/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `web/` if you actually need to render notation.
 
 **No emoji.** Sheemu's voice is plain, but it's not casual in that way.
 

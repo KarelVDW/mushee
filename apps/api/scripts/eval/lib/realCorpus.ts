@@ -29,8 +29,8 @@ export function discoverRealDatasets(root: string): RealDataset[] {
     .map((d) => {
       const dir = join(root, d.name);
       const manifestPath = join(dir, 'dataset.json');
-      const m: Partial<RealDataset> = existsSync(manifestPath)
-        ? JSON.parse(readFileSync(manifestPath, 'utf8'))
+      const m = existsSync(manifestPath)
+        ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Partial<RealDataset>)
         : {};
       return {
         id: d.name,

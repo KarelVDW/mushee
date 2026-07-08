@@ -63,6 +63,12 @@ services:
       # Let the host-run web dev server (:3200) talk to this API.
       CORS_ORIGIN: http://localhost:3200
       TRUSTED_ORIGINS: http://localhost:3200
+      # Links in outgoing mail point at the host-run web app.
+      WEB_APP_URL: http://localhost:3200
+      # Closed beta off locally, mirroring deploy/k8s/overlays/local.
+      # TRUST_PROXY is deliberately unset: unlike k8s there is no ingress in
+      # front of this container, so client IPs arrive directly.
+      BETA_MODE: 'false'
       # Forward passes go to the per-model services; the API does no inference.
       CREPE_INFERENCE_URL: crepe-inference:50051
       BASIC_PITCH_INFERENCE_URL: basic-pitch-inference:50052

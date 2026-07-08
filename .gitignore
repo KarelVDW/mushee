@@ -36,3 +36,7 @@ apps/api/scripts/eval/.tmp/
 apps/api/scripts/eval/.cache/
 apps/api/scripts/fixtures/eval/
 apps/api/scripts/fixtures/eval-real/
+# Python gRPC stubs are generated, not committed: at image build (Dockerfiles'
+# proto stage) or on the host via packages/inference-proto/generate-python.sh
+apps/inference-*/inference_pb2.py
+apps/inference-*/inference_pb2_grpc.py

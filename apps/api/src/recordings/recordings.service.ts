@@ -5,18 +5,18 @@ import { Repository } from 'typeorm';
 
 import { StorageService } from '../storage/storage.service';
 import { Recording } from './entities/recording.entity';
-import { usedProviderNames } from './profiles/PipelineProfile';
-import { ProfileResolver } from './profiles/ProfileResolver';
-import { createModelBackend } from './providers/createModelBackend';
-import { ProviderRegistry } from './providers/ProviderRegistry';
+import { usedProviderNames } from './pipeline/profiles/pipeline-profile';
+import { ProfileResolver } from './pipeline/profiles/profile-resolver';
+import { createModelBackend } from './pipeline/providers/create-model-backend';
+import { ProviderRegistry } from './pipeline/providers/provider-registry';
+import { RecordingPipeline } from './pipeline/recording-pipeline';
+import { RecordingArchiver } from './recording-archiver';
 import { RecordingCreditsService } from './recording-credits.service';
 import { RecordingLocksService } from './recording-locks.service';
-import { RecordingArchiver } from './RecordingArchiver';
-import { RecordingPipeline } from './RecordingPipeline';
 import {
   RecordingSession,
   RecordingSessionEvents,
-} from './RecordingSession';
+} from './recording-session';
 
 const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
 const DEFAULT_CREPE_TINY_DIR = resolve(process.cwd(), 'model-crepe-tiny');

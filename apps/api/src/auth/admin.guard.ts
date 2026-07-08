@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { fromNodeHeaders } from 'better-auth/node';
 
-import { auth } from './auth';
+import { auth } from './auth.config';
 
 /** AuthGuard + role check: only users with role 'admin' get through. */
 @Injectable()

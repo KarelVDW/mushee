@@ -14,17 +14,16 @@
  */
 
 import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 
-import ffmpegPath from 'ffmpeg-static';
-
-import { AudioDecoder } from '../../src/recordings/AudioDecoder';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { BasicPitchProvider } from '../../src/recordings/providers/BasicPitchProvider';
-import { LocalModelBackend } from '../../src/recordings/providers/LocalModelBackend';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { BasicPitchProvider } from '../../src/recordings/pipeline/providers/basic-pitch-provider';
+import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import { runThroughPipelineStreaming } from './lib/pipelineRun';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
@@ -51,7 +50,8 @@ function loopToWebm(wav: Buffer, n: number): Promise<Buffer> {
     proc.on('error', rej);
     proc.on('close', (code) => {
       const o = Buffer.concat(out);
-      o.length ? res(o) : rej(new Error(`loop encode failed (${code})`));
+      if (o.length) res(o);
+      else rej(new Error(`loop encode failed (${code})`));
     });
     proc.stdin.on('error', () => {});
     proc.stdin.end(wav);

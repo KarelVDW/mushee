@@ -79,6 +79,11 @@ docker build -f apps/inference-crepe/Dockerfile       -t mushee/crepe-inference:
 docker build -f apps/inference-basic-pitch/Dockerfile -t mushee/basic-pitch-inference:latest .
 ```
 
+The inference services' Python gRPC stubs are generated from
+`packages/inference-proto/inference.proto` inside each Dockerfile (never
+committed); to run a `server.py` directly on the host, generate them first with
+`packages/inference-proto/generate-python.sh`.
+
 **Local (Docker Desktop k8s)** — self-contained: ephemeral Postgres, dummy
 secret, demo data, API on http://localhost:3000:
 

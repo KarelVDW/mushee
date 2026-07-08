@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react'
 
-import { BravuraFont } from '../../origin/fonts/bravura_glyphs'
 import { GLYPH_SCALE, NOTATION_INK } from './constants'
-import { outlineToSvgPath } from './glyph-utils'
+import { BravuraFont } from './fonts/bravura_glyphs'
+import { outlineToSvgPath } from './glyphUtils'
 
 interface GlyphProps {
     name: string

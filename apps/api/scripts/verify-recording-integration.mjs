@@ -96,14 +96,20 @@ function connect(path, cookie) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// fixtures/test.webm decodes to ~20.5 s of audio. Stream at REAL-TIME pace —
+// the server bills max(wall-clock, decoded-audio) seconds precisely so that
+// faster-than-real-time clients can't underpay, so a test that loops the
+// fixture at 10x real time is billed for every decoded second (correctly).
+const FIXTURE_AUDIO_SECONDS = 20.5;
+
 async function streamAudio(ws, audio, seconds) {
-  const chunkSize = 16 * 1024;
+  const bytesPerTick = Math.ceil(audio.byteLength / FIXTURE_AUDIO_SECONDS / 10);
   const deadline = Date.now() + seconds * 1000;
   let offset = 0;
   ws.send(JSON.stringify({ type: 'meta', bpm: 90, timeSignature: { beats: 4, beatType: 4 } }));
-  while (Date.now() < deadline && ws.readyState === WebSocket.OPEN) {
-    ws.send(audio.subarray(offset, offset + chunkSize));
-    offset = (offset + chunkSize) % audio.byteLength;
+  while (Date.now() < deadline && ws.readyState === WebSocket.OPEN && offset < audio.byteLength) {
+    ws.send(audio.subarray(offset, offset + bytesPerTick));
+    offset += bytesPerTick;
     await sleep(100);
   }
 }

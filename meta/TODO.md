@@ -45,7 +45,7 @@
 ### Recording pipeline robustness
 - [ ] Per-recording timeout / max-length cap (defense in depth on top of credits)
 - [ ] Concurrent recording limit per user
-- [x] Graceful FFmpeg failure handling (AudioDecoder.ts — tolerates truncated input, handles exit codes)
+- [x] Graceful FFmpeg failure handling (pipeline/audio-decoder.ts — tolerates truncated input, handles exit codes)
 - [ ] Decide which model ships in prod (basic-pitch / CREPE / YIN) and pin the choice; remove/feature-flag the others — defaults to basic-pitch via PITCH_PROVIDER env, but all providers still shipped
 
 ### Testing

@@ -4,7 +4,7 @@ import type { Tempo } from '@/model/Tempo'
 
 import { GLYPH_SCALE, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
-import { getGlyphWidth } from './glyph-utils'
+import { getGlyphWidth } from './glyphUtils'
 
 const TEMPO_NOTE_STEM_HEIGHT = 14
 const TEMPO_FONT_SIZE = 10

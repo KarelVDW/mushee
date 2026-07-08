@@ -12,14 +12,13 @@
  */
 
 import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 
-import ffmpegPath from 'ffmpeg-static';
-
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import { runThroughPipelineStreaming } from './lib/pipelineRun';
 import { SCENARIOS } from './scenarios';
 import type { GroundTruth } from './types';
@@ -62,9 +61,9 @@ async function main(): Promise<void> {
   const resolver = new ProfileResolver();
 
   const scenario = SCENARIOS.find((s) => s.id === id);
-  const truth: GroundTruth = JSON.parse(
+  const truth = JSON.parse(
     readFileSync(join(EVAL_ROOT, id, 'tune.truth.json'), 'utf8'),
-  );
+  ) as GroundTruth;
   const wav = readFileSync(join(EVAL_ROOT, id, 'tune__clean.wav'));
   // One clip is ~9.8 s; loop to reach ~targetSec.
   const loops = Math.max(1, Math.round(targetSec / 9.8));

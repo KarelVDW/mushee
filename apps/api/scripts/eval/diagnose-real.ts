@@ -16,11 +16,11 @@
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { AudioConverter } from '../../src/recordings/AudioConverter';
-import { AudioDecoder } from '../../src/recordings/AudioDecoder';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { scoreNotes, type EstNote } from './lib/metrics';
+import { AudioConverter } from '../../src/recordings/pipeline/audio-converter';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { type EstNote,scoreNotes } from './lib/metrics';
 import { runThroughPipeline } from './lib/pipelineRun';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import type { GroundTruth, TruthNote } from './types';
@@ -39,7 +39,7 @@ function mean(xs: number[]): number {
 
 /** Longest common subsequence length over two integer sequences. */
 function lcsLen(a: number[], b: number[]): number {
-  const dp = new Array(b.length + 1).fill(0);
+  const dp: number[] = new Array<number>(b.length + 1).fill(0);
   for (let i = 1; i <= a.length; i += 1) {
     let prev = 0;
     for (let j = 1; j <= b.length; j += 1) {
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
       let truth: GroundTruth;
       let wav: Buffer;
       try {
-        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8'));
+        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8')) as GroundTruth;
         wav = readFileSync(join(ds.dir, `${clip}__real.wav`));
       } catch {
         continue;

@@ -2,7 +2,7 @@ import { vi } from 'vitest'
 
 // Mock the glyph utilities to avoid loading the large Bravura font data in tests.
 // Returns deterministic widths based on the glyph name so width classes have stable output.
-vi.mock('@/components/notation/glyph-utils', () => {
+vi.mock('@/components/notation/glyphUtils', () => {
     const widths: Record<string, number> = {
         gClef: 20,
         noteheadBlack: 10,

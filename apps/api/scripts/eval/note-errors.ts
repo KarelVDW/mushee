@@ -12,13 +12,12 @@
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { AudioConverter } from '../../src/recordings/AudioConverter';
-import { AudioDecoder } from '../../src/recordings/AudioDecoder';
-import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/NoteExtractor';
-import { OnsetDetector } from '../../src/recordings/OnsetDetector';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import type { PitchTranscribeOptions } from '../../src/recordings/providers/PitchProvider';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
+import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import type { PitchTranscribeOptions } from '../../src/recordings/pipeline/providers/pitch-provider';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import type { EstNote } from './lib/metrics';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import type { GroundTruth, TruthNote } from './types';
@@ -80,7 +79,7 @@ async function main(): Promise<void> {
     for (const clip of listRealClips(ds.dir)) {
       let truth: GroundTruth; let wav: Buffer;
       try {
-        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8'));
+        truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8')) as GroundTruth;
         wav = readFileSync(join(ds.dir, `${clip}__real.wav`));
       } catch { continue; }
       const det = await decoder.decode(wav, DETECT_SR, { loudnorm: false, highpassHz: 30 });

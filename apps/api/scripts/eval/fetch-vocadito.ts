@@ -27,7 +27,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'fs';
-import { resolve, join } from 'path';
+import { join,resolve } from 'path';
 
 import { hzToMidi } from './lib/groundTruth';
 import type { GroundTruth, TruthNote } from './types';

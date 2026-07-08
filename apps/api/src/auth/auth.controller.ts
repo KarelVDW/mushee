@@ -1,7 +1,7 @@
 import { All, Controller, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { auth } from './auth';
+import { auth } from './auth.config';
 
 @Controller('api/auth')
 export class AuthController {

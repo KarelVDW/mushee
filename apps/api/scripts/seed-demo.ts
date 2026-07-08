@@ -5,9 +5,9 @@
  *   pnpm db:reset         (clean + migrate + seed)
  *
  * Same seeding code the API runs on boot when SEED_DEMO_DATA=true; see
- * src/database/demo-seed.ts for the account list and idempotency rules.
+ * src/database/seed/demo-seed.ts for the account list and idempotency rules.
  */
-import { seedDemoData } from '../src/database/demo-seed';
+import { seedDemoData } from '../src/database/seed/demo-seed';
 
 seedDemoData().then(
   () => process.exit(0),

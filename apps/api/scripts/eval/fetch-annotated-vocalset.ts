@@ -57,6 +57,7 @@
  */
 
 import { execFileSync } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import {
   copyFileSync,
   existsSync,
@@ -66,9 +67,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'fs';
-import { resolve, join, basename } from 'path';
-
-import ffmpegPath from 'ffmpeg-static';
+import { basename,join, resolve } from 'path';
 
 import { hzToMidi } from './lib/groundTruth';
 import type { GroundTruth, TruthNote } from './types';
@@ -285,8 +284,12 @@ function pickSubset(
 ): Candidate[] {
   const byTech = new Map<string, Candidate[]>();
   for (const c of candidates) {
-    if (!byTech.has(c.technique)) byTech.set(c.technique, []);
-    byTech.get(c.technique)!.push(c);
+    let list = byTech.get(c.technique);
+    if (!list) {
+      list = [];
+      byTech.set(c.technique, list);
+    }
+    list.push(c);
   }
   for (const list of Array.from(byTech.values())) list.sort((a, b) => a.clip.localeCompare(b.clip));
 

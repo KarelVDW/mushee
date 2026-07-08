@@ -7,7 +7,7 @@ import { Pitch } from '@/model/Pitch'
 
 import { Eyebrow } from '../ui'
 import { Glyph } from './Glyph'
-import { getYForNote } from './note-utils'
+import { getYForNote } from './noteUtils'
 
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
 const KEY_ROWS: number[][] = [

@@ -8,6 +8,11 @@
  *                         (and are auto-approved), enabling /admin endpoints.
  *
  * The web app mirrors the toggle as NEXT_PUBLIC_BETA_MODE.
+ *
+ * Deliberately a plain module rather than a Nest provider: the signup policy
+ * must be readable from auth.config.ts (better-auth's config object is built
+ * outside the DI container), and from billing/mail without pulling BetaModule
+ * into their dependency graphs.
  */
 
 export type BetaStatus = 'pending' | 'approved';

@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { AudioDecoder, StreamingDecoder } from '../../src/recordings/AudioDecoder';
+import { AudioDecoder, StreamingDecoder } from '../../src/recordings/pipeline/audio-decoder';
 
 const SAMPLE_RATE = 16000;
 const TONE_SEC = 0.6;

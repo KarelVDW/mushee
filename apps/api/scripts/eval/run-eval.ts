@@ -21,29 +21,29 @@
  *   EVAL_LABEL        label stored in the report (e.g. the config name)
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { existsSync, readdirSync,readFileSync, writeFileSync } from 'fs';
+import { join,resolve } from 'path';
 
-import { AudioConverter } from '../../src/recordings/AudioConverter';
-import { AudioDecoder } from '../../src/recordings/AudioDecoder';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { BasicPitchProvider } from '../../src/recordings/providers/BasicPitchProvider';
-import { CrepeProvider } from '../../src/recordings/providers/CrepeProvider';
-import { LocalModelBackend } from '../../src/recordings/providers/LocalModelBackend';
+import { AudioConverter } from '../../src/recordings/pipeline/audio-converter';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { BasicPitchProvider } from '../../src/recordings/pipeline/providers/basic-pitch-provider';
+import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider';
+import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
 import type {
   PitchProvider,
   PitchTranscribeOptions,
-} from '../../src/recordings/providers/PitchProvider';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
+} from '../../src/recordings/pipeline/providers/pitch-provider';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import {
-  scoreNotes,
-  timingStats,
-  type Metrics,
   type EstNote,
   type MatchOptions,
+  type Metrics,
+  scoreNotes,
+  timingStats,
 } from './lib/metrics';
 import { discoverRealDatasets } from './lib/realCorpus';
-import { SCENARIOS, CONDITIONS } from './scenarios';
+import { CONDITIONS,SCENARIOS } from './scenarios';
 import type { Condition, GroundTruth, Scenario } from './types';
 
 const DETECT_SR = 16000;

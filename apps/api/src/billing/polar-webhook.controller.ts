@@ -9,7 +9,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 
 import { BillingService } from './billing.service';
-import { WebhookVerificationError } from './polar-webhooks';
+import { WebhookVerificationError } from './polar/webhook-verify';
 
 /**
  * Polar webhook receiver. Signature verification (standard-webhooks) needs

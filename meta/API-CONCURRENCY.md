@@ -19,19 +19,19 @@ optimizing. Everything below except §1 is code-reading, not measurement.
 Per-session memory grows linearly with recording duration, ~14 MB/min:
 
 - `StreamingDecoder` keeps the full decoded PCM (`ensureCapacity` doubling,
-  `AudioDecoder.ts` ~L248) — ~5.3 MB/min at 22.05 kHz.
+  `pipeline/audio-decoder.ts` ~L248) — ~5.3 MB/min at 22.05 kHz.
 - `CrepeSession` caches activations for the whole recording
   (`CrepeProvider.ts` ~L156) — ~8.6 MB/min.
 
 The pipeline freezes committed audio and only re-transcribes a trailing window
-(`RecordingPipeline.ts`), so both buffers can drop everything behind the
+(`pipeline/recording-pipeline.ts`), so both buffers can drop everything behind the
 committed watermark (ring buffer / trim). At the 512 Mi pod limit, a few long
 unlimited-tier recordings currently OOM a pod.
 
 ## 2. Cheap wins
 
 - **Aligned buffer copies instead of per-element JS loops**: decoder ingest
-  (`AudioDecoder.ts` ~L242) and `RemoteModelBackend.bytesToF32` do
+  (`pipeline/audio-decoder.ts` ~L242) and `RemoteModelBackend.bytesToF32` do
   `readFloatLE` per float; a `Buffer.copy` into an aligned buffer + a
   `Float32Array` view is a memcpy. `unflatten` in `RemoteModelBackend` also
   builds `number[][]` garbage per pass — keep flat typed arrays if

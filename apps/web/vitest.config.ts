@@ -21,7 +21,7 @@ export default defineConfig({
             exclude: [
                 'src/**/*.d.ts',
                 'src/**/index.ts',
-                'src/origin/**', // generated Bravura font data
+                'src/components/notation/fonts/**', // generated Bravura font data
                 'src/app/**', // Next.js pages/route components — covered via e2e
                 'src/proxy.ts', // Next.js middleware — covered via e2e
             ],

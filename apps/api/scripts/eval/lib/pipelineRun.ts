@@ -7,10 +7,10 @@
  * Shared by probe-realpath.ts and diagnose-real.ts.
  */
 
-import type { MxmlMeasure } from '../../../src/recordings/mxml.types';
-import { ProfileResolver } from '../../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../../src/recordings/providers/ProviderRegistry';
-import { RecordingPipeline } from '../../../src/recordings/RecordingPipeline';
+import type { MxmlMeasure } from '../../../src/recordings/pipeline/mxml.types';
+import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver';
+import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry';
+import { RecordingPipeline } from '../../../src/recordings/pipeline/recording-pipeline';
 import type { EstNote } from './metrics';
 
 const STEP_SEMITONE: Record<string, number> = {

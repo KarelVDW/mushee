@@ -6,7 +6,6 @@
  */
 
 import { execFileSync } from 'child_process';
-
 import ffmpegPath from 'ffmpeg-static';
 
 import type { Condition } from '../types';

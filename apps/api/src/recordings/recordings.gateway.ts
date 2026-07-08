@@ -8,13 +8,13 @@ import { fromNodeHeaders } from 'better-auth/node';
 import type { IncomingMessage } from 'http';
 import type { RawData, WebSocket } from 'ws';
 
-import { auth } from '../auth/auth';
+import { auth } from '../auth/auth.config';
 import { BetaService } from '../beta/beta.service';
 import { ScoresService } from '../scores/scores.service';
 import type { RecordingCreditBalance } from './recording-credits.service';
 import { RecordingCreditsService } from './recording-credits.service';
+import type { RecordingSession } from './recording-session';
 import { RecordingsService } from './recordings.service';
-import type { RecordingSession } from './RecordingSession';
 
 interface RecordingMetaMessage {
   type: 'meta';

@@ -4,40 +4,42 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   RecordingArchiver,
   sniffContainer,
-} from '../../src/recordings/RecordingArchiver';
+} from '../../src/recordings/recording-archiver';
 import type { StorageService } from '../../src/storage/storage.service';
 
 function fakeStorage() {
   const objects = new Map<string, Buffer>();
   const streams = new Map<string, PassThrough>();
+  const createWriteStream = vi.fn((key: string) => {
+    const stream = new PassThrough();
+    const chunks: Buffer[] = [];
+    stream.on('data', (c: Buffer) => chunks.push(c));
+    stream.on('end', () => objects.set(key, Buffer.concat(chunks)));
+    streams.set(key, stream);
+    return stream;
+  });
   const storage = {
-    createWriteStream: vi.fn((key: string) => {
-      const stream = new PassThrough();
-      const chunks: Buffer[] = [];
-      stream.on('data', (c: Buffer) => chunks.push(c));
-      stream.on('end', () => objects.set(key, Buffer.concat(chunks)));
-      streams.set(key, stream);
-      return stream;
-    }),
-    write: vi.fn(async (key: string, content: string | Buffer) => {
+    createWriteStream,
+    write: vi.fn((key: string, content: string | Buffer) => {
       objects.set(key, Buffer.from(content));
+      return Promise.resolve();
     }),
   } as unknown as StorageService;
-  return { storage, objects, streams };
+  return { storage, createWriteStream, objects, streams };
 }
 
 const WEBM_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01, 0x02]);
 
 describe('RecordingArchiver', () => {
   it('streams audio under the recording path with a sniffed extension', async () => {
-    const { storage, objects } = fakeStorage();
+    const { storage, createWriteStream, objects } = fakeStorage();
     const archiver = new RecordingArchiver(storage, 'recordings/u/s/r');
 
     archiver.appendAudio(WEBM_HEADER);
     archiver.appendAudio(Buffer.from('more-audio'));
     await archiver.finalize({});
 
-    expect(storage.createWriteStream).toHaveBeenCalledWith(
+    expect(createWriteStream).toHaveBeenCalledWith(
       'recordings/u/s/r/audio.webm',
       { contentType: 'audio/webm' },
     );
@@ -61,7 +63,7 @@ describe('RecordingArchiver', () => {
       '{"measures":{}}',
     );
     expect(
-      JSON.parse(objects.get('recordings/u/s/r/session.json')!.toString()),
+      JSON.parse(objects.get('recordings/u/s/r/session.json')?.toString() ?? 'null'),
     ).toEqual({ bpm: 120 });
   });
 
@@ -71,8 +73,8 @@ describe('RecordingArchiver', () => {
 
     archiver.appendAudio(WEBM_HEADER);
     streams
-      .get('recordings/u/s/r/audio.webm')!
-      .destroy(new Error('bucket unreachable'));
+      .get('recordings/u/s/r/audio.webm')
+      ?.destroy(new Error('bucket unreachable'));
     await new Promise((resolve) => setImmediate(resolve));
     // Further chunks are dropped without throwing into the recording path.
     archiver.appendAudio(Buffer.from('late'));

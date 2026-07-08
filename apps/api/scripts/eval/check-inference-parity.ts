@@ -13,17 +13,16 @@
  */
 
 import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import ffmpegPath from 'ffmpeg-static';
-
-import { CompositeModelBackend } from '../../src/recordings/providers/CompositeModelBackend';
-import { LocalModelBackend } from '../../src/recordings/providers/LocalModelBackend';
-import type { ModelBackend } from '../../src/recordings/providers/ModelBackend';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { RemoteModelBackend } from '../../src/recordings/providers/RemoteModelBackend';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { CompositeModelBackend } from '../../src/recordings/pipeline/providers/composite-model-backend';
+import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
+import type { ModelBackend } from '../../src/recordings/pipeline/providers/model-backend';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { RemoteModelBackend } from '../../src/recordings/pipeline/providers/remote-model-backend';
 import { scoreNotes } from './lib/metrics';
 import { runThroughPipeline } from './lib/pipelineRun';
 import { SCENARIOS } from './scenarios';
@@ -138,7 +137,7 @@ async function main(): Promise<void> {
     const sc = SCENARIOS.find((s) => s.id === id);
     let truth: GroundTruth, wav: Buffer;
     try {
-      truth = JSON.parse(readFileSync(join(EVAL_ROOT, id, `${melody}.truth.json`), 'utf8'));
+      truth = JSON.parse(readFileSync(join(EVAL_ROOT, id, `${melody}.truth.json`), 'utf8')) as GroundTruth;
       wav = readFileSync(join(EVAL_ROOT, id, `${melody}__clean.wav`));
     } catch { console.log(`  ${id}: missing fixture`); continue; }
     const webm = await encodeWebmOpus(wav);

@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 import { hzToMidi } from './lib/groundTruth';
-import { scoreNotes, type EstNote } from './lib/metrics';
+import { type EstNote,scoreNotes } from './lib/metrics';
 import type { TruthNote } from './types';
 
 const NOTES_DIR = resolve(__dirname, '.cache/vocadito/Annotations/Notes');
@@ -31,7 +31,7 @@ function parseNotes(csv: string): TruthNote[] {
 }
 
 function lcsLen(a: number[], b: number[]): number {
-  const dp = new Array(b.length + 1).fill(0);
+  const dp: number[] = new Array<number>(b.length + 1).fill(0);
   for (let i = 1; i <= a.length; i += 1) {
     let prev = 0;
     for (let j = 1; j <= b.length; j += 1) {

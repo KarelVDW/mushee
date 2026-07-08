@@ -19,15 +19,14 @@
  */
 
 import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import ffmpegPath from 'ffmpeg-static';
-
-import { AudioDecoder, StreamingDecoder } from '../../src/recordings/AudioDecoder';
-import { ProfileResolver } from '../../src/recordings/profiles/ProfileResolver';
-import { ProviderRegistry } from '../../src/recordings/providers/ProviderRegistry';
-import { scoreNotes, type EstNote } from './lib/metrics';
+import { AudioDecoder, StreamingDecoder } from '../../src/recordings/pipeline/audio-decoder';
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { type EstNote,scoreNotes } from './lib/metrics';
 import { runThroughPipeline, runThroughPipelineStreaming } from './lib/pipelineRun';
 import { SCENARIOS } from './scenarios';
 import type { GroundTruth } from './types';
@@ -52,7 +51,8 @@ function encodeWebmOpus(wav: Buffer): Promise<Buffer> {
     proc.on('error', rej);
     proc.on('close', (code) => {
       const o = Buffer.concat(out);
-      o.length ? res(o) : rej(new Error(`encode failed (${code})`));
+      if (o.length) res(o);
+      else rej(new Error(`encode failed (${code})`));
     });
     proc.stdin.on('error', () => {});
     proc.stdin.end(wav);
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     let truth: GroundTruth;
     let wav: Buffer;
     try {
-      truth = JSON.parse(readFileSync(join(EVAL_ROOT, id, `${melody}.truth.json`), 'utf8'));
+      truth = JSON.parse(readFileSync(join(EVAL_ROOT, id, `${melody}.truth.json`), 'utf8')) as GroundTruth;
       wav = readFileSync(join(EVAL_ROOT, id, `${melody}__clean.wav`));
     } catch {
       console.log(`  ${id}: missing fixture`);

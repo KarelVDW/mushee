@@ -8,7 +8,17 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
     // Global ignores (must be standalone config object)
     {
-        ignores: ['eslint.config.mjs', '**/dist/**', '**/node_modules/**', '**/build/**', '**/.next/**', '**/out/**'],
+        ignores: [
+            'eslint.config.mjs',
+            '**/dist/**',
+            '**/node_modules/**',
+            '**/build/**',
+            '**/.next/**',
+            '**/out/**',
+            '**/coverage/**',
+            // Local Python venvs (fetch-crepe-model.sh / basic-pitch tooling) ship their own JS assets
+            '**/.venv-*/**',
+        ],
     },
     {
         linterOptions: { reportUnusedDisableDirectives: 'error' },
@@ -65,5 +75,15 @@ export default tseslint.config(
     {
         files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
         extends: [tseslint.configs.disableTypeChecked],
+    },
+
+    // Tiny CommonJS shim package (proto path exports); it belongs to no
+    // tsconfig project and legitimately uses require().
+    {
+        files: ['packages/inference-proto/**'],
+        extends: [tseslint.configs.disableTypeChecked],
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
+        },
     },
 )

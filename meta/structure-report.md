@@ -1,83 +1,133 @@
-# Project structure & cleanliness report — 2026-07-08
+# Project structure & cleanliness report — 2026-07-08 (post-restructure)
 
-Result of a full-repo structure evaluation (three parallel surveys: API, web, root/deploy/packages),
-plus the cleanups applied in the same pass. Grades: **clean / acceptable / messy / very messy**.
-No module earned *very messy*, so per the brief only small, safe fixes were applied; the rest is
-reported here (and fed into `master-todo.md`).
+Second pass, same day: the morning survey graded every module (see git history of
+this file for the original findings); this pass **executed the full backlog** it
+produced. Every module now grades **clean**. Verification after the pass:
+API `tsc --noEmit` + 85 vitest tests + `nest build` green (scripts/ now included
+in the tsconfig project), web `tsc --noEmit` + 923 vitest tests green (100%
+model-coverage gate intact), repo-wide `eslint .` zero errors.
 
-## Actions taken in this pass
-
-- **Docs reorg**: `TODO.md`, `AFTERTHOUGHTS.md`, `PRODUCTION-READINESS.md` (repo root) and
-  `apps/api/CONCURRENCY.md` (→ `API-CONCURRENCY.md`) moved into `meta/` — all four are
-  developer/agent communication, not user-facing docs. README's doc index updated.
-  Kept in place: `README.md` (user-facing), `apps/web/DESIGN.md` + `design/` (design system),
-  `apps/web/src/model/ARCHITECTURE.md` (living architecture reference), `e2e/README.md` (test docs).
-- **Deleted (verified dead / stray, tracked in git)**:
-  - `reference-keyboard.html` (repo root) — 248 KB HTML scraped from an external app's shortcut
-    reference; zero references; the app has its own `KeyboardShortcutsDialog.tsx`.
-  - `apps/web/src/actions.ts` — empty 0-byte stub; the real `actions.ts` lives in
-    `app/scores/[id]/`.
-  - `apps/web/public/{next,vercel,file,globe,window}.svg` — default Next.js starter assets,
-    zero importers (real favicon/OG assets live in `src/app/`).
-  - `apps/api/test/**` compiled artifacts (`.js`, `.js.map`, `.d.ts`, `.d.ts.map` for the beta and
-    billing tests) — accidental `tsc` output committed next to sources; now gitignored.
-  - `apps/api/scripts/eval/{brainstorm,tuning}-workflow.js` — orphaned one-off scripts, the only
-    `.js` in a `.ts` dir, referenced nowhere.
-- **Moved**: `apps/api/src/health.controller.ts` → `src/health/health.controller.ts` — it was the
-  only feature sitting loose at the src root.
-- Local-only junk removed from disk (untracked): `.DS_Store` files, orphaned
-  `apps/api/tsconfig.eval-check.tsbuildinfo` (its tsconfig no longer exists).
-
-## Module grades
+## What changed in this pass
 
 ### apps/api
 
-| Module | Grade | Notes |
-|---|---|---|
-| account | clean | Standard controller/service/dto/entities. No tests, but low-risk. |
-| auth | acceptable | `auth.ts` is a loose better-auth config outside the `*.service` convention; security-critical yet untested. |
-| beta | acceptable | `beta-config.ts` loose config imported across modules (incl. auth) — mild coupling. |
-| billing | **messy** | 7 loose root files; confusing near-duplicate names (`polar-webhooks.ts` lib vs `polar-webhook.controller.ts`); 346-line service; payment-critical logic largely untested (only products/state mappers have tests). Top refactor candidate. |
-| cache, cron, onboarding, settings, storage, subscriptions | clean | Small and single-purpose. Note: subscriptions vs billing conceptual overlap (subscription state spans both). |
-| database | acceptable | Demo/seed data (`demo-data.ts`, `demo-seed.ts`) lives in `src/` but is arguably a scripts concern. |
-| health | clean (after fix) | Moved into its own folder this pass. |
-| recordings | **messy** | The heavyweight: DSP/pipeline logic (NoteExtractor 518, RecordingPipeline 510 lines) mixed with Nest gateway/service concerns; worst file-naming inconsistency (PascalCase pipeline classes vs kebab-case Nest files vs camelCase `createModelBackend.ts`/`tfBackend.ts`/`pitchDecoder.ts` in providers/); only a few units tested. Works well (eval-gated), but structure needs a dedicated pass. |
-| scripts/eval | **messy** | An experiment graveyard: ~10 standalone tuning/diagnostic scripts with no index, docs, or package.json entries. Needs a README + pruning decision. |
-| scripts (rest) | acceptable | `verify-recording-integration.mjs` is a `.mjs` outlier not wired into package.json but still the documented integration check — keep. `fixtures/test.webm` (334 KB) is a committed binary fixture (used; acceptable). |
+- **billing** (was *messy*) — Polar integration library moved into `billing/polar/`
+  (`client.ts`, `products.ts`, `webhook-verify.ts`, `subscription-state.ts`); the
+  confusing `polar-webhooks.ts` / `polar-webhook.controller.ts` near-duplicate is
+  gone (the lib shim is now `polar/webhook-verify.ts`). Root holds only Nest-
+  conventional files. Added `test/billing/billing.service.test.ts` — 22 tests over
+  the payment-critical logic: checkout guards (beta/unconfigured/unmapped),
+  plan change/cancel/resume mirroring, webhook signature + idempotency +
+  out-of-order/stale-event handling, GDPR customer deletion.
+- **recordings** (was *messy*) — split into two layers, documented in
+  `src/recordings/README.md`: root = Nest transport/persistence (gateway,
+  services, `recording-session.ts`, `recording-archiver.ts`, entities);
+  `pipeline/` = the pure audio→notes DSP (with `profiles/` and `providers/`).
+  All 34 files normalized to kebab-case (was a Pascal/kebab/camel mix); public
+  Nest-layer paths unchanged, so no importers outside the module moved.
+- **auth** — loose `auth.ts` renamed to `auth.config.ts` (the better-auth
+  instance; it stays a plain module because better-auth config is built outside
+  the DI container). Added `test/auth/guards.test.ts` covering AuthGuard/
+  AdminGuard rejection and request-stamping paths.
+- **mail** — added `test/mail/mail.service.test.ts`: production fail-fast without
+  API key, dev log-only mode, from-identity, link-base fallback chain
+  (`WEB_APP_URL` → `CORS_ORIGIN`), HTML escaping of user names.
+- **beta** — `beta-config.ts` keeps its plain-module shape by design (readable
+  from `auth.config.ts` and billing without dragging BetaModule into their
+  graphs); the rationale is now documented in the file header. Already tested.
+- **database** — `demo-data.ts`/`demo-seed.ts` moved to `database/seed/` (they
+  stay in `src/` because the boot seeder runs in-process on `SEED_DEMO_DATA`).
+- **scripts** — `scripts/eval/README.md` indexes every script (harness core,
+  corpus fetchers, gates/benchmarks, diagnostics) with prerequisites and a
+  pruning log; `tempo-experiment.ts` deleted (both questions answered and
+  shipped). `scripts/**` joined `tsconfig.json` include, so `pnpm type-check`
+  and eslint now cover it — the type/lint debt that surfaced was fixed
+  (typed JSON.parse, dead Mongo persistence path removed from
+  `test-recording-ws.ts`). New package.json entries: `eval:generate`,
+  `eval:run`, `verify:recording-integration`.
+- **model weights** — provenance `SOURCE.md` added to `model/` (basic-pitch,
+  bit-identical to the `@spotify/basic-pitch` npm model), `model-crepe-tiny/`
+  (marl/crepe via `fetch-crepe-model.sh`), and
+  `apps/inference-crepe/crepe_saved_model/` (converted from the tiny tfjs
+  weights, parity-gated). Deliberate keep in git (~5 MB); LFS only if the repo
+  ever needs slimming.
 
 ### apps/web
 
-| Area | Grade | Notes |
-|---|---|---|
-| src/app routes | acceptable→messy | Routes are conventional. Two god pages: `scores/[id]/page.tsx` (~570 lines: editor shell + recording flow + dialogs + inline TitleInput) and `onboarding/page.tsx` (~600 lines: inline data tables + multi-step flow). Extract-component pass recommended. |
-| src/components/ui | clean | Cohesive primitives; `Icon.tsx` is 639 lines but a flat glyph registry (data, not logic). |
-| src/components/notation | clean | Well-factored; minor kebab-vs-PascalCase util naming inconsistency. |
-| src/lib | clean | Transport-composed audio units + api/queries; clear responsibilities. |
-| src/model (+layout/width/util) | clean | The showpiece: 1:1 test mirroring, 100% coverage gate, ARCHITECTURE.md. |
-| src/origin | clean, odd placement | Only vendored Bravura glyph data (3567 lines, generated); the name `origin/` is opaque — would read better as notation asset data. |
-| tests/, e2e/, design/ | clean | Left untouched per brief. `design/ui_kits/*.jsx` intentionally shadow real component names (reference mockups). |
-| public | clean (after fix) | Contained only unused starter SVGs; deleted. |
+- **`scores/[id]/page.tsx`** (was *acceptable→messy*, 578 lines) — now 300 lines.
+  Extracted colocated `TitleInput.tsx`, `useRecording.ts` (WS session, limits,
+  waveform), `usePlayback.ts` (transport lifecycle, preview, metronome),
+  `useScoreAutosave.ts` (debounce + retry). All e2e aria-label invariants
+  preserved verbatim.
+- **`onboarding/page.tsx`** (600 lines) — now 201 lines. Extracted
+  `onboarding-data.ts` (option tables, `formatPrice`), `OnboardingControls.tsx`
+  (StepShell/StepProgress/OptionCard/BillingToggle/TierCard, aria intact), and
+  `OnboardingSteps.tsx` (one component per step; step-local state moved in,
+  cross-step state stays in the page).
+- **`src/origin/`** — gone; the generated Bravura glyph data now lives with its
+  only consumers at `src/components/notation/fonts/bravura_glyphs.ts`
+  (kept snake_case: generated file). Coverage exclude + design docs updated.
+- **notation utils** — `glyph-utils.ts`/`note-utils.ts` → `glyphUtils.ts`/
+  `noteUtils.ts`, matching the camelCase module convention of `model/`
+  (`rowWidth.ts`) and the new hooks.
 
 ### Root / deploy / packages / inference
 
-| Area | Grade | Notes |
-|---|---|---|
-| Root configs | clean | Coherent scripts, flat eslint config, thorough ignores. |
-| deploy/k8s | clean | Labels/selectors/HPAs/PDBs/NetworkPolicies consistent; textbook base+overlay. |
-| packages/inference-proto | clean | Minimal, correct exports. |
-| apps/inference-* | acceptable→messy | Generated gRPC stubs (`inference_pb2*.py`) are checked into each app AND generated with mismatched protobuf toolchains (crepe 6.31.1 vs basic-pitch 4.25.1). They interoperate, but should be regenerated from one toolchain (ideally at image build from `packages/inference-proto/inference.proto`). |
-| docker-compose vs k8s local | acceptable | Minor env drift: compose lacks `WEB_APP_URL`, `BETA_MODE`, `TRUST_PROXY` that k8s sets. |
+- **Inference proto stubs** (was *acceptable→messy*) — the checked-in
+  `inference_pb2*.py` copies (mismatched protoc 6.31.1 vs 4.25.1) are deleted
+  and gitignored. Both Dockerfiles already generated stubs at image build from
+  `packages/inference-proto/inference.proto` with one pinned toolchain
+  (grpcio-tools 1.62.3); host runs use the new
+  `packages/inference-proto/generate-python.sh` (same pin, verified to produce
+  identical stubs for both services).
+- **docker-compose env drift** — compose now sets `WEB_APP_URL` and
+  `BETA_MODE: 'false'` like the local k8s overlay; `TRUST_PROXY` is deliberately
+  unset (no ingress in front of the container) with a comment saying so.
+- **eslint config** — ignores extended with `**/coverage/**` and the local
+  Python venvs (`**/.venv-*/**`, ~10k vendor-JS errors previously drowning the
+  signal); targeted override for the tiny CommonJS `inference-proto` shim.
+  Repo-wide `eslint .` is now genuinely zero-error, including the previously
+  unlinted `apps/api/scripts/**`.
 
-## Reported-but-not-fixed (ranked; also in master-todo.md)
+## Module grades
 
-1. **billing module reorganization + service tests** — payment-critical and the messiest src module.
-2. **recordings module split** — separate the transcription pipeline (pure DSP, PascalCase classes)
-   from the Nest transport layer (gateway/services); normalize file naming while at it.
-3. **Editor page decomposition** (`scores/[id]/page.tsx`) — extract the recording flow and title
-   input; onboarding page similar.
-4. **scripts/eval index/prune** — README with what each script is for; delete what's superseded.
-5. **Inference proto stubs** — single generation source (build-time protoc from the shared .proto).
-6. **Committed model weights** (~5 MB total: `model/`, `model-crepe-tiny/`, `crepe_saved_model/`)
-   — consider LFS or fetch-at-build; add missing provenance SOURCE.md files.
-7. Minor: `src/origin/` naming, notation util-file casing, compose/k8s env drift,
-   `database/demo-*` → scripts, missing `auth`/`mail`/`billing` service tests.
+| Area | Grade |
+|---|---|
+| apps/api — account, auth, beta, billing, cache, cron, database, health, mail, onboarding, recordings, scores, settings, storage, subscriptions | clean |
+| apps/api/scripts (+ eval) | clean |
+| apps/web — app routes, components/ui, components/notation, lib, model, tests/e2e/design, public | clean |
+| Root configs, deploy/k8s, docker-compose | clean |
+| packages/inference-proto, apps/inference-* | clean |
+
+## Deliberate keeps (not defects)
+
+- **subscriptions vs billing**: complementary, not overlapping — subscriptions
+  owns the data model + catalogue, billing owns the Polar integration and writes
+  through `SubscriptionsService`. `polar/subscription-state.ts` (the pure
+  payload→row-patch mapper) lives in billing because it speaks Polar.
+- **Model weights in git** (~5 MB) with `SOURCE.md` provenance.
+- **`beta-config.ts` / `postgres-ssl.ts`-style plain modules** where config must
+  be readable outside the DI container.
+- **`fixtures/test.webm`** (334 KB) — used binary fixture.
+- Nest wiring (modules/controllers/gateways) is intentionally not unit-tested;
+  logic layers are. The recording pipeline itself is eval-gated
+  (`scripts/eval/README.md`).
+
+## End-to-end verification (completed after the dev-server lock was freed)
+
+- Mocked Playwright suite: **32/32 passed** (chromium + webkit) — editor chrome,
+  autosave, selection, shortcuts, exports, library flows all green on the
+  decomposed pages.
+- Full-stack smoke: **2/2 passed** against a live stack (e2e Postgres on 5532,
+  API on 4300 with the gRPC inference services, web on 3300) — the authed
+  create → edit → reload persistence flow works through the restructured API.
+- `pnpm verify:recording-integration`: **ALL CHECKS PASSED** against the same
+  stack. One stale expectation in the script itself was fixed along the way:
+  it streamed the fixture at ~10× real time on a wrap-around loop, while the
+  server (deliberately, since the H6 fix) bills `max(wall-clock, decoded-audio)`
+  seconds — so the "3-5 credits" check correctly billed ~21-31. `streamAudio`
+  now paces at real time; the anti-abuse metering itself was verified correct.
+
+## Outstanding
+
+- Remaining low-priority follow-ups live in `master-todo.md` items 23–25.

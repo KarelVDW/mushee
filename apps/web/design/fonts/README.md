@@ -12,4 +12,4 @@ No font substitutions were needed — Space Grotesk and Geist Mono are both avai
 
 ## Notation glyphs
 
-Music notation in the score editor is rendered from **Bravura** SMuFL outlines bundled at `web/src/origin/fonts/bravura_glyphs.ts` in the production codebase. These are _not_ used outside the score canvas and are not copied here — re-import from `web/` when working on notation features.
+Music notation in the score editor is rendered from **Bravura** SMuFL outlines bundled at `web/src/components/notation/fonts/bravura_glyphs.ts` in the production codebase. These are _not_ used outside the score canvas and are not copied here — re-import from `web/` when working on notation features.
