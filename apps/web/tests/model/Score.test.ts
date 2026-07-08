@@ -1004,6 +1004,56 @@ describe('Score', () => {
         })
     })
 
+    describe('addMeasureAdoptingTempo', () => {
+        it('moves a leading tempo marking from the displaced measure onto the new one', () => {
+            const score = makeScore(1)
+            const displaced = score.firstMeasure
+            if (!displaced) throw new Error('expected firstMeasure')
+            score.setTempo(displaced.firstNote, 120)
+
+            const inserted = score.addMeasureAdoptingTempo(0)
+
+            expect(score.measures[0]).toBe(inserted)
+            expect(inserted.tempoAtBeat(0)?.bpm).toBe(120)
+            expect(displaced.tempoAtBeat(0)).toBeUndefined()
+            // The take's measure — and everything after it — sounds at the adopted bpm.
+            inserted.complete()
+            expect(score.bpmAt(inserted.firstNote)).toBe(120)
+            expect(score.bpmAt(displaced.firstNote)).toBe(120)
+        })
+
+        it('leaves a mid-measure marking with the displaced measure', () => {
+            const score = makeScore(1)
+            const displaced = score.firstMeasure
+            if (!displaced) throw new Error('expected firstMeasure')
+            score.setTempo(displaced.noteAtBeat(2), 160) // beat 2, not a leading marking
+
+            const inserted = score.addMeasureAdoptingTempo(0)
+
+            expect(inserted.tempoAtBeat(0)).toBeUndefined()
+            expect(displaced.tempoAtBeat(2)?.bpm).toBe(160)
+        })
+
+        it('adds no marking when the displaced measure has none', () => {
+            const score = makeScore(2)
+            score.setTempo(score.measures[0].firstNote, 144)
+
+            // Displacing measure 1 (unmarked): the bpm keeps carrying in from measure 0.
+            const inserted = score.addMeasureAdoptingTempo(1)
+
+            expect(inserted.tempoAtBeat(0)).toBeUndefined()
+            inserted.complete()
+            expect(score.bpmAt(inserted.firstNote)).toBe(144)
+        })
+
+        it('appends like addMeasure when no measure is displaced', () => {
+            const score = makeScore(1)
+            const inserted = score.addMeasureAdoptingTempo(score.measures.length)
+            expect(score.lastMeasure).toBe(inserted)
+            expect(inserted.tempoAtBeat(0)).toBeUndefined()
+        })
+    })
+
     describe('measure lookup guards', () => {
         it('getIndexForMeasure throws for a measure not in this score', () => {
             const score = makeScore(1)

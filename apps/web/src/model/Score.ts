@@ -226,6 +226,26 @@ export class Score {
         return measure
     }
 
+    /**
+     * Insert an empty measure at `index` that takes over the displaced measure's
+     * tempo. A recording take starts in this measure and must sound at the bpm
+     * prevailing where the cursor was — but that bpm is often marked at the start
+     * of the very measure being pushed aside (a score's opening marking when the
+     * take begins at measure one), where the engines' walk-back can't see it. The
+     * marking moves onto the new measure, so the take and playback of the finished
+     * piece keep their bpm instead of falling back to the default.
+     */
+    addMeasureAdoptingTempo(index: number): Measure {
+        const displaced = this.measures[index]
+        const measure = this.addMeasure(index)
+        const marking = displaced?.tempoAtBeat(0)
+        if (displaced && marking) {
+            displaced.removeTempo(0)
+            measure.setTempo(0, marking.bpm)
+        }
+        return measure
+    }
+
     removeLastMeasure() {
         this.measures.pop()
         const newLast = last(this.measures)

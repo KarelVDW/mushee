@@ -297,7 +297,9 @@ export default function ScoreEditorPage() {
         manipulator.select(null)
         waveformStore.reset()
         const startIndex = measureIndex
-        score.addMeasure(measureIndex++).complete()
+        // The take's first measure displaces the cursor's measure and adopts its
+        // tempo marking, so the count-off and click run at the bpm the cursor sat in.
+        score.addMeasureAdoptingTempo(measureIndex++).complete()
         saveToApi({ score })
 
         const resolvePosition = (measureIndex: number, beat: number) => {
