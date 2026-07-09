@@ -3,9 +3,9 @@
 # only while the beta is young — promote to on-push-to-master when the smoke
 # suite is trusted.
 #
-# One-time GCP setup (grep PROJECT_ID/NUMBER below): a workload-identity
-# federation pool for GitHub OIDC and a deployer service account with
-# roles/artifactregistry.writer + roles/container.developer.
+# One-time GCP setup: a workload-identity federation pool for GitHub OIDC and
+# a deployer service account with roles/artifactregistry.writer +
+# roles/container.developer — commands in deploy/k8s/overlays/production/README.md.
 name: Deploy
 
 on:
@@ -17,12 +17,12 @@ on:
         default: true
 
 env:
-  PROJECT_ID: PROJECT_ID # TODO: real GCP project id
+  PROJECT_ID: sheemu-prod
   REGION: europe-west1
   CLUSTER: mushee-prod
   REGISTRY: europe-west1-docker.pkg.dev
-  WIF_PROVIDER: projects/NUMBER/locations/global/workloadIdentityPools/github/providers/github # TODO
-  WIF_SERVICE_ACCOUNT: github-deployer@PROJECT_ID.iam.gserviceaccount.com # TODO
+  WIF_PROVIDER: projects/940791749471/locations/global/workloadIdentityPools/github/providers/github
+  WIF_SERVICE_ACCOUNT: github-deployer@sheemu-prod.iam.gserviceaccount.com
 
 permissions:
   contents: read

@@ -4,7 +4,7 @@
 # API reaches GCS without key files. See README.md next to this file for the
 # one-time GCP provisioning steps and the api-secrets creation command.
 #
-# PROJECT_ID is a placeholder (grep for it here and in service-account.yaml);
+# sheemu-prod is a placeholder (grep for it here and in service-account.yaml);
 # replace it once the GCP project exists. Image tags are stamped by CI
 # (kustomize edit set image) — `set-by-ci` never resolves, so a manual apply
 # without CI fails loudly at image pull instead of deploying stale :latest.
@@ -21,11 +21,11 @@ patches:
   - path: api-service-patch.yaml
 images:
   - name: mushee/api
-    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/api
+    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/api
     newTag: set-by-ci
   - name: mushee/crepe-inference
-    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/crepe-inference
+    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/crepe-inference
     newTag: set-by-ci
   - name: mushee/basic-pitch-inference
-    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/basic-pitch-inference
+    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/basic-pitch-inference
     newTag: set-by-ci
