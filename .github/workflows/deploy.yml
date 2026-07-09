@@ -1,0 +1,86 @@
+# Build the three backend images, push them to Artifact Registry with the git
+# SHA as an immutable tag, and roll the production overlay. Manual trigger
+# only while the beta is young — promote to on-push-to-master when the smoke
+# suite is trusted.
+#
+# One-time GCP setup (grep PROJECT_ID/NUMBER below): a workload-identity
+# federation pool for GitHub OIDC and a deployer service account with
+# roles/artifactregistry.writer + roles/container.developer.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply the production overlay to the cluster after pushing'
+        type: boolean
+        default: true
+
+env:
+  PROJECT_ID: PROJECT_ID # TODO: real GCP project id
+  REGION: europe-west1
+  CLUSTER: mushee-prod
+  REGISTRY: europe-west1-docker.pkg.dev
+  WIF_PROVIDER: projects/NUMBER/locations/global/workloadIdentityPools/github/providers/github # TODO
+  WIF_SERVICE_ACCOUNT: github-deployer@PROJECT_ID.iam.gserviceaccount.com # TODO
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for workload identity federation
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: crepe-inference
+            dockerfile: apps/inference-crepe/Dockerfile
+          - image: basic-pitch-inference
+            dockerfile: apps/inference-basic-pitch/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+      - run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/mushee/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+
+  deploy:
+    needs: build-push
+    if: ${{ inputs.apply }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+      - name: Stamp immutable image tags and apply
+        working-directory: deploy/k8s/overlays/production
+        run: |
+          for img in api crepe-inference basic-pitch-inference; do
+            kustomize edit set image \
+              "mushee/$img=$REGISTRY/$PROJECT_ID/mushee/$img:$GITHUB_SHA"
+          done
+          kubectl apply -k .
+      - name: Wait for rollouts
+        run: |
+          for d in api crepe-inference basic-pitch-inference; do
+            kubectl rollout status deploy/$d -n mushee --timeout=10m
+          done

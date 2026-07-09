@@ -1,0 +1,29 @@
+# Non-secret production config lives here so the topology is reviewable in
+# git; Secret/api-secrets carries only real secrets (see README.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  template:
+    spec:
+      serviceAccountName: api
+      containers:
+        - name: api
+          env:
+            - { name: BETTER_AUTH_URL, value: 'https://api.sheemu.com' }
+            - { name: WEB_APP_URL, value: 'https://sheemu.com' }
+            - { name: CORS_ORIGIN, value: 'https://sheemu.com' }
+            - { name: TRUSTED_ORIGINS, value: 'https://sheemu.com' }
+            # Web and API sit on different subdomains of one site; the session
+            # cookie must be scoped to the shared parent or the web middleware
+            # never sees it and every signed-in user bounces to /login.
+            - { name: COOKIE_DOMAIN, value: '.sheemu.com' }
+            - { name: STORAGE_DRIVER, value: 'gcs' }
+            - { name: GCS_BUCKET, value: 'sheemu-prod-storage' }
+            # Cloud SQL over private IP with TLS; credentials come from the
+            # POSTGRES_URL in api-secrets.
+            - { name: POSTGRES_SSL, value: 'require' }
+            # Closed beta: signups join the waitlist until approved at /admin.
+            # Flip to 'false' (and NEXT_PUBLIC_BETA_MODE on Vercel) to open up.
+            - { name: BETA_MODE, value: 'true' }

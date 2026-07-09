@@ -1,0 +1,31 @@
+# Production overlay (GKE) — everything the base deliberately leaves to the
+# cluster: namespace, registry image retags, HTTPS ingress with a
+# Google-managed certificate for api.sheemu.com, and workload identity so the
+# API reaches GCS without key files. See README.md next to this file for the
+# one-time GCP provisioning steps and the api-secrets creation command.
+#
+# PROJECT_ID is a placeholder (grep for it here and in service-account.yaml);
+# replace it once the GCP project exists. Image tags are stamped by CI
+# (kustomize edit set image) — `set-by-ci` never resolves, so a manual apply
+# without CI fails loudly at image pull instead of deploying stale :latest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: mushee
+resources:
+  - namespace.yaml
+  - ../../base
+  - service-account.yaml
+  - api-ingress.yaml
+patches:
+  - path: api-patch.yaml
+  - path: api-service-patch.yaml
+images:
+  - name: mushee/api
+    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/api
+    newTag: set-by-ci
+  - name: mushee/crepe-inference
+    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/crepe-inference
+    newTag: set-by-ci
+  - name: mushee/basic-pitch-inference
+    newName: europe-west1-docker.pkg.dev/PROJECT_ID/mushee/basic-pitch-inference
+    newTag: set-by-ci

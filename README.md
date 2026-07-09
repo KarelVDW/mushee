@@ -95,8 +95,14 @@ Start over with clean demo data: `kubectl rollout restart deploy postgres` (the
 DB is an emptyDir), then `kubectl rollout restart deploy api` — the API
 re-migrates and re-seeds on boot.
 
-**Production** — `deploy/k8s/base` only (retag images to your registry, e.g.
-via a kustomize `images:` override). The cluster must provide:
+**Production (GKE)** — `deploy/k8s/overlays/production`: namespace, Artifact
+Registry image retags, HTTPS ingress with a Google-managed certificate for
+`api.sheemu.com`, and workload identity for GCS. Its `README.md` is the
+one-time GCP provisioning runbook (registry, Autopilot cluster, Cloud SQL,
+bucket, static IP, `Secret/api-secrets`), and `.github/workflows/deploy.yml`
+builds/pushes the images and applies the overlay with immutable SHA tags. The
+web app deploys separately on Vercel. On any other cluster, start from
+`deploy/k8s/base` instead; it must provide:
 
 - `Secret/api-secrets` with `POSTGRES_*` (managed database), `BETTER_AUTH_SECRET`,
   `BETTER_AUTH_URL`, `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `WEB_APP_URL`, SendGrid
