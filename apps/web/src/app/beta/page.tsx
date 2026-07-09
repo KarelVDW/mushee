@@ -88,8 +88,8 @@ export default function BetaWaitingPage() {
                             </PrimaryButton>
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                                 This page checks automatically every 30 seconds. Questions?{' '}
-                                <a href="mailto:support@sheemu.app" className="text-primary underline">
-                                    support@sheemu.app
+                                <a href="mailto:support@sheemu.com" className="text-primary underline">
+                                    support@sheemu.com
                                 </a>
                             </span>
                         </div>

@@ -81,10 +81,10 @@ describe('MailService content', () => {
   });
 
   it('links to the web app using WEB_APP_URL, trailing slash stripped', async () => {
-    process.env.WEB_APP_URL = 'https://sheemu.app/';
+    process.env.WEB_APP_URL = 'https://sheemu.com/';
     await new MailService().sendBetaApprovedEmail('a@b.c', 'Ada');
     const msg = sgSend.mock.calls[0][0] as { text: string };
-    expect(msg.text).toContain('https://sheemu.app/login');
+    expect(msg.text).toContain('https://sheemu.com/login');
     expect(msg.text).not.toContain('app//login');
   });
 

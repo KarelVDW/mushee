@@ -60,7 +60,7 @@ export default function TermsPage() {
                 </li>
                 <li>
                     Statutory withdrawal and refund rights remain unaffected. For refund requests, contact{' '}
-                    <a href="mailto:support@sheemu.app">support@sheemu.app</a>.
+                    <a href="mailto:support@sheemu.com">support@sheemu.com</a>.
                 </li>
                 <li>We may change prices; existing subscriptions are informed at least 30 days before a change takes effect.</li>
             </ul>
@@ -133,7 +133,7 @@ export default function TermsPage() {
             <h2>12. Contact</h2>
             <p>
                 Sheemu (Sheemu Music BV) · Voorbeeldstraat 12, 2000 Antwerp, Belgium ·{' '}
-                <a href="mailto:legal@sheemu.app">legal@sheemu.app</a> · <Link href="/contact">contact page</Link>.
+                <a href="mailto:legal@sheemu.com">legal@sheemu.com</a> · <Link href="/contact">contact page</Link>.
             </p>
         </PublicPageShell>
     )

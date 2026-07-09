@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/' },
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.com'
 
 /** Structured data for rich search results (SoftwareApplication + offers). */
 const jsonLd = {

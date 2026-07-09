@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.com'
 
 /** Public, indexable pages only — the app itself lives behind login. */
 export default function sitemap(): MetadataRoute.Sitemap {

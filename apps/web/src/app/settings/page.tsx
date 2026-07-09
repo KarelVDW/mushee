@@ -116,10 +116,10 @@ export default function SettingsPage() {
                                     subtitle="Stuck, found a bug, or want to say hi? We read everything.">
                                     <div className="flex items-center gap-4">
                                         <a
-                                            href="mailto:support@sheemu.app"
+                                            href="mailto:support@sheemu.com"
                                             className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
                                             <Icon name="mail" size={16} />
-                                            support@sheemu.app
+                                            support@sheemu.com
                                         </a>
                                         <a
                                             href="/contact"

@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 // company data before launch (see meta/notes.md § Domain / legal placeholders).
 
 const CHANNELS: { label: string; email: string; blurb: string }[] = [
-    { label: 'Support', email: 'support@sheemu.app', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
-    { label: 'Hello', email: 'hello@sheemu.app', blurb: 'Feedback, ideas, partnerships, press — or just to tell us what you wrote today.' },
-    { label: 'Privacy', email: 'privacy@sheemu.app', blurb: 'Anything about your personal data or GDPR requests.' },
-    { label: 'Legal', email: 'legal@sheemu.app', blurb: 'Terms, licensing, and other formal matters.' },
+    { label: 'Support', email: 'support@sheemu.com', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
+    { label: 'Hello', email: 'hello@sheemu.com', blurb: 'Feedback, ideas, partnerships, press — or just to tell us what you wrote today.' },
+    { label: 'Privacy', email: 'privacy@sheemu.com', blurb: 'Anything about your personal data or GDPR requests.' },
+    { label: 'Legal', email: 'legal@sheemu.com', blurb: 'Terms, licensing, and other formal matters.' },
 ]
 
 export default function ContactPage() {

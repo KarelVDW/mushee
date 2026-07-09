@@ -21,14 +21,14 @@ export default function PrivacyPolicyPage() {
                 Sheemu is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of
                 your personal data — this policy explains exactly what we collect, why, how long we keep it, and the rights you have
                 over it. We&apos;ve tried to keep it readable; if anything is unclear, write to{' '}
-                <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a>.
+                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>.
             </p>
 
             <h2 id="controller">1. Who is responsible for your data</h2>
             <p>
                 The data controller for Sheemu is <strong>Sheemu (Sheemu Music BV)</strong>, Voorbeeldstraat 12, 2000 Antwerp, Belgium
                 (&quot;Sheemu&quot;, &quot;we&quot;, &quot;us&quot;). For any privacy matter, contact{' '}
-                <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a>.
+                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>.
             </p>
 
             <h2 id="data-we-collect">2. What we collect and why</h2>
@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
                 actively started a recording — never in the background. Your recordings are deleted when you delete your account.
                 Legal basis: <strong>performance of a contract</strong> for storing and transcribing your recordings;{' '}
                 <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving transcription quality — contact{' '}
-                <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a> to object to that use.
+                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a> to object to that use.
             </p>
 
             <h3>Payments</h3>
@@ -213,7 +213,7 @@ export default function PrivacyPolicyPage() {
                 </li>
             </ul>
             <p>
-                To exercise any of these, email <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a>. We respond within one
+                To exercise any of these, email <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>. We respond within one
                 month.
             </p>
 
@@ -239,8 +239,8 @@ export default function PrivacyPolicyPage() {
             <h2 id="contact">10. Contact</h2>
             <p>
                 Sheemu (Sheemu Music BV) · Voorbeeldstraat 12, 2000 Antwerp, Belgium ·{' '}
-                <a href="mailto:privacy@sheemu.app">privacy@sheemu.app</a>. General questions:{' '}
-                <a href="mailto:support@sheemu.app">support@sheemu.app</a> or the <Link href="/contact">contact page</Link>.
+                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>. General questions:{' '}
+                <a href="mailto:support@sheemu.com">support@sheemu.com</a> or the <Link href="/contact">contact page</Link>.
             </p>
         </PublicPageShell>
     )

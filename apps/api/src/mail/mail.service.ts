@@ -17,9 +17,9 @@ export class MailService {
 
   constructor() {
     const apiKey = process.env.SENDGRID_API_KEY;
-    // Fallback must match the canonical site domain (sheemu.app) — a mismatch
+    // Fallback must match the canonical site domain (sheemu.com) — a mismatch
     // breaks SPF/DKIM alignment and lands every verification code in spam.
-    this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@sheemu.app';
+    this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@sheemu.com';
     this.fromName = process.env.SENDGRID_FROM_NAME ?? 'Sheemu';
     this.configured = Boolean(apiKey);
 
@@ -107,14 +107,14 @@ export class MailService {
       `Sheemu is currently in a closed beta, so access is granted personally. ` +
       `You're on the waitlist now — we'll email you the moment your account is approved.\n\n` +
       `Once you're in, your beta account comes with 5 minutes of recording per day, free of charge.\n\n` +
-      `Questions? Write to support@sheemu.app.`;
+      `Questions? Write to support@sheemu.com.`;
     const html = layout(
       "You're on the waitlist",
       `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
        <p>Thanks for signing up for the <strong>Sheemu</strong> beta!</p>
        <p>Sheemu is currently in a closed beta, so access is granted personally. You're on the waitlist now — we'll email you the moment your account is approved.</p>
        <p>Once you're in, your beta account comes with <strong>5 minutes of recording per day</strong>, free of charge.</p>
-       <p class="muted">Questions? Write to support@sheemu.app.</p>`,
+       <p class="muted">Questions? Write to support@sheemu.com.</p>`,
     );
     await this.send({ to, subject, html, text });
   }
@@ -128,7 +128,7 @@ export class MailService {
       `Good news: your Sheemu beta account has been approved!\n\n` +
       `Sign in and start recording — hum, sing or play, and watch the notation appear:\n${appUrl}/login\n\n` +
       `Your beta plan includes 5 minutes of recording per day.\n\n` +
-      `Have fun, and tell us everything that feels rough: support@sheemu.app.`;
+      `Have fun, and tell us everything that feels rough: support@sheemu.com.`;
     const html = layout(
       "You're in!",
       `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
@@ -136,7 +136,7 @@ export class MailService {
        <p>Sign in and start recording — hum, sing or play, and watch the notation appear.</p>
        ${button(`${appUrl}/login`, 'Open Sheemu')}
        <p>Your beta plan includes <strong>5 minutes of recording per day</strong>.</p>
-       <p class="muted">Have fun, and tell us everything that feels rough: support@sheemu.app.</p>`,
+       <p class="muted">Have fun, and tell us everything that feels rough: support@sheemu.com.</p>`,
     );
     await this.send({ to, subject, html, text });
   }
