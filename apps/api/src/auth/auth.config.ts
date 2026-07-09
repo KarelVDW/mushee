@@ -6,6 +6,15 @@ import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields }
 import { postgresSsl } from '../database/postgres-ssl';
 import { mailService } from '../mail/mail.service';
 
+// better-auth reads BETTER_AUTH_SECRET from the environment itself; its
+// built-in fallback is a publicly known constant, so booting production
+// without a real secret would make every session token forgeable.
+if (process.env.NODE_ENV === 'production' && !process.env.BETTER_AUTH_SECRET) {
+  throw new Error(
+    'BETTER_AUTH_SECRET must be set in production — better-auth would otherwise sign sessions with a public default.',
+  );
+}
+
 const pool = new Pool({
   connectionString:
     process.env.POSTGRES_URL ??
@@ -23,9 +32,9 @@ export const auth = betterAuth({
   trustedOrigins,
   database: pool,
   // Production serves web and API on different hosts of one site (e.g.
-  // sheemu.app + api.sheemu.app). The session cookie must be scoped to the
+  // sheemu.com + api.sheemu.com). The session cookie must be scoped to the
   // shared parent domain or the web middleware never sees it. Set
-  // COOKIE_DOMAIN to that parent (e.g. '.sheemu.app'); leave unset for
+  // COOKIE_DOMAIN to that parent (e.g. '.sheemu.com'); leave unset for
   // same-host dev.
   ...(process.env.COOKIE_DOMAIN
     ? {

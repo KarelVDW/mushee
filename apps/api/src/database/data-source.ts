@@ -26,6 +26,16 @@ import { postgresSsl } from './postgres-ssl';
  * its schema is snapshotted into these migrations (BetterAuthSchema) so boot
  * alone fully provisions a fresh database.
  */
+// The mushee:mushee@localhost fallbacks below exist for local dev only; a
+// production pod that reaches them is misconfigured (Secret not mounted) and
+// must not sit in a crash-loop of connection errors that looks like a DB
+// outage.
+if (process.env.NODE_ENV === 'production' && !process.env.POSTGRES_URL && !process.env.POSTGRES_PASSWORD) {
+  throw new Error(
+    'POSTGRES_URL or POSTGRES_PASSWORD must be set in production — refusing to fall back to the local dev credentials.',
+  );
+}
+
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   // POSTGRES_URL wins when set — better-auth and the seeder already read it,
