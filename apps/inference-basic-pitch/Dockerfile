@@ -28,5 +28,11 @@ COPY apps/inference-basic-pitch/server.py .
 
 ENV PORT=50052 \
     TF_CPP_MIN_LOG_LEVEL=3
+
+# Non-root, matching the k8s securityContext (runAsUser 1000). Home dir is
+# real so TF/numba cache writes don't fail.
+RUN useradd --create-home --uid 1000 app
+USER app
+
 EXPOSE 50052
 CMD ["python", "server.py"]

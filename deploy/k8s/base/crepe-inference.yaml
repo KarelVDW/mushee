@@ -17,6 +17,12 @@ spec:
         - name: crepe-inference
           image: mushee/crepe-inference:latest # build & push from apps/inference-crepe/Dockerfile
           imagePullPolicy: Always # local overlay patches this back for locally-built images
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000 # `app` user in the image
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ['ALL'] }
           ports:
             - containerPort: 50051
           env:
