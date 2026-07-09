@@ -62,7 +62,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
 ### Domain / legal placeholders
 
 - Placeholder identity "Sheemu Music BV, Voorbeeldstraat 12" + unowned
-  `support@`/`privacy@`/`hello@`/`legal@sheemu.app` mailboxes appear in
+  `support@`/`privacy@`/`hello@`/`legal@sheemu.com` mailboxes appear in
   `/privacy`, `/terms`, `/contact`, settings, and transactional email bodies —
   grep for `Voorbeeldstraat` and the mailboxes when replacing.
 - Pick one canonical domain and align everything: `NEXT_PUBLIC_SITE_URL`
@@ -71,7 +71,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 ### Deploy-time musts (code is ready, config is yours)
 
-1. Topology `sheemu.app` + `api.sheemu.app`; `COOKIE_DOMAIN=.sheemu.app`. The
+1. Topology `sheemu.com` + `api.sheemu.com`; `COOKIE_DOMAIN=.sheemu.com`. The
    proxy accepts both `__Secure-` and plain cookie names, but the cookie must
    *reach* it — same parent domain required. Smoke-test one real HTTPS login first.
 2. `POSTGRES_SSL=require` (or `verify` + `POSTGRES_SSL_CA`) against managed

@@ -11,7 +11,7 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 
 1. **Real legal/business values** *(owner input — PR B6)*
    Replace the placeholder entity ("Sheemu Music BV", Voorbeeldstraat 12), postal address,
-   and mailboxes (`support@` / `privacy@` / `hello@` @sheemu.app) in /privacy, /terms,
+   and mailboxes (`support@` / `privacy@` / `hello@` @sheemu.com) in /privacy, /terms,
    /contact; confirm Belgium as governing law; have a lawyer review both documents.
    The privacy policy was just rewritten for stored recording audio (2026-07-08) — include
    that section in the review.
@@ -23,9 +23,15 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    Provision with TLS (`POSTGRES_SSL=require|verify`), enable PITR/backups, and **rehearse
    one restore** before launch.
 4. **Domain topology + one real HTTPS login** *(PR B2 follow-through)*
-   `sheemu.app` + `api.sheemu.app`, set `COOKIE_DOMAIN=.sheemu.app`, `WEB_APP_URL`,
+   `sheemu.com` + `api.sheemu.com`, set `COOKIE_DOMAIN=.sheemu.com`, `WEB_APP_URL`,
    `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `NEXT_PUBLIC_SITE_URL`, `TRUST_PROXY=1`. Smoke-test
    signup → login → editor on the real domains before anything else.
+   *Update 2026-07-09: domain decided (sheemu.com; repo-wide sweep off the old
+   sheemu.app placeholder done). Deploy targets decided: web on Vercel, API +
+   inference on GKE. The API-side topology values are now committed in
+   `deploy/k8s/overlays/production/api-patch.yaml`; the web vars go into the
+   Vercel build env (all `NEXT_PUBLIC_*` are build-time baked). Remaining: DNS,
+   the Vercel project, and the smoke test itself.*
 5. **Email deliverability**: SendGrid production key, sender domain auth (SPF/DKIM/DMARC),
    real mailboxes receiving. Signup dead-ends at OTP without this.
 6. **Polar production setup**: create products, set `POLAR_PRODUCT_<TIER>_<INTERVAL>` ids,
@@ -40,6 +46,21 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    production-hardening section (`TRUST_PROXY`, `COOKIE_DOMAIN`, `RATE_LIMIT_*`,
    `MAX_BODY_BYTES`, `LOG_FORMAT`, `RECORDING_*` caps) with code-verified defaults.
    The web `.env.example` was already in sync.
+
+8b. ~~**Production deploy layer** *(found missing in the 2026-07-09 pre-deploy audit)*~~ —
+   **done 2026-07-09** (numbered 8b so the item numbers notes.md references keep pointing
+   at the same entries): `deploy/k8s/overlays/production` (namespace, Artifact Registry
+   retags, GKE Ingress + ManagedCertificate + BackendConfig with the /health check and a
+   2 h WebSocket timeout, workload-identity ServiceAccount, non-secret prod env in
+   `api-patch.yaml`) with a provisioning runbook in its README;
+   `.github/workflows/deploy.yml` builds/pushes SHA-tagged images and applies the
+   overlay (manual dispatch). Also from that audit: `BETTER_AUTH_SECRET` documented +
+   prod boot guard, prod guard against default Postgres creds, inference containers
+   non-root (Dockerfiles + securityContexts — re-run `check-inference-parity` on the
+   rebuilt images before first prod rollout), baseline web security headers (CSP is a
+   deliberate follow-up: needs nonce plumbing for Next hydration + PostHog replay).
+   Replace `PROJECT_ID` placeholders (overlay kustomization, service-account.yaml,
+   deploy.yml) once the GCP project exists.
 
 ## Phase 2 — should land in the first beta weeks (safety & confidence)
 
