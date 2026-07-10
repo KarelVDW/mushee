@@ -101,7 +101,9 @@ Registry image retags, HTTPS ingress with a Google-managed certificate for
 one-time GCP provisioning runbook (registry, Autopilot cluster, Cloud SQL,
 bucket, static IP, `Secret/api-secrets`), and `.github/workflows/deploy.yml`
 builds/pushes the images and applies the overlay with immutable SHA tags. The
-web app deploys separately on Vercel. On any other cluster, start from
+web app deploys separately on Vercel. Operational guides — secret rotation,
+new environments, rollback/incident playbook, database recovery, ending the
+beta — live in `deploy/runbooks/`. On any other cluster, start from
 `deploy/k8s/base` instead; it must provide:
 
 - `Secret/api-secrets` with `POSTGRES_*` (managed database), `BETTER_AUTH_SECRET`,
