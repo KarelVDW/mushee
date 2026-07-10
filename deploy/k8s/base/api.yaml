@@ -49,9 +49,16 @@ spec:
             # Headroom for recording sessions: decoded PCM grows ~320 MB/hour
             # and the per-session cap (RECORDING_MAX_SECONDS) is 1 h by default.
             limits: { cpu: '1', memory: 1Gi }
+          # Boot includes locked migrations against a possibly-cold database
+          # and took >100 s on a fresh Autopilot node (first prod rollout got
+          # liveness-killed once) — cover boot with a startup probe so
+          # liveness only watches an app that has already come up.
+          startupProbe:
+            httpGet: { path: /health, port: 3000 }
+            failureThreshold: 36
+            periodSeconds: 5
           readinessProbe:
             httpGet: { path: /health, port: 3000 }
-            initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet: { path: /health, port: 3000 }

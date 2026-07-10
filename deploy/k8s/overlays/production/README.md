@@ -31,6 +31,13 @@ gcloud sql users create mushee --instance=mushee-prod --password='<generate one>
 # …then REHEARSE ONE RESTORE before launch (clone from a backup to a throwaway
 # instance and connect once). Non-negotiable.
 
+# 3b. Let the Autopilot nodes pull from Artifact Registry. New GCP projects
+# no longer auto-grant the default compute SA any roles, so without this the
+# first rollout sits in ImagePullBackOff (bitten 2026-07-10).
+gcloud projects add-iam-policy-binding sheemu-prod \
+  --member="serviceAccount:940791749471-compute@developer.gserviceaccount.com" \
+  --role=roles/artifactregistry.reader
+
 # 4. Workload identity: GSA for the API, bucket access, KSA binding.
 gcloud iam service-accounts create mushee-api
 gcloud storage buckets add-iam-policy-binding gs://sheemu-prod-storage \
