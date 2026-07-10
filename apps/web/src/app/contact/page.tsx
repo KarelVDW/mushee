@@ -8,8 +8,6 @@ export const metadata: Metadata = {
     alternates: { canonical: '/contact' },
 }
 
-// NOTE: all contact details below are placeholders — swap in the real
-// company data before launch (see meta/notes.md § Domain / legal placeholders).
 
 const CHANNELS: { label: string; email: string; blurb: string }[] = [
     { label: 'Support', email: 'support@sheemu.com', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
@@ -37,11 +35,13 @@ export default function ContactPage() {
 
             <h2>Postal address</h2>
             <p>
-                Sheemu (Sheemu Music BV)
+                Sheemu · Karel Van De Winkel
                 <br />
-                Voorbeeldstraat 12
+                Capucienenlaan 23
                 <br />
-                2000 Antwerp, Belgium
+                9300 Aalst, Belgium
+                <br />
+                Enterprise no. 1039.906.118
             </p>
 
             <h2>In the app</h2>

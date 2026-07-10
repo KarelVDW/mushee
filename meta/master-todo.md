@@ -9,12 +9,12 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 
 ## Phase 1 — must happen before the beta opens (blockers)
 
-1. **Real legal/business values** *(owner input — PR B6)*
-   Replace the placeholder entity ("Sheemu Music BV", Voorbeeldstraat 12), postal address,
-   and mailboxes (`support@` / `privacy@` / `hello@` @sheemu.com) in /privacy, /terms,
-   /contact; confirm Belgium as governing law; have a lawyer review both documents.
-   The privacy policy was just rewritten for stored recording audio (2026-07-08) — include
-   that section in the review.
+1. **Real legal/business values** *(owner input — PR B6)* — **values done 2026-07-10**:
+   pages now name Karel Van De Winkel, trading as Sheemu (sole proprietorship, enterprise
+   no. 1039.906.118), Capucienenlaan 23, 9300 Aalst; Belgium confirmed as governing law.
+   Remaining: add `support@`/`privacy@`/`legal@`/`hello@` as Workspace aliases of
+   `info@sheemu.com`, and have a lawyer review both documents (include the stored-
+   recording-audio section rewritten 2026-07-08).
 2. **Production storage bucket (GCS)** *(new since the rclone removal)*
    Create the GCS bucket, enable object versioning, wire workload identity (or a service
    account) for the API, set `STORAGE_DRIVER=gcs` + `GCS_BUCKET` in `Secret/api-secrets`.

@@ -9,10 +9,8 @@ export const metadata: Metadata = {
     alternates: { canonical: '/privacy' },
 }
 
-const LAST_UPDATED = '8 July 2026'
+const LAST_UPDATED = '10 July 2026'
 
-// NOTE: contact details and the legal entity below are placeholders — swap in
-// the real company data before launch (see meta/notes.md § Domain / legal placeholders).
 
 export default function PrivacyPolicyPage() {
     return (
@@ -26,8 +24,9 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="controller">1. Who is responsible for your data</h2>
             <p>
-                The data controller for Sheemu is <strong>Sheemu (Sheemu Music BV)</strong>, Voorbeeldstraat 12, 2000 Antwerp, Belgium
-                (&quot;Sheemu&quot;, &quot;we&quot;, &quot;us&quot;). For any privacy matter, contact{' '}
+                The data controller for Sheemu is <strong>Karel Van De Winkel, trading as Sheemu</strong> (sole proprietorship,
+                enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Sheemu&quot;, &quot;we&quot;,
+                &quot;us&quot;). For any privacy matter, contact{' '}
                 <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>.
             </p>
 
@@ -238,7 +237,7 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="contact">10. Contact</h2>
             <p>
-                Sheemu (Sheemu Music BV) · Voorbeeldstraat 12, 2000 Antwerp, Belgium ·{' '}
+                Karel Van De Winkel, trading as Sheemu · Capucienenlaan 23, 9300 Aalst, Belgium ·{' '}
                 <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>. General questions:{' '}
                 <a href="mailto:support@sheemu.com">support@sheemu.com</a> or the <Link href="/contact">contact page</Link>.
             </p>

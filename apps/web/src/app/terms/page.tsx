@@ -9,17 +9,15 @@ export const metadata: Metadata = {
     alternates: { canonical: '/terms' },
 }
 
-const LAST_UPDATED = '8 July 2026'
-
-// NOTE: legal entity, governing law, and contact details are placeholders —
-// swap in the real company data before launch (see meta/notes.md § Domain / legal placeholders).
+const LAST_UPDATED = '10 July 2026'
 
 export default function TermsPage() {
     return (
         <PublicPageShell title="Terms of Service" subtitle={`Last updated: ${LAST_UPDATED}`}>
             <p>
-                These terms are the agreement between you and <strong>Sheemu (Sheemu Music BV)</strong>, Voorbeeldstraat 12, 2000
-                Antwerp, Belgium (&quot;Sheemu&quot;, &quot;we&quot;) for the use of the Sheemu web application and website. By
+                These terms are the agreement between you and <strong>Karel Van De Winkel, trading as Sheemu</strong> (sole
+                proprietorship, enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Sheemu&quot;,
+                &quot;we&quot;) for the use of the Sheemu web application and website. By
                 creating an account or using Sheemu you accept them. If you don&apos;t agree, please don&apos;t use the service.
             </p>
 
@@ -132,8 +130,9 @@ export default function TermsPage() {
 
             <h2>12. Contact</h2>
             <p>
-                Sheemu (Sheemu Music BV) · Voorbeeldstraat 12, 2000 Antwerp, Belgium ·{' '}
-                <a href="mailto:legal@sheemu.com">legal@sheemu.com</a> · <Link href="/contact">contact page</Link>.
+                Karel Van De Winkel, trading as Sheemu · Capucienenlaan 23, 9300 Aalst, Belgium · enterprise no.
+                1039.906.118 · <a href="mailto:legal@sheemu.com">legal@sheemu.com</a> ·{' '}
+                <Link href="/contact">contact page</Link>.
             </p>
         </PublicPageShell>
     )

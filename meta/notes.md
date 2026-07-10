@@ -59,15 +59,18 @@ bug-fix logs were dropped; what remains is still-true reference material.
   `UPDATE user_subscriptions SET "tierId"='free' WHERE "tierId"='beta';`
 - Local dev: `demo@mushee.local` is seeded as admin; demo accounts pre-approved.
 
-### Domain / legal placeholders
+### Domain / legal identity (real since 2026-07-10)
 
-- Placeholder identity "Sheemu Music BV, Voorbeeldstraat 12" + unowned
-  `support@`/`privacy@`/`hello@`/`legal@sheemu.com` mailboxes appear in
-  `/privacy`, `/terms`, `/contact`, settings, and transactional email bodies —
-  grep for `Voorbeeldstraat` and the mailboxes when replacing.
-- Pick one canonical domain and align everything: `NEXT_PUBLIC_SITE_URL`
-  (drives sitemap/robots/OG), the mail from-address, and DNS (SPF/DKIM/DMARC
-  for SendGrid). Governing law is set to Belgium in the ToS (guessed).
+- Legal identity on `/privacy`, `/terms`, `/contact`: **Karel Van De Winkel,
+  trading as Sheemu** (Belgian sole proprietorship, enterprise no.
+  1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium. Not VAT-registered
+  yet — revisit the pages (and Polar tax settings) if that changes.
+  Governing law: Belgium. Lawyer review of both documents still outstanding.
+- Canonical domain is **sheemu.com** (apex; www 308-redirects to it — the
+  Vercel primary domain must stay the apex or CORS breaks). Mail from-address
+  `no-reply@sheemu.com`, domain-authenticated in SendGrid. Real mailbox is
+  `info@sheemu.com` (Google Workspace); `support@`/`privacy@`/`hello@`/
+  `legal@` should be aliases of it (Admin console → user → Email aliases).
 
 ### Deploy-time musts (code is ready, config is yours)
 
