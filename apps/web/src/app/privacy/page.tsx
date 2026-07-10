@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/privacy' },
 }
 
-const LAST_UPDATED = '10 July 2026'
+const LAST_UPDATED = '11 July 2026'
 
 
 export default function PrivacyPolicyPage() {
@@ -75,15 +75,24 @@ export default function PrivacyPolicyPage() {
                 . Legal basis: <strong>performance of a contract</strong>.
             </p>
 
-            <h3>Analytics, session replay &amp; error tracking (opt-in)</h3>
+            <h3>Anonymous usage statistics (no cookies)</h3>
             <p>
-                With your <strong>consent</strong> — and only with it — we use <strong>PostHog</strong> (hosted in the EU, Frankfurt)
-                to understand how Sheemu is used: which features get used (product &amp; web analytics), pseudonymous session replays
-                of rough edges in the interface — linked to your account id but never your name or email, with keystrokes and form
-                inputs masked — and reports of errors you run into. You give
-                or refuse this consent in the cookie banner and can change your mind any time via{' '}
-                <strong>Cookie settings</strong> in the footer. Refusing has no effect on how Sheemu works. Legal basis:{' '}
-                <strong>consent</strong> (Art. 6(1)(a) GDPR).
+                We use <strong>PostHog</strong> (hosted in the EU, Frankfurt) to count page visits and feature use in{' '}
+                <strong>anonymous, cookieless</strong> form: nothing is stored on your device, no profile is built, and the events
+                are not linked to your account or identity. We use these counts to understand what gets used and to improve Sheemu.
+                Legal basis: <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in understanding aggregate usage of the
+                service — contact <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a> to object.
+            </p>
+
+            <h3>Session replay &amp; account-linked analytics (opt-in)</h3>
+            <p>
+                With your <strong>consent</strong> — and only with it — we additionally enable pseudonymous session replays of rough
+                edges in the interface — linked to your account id but never your name or email, with keystrokes and form inputs
+                masked — link analytics events to your account id, and set one persistent PostHog cookie so your visits connect.
+                You give or refuse this consent in the cookie banner and can change your mind any time via{' '}
+                <strong>Cookie settings</strong> in the footer; withdrawing deletes the cookie and drops you back to the anonymous
+                statistics above. Refusing has no effect on how Sheemu works. Legal basis: <strong>consent</strong> (Art. 6(1)(a)
+                GDPR).
             </p>
             <p>
                 Independent of consent, our servers report <strong>technical errors</strong> (stack traces, request metadata — not

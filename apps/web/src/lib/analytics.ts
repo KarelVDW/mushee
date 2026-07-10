@@ -4,14 +4,19 @@ import { hasAnalyticsConsent, onConsentChange } from './consent'
 
 /**
  * PostHog wiring — product analytics, web analytics, session replay, and
- * error tracking — strictly gated behind cookie consent:
+ * error tracking — in a two-tier consent model:
  *
  * - No key configured → everything here is a no-op.
- * - Initialized opted-out with in-memory persistence, so before (or without)
- *   consent PostHog stores nothing and sends nothing.
- * - On consent: opt in, move persistence to cookies/localStorage, start
- *   session recording, and backfill the current pageview.
- * - On withdrawal: opt back out and drop to memory persistence.
+ * - Base tier (everyone, no consent needed): cookieless anonymous capture.
+ *   In-memory persistence and `person_profiles: 'identified_only'`, so
+ *   nothing is written to the device and events stay PostHog "anonymous
+ *   events" with no person profile — top-line usage data without touching
+ *   ePrivacy storage. Session replay stays off.
+ * - Consent tier (opt-in via the cookie banner): persistence moves to
+ *   cookies/localStorage, events are identified with the account id, and
+ *   session replay starts (inputs always masked).
+ * - On withdrawal: identifiers are wiped (posthog.reset drops the ph_*
+ *   cookie) and capture drops back to the anonymous base tier.
  *
  * Events are proxied through /ingest (next.config.ts rewrites) so ad
  * blockers don't silently blind us.
@@ -21,6 +26,9 @@ const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 const UI_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com'
 
 let initialized = false
+
+/** The signed-in user, remembered so a consent grant can identify retroactively. */
+let currentUserId: string | null = null
 
 export function isAnalyticsEnabled(): boolean {
     return initialized
@@ -34,12 +42,13 @@ export function initAnalytics(): void {
         api_host: '/ingest',
         ui_host: UI_HOST.replace('.i.posthog.com', '.posthog.com'),
         defaults: '2026-05-30',
-        // Consent-first: nothing leaves the browser until opt-in.
-        opt_out_capturing_by_default: true,
+        // Base tier: capture for everyone, but cookieless (nothing on the
+        // device) and anonymous (no person profile until identify).
         persistence: 'memory',
+        person_profiles: 'identified_only',
         // Error tracking: capture unhandled exceptions + rejections.
         capture_exceptions: true,
-        // Session replay starts only after consent; inputs always masked.
+        // Session replay is consent-tier only; inputs always masked.
         disable_session_recording: true,
         session_recording: {
             maskAllInputs: true,
@@ -54,39 +63,42 @@ function applyConsent(granted: boolean): void {
     if (!initialized) return
     if (granted) {
         posthog.set_config({ persistence: 'localStorage+cookie', disable_session_recording: false })
-        if (posthog.has_opted_out_capturing()) {
-            posthog.opt_in_capturing({ captureEventName: null })
-            // The initial pageview fired while opted out; recapture it.
-            posthog.capture('$pageview')
-        }
         posthog.startSessionRecording()
+        // Link the session to the account now that we're allowed to.
+        if (currentUserId && posthog.get_distinct_id() !== currentUserId) {
+            posthog.identify(currentUserId)
+        }
     } else {
-        posthog.opt_out_capturing()
-        // Clear identifiers persisted while consent was granted (withdrawal
-        // must remove the ph_* cookie/localStorage, not just stop capture),
-        // then drop back to memory-only persistence.
+        // Wipe identifiers persisted while consent was granted (withdrawal
+        // must remove the ph_* cookie/localStorage, not just unlink), then
+        // continue capturing anonymously in memory.
+        posthog.stopSessionRecording()
         posthog.reset()
         posthog.set_config({ persistence: 'memory', disable_session_recording: true })
     }
 }
 
-/** Track a product event. Safe to call anywhere — no-op without consent/key. */
+/** Track a product event. Safe to call anywhere — anonymous without consent,
+ *  account-linked with it; no-op without a key. */
 export function track(event: string, properties?: Record<string, unknown>): void {
     if (!initialized) return
     posthog.capture(event, properties)
 }
 
-/** Tie events to the signed-in account. Id only — never email/name: the
- *  privacy policy describes replays/analytics as pseudonymous, so the profile
- *  must not carry direct identifiers. */
+/** Tie events to the signed-in account — only once the user consented, and
+ *  id only, never email/name: the privacy policy describes replays/analytics
+ *  as pseudonymous, so the profile must not carry direct identifiers. */
 export function identifyUser(user: { id: string; email?: string; name?: string }): void {
     if (!initialized) return
+    currentUserId = user.id
+    if (!hasAnalyticsConsent()) return
     if (posthog.get_distinct_id() === user.id) return
     posthog.identify(user.id)
 }
 
 /** On sign-out: unlink the device from the account. */
 export function resetAnalyticsIdentity(): void {
+    currentUserId = null
     if (!initialized) return
     posthog.reset()
 }

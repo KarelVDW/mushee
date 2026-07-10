@@ -13,8 +13,10 @@ export function openCookieSettings(): void {
 
 /**
  * GDPR consent banner + preferences dialog, mounted app-wide in Providers.
- * Analytics (PostHog) stays off until the user opts in; "Essential only"
- * is as easy to pick as "Accept all", as the GDPR requires.
+ * Anonymous cookieless usage stats run regardless (nothing stored on the
+ * device — see lib/analytics.ts); the opt-in here covers session replay,
+ * account-linked analytics, and the persistent PostHog cookie. "Essential
+ * only" is as easy to pick as "Accept all", as the GDPR requires.
  */
 export function CookieConsent() {
     const [decided, setDecided] = useState(true) // assume decided until mounted, to avoid a flash
@@ -67,10 +69,24 @@ export function CookieConsent() {
                             </p>
                         </div>
                         <div className="bg-surface-container-low rounded-md px-4 py-3.5 flex flex-col gap-2">
-                            <Switch checked={analyticsChoice} onChange={setAnalyticsChoice} label="Analytics & session replay" />
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">
+                                    Anonymous statistics
+                                </span>
+                                <span className="font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                                    Always on · no cookies
+                                </span>
+                            </div>
                             <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                                Helps us understand which features get used, watch anonymized replays of rough edges, and catch errors
-                                (PostHog, hosted in the EU). Off by default — nothing is collected unless you turn it on.
+                                Counts pages and feature use without cookies or anything stored on your device — never linked to who
+                                you are (PostHog, hosted in the EU).
+                            </p>
+                        </div>
+                        <div className="bg-surface-container-low rounded-md px-4 py-3.5 flex flex-col gap-2">
+                            <Switch checked={analyticsChoice} onChange={setAnalyticsChoice} label="Session replay & linked analytics" />
+                            <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
+                                Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug
+                                your issues. Uses one PostHog cookie. Off by default.
                             </p>
                         </div>
                         <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
@@ -98,8 +114,8 @@ export function CookieConsent() {
                     Cookies
                 </span>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
-                    Sheemu uses essential cookies to keep you signed in. With your permission we&apos;d also use analytics to improve the
-                    editor — that&apos;s entirely up to you.{' '}
+                    Sheemu uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
+                    we&apos;d also use session replay to improve the editor — that&apos;s entirely up to you.{' '}
                     <Link href="/privacy#cookies" className="text-primary underline">
                         Learn more
                     </Link>

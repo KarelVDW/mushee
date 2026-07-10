@@ -140,12 +140,18 @@ bug-fix logs were dropped; what remains is still-true reference material.
 - **Editor chrome**: in-flow bottom tool dock chosen over a left vertical rail —
   it keeps the horizontal controls and popovers-open-upward pattern and fixes
   the old overlap by construction. If tool count truly explodes, revisit the rail.
-- **Consent design**: one `analytics` category (PostHog bundles analytics,
-  replay, error tracking — one purpose), versioned via `CONSENT_VERSION` so
-  changing what you track re-prompts everyone. PostHog initializes opted-out
-  with in-memory persistence (nothing stored pre-consent); withdrawal calls
-  `posthog.reset()`. Server-side error reports run on legitimate interest.
-  PostHog `identify` sends the account id only — policy says "pseudonymous".
+- **Consent design** (two-tier since 2026-07-11, CONSENT_VERSION 2): base
+  tier for everyone is cookieless anonymous capture (in-memory persistence +
+  `person_profiles: 'identified_only'` — nothing on the device, no identity,
+  legitimate interest) so top-line traffic isn't consent-gated; the one
+  `analytics` consent toggle upgrades to session replay + account-id-linked
+  events + the persistent ph_* cookie. Withdrawal calls `posthog.reset()`
+  (drops the cookie) and falls back to the anonymous tier — never to
+  opt-out. `identify` is consent-gated and sends the account id only —
+  policy says "pseudonymous". Server-side error reports run on legitimate
+  interest. `CONSENT_VERSION` re-prompts everyone when tracking meaning
+  changes. Caveat: anonymous unique-visitor counts overcount (memory
+  persistence = new id per page load); pageview/event counts are exact.
 - **Landing honesty**: one plan catalogue (three divergent copies consolidated),
   feature lists trimmed to what the backend enforces (recording time), fabricated
   testimonials removed. The hero is a hand-built animation

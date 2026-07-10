@@ -1,13 +1,16 @@
 /**
  * GDPR cookie-consent store. One consent record, versioned so a future
  * change in what we track re-prompts everyone. 'necessary' (session cookie,
- * the consent choice itself) needs no consent; 'analytics' (PostHog:
- * product analytics, session replay, error tracking) is strictly opt-in —
- * nothing analytics-related runs before the user says yes.
+ * the consent choice itself) needs no consent; anonymous cookieless usage
+ * stats also run without consent (legitimate interest — nothing stored on
+ * the device, no identity). The 'analytics' toggle is the opt-in upgrade:
+ * session replay, account-linked analytics, and the persistent ph_* cookie.
  */
 
-/** Bump when the categories or their meaning change — users get re-asked. */
-export const CONSENT_VERSION = 1
+/** Bump when the categories or their meaning change — users get re-asked.
+ *  v2 (2026-07-11): base analytics became always-on anonymous/cookieless;
+ *  the consent toggle now covers replay + account linking + the cookie. */
+export const CONSENT_VERSION = 2
 
 const STORAGE_KEY = 'sheemu:consent'
 
