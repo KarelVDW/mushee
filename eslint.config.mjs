@@ -18,6 +18,8 @@ export default tseslint.config(
             '**/coverage/**',
             // Local Python venvs (fetch-crepe-model.sh / basic-pitch tooling) ship their own JS assets
             '**/.venv-*/**',
+            // Claude Code scratch worktrees are throwaway repo copies, not source
+            '**/.claude/**',
         ],
     },
     {

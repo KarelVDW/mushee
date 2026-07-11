@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 
 import { expect, type Page, type Route,test as base } from '@playwright/test'
 
+import { CONSENT_VERSION } from '../src/lib/consent'
+
 /**
  * Shared Playwright fixtures for the mocked-API editor suite.
  *
@@ -159,11 +161,27 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.
+        // Seed the live CONSENT_VERSION — a stale record re-prompts and the banner
+        // then swallows clicks aimed at the bottom dock.
+        await context.addInitScript(
+            ([version]) => {
+                window.localStorage.setItem(
+                    'sheemu:consent',
+                    JSON.stringify({ version, analytics: false, decidedAt: '2026-01-01T00:00:00.000Z' }),
+                )
+            },
+            [CONSENT_VERSION] as const,
+        )
+        // Next's dev-overlay portal intercepts taps aimed at the bottom-left of the
+        // viewport (the mobile dock's note navigator). Dev-server-only; hide it.
         await context.addInitScript(() => {
-            window.localStorage.setItem(
-                'sheemu:consent',
-                JSON.stringify({ version: 1, analytics: false, decidedAt: '2026-01-01T00:00:00.000Z' }),
-            )
+            const hide = () => {
+                const style = document.createElement('style')
+                style.textContent = 'nextjs-portal { display: none !important; }'
+                document.head?.appendChild(style)
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hide)
+            else hide()
         })
         await installApiMocks(page, mock)
         await use(mock)

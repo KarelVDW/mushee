@@ -31,11 +31,19 @@ export default defineConfig({
         actionTimeout: 10_000,
     },
     projects: [
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        { name: 'chromium', testIgnore: '**/mobile.spec.ts', use: { ...devices['Desktop Chrome'] } },
         // WebKit is the most behavior-divergent supported engine (Safari); running
         // the mocked-API suite against it catches Safari-only breakage without
         // needing a Mac-hosted real Safari.
-        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+        { name: 'webkit', testIgnore: '**/mobile.spec.ts', use: { ...devices['Desktop Safari'] } },
+        // Phone chrome is structurally different (transport in the dock, touch
+        // controls, reflowed layout) — the mobile suite runs only its own spec,
+        // and the desktop specs stay off this project.
+        {
+            name: 'mobile-chromium',
+            testMatch: '**/mobile.spec.ts',
+            use: { ...devices['Pixel 7'] },
+        },
     ],
     webServer: {
         command: `next dev --turbopack -p ${WEB_PORT}`,
