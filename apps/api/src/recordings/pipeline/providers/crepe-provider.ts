@@ -46,10 +46,26 @@ const VITERBI_BAND_BINS = VITERBI_SIGMA_BINS * 4;
  *  the very last cached frames are tentative until the next pass confirms them. */
 const RECOMPUTE_TAIL_FRAMES = 5;
 
+/**
+ * Jump-cost floor for the transition prior (see ViterbiOptions.jumpLogFloor),
+ * in nats — e.g. -2.5 lets the path leave a reverb tail after a few frames of
+ * evidence for the new note. OFF BY DEFAULT: the 2026-07 adverse eval measured
+ * it within noise on the synthetic matrix (-0.001 overall) and mildly negative
+ * on real reverberant singing — the reverb-tail-tracking theory it encodes is
+ * not what actually limits reverb recall. Set RECORDING_VITERBI_JUMP_FLOOR to
+ * a negative number to experiment.
+ */
+const JUMP_FLOOR_ENV = process.env.RECORDING_VITERBI_JUMP_FLOOR;
+const VITERBI_JUMP_FLOOR =
+  JUMP_FLOOR_ENV !== undefined && JUMP_FLOOR_ENV !== '' && Number.isFinite(Number(JUMP_FLOOR_ENV))
+    ? Number(JUMP_FLOOR_ENV)
+    : undefined;
+
 const VITERBI_OPTS: ViterbiOptions = {
   numBins: NUM_BINS,
   sigmaBins: VITERBI_SIGMA_BINS,
   bandBins: VITERBI_BAND_BINS,
+  jumpLogFloor: VITERBI_JUMP_FLOOR,
 };
 
 const SEGMENT_OPTS: SegmentOptions = {

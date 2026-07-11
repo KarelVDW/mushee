@@ -8,12 +8,33 @@ export interface DecodedAudio {
 }
 
 /**
- * Build the ffmpeg audio-filter chain shared by the one-shot and streaming
- * decoders. High-pass first (causal IIR, clears sub-bass rumble), then optional
- * `loudnorm`. See `DecodeOptions` for why `loudnorm` is opt-out.
+ * Spectral denoiser inserted when the resolved profile measured a noisy
+ * backdrop (wind, chatter, hiss). afftdn tracks the noise floor over time and
+ * subtracts it per FFT bin; it is deterministic and emits samples in place
+ * (no timeline shift), so the streaming decoder's append-only PCM contract
+ * holds. Overridable for tuning sweeps.
  */
-function buildFilterChain(highpassHz: number, loudnorm: boolean): string {
+/**
+ * The trailing atrim compensates afftdn's constant 25.0 ms analysis delay
+ * (measured by cross-correlation at both 16 kHz and 22.05 kHz) so note onsets
+ * stay on the metronome grid; atrim is causal, so the streaming decoder's
+ * prefix-stable contract holds. An override via RECORDING_DENOISE_FILTER must
+ * bring its own compensation if its filters add latency (the eval's timing
+ * stats catch drift).
+ */
+const DENOISE_FILTER =
+  process.env.RECORDING_DENOISE_FILTER ?? 'afftdn=nr=12:nf=-40:tn=1,atrim=start=0.025';
+
+/**
+ * Build the ffmpeg audio-filter chain shared by the one-shot and streaming
+ * decoders. High-pass first (causal IIR, clears sub-bass rumble), then the
+ * optional denoiser (fed rumble-free audio), then optional `loudnorm` (which
+ * then normalizes the DENOISED level). See `DecodeOptions` for why `loudnorm`
+ * is opt-out.
+ */
+function buildFilterChain(highpassHz: number, loudnorm: boolean, denoise: boolean): string {
   const filters = [`highpass=f=${highpassHz}`];
+  if (denoise) filters.push(DENOISE_FILTER);
   if (loudnorm) filters.push('loudnorm=I=-16:TP=-3');
   return filters.join(',');
 }
@@ -86,6 +107,13 @@ export interface DecodeOptions {
    * up front — skips probing the pipe. Omit to let ffmpeg auto-detect.
    */
   inputFormat?: string;
+
+  /**
+   * Insert the spectral denoiser (see DENOISE_FILTER) between the high-pass
+   * and `loudnorm`. Set from `PipelineProfile.denoise` when the profile scan
+   * measured a noisy backdrop. Defaults to false.
+   */
+  denoise?: boolean;
 }
 
 /**
@@ -122,7 +150,7 @@ export class AudioDecoder {
     // stable across re-runs with longer inputs. loudnorm is optional because
     // it's a look-ahead filter and breaks that property.
     const highpassHz = opts?.highpassHz ?? 80;
-    const filterChain = buildFilterChain(highpassHz, opts?.loudnorm ?? true);
+    const filterChain = buildFilterChain(highpassHz, opts?.loudnorm ?? true, opts?.denoise ?? false);
 
     return new Promise<DecodedAudio>((resolve, reject) => {
       const proc = spawn(
@@ -177,6 +205,8 @@ export interface StreamingDecodeOptions {
   highpassHz?: number;
   /** See `DecodeOptions.inputFormat`. Omit to auto-detect. */
   inputFormat?: string;
+  /** See `DecodeOptions.denoise`. Defaults to false. */
+  denoise?: boolean;
 }
 
 /**
@@ -211,6 +241,7 @@ export class StreamingDecoder {
     const filterChain = buildFilterChain(
       opts?.highpassHz ?? 80,
       opts?.loudnorm ?? true,
+      opts?.denoise ?? false,
     );
     this.buf = new Float32Array(sampleRate * 8); // ~8 s initial, grows as needed
     this.proc = spawn(

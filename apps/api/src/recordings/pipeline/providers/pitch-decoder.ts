@@ -18,6 +18,16 @@ export interface ViterbiOptions {
   /** Truncate the transition kernel beyond ±band bins. Controls per-frame cost
    *  (O(numBins · band) vs O(numBins²)). Pick ≥ 3·sigmaBins. */
   bandBins: number;
+  /**
+   * Floor (in log-probability nats, negative) on the transition prior within
+   * the band — a Gaussian+uniform MIXTURE. The pure Gaussian makes a large
+   * interval quadratically expensive, so when reverb keeps the previous
+   * note's tail alive the path clings to it for hundreds of ms and eats the
+   * next note's onset (arpeggios under reverb collapse). With a floor, any
+   * in-band jump costs at most `-jumpLogFloor` nats, so a few frames of
+   * evidence for the new pitch flips the path. Omit for the pure Gaussian.
+   */
+  jumpLogFloor?: number;
 }
 
 /**
@@ -38,8 +48,9 @@ export function viterbi(
   const kernelSize = 2 * bandBins + 1;
   const logTrans = new Float32Array(kernelSize);
   const twoSigmaSq = 2 * sigmaBins * sigmaBins;
+  const floor = opts.jumpLogFloor ?? -Infinity;
   for (let d = -bandBins; d <= bandBins; d++) {
-    logTrans[d + bandBins] = -(d * d) / twoSigmaSq;
+    logTrans[d + bandBins] = Math.max(-(d * d) / twoSigmaSq, floor);
   }
 
   const logProb = new Float32Array(frames * numBins);

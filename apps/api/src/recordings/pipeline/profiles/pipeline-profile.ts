@@ -25,6 +25,13 @@ export interface PipelineProfile {
   /** basic-pitch note gates. */
   onsetThreshold?: number;
   frameThreshold?: number;
+  /**
+   * Run the decoder's spectral denoiser (afftdn) before transcription — set by
+   * the resolver when the scan measures a noisy backdrop (wind, chatter, hiss).
+   */
+  denoise?: boolean;
+  /** Minimum voiced run length (frames) a note needs — raised under noise. */
+  minFramesPerNote?: number;
 }
 
 /** Absolute clamps for any resolved window. ~A0 to a hair above C8. */
@@ -58,7 +65,10 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     highpassHz: 40,
     minFreqHz: 55,
     maxFreqHz: 700,
-    confidenceThreshold: 0.6,
+    // 0.6 predates the 2026-07 scan fix: the legacy scan often locked onto a
+    // harmonic and routed male voices to `mid`; with the register now read
+    // correctly they land here, and 0.6 cost them recall on the real corpus.
+    confidenceThreshold: 0.5,
   },
   {
     id: 'mid', // trumpet, clarinet, tenor/alto voice, harmonica

@@ -255,6 +255,7 @@ export class RecordingPipeline {
       const decoder = new StreamingDecoder(provider.sampleRate, {
         highpassHz: profile.highpassHz,
         loudnorm: provider.normalizeLoudness,
+        denoise: profile.denoise,
         inputFormat: this.inputFormat,
       });
       decoder.write(Buffer.concat(this.chunks));
@@ -374,6 +375,7 @@ export class RecordingPipeline {
       confidenceThreshold: profile.confidenceThreshold,
       onsetThreshold: profile.onsetThreshold,
       frameThreshold: profile.frameThreshold,
+      minFramesPerNote: profile.minFramesPerNote,
     };
   }
 

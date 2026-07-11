@@ -22,6 +22,44 @@ export interface ProfileHint {
   instrumentId?: string;
 }
 
+/**
+ * Noise-adaptation thresholds (tuned against the adverse tier of the eval
+ * corpus — scripts/eval). A recording counts as noisy when either a
+ * meaningful share of its energetic frames are broadband (wind gusts,
+ * chatter) or its quiet frames sit close to its loud ones (steady backdrop).
+ */
+/** A/B kill-switch shared with pitch-scan.ts: RECORDING_NOISE_ADAPT=0 = legacy. */
+const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0';
+
+/** Env override with default — lets the eval sweep explore without code edits. */
+function envNum(key: string, fallback: number): number {
+  const v = Number(process.env[key]);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+/**
+ * A take counts as noisy when the measured signal-to-backdrop ratio drops
+ * below this. Takes with no measurable backdrop (snrDb undefined — e.g.
+ * wall-to-wall clean legato) are never flagged: absence of quiet frames is
+ * not evidence of noise.
+ */
+const NOISY_MAX_SNR_DB = envNum('RECORDING_NOISY_MAX_SNR_DB', 25);
+const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5);
+/**
+ * Actions taken on a noisy take. ALL DEFAULT TO NO-OPS: the 2026-07 adverse
+ * eval (scripts/eval, echoey-room/wind/street/distant conditions on both the
+ * synthetic and real corpora) measured the confidence/min-frames tightening
+ * as a net LOSS wherever it fired (recall drops outweigh precision gains,
+ * echoey-room -0.03) and the afftdn denoise pass as exactly neutral. The
+ * classifier itself stays on as telemetry (the NOISY flag in the resolver
+ * log + the archived profile id), and the env knobs let ops re-enable the
+ * actions for experiments on real-world traffic.
+ */
+const NOISY_CONFIDENCE_BUMP = envNum('RECORDING_NOISY_CONF_BUMP', 0);
+const NOISY_CONFIDENCE_CAP = 0.75;
+const NOISY_MIN_FRAMES_PER_NOTE = envNum('RECORDING_NOISY_MIN_FRAMES', 4);
+const NOISY_DENOISE = process.env.RECORDING_NOISY_DENOISE === '1';
+
 function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
 }
@@ -58,11 +96,15 @@ export class ProfileResolver {
   ): PipelineProfile {
     const scan = scanPitch(samples, sampleRate);
     const hintRange = rangeForInstrument(hint?.instrumentId);
+    const noisy =
+      (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) ||
+      scan.noisiness >= NOISY_MIN_NOISINESS;
 
     if (!scan.voiced) {
       // No reliable pitch yet — fall back to a wide default, widened to the
-      // hint range if we have one.
-      const base = DEFAULT_PROFILE;
+      // hint range if we have one. (With the harmonicity gate this is also
+      // where pure-backdrop lead-ins land, instead of locking a garbage band.)
+      const base = this.applyNoise(DEFAULT_PROFILE, noisy);
       if (!hintRange) return base;
       return this.finalize(base, hintRange.minHz, hintRange.maxHz, base.id + '+hint');
     }
@@ -85,16 +127,37 @@ export class ProfileResolver {
       highHz = Math.max(highHz, hintRange.maxHz);
     }
 
-    const base = bandFor(scan.medianHz);
+    const base = this.applyNoise(bandFor(scan.medianHz), noisy);
     const profile = this.finalize(base, lowHz, highHz, base.id);
     this.logger.debug(
       `Resolved profile=${profile.id} provider=${profile.providerName} ` +
         `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
         `hp=${profile.highpassHz.toFixed(0)} ` +
         `(scan p10/med/p90=${scan.p10Hz.toFixed(0)}/${scan.medianHz.toFixed(0)}/${scan.p90Hz.toFixed(0)}Hz, ` +
-        `frames=${scan.voicedFrames}, hint=${hint?.instrumentId ?? 'none'})`,
+        `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
+        `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
+        `hint=${hint?.instrumentId ?? 'none'})`,
     );
     return profile;
+  }
+
+  /**
+   * Adapt a band anchor to a measured noisy backdrop: turn on the decoder's
+   * spectral denoiser and tighten the note gates, trading a sliver of clean
+   * recall for not hallucinating notes out of wind, chatter, or reverb wash.
+   */
+  private applyNoise(base: PipelineProfile, noisy: boolean): PipelineProfile {
+    if (!noisy || !NOISE_ADAPT) return base;
+    return {
+      ...base,
+      id: base.id + '+noise',
+      denoise: NOISY_DENOISE || undefined,
+      confidenceThreshold:
+        base.confidenceThreshold === undefined
+          ? undefined
+          : Math.min(NOISY_CONFIDENCE_CAP, base.confidenceThreshold + NOISY_CONFIDENCE_BUMP),
+      minFramesPerNote: NOISY_MIN_FRAMES_PER_NOTE,
+    };
   }
 
   /** Apply the dynamic window + high-pass to a band anchor, with safety rules. */
