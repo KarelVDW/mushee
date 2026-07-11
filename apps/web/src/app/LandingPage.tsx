@@ -20,7 +20,7 @@ export function LandingPage() {
         router.push(authed ? '/scores' : '/signup')
     }
 
-    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : "Start free — no card needed"
+    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : "Start free"
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
