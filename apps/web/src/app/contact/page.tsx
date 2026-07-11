@@ -19,7 +19,7 @@ const CHANNELS: { label: string; email: string; blurb: string }[] = [
 export default function ContactPage() {
     return (
         <PublicPageShell title="Contact" subtitle="Real humans, real inboxes. Pick the one that fits.">
-            <div className="grid grid-cols-2 gap-4 not-prose m-0 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose m-0 mb-8">
                 {CHANNELS.map((c) => (
                     <div key={c.label} className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 flex flex-col gap-2">
                         <span className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">

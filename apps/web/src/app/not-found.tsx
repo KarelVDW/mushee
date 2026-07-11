@@ -6,7 +6,7 @@ import { Wordmark } from '@/components/ui'
 // paths to /login first), so the way home is the library.
 export default function NotFound() {
     return (
-        <div className="min-h-screen bg-surface text-on-surface flex items-center justify-center px-6">
+        <div className="min-h-dvh bg-surface text-on-surface flex items-center justify-center px-6">
             <div className="text-center flex flex-col items-center gap-3">
                 <Wordmark size={28} />
                 <h1 className="font-display font-medium text-[22px] leading-tight">This page doesn&apos;t exist</h1>

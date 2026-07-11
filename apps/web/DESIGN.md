@@ -60,6 +60,20 @@ ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). Ev
 
 ---
 
+## 4b. Mobile (< 768px)
+
+Phones get the same design language, restructured — never a shrunken desktop:
+
+- **The score reflows, it never scales down.** `ScoreLayout` packs rows against the container width (`Score.setLayoutWidth`, floor 340 units), so notation keeps full glyph size and the piece reads as a vertically scrolling column of 1–2-measure rows. Exports stay print-shaped: PDF pins the layout back to the standard 1000-unit width for the snapshot.
+- **Transport moves into the dock.** On phones the header keeps only back / title / instrument chip / export (icon-only); the dock gains an action row — note navigator (◀ ▶), pitch nudges (▼ ▲), then stop / play / **record**. The record button is always the largest control on screen (54px vs 46px play); its emphasis never disappears. The metronome joins the tool strip as a chip.
+- **Touch replaces hover and the keyboard.** Tap selects; horizontal drag extends the selection (`touch-action: pan-y` keeps vertical scrolling native); the hover ghost-pitch preview is mouse-only — pitch edits go through the nudge buttons. The keyboard-shortcuts entry point is hidden. The selection and the playback/recording cursor auto-scroll their row into view.
+- **Dock popovers become sheets.** Clef / key / tempo popovers span the dock's width (`popoverPosition(compact)`) instead of anchoring to their chip — anchored panels clip at the viewport edge.
+- **Tap targets grow on coarse pointers.** Shared controls use `pointer-coarse:` bumps (chips ≥ 40px, segmented ≥ 40px); don't hand-size touch targets per screen.
+- **Full-height surfaces use `dvh`, never `100vh`** (mobile browser toolbars), and the dock pads `env(safe-area-inset-bottom)`.
+- **Page scaffolding stacks below `md`:** multi-column grids go single-column, the auth card stacks its brand panel into a strip, settings' side rail becomes a tab row, the library table collapses to title + updated cards. Section padding steps down (`px-5 sm:px-8`, `py-14 sm:py-22`); display type steps down one size (`text-[34px] sm:text-[48px]`, hero `text-[40px] sm:text-[56px] lg:text-[72px]`).
+
+---
+
 ## 5. Do / Don't
 
 **Do**

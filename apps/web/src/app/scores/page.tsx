@@ -90,15 +90,15 @@ export default function ScoresPage() {
     }
 
     return (
-        <div className="bg-surface text-on-surface min-h-screen flex flex-col">
+        <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => setCreateDialogOpen(true)} />
 
-            <main className="flex-1 max-w-384 mx-auto px-8 py-10 flex flex-col gap-6 w-full box-border">
+            <main className="flex-1 max-w-384 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 w-full box-border">
                 <PageHeader
                     title="Your scores"
                     subtitle="A quiet shelf for everything you're working on."
                     right={
-                        <div className="w-64">
+                        <div className="w-full md:w-64">
                             <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
                         </div>
                     }
@@ -128,10 +128,14 @@ export default function ScoresPage() {
                         <div role="rowgroup">
                             <div
                                 role="row"
-                                className="grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                                className="grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-4 sm:px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
                                 <span role="columnheader">Title</span>
-                                <span role="columnheader">Created</span>
-                                <span role="columnheader">Updated</span>
+                                <span role="columnheader" className="max-md:hidden">
+                                    Created
+                                </span>
+                                <span role="columnheader" className="max-md:hidden">
+                                    Updated
+                                </span>
                                 <span role="columnheader" aria-label="Actions" />
                             </div>
                         </div>
@@ -184,7 +188,7 @@ export default function ScoresPage() {
 
 function EmptyCard({ children }: { children: React.ReactNode }) {
     return (
-        <div className="bg-surface-container-lowest rounded-md p-14 editorial-shadow text-center flex flex-col gap-3 items-center">
+        <div className="bg-surface-container-lowest rounded-md p-8 sm:p-14 editorial-shadow text-center flex flex-col gap-3 items-center">
             {children}
         </div>
     )
@@ -192,7 +196,7 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
 
 function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
     return (
-        <div className="bg-surface-container-lowest rounded-md px-8 py-10 editorial-shadow flex items-center gap-7">
+        <div className="bg-surface-container-lowest rounded-md px-6 sm:px-8 py-8 sm:py-10 editorial-shadow flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-7">
             <svg viewBox="0 0 120 80" width="96" height="64" aria-hidden className="shrink-0">
                 {[0, 1, 2, 3, 4].map((i) => (
                     <line key={i} x1={8} x2={112} y1={20 + i * 10} y2={20 + i * 10} stroke="var(--color-outline-variant)" strokeWidth={1} />
@@ -220,12 +224,12 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
             className={[
                 'group relative overflow-hidden',
                 'bg-surface-container-lowest hover:bg-surface-container-high',
-                'rounded-md px-6 py-4.5 editorial-shadow',
-                'grid grid-cols-[5fr_2fr_2fr_1fr] gap-4 items-center',
+                'rounded-md px-4 sm:px-6 py-4.5 editorial-shadow',
+                'grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-3 md:gap-4 items-center',
                 'transition-colors duration-150 ease-sheemu',
             ].join(' ')}>
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,transform] duration-150 ease-sheemu" />
-            <div role="cell">
+            <div role="cell" className="min-w-0 flex flex-col gap-1">
                 <button
                     onClick={onOpen}
                     type="button"
@@ -238,25 +242,28 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                     ].join(' ')}>
                     {score.title}
                 </button>
+                <span className="md:hidden font-body font-normal text-[12px] leading-none text-on-surface-variant">
+                    {relativeTime(score.updatedAt)}
+                </span>
             </div>
-            <span role="cell" className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
+            <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
                 {formatDate(score.createdAt)}
             </span>
-            <span role="cell" className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
+            <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
                 {relativeTime(score.updatedAt)}
             </span>
             <div role="cell" className="flex gap-2 justify-end">
                 <IconButton
                     icon="pencil"
                     ariaLabel={`Edit ${score.title}`}
-                    size={28}
+                    size={32}
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
                     onClick={onOpen}
                 />
                 <IconButton
                     icon="trash-2"
                     ariaLabel={`Delete ${score.title}`}
-                    size={28}
+                    size={32}
                     hoverTone="magenta"
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
                     onClick={onDelete}

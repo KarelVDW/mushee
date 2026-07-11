@@ -66,12 +66,12 @@ export function Toaster() {
     if (visible.length === 0) return null
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 pointer-events-none" role="status">
+        <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] flex flex-col items-center gap-3 pointer-events-none" role="status">
             {visible.map((toast) => (
                 <div
                     key={toast.id}
                     className={[
-                        'pointer-events-auto flex items-center gap-3 max-w-xl',
+                        'pointer-events-auto flex items-center gap-3 max-w-full sm:max-w-xl',
                         'bg-surface-container-lowest/85 backdrop-blur-[12px] rounded-lg editorial-shadow',
                         'pl-3 pr-2 py-2.5',
                     ].join(' ')}>

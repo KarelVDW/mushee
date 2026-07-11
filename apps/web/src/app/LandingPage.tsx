@@ -23,7 +23,7 @@ export function LandingPage() {
     const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : "Start free — no card needed"
 
     return (
-        <div className="bg-surface min-h-screen flex flex-col">
+        <div className="bg-surface min-h-dvh flex flex-col">
             <LandingNav authed={authed} cta={authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'} onSignIn={onSignIn} onGetStarted={() => onGetStarted('nav')} />
             <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
             <HowItWorks />
@@ -49,16 +49,16 @@ function LandingNav({
     const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
     return (
         <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
-            <div className="max-w-320 mx-auto px-8 py-5 flex justify-between items-center">
+            <div className="max-w-320 mx-auto px-4 sm:px-8 py-4 sm:py-5 flex justify-between items-center gap-3">
                 <Wordmark size={28} />
-                <div className="flex items-center gap-6">
-                    <a href="#how" className={navLinkClass}>
+                <div className="flex items-center gap-4 sm:gap-6">
+                    <a href="#how" className={`${navLinkClass} max-md:hidden`}>
                         How it works
                     </a>
-                    <a href="#features" className={navLinkClass}>
+                    <a href="#features" className={`${navLinkClass} max-md:hidden`}>
                         Features
                     </a>
-                    <a href="#pricing" className={navLinkClass}>
+                    <a href="#pricing" className={`${navLinkClass} max-md:hidden`}>
                         Pricing
                     </a>
                     {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
@@ -83,12 +83,12 @@ function Hero({
     onGetStarted: () => void
 }) {
     return (
-        <section className="relative overflow-hidden pt-16 pb-20">
+        <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
-            <div className="max-w-320 mx-auto px-8 relative z-2 grid grid-cols-[1.05fr_1fr] gap-12 items-center">
+            <div className="max-w-320 mx-auto px-5 sm:px-8 relative z-2 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-12 items-center">
                 <div className="flex flex-col gap-6">
                     <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Live audio-to-notation'}</Eyebrow>
-                    <h1 className="font-display font-bold text-[72px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
+                    <h1 className="font-display font-bold text-[40px] sm:text-[56px] lg:text-[72px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
                         The fastest way to get a melody
                         <br />
                         <em className="font-serif font-normal">on the page.</em>
@@ -134,15 +134,15 @@ function HowItWorks() {
         ],
     ]
     return (
-        <section id="how" className="py-22 px-8">
+        <section id="how" className="py-14 sm:py-22 px-5 sm:px-8">
             <div className="max-w-320 mx-auto">
                 <div className="mb-12">
                     <Eyebrow className="text-primary">How it works</Eyebrow>
-                    <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
+                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
                         From melody to sheet music in one take.
                     </h2>
                 </div>
-                <div className="grid grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {steps.map(([num, title, body]) => (
                         <div key={num} className="flex flex-col gap-3">
                             <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
@@ -192,15 +192,15 @@ function FeatureGrid() {
         ],
     ]
     return (
-        <section id="features" className="py-22 px-8 bg-surface-container-lowest">
+        <section id="features" className="py-14 sm:py-22 px-5 sm:px-8 bg-surface-container-lowest">
             <div className="max-w-320 mx-auto">
-                <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
+                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
                     Quiet tools, real notation.
                 </h2>
                 <p className="font-body font-normal text-[16px] leading-normal text-on-surface-variant max-w-140 m-0 mb-12">
                     Everything you need to catch an idea before it evaporates — nothing you don&apos;t.
                 </p>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {features.map(([icon, title, body]) => (
                         <div key={title} className="bg-surface rounded-lg p-6 flex flex-col gap-3">
                             <div className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
@@ -220,11 +220,11 @@ function FeatureGrid() {
 
 function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
     return (
-        <section id="pricing" className="py-22 px-8">
+        <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
             <div className="max-w-320 mx-auto">
                 <div className="mb-12 text-center">
                     <Eyebrow className="text-primary">Pricing</Eyebrow>
-                    <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
+                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
                         Pay for recording time, nothing else.
                     </h2>
                     <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
@@ -243,7 +243,7 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                     </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
                     {PLAN_TIERS.map((tier) => (
                         <PricingCard key={tier.id} tier={tier} onGetStarted={onGetStarted} />
                     ))}
@@ -309,10 +309,10 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
 
 function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void }) {
     return (
-        <section className="py-24 px-8 relative overflow-hidden">
+        <section className="py-16 sm:py-24 px-5 sm:px-8 relative overflow-hidden">
             <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
             <div className="max-w-190 mx-auto text-center relative z-2 flex flex-col gap-5 items-center">
-                <h2 className="font-display font-bold text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
+                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
                     That melody in your head?
                     <br />
                     <em className="font-serif font-normal">It takes one take.</em>

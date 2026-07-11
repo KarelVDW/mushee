@@ -56,7 +56,7 @@ interface ErrorScreenProps {
  */
 export function ErrorScreen({ title, message, onRetry, retryLabel = 'Try again', onBack, backLabel = 'Go back' }: ErrorScreenProps) {
     return (
-        <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="min-h-dvh bg-surface flex items-center justify-center">
             <div className="text-center flex flex-col items-center gap-4 max-w-md px-8">
                 <Wordmark size={28} />
                 <span className="w-11 h-11 rounded-full bg-error-container text-on-error-container inline-flex items-center justify-center">

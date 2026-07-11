@@ -31,7 +31,7 @@ interface AuthCardProps {
 export function AuthCard(props: AuthCardProps) {
     const isSignup = props.mode === 'signup'
     return (
-        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex overflow-hidden min-h-145 relative">
+        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
             <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
             <BrandPanel mode={props.mode} />
             <FormPanel {...props} isSignup={isSignup} />
@@ -42,9 +42,9 @@ export function AuthCard(props: AuthCardProps) {
 function BrandPanel({ mode }: { mode: AuthMode }) {
     const isSignup = mode === 'signup'
     return (
-        <section className="w-[42%] bg-surface-container-high p-12 flex flex-col justify-between relative overflow-hidden">
+        <section className="md:w-[42%] bg-surface-container-high p-6 md:p-12 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-4 relative overflow-hidden">
             <Wordmark size={32} />
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 max-md:hidden">
                 <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
                     {isSignup ? (
                         <>
@@ -64,6 +64,9 @@ function BrandPanel({ mode }: { mode: AuthMode }) {
                     A simple, fast score editor for the music in your head.
                 </p>
             </div>
+            <p className="md:hidden font-serif italic text-[17px] leading-snug text-on-surface-variant m-0 text-right">
+                {isSignup ? 'Compose without friction.' : 'Welcome back.'}
+            </p>
         </section>
     )
 }
@@ -85,7 +88,7 @@ function FormPanel({
     isSignup,
 }: AuthCardProps & { isSignup: boolean }) {
     return (
-        <section className="flex-1 p-14 flex flex-col relative z-2">
+        <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
             <div className="max-w-90 w-full mx-auto flex-1 flex flex-col">
                 <Tabs mode={mode} />
 
@@ -173,5 +176,5 @@ function SwitchModeRow({ mode }: { mode: AuthMode }) {
 }
 
 export function AuthShell({ children }: { children: ReactNode }) {
-    return <div className="min-h-screen flex items-center justify-center p-8 bg-surface">{children}</div>
+    return <div className="min-h-dvh flex items-center justify-center p-4 py-6 sm:p-8 bg-surface">{children}</div>
 }

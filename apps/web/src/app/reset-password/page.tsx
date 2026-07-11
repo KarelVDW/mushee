@@ -108,12 +108,12 @@ function PasswordResetPageInner() {
 
     return (
         <AuthShell>
-            <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex overflow-hidden min-h-145 relative">
+            <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
                 <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
-                <section className="w-[42%] bg-surface-container-high p-12 flex flex-col justify-between">
+                <section className="md:w-[42%] bg-surface-container-high p-6 md:p-12 flex flex-col justify-between gap-4">
                     <Wordmark size={32} />
                     <div className="flex flex-col gap-4">
-                        <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
+                        <h1 className="font-serif font-normal italic text-[28px] md:text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
                             {stage === 'done' ? (
                                 <>
                                     You&apos;re
@@ -137,7 +137,7 @@ function PasswordResetPageInner() {
                     </div>
                 </section>
 
-                <section className="flex-1 p-14 flex flex-col relative z-2">
+                <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
                     <div className="max-w-90 w-full mx-auto flex-1 flex flex-col gap-6">
                         <div className="flex items-center gap-2">
                             {STAGES.map((s, i) => (

@@ -178,7 +178,7 @@ export function BackgroundStep({ value, onChange }: { value: string | null; onCh
         <StepShell
             title="Where are you in your musical life?"
             subtitle="We tune the editor's defaults and tutorials to your level — pick the closest match.">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {BACKGROUNDS.map(([k, t, b]) => (
                     <OptionCard key={k} active={value === k} onClick={() => onChange(k)} title={t} body={b} />
                 ))}
@@ -224,7 +224,7 @@ export function SourceStep({
         <StepShell
             title="How did you find Sheemu?"
             subtitle="Helps us know what's working — entirely optional, no wrong answers.">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {REFERRAL_SOURCES.map(([k, label]) => (
                     <OptionCard key={k} active={source === k} onClick={() => onSourceChange(k)} title={label} />
                 ))}
@@ -258,7 +258,7 @@ export function PlanStep({
     return (
         <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
             <BillingToggle value={billing} onChange={onBillingChange} />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {plans.map((p) => (
                     <TierCard key={p.id} plan={p} billing={billing} active={tier === p.id} onSelect={() => onTierChange(p.id)} />
                 ))}

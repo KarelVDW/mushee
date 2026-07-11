@@ -29,12 +29,12 @@ export function TopNav({ user, onCreate }: TopNavProps) {
 
     return (
         <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
-            <div className="max-w-384 mx-auto px-8 py-4.5 flex items-center justify-between">
-                <div className="flex items-center gap-6.5">
-                    <Link href="/scores" className="no-underline">
+            <div className="max-w-384 mx-auto px-4 sm:px-8 py-3.5 sm:py-4.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 sm:gap-6.5 min-w-0">
+                    <Link href="/scores" className="no-underline max-[24rem]:hidden">
                         <Wordmark size={28} />
                     </Link>
-                    <div className="flex items-center gap-5.5 ml-4">
+                    <div className="flex items-center gap-4 sm:gap-5.5 sm:ml-4">
                         {items.map((n) => {
                             const active = n.match(pathname ?? '')
                             return (
@@ -54,11 +54,19 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                         })}
                     </div>
                 </div>
-                <div className="flex items-center gap-3.5">
+                <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
                     {onCreate && (
-                        <PrimaryButton onClick={onCreate} icon="plus" emphasis="pop">
-                            New score
-                        </PrimaryButton>
+                        <>
+                            {/* One CTA, two widths: the label costs too much room on a phone. */}
+                            <span className="max-sm:hidden">
+                                <PrimaryButton onClick={onCreate} icon="plus" emphasis="pop">
+                                    New score
+                                </PrimaryButton>
+                            </span>
+                            <span className="sm:hidden">
+                                <PrimaryButton onClick={onCreate} icon="plus" emphasis="pop" ariaLabel="New score" />
+                            </span>
+                        </>
                     )}
                     <button
                         onClick={() => router.push('/settings')}
@@ -89,7 +97,7 @@ export function PageHeader({
     right?: ReactNode
 }) {
     return (
-        <div className="flex justify-between items-end gap-4.5 pb-4.5">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4.5 pb-4.5">
             <div className="flex flex-col gap-2">
                 <PageTitle italic={italic}>{title}</PageTitle>
                 {subtitle && <SubHeadline>{subtitle}</SubHeadline>}

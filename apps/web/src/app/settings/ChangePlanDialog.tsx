@@ -166,7 +166,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                             })}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {plans.map((p) => {
                                 const active = selected === p.id
                                 const isCurrent = p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)

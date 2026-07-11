@@ -205,6 +205,15 @@ body {
     font-size: 13px;
     margin: 0 0 1.2em;
 }
+/* Phone widths: let a wide table scroll inside itself instead of stretching the page
+   (the cookie table holds unbreakable tokens like __Secure-better-auth.session_token). */
+@media (max-width: 640px) {
+    .legal-prose table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
 .legal-prose th,
 .legal-prose td {
     text-align: left;

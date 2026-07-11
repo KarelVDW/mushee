@@ -29,13 +29,13 @@ export default function BetaWaitingPage() {
     }
 
     return (
-        <main className="min-h-screen bg-surface flex flex-col items-center px-6 py-8">
+        <main className="min-h-dvh bg-surface flex flex-col items-center px-6 py-8">
             <header className="w-full max-w-180 flex justify-between items-center">
                 <Wordmark size={26} />
                 <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
             </header>
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-12 py-10 flex flex-col gap-6">
+            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-6 py-8 sm:px-12 sm:py-10 flex flex-col gap-6">
                 {approved ? (
                     <>
                         <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">

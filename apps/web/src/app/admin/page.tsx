@@ -30,10 +30,10 @@ export default function AdminPage() {
     const approved = signups.data?.filter((s) => s.status === 'approved') ?? []
 
     return (
-        <div className="bg-surface text-on-surface min-h-screen flex flex-col">
+        <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
             <TopNav user={session?.user?.name ?? undefined} />
 
-            <main className="flex-1 max-w-5xl mx-auto px-8 py-10 flex flex-col gap-8 w-full box-border">
+            <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-8 py-10 flex flex-col gap-8 w-full box-border">
                 <PageHeader
                     title="Beta signups"
                     subtitle={

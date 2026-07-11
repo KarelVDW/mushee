@@ -132,13 +132,13 @@ export default function OnboardingPage() {
     const finish = () => router.push(awaitingApproval ? '/beta' : '/scores')
 
     return (
-        <main className="min-h-screen bg-surface flex flex-col items-center px-6 py-8">
+        <main className="min-h-dvh bg-surface flex flex-col items-center px-6 py-8">
             <header className="w-full max-w-180 flex justify-between items-center">
                 <Wordmark size={26} />
                 {!done && step > 0 ? <TertiaryButton onClick={skip}>Skip for now</TertiaryButton> : <span />}
             </header>
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-12 py-10 flex flex-col gap-7">
+            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-6 py-8 sm:px-12 sm:py-10 flex flex-col gap-7">
                 {!done && <StepProgress step={step} total={STEP_COUNT} />}
 
                 {!done && step === 0 && (
