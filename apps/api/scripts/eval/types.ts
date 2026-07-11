@@ -60,8 +60,20 @@ export interface Condition {
   /** Added background noise. Omit for a clean condition. */
   noise?: { color: 'pink' | 'white'; amplitude: number };
   /**
-   * ffmpeg `-af` chain applied AFTER loudnorm (and after noise mixing, if any):
-   * mic EQ coloration, band-limiting, light reverb. Empty = none.
+   * Room reverberation: convolve with a synthetic impulse response
+   * (lib/acoustics.ts) via ffmpeg `afir` — applied to the source BEFORE any
+   * noise is mixed in (the room reverberates the performance; wind/babble
+   * arrive at the microphone).
+   */
+  ir?: { rt60Sec: number; wetDb: number; preDelayMs?: number };
+  /**
+   * A synthesized noise bed (lib/acoustics.ts) mixed at `gainDb` relative to
+   * the loudness-normalized source (≈ -SNR in dB).
+   */
+  noiseBed?: { kind: 'wind' | 'speech'; gainDb: number };
+  /**
+   * ffmpeg `-af` chain applied AFTER loudnorm (and after reverb/noise mixing,
+   * if any): mic EQ coloration, band-limiting. Empty = none.
    */
   postFilter?: string;
 }

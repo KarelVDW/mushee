@@ -29,9 +29,32 @@ The two everyday entry points are also wired into package.json:
   `<melody>.truth.json`.
 - `scripts/fixtures/eval-real/<dataset>/` — **real** singing corpora, built by
   the `fetch-*.ts` scripts: `<clip>__real.wav` + `<clip>.truth.json` +
-  `dataset.json` manifest.
+  `dataset.json` manifest. `degrade-real.ts` adds `<clip>__<condition>.wav`
+  variants for the adverse conditions — real singing under synthetic
+  wind/reverb/babble is the most honest robustness measure we have.
 
 Both fixture trees are gitignored; regenerate them locally with the scripts below.
+
+### Degradation conditions (scenarios.ts)
+
+Two tiers: the moderate originals (`clean`, `room-mic`, `noisy-phone`) and the
+**adverse tier** modelling real recording circumstances — `echoey-room`
+(impulse-response reverb, RT60 0.9 s), `wind-outdoor` (gusty synthesized wind,
+`lib/acoustics.ts`), `street-noise` (speech-shaped babble), and `distant-mic`
+(wet-dominant RT60 1.3 s + noise + air absorption). Reports aggregate per
+condition as well as per scenario.
+
+### Noise-adaptation env knobs (production code, sweepable)
+
+The pipeline's noise adaptation reads these (defaults in parentheses):
+`RECORDING_NOISE_ADAPT` (1; `0` = the legacy scan), `RECORDING_HARMONICITY_GATE`
+(4.0), `RECORDING_NOISY_MAX_SNR_DB` (25), `RECORDING_NOISY_MIN_NOISINESS` (0.5).
+The classifier's ACTIONS all default to no-ops after the adverse-eval verdict
+(see profile-resolver.ts): `RECORDING_NOISY_CONF_BUMP` (0),
+`RECORDING_NOISY_MIN_FRAMES` (4), `RECORDING_NOISY_DENOISE` (0 — set 1 to run
+`RECORDING_DENOISE_FILTER`, afftdn + its 25 ms delay-compensating atrim), and
+`RECORDING_VITERBI_JUMP_FLOOR` (unset — pass nats, e.g. -2.5, to enable the
+Gaussian+uniform mixture transition prior).
 
 ## Scripts
 
@@ -52,6 +75,7 @@ Both fixture trees are gitignored; regenerate them locally with the scripts belo
 | `fetch-mir-qbsh.ts` | MIR-QBSH — low-fi sung/hummed queries (8 kHz). |
 | `fetch-annotated-vocalset.ts` | Annotated-VocalSet — studio-quality professional singing. |
 | `fetch-soundfont.sh` | FluidR3_GM soundfont for `generate.ts`. |
+| `degrade-real.ts` | Adverse-condition variants of the fetched real clips (run after the fetchers). |
 
 ### Gates & benchmarks (re-run when touching the relevant subsystem)
 

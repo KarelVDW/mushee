@@ -101,7 +101,9 @@ function discoverRealScenarios(root: string): Scenario[] {
 }
 
 // Real clips ship as `<clip>__real.wav`; the harness's per-condition WAV lookup
-// reuses this single pseudo-condition (no synthetic degradation is applied).
+// reuses this pseudo-condition. Degraded variants of the real clips (see
+// degrade-real.ts) reuse the synthetic condition ids — missing variants are
+// simply skipped, so running before degrade-real.ts still works.
 const REAL_CONDITION: Condition = { id: 'real', label: 'real recording' };
 
 interface ClipResult {
@@ -123,8 +125,10 @@ async function main(): Promise<void> {
     confidenceThreshold: numEnv('EVAL_CONFIDENCE'),
     onsetThreshold: numEnv('EVAL_ONSET'),
     frameThreshold: numEnv('EVAL_FRAME'),
+    minFramesPerNote: numEnv('EVAL_MIN_FRAMES'),
   };
   const highpassHz = numEnv('EVAL_HIGHPASS') ?? 80;
+  const fixedDenoise = boolEnv('EVAL_DENOISE');
   const scenarioFilter = listEnv('EVAL_SCENARIOS');
   const conditionFilter = listEnv('EVAL_CONDITIONS');
   // Real recorded corpus vs. the synthetic one; picks the fixtures root.
@@ -168,6 +172,7 @@ async function main(): Promise<void> {
       const decoded = await decoder.decode(buf, provider.sampleRate, {
         loudnorm: provider.normalizeLoudness,
         highpassHz: profile.highpassHz,
+        denoise: profile.denoise,
       });
       const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
         decoded.samples,
@@ -179,6 +184,7 @@ async function main(): Promise<void> {
           confidenceThreshold: profile.confidenceThreshold,
           onsetThreshold: profile.onsetThreshold,
           frameThreshold: profile.frameThreshold,
+          minFramesPerNote: profile.minFramesPerNote,
         },
       );
       return extracted.deduced.map((n) => ({
@@ -194,6 +200,7 @@ async function main(): Promise<void> {
       const decoded = await decoder.decode(buf, provider.sampleRate, {
         loudnorm: provider.normalizeLoudness,
         highpassHz,
+        denoise: fixedDenoise,
       });
       const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
         decoded.samples,
@@ -213,7 +220,9 @@ async function main(): Promise<void> {
   const scenarios = allScenarios.filter(
     (s) => !scenarioFilter || scenarioFilter.includes(s.id),
   );
-  const allConditions = realMode ? [REAL_CONDITION] : CONDITIONS;
+  const allConditions = realMode
+    ? [REAL_CONDITION, ...CONDITIONS.filter((c) => c.id !== 'clean')]
+    : CONDITIONS;
   const conditions = allConditions.filter(
     (c) => !conditionFilter || conditionFilter.includes(c.id),
   );
@@ -283,6 +292,23 @@ async function main(): Promise<void> {
     };
   });
 
+  // Aggregate per condition — the robustness axis: how much each acoustic
+  // circumstance costs relative to clean.
+  const perCondition = conditions
+    .map((c) => {
+      const rs = results.filter((r) => r.condition === c.id);
+      return {
+        condition: c.id,
+        label: c.label,
+        clips: rs.length,
+        f1: mean(rs.map((r) => r.metrics.f1)),
+        precision: mean(rs.map((r) => r.metrics.precision)),
+        recall: mean(rs.map((r) => r.metrics.recall)),
+        octaveErrorRate: mean(rs.map((r) => r.metrics.octaveErrorRate)),
+      };
+    })
+    .filter((c) => c.clips > 0);
+
   const overallTiming = timingStats(
     results.flatMap((r) => r.metrics.timing.onsetDeltasMs),
     results.flatMap((r) => r.metrics.timing.offsetDeltasMs),
@@ -297,6 +323,7 @@ async function main(): Promise<void> {
     overallF1,
     overallTiming,
     perScenario,
+    perCondition,
     clips: results.map((r) => ({
       scenario: r.scenario,
       melody: r.melody,
@@ -318,6 +345,17 @@ async function main(): Promise<void> {
         s.octaveErrorRate.toFixed(2),
     );
   }
+  console.log('\n' + 'condition'.padEnd(20) + 'F1'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
+  for (const c of perCondition) {
+    console.log(
+      c.condition.padEnd(20) +
+        c.f1.toFixed(2).padEnd(7) +
+        c.precision.toFixed(2).padEnd(7) +
+        c.recall.toFixed(2).padEnd(8) +
+        c.octaveErrorRate.toFixed(2),
+    );
+  }
+
   console.log(`\nOVERALL mean F1 = ${overallF1.toFixed(3)}`);
 
   // Timing diagnostic (signed ms over exact-pitch matches; + = pipeline late).

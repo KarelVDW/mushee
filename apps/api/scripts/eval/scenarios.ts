@@ -37,9 +37,11 @@ export const SCENARIOS: Scenario[] = [
 ];
 
 /**
- * Degradation conditions. Moderate by design — the user still expects "relative
- * quality" input, so we model a clean take, a roomy/condenser mic, and a noisy
- * band-limited phone mic, not extreme corruption.
+ * Degradation conditions, in two tiers. The first three are moderate — a clean
+ * take, a roomy/condenser mic, a noisy band-limited phone mic. The adverse
+ * tier models the real-world circumstances users actually record in (an
+ * echoey room, a windy backdrop, street chatter, a phone across the room):
+ * hard, but every note is still clearly audible to a human listener.
  */
 export const CONDITIONS: Condition[] = [
   { id: 'clean', label: 'Clean' },
@@ -57,5 +59,42 @@ export const CONDITIONS: Condition[] = [
     // masking low fundamentals entirely.
     noise: { color: 'pink', amplitude: 0.012 },
     postFilter: 'highpass=f=85,lowpass=f=7000',
+  },
+
+  // --- Adverse tier ---
+  {
+    id: 'echoey-room',
+    label: 'Echoey room (RT60 0.9 s)',
+    // Genuine reverberation (impulse-response convolution), unlike room-mic's
+    // single slapback tap: onsets smear, offsets ring into the next note.
+    ir: { rt60Sec: 0.9, wetDb: -2, preDelayMs: 15 },
+    noise: { color: 'pink', amplitude: 0.003 },
+    // volume pad: direct+wet peaks would clip the s16 output otherwise
+    postFilter: 'volume=-7dB,highpass=f=60,lowpass=f=11000',
+  },
+  {
+    id: 'wind-outdoor',
+    label: 'Windy backdrop (gusts)',
+    // Gusty low-frequency-dominant wind at the mic; the killer for low
+    // registers, and gusts fool amplitude-based onset detection.
+    noiseBed: { kind: 'wind', gainDb: -8 },
+    postFilter: 'highpass=f=25',
+  },
+  {
+    id: 'street-noise',
+    label: 'Street / chatter backdrop',
+    // Speech-shaped babble sits exactly in the voice band — the hardest
+    // masker for sung input.
+    noiseBed: { kind: 'speech', gainDb: -14 },
+    noise: { color: 'pink', amplitude: 0.003 },
+  },
+  {
+    id: 'distant-mic',
+    label: 'Distant mic in live room',
+    // Wet-dominant reverb + noise floor + air absorption: a phone recording
+    // from across an untreated room.
+    ir: { rt60Sec: 1.3, wetDb: 4, preDelayMs: 25 },
+    noise: { color: 'pink', amplitude: 0.006 },
+    postFilter: 'volume=-11dB,lowpass=f=8000',
   },
 ];
