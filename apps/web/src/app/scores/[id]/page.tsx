@@ -8,11 +8,16 @@ import type { ScorePartwise } from '@/components/notation/types'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Instrument, type Note, type Pitch } from '@/model'
 import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import {
     CHANGE_PITCH,
+    LOWER_PITCH,
+    MOVE_NEXT,
+    MOVE_PREVIOUS,
+    RAISE_PITCH,
     SET_ACCIDENTAL,
     SET_CLEF,
     SET_DURATION,
@@ -24,7 +29,7 @@ import {
     TOGGLE_TUPLET,
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
-import { NoteToolDock, TransportControls } from './EditorControls'
+import { MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
@@ -50,6 +55,9 @@ export default function ScoreEditorPage() {
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
+    // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
+    // shortcuts entry point disappears, and header/dock controls tighten up.
+    const isMobile = useMediaQuery('(max-width: 767px)')
 
     const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
 
@@ -166,7 +174,7 @@ export default function ScoreEditorPage() {
 
     if (!score) {
         return (
-            <div className="min-h-screen bg-surface flex items-center justify-center">
+            <div className="min-h-dvh bg-surface flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-2">
                     <Wordmark size={28} />
                     <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Loading score…</span>
@@ -176,12 +184,9 @@ export default function ScoreEditorPage() {
     }
 
     return (
-        <div
-            ref={containerRef}
-            tabIndex={0}
-            className="relative flex flex-col min-h-screen max-h-screen bg-surface text-on-surface outline-none">
-            <header className="flex items-center gap-4 px-5 py-2 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div ref={containerRef} tabIndex={0} className="relative flex flex-col h-dvh bg-surface text-on-surface outline-none">
+            <header className="flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
+                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
                     <button
                         onClick={() => router.push('/scores')}
                         aria-label="Back to library"
@@ -208,35 +213,47 @@ export default function ScoreEditorPage() {
                         className={[
                             'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-2.5 py-1.5 cursor-pointer',
                             'font-label font-semibold text-[11px] leading-none whitespace-nowrap',
+                            'max-md:max-w-28 min-w-0',
                             'bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
                             'transition-colors duration-150 ease-sheemu',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                         ].join(' ')}>
-                        {score.instrument.displayName}
+                        <span className="truncate">{score.instrument.displayName}</span>
                         <Icon name="sliders-horizontal" size={11} />
                     </button>
                 </div>
-                <TransportControls
-                    playbackState={playbackState}
-                    onPlayToggle={handlePlayToggle}
-                    onStop={stopAll}
-                    recordingState={recordingState}
-                    onRecordToggle={() => void handleRecordToggle()}
-                    metronome={metronome}
-                    onMetronomeToggle={() => setMetronome((m) => !m)}
-                />
-                <div className="flex items-center gap-2 flex-1 justify-end">
-                    <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
-                        <Icon name="keyboard" size={16} />
-                    </ChipToggle>
-                    <ExportMenu score={score} title={title} getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null} />
+                {!isMobile && (
+                    <TransportControls
+                        playbackState={playbackState}
+                        onPlayToggle={handlePlayToggle}
+                        onStop={stopAll}
+                        recordingState={recordingState}
+                        onRecordToggle={() => void handleRecordToggle()}
+                        metronome={metronome}
+                        onMetronomeToggle={() => setMetronome((m) => !m)}
+                    />
+                )}
+                <div className="flex items-center gap-2 shrink-0 sm:flex-1 justify-end">
+                    {!isMobile && (
+                        <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
+                            <Icon name="keyboard" size={16} />
+                        </ChipToggle>
+                    )}
+                    <ExportMenu
+                        score={score}
+                        title={title}
+                        compact={isMobile}
+                        getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+                    />
                 </div>
             </header>
             {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
                 against a flex-sized (height-less) scroll container. */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-8 bg-surface flex flex-col">
-                <div ref={scoreAreaRef} className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-10 tonal-layer-glow manuscript-canvas">
+            <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col">
+                <div
+                    ref={scoreAreaRef}
+                    className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
                     <ScoreView
                         score={score}
                         layoutId={score.layout.id}
@@ -276,6 +293,28 @@ export default function ScoreEditorPage() {
                 keyFifths={activeNote?.keySignature.fifths ?? 0}
                 onKeySet={handleKeySet}
                 selectionDisabled={!activeNote}
+                compact={isMobile}
+                metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
+                footer={
+                    isMobile ? (
+                        <MobileEditorActions
+                            transport={{
+                                playbackState,
+                                onPlayToggle: handlePlayToggle,
+                                onStop: stopAll,
+                                recordingState,
+                                onRecordToggle: () => void handleRecordToggle(),
+                                metronome,
+                                onMetronomeToggle: () => setMetronome((m) => !m),
+                            }}
+                            onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
+                            onNext={() => manipulator.run(MOVE_NEXT)}
+                            onPitchUp={() => manipulator.run(RAISE_PITCH)}
+                            onPitchDown={() => manipulator.run(LOWER_PITCH)}
+                            disabled={!activeNote}
+                        />
+                    ) : undefined
+                }
             />
 
             <ChangeInstrumentDialog

@@ -1,11 +1,12 @@
-import { MEASURE_BUTTON_SPACING, SCORE_WIDTH } from '@/components/notation/constants'
+import { MEASURE_BUTTON_SPACING } from '@/components/notation/constants'
 
 /**
- * Horizontal budget available to a row's measures. The last row reserves
- * MEASURE_BUTTON_SPACING for the add/remove-measure buttons rendered after the
- * final barline, so Row.canFit and RowLayout must agree on this number to keep
- * row composition consistent with layout. See RowLayout and Row.canFit.
+ * Horizontal budget available to a row's measures within a score laid out
+ * `scoreWidth` units wide. The last row reserves MEASURE_BUTTON_SPACING for the
+ * add/remove-measure buttons rendered after the final barline, so packing and
+ * RowLayout must agree on this number to keep row composition consistent with
+ * layout. See ScoreLayout.packGreedy and RowLayout.
  */
-export function availableRowWidth({ isLastRow }: { isLastRow: boolean }): number {
-    return SCORE_WIDTH - (isLastRow ? MEASURE_BUTTON_SPACING : 0)
+export function availableRowWidth({ isLastRow, scoreWidth }: { isLastRow: boolean; scoreWidth: number }): number {
+    return scoreWidth - (isLastRow ? MEASURE_BUTTON_SPACING : 0)
 }

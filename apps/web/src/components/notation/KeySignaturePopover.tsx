@@ -105,7 +105,7 @@ export function KeySignaturePopover({ active, onSelect, onDismiss, className, an
             <Eyebrow>Key signature</Eyebrow>
             <div role="group" aria-label="Key signature" className="flex flex-col gap-1.5 items-center">
                 {KEY_ROWS.map((row, i) => (
-                    <div key={i} className="flex gap-1.5">
+                    <div key={i} className="flex flex-wrap justify-center gap-1.5">
                         {row.map((fifths) => {
                             const isActive = fifths === active
                             return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 
 import {
     CLEF_DEFS,
@@ -68,7 +68,7 @@ function TupletIcon() {
 
 // --- Transport (lives in the editor header) ---
 
-interface TransportControlsProps {
+export interface TransportControlsProps {
     playbackState: 'stopped' | 'playing' | 'paused'
     onPlayToggle: () => void
     onStop: () => void
@@ -76,6 +76,10 @@ interface TransportControlsProps {
     onRecordToggle: () => void
     metronome: boolean
     onMetronomeToggle: () => void
+    /** Thumb-sized buttons with the record button as the biggest of the set (the mobile dock). */
+    large?: boolean
+    /** The mobile dock hides the metronome here and hosts it in the tool strip instead. */
+    showMetronome?: boolean
 }
 
 export function TransportControls({
@@ -86,31 +90,76 @@ export function TransportControls({
     onRecordToggle,
     metronome,
     onMetronomeToggle,
+    large = false,
+    showMetronome = true,
 }: TransportControlsProps) {
     const isRecording = recordingState !== 'idle'
     const isPlaying = playbackState === 'playing'
     const canStop = playbackState !== 'stopped' || isRecording
 
     return (
-        <div className="flex items-center gap-2.5 shrink-0">
-            <TransportBtn size={30} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
-                <Icon name="square" size={12} />
+        <div className={`flex items-center shrink-0 ${large ? 'gap-2' : 'gap-2.5'}`}>
+            <TransportBtn size={large ? 36 : 30} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
+                <Icon name="square" size={large ? 14 : 12} />
             </TransportBtn>
             <TransportBtn
-                size={40}
+                size={large ? 46 : 40}
                 tone="play"
                 active={isPlaying}
                 onClick={onPlayToggle}
                 ariaLabel={isPlaying ? 'Pause' : 'Play'}
                 disabled={isRecording}>
-                <Icon name={isPlaying ? 'pause' : 'play'} size={18} />
+                <Icon name={isPlaying ? 'pause' : 'play'} size={large ? 20 : 18} />
             </TransportBtn>
-            <TransportBtn size={40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record">
+            <TransportBtn size={large ? 54 : 40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record">
                 <Icon name="circle" size={16} />
             </TransportBtn>
-            <TransportBtn size={30} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
-                <Icon name="audio-lines" size={12} />
-            </TransportBtn>
+            {showMetronome && (
+                <TransportBtn size={large ? 36 : 30} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
+                    <Icon name="audio-lines" size={large ? 14 : 12} />
+                </TransportBtn>
+            )}
+        </div>
+    )
+}
+
+// --- Mobile action row (bottom of the dock): note navigation, pitch nudges, transport ---
+
+interface MobileEditorActionsProps {
+    transport: TransportControlsProps
+    onPrevious: () => void
+    onNext: () => void
+    onPitchUp: () => void
+    onPitchDown: () => void
+    /** No note selected (nothing to navigate from or nudge). */
+    disabled: boolean
+}
+
+/**
+ * Touch replaces the keyboard: arrows become the note navigator, ArrowUp/Down become
+ * pitch nudges, and the transport moves down here where thumbs live. The record
+ * button stays the biggest, loudest control on the screen.
+ */
+export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled }: MobileEditorActionsProps) {
+    return (
+        <div role="group" aria-label="Note navigation and transport" className="flex items-center justify-between gap-1.5 pt-2">
+            <div className="flex items-center gap-1">
+                <TransportBtn size={36} onClick={onPrevious} ariaLabel="Select previous note" disabled={disabled}>
+                    <Icon name="chevron-left" size={18} />
+                </TransportBtn>
+                <TransportBtn size={36} onClick={onNext} ariaLabel="Select next note" disabled={disabled}>
+                    <Icon name="chevron-right" size={18} />
+                </TransportBtn>
+            </div>
+            <div className="flex items-center gap-1">
+                <TransportBtn size={36} onClick={onPitchDown} ariaLabel="Lower pitch" disabled={disabled}>
+                    <Icon name="chevron-down" size={18} />
+                </TransportBtn>
+                <TransportBtn size={36} onClick={onPitchUp} ariaLabel="Raise pitch" disabled={disabled}>
+                    <Icon name="chevron-up" size={18} />
+                </TransportBtn>
+            </div>
+            <TransportControls {...transport} large showMetronome={false} />
         </div>
     )
 }
@@ -139,6 +188,12 @@ interface NoteToolDockProps {
     keyFifths: number
     onKeySet: (fifths: number) => void
     selectionDisabled: boolean
+    /** Tighter group spacing so the tool rows fit a phone. */
+    compact?: boolean
+    /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
+    metronome?: { active: boolean; onToggle: () => void }
+    /** Extra dock row rendered below the tools (the mobile action row). */
+    footer?: ReactNode
 }
 
 /**
@@ -170,13 +225,16 @@ export function NoteToolDock({
     keyFifths,
     onKeySet,
     selectionDisabled,
+    compact = false,
+    metronome,
+    footer,
 }: NoteToolDockProps) {
     return (
-        <div className="shrink-0 z-20 px-4 py-2.5 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
+        <div className="shrink-0 z-20 px-3 sm:px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div
                 role="group"
                 aria-label="Note tools"
-                className="mx-auto flex items-center justify-center flex-wrap gap-x-6 gap-y-2">
+                className={`mx-auto flex items-center justify-center flex-wrap gap-y-2 ${compact ? 'gap-x-3' : 'gap-x-6'}`}>
                 <Segmented
                     ariaLabel="Note duration"
                     value={duration}
@@ -206,17 +264,30 @@ export function NoteToolDock({
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
                 <div className="flex items-center gap-1.5">
-                    <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} />
-                    <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} />
-                    <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} />
+                    <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} compact={compact} />
+                    <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
+                    <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
+                    {metronome && (
+                        <ChipToggle active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
+                            <Icon name="audio-lines" size={14} />
+                        </ChipToggle>
+                    )}
                 </div>
             </div>
+            {footer}
         </div>
     )
 }
 
-// Popovers open upward from the dock, clear of its glass panel.
-const POPOVER_POSITION = 'right-0 bottom-[calc(100%+0.75rem)]'
+/**
+ * Popovers open upward from the dock, clear of its glass panel. In compact (mobile)
+ * mode they become a sheet spanning the dock's width instead — anchored popovers
+ * would clip at the viewport edges. (`fixed` resolves against the dock, whose
+ * backdrop-filter makes it the containing block; the dock spans the viewport.)
+ */
+function popoverPosition(compact: boolean): string {
+    return compact ? 'fixed! inset-x-2 bottom-full mb-2 w-auto! max-h-[60vh] overflow-y-auto' : 'right-0 bottom-[calc(100%+0.75rem)]'
+}
 
 // --- Clef control ---
 
@@ -224,9 +295,10 @@ interface ClefControlProps {
     clef: ClefType
     onSet: (clef: ClefType) => void
     disabled: boolean
+    compact: boolean
 }
 
-function ClefControl({ clef, onSet, disabled }: ClefControlProps) {
+function ClefControl({ clef, onSet, disabled, compact }: ClefControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
 
@@ -239,7 +311,7 @@ function ClefControl({ clef, onSet, disabled }: ClefControlProps) {
                 <ClefPopover
                     active={clef}
                     anchorRef={anchorRef}
-                    className={POPOVER_POSITION}
+                    className={popoverPosition(compact)}
                     onSelect={(type) => {
                         onSet(type)
                         setOpen(false)
@@ -257,9 +329,10 @@ interface KeySignatureControlProps {
     fifths: number
     onSet: (fifths: number) => void
     disabled: boolean
+    compact: boolean
 }
 
-function KeySignatureControl({ fifths, onSet, disabled }: KeySignatureControlProps) {
+function KeySignatureControl({ fifths, onSet, disabled, compact }: KeySignatureControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
 
@@ -276,7 +349,7 @@ function KeySignatureControl({ fifths, onSet, disabled }: KeySignatureControlPro
                 <KeySignaturePopover
                     active={fifths}
                     anchorRef={anchorRef}
-                    className={POPOVER_POSITION}
+                    className={popoverPosition(compact)}
                     onSelect={(value) => {
                         onSet(value)
                         setOpen(false)
@@ -294,9 +367,10 @@ interface TempoControlProps {
     bpm: number
     onSet: (bpm: number) => void
     disabled: boolean
+    compact: boolean
 }
 
-function TempoControl({ bpm, onSet, disabled }: TempoControlProps) {
+function TempoControl({ bpm, onSet, disabled, compact }: TempoControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
 
@@ -309,7 +383,7 @@ function TempoControl({ bpm, onSet, disabled }: TempoControlProps) {
                 <TempoPopover
                     initialBpm={bpm}
                     anchorRef={anchorRef}
-                    className={POPOVER_POSITION}
+                    className={popoverPosition(compact)}
                     onSubmit={(value) => {
                         onSet(value)
                         setOpen(false)

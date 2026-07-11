@@ -1,7 +1,7 @@
 import { makeScore, pitched } from '@test/helpers'
 import { describe, expect, it } from 'vitest'
 
-import { MAX_MEASURES_PER_ROW } from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@/components/notation/constants'
 import { Duration } from '@/model/Duration'
 import { Instrument } from '@/model/Instrument'
 import { Measure } from '@/model/Measure'
@@ -64,6 +64,56 @@ describe('Score', () => {
             expect(m0.layout).toBe(m0Layout) // untouched measure keeps its layout
             expect(m1.layout).not.toBe(m1Layout) // mutated measure gets a new one
             expect(m1.layout.id).not.toBe(m1Layout.id)
+        })
+    })
+
+    describe('layout width (responsive reflow)', () => {
+        it('defaults to the standard score width', () => {
+            const score = makeScore(1)
+            expect(score.layoutWidth).toBe(SCORE_WIDTH)
+            expect(score.layout.scoreWidth).toBe(SCORE_WIDTH)
+        })
+
+        it('setLayoutWidth rebuilds the layout at the new width without moving the version', () => {
+            const score = makeScore(1)
+            const before = score.layout
+            const version = score.version
+            score.setLayoutWidth(400)
+            expect(score.layoutWidth).toBe(400)
+            expect(score.version).toBe(version)
+            expect(score.layout).not.toBe(before)
+            expect(score.layout.scoreWidth).toBe(400)
+        })
+
+        it('setLayoutWidth notifies onChange so views re-read the layout', () => {
+            let calls = 0
+            const score = new Score(() => calls++)
+            score.addMeasure().complete()
+            const baseline = calls
+            score.setLayoutWidth(400)
+            expect(calls).toBe(baseline + 1)
+        })
+
+        it('setting the same width again is a no-op (no notification, same snapshot)', () => {
+            let calls = 0
+            const score = new Score(() => calls++)
+            score.addMeasure().complete()
+            score.setLayoutWidth(400)
+            const layout = score.layout
+            const baseline = calls
+            score.setLayoutWidth(400)
+            expect(calls).toBe(baseline)
+            expect(score.layout).toBe(layout)
+        })
+
+        it('a narrow width packs fewer measures per row than the default', () => {
+            const score = makeScore(4)
+            expect(score.layout.rows).toHaveLength(1)
+            score.setLayoutWidth(400)
+            expect(score.layout.rows.length).toBeGreaterThan(1)
+            for (const row of score.layout.rows) {
+                expect(row.width).toBeLessThanOrEqual(400)
+            }
         })
     })
 

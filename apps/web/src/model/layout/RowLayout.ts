@@ -11,6 +11,8 @@ export interface RowLayoutContext {
     measures: Measure[]
     /** Minimal width per measure, computed by the packing pass. */
     minimalWidths: Map<Measure, number>
+    /** Total layout width the row's budget derives from (responsive reflow input). */
+    scoreWidth: number
 }
 
 /**
@@ -27,6 +29,7 @@ export class RowLayout {
     readonly staffLines: LayoutLine[]
     readonly openingBarline: LayoutBarline
     private readonly _minimalWidths: Map<Measure, number>
+    private readonly _scoreWidth: number
     private readonly _measureData = new Map<Measure, { width: number; measureX: number }>()
 
     constructor(context: RowLayoutContext) {
@@ -34,8 +37,9 @@ export class RowLayout {
         this.isLastRow = context.isLastRow
         this.measures = context.measures
         this._minimalWidths = context.minimalWidths
+        this._scoreWidth = context.scoreWidth
 
-        const totalWidth = availableRowWidth({ isLastRow: context.isLastRow })
+        const totalWidth = availableRowWidth({ isLastRow: context.isLastRow, scoreWidth: context.scoreWidth })
         const allowIncompleteRow = context.isLastRow && context.measures.length <= 2
         const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : context.measures.length)
         const sizeables: Array<Sizeable & { measure: Measure }> = context.measures.map((measure) => ({
@@ -63,6 +67,7 @@ export class RowLayout {
     /** Whether this row's inputs are identical — used by ScoreLayout to reuse the instance across rebuilds. */
     matches(context: RowLayoutContext): boolean {
         if (this.index !== context.index || this.isLastRow !== context.isLastRow) return false
+        if (this._scoreWidth !== context.scoreWidth) return false
         if (this.measures.length !== context.measures.length) return false
         return this.measures.every(
             (measure, i) => context.measures[i] === measure && context.minimalWidths.get(measure) === this._minimalWidths.get(measure),

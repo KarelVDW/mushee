@@ -25,6 +25,7 @@ function context(measures: Measure[], widths: number[], overrides?: Partial<RowL
         isLastRow: true,
         measures,
         minimalWidths: new Map(measures.map((m, i) => [m, widths[i]])),
+        scoreWidth: SCORE_WIDTH,
         ...overrides,
     }
 }
@@ -104,7 +105,7 @@ describe('RowLayout', () => {
 
     it('a measure without a registered minimal width is allotted the plain default', () => {
         const m = bareMeasure()
-        const row = new RowLayout({ index: 0, isLastRow: true, measures: [m], minimalWidths: new Map() })
+        const row = new RowLayout({ index: 0, isLastRow: true, measures: [m], minimalWidths: new Map(), scoreWidth: SCORE_WIDTH })
         expect(row.getMeasureWidth(m)).toBeCloseTo((SCORE_WIDTH - MEASURE_BUTTON_SPACING) / MAX_MEASURES_PER_ROW)
     })
 
@@ -136,6 +137,10 @@ describe('RowLayout', () => {
 
         it('rejects a changed minimal width', () => {
             expect(row.matches(context([a, b], [200, 300]))).toBe(false)
+        })
+
+        it('rejects a changed score width (responsive reflow)', () => {
+            expect(row.matches(context([a, b], [200, 250], { scoreWidth: 500 }))).toBe(false)
         })
     })
 })

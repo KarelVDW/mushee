@@ -1,5 +1,6 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
+import { SCORE_WIDTH } from '@/components/notation/constants'
 import type { ClefType, DurationType } from '@/components/notation/types'
 
 import { Duration } from './Duration'
@@ -37,7 +38,8 @@ export class Score {
     private _structureChanged = false
     private _instrumentDirty = false
 
-    private _layoutState: { version: number; layout: ScoreLayout } | null = null
+    private _layoutState: { version: number; width: number; layout: ScoreLayout } | null = null
+    private _layoutWidth = SCORE_WIDTH
 
     private readonly _indexByMeasure = new Derived(
         () => this._version,
@@ -100,10 +102,30 @@ export class Score {
         return this._instrument
     }
 
-    /** The current layout snapshot, rebuilt lazily when the version moves (unchanged parts are reused). */
+    /**
+     * The width the layout packs rows against — a presentation input to the `layout`
+     * gateway (responsive reflow on narrow viewports), never semantic state: it is not
+     * serialized and changing it moves neither the version nor the dirty tracking.
+     */
+    get layoutWidth(): number {
+        return this._layoutWidth
+    }
+
+    /** Change the layout width. Notifies the owner (so views re-read `layout`) without dirtying the score. */
+    setLayoutWidth(width: number) {
+        if (width === this._layoutWidth) return
+        this._layoutWidth = width
+        this._onChange?.()
+    }
+
+    /** The current layout snapshot, rebuilt lazily when the version or layout width moves (unchanged parts are reused). */
     get layout(): ScoreLayout {
-        if (this._layoutState?.version !== this._version) {
-            this._layoutState = { version: this._version, layout: new ScoreLayout(this, this._layoutState?.layout) }
+        if (this._layoutState?.version !== this._version || this._layoutState.width !== this._layoutWidth) {
+            this._layoutState = {
+                version: this._version,
+                width: this._layoutWidth,
+                layout: new ScoreLayout(this, this._layoutState?.layout, this._layoutWidth),
+            }
         }
         return this._layoutState.layout
     }

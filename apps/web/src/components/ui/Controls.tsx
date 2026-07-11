@@ -25,6 +25,7 @@ export function Segmented<T extends string | undefined>({ options, value, onChan
                         onClick={() => onChange(o.value)}
                         className={[
                             'border-0 px-2.5 py-1.5 cursor-pointer rounded-full min-w-8.5',
+                            'pointer-coarse:py-2.5 pointer-coarse:min-w-10',
                             'font-label font-semibold text-[14px] leading-none',
                             'inline-flex items-center justify-center',
                             'transition-[background-color,color] duration-150 ease-sheemu',
@@ -57,6 +58,7 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled }: C
             onClick={onClick}
             className={[
                 'border-0 rounded-full px-3.5 py-1.75 min-h-8 whitespace-nowrap',
+                'pointer-coarse:min-h-10 pointer-coarse:px-4',
                 'font-label font-semibold text-[13px] leading-none',
                 'inline-flex items-center justify-center',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',

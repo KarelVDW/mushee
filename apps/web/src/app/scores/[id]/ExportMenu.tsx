@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 
+import { SCORE_WIDTH } from '@/components/notation/constants'
 import { ChipToggle, Eyebrow, Icon, showToast } from '@/components/ui'
 import { PdfExporter } from '@/lib/PdfExporter'
 import type { Score } from '@/model'
@@ -30,9 +32,11 @@ interface ExportMenuProps {
     title: string
     /** The rendered score SVG, resolved at export time — needed for the PDF's visual snapshot. */
     getSvg: () => SVGSVGElement | null
+    /** Icon-only trigger (the mobile header). */
+    compact?: boolean
 }
 
-export function ExportMenu({ score, title, getSvg }: ExportMenuProps) {
+export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenuProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const popRef = useRef<HTMLDivElement>(null)
     const [open, setOpen] = useState(false)
@@ -72,9 +76,17 @@ export function ExportMenu({ score, title, getSvg }: ExportMenuProps) {
                 } else if (format === 'midi') {
                     download(new Blob([new MidiExporter(score).toBytes()], { type: 'audio/midi' }), `${basename}.mid`)
                 } else {
-                    const svg = getSvg()
-                    if (!svg) throw new Error('Score is not rendered')
-                    download(await new PdfExporter(score, svg).toBlob(title), `${basename}.pdf`)
+                    // The PDF is a print artifact: pin the layout to the standard page width
+                    // for the snapshot (a phone displays a reflowed layout), restore after.
+                    const displayWidth = score.layoutWidth
+                    if (displayWidth !== SCORE_WIDTH) flushSync(() => score.setLayoutWidth(SCORE_WIDTH))
+                    try {
+                        const svg = getSvg()
+                        if (!svg) throw new Error('Score is not rendered')
+                        download(await new PdfExporter(score, svg).toBlob(title), `${basename}.pdf`)
+                    } finally {
+                        if (displayWidth !== SCORE_WIDTH) flushSync(() => score.setLayoutWidth(displayWidth))
+                    }
                 }
                 setOpen(false)
             } catch (err) {
@@ -92,7 +104,7 @@ export function ExportMenu({ score, title, getSvg }: ExportMenuProps) {
             <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel="Export score">
                 <span className="inline-flex items-center gap-1.5">
                     <Icon name="download" size={14} />
-                    Export
+                    {!compact && 'Export'}
                 </span>
             </ChipToggle>
             {open && (

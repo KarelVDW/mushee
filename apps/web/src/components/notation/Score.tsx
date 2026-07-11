@@ -22,7 +22,25 @@ import { Tie } from './Tie'
 /** Vertical offset from the reference Y to the teardrop tip */
 const CURSOR_Y_OFFSET = 15
 
-/** Extra width reserved for add/remove measure buttons */
+/**
+ * Below this container width the layout reflows to the container instead of
+ * scaling down: rows are packed against the viewport so notation keeps its
+ * full glyph size on phones and narrow windows (see Score.setLayoutWidth).
+ */
+const REFLOW_BREAKPOINT = 768
+/** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
+const MIN_LAYOUT_WIDTH = 340
+/** Breathing room kept between the followed row and the scroll viewport's edges. */
+const FOLLOW_SCROLL_MARGIN = 16
+
+/** The nearest ancestor that scrolls vertically — where selection/cursor following happens. */
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+    for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
+        const overflowY = getComputedStyle(node).overflowY
+        if (overflowY === 'auto' || overflowY === 'scroll') return node
+    }
+    return null
+}
 
 interface ScoreProps {
     score: ScoreModel
@@ -82,18 +100,23 @@ export const Score = memo(function Score({
         if (!el) return
         const observer = new ResizeObserver((entries) => {
             const entry = entries[0]
-            if (entry) setContainerWidth(entry.contentRect.width)
+            if (!entry) return
+            const width = entry.contentRect.width
+            // Reflow instead of shrink: on narrow containers the layout packs rows
+            // against the available width, so glyphs render at full size on phones.
+            score.setLayoutWidth(width > 0 && width < REFLOW_BREAKPOINT ? Math.max(MIN_LAYOUT_WIDTH, Math.floor(width)) : SCORE_WIDTH)
+            setContainerWidth(width)
         })
         observer.observe(el)
         return () => observer.disconnect()
-    }, [])
+    }, [score])
 
     // The current layout snapshot (rebuilt lazily by the model when the score changed)
     const layout = score.layout
     const showMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
     const rows = layout.rows
     const totalHeight = layout.totalHeight
-    const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / SCORE_WIDTH) : 0
+    const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
 
     // Cursor indicator position (row-local coordinates)
     const cursorPos = useMemo(() => {
@@ -118,7 +141,7 @@ export const Score = memo(function Score({
                 y: ((clientY - rect.top) / rect.height) * totalHeight,
             }
         },
-        [totalHeight],
+        [totalHeight, score],
     )
 
     // SVG coordinate to container-relative pixel position (inverse of clientToSvg)
@@ -129,15 +152,62 @@ export const Score = memo(function Score({
             if (!svg || !container) return null
             const svgRect = svg.getBoundingClientRect()
             const containerRect = container.getBoundingClientRect()
-            const scaleX = svgRect.width / SCORE_WIDTH
+            const scaleX = svgRect.width / score.layout.scoreWidth
             const scaleY = svgRect.height / totalHeight
             return {
                 x: svgRect.left + svgX * scaleX - containerRect.left,
                 y: svgRect.top + svgY * scaleY - containerRect.top,
             }
         },
-        [totalHeight],
+        [totalHeight, score],
     )
+
+    // Scroll the nearest scrollable ancestor so the row at `layoutY` sits inside the
+    // viewport (no-op when it already does) — how the selection and the playback
+    // cursor stay in view on small screens.
+    const scrollRowIntoView = useCallback(
+        (layoutY: number) => {
+            const svg = svgRef.current
+            const scroller = findScrollParent(containerRef.current)
+            if (!svg || !scroller) return
+            const scale = svg.getBoundingClientRect().width / score.layout.scoreWidth
+            const svgTop = svg.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
+            const rowTop = svgTop + layoutY * scale
+            const rowBottom = rowTop + score.layout.rowHeight * scale
+            if (rowTop < scroller.scrollTop + FOLLOW_SCROLL_MARGIN) {
+                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: 'smooth' })
+            } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - FOLLOW_SCROLL_MARGIN) {
+                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: 'smooth' })
+            }
+        },
+        [score],
+    )
+
+    // Keep the selected note's row visible whenever the selection moves (taps,
+    // arrow keys, the mobile note navigator).
+    useEffect(() => {
+        if (!selectedNote) return
+        try {
+            const row = score.layout.rowFor(selectedNote.measure)
+            scrollRowIntoView(score.layout.getYForRow(row))
+        } catch {
+            // A selection can briefly reference a measure detached by an in-flight edit.
+        }
+    }, [selectedNote, score, scrollRowIntoView])
+
+    // Follow playback/recording: the engines drive the cursor rect's transform
+    // directly, so a row change surfaces here as an attribute mutation.
+    useEffect(() => {
+        const cursor = playbackCursorRef?.current
+        if (!cursor || containerWidth === 0) return
+        const observer = new MutationObserver(() => {
+            if (cursor.getAttribute('display') === 'none') return
+            const match = /translate\(\s*0\s*[,\s]\s*([\d.]+)\s*\)/.exec(cursor.getAttribute('transform') ?? '')
+            if (match) scrollRowIntoView(Number(match[1]))
+        })
+        observer.observe(cursor, { attributes: true, attributeFilter: ['transform', 'display'] })
+        return () => observer.disconnect()
+    }, [playbackCursorRef, containerWidth, scrollRowIntoView])
 
     const handleTempoClick = useCallback(
         (measureIndex: number, beatPosition: number, bpm: number, svgX: number, svgY: number) => {
@@ -164,8 +234,8 @@ export const Score = memo(function Score({
         [clientToSvg, score],
     )
 
-    const handleMouseMove = useCallback(
-        (e: React.MouseEvent<SVGSVGElement>) => {
+    const handlePointerMove = useCallback(
+        (e: React.PointerEvent<SVGSVGElement>) => {
             const hit = resolveHit(e.clientX, e.clientY)
             if (!hit) {
                 if (hoveredNote) setHoveredNote(null)
@@ -187,6 +257,9 @@ export const Score = memo(function Score({
                 return
             }
 
+            // Hover-to-pitch preview is a mouse affordance; a finger can't hover, and on
+            // touch the ghost would flash under every tap.
+            if (e.pointerType !== 'mouse') return
             const hoverLine = getLineForY(localY)
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
@@ -196,8 +269,8 @@ export const Score = memo(function Score({
         [resolveHit, hoveredNote, ghostNote, selectedNote, onSelectionExtend],
     )
 
-    const handleMouseDown = useCallback(
-        (e: React.MouseEvent<SVGSVGElement>) => {
+    const handlePointerDown = useCallback(
+        (e: React.PointerEvent<SVGSVGElement>) => {
             if (openPopover) return
             const hit = resolveHit(e.clientX, e.clientY)
             if (!hit) return
@@ -210,16 +283,21 @@ export const Score = memo(function Score({
         [openPopover, resolveHit, onSelectionStart, onSelectionExtend],
     )
 
-    // A drag can end with the pointer outside the score, so listen on the window.
+    // A drag can end with the pointer outside the score (or be taken over by a
+    // scroll gesture on touch), so listen on the window.
     useEffect(() => {
         const endDrag = () => {
             pointerDownRef.current = false
         }
-        window.addEventListener('mouseup', endDrag)
-        return () => window.removeEventListener('mouseup', endDrag)
+        window.addEventListener('pointerup', endDrag)
+        window.addEventListener('pointercancel', endDrag)
+        return () => {
+            window.removeEventListener('pointerup', endDrag)
+            window.removeEventListener('pointercancel', endDrag)
+        }
     }, [])
 
-    const handleMouseLeave = useCallback(() => {
+    const handlePointerLeave = useCallback(() => {
         setHoveredNote(null)
         setGhostNote(null)
     }, [])
@@ -262,11 +340,14 @@ export const Score = memo(function Score({
                     ref={svgRef}
                     width={containerWidth}
                     height={scaledHeight}
-                    viewBox={`0 0 ${SCORE_WIDTH} ${totalHeight}`}
+                    viewBox={`0 0 ${layout.scoreWidth} ${totalHeight}`}
                     xmlns="http://www.w3.org/2000/svg"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
+                    // pan-y: vertical touch gestures keep scrolling the page, while taps and
+                    // horizontal drags reach the pointer handlers (select / drag-extend).
+                    className="touch-pan-y"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerLeave={handlePointerLeave}
                     onClick={handleClick}>
                     {/* Live recording waveform — its own store-subscribed layer, so
                         sample-rate updates never re-render the score itself */}

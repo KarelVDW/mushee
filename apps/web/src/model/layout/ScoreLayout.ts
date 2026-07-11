@@ -14,10 +14,13 @@ import { RowLayout } from './RowLayout'
 import { availableRowWidth } from './rowWidth'
 import { TieLayout, type TieLayoutContext } from './TieLayout'
 
-/** A measure narrower than this is padded up — prevents unusably cramped bars. */
-const ABSOLUTE_MINIMUM_WIDTH = SCORE_WIDTH / (MAX_MEASURES_PER_ROW + 1)
 /** Packing converges in one or two passes in practice; the cap only guards pathological oscillation. */
 const MAX_PACKING_ITERATIONS = 10
+
+/** A measure narrower than this is padded up — prevents unusably cramped bars. */
+function absoluteMinimumWidth(scoreWidth: number): number {
+    return scoreWidth / (MAX_MEASURES_PER_ROW + 1)
+}
 
 interface MeasureFlags {
     showsClef: boolean
@@ -49,7 +52,7 @@ interface MeasurePlan {
  */
 export class ScoreLayout {
     readonly id = crypto.randomUUID()
-    readonly scoreWidth = SCORE_WIDTH
+    readonly scoreWidth: number
     readonly rowGap = ROW_GAP
     readonly rowHeight = ROW_HEIGHT
     readonly rows: RowLayout[]
@@ -60,7 +63,9 @@ export class ScoreLayout {
     private readonly _rowByMeasure = new Map<Measure, RowLayout>()
     private readonly _tiesByKey = new Map<string, TieLayout>()
 
-    constructor(score: Score, previous?: ScoreLayout) {
+    constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
+        this.scoreWidth = scoreWidth
+        const minimumMeasureWidth = absoluteMinimumWidth(scoreWidth)
         const plans = ScoreLayout.buildPlans(score)
 
         // --- Fixed-point packing: flags → widths → rows → row-start flags, until stable ---
@@ -71,8 +76,8 @@ export class ScoreLayout {
         }))
         let rowGroups: number[][] = []
         for (let iteration = 0; iteration < MAX_PACKING_ITERATIONS; iteration++) {
-            const widths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i]))
-            rowGroups = ScoreLayout.packGreedy(widths)
+            const widths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i], minimumMeasureWidth))
+            rowGroups = ScoreLayout.packGreedy(widths, scoreWidth)
             const next = plans.map((plan) => ({ ...plan.base }))
             for (const group of rowGroups) {
                 next[group[0]].showsClef = true
@@ -87,7 +92,7 @@ export class ScoreLayout {
             flags = next
             if (stable) break
         }
-        const minimalWidths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i]))
+        const minimalWidths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i], minimumMeasureWidth))
 
         // --- Rows (reusing unchanged ones from the previous snapshot) ---
         this.rows = rowGroups.map((group, rowIndex) => {
@@ -96,6 +101,7 @@ export class ScoreLayout {
                 isLastRow: rowIndex === rowGroups.length - 1,
                 measures: group.map((i) => plans[i].measure),
                 minimalWidths: new Map(group.map((i) => [plans[i].measure, minimalWidths[i]])),
+                scoreWidth,
             }
             const previousRow = previous?.rows[rowIndex]
             const row = previousRow?.matches(context) ? previousRow : new RowLayout(context)
@@ -223,18 +229,18 @@ export class ScoreLayout {
         })
     }
 
-    private static minimalWidth(plan: MeasurePlan, flags: MeasureFlags): number {
+    private static minimalWidth(plan: MeasurePlan, flags: MeasureFlags, minimumMeasureWidth: number): number {
         const sum =
             (flags.showsClef ? plan.measure.clef.width.total : 0) +
             (flags.showsKeySignature ? plan.leadingKeyWidth.total : 0) +
             (flags.showsTimeSignature ? plan.measure.timeSignature.width.total : 0) +
             plan.fixedWidth
-        return Math.max(sum, ABSOLUTE_MINIMUM_WIDTH)
+        return Math.max(sum, minimumMeasureWidth)
     }
 
     /** Greedy row fill, reserving measure-button space on every row while fitting (the historical budget). */
-    private static packGreedy(widths: number[]): number[][] {
-        const budget = availableRowWidth({ isLastRow: true })
+    private static packGreedy(widths: number[], scoreWidth: number): number[][] {
+        const budget = availableRowWidth({ isLastRow: true, scoreWidth })
         const groups: number[][] = []
         let current: number[] = []
         let currentWidth = 0

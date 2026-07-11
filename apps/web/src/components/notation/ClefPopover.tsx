@@ -86,7 +86,7 @@ export function ClefPopover({ active, onSelect, onDismiss, className, anchorRef 
             <Eyebrow>Clef</Eyebrow>
             <div role="group" aria-label="Clef" className="flex flex-col gap-1.5">
                 {CLEF_FAMILIES.map((family, i) => (
-                    <div key={i} className="flex gap-1.5">
+                    <div key={i} className="flex flex-wrap gap-1.5">
                         {family.map((type) => {
                             const isActive = type === active
                             return (

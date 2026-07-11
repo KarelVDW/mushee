@@ -14,6 +14,8 @@ interface PrimaryButtonProps {
     emphasis?: 'flat' | 'pop'
     danger?: boolean
     fullWidth?: boolean
+    /** Accessible name — required when rendering icon-only (no children). */
+    ariaLabel?: string
 }
 
 /**
@@ -31,6 +33,7 @@ export function PrimaryButton({
     emphasis = 'flat',
     danger = false,
     fullWidth = false,
+    ariaLabel,
 }: PrimaryButtonProps) {
     const big = size === 'lg'
     // Destructive variant: red fill, no magenta pop — the signature lift is reserved
@@ -48,10 +51,11 @@ export function PrimaryButton({
             type={type}
             disabled={disabled}
             onClick={onClick}
+            aria-label={ariaLabel}
             className={[
                 'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
                 'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
-                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px]',
+                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
                 'transition-[transform,box-shadow,background-color,color] duration-200 ease-sheemu',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -61,7 +65,7 @@ export function PrimaryButton({
                 popStyles,
                 fullWidth ? 'w-full' : '',
             ].join(' ')}>
-            <span>{children}</span>
+            {children != null && <span>{children}</span>}
             {icon && <Icon name={icon} size={big ? 18 : 16} />}
         </button>
     )
@@ -78,7 +82,7 @@ export function SecondaryButton({ children, onClick, size = 'md', type = 'button
                 'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
                 'border-0 rounded-full font-label font-semibold',
                 'bg-surface-container-low text-on-surface hover:bg-surface-container',
-                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px]',
+                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
                 'transition-colors duration-150 ease-sheemu',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -136,6 +140,8 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
             onClick={onClick}
             className={[
                 'inline-flex items-center justify-center cursor-pointer border-0 rounded-full',
+                // Touch: extend the hit area past the visual circle (small sizes stay tappable).
+                'relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 pointer-coarse:after:content-[""] pointer-coarse:after:rounded-full',
                 'text-on-surface',
                 idleClassName ?? 'bg-surface-container',
                 hoverPalette,
@@ -161,7 +167,7 @@ export function ToggleButton({ active, tone = 'cyan', children, className, ...re
             {...rest}
             className={[
                 'inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
-                'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5',
+                'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5 pointer-coarse:min-h-10',
                 'font-label font-semibold text-[12px] leading-none',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 active ? activePalette : 'bg-surface-container-low text-on-surface',
