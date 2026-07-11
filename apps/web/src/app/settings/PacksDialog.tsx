@@ -4,8 +4,10 @@ import { useState } from 'react'
 
 import { DialogPanel, DialogScrim, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
+import { formatMoney } from '@/lib/currency'
 import { CREDIT_PACKS, type CreditPack } from '@/lib/plans'
 import { useStartPackCheckout } from '@/lib/queries'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 type Phase = 'choose' | 'redirecting'
 
@@ -24,6 +26,7 @@ interface PacksDialogProps {
 export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
     const [selected, setSelected] = useState<CreditPack['id']>('single')
     const [phase, setPhase] = useState<Phase>('choose')
+    const currency = useDisplayCurrency()
     const startCheckout = useStartPackCheckout()
 
     const pack = CREDIT_PACKS.find((p) => p.id === selected) ?? CREDIT_PACKS[0]
@@ -53,7 +56,7 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                         <>
                             {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
                             <PrimaryButton icon="external-link" onClick={buy}>
-                                {`Buy ${pack.name} · $${pack.price}`}
+                                {`Buy ${pack.name} · ${formatMoney(pack.price, currency)}`}
                             </PrimaryButton>
                         </>
                     ) : null
@@ -61,8 +64,8 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                 {phase === 'choose' && (
                     <div className="flex flex-col gap-4 pb-2">
                         <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                            Recording regularly? <strong>Songwriter</strong> gives you 20 minutes <em>every day</em> for
-                            $9/month — packs are for the once-in-a-while.
+                            Recording regularly? <strong>Songwriter</strong> gives you 20 minutes <em>every day</em> for{' '}
+                            {formatMoney(9, currency)}/month — packs are for the once-in-a-while.
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
@@ -85,7 +88,7 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                                         ].join(' ')}>
                                         <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
                                         <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
-                                            ${p.price}
+                                            {formatMoney(p.price, currency)}
                                         </span>
                                         <span className="font-body font-normal text-[13px] leading-[1.4]">
                                             {p.minutes} min of recording
@@ -96,8 +99,8 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                             })}
                         </div>
 
-                        <p className="font-body font-normal text-[12px] leading-[1.5] text-on-surface-variant m-0">
-                            {pack.compare}
+                        <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                            {pack.compare(currency)}
                         </p>
                     </div>
                 )}

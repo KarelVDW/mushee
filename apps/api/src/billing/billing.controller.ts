@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/user.decorator';
@@ -17,13 +18,16 @@ export class BillingController {
     return this.billingService.getState(user.id);
   }
 
-  /** Start a Polar-hosted checkout; the client redirects to the returned URL. */
+  /** Start a Polar-hosted checkout; the client redirects to the returned URL.
+   *  The client IP is forwarded so Polar's multi-currency geolocation prices
+   *  the session in the customer's currency, not the server's. */
   @Post('checkout')
   checkout(
     @CurrentUser() user: { id: string; email: string },
     @Body() dto: CreateCheckoutDto,
+    @Req() req: FastifyRequest,
   ) {
-    return this.billingService.createCheckout(user, dto.tierId, dto.interval);
+    return this.billingService.createCheckout(user, dto.tierId, dto.interval, req.ip);
   }
 
   /** Checkout for a one-time minute pack (no subscription involved). */
@@ -31,8 +35,9 @@ export class BillingController {
   packCheckout(
     @CurrentUser() user: { id: string; email: string },
     @Body() dto: CreatePackCheckoutDto,
+    @Req() req: FastifyRequest,
   ) {
-    return this.billingService.createPackCheckout(user, dto.packId);
+    return this.billingService.createPackCheckout(user, dto.packId, req.ip);
   }
 
   /** Polar-hosted customer portal (invoices, payment methods, cancellation). */

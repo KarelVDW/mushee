@@ -88,11 +88,17 @@ export class BillingService {
     };
   }
 
-  /** Create a Polar checkout session and return its hosted URL. */
+  /**
+   * Create a Polar checkout session and return its hosted URL. The customer
+   * IP is forwarded because sessions are created server-side: Polar picks
+   * the presentment currency (USD/EUR) by geolocating that IP — without it,
+   * every customer would be priced from the server's location.
+   */
   async createCheckout(
     user: { id: string; email: string },
     tierId: PaidTierId,
     interval: BillingInterval,
+    customerIp?: string,
   ): Promise<{ url: string }> {
     if (isBetaMode()) {
       throw new ForbiddenException(
@@ -111,6 +117,7 @@ export class BillingService {
       products: [productId],
       externalCustomerId: user.id,
       customerEmail: user.email,
+      customerIpAddress: customerIp,
       successUrl: `${this.webAppUrl()}/settings?checkout=success`,
       metadata: { userId: user.id },
     });
@@ -124,6 +131,7 @@ export class BillingService {
   async createPackCheckout(
     user: { id: string; email: string },
     packId: PackId,
+    customerIp?: string,
   ): Promise<{ url: string }> {
     if (isBetaMode()) {
       throw new ForbiddenException(
@@ -142,6 +150,7 @@ export class BillingService {
       products: [productId],
       externalCustomerId: user.id,
       customerEmail: user.email,
+      customerIpAddress: customerIp,
       successUrl: `${this.webAppUrl()}/settings?pack=success`,
       metadata: { userId: user.id, packId },
     });

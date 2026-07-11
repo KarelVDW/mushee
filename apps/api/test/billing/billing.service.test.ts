@@ -209,18 +209,21 @@ describe('createCheckout', () => {
     );
   });
 
-  it('creates a Polar checkout keyed to the user and returns its URL', async () => {
+  it('creates a Polar checkout keyed to the user, forwarding the client IP for currency geolocation', async () => {
     process.env.WEB_APP_URL = 'https://app.example.com/';
     const polar = fakePolar();
     configurePolar(polar);
     const { service } = makeService();
-    await expect(service.createCheckout(USER, 'pro', 'monthly')).resolves.toEqual({
+    await expect(
+      service.createCheckout(USER, 'pro', 'monthly', '203.0.113.7'),
+    ).resolves.toEqual({
       url: 'https://polar.sh/checkout/1',
     });
     expect(polar.checkouts.create).toHaveBeenCalledWith({
       products: [PRO_MONTHLY],
       externalCustomerId: USER.id,
       customerEmail: USER.email,
+      customerIpAddress: '203.0.113.7',
       successUrl: 'https://app.example.com/settings?checkout=success',
       metadata: { userId: USER.id },
     });
@@ -251,18 +254,21 @@ describe('createPackCheckout', () => {
     );
   });
 
-  it('creates a one-time checkout keyed to the user and pack', async () => {
+  it('creates a one-time checkout keyed to the user and pack, forwarding the client IP', async () => {
     process.env.WEB_APP_URL = 'https://app.example.com/';
     const polar = fakePolar();
     configurePolar(polar);
     const { service } = makeService();
-    await expect(service.createPackCheckout(USER, 'single')).resolves.toEqual({
+    await expect(
+      service.createPackCheckout(USER, 'single', '203.0.113.7'),
+    ).resolves.toEqual({
       url: 'https://polar.sh/checkout/1',
     });
     expect(polar.checkouts.create).toHaveBeenCalledWith({
       products: [PACK_SINGLE],
       externalCustomerId: USER.id,
       customerEmail: USER.email,
+      customerIpAddress: '203.0.113.7',
       successUrl: 'https://app.example.com/settings?pack=success',
       metadata: { userId: USER.id, packId: 'single' },
     });

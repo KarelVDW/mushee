@@ -19,6 +19,7 @@ import {
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
 import { billingKeys, useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { ChangePlanDialog } from './ChangePlanDialog'
@@ -185,6 +186,7 @@ function BillingSection() {
     const resume = useResumeSubscription()
     const [changePlanOpen, setChangePlanOpen] = useState(false)
     const [packsOpen, setPacksOpen] = useState(false)
+    const currency = useDisplayCurrency()
 
     if (isPending) {
         return (
@@ -211,7 +213,7 @@ function BillingSection() {
     const priceLine = isBeta
         ? 'Free during the beta'
         : hasSubscription
-          ? `${planPrice(plan, billing.interval ?? 'monthly')}${
+          ? `${planPrice(plan, billing.interval ?? 'monthly', currency)}${
                 periodEnd ? (billing.cancelAtPeriodEnd ? ` · ends ${periodEnd}` : ` · renews ${periodEnd}`) : ''
             }`
           : 'Free'

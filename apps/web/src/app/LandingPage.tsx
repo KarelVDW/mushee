@@ -6,7 +6,9 @@ import { useState } from 'react'
 import { Eyebrow, Footer, Icon, PrimaryButton, SecondaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
+import { type Currency, formatMoney } from '@/lib/currency'
 import { BETA_MODE, BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { HeroDemo } from './HeroDemo'
 
@@ -220,6 +222,7 @@ function FeatureGrid() {
 }
 
 function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
+    const currency = useDisplayCurrency()
     return (
         <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
             <div className="max-w-320 mx-auto">
@@ -246,15 +249,21 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
                     {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
-                        <PricingCard key={tier.id} tier={tier} onGetStarted={onGetStarted} />
+                        <PricingCard key={tier.id} tier={tier} currency={currency} onGetStarted={onGetStarted} />
                     ))}
                 </div>
 
                 {PLAN_TIERS.filter((tier) => tier.professional).map((tier) => (
-                    <ProfessionalCard key={tier.id} tier={tier} onGetStarted={onGetStarted} />
+                    <ProfessionalCard key={tier.id} tier={tier} currency={currency} onGetStarted={onGetStarted} />
                 ))}
 
-                <PacksTeaser />
+                <PacksTeaser currency={currency} />
+
+                {currency === 'eur' && (
+                    <p className="mt-6 font-body font-normal text-[12px] leading-normal text-on-surface-variant text-center m-0">
+                        Prices in euro for eurozone customers; any applicable VAT is shown at checkout.
+                    </p>
+                )}
             </div>
         </section>
     )
@@ -262,7 +271,7 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
 
 /** The professional tier: present enough to anchor the ladder, slim enough
  *  not to compete with the consumer cards. */
-function ProfessionalCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () => void }) {
+function ProfessionalCard({ tier, currency, onGetStarted }: { tier: PlanTier; currency: Currency; onGetStarted: () => void }) {
     return (
         <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
             <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
@@ -278,10 +287,10 @@ function ProfessionalCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted
             </div>
             <div className="flex items-baseline gap-1.5">
                 <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em] text-on-surface">
-                    ${tier.priceMonthly}
+                    {formatMoney(tier.priceMonthly, currency)}
                 </span>
                 <span className="font-body font-medium text-[12px] leading-none text-on-surface-variant">
-                    / month · ${tier.priceYearly}/yr
+                    / month · {formatMoney(tier.priceYearly, currency)}/yr
                 </span>
             </div>
             <SecondaryButton onClick={onGetStarted}>{BETA_MODE ? 'Join the beta' : `Go ${tier.name}`}</SecondaryButton>
@@ -290,7 +299,7 @@ function ProfessionalCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted
 }
 
 /** One-time packs, one click away — the subscriptions above stay the offer. */
-function PacksTeaser() {
+function PacksTeaser({ currency }: { currency: Currency }) {
     const [open, setOpen] = useState(false)
     return (
         <div className="mt-8 text-center">
@@ -299,7 +308,7 @@ function PacksTeaser() {
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
-                Not ready for a subscription? One-time minute packs, from $6
+                Not ready for a subscription? One-time minute packs, from {formatMoney(6, currency)}
             </button>
             {open && (
                 <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
@@ -307,13 +316,13 @@ function PacksTeaser() {
                         <div key={pack.id} className="bg-surface-container-lowest tonal-layer-glow rounded-lg p-5 flex flex-col gap-1.5">
                             <span className="font-headline font-semibold text-[15px] leading-[1.2] text-on-surface">{pack.name}</span>
                             <span className="font-mono font-semibold text-[20px] leading-none tracking-[-0.01em] text-on-surface">
-                                ${pack.price}
+                                {formatMoney(pack.price, currency)}
                             </span>
                             <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                                 {pack.minutes} min of recording · {pack.blurb}
                             </span>
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                {pack.compare}
+                                {pack.compare(currency)}
                             </span>
                         </div>
                     ))}
@@ -326,7 +335,7 @@ function PacksTeaser() {
     )
 }
 
-function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () => void }) {
+function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currency: Currency; onGetStarted: () => void }) {
     const emphasis = tier.popular === true
     const cta = BETA_MODE ? 'Join the beta' : tier.priceMonthly === 0 ? 'Start sketching' : `Go ${tier.name}`
     return (
@@ -345,14 +354,14 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
             </div>
             <div className="flex items-baseline gap-1.5">
                 <span className="font-display font-bold text-[40px] tracking-[-0.03em]">
-                    {tier.priceMonthly === 0 ? 'Free' : `$${tier.priceMonthly}`}
+                    {tier.priceMonthly === 0 ? 'Free' : formatMoney(tier.priceMonthly, currency)}
                 </span>
                 <span
                     className={[
                         'font-body font-medium text-[13px] leading-none',
                         emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant',
                     ].join(' ')}>
-                    {tier.priceMonthly === 0 ? 'forever' : `/ month · $${tier.priceYearly}/yr`}
+                    {tier.priceMonthly === 0 ? 'forever' : `/ month · ${formatMoney(tier.priceYearly, currency)}/yr`}
                 </span>
             </div>
             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">

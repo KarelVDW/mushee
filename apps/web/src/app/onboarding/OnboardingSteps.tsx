@@ -5,6 +5,7 @@ import { type Dispatch, type SetStateAction, useState } from 'react'
 import { Chip, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import { emailOtp } from '@/lib/auth-client'
 import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { BACKGROUNDS, PRIMARY_INSTRUMENTS, REFERRAL_SOURCES } from './onboarding-data'
 import { BillingToggle, OptionCard, StepShell, TierCard } from './OnboardingControls'
@@ -255,12 +256,20 @@ export function PlanStep({
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
+    const currency = useDisplayCurrency()
     return (
         <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
             <BillingToggle value={billing} onChange={onBillingChange} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {plans.map((p) => (
-                    <TierCard key={p.id} plan={p} billing={billing} active={tier === p.id} onSelect={() => onTierChange(p.id)} />
+                    <TierCard
+                        key={p.id}
+                        plan={p}
+                        billing={billing}
+                        currency={currency}
+                        active={tier === p.id}
+                        onSelect={() => onTierChange(p.id)}
+                    />
                 ))}
             </div>
         </StepShell>

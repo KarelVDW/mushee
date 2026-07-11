@@ -7,6 +7,7 @@ import { track } from '@/lib/analytics'
 import type { BillingState } from '@/lib/api'
 import { type Billing, PLAN_TIERS, planById, planFeatures, planPrice, type PlanTier } from '@/lib/plans'
 import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
@@ -28,6 +29,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
     const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
     const [billing, setBilling] = useState<Billing>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
+    const currency = useDisplayCurrency()
 
     const startCheckout = useStartCheckout()
     const changePlan = useChangePlan()
@@ -195,7 +197,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                                             <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
                                         </div>
                                         <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
-                                            {planPrice(p, billing)}
+                                            {planPrice(p, billing, currency)}
                                         </span>
                                         <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
                                             {planFeatures(p).map((f) => (

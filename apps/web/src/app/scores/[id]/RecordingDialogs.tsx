@@ -3,9 +3,11 @@
 import { useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { formatMoney } from '@/lib/currency'
 import { PLAN_TIERS } from '@/lib/plans'
 import { usePlans } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 // Format seconds as S"s" under a minute, M:SS under an hour, then H"h".
 function fmtRecTime(sec: number): string {
@@ -40,6 +42,7 @@ interface RecordingLimitDialogProps {
  */
 export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimitDialogProps) {
     useEscape(onClose)
+    const currency = useDisplayCurrency()
 
     // The upgrade target comes from the database tier catalogue; the static
     // list only bridges the moment before the query resolves.
@@ -89,7 +92,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                         <a href="/settings" className="text-primary underline">
                             One-time minute packs
                         </a>{' '}
-                        start at $6 and never expire.
+                        start at {formatMoney(6, currency)} and never expire.
                     </span>
                 </div>
             </DialogPanel>

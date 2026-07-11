@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react'
 
 import { Eyebrow, Icon, ModalTitle, SubHeadline } from '@/components/ui'
+import { type Currency, formatMoney } from '@/lib/currency'
 import { type Billing, planFeatures, type PlanTier } from '@/lib/plans'
 
 import { formatPrice } from './onboarding-data'
@@ -93,8 +94,8 @@ export function BillingToggle({ value, onChange }: { value: Billing; onChange: (
     )
 }
 
-export function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; active: boolean; billing: Billing; onSelect: () => void }) {
-    const price = formatPrice(plan, billing)
+export function TierCard({ plan, active, billing, currency, onSelect }: { plan: PlanTier; active: boolean; billing: Billing; currency: Currency; onSelect: () => void }) {
+    const price = formatPrice(plan, billing, currency)
     const showSavings = billing === 'yearly' && plan.priceMonthly > 0
     const savings = showSavings ? plan.priceMonthly * 12 - plan.priceYearly : 0
     return (
@@ -129,7 +130,7 @@ export function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; 
                 <span className="font-mono font-semibold text-[28px] leading-none tracking-[-0.02em]">{price.amount}</span>
                 <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{price.cadence}</span>
             </div>
-            {showSavings && <Eyebrow className={active ? '' : 'text-primary'}>Save ${savings}/yr</Eyebrow>}
+            {showSavings && <Eyebrow className={active ? '' : 'text-primary'}>Save {formatMoney(savings, currency)}/yr</Eyebrow>}
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
                 {planFeatures(plan).map((f) => (
                     <li key={f} className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4]">

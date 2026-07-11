@@ -7,8 +7,12 @@
  * from this static catalogue (it must work without the API), so keep the
  * `dailyRecordingSeconds` fallbacks roughly in sync with the seeded tiers.
  * Prices are display-only; the amounts actually charged come from the Polar
- * products configured on the API.
+ * products configured on the API. Numerals are the same in USD and EUR
+ * (parity pricing — keep the Polar products configured that way too); the
+ * display currency only swaps the symbol (lib/currency.ts).
  */
+
+import { type Currency, currencySymbol, formatMoney } from './currency'
 
 export interface PlanTier {
     id: 'free' | 'pro' | 'studio' | 'arranger'
@@ -86,7 +90,7 @@ export interface CreditPack {
     price: number
     blurb: string
     /** The honest subscription comparison shown on the card. */
-    compare: string
+    compare: (currency: Currency) => string
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
@@ -96,7 +100,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 15,
         price: 6,
         blurb: 'One song, with plenty of retakes.',
-        compare: 'Songwriter gives you 20 min every day for $3 more a month.',
+        compare: (c) => `Songwriter gives you 20 min every day for ${formatMoney(3, c)} more a month.`,
     },
     {
         id: 'ep',
@@ -104,7 +108,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 45,
         price: 15,
         blurb: 'A weekend writing session.',
-        compare: 'Roughly 7 weeks of Songwriter costs the same.',
+        compare: () => 'Roughly 7 weeks of Songwriter costs the same.',
     },
     {
         id: 'album',
@@ -112,7 +116,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 150,
         price: 39,
         blurb: 'A whole project, start to finish.',
-        compare: 'Four months of Songwriter costs the same.',
+        compare: () => 'Four months of Songwriter costs the same.',
     },
 ]
 
@@ -155,11 +159,11 @@ export function planFeatures(
     return [recordingBudgetLabel(dailyRecordingSeconds), ...plan.features]
 }
 
-export function planPrice(plan: PlanTier, billing: Billing): string {
+export function planPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): string {
     if (plan.priceMonthly === 0) return 'Free'
     if (billing === 'yearly') {
         const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return `$${m}/mo · billed yearly`
+        return `${currencySymbol(currency)}${m}/mo · billed yearly`
     }
-    return `$${plan.priceMonthly}/mo`
+    return `${formatMoney(plan.priceMonthly, currency)}/mo`
 }

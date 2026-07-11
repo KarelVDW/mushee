@@ -1,3 +1,4 @@
+import { type Currency, currencySymbol, formatMoney } from '@/lib/currency'
 import { type Billing, type PlanTier } from '@/lib/plans'
 
 export const BACKGROUNDS: [string, string, string][] = [
@@ -34,13 +35,13 @@ export const REFERRAL_SOURCES: [string, string][] = [
     ['other', 'Somewhere else'],
 ]
 
-export function formatPrice(plan: PlanTier, billing: Billing): { amount: string; cadence: string } {
+export function formatPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): { amount: string; cadence: string } {
     if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever' }
     if (billing === 'yearly') {
         const monthlyEquiv = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return { amount: `$${monthlyEquiv}`, cadence: '/month, billed yearly' }
+        return { amount: `${currencySymbol(currency)}${monthlyEquiv}`, cadence: '/month, billed yearly' }
     }
-    return { amount: `$${plan.priceMonthly}`, cadence: '/month' }
+    return { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month' }
 }
 
 // Steps in order: verify email, mic permission, name, background, instruments, source, tier.
