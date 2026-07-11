@@ -13,6 +13,8 @@ type Phase = 'choose' | 'redirecting' | 'done'
 interface ChangePlanDialogProps {
     billing: BillingState
     onClose: () => void
+    /** Open the one-time packs dialog instead (subscriptions stay the headline). */
+    onShowPacks?: () => void
 }
 
 /**
@@ -21,7 +23,7 @@ interface ChangePlanDialogProps {
  * - paid → other paid tier/cadence: POST /billing/change (prorated in place).
  * - paid → free: POST /billing/cancel (keeps access until the period ends).
  */
-export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogProps) {
+export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: ChangePlanDialogProps) {
     const currentBilling: Billing = state.interval ?? 'monthly'
     const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
     const [billing, setBilling] = useState<Billing>(currentBilling)
@@ -66,14 +68,14 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
         } else if (needsCheckout) {
             track('checkout_started', { tierId: nextPlan.id, interval: billing })
             startCheckout.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio', interval: billing },
+                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
                 // Success navigates away to Polar; only errors return here.
                 { onError: () => setPhase('choose') },
             )
         } else {
             track('plan_change_started', { tierId: nextPlan.id, interval: billing })
             changePlan.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio', interval: billing },
+                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
                 {
                     onSuccess: () => setPhase('done'),
                     onError: () => setPhase('choose'),
@@ -166,7 +168,7 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                             })}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {plans.map((p) => {
                                 const active = selected === p.id
                                 const isCurrent = p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
@@ -211,6 +213,18 @@ export function ChangePlanDialog({ billing: state, onClose }: ChangePlanDialogPr
                                 )
                             })}
                         </div>
+
+                        {onShowPacks && (
+                            <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                                Just need a few minutes once?{' '}
+                                <button
+                                    type="button"
+                                    onClick={onShowPacks}
+                                    className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[12px] text-primary underline">
+                                    One-time minute packs
+                                </button>
+                            </p>
+                        )}
 
                         {isCancel && (
                             <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">

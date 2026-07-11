@@ -11,7 +11,7 @@
  */
 
 export interface PlanTier {
-    id: 'free' | 'pro' | 'studio'
+    id: 'free' | 'pro' | 'studio' | 'arranger'
     name: string
     icon: string
     tagline: string
@@ -22,6 +22,8 @@ export interface PlanTier {
     /** Marketing feature lines, excluding the recording budget (derived). */
     features: string[]
     popular?: boolean
+    /** Professional tiers render as a slim secondary card, not in the main grid. */
+    professional?: boolean
 }
 
 export type Billing = 'monthly' | 'yearly'
@@ -34,18 +36,18 @@ export const PLAN_TIERS: PlanTier[] = [
         tagline: 'For trying things out',
         priceMonthly: 0,
         priceYearly: 0,
-        dailyRecordingSeconds: 30,
-        features: ['Unlimited scores', 'Live audio-to-notation', 'Full editor'],
+        dailyRecordingSeconds: 180,
+        features: ['Unlimited scores', 'Live audio-to-notation', 'Full editor & playback'],
     },
     {
         id: 'pro',
-        name: 'Composer',
+        name: 'Songwriter',
         icon: 'sparkles',
         tagline: 'For daily writers',
-        priceMonthly: 8,
-        priceYearly: 80,
-        dailyRecordingSeconds: 600,
-        features: ['Everything in Sketch', 'Priority transcription', 'Early access to new features'],
+        priceMonthly: 9,
+        priceYearly: 90,
+        dailyRecordingSeconds: 1200,
+        features: ['Everything in Sketch', 'Early access to new features'],
         popular: true,
     },
     {
@@ -53,10 +55,64 @@ export const PLAN_TIERS: PlanTier[] = [
         name: 'Studio',
         icon: 'gem',
         tagline: 'For heavy sessions',
-        priceMonthly: 18,
-        priceYearly: 180,
-        dailyRecordingSeconds: null,
-        features: ['Everything in Composer', 'Priority support'],
+        priceMonthly: 19,
+        priceYearly: 190,
+        dailyRecordingSeconds: 10800,
+        features: ['Everything in Songwriter', 'Priority support'],
+    },
+    {
+        id: 'arranger',
+        name: 'Arranger',
+        icon: 'crown',
+        tagline: 'For transcription as a job',
+        priceMonthly: 49,
+        priceYearly: 490,
+        dailyRecordingSeconds: 28800,
+        features: ['Everything in Studio', 'Direct support from the maker'],
+        professional: true,
+    },
+]
+
+/**
+ * One-time recording-minute packs — display catalogue only; the charged
+ * amounts come from the Polar pack products on the API. Deliberately priced
+ * well above the subscriptions' per-minute rate: packs serve the
+ * once-in-a-while user, and every card says so out loud.
+ */
+export interface CreditPack {
+    id: 'single' | 'ep' | 'album'
+    name: string
+    minutes: number
+    price: number
+    blurb: string
+    /** The honest subscription comparison shown on the card. */
+    compare: string
+}
+
+export const CREDIT_PACKS: CreditPack[] = [
+    {
+        id: 'single',
+        name: 'Single',
+        minutes: 15,
+        price: 6,
+        blurb: 'One song, with plenty of retakes.',
+        compare: 'Songwriter gives you 20 min every day for $3 more a month.',
+    },
+    {
+        id: 'ep',
+        name: 'EP',
+        minutes: 45,
+        price: 15,
+        blurb: 'A weekend writing session.',
+        compare: 'Roughly 7 weeks of Songwriter costs the same.',
+    },
+    {
+        id: 'album',
+        name: 'Album',
+        minutes: 150,
+        price: 39,
+        blurb: 'A whole project, start to finish.',
+        compare: 'Four months of Songwriter costs the same.',
     },
 ]
 
@@ -66,7 +122,7 @@ export const BETA_PLAN = {
     name: 'Beta',
     icon: 'sparkles',
     tagline: 'Free while the beta runs',
-    dailyRecordingSeconds: 300,
+    dailyRecordingSeconds: 1800,
     features: ['Full editor', 'Direct line to the makers'],
 }
 
@@ -82,7 +138,9 @@ export function planById(id: string | undefined | null): PlanTier {
 export function recordingBudgetLabel(seconds: number | null): string {
     if (seconds === null) return 'Unlimited recording'
     if (seconds < 60) return `${seconds} sec of recording / day`
-    return `${Math.round(seconds / 60)} min of recording / day`
+    if (seconds < 3600) return `${Math.round(seconds / 60)} min of recording / day`
+    const hours = seconds / 3600
+    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h of recording / day`
 }
 
 /**

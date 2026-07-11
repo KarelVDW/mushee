@@ -39,6 +39,7 @@ Logger.overrideLogger(false);
 
 const PRO_MONTHLY = 'prod-pro-m';
 const PRO_YEARLY = 'prod-pro-y';
+const PACK_SINGLE = 'prod-pack-single';
 const USER = { id: 'user-1', email: 'user@example.com' };
 const WEBHOOK_HEADERS = { 'webhook-id': 'wh-1' };
 
@@ -77,7 +78,9 @@ function makeService(
     upsert: vi.fn(() => Promise.resolve({})),
   };
   const credits = {
-    balance: vi.fn(() => Promise.resolve({ used: 60, remaining: 3540 })),
+    balance: vi.fn(() => Promise.resolve({ used: 60, remaining: 3540, packSeconds: 120 })),
+    grantPackSeconds: vi.fn(() => Promise.resolve()),
+    revokePackSeconds: vi.fn(() => Promise.resolve()),
   };
   // Minimal EntityManager: the dedupe insert query builder + a transaction
   // that simply runs the callback against itself.
@@ -113,6 +116,11 @@ const ENV_KEYS = [
   'POLAR_PRODUCT_PRO_YEARLY',
   'POLAR_PRODUCT_STUDIO_MONTHLY',
   'POLAR_PRODUCT_STUDIO_YEARLY',
+  'POLAR_PRODUCT_ARRANGER_MONTHLY',
+  'POLAR_PRODUCT_ARRANGER_YEARLY',
+  'POLAR_PRODUCT_PACK_SINGLE',
+  'POLAR_PRODUCT_PACK_EP',
+  'POLAR_PRODUCT_PACK_ALBUM',
 ];
 const savedEnv: Record<string, string | undefined> = {};
 
@@ -123,6 +131,7 @@ beforeEach(() => {
   }
   process.env.POLAR_PRODUCT_PRO_MONTHLY = PRO_MONTHLY;
   process.env.POLAR_PRODUCT_PRO_YEARLY = PRO_YEARLY;
+  process.env.POLAR_PRODUCT_PACK_SINGLE = PACK_SINGLE;
   process.env.POLAR_WEBHOOK_SECRET = 'whsec_test';
   vi.mocked(validateEvent).mockReset();
   configurePolar(null);
@@ -156,7 +165,7 @@ describe('getState', () => {
       cancelAtPeriodEnd: true,
       billingConfigured: true,
       betaMode: false,
-      credits: { limitSeconds: 3600, usedSeconds: 60, remainingSeconds: 3540 },
+      credits: { limitSeconds: 3600, usedSeconds: 60, remainingSeconds: 3540, packSeconds: 120 },
     });
   });
 
@@ -214,6 +223,48 @@ describe('createCheckout', () => {
       customerEmail: USER.email,
       successUrl: 'https://app.example.com/settings?checkout=success',
       metadata: { userId: USER.id },
+    });
+  });
+});
+
+describe('createPackCheckout', () => {
+  it('is forbidden in beta mode', async () => {
+    process.env.BETA_MODE = 'true';
+    const { service } = makeService();
+    await expect(service.createPackCheckout(USER, 'single')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('answers 503 when Polar is not configured', async () => {
+    const { service } = makeService();
+    await expect(service.createPackCheckout(USER, 'single')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
+  it('rejects packs without a configured product', async () => {
+    configurePolar(fakePolar());
+    const { service } = makeService();
+    await expect(service.createPackCheckout(USER, 'album')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('creates a one-time checkout keyed to the user and pack', async () => {
+    process.env.WEB_APP_URL = 'https://app.example.com/';
+    const polar = fakePolar();
+    configurePolar(polar);
+    const { service } = makeService();
+    await expect(service.createPackCheckout(USER, 'single')).resolves.toEqual({
+      url: 'https://polar.sh/checkout/1',
+    });
+    expect(polar.checkouts.create).toHaveBeenCalledWith({
+      products: [PACK_SINGLE],
+      externalCustomerId: USER.id,
+      customerEmail: USER.email,
+      successUrl: 'https://app.example.com/settings?pack=success',
+      metadata: { userId: USER.id, packId: 'single' },
     });
   });
 });
@@ -401,10 +452,90 @@ describe('handleWebhook', () => {
   });
 
   it('acknowledges unrelated event types without mirroring anything', async () => {
-    vi.mocked(validateEvent).mockReturnValue({ type: 'order.created', data: {} });
+    vi.mocked(validateEvent).mockReturnValue({ type: 'benefit.created', data: {} });
     const { service, subscriptions } = makeService();
     await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
     expect(subscriptions.upsert).not.toHaveBeenCalled();
+  });
+
+  it('grants pack seconds on order.paid for a pack product', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.paid',
+      data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.grantPackSeconds).toHaveBeenCalledWith(
+      USER.id,
+      15 * 60,
+      expect.anything(),
+    );
+  });
+
+  it('falls back to checkout metadata when the order has no external customer id', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.paid',
+      data: { productId: PACK_SINGLE, customer: {}, metadata: { userId: USER.id } },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.grantPackSeconds).toHaveBeenCalledWith(
+      USER.id,
+      15 * 60,
+      expect.anything(),
+    );
+  });
+
+  it('ignores order.paid for subscription invoices (non-pack products)', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.paid',
+      data: { productId: PRO_MONTHLY, customer: { externalId: USER.id } },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.grantPackSeconds).not.toHaveBeenCalled();
+  });
+
+  it('ignores order.created even for pack products (only order.paid grants)', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.created',
+      data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.grantPackSeconds).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges but ignores a pack order without any user id', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.paid',
+      data: { productId: PACK_SINGLE, customer: {}, metadata: {} },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.grantPackSeconds).not.toHaveBeenCalled();
+  });
+
+  it('revokes pack seconds on order.refunded, but only for pack products', async () => {
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.refunded',
+      data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+    });
+    const { service, credits } = makeService();
+    await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(credits.revokePackSeconds).toHaveBeenCalledWith(
+      USER.id,
+      15 * 60,
+      expect.anything(),
+    );
+
+    vi.mocked(validateEvent).mockReturnValue({
+      type: 'order.refunded',
+      data: { productId: PRO_MONTHLY, customer: { externalId: USER.id } },
+    });
+    const second = makeService();
+    await expect(second.service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true);
+    expect(second.credits.revokePackSeconds).not.toHaveBeenCalled();
   });
 });
 

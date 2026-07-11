@@ -5,15 +5,16 @@
  *
  *   POLAR_PRODUCT_PRO_MONTHLY / POLAR_PRODUCT_PRO_YEARLY
  *   POLAR_PRODUCT_STUDIO_MONTHLY / POLAR_PRODUCT_STUDIO_YEARLY
+ *   POLAR_PRODUCT_ARRANGER_MONTHLY / POLAR_PRODUCT_ARRANGER_YEARLY
  *
  * Unset ids simply make that tier/interval unavailable for checkout, so a
  * partially configured environment degrades gracefully.
  */
 
-export type PaidTierId = 'pro' | 'studio';
+export type PaidTierId = 'pro' | 'studio' | 'arranger';
 export type BillingInterval = 'monthly' | 'yearly';
 
-export const PAID_TIER_IDS: PaidTierId[] = ['pro', 'studio'];
+export const PAID_TIER_IDS: PaidTierId[] = ['pro', 'studio', 'arranger'];
 export const BILLING_INTERVALS: BillingInterval[] = ['monthly', 'yearly'];
 
 function envKey(tierId: PaidTierId, interval: BillingInterval): string {

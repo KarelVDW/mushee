@@ -10,7 +10,7 @@ export interface DemoAccount {
   email: string;
   name: string;
   /** Subscription tier id; must exist in the subscription_tiers table. */
-  tierId: 'free' | 'pro' | 'studio';
+  tierId: 'free' | 'pro' | 'studio' | 'arranger';
   /** Grants the admin panel (beta approvals). */
   role?: 'admin';
   /** Fixed UUIDs of the demo scores this account owns (keys of DEMO_SCORES). */
@@ -19,8 +19,8 @@ export interface DemoAccount {
 
 /**
  * One account per tier, plus the main demo account. The main account is on
- * the Studio tier, whose `dailyRecordingCredits` is `null` — i.e. recording
- * is unlimited (see the subscription_tiers seed migration).
+ * the Studio tier — 3 h of recording a day, comfortably unlimited for demo
+ * purposes (see the PricingRelaunch migration for the tier ladder).
  */
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
@@ -41,7 +41,7 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   },
   {
     email: 'pro@mushee.local',
-    name: 'Demo Composer',
+    name: 'Demo Songwriter',
     tierId: 'pro',
     scoreIds: ['00000000-0000-4000-8000-000000000021'],
   },

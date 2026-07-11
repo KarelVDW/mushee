@@ -1,11 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 import { Eyebrow, Footer, Icon, PrimaryButton, SecondaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
-import { BETA_MODE, BETA_PLAN, PLAN_TIERS, planFeatures, type PlanTier } from '@/lib/plans'
+import { BETA_MODE, BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
 
@@ -105,7 +106,7 @@ function Hero({
                     </div>
                     {BETA_MODE && (
                         <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                            Free during the beta · 5 minutes of recording per day · approved personally, usually within a day.
+                            Free during the beta · 30 minutes of recording per day · approved personally, usually within a day.
                         </p>
                     )}
                 </div>
@@ -237,19 +238,91 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                     <div className="max-w-190 mx-auto mb-10 bg-secondary-soft text-on-secondary-soft rounded-lg px-6 py-5 text-center">
                         <p className="font-body font-medium text-[15px] leading-normal m-0">
                             <strong>Sheemu is in closed beta.</strong> Right now every account is on the free{' '}
-                            <strong>{BETA_PLAN.name}</strong> plan — 5 minutes of recording per day, no card, no charge. The plans
+                            <strong>{BETA_PLAN.name}</strong> plan — 30 minutes of recording per day, no card, no charge. The plans
                             below go live at launch.
                         </p>
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
-                    {PLAN_TIERS.map((tier) => (
+                    {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
                         <PricingCard key={tier.id} tier={tier} onGetStarted={onGetStarted} />
                     ))}
                 </div>
+
+                {PLAN_TIERS.filter((tier) => tier.professional).map((tier) => (
+                    <ProfessionalCard key={tier.id} tier={tier} onGetStarted={onGetStarted} />
+                ))}
+
+                <PacksTeaser />
             </div>
         </section>
+    )
+}
+
+/** The professional tier: present enough to anchor the ladder, slim enough
+ *  not to compete with the consumer cards. */
+function ProfessionalCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () => void }) {
+    return (
+        <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
+            <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
+                <Icon name={tier.icon} size={18} />
+            </span>
+            <div className="flex flex-col gap-0.5 flex-1 min-w-50">
+                <span className="font-headline font-semibold text-[16px] leading-[1.2] text-on-surface">
+                    {tier.name} — {tier.tagline.toLowerCase()}
+                </span>
+                <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                    {recordingBudgetLabel(tier.dailyRecordingSeconds)} · everything in Studio · direct support from the maker
+                </span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+                <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em] text-on-surface">
+                    ${tier.priceMonthly}
+                </span>
+                <span className="font-body font-medium text-[12px] leading-none text-on-surface-variant">
+                    / month · ${tier.priceYearly}/yr
+                </span>
+            </div>
+            <SecondaryButton onClick={onGetStarted}>{BETA_MODE ? 'Join the beta' : `Go ${tier.name}`}</SecondaryButton>
+        </div>
+    )
+}
+
+/** One-time packs, one click away — the subscriptions above stay the offer. */
+function PacksTeaser() {
+    const [open, setOpen] = useState(false)
+    return (
+        <div className="mt-8 text-center">
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
+                Not ready for a subscription? One-time minute packs, from $6
+            </button>
+            {open && (
+                <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+                    {CREDIT_PACKS.map((pack) => (
+                        <div key={pack.id} className="bg-surface-container-lowest tonal-layer-glow rounded-lg p-5 flex flex-col gap-1.5">
+                            <span className="font-headline font-semibold text-[15px] leading-[1.2] text-on-surface">{pack.name}</span>
+                            <span className="font-mono font-semibold text-[20px] leading-none tracking-[-0.01em] text-on-surface">
+                                ${pack.price}
+                            </span>
+                            <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                                {pack.minutes} min of recording · {pack.blurb}
+                            </span>
+                            <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                                {pack.compare}
+                            </span>
+                        </div>
+                    ))}
+                    <p className="sm:col-span-3 font-body font-normal text-[12px] leading-normal text-on-surface-variant text-center m-0">
+                        Packs never expire and need a free account — buy them any time from Settings.
+                    </p>
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -266,7 +339,7 @@ function PricingCard({ tier, onGetStarted }: { tier: PlanTier; onGetStarted: () 
                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
                 {emphasis && (
                     <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-soft text-on-secondary-soft px-2.5 py-1.5 rounded-full">
-                        Most picked
+                        Best value
                     </span>
                 )}
             </div>

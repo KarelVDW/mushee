@@ -13,6 +13,7 @@ import { RecordingCreditsService } from '../recordings/recording-credits.service
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { ProcessedWebhookEvent } from './entities/processed-webhook-event.entity';
 import { isBillingConfigured, polarClient } from './polar/client';
+import { PACK_SECONDS, packForProduct, PackId, productIdForPack } from './polar/packs';
 import {
   BillingInterval,
   intervalForProduct,
@@ -43,6 +44,8 @@ export interface BillingState {
     limitSeconds: number | null;
     usedSeconds: number;
     remainingSeconds: number | null;
+    /** Purchased one-time pack seconds; never expire. */
+    packSeconds: number;
   };
 }
 
@@ -80,6 +83,7 @@ export class BillingService {
         limitSeconds: tier.dailyRecordingCredits,
         usedSeconds: balance.used,
         remainingSeconds: balance.remaining,
+        packSeconds: balance.packSeconds,
       },
     };
   }
@@ -109,6 +113,37 @@ export class BillingService {
       customerEmail: user.email,
       successUrl: `${this.webAppUrl()}/settings?checkout=success`,
       metadata: { userId: user.id },
+    });
+    return { url: checkout.url };
+  }
+
+  /**
+   * Create a Polar checkout for a one-time minute pack. Packs are one-off
+   * products (no subscription); the grant lands via the `order.paid` webhook.
+   */
+  async createPackCheckout(
+    user: { id: string; email: string },
+    packId: PackId,
+  ): Promise<{ url: string }> {
+    if (isBetaMode()) {
+      throw new ForbiddenException(
+        'Packs cannot be purchased during the beta — everyone is on the beta plan.',
+      );
+    }
+    const polar = this.requirePolar();
+    const productId = productIdForPack(packId);
+    if (!productId) {
+      throw new BadRequestException(
+        `The ${packId} pack is not available yet.`,
+      );
+    }
+
+    const checkout = await polar.checkouts.create({
+      products: [productId],
+      externalCustomerId: user.id,
+      customerEmail: user.email,
+      successUrl: `${this.webAppUrl()}/settings?pack=success`,
+      metadata: { userId: user.id, packId },
     });
     return { url: checkout.url };
   }
@@ -301,10 +336,73 @@ export class BillingService {
         return;
       }
 
+      // One-time minute packs. Only `order.paid` grants (never `order.created`
+      // / `order.updated`, which would double-credit the same purchase), and
+      // only for products mapped to a pack — subscription invoices also arrive
+      // as orders and must fall through untouched.
+      case 'order.paid': {
+        const order = this.asOrder(event.data);
+        const packId = packForProduct(order.productId);
+        if (!packId) return;
+        if (!order.userId) {
+          this.logger.warn(
+            `order.paid for pack product ${order.productId} has no external customer id — ignoring`,
+          );
+          return;
+        }
+        await this.credits.grantPackSeconds(
+          order.userId,
+          PACK_SECONDS[packId],
+          em,
+        );
+        this.logger.log(
+          `order.paid: user ${order.userId} +${PACK_SECONDS[packId]}s (${packId} pack)`,
+        );
+        return;
+      }
+
+      case 'order.refunded': {
+        const order = this.asOrder(event.data);
+        const packId = packForProduct(order.productId);
+        if (!packId || !order.userId) return;
+        // Refunds are all-or-nothing for packs; already-recorded seconds
+        // clamp at zero rather than going negative.
+        await this.credits.revokePackSeconds(
+          order.userId,
+          PACK_SECONDS[packId],
+          em,
+        );
+        this.logger.log(
+          `order.refunded: user ${order.userId} -${PACK_SECONDS[packId]}s (${packId} pack)`,
+        );
+        return;
+      }
+
       default:
-        // Orders, benefits, refunds… — nothing to mirror yet.
+        // Benefits, other order states… — nothing to mirror yet.
         this.logger.debug?.(`Ignoring webhook event ${event.type}`);
     }
+  }
+
+  /** The slice of a Polar order webhook payload this service reads. */
+  private asOrder(data: unknown): {
+    productId: string | null;
+    userId: string | null;
+  } {
+    const order = data as {
+      productId?: string | null;
+      product?: { id?: string | null } | null;
+      customer?: { externalId?: string | null } | null;
+      metadata?: Record<string, unknown>;
+    };
+    return {
+      productId: order.productId ?? order.product?.id ?? null,
+      userId:
+        order.customer?.externalId ??
+        (typeof order.metadata?.userId === 'string'
+          ? order.metadata.userId
+          : null),
+    };
   }
 
   /** GDPR cleanup of the Polar customer when an account is purged. */

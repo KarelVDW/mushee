@@ -12,15 +12,19 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 ### Polar (billing)
 
-- Create 4 subscription products: Composer $8/mo, $80/yr, Studio $18/mo, $180/yr.
+- Create 6 subscription products — Songwriter $9/mo, $90/yr; Studio $19/mo,
+  $190/yr; Arranger $49/mo, $490/yr — plus 3 one-time minute packs: Single $6
+  (15 min), EP $15 (45 min), Album $39 (150 min) (2026-07 pricing relaunch).
   Entitlements (names, credit budgets) are DB-driven via `subscription_tiers` +
   `GET /plans`; **display** prices/icons live in `apps/web/src/lib/plans.ts` —
-  change Polar products, the seed, and plans.ts together.
+  change Polar products, the migration, and plans.ts together. Pack seconds
+  land in `credit_balances` via `order.paid` webhooks and never expire.
 - API env: `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_SERVER`
-  (`sandbox` while testing), `POLAR_PRODUCT_<TIER>_<INTERVAL>` ids, `WEB_APP_URL`
-  (checkout redirects).
+  (`sandbox` while testing), `POLAR_PRODUCT_<TIER>_<INTERVAL>` +
+  `POLAR_PRODUCT_PACK_<PACK>` ids, `WEB_APP_URL` (checkout redirects).
 - Webhook endpoint in the Polar dashboard: `<api-url>/billing/webhooks/polar`,
-  subscribed to `subscription.*` + `customer.state_changed`.
+  subscribed to `subscription.*` + `customer.state_changed` + `order.paid` +
+  `order.refunded`.
 - Unconfigured Polar degrades gracefully: `/billing/*` answers 503, the UI hides
   paid actions, free/beta tiers keep working.
 - Sandbox test before launch: checkout → webhook → tier flips in Settings;
@@ -43,7 +47,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
 - API: `BETA_MODE=true`, `ADMIN_EMAILS=you@domain`; web: `NEXT_PUBLIC_BETA_MODE=true`
   (server's runtime `betaMode` is also trusted, so ending the beta doesn't
   strictly require a web rebuild).
-- Flow: signup → `betaStatus='pending'` on the `beta` tier (300 credits = 5 min/day)
+- Flow: signup → `betaStatus='pending'` on the `beta` tier (1800 credits = 30 min/day)
   → waitlist email + admin notification → onboarding works while pending →
   `/beta` waiting room (polls 30 s) → approve at `/admin` → approval email →
   room unlocks. Pending users are blocked server-side from `/scores` and from

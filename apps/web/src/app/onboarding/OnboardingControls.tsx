@@ -109,7 +109,7 @@ export function TierCard({ plan, active, billing, onSelect }: { plan: PlanTier; 
             ].join(' ')}>
             {plan.popular && (
                 <span className="absolute -top-2.5 right-3.5 bg-secondary-soft text-on-secondary-soft font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
-                    Most picked
+                    Best value
                 </span>
             )}
             <div className="flex items-center gap-2.5">

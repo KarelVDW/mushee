@@ -258,7 +258,7 @@ export function PlanStep({
     return (
         <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
             <BillingToggle value={billing} onChange={onBillingChange} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {plans.map((p) => (
                     <TierCard key={p.id} plan={p} billing={billing} active={tier === p.id} onSelect={() => onTierChange(p.id)} />
                 ))}

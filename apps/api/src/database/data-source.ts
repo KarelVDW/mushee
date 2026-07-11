@@ -7,6 +7,7 @@ import { ProcessedWebhookEvent } from '../billing/entities/processed-webhook-eve
 import { CachedScore } from '../cache/entities/cached-score.entity';
 import { UserOnboarding } from '../onboarding/entities/user-onboarding.entity';
 import { ActiveRecording } from '../recordings/entities/active-recording.entity';
+import { CreditBalance } from '../recordings/entities/credit-balance.entity';
 import { Recording } from '../recordings/entities/recording.entity';
 import { RecordingUsage } from '../recordings/entities/recording-usage.entity';
 import { Score } from '../scores/entities/score.entity';
@@ -58,6 +59,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AccountDeletion,
     ActiveRecording,
     CachedScore,
+    CreditBalance,
     ProcessedWebhookEvent,
     Recording,
     RecordingUsage,

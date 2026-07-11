@@ -6,6 +6,7 @@ import { ScoresModule } from '../scores/scores.module';
 import { StorageModule } from '../storage/storage.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { ActiveRecording } from './entities/active-recording.entity';
+import { CreditBalance } from './entities/credit-balance.entity';
 import { Recording } from './entities/recording.entity';
 import { RecordingUsage } from './entities/recording-usage.entity';
 import { RecordingCreditsService } from './recording-credits.service';
@@ -15,7 +16,7 @@ import { RecordingsService } from './recordings.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Recording, RecordingUsage, ActiveRecording]),
+    TypeOrmModule.forFeature([Recording, RecordingUsage, ActiveRecording, CreditBalance]),
     SubscriptionsModule,
     ScoresModule,
     BetaModule,

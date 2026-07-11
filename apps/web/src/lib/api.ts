@@ -176,7 +176,7 @@ export function listPlans(): Promise<Plan[]> {
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
 
 export interface BillingState {
-    tierId: 'free' | 'pro' | 'studio' | 'beta'
+    tierId: 'free' | 'pro' | 'studio' | 'arranger' | 'beta'
     tierName: string
     /** Polar subscription status ('active', 'trialing', …); null on free/beta. */
     status: string | null
@@ -190,6 +190,8 @@ export interface BillingState {
         limitSeconds: number | null
         usedSeconds: number
         remainingSeconds: number | null
+        /** Purchased one-time pack seconds; never expire. */
+        packSeconds: number
     }
 }
 
@@ -197,11 +199,21 @@ export function getBillingState(): Promise<BillingState> {
     return api('/billing/subscription')
 }
 
+export type PaidTierId = 'pro' | 'studio' | 'arranger'
+
 /** Returns the Polar-hosted checkout URL to redirect the browser to. */
-export function createCheckout(tierId: 'pro' | 'studio', interval: 'monthly' | 'yearly'): Promise<{ url: string }> {
+export function createCheckout(tierId: PaidTierId, interval: 'monthly' | 'yearly'): Promise<{ url: string }> {
     return api('/billing/checkout', {
         method: 'POST',
         body: JSON.stringify({ tierId, interval }),
+    })
+}
+
+/** Checkout URL for a one-time minute pack (no subscription involved). */
+export function createPackCheckout(packId: 'single' | 'ep' | 'album'): Promise<{ url: string }> {
+    return api('/billing/checkout/pack', {
+        method: 'POST',
+        body: JSON.stringify({ packId }),
     })
 }
 
@@ -211,7 +223,7 @@ export function createBillingPortalSession(): Promise<{ url: string }> {
 }
 
 /** Switch tier/cadence on an existing subscription (prorated by Polar). */
-export function changePlan(tierId: 'pro' | 'studio', interval: 'monthly' | 'yearly'): Promise<BillingState> {
+export function changePlan(tierId: PaidTierId, interval: 'monthly' | 'yearly'): Promise<BillingState> {
     return api('/billing/change', {
         method: 'POST',
         body: JSON.stringify({ tierId, interval }),

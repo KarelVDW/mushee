@@ -8,6 +8,7 @@ import {
     changePlan,
     createBillingPortalSession,
     createCheckout,
+    createPackCheckout,
     createScore,
     deleteScore,
     getBetaStatus,
@@ -19,6 +20,7 @@ import {
     listScores,
     loadScore,
     type OnboardingPatch,
+    type PaidTierId,
     patchOnboarding,
     putKeyboardShortcuts,
     reactivateAccount,
@@ -175,8 +177,19 @@ export function useBillingState() {
 /** Creates a Polar checkout and sends the browser there. */
 export function useStartCheckout() {
     return useMutation({
-        mutationFn: (args: { tierId: 'pro' | 'studio'; interval: 'monthly' | 'yearly' }) =>
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
             createCheckout(args.tierId, args.interval),
+        onSuccess: ({ url }) => {
+            window.location.assign(url)
+        },
+        meta: { errorMessage: "Couldn't start the checkout. Please try again." },
+    })
+}
+
+/** Checkout for a one-time minute pack; redirects to Polar like a plan checkout. */
+export function useStartPackCheckout() {
+    return useMutation({
+        mutationFn: (packId: 'single' | 'ep' | 'album') => createPackCheckout(packId),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -199,7 +212,7 @@ export function useBillingPortal() {
 export function useChangePlan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (args: { tierId: 'pro' | 'studio'; interval: 'monthly' | 'yearly' }) =>
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
             changePlan(args.tierId, args.interval),
         onSuccess: (state) => queryClient.setQueryData(billingKeys.subscription, state),
         meta: { errorMessage: "Couldn't change the plan. Please try again." },

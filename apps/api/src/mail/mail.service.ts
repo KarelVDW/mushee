@@ -106,14 +106,14 @@ export class MailService {
       `Thanks for signing up for the Sheemu beta!\n\n` +
       `Sheemu is currently in a closed beta, so access is granted personally. ` +
       `You're on the waitlist now — we'll email you the moment your account is approved.\n\n` +
-      `Once you're in, your beta account comes with 5 minutes of recording per day, free of charge.\n\n` +
+      `Once you're in, your beta account comes with 30 minutes of recording per day, free of charge.\n\n` +
       `Questions? Write to support@sheemu.com.`;
     const html = layout(
       "You're on the waitlist",
       `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
        <p>Thanks for signing up for the <strong>Sheemu</strong> beta!</p>
        <p>Sheemu is currently in a closed beta, so access is granted personally. You're on the waitlist now — we'll email you the moment your account is approved.</p>
-       <p>Once you're in, your beta account comes with <strong>5 minutes of recording per day</strong>, free of charge.</p>
+       <p>Once you're in, your beta account comes with <strong>30 minutes of recording per day</strong>, free of charge.</p>
        <p class="muted">Questions? Write to support@sheemu.com.</p>`,
     );
     await this.send({ to, subject, html, text });
@@ -127,7 +127,7 @@ export class MailService {
       `Hi ${name},\n\n` +
       `Good news: your Sheemu beta account has been approved!\n\n` +
       `Sign in and start recording — hum, sing or play, and watch the notation appear:\n${appUrl}/login\n\n` +
-      `Your beta plan includes 5 minutes of recording per day.\n\n` +
+      `Your beta plan includes 30 minutes of recording per day.\n\n` +
       `Have fun, and tell us everything that feels rough: support@sheemu.com.`;
     const html = layout(
       "You're in!",
@@ -135,7 +135,7 @@ export class MailService {
        <p>Good news: your <strong>Sheemu</strong> beta account has been approved!</p>
        <p>Sign in and start recording — hum, sing or play, and watch the notation appear.</p>
        ${button(`${appUrl}/login`, 'Open Sheemu')}
-       <p>Your beta plan includes <strong>5 minutes of recording per day</strong>.</p>
+       <p>Your beta plan includes <strong>30 minutes of recording per day</strong>.</p>
        <p class="muted">Have fun, and tell us everything that feels rough: support@sheemu.com.</p>`,
     );
     await this.send({ to, subject, html, text });

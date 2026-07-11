@@ -4,6 +4,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/user.decorator';
 import { BillingService } from './billing.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { CreatePackCheckoutDto } from './dto/create-pack-checkout.dto';
 
 @Controller('billing')
 @UseGuards(AuthGuard)
@@ -23,6 +24,15 @@ export class BillingController {
     @Body() dto: CreateCheckoutDto,
   ) {
     return this.billingService.createCheckout(user, dto.tierId, dto.interval);
+  }
+
+  /** Checkout for a one-time minute pack (no subscription involved). */
+  @Post('checkout/pack')
+  packCheckout(
+    @CurrentUser() user: { id: string; email: string },
+    @Body() dto: CreatePackCheckoutDto,
+  ) {
+    return this.billingService.createPackCheckout(user, dto.packId);
   }
 
   /** Polar-hosted customer portal (invoices, payment methods, cancellation). */

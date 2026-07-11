@@ -13,6 +13,7 @@ const env = {
   POLAR_PRODUCT_PRO_YEARLY: 'prod-pro-y',
   POLAR_PRODUCT_STUDIO_MONTHLY: 'prod-studio-m',
   // studio yearly intentionally unconfigured
+  POLAR_PRODUCT_ARRANGER_MONTHLY: 'prod-arranger-m',
 } as NodeJS.ProcessEnv;
 
 describe('polar product mapping', () => {
@@ -36,6 +37,7 @@ describe('polar product mapping', () => {
   it('reverse-maps product ids to tiers and intervals', () => {
     expect(tierForProduct('prod-pro-y', env)).toBe('pro');
     expect(tierForProduct('prod-studio-m', env)).toBe('studio');
+    expect(tierForProduct('prod-arranger-m', env)).toBe('arranger');
     expect(tierForProduct('someone-elses-product', env)).toBeNull();
     expect(intervalForProduct('prod-pro-y', env)).toBe('yearly');
     expect(intervalForProduct('prod-studio-m', env)).toBe('monthly');
@@ -44,6 +46,7 @@ describe('polar product mapping', () => {
 
   it('validates tier ids and intervals', () => {
     expect(isPaidTierId('pro')).toBe(true);
+    expect(isPaidTierId('arranger')).toBe(true);
     expect(isPaidTierId('beta')).toBe(false);
     expect(isPaidTierId('free')).toBe(false);
     expect(isBillingInterval('yearly')).toBe(true);

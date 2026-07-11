@@ -154,15 +154,20 @@ cd apps/api && CREPE_INFERENCE_URL=localhost:50051 BASIC_PITCH_INFERENCE_URL=loc
 Paid tiers are sold through [Polar](https://polar.sh) (merchant of record).
 One-time setup in the Polar dashboard:
 
-1. Create four subscription products — Composer monthly/yearly, Studio
+1. Create six subscription products — Songwriter, Studio, and Arranger, each
    monthly/yearly — and put their ids in `POLAR_PRODUCT_PRO_MONTHLY`,
    `POLAR_PRODUCT_PRO_YEARLY`, `POLAR_PRODUCT_STUDIO_MONTHLY`,
-   `POLAR_PRODUCT_STUDIO_YEARLY`.
-2. Create an organization access token → `POLAR_ACCESS_TOKEN`
+   `POLAR_PRODUCT_STUDIO_YEARLY`, `POLAR_PRODUCT_ARRANGER_MONTHLY`,
+   `POLAR_PRODUCT_ARRANGER_YEARLY`.
+2. Create three one-time products for the minute packs — Single ($6),
+   EP ($15), Album ($39) — and put their ids in `POLAR_PRODUCT_PACK_SINGLE`,
+   `POLAR_PRODUCT_PACK_EP`, `POLAR_PRODUCT_PACK_ALBUM`.
+3. Create an organization access token → `POLAR_ACCESS_TOKEN`
    (`POLAR_SERVER=sandbox` while testing against sandbox.polar.sh).
-3. Add a webhook endpoint pointing at `<api-url>/billing/webhooks/polar`
-   (subscribe to at least the `subscription.*` and `customer.state_changed`
-   events) and put its secret in `POLAR_WEBHOOK_SECRET`.
+4. Add a webhook endpoint pointing at `<api-url>/billing/webhooks/polar`
+   (subscribe to at least the `subscription.*`, `customer.state_changed`,
+   `order.paid`, and `order.refunded` events) and put its secret in
+   `POLAR_WEBHOOK_SECRET`.
 
 With those unset, billing degrades gracefully: `/billing/*` answers 503 and
 the web UI hides paid actions. Subscription state is mirrored into

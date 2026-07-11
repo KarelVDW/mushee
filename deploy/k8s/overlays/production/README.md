@@ -80,7 +80,8 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=ADMIN_EMAILS='karel@advantitge.com'
 # Polar (add before enabling checkout; webhook path works without checkout):
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, POLAR_SERVER=production,
-#   POLAR_PRODUCT_{PRO,STUDIO}_{MONTHLY,YEARLY}
+#   POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY},
+#   POLAR_PRODUCT_PACK_{SINGLE,EP,ALBUM}
 ```
 
 ## Deploying

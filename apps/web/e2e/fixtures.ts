@@ -119,7 +119,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 cancelAtPeriodEnd: false,
                 billingConfigured: false,
                 betaMode: false,
-                credits: { limitSeconds: 30, usedSeconds: 0, remainingSeconds: 30 },
+                credits: { limitSeconds: 180, usedSeconds: 0, remainingSeconds: 180, packSeconds: 0 },
             })
         }
 

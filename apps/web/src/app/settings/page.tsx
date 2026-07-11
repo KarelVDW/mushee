@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { type ReactNode, useEffect, useState } from 'react'
 
@@ -17,17 +18,19 @@ import {
 } from '@/components/ui'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
-import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
+import { billingKeys, useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { ChangePlanDialog } from './ChangePlanDialog'
 import { DeleteAccountDialog } from './DeleteAccountDialog'
+import { PacksDialog } from './PacksDialog'
 
 type Tab = 'profile' | 'account'
 
 export default function SettingsPage() {
     const router = useRouter()
     const { data: session } = useSession()
+    const queryClient = useQueryClient()
     const [tab, setTab] = useState<Tab>('profile')
 
     const [name, setName] = useState(session?.user?.name ?? '')
@@ -56,12 +59,21 @@ export default function SettingsPage() {
 
     // Coming back from a successful Polar checkout: land on the account tab.
     useEffect(() => {
-        if (new URLSearchParams(window.location.search).get('checkout') === 'success') {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('checkout') === 'success') {
             setTab('account')
             showToast('Payment confirmed — welcome to your new plan!', 'info')
             window.history.replaceState(null, '', '/settings')
+        } else if (params.get('pack') === 'success') {
+            setTab('account')
+            // The minutes land via the Polar webhook, usually within seconds —
+            // refresh the balance once it has had a moment to arrive.
+            showToast('Payment confirmed — your minutes are on their way!', 'info')
+            window.history.replaceState(null, '', '/settings')
+            const timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey: billingKeys.subscription }), 4000)
+            return () => clearTimeout(timer)
         }
-    }, [])
+    }, [queryClient])
 
     async function handleSignOut() {
         await signOut()
@@ -172,6 +184,7 @@ function BillingSection() {
     const portal = useBillingPortal()
     const resume = useResumeSubscription()
     const [changePlanOpen, setChangePlanOpen] = useState(false)
+    const [packsOpen, setPacksOpen] = useState(false)
 
     if (isPending) {
         return (
@@ -224,7 +237,17 @@ function BillingSection() {
                 )}
             </div>
 
-            <CreditsMeter limit={billing.credits.limitSeconds} used={billing.credits.usedSeconds} />
+            <CreditsMeter
+                limit={billing.credits.limitSeconds}
+                used={billing.credits.usedSeconds}
+                packSeconds={billing.credits.packSeconds}
+            />
+
+            {!isBeta && billing.billingConfigured && !billing.betaMode && (
+                <div>
+                    <TertiaryButton onClick={() => setPacksOpen(true)}>Top up with a one-time pack</TertiaryButton>
+                </div>
+            )}
 
             {(hasSubscription || billing.cancelAtPeriodEnd) && (
                 <div className="flex items-center gap-3 flex-wrap">
@@ -245,19 +268,50 @@ function BillingSection() {
                 </p>
             )}
 
-            {changePlanOpen && <ChangePlanDialog billing={billing} onClose={() => setChangePlanOpen(false)} />}
+            {changePlanOpen && (
+                <ChangePlanDialog
+                    billing={billing}
+                    onClose={() => setChangePlanOpen(false)}
+                    onShowPacks={() => {
+                        setChangePlanOpen(false)
+                        setPacksOpen(true)
+                    }}
+                />
+            )}
+            {packsOpen && (
+                <PacksDialog
+                    onClose={() => setPacksOpen(false)}
+                    onSeePlans={() => {
+                        setPacksOpen(false)
+                        setChangePlanOpen(true)
+                    }}
+                />
+            )}
         </Section>
     )
 }
 
-/** Today's recording budget as a small meter (resets at midnight UTC). */
-function CreditsMeter({ limit, used }: { limit: number | null; used: number }) {
+/** Today's recording budget as a small meter (resets at midnight UTC), plus
+ *  any purchased pack minutes waiting behind it. */
+function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; used: number; packSeconds?: number }) {
     const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+    const packLine = packSeconds > 0 && (
+        <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-none text-on-surface-variant">
+            <Icon name="gift" size={14} />
+            <span>
+                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run
+                out, never expires.
+            </span>
+        </div>
+    )
     if (limit === null) {
         return (
-            <div className="flex items-center gap-2 font-body font-normal text-[13px] text-on-surface-variant">
-                <Icon name="infinity" size={16} />
-                Unlimited recording — {fmt(used)} used today.
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 font-body font-normal text-[13px] text-on-surface-variant">
+                    <Icon name="infinity" size={16} />
+                    Unlimited recording — {fmt(used)} used today.
+                </div>
+                {packLine}
             </div>
         )
     }
@@ -276,6 +330,7 @@ function CreditsMeter({ limit, used }: { limit: number | null; used: number }) {
                     style={{ width: `${pct}%` }}
                 />
             </div>
+            {packLine}
         </div>
     )
 }

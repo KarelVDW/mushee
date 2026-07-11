@@ -7,13 +7,14 @@ import { PLAN_TIERS } from '@/lib/plans'
 import { usePlans } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
 
-// Format seconds as M:SS (or just S"s" when under a minute).
+// Format seconds as S"s" under a minute, M:SS under an hour, then H"h".
 function fmtRecTime(sec: number): string {
     const s = Math.max(0, Math.floor(sec))
     if (s < 60) return `${s}s`
     const m = Math.floor(s / 60)
-    const r = s % 60
-    return `${m}:${String(r).padStart(2, '0')}`
+    if (m < 60) return `${m}:${String(s % 60).padStart(2, '0')}`
+    const h = Math.floor(m / 60)
+    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
 }
 
 function useEscape(onClose: () => void) {
@@ -83,6 +84,13 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                             Upgrading to <strong className="text-on-surface">{nextPlanName}</strong> lifts the cap immediately.
                         </span>
                     )}
+                    <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
+                        Just need to finish this one?{' '}
+                        <a href="/settings" className="text-primary underline">
+                            One-time minute packs
+                        </a>{' '}
+                        start at $6 and never expire.
+                    </span>
                 </div>
             </DialogPanel>
         </DialogScrim>
