@@ -275,9 +275,6 @@ export function HeroDemo() {
                     ))}
                 </div>
             </div>
-            <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant text-center m-0">
-                Recording in the Sheemu editor: hum Frère Jacques, and a beat behind the cursor the waveform becomes clean notation.
-            </p>
             <style>{TIMELINE_CSS}</style>
         </div>
     )
