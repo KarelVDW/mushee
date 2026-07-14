@@ -70,12 +70,13 @@ export class BetaService {
   }
 
   async approve(userId: string): Promise<BetaSignup[]> {
-    const rows: Array<{ email: string; name: string }> = await this.dataSource.query(
-      `UPDATE "user" SET "betaStatus" = 'approved', "updatedAt" = now()
-       WHERE id = $1 AND "betaStatus" = 'pending'
-       RETURNING email, name`,
-      [userId],
-    );
+    const [rows]: [Array<{ email: string; name: string }>, number] =
+      await this.dataSource.query(
+        `UPDATE "user" SET "betaStatus" = 'approved', "updatedAt" = now()
+         WHERE id = $1 AND "betaStatus" = 'pending'
+         RETURNING email, name`,
+        [userId],
+      );
     if (rows.length > 0) {
       this.logger.log(`Beta signup ${userId} approved`);
       try {
