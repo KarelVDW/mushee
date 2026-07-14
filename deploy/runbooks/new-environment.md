@@ -113,7 +113,7 @@ kubectl create secret generic api-secrets -n mushee-uat \
   --from-literal=POSTGRES_URL="postgres://mushee_uat:$(cat /tmp/uat-db-password.txt)@10.56.0.3:5432/mushee_uat" \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<the prod key is fine — mail is real either way>' \
-  --from-literal=ADMIN_EMAILS='karel@advantitge.com'
+  --from-literal=ADMIN_EMAILS='info@sheemu.com'
 
 cd deploy/k8s/overlays/uat
 kustomize edit set image \

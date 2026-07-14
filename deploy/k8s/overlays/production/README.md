@@ -77,7 +77,7 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=POSTGRES_URL='postgres://mushee:<password>@<private-ip>:5432/mushee' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='karel@advantitge.com'
+  --from-literal=ADMIN_EMAILS='info@sheemu.com'
 # Polar (add before enabling checkout; webhook path works without checkout):
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, POLAR_SERVER=production,
 #   POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY},

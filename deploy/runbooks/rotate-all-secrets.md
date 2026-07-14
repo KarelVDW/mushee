@@ -76,7 +76,7 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=POSTGRES_URL="postgres://mushee:$(cat /tmp/rot/db-password.txt)@10.56.0.3:5432/mushee" \
   --from-literal=BETTER_AUTH_SECRET="$(cat /tmp/rot/better-auth.txt)" \
   --from-literal=SENDGRID_API_KEY="$(cat /tmp/rot/sendgrid.txt)" \
-  --from-literal=ADMIN_EMAILS='karel@advantitge.com' \
+  --from-literal=ADMIN_EMAILS='info@sheemu.com' \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 

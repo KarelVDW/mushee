@@ -45,7 +45,7 @@ export default function SignupPage() {
                     BETA_MODE ? (
                         <>
                             <strong>Sheemu is in closed beta.</strong> Signing up puts you on the waitlist — we approve new accounts
-                            personally, usually within a day. Beta accounts record free for 30 minutes a day.
+                            personally, usually within a day.
                         </>
                     ) : undefined
                 }
