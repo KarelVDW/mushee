@@ -53,7 +53,7 @@ kubectl create secret generic api-secrets -n mushee-staging \
   --from-literal=POSTGRES_URL='postgres://mushee_staging:<password>@10.56.0.3:5432/mushee_staging' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='karel@advantitge.com'
+  --from-literal=ADMIN_EMAILS='info@sheemu.com'
 # Polar: use sandbox credentials here (POLAR_SERVER=sandbox), never production.
 ```
 
