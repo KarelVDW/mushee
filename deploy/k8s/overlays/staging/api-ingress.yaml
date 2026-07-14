@@ -1,0 +1,61 @@
+# HTTPS entry point for api.staging.sheemu.com — same shape as production
+# (global L7 LB + Google-managed cert). Needs a reserved global static IP named
+# `mushee-api-staging-ip` (see README.md) and the api.staging.sheemu.com A
+# record pointing at it — the ManagedCertificate only provisions once DNS
+# resolves.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: api-cert
+spec:
+  domains:
+    - api.staging.sheemu.com
+---
+# Plain-HTTP requests get a 301 to HTTPS at the load balancer.
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: api-frontend
+spec:
+  redirectToHttps:
+    enabled: true
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: api-backend
+spec:
+  # Recording WebSockets are long-lived: RECORDING_MAX_SECONDS defaults to
+  # 3600, and the LB timeout bounds the whole connection, so give it 2 h.
+  timeoutSec: 7200
+  # The LB health-checks pods directly (container-native NEGs) — point it at
+  # the API's real health endpoint instead of the default `/`.
+  healthCheck:
+    type: HTTP
+    requestPath: /health
+    port: 3000
+  # Match terminationGracePeriodSeconds so draining pods can finish takes.
+  connectionDraining:
+    drainingTimeoutSec: 60
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: mushee-api-staging-ip
+    networking.gke.io/managed-certificates: api-cert
+    networking.gke.io/v1beta1.FrontendConfig: api-frontend
+spec:
+  rules:
+    - host: api.staging.sheemu.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80

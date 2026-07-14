@@ -1,0 +1,30 @@
+# Staging topology. Everything lives one level down under *.staging.sheemu.com
+# so the cookie domain (.staging.sheemu.com) never overlaps production's
+# (.sheemu.com) writes — note the browser still SENDS production's .sheemu.com
+# cookie to staging hosts; the staging API just won't recognise it. If auth on
+# staging ever behaves oddly while you're logged into production in the same
+# browser, clear cookies for sheemu.com first.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  template:
+    spec:
+      serviceAccountName: api
+      containers:
+        - name: api
+          env:
+            - { name: BETTER_AUTH_URL, value: 'https://api.staging.sheemu.com' }
+            - { name: WEB_APP_URL, value: 'https://staging.sheemu.com' }
+            - { name: CORS_ORIGIN, value: 'https://staging.sheemu.com' }
+            - { name: TRUSTED_ORIGINS, value: 'https://staging.sheemu.com' }
+            - { name: COOKIE_DOMAIN, value: '.staging.sheemu.com' }
+            - { name: STORAGE_DRIVER, value: 'gcs' }
+            - { name: GCS_BUCKET, value: 'sheemu-staging-storage' }
+            # Same Cloud SQL instance as production, separate database + user
+            # (see README.md); credentials come from POSTGRES_URL in
+            # api-secrets of the mushee-staging namespace.
+            - { name: POSTGRES_SSL, value: 'require' }
+            # Mirrors production so the waitlist/approval flow is testable.
+            - { name: BETA_MODE, value: 'true' }

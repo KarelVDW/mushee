@@ -86,8 +86,9 @@ kubectl create secret generic api-secrets -n mushee \
 
 ## Deploying
 
-CI (`.github/workflows/deploy.yml`) builds, pushes, stamps immutable image
-tags, and applies this overlay. First-time bring-up order: provision the
+Every push to the `production` branch builds, pushes, stamps immutable image
+tags, and applies this overlay (`.github/workflows/deploy.yml`); pushes to
+`staging` deploy `overlays/staging` the same way. First-time bring-up order: provision the
 resources above → create the secret → run the Deploy workflow → wait for the
 ManagedCertificate to become Active (`kubectl describe managedcertificate
 api-cert -n mushee`, takes ~15–60 min after DNS resolves) → smoke-test one

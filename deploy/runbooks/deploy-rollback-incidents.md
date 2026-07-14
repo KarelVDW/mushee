@@ -2,18 +2,26 @@
 
 ## 1. The normal release
 
+Deploys are branch-driven (`deploy.yml`): a push to `staging` deploys the
+staging overlay (api.staging.sheemu.com, ns `mushee-staging`), a push to
+`production` deploys production. Vercel mirrors the same branches:
+`staging` → staging.sheemu.com, `production` → sheemu.com. `master` never
+deploys anywhere.
+
 1. Merge/push to `master` — CI (`ci.yml`) must be green (lint, type-check,
    API + web unit tests incl. the model 100%-coverage gate, build, mocked e2e).
-2. GitHub → Actions → **Deploy** → Run workflow (leave "apply" checked).
-   It builds all three images from the exact commit, pushes them SHA-tagged,
-   stamps the tags into `overlays/production`, applies, and waits for all
-   three rollouts.
-3. The web deploys **separately and automatically**: Vercel builds every push
-   to `master`. There is no coordination mechanism between the two — for
-   changes where API and web must move together (a changed API contract),
-   ship the API first (it tolerates old clients) and merge the web change
-   after the workflow finishes.
-4. Post-deploy check, 60 seconds:
+2. Promote to staging: `git push origin master:staging`. The Deploy workflow
+   builds all three images SHA-tagged, applies `overlays/staging`, and waits
+   for the rollouts; Vercel builds the web in parallel. Smoke-test on
+   https://staging.sheemu.com.
+3. Promote to production: `git push origin staging:production` (the exact
+   commit you verified — never rebuild from a moved master).
+4. The web deploys **separately** on Vercel from the same branch push. There
+   is no coordination mechanism between the two — for changes where API and
+   web must move together (a changed API contract), ship the API first (it
+   tolerates old clients) and promote the web change after the workflow
+   finishes.
+5. Post-deploy check, 60 seconds:
    ```sh
    curl -s https://api.sheemu.com/health
    kubectl get pods -n mushee

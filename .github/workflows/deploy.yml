@@ -1,20 +1,34 @@
 # Build the three backend images, push them to Artifact Registry with the git
-# SHA as an immutable tag, and roll the production overlay. Manual trigger
-# only while the beta is young — promote to on-push-to-master when the smoke
-# suite is trusted.
+# SHA as an immutable tag, and roll the matching overlay. Pushes to the
+# `production` branch deploy the production overlay (namespace mushee),
+# pushes to `staging` deploy the staging overlay (namespace mushee-staging);
+# workflow_dispatch remains as a manual escape hatch for either.
 #
 # One-time GCP setup: a workload-identity federation pool for GitHub OIDC and
 # a deployer service account with roles/artifactregistry.writer +
-# roles/container.developer — commands in deploy/k8s/overlays/production/README.md.
+# roles/container.developer — commands in deploy/k8s/overlays/production/README.md
+# (the staging overlay reuses the same deployer; see its README).
 name: Deploy
 
 on:
+  push:
+    branches: [production, staging]
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Overlay to deploy'
+        type: choice
+        options: [production, staging]
+        default: staging
       apply:
-        description: 'Apply the production overlay to the cluster after pushing'
+        description: 'Apply the overlay to the cluster after pushing'
         type: boolean
         default: true
+
+# One deploy per environment at a time; queue (never cancel) a running apply.
+concurrency:
+  group: deploy-${{ github.event_name == 'push' && github.ref_name || inputs.environment }}
+  cancel-in-progress: false
 
 env:
   PROJECT_ID: sheemu-prod
@@ -23,6 +37,8 @@ env:
   REGISTRY: europe-west1-docker.pkg.dev
   WIF_PROVIDER: projects/940791749471/locations/global/workloadIdentityPools/github/providers/github
   WIF_SERVICE_ACCOUNT: github-deployer@sheemu-prod.iam.gserviceaccount.com
+  # Branch name and overlay/environment name are deliberately identical.
+  DEPLOY_ENV: ${{ github.event_name == 'push' && github.ref_name || inputs.environment }}
 
 permissions:
   contents: read
@@ -59,8 +75,11 @@ jobs:
 
   deploy:
     needs: build-push
-    if: ${{ inputs.apply }}
+    if: ${{ github.event_name == 'push' || inputs.apply }}
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'push' && github.ref_name || inputs.environment }}
+      url: ${{ (github.event_name == 'push' && github.ref_name || inputs.environment) == 'production' && 'https://api.sheemu.com' || 'https://api.staging.sheemu.com' }}
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
@@ -72,7 +91,7 @@ jobs:
           cluster_name: ${{ env.CLUSTER }}
           location: ${{ env.REGION }}
       - name: Stamp immutable image tags and apply
-        working-directory: deploy/k8s/overlays/production
+        working-directory: deploy/k8s/overlays/${{ env.DEPLOY_ENV }}
         run: |
           for img in api crepe-inference basic-pitch-inference; do
             kustomize edit set image \
@@ -81,6 +100,7 @@ jobs:
           kubectl apply -k .
       - name: Wait for rollouts
         run: |
+          ns=$([ "$DEPLOY_ENV" = production ] && echo mushee || echo mushee-staging)
           for d in api crepe-inference basic-pitch-inference; do
-            kubectl rollout status deploy/$d -n mushee --timeout=10m
+            kubectl rollout status "deploy/$d" -n "$ns" --timeout=10m
           done
