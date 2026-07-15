@@ -200,6 +200,65 @@ describe('ResizeError regressions', () => {
         })
     })
 
+    describe('narrow layout widths (mobile reflow)', () => {
+        // Regression: Score.setLayoutWidth packs rows against the container on
+        // phones (down to 340). A single dense measure whose minimum width
+        // exceeds that budget was packed alone on its row and then threw at
+        // layout time. The layout now widens to fit the densest measure and
+        // views scale it down instead.
+        it('a dense measure lays out at the minimum reflow width instead of throwing', () => {
+            const score = new Score()
+            const m = score.addMeasure()
+            for (let i = 0; i < 16; i++) m.addNotes([sixteenthSharp()])
+            score.setLayoutWidth(340)
+            expect(() => layOutAllRows(score)).not.toThrow()
+            for (const row of score.layout.rows) {
+                expect(row.width).toBeLessThanOrEqual(score.layout.scoreWidth)
+            }
+        })
+
+        it('widens the layout only as far as the densest measure requires', () => {
+            const score = new Score()
+            const dense = score.addMeasure()
+            for (let i = 0; i < 16; i++) dense.addNotes([sixteenthSharp()])
+            score.addMeasure().complete()
+            score.setLayoutWidth(340)
+            const layout = score.layout
+            expect(layout.scoreWidth).toBeGreaterThan(340)
+            // The dense row must fit its widened budget exactly — no leftover throw margin.
+            const denseRow = layout.rowFor(dense)
+            expect(denseRow.width).toBeLessThanOrEqual(layout.scoreWidth)
+        })
+
+        it('keeps the requested width when every measure fits it', () => {
+            const score = new Score()
+            for (let i = 0; i < 3; i++) score.addMeasure().complete()
+            score.setLayoutWidth(340)
+            expect(score.layout.scoreWidth).toBe(340)
+            expect(() => layOutAllRows(score)).not.toThrow()
+        })
+
+        it('an over-dense measure also lays out at full desktop width', () => {
+            // Not just a mobile concern: enough triplet sixteenths with accidentals
+            // can exceed even SCORE_WIDTH.
+            const score = new Score()
+            const m = score.addMeasure()
+            const notes: Note[] = []
+            for (let i = 0; i < 24; i++)
+                notes.push(
+                    new Note({
+                        duration: new Duration({ type: '16', ratio: { actualNotes: 3, normalNotes: 2 } }),
+                        pitch: new Pitch({ name: 'C', octave: 4, accidental: '#' }),
+                    }),
+                )
+            m.addNotes(notes)
+            expect(() => layOutAllRows(score)).not.toThrow()
+            for (const row of score.layout.rows) {
+                expect(row.width).toBeLessThanOrEqual(score.layout.scoreWidth)
+            }
+        })
+    })
+
     describe('last-row button-spacing boundary', () => {
         // Regression: row fitting historically used SCORE_WIDTH, but the last row
         // reserves MEASURE_BUTTON_SPACING for the +/- measure buttons. Measures whose

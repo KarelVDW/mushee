@@ -27,6 +27,8 @@ const CURSOR_Y_OFFSET = 15
  * Below this container width the layout reflows to the container instead of
  * scaling down: rows are packed against the viewport so notation keeps its
  * full glyph size on phones and narrow windows (see Score.setLayoutWidth).
+ * A measure too dense for that budget widens layout.scoreWidth instead of
+ * failing, and the viewBox scale-to-fit shrinks it on screen.
  */
 const REFLOW_BREAKPOINT = 768
 /** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
