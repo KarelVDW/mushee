@@ -5,11 +5,15 @@ import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOn
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
 function okResponse(body: unknown): Response {
+    // Mirror real fetch semantics: an empty body yields text '' and a
+    // rejecting json() — void endpoints (DELETE) respond this way.
+    const text = body === undefined ? '' : JSON.stringify(body)
     return {
         ok: true,
         status: 200,
         statusText: 'OK',
-        json: () => Promise.resolve(body),
+        text: () => Promise.resolve(text),
+        json: () => (text ? Promise.resolve(JSON.parse(text)) : Promise.reject(new SyntaxError('Unexpected end of JSON input'))),
     } as unknown as Response
 }
 
@@ -26,9 +30,9 @@ describe('api', () => {
         vi.restoreAllMocks()
     })
 
-    it('api() returns parsed JSON and sends JSON + credentials by default', async () => {
+    it('api() returns parsed JSON and sends JSON + credentials when a body is present', async () => {
         fetchMock.mockResolvedValue(okResponse({ hello: 'world' }))
-        const result = await api<{ hello: string }>('/ping')
+        const result = await api<{ hello: string }>('/ping', { method: 'POST', body: '{}' })
 
         expect(result).toEqual({ hello: 'world' })
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
@@ -37,9 +41,16 @@ describe('api', () => {
         expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' })
     })
 
+    it('api() omits Content-Type on body-less requests — the server 400s an empty JSON body', async () => {
+        fetchMock.mockResolvedValue(okResponse({}))
+        await api('/ping')
+        const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+        expect(init.headers).not.toHaveProperty('Content-Type')
+    })
+
     it('api() merges caller-supplied headers over the defaults', async () => {
         fetchMock.mockResolvedValue(okResponse({}))
-        await api('/x', { headers: { Authorization: 'Bearer t' } })
+        await api('/x', { method: 'POST', body: '{}', headers: { Authorization: 'Bearer t' } })
         const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
         expect(init.headers).toMatchObject({ 'Content-Type': 'application/json', Authorization: 'Bearer t' })
     })
@@ -103,6 +114,11 @@ describe('api', () => {
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
         expect(url).toBe(`${BASE}/scores/3`)
         expect(init.method).toBe('DELETE')
+    })
+
+    it('api() resolves on an ok response with an empty body (void endpoints)', async () => {
+        fetchMock.mockResolvedValue(okResponse(undefined))
+        await expect(api('/scores/3', { method: 'DELETE' })).resolves.toBeUndefined()
     })
 
     it('patchOnboarding() PATCHes the patch body to /onboarding', async () => {

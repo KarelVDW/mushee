@@ -33,7 +33,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
             ...init,
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json',
+                // Only claim a JSON body when there is one — the server rejects
+                // body-less requests (DELETE) that carry a content-type.
+                ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...init?.headers,
             },
         })
@@ -56,7 +58,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
         throw new ApiError(res.status, message)
     }
 
-    return res.json() as Promise<T>
+    // Void endpoints (e.g. DELETE) respond with an empty body — parsing it as
+    // JSON would throw even though the request succeeded.
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
 }
 
 export interface ScoreMeta {
