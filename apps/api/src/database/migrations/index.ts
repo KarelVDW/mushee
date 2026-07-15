@@ -4,6 +4,7 @@ import { SubscriptionEventOrdering1783382400000 } from './1783382400000-Subscrip
 import { RecordingStoragePath1783555200000 } from './1783555200000-RecordingStoragePath';
 import { SubscriptionTiers1783641600000 } from './1783641600000-SubscriptionTiers';
 import { PricingRelaunch1783900800000 } from './1783900800000-PricingRelaunch';
+import { FreeTierScoreLimit1784073600000 } from './1784073600000-FreeTierScoreLimit';
 
 /**
  * All migrations, in order: better-auth's tables first so the app schema can
@@ -18,4 +19,5 @@ export const migrations = [
   RecordingStoragePath1783555200000,
   SubscriptionTiers1783641600000,
   PricingRelaunch1783900800000,
+  FreeTierScoreLimit1784073600000,
 ];

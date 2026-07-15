@@ -232,8 +232,8 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                         Pay for recording time, nothing else.
                     </h2>
                     <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                        Every plan gets the full editor, unlimited scores, and playback. The plans differ in one thing: how much you
-                        can record per day.
+                        Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
+                        record per day — and Sketch keeps a shelf of up to five scores.
                     </p>
                 </div>
 

@@ -125,6 +125,16 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 
         if (path === '/beta/status') return json({ betaMode: false, status: null, role: 'user' })
 
+        // The database tier catalogue, mirroring the seed migrations.
+        if (path === '/plans') {
+            return json([
+                { id: 'free', name: 'Sketch', dailyRecordingCredits: 180, maxScores: 5, sellable: true },
+                { id: 'pro', name: 'Songwriter', dailyRecordingCredits: 1200, maxScores: null, sellable: true },
+                { id: 'studio', name: 'Studio', dailyRecordingCredits: 10800, maxScores: null, sellable: true },
+                { id: 'arranger', name: 'Arranger', dailyRecordingCredits: 28800, maxScores: null, sellable: true },
+            ])
+        }
+
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
 
         const idMatch = path.match(/\/scores\/([^/]+)$/)

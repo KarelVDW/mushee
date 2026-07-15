@@ -101,6 +101,43 @@ test('a failed delete surfaces an error toast and keeps the row', async ({ page,
     await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
 })
 
+test('hitting the score cap opens the upgrade dialog instead of an error toast', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/scores')
+
+    // Registered after the fixture mock, so it wins: the server refuses the
+    // create with the structured score-limit error. CORS headers are needed
+    // because the app must be able to read the body to see the code.
+    await page.route(
+        (url) => url.pathname.endsWith('/scores'),
+        (route) => {
+            if (route.request().method() !== 'POST') return route.fallback()
+            const origin = route.request().headers()['origin'] ?? '*'
+            return route.fulfill({
+                status: 403,
+                contentType: 'application/json',
+                headers: { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true' },
+                body: JSON.stringify({ code: 'score-limit', message: 'Your Sketch plan holds up to 5 scores. Upgrade to add more.' }),
+            })
+        },
+    )
+
+    await page.getByRole('button', { name: 'New score' }).click()
+    await page.getByLabel('Title', { exact: true }).fill('One Too Many')
+    await page.getByRole('button', { name: 'Create score' }).click()
+
+    // The tier-aware upgrade dialog appears, with no failure toast doubling it up.
+    const dialog = page.getByRole('dialog', { name: 'Your Sketch plan holds up to 5 scores.' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Upgrade to Songwriter' })).toBeVisible()
+    await expect(page.getByText('Could not create the score. Please try again.')).toHaveCount(0)
+
+    // "Not now" dismisses; the library stays as it was.
+    await page.getByRole('button', { name: 'Not now' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+})
+
 test('the create dialog validates, submits on Enter, and can be cancelled', async ({ page, apiMock }) => {
     await page.goto('/scores')
     await page.getByRole('button', { name: 'New score' }).click()

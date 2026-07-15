@@ -23,7 +23,9 @@ export interface PlanTier {
     priceYearly: number
     /** Static fallback for the recording budget; the API value wins in-app. */
     dailyRecordingSeconds: number | null
-    /** Marketing feature lines, excluding the recording budget (derived). */
+    /** Static fallback for the score cap (null = no cap); the API value wins in-app. */
+    maxScores: number | null
+    /** Marketing feature lines, excluding the recording budget and score cap (derived). */
     features: string[]
     popular?: boolean
     /** Professional tiers render as a slim secondary card, not in the main grid. */
@@ -41,7 +43,8 @@ export const PLAN_TIERS: PlanTier[] = [
         priceMonthly: 0,
         priceYearly: 0,
         dailyRecordingSeconds: 180,
-        features: ['Unlimited scores', 'Live audio-to-notation', 'Full editor & playback'],
+        maxScores: 5,
+        features: ['Live audio-to-notation', 'Full editor & playback'],
     },
     {
         id: 'pro',
@@ -51,6 +54,7 @@ export const PLAN_TIERS: PlanTier[] = [
         priceMonthly: 9,
         priceYearly: 90,
         dailyRecordingSeconds: 1200,
+        maxScores: null,
         features: ['Everything in Sketch', 'Early access to new features'],
         popular: true,
     },
@@ -62,6 +66,7 @@ export const PLAN_TIERS: PlanTier[] = [
         priceMonthly: 19,
         priceYearly: 190,
         dailyRecordingSeconds: 10800,
+        maxScores: null,
         features: ['Everything in Songwriter', 'Priority support'],
     },
     {
@@ -72,6 +77,7 @@ export const PLAN_TIERS: PlanTier[] = [
         priceMonthly: 49,
         priceYearly: 490,
         dailyRecordingSeconds: 28800,
+        maxScores: null,
         features: ['Everything in Studio', 'Direct support from the maker'],
         professional: true,
     },
@@ -127,6 +133,7 @@ export const BETA_PLAN = {
     icon: 'sparkles',
     tagline: 'Free while the beta runs',
     dailyRecordingSeconds: 1800,
+    maxScores: null,
     features: ['Full editor', 'Direct line to the makers'],
 }
 
@@ -147,16 +154,24 @@ export function recordingBudgetLabel(seconds: number | null): string {
     return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h of recording / day`
 }
 
+/** Human line for a score cap; null = no cap. */
+export function scoreLimitLabel(maxScores: number | null): string {
+    if (maxScores === null) return 'As many scores as you like'
+    return `Up to ${maxScores} scores`
+}
+
 /**
- * The full feature list for a plan card: the recording budget first, then the
- * marketing lines. Pass the API's `dailyRecordingCredits` when available so
- * the shown budget is the one the server actually enforces.
+ * The full feature list for a plan card: the recording budget and score cap
+ * first, then the marketing lines. Pass the API's `dailyRecordingCredits` and
+ * `maxScores` when available so the shown limits are the ones the server
+ * actually enforces.
  */
 export function planFeatures(
-    plan: Pick<PlanTier, 'dailyRecordingSeconds' | 'features'>,
+    plan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'>,
     dailyRecordingSeconds: number | null = plan.dailyRecordingSeconds,
+    maxScores: number | null = plan.maxScores,
 ): string[] {
-    return [recordingBudgetLabel(dailyRecordingSeconds), ...plan.features]
+    return [recordingBudgetLabel(dailyRecordingSeconds), scoreLimitLabel(maxScores), ...plan.features]
 }
 
 export function planPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): string {

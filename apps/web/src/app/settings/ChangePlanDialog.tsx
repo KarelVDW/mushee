@@ -47,6 +47,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                   id: p.id as PlanTier['id'],
                   name: p.name,
                   dailyRecordingSeconds: p.dailyRecordingCredits,
+                  maxScores: p.maxScores,
               }))
         : PLAN_TIERS
 
