@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
+import { useObservedWidth } from '@/lib/useObservedWidth'
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
@@ -95,21 +96,18 @@ export const Score = memo(function Score({
         y: number
     } | null>(null)
 
-    useEffect(() => {
-        const el = containerRef.current
-        if (!el) return
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0]
-            if (!entry) return
-            const width = entry.contentRect.width
-            // Reflow instead of shrink: on narrow containers the layout packs rows
-            // against the available width, so glyphs render at full size on phones.
-            score.setLayoutWidth(width > 0 && width < REFLOW_BREAKPOINT ? Math.max(MIN_LAYOUT_WIDTH, Math.floor(width)) : SCORE_WIDTH)
-            setContainerWidth(width)
-        })
-        observer.observe(el)
-        return () => observer.disconnect()
-    }, [score])
+    useObservedWidth(
+        containerRef,
+        useCallback(
+            (width: number) => {
+                // Reflow instead of shrink: on narrow containers the layout packs rows
+                // against the available width, so glyphs render at full size on phones.
+                score.setLayoutWidth(width > 0 && width < REFLOW_BREAKPOINT ? Math.max(MIN_LAYOUT_WIDTH, Math.floor(width)) : SCORE_WIDTH)
+                setContainerWidth(width)
+            },
+            [score],
+        ),
+    )
 
     // The current layout snapshot (rebuilt lazily by the model when the score changed)
     const layout = score.layout
