@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Score editor chrome — slim header + note tool dock</title>
+        <link rel="stylesheet" href="../colors_and_type.css" />
+        <style>
+            html,
+            body {
+                margin: 0;
+                background: var(--color-surface);
+            }
+            :focus-visible {
+                outline: 2px solid var(--color-primary);
+                outline-offset: 2px;
+            }
+            /* The editor column: slim header on top, canvas strip, dock along the bottom.
+               Header and dock share the same chrome mirror surface. */
+            .editor {
+                width: 1100px;
+                display: flex;
+                flex-direction: column;
+                box-shadow: var(--shadow-tonal);
+            }
+            .chrome {
+                background: color-mix(in srgb, var(--color-surface-container-low) 85%, transparent);
+                backdrop-filter: blur(24px);
+                -webkit-backdrop-filter: blur(24px);
+                box-shadow: var(--shadow-tonal);
+            }
+
+            /* Slim header — back · wordmark · title · instrument | transport | shortcuts · export */
+            .header {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 8px 20px;
+            }
+            .header .side {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+            }
+            .header .side.right {
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .back {
+                background: transparent;
+                border: 0;
+                cursor: pointer;
+                color: var(--color-on-surface-variant);
+                padding: 6px;
+                margin-left: -6px;
+                border-radius: 9999px;
+                display: inline-flex;
+            }
+            .header .wordmark {
+                font-size: 19px;
+            }
+            .divider {
+                width: 1px;
+                height: 20px;
+                background: color-mix(in srgb, var(--color-outline-variant) 15%, transparent);
+            }
+            .title {
+                font: 500 17px/1 var(--font-display);
+                letter-spacing: -0.01em;
+                color: var(--color-on-surface);
+                padding: 6px 8px;
+            }
+            .instrument {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                border: 0;
+                border-radius: 9999px;
+                padding: 6px 10px;
+                cursor: pointer;
+                font: 600 11px/1 var(--font-label);
+                background: color-mix(in srgb, var(--color-secondary-soft) 70%, transparent);
+                color: var(--color-on-secondary-soft);
+            }
+
+            /* Transport — record equals play on desktop (30 / 40 / 40 / 30) */
+            .transport {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-shrink: 0;
+            }
+            .satellite {
+                width: 30px;
+                height: 30px;
+                border-radius: 9999px;
+                background: var(--color-surface-container-low);
+                color: var(--color-on-surface-variant);
+                border: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            .satellite.active {
+                color: var(--color-primary);
+            }
+            .play {
+                width: 40px;
+                height: 40px;
+                border-radius: 9999px;
+                background: var(--color-surface-container-lowest);
+                border: 3px solid var(--color-primary-container);
+                color: var(--color-primary);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                padding: 0;
+            }
+            .play.active {
+                background: var(--color-primary-container);
+                color: var(--color-on-primary-container);
+            }
+            .record {
+                width: 40px;
+                height: 40px;
+                border-radius: 9999px;
+                background: var(--color-surface-container-lowest);
+                border: 3px solid var(--color-error-container);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                padding: 0;
+            }
+            .record .core {
+                width: 17px;
+                height: 17px;
+                border-radius: 9999px;
+                background: var(--color-error-container);
+                box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+            }
+            .record.active {
+                background: var(--color-error);
+                border-color: var(--color-error);
+            }
+            .record.active .core {
+                background: var(--color-on-error);
+                box-shadow: none;
+            }
+
+            /* Chip toggle — shortcuts / export / dot / tie / clef / key / tempo */
+            .chip {
+                background: var(--color-surface-container-low);
+                color: var(--color-on-surface);
+                border: 0;
+                border-radius: 9999px;
+                padding: 7px 14px;
+                font: 600 13px/1 var(--font-label);
+                cursor: pointer;
+                min-height: 32px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                white-space: nowrap;
+            }
+            .chip.active {
+                background: var(--color-primary-container);
+                color: var(--color-on-primary-container);
+            }
+            .chip .serif {
+                font-family: var(--font-serif);
+                font-size: 19px;
+                line-height: 1;
+            }
+
+            /* Canvas strip — the manuscript between the two chrome surfaces */
+            .canvas {
+                background: var(--color-surface);
+                padding: 24px 32px;
+                display: flex;
+                justify-content: center;
+            }
+            .canvas .page {
+                background: var(--color-surface-container-lowest);
+                box-shadow: var(--shadow-tonal);
+                width: 100%;
+                max-width: 960px;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--color-outline-variant);
+                font: 400 13px/1 var(--font-body);
+            }
+
+            /* Note tool dock — groups separated by space (no dividers), wraps onto rows */
+            .dock {
+                padding: 10px 16px;
+            }
+            .dock .tools {
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-wrap: wrap;
+                column-gap: 24px;
+                row-gap: 8px;
+            }
+            .group {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            /* Segmented pill track (durations / accidentals) */
+            .seg {
+                display: inline-flex;
+                padding: 3px;
+                border-radius: 9999px;
+                background: var(--color-surface-container-low);
+            }
+            .seg button {
+                background: transparent;
+                color: var(--color-on-surface-variant);
+                border: 0;
+                padding: 6px 10px;
+                cursor: pointer;
+                border-radius: 9999px;
+                min-width: 34px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font: 600 14px/1 var(--font-label);
+            }
+            .seg button.active {
+                background: var(--color-primary-container);
+                color: var(--color-on-primary-container);
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="editor">
+            <!-- HEADER — slim; transport centred; no Save/Share (production autosaves) -->
+            <header class="header chrome">
+                <div class="side">
+                    <button class="back" aria-label="Back to library">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="20" height="20"><path d="M20 12H5"/><path d="m11 5-7 7 7 7"/></svg>
+                    </button>
+                    <span class="wordmark">Sheemu</span>
+                    <span class="divider"></span>
+                    <span class="title">Nocturne in C</span>
+                    <button class="instrument" aria-label="Change instrument (current: Piano)">
+                        Piano
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="11" height="11"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/><path d="M15 3v6"/><path d="M8 9v6"/><path d="M17.5 15v6"/></svg>
+                    </button>
+                </div>
+
+                <!-- TRANSPORT — stop 30 · play 40 · record 40 · metronome 30 -->
+                <div class="transport">
+                    <button class="satellite" aria-label="Stop">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="12" height="12"><rect x="6" y="6" width="12" height="12"/></svg>
+                    </button>
+                    <button class="play" aria-label="Play">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="18" height="18"><path d="M7.5 4.5 19.5 12 7.5 19.5Z"/></svg>
+                    </button>
+                    <button class="record" aria-label="Record">
+                        <span class="core"></span>
+                    </button>
+                    <button class="satellite active" aria-label="Metronome">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="12" height="12"><path d="M4 10v4"/><path d="M8 6v12"/><path d="M12 3v18"/><path d="M16 8v8"/><path d="M20 11v2"/></svg>
+                    </button>
+                </div>
+
+                <div class="side right">
+                    <button class="chip" aria-label="Keyboard shortcuts">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="16" height="16"><path d="M2.5 6.5h17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-9Z"/><path d="M6.5 10.5h.01"/><path d="M10 10.5h.01"/><path d="M13.5 10.5h.01"/><path d="M17 10.5h.01"/><path d="M8.5 14h7"/></svg>
+                    </button>
+                    <button class="chip" aria-label="Export score">
+                        <svg class="ico-glyph" viewBox="0 0 24 24" width="14" height="14"><path d="M12 3.5V15"/><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/><path d="M4 17v3.5h16V17"/></svg>
+                        Export
+                    </button>
+                </div>
+            </header>
+
+            <!-- CANVAS STRIP -->
+            <div class="canvas">
+                <div class="page">manuscript canvas</div>
+            </div>
+
+            <!-- NOTE TOOL DOCK — durations · dot/tuplet/rest/tie · accidentals · clef/key/tempo.
+                 Popovers (clef, key, tempo) open UPWARD, away from the dock. -->
+            <div class="dock chrome">
+                <div class="tools" role="group" aria-label="Note tools">
+                    <div class="seg" role="group" aria-label="Note duration">
+                        <button aria-label="Whole note">
+                            <svg width="11" height="20" viewBox="0 0 16 30"><ellipse cx="7" cy="25" rx="5.6" ry="4" transform="rotate(-18 7 25)" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+                        </button>
+                        <button aria-label="Half note">
+                            <svg width="11" height="20" viewBox="0 0 16 30"><line x1="12.4" y1="24" x2="12.4" y2="4" stroke="currentColor" stroke-width="1.4"/><ellipse cx="7" cy="25" rx="5.6" ry="4" transform="rotate(-18 7 25)" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+                        </button>
+                        <button class="active" aria-label="Quarter note">
+                            <svg width="11" height="20" viewBox="0 0 16 30"><line x1="12.4" y1="24" x2="12.4" y2="4" stroke="currentColor" stroke-width="1.4"/><ellipse cx="7" cy="25" rx="5.6" ry="4" transform="rotate(-18 7 25)" fill="currentColor"/></svg>
+                        </button>
+                        <button aria-label="Eighth note">
+                            <svg width="11" height="20" viewBox="0 0 16 30"><line x1="12.4" y1="24" x2="12.4" y2="4" stroke="currentColor" stroke-width="1.4"/><path d="M12.4 4 c4 2 5.5 4.5 3.5 9 c1 -4 -0.5 -6.5 -3.5 -7.5 Z" fill="currentColor"/><ellipse cx="7" cy="25" rx="5.6" ry="4" transform="rotate(-18 7 25)" fill="currentColor"/></svg>
+                        </button>
+                        <button aria-label="Sixteenth note">
+                            <svg width="11" height="20" viewBox="0 0 16 30"><line x1="12.4" y1="24" x2="12.4" y2="4" stroke="currentColor" stroke-width="1.4"/><path d="M12.4 4 c4 2 5.5 4.5 3.5 9 c1 -4 -0.5 -6.5 -3.5 -7.5 Z" fill="currentColor"/><path d="M12.4 9 c4 2 5.5 4.5 3.5 9 c1 -4 -0.5 -6.5 -3.5 -7.5 Z" fill="currentColor"/><ellipse cx="7" cy="25" rx="5.6" ry="4" transform="rotate(-18 7 25)" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="group">
+                        <button class="chip" aria-label="Dotted">·</button>
+                        <button class="chip" aria-label="Triplet">
+                            <svg width="18" height="11" viewBox="0 0 32 20"><rect x="1" y="10" width="1.5" height="5" fill="currentColor"/><rect x="1" y="10" width="9" height="1.5" fill="currentColor"/><rect x="22" y="10" width="9" height="1.5" fill="currentColor"/><rect x="29.5" y="10" width="1.5" height="5" fill="currentColor"/><text x="16" y="16" text-anchor="middle" font-family="var(--font-serif)" font-weight="700" font-size="13" fill="currentColor">3</text></svg>
+                        </button>
+                        <button class="chip" aria-label="Rest">
+                            <svg width="9" height="16" viewBox="0 0 16 30"><path d="M5 3 L11 11 C7 14 6.5 17 10.5 21 C5.5 19.5 4.5 16 8 12.5 L3.5 7 Z M10.5 21 C6 22.5 5.5 25 8.5 28 C3.5 26.5 3 22.5 7.5 20.5 Z" fill="currentColor"/></svg>
+                        </button>
+                        <button class="chip active">Tie</button>
+                    </div>
+
+                    <div class="seg" role="group" aria-label="Accidental">
+                        <button>♮</button>
+                        <button class="active">♭</button>
+                        <button>♯</button>
+                    </div>
+
+                    <div class="group">
+                        <button class="chip" aria-label="Clef: Treble"><span class="serif">𝄞</span></button>
+                        <button class="chip" aria-label="Key signature: C major">♮</button>
+                        <button class="chip" aria-label="Tempo: 120 bpm">120 bpm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

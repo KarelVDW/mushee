@@ -17,6 +17,8 @@ export default defineConfig({
     testDir: './e2e',
     testMatch: '**/*.spec.ts',
     // The full-stack smoke runs under its own config; keep it out of the default run.
+    // NOTE: a project-level testIgnore REPLACES this one, so the desktop projects
+    // below must repeat the fullstack exclusion alongside their own.
     testIgnore: '**/*.fullstack.spec.ts',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
@@ -31,11 +33,11 @@ export default defineConfig({
         actionTimeout: 10_000,
     },
     projects: [
-        { name: 'chromium', testIgnore: '**/mobile.spec.ts', use: { ...devices['Desktop Chrome'] } },
+        { name: 'chromium', testIgnore: ['**/mobile.spec.ts', '**/*.fullstack.spec.ts'], use: { ...devices['Desktop Chrome'] } },
         // WebKit is the most behavior-divergent supported engine (Safari); running
         // the mocked-API suite against it catches Safari-only breakage without
         // needing a Mac-hosted real Safari.
-        { name: 'webkit', testIgnore: '**/mobile.spec.ts', use: { ...devices['Desktop Safari'] } },
+        { name: 'webkit', testIgnore: ['**/mobile.spec.ts', '**/*.fullstack.spec.ts'], use: { ...devices['Desktop Safari'] } },
         // Phone chrome is structurally different (transport in the dock, touch
         // controls, reflowed layout) — the mobile suite runs only its own spec,
         // and the desktop specs stay off this project.

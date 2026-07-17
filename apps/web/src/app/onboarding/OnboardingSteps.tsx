@@ -281,7 +281,7 @@ export function BetaPlanStep({
     betaPlan,
     awaitingApproval,
 }: {
-    betaPlan: Pick<PlanTier, 'dailyRecordingSeconds' | 'features'> & { name: string; tagline: string }
+    betaPlan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'> & { name: string; tagline: string }
     awaitingApproval: boolean
 }) {
     return (

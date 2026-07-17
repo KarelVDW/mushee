@@ -1,14 +1,31 @@
-// Score editor — top toolbar + sanctuary canvas with placeholder staff.
+// Score editor — slim header + sanctuary canvas + bottom-docked note tool bar.
 //
-// Toolbar grammar:
-//   left   → segmented note-input (durations · dot · accidentals · tie)
-//   center → transport, organized around the moment of capture:
-//              [stop]  [PLAY]  [● RECORD]  [metro]
-//            Record is the headline action; Play sits beside it slightly
-//            smaller; Stop & Metronome are small satellite controls.
-//   right  → tempo readout
+// Chrome grammar (mirrors apps/web/src/app/scores/[id]):
+//   header (slim, py-2) → back · wordmark · title · instrument chip
+//                          | transport centred: [stop 30] [play 40] [● record 40] [metro 30]
+//                          | keyboard-shortcuts chip · Export menu
+//   dock (bottom, in-flow) → every selection-scoped edit control in one bar along the
+//                            editor's bottom edge: durations (SVG note icons) · dot/tuplet/
+//                            rest/tie · accidentals · clef/key/tempo. Groups are separated
+//                            by space — no dividers — and wrap onto extra rows. Popovers
+//                            open UPWARD, away from the dock.
+//   Both chrome surfaces are the same tonal mirror: surface-container-low @ 85% +
+//   backdrop blur + tonal shadow. Saving is silent autosave — no Save or Share buttons.
+//
+// Mobile (<768px), not depicted in this desktop kit: the transport moves out of the
+// header into the dock as a thumb-sized action row (record grows to 54px, the biggest
+// control on screen) alongside note-nav + pitch-nudge buttons, the metronome joins the
+// tool strip, and the dock popovers become full-width sheets instead of anchored panels.
 
-function Segmented({ value, onChange, options, font, ariaLabel }) {
+// Chrome mirror surface — shared by the header and the dock.
+const CHROME_SURFACE = {
+    background: 'color-mix(in srgb, var(--color-surface-container-low) 85%, transparent)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    boxShadow: 'var(--shadow-tonal)',
+}
+
+function Segmented({ value, onChange, options, ariaLabel }) {
     return (
         <div
             role="group"
@@ -24,19 +41,20 @@ function Segmented({ value, onChange, options, font, ariaLabel }) {
                 return (
                     <button
                         key={k || 'default'}
+                        aria-pressed={active}
                         onClick={() => onChange(k)}
                         style={{
                             background: active ? 'var(--color-primary-container)' : 'transparent',
                             color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
                             border: 0,
-                            padding: '6px 12px',
+                            padding: '6px 10px',
                             cursor: 'pointer',
                             borderRadius: 9999,
                             minWidth: 34,
-                            fontFamily: font || 'var(--font-label)',
-                            fontWeight: active ? 600 : 500,
-                            fontSize: font === 'serif' ? 18 : 16,
-                            lineHeight: 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            font: '600 14px/1 var(--font-label)',
                             transition: 'background 150ms var(--ease), color 150ms var(--ease)',
                         }}>
                         {g}
@@ -47,19 +65,21 @@ function Segmented({ value, onChange, options, font, ariaLabel }) {
     )
 }
 
-function ChipToggle({ active, onClick, children, ariaLabel }) {
+function ChipToggle({ active, onClick, children, ariaLabel, disabled }) {
     const [hover, setHover] = useState(false)
     return (
         <button
             type="button"
             aria-label={ariaLabel}
+            aria-pressed={active}
+            disabled={disabled}
             onClick={onClick}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
                 background: active
                     ? 'var(--color-primary-container)'
-                    : hover
+                    : hover && !disabled
                       ? 'var(--color-surface-container)'
                       : 'var(--color-surface-container-low)',
                 color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
@@ -67,9 +87,13 @@ function ChipToggle({ active, onClick, children, ariaLabel }) {
                 borderRadius: 9999,
                 padding: '7px 14px',
                 font: '600 13px/1 var(--font-label)',
-                cursor: 'pointer',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.4 : 1,
                 whiteSpace: 'nowrap',
                 minHeight: 32,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 transition: 'background 150ms var(--ease), color 150ms var(--ease)',
             }}>
             {children}
@@ -77,8 +101,9 @@ function ChipToggle({ active, onClick, children, ariaLabel }) {
     )
 }
 
-function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, children }) {
+function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disabled, children }) {
     const [hover, setHover] = useState(false)
+    const hovering = hover && !disabled
 
     if (tone === 'record') {
         // Concentric "rec light": white shell, thick red ring, solid red core.
@@ -89,6 +114,7 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
                 type="button"
                 aria-label={ariaLabel}
                 onClick={onClick}
+                disabled={disabled}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
                 style={{
@@ -101,9 +127,10 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled ? 0.4 : 1,
                     flexShrink: 0,
-                    transform: hover ? 'scale(1.04)' : 'scale(1)',
+                    transform: hovering ? 'scale(1.05)' : 'scale(1)',
                     transition: 'transform 220ms var(--ease), background 180ms var(--ease), border-color 180ms var(--ease)',
                 }}>
                 <span
@@ -127,6 +154,7 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
                 type="button"
                 aria-label={ariaLabel}
                 onClick={onClick}
+                disabled={disabled}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
                 style={{
@@ -140,9 +168,10 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled ? 0.4 : 1,
                     flexShrink: 0,
-                    transform: hover ? 'scale(1.04)' : 'scale(1)',
+                    transform: hovering ? 'scale(1.05)' : 'scale(1)',
                     transition: 'transform 220ms var(--ease), background 180ms var(--ease), color 180ms var(--ease)',
                 }}>
                 {children}
@@ -151,13 +180,14 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
     }
 
     // Neutral satellite (stop / metronome) — quiet tonal circle
-    const bg = hover ? 'var(--color-surface-container)' : 'var(--color-surface-container-low)'
+    const bg = hovering ? 'var(--color-surface-container)' : 'var(--color-surface-container-low)'
     const fg = active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
     return (
         <button
             type="button"
             aria-label={ariaLabel}
             onClick={onClick}
+            disabled={disabled}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
@@ -167,7 +197,8 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
                 background: bg,
                 color: fg,
                 border: 0,
-                cursor: 'pointer',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.4 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -179,12 +210,143 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, chil
     )
 }
 
+// Transport cluster — lives centred in the header on desktop. Record is the same
+// size as play here; it only headlines (54px) in the mobile dock.
+function TransportControls({ playing, onPlay, onStop, recording, onRec, metro, onMetro }) {
+    const canStop = playing || recording
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <TransportBtn size={30} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
+                <Icon name="square" size={12} />
+            </TransportBtn>
+            <TransportBtn size={40} tone="play" active={playing} onClick={onPlay} ariaLabel={playing ? 'Pause' : 'Play'} disabled={recording}>
+                <Icon name={playing ? 'pause' : 'play'} size={18} />
+            </TransportBtn>
+            <TransportBtn size={40} tone="record" active={recording} onClick={onRec} ariaLabel="Record">
+                <Icon name="circle" size={16} />
+            </TransportBtn>
+            <TransportBtn size={30} active={metro} onClick={onMetro} ariaLabel="Metronome">
+                <Icon name="audio-lines" size={12} />
+            </TransportBtn>
+        </div>
+    )
+}
+
+// --- Notation glyphs for the tool dock ---
+// The production dock draws these from the Bravura SMuFL font; the kit approximates
+// the same silhouettes with plain SVG so durations read as note icons, not text.
+
+function DurationIcon({ dur }) {
+    const hollow = dur === 'w' || dur === 'h'
+    const hasStem = dur !== 'w'
+    const flags = dur === '8' ? 1 : dur === '16' ? 2 : 0
+    const cx = 7
+    const cy = 25
+    const stemX = 12.4
+    const stemTop = 4
+    return (
+        <svg width={11} height={20} viewBox="0 0 16 30" aria-hidden="true">
+            {hasStem && <line x1={stemX} y1={cy - 1} x2={stemX} y2={stemTop} stroke="currentColor" strokeWidth={1.4} />}
+            {Array.from({ length: flags }).map((_, i) => (
+                <path
+                    key={i}
+                    d={`M${stemX} ${stemTop + i * 5} c4 2 5.5 4.5 3.5 9 c1 -4 -0.5 -6.5 -3.5 -7.5 Z`}
+                    fill="currentColor"
+                />
+            ))}
+            <ellipse
+                cx={cx}
+                cy={cy}
+                rx={5.6}
+                ry={4}
+                transform={`rotate(-18 ${cx} ${cy})`}
+                fill={hollow ? 'none' : 'currentColor'}
+                stroke="currentColor"
+                strokeWidth={hollow ? 1.7 : 0}
+            />
+        </svg>
+    )
+}
+
+function TupletIcon() {
+    // Bracket with a centred 3 — matches the app's tuplet chip.
+    return (
+        <svg width={18} height={11} viewBox="0 0 32 20" aria-hidden="true">
+            <rect x={1} y={10} width={1.5} height={5} fill="currentColor" />
+            <rect x={1} y={10} width={9} height={1.5} fill="currentColor" />
+            <rect x={22} y={10} width={9} height={1.5} fill="currentColor" />
+            <rect x={29.5} y={10} width={1.5} height={5} fill="currentColor" />
+            <text x={16} y={16} textAnchor="middle" fontFamily="var(--font-serif)" fontWeight="700" fontSize={13} fill="currentColor">
+                3
+            </text>
+        </svg>
+    )
+}
+
+function RestIcon() {
+    // Simplified quarter-rest squiggle.
+    return (
+        <svg width={9} height={16} viewBox="0 0 16 30" aria-hidden="true">
+            <path
+                d="M5 3 L11 11 C7 14 6.5 17 10.5 21 C5.5 19.5 4.5 16 8 12.5 L3.5 7 Z M10.5 21 C6 22.5 5.5 25 8.5 28 C3.5 26.5 3 22.5 7.5 20.5 Z"
+                fill="currentColor"
+            />
+        </svg>
+    )
+}
+
+// Upward glass popover shared by the dock's clef / key / tempo controls.
+// Production positions these `bottom-[calc(100%+0.75rem)] right-0` so they can
+// never hang over the dock; on mobile they become full-width sheets instead.
+function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
+    const popRef = React.useRef(null)
+    React.useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'Escape') onDismiss()
+        }
+        const onClick = (e) => {
+            if (popRef.current && !popRef.current.contains(e.target)) onDismiss()
+        }
+        window.addEventListener('keydown', onKey)
+        // Defer so the opening click doesn't immediately close it
+        const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0)
+        return () => {
+            clearTimeout(t)
+            window.removeEventListener('keydown', onKey)
+            document.removeEventListener('mousedown', onClick)
+        }
+    }, [])
+    return (
+        <div
+            ref={popRef}
+            role="dialog"
+            aria-label={ariaLabel}
+            className="glass-panel"
+            style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 12px)',
+                right: 0,
+                borderRadius: 12,
+                padding: 16,
+                width,
+                zIndex: 50,
+                boxShadow: 'var(--shadow-tonal)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+            }}>
+            {children}
+        </div>
+    )
+}
+
 // Tempo popover — tap-along pad + manual input. Spacebar works while open.
+// Opens upward from the dock; Set is a plain PrimaryButton (no pop — the
+// signature lift is reserved for hero moments, not a utility commit).
 function TempoPopover({ bpm, onChange, onClose }) {
     const [taps, setTaps] = useState([]) // timestamps of recent taps
     const [draft, setDraft] = useState(String(bpm))
     const [pulse, setPulse] = useState(0) // bumps each tap to flash the pad
-    const popRef = React.useRef(null)
     const inputRef = React.useRef(null)
 
     const tappedBpm = React.useMemo(() => {
@@ -200,8 +362,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
         setTaps((prev) => {
             // Reset if more than 2s between taps
             const last = prev[prev.length - 1]
-            const next = last && now - last > 2000 ? [now] : [...prev, now].slice(-8)
-            return next
+            return last && now - last > 2000 ? [now] : [...prev, now].slice(-8)
         })
         setPulse((p) => p + 1)
     }, [])
@@ -212,8 +373,6 @@ function TempoPopover({ bpm, onChange, onClose }) {
             if (e.code === 'Space' && document.activeElement !== inputRef.current) {
                 e.preventDefault()
                 handleTap()
-            } else if (e.key === 'Escape') {
-                onClose()
             } else if (e.key === 'Enter' && document.activeElement === inputRef.current) {
                 commit()
             }
@@ -221,19 +380,6 @@ function TempoPopover({ bpm, onChange, onClose }) {
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [handleTap])
-
-    // Click outside to dismiss
-    React.useEffect(() => {
-        const onClick = (e) => {
-            if (popRef.current && !popRef.current.contains(e.target)) onClose()
-        }
-        // Defer so the opening click doesn't immediately close it
-        const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0)
-        return () => {
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onClick)
-        }
-    }, [])
 
     // Push tapped value into the input as it stabilizes
     React.useEffect(() => {
@@ -249,24 +395,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
     }
 
     return (
-        <div
-            ref={popRef}
-            role="dialog"
-            aria-label="Set tempo"
-            className="glass-panel"
-            style={{
-                position: 'absolute',
-                top: 'calc(100% + 10px)',
-                right: 0,
-                borderRadius: 12,
-                padding: 16,
-                width: 360,
-                zIndex: 20,
-                boxShadow: 'var(--shadow-tonal)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-            }}>
+        <DockPopover ariaLabel="Set tempo" onDismiss={onClose} width={360}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Eyebrow>Tempo</Eyebrow>
                 <span style={{ font: '500 11px/1 var(--font-mono)', color: 'var(--color-on-surface-variant)' }}>
@@ -314,17 +443,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
                     />
                     Tap along
                 </span>
-                <span
-                    style={{
-                        fontFamily: 'var(--font-serif)',
-                        fontStyle: 'italic',
-                        fontWeight: 400,
-                        fontSize: 20,
-                        lineHeight: 1.2,
-                        letterSpacing: '-0.01em',
-                    }}>
-                    Click or tap the spacebar in tempo
-                </span>
+                <span style={{ font: '500 15px/1.3 var(--font-body)' }}>Click or tap the spacebar in tempo</span>
             </button>
 
             {/* Manual input + submit */}
@@ -378,17 +497,31 @@ function TempoPopover({ bpm, onChange, onClose }) {
                         }}
                     />
                 </div>
-                <PrimaryButton onClick={commit} emphasis="pop">
-                    Set
-                </PrimaryButton>
+                <PrimaryButton onClick={commit}>Set</PrimaryButton>
             </div>
-        </div>
+        </DockPopover>
     )
 }
 
-// BPM trigger — matches ChipToggle's tappable surface so it reads as a button,
-// not a label. Active = open state.
-function TempoBtn({ open, bpm, onClick }) {
+// Clef + key options. Production renders SMuFL glyphs; the serif Unicode glyphs
+// here are close enough for a kit chip.
+const CLEF_OPTIONS = [
+    ['treble', '𝄞', 'Treble'],
+    ['bass', '𝄢', 'Bass'],
+    ['alto', '𝄡', 'Alto'],
+]
+
+const KEY_OPTIONS = [
+    [3, '3♯', 'A major'],
+    [2, '2♯', 'D major'],
+    [1, '1♯', 'G major'],
+    [0, '♮', 'C major'],
+    [-1, '1♭', 'F major'],
+    [-2, '2♭', 'B♭ major'],
+    [-3, '3♭', 'E♭ major'],
+]
+
+function PopoverOption({ active, onClick, glyph, label, serifGlyph }) {
     const [hover, setHover] = useState(false)
     return (
         <button
@@ -396,162 +529,297 @@ function TempoBtn({ open, bpm, onClick }) {
             onClick={onClick}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-label={`Tempo: ${bpm} bpm`}
+            aria-label={`Set ${label}`}
             style={{
-                background: open
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                width: '100%',
+                border: 0,
+                borderRadius: 8,
+                padding: '9px 12px',
+                cursor: 'pointer',
+                background: active
                     ? 'var(--color-primary-container)'
                     : hover
                       ? 'var(--color-surface-container)'
                       : 'var(--color-surface-container-low)',
-                color: open ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
-                border: 0,
-                borderRadius: 9999,
-                padding: '7px 14px',
-                display: 'inline-flex',
-                alignItems: 'baseline',
-                gap: 8,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                minHeight: 32,
+                color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
+                font: '600 13px/1 var(--font-label)',
                 transition: 'background 150ms var(--ease), color 150ms var(--ease)',
             }}>
-            <span style={{ font: '400 16px/1 var(--font-display)', fontStyle: 'italic' }}>♩ =</span>
-            <span style={{ font: '600 14px/1 var(--font-mono)', letterSpacing: '-0.01em' }}>{bpm}</span>
-            <span
-                style={{
-                    font: '600 10px/1 var(--font-label)',
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase',
-                    opacity: 0.75,
-                }}>
-                bpm
-            </span>
+            <span>{label}</span>
+            <span style={serifGlyph ? { fontFamily: 'var(--font-serif)', fontSize: 20, lineHeight: 1 } : undefined}>{glyph}</span>
         </button>
     )
 }
 
-// Format seconds as M:SS (or just S"s" when under a minute).
-function fmtRecTime(sec) {
-    const s = Math.max(0, Math.floor(sec))
-    if (s < 60) return `${s}s`
-    const m = Math.floor(s / 60)
-    const r = s % 60
-    return `${m}:${String(r).padStart(2, '0')}`
-}
-
-// Usage meter that wraps the record button. Shows how much of today's daily
-// recording budget remains. When `unlimited`, renders as a calm "Unlimited"
-// pill — no progress bar.
-function RecordingUsage({ usedSec, limitSec, recording, planName, onClickWhenExhausted }) {
-    const unlimited = !isFinite(limitSec)
-    const exhausted = !unlimited && usedSec >= limitSec
-    const pct = unlimited ? 0 : Math.min(1, usedSec / limitSec)
-    const remaining = Math.max(0, (limitSec || 0) - usedSec)
-
-    // Compact: tier label · used / total · thin bar.
+function ClefControl({ clef, onSet }) {
+    const [open, setOpen] = useState(false)
+    const current = CLEF_OPTIONS.find(([k]) => k === clef) ?? CLEF_OPTIONS[0]
     return (
-        <div
-            role={exhausted ? 'button' : undefined}
-            tabIndex={exhausted ? 0 : undefined}
-            onClick={exhausted ? onClickWhenExhausted : undefined}
-            onKeyDown={
-                exhausted
-                    ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              onClickWhenExhausted()
-                          }
-                      }
-                    : undefined
-            }
-            style={{
-                position: 'absolute',
-                top: 'calc(100% + 6px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                minWidth: 132,
-                cursor: exhausted ? 'pointer' : 'default',
-                opacity: exhausted ? 0.95 : 1,
-            }}>
-            <span
-                style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 6,
-                    whiteSpace: 'nowrap',
-                    font: '500 11px/1 var(--font-mono)',
-                    color: exhausted ? 'var(--color-error)' : 'var(--color-on-surface-variant)',
-                    letterSpacing: '-0.01em',
-                }}>
-                {unlimited ? (
-                    <>
-                        <Icon name="infinity" size={12} />
-                        <span>Unlimited recording</span>
-                    </>
-                ) : exhausted ? (
-                    <span style={{ font: '600 11px/1 var(--font-label)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                        Daily limit reached
-                    </span>
-                ) : (
-                    <>
-                        <span style={{ color: recording ? 'var(--color-error)' : 'var(--color-on-surface)' }}>{fmtRecTime(usedSec)}</span>
-                        <span style={{ opacity: 0.7 }}>/ {fmtRecTime(limitSec)} today</span>
-                    </>
-                )}
-            </span>
-            {!unlimited && (
-                <div
-                    style={{
-                        width: 132,
-                        height: 3,
-                        borderRadius: 3,
-                        overflow: 'hidden',
-                        background: 'var(--color-surface-container)',
-                    }}>
-                    <div
-                        style={{
-                            width: `${pct * 100}%`,
-                            height: '100%',
-                            background: exhausted
-                                ? 'var(--color-error)'
-                                : recording
-                                  ? 'var(--color-error-container)'
-                                  : pct > 0.8
-                                    ? 'var(--color-secondary-container)'
-                                    : 'var(--color-primary-container)',
-                            transition: 'width 200ms linear, background 200ms var(--ease)',
-                        }}
-                    />
-                </div>
+        <div style={{ position: 'relative' }}>
+            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${current[2]}`}>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: 19, lineHeight: 1 }}>{current[1]}</span>
+            </ChipToggle>
+            {open && (
+                <DockPopover ariaLabel="Select clef" onDismiss={() => setOpen(false)} width={220}>
+                    <Eyebrow>Clef</Eyebrow>
+                    <div role="group" aria-label="Clef" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {CLEF_OPTIONS.map(([k, glyph, label]) => (
+                            <PopoverOption
+                                key={k}
+                                active={clef === k}
+                                glyph={glyph}
+                                label={label}
+                                serifGlyph
+                                onClick={() => {
+                                    onSet(k)
+                                    setOpen(false)
+                                }}
+                            />
+                        ))}
+                    </div>
+                </DockPopover>
             )}
-            <span
-                style={{
-                    font: '400 10px/1 var(--font-label)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'var(--color-on-surface-variant)',
-                    opacity: 0.7,
-                }}>
-                {planName}
-            </span>
         </div>
     )
 }
 
-// Limit-reached dialog. Tier-aware: free / pro both see an upgrade CTA;
-// the secondary action acknowledges the cap ("OK, I'll wait").
+function KeySignatureControl({ fifths, onSet }) {
+    const [open, setOpen] = useState(false)
+    const current = KEY_OPTIONS.find(([v]) => v === fifths) ?? KEY_OPTIONS[3]
+    return (
+        <div style={{ position: 'relative' }}>
+            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${current[2]}`}>
+                {current[1]}
+            </ChipToggle>
+            {open && (
+                <DockPopover ariaLabel="Select key signature" onDismiss={() => setOpen(false)} width={240}>
+                    <Eyebrow>Key signature</Eyebrow>
+                    <div role="group" aria-label="Key signature" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {KEY_OPTIONS.map(([v, glyph, label]) => (
+                            <PopoverOption
+                                key={v}
+                                active={fifths === v}
+                                glyph={glyph}
+                                label={label}
+                                onClick={() => {
+                                    onSet(v)
+                                    setOpen(false)
+                                }}
+                            />
+                        ))}
+                    </div>
+                </DockPopover>
+            )}
+        </div>
+    )
+}
+
+function TempoControl({ bpm, onSet }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <div style={{ position: 'relative' }}>
+            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
+                {bpm} bpm
+            </ChipToggle>
+            {open && <TempoPopover bpm={bpm} onChange={onSet} onClose={() => setOpen(false)} />}
+        </div>
+    )
+}
+
+// Export menu — replaces the old Save/Share pair; production autosaves silently,
+// so the only document action left in the header is getting the score out.
+const EXPORT_FORMATS = [
+    ['MusicXML', 'For other notation apps (.musicxml)'],
+    ['PDF', 'Print-ready sheet music (.pdf)'],
+    ['MIDI', 'For DAWs and players (.mid)'],
+]
+
+function ExportMenu() {
+    const [open, setOpen] = useState(false)
+    const popRef = React.useRef(null)
+    React.useEffect(() => {
+        if (!open) return
+        const onClick = (e) => {
+            if (popRef.current && !popRef.current.contains(e.target)) setOpen(false)
+        }
+        const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0)
+        return () => {
+            clearTimeout(t)
+            document.removeEventListener('mousedown', onClick)
+        }
+    }, [open])
+    return (
+        <div ref={popRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel="Export score">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="download" size={14} />
+                    Export
+                </span>
+            </ChipToggle>
+            {open && (
+                <div
+                    role="dialog"
+                    aria-label="Export score"
+                    className="glass-panel"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        right: 0,
+                        borderRadius: 12,
+                        padding: 16,
+                        zIndex: 50,
+                        boxShadow: 'var(--shadow-tonal)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                    }}>
+                    <Eyebrow>Export as</Eyebrow>
+                    <div role="group" aria-label="Export format" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {EXPORT_FORMATS.map(([label, description]) => (
+                            <ExportOption key={label} label={label} description={description} onClick={() => setOpen(false)} />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function ExportOption({ label, description, onClick }) {
+    const [hover, setHover] = useState(false)
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 4,
+                width: 224,
+                border: 0,
+                borderRadius: 8,
+                padding: '10px 12px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                background: hover ? 'var(--color-surface-container)' : 'var(--color-surface-container-low)',
+                transition: 'background 150ms var(--ease)',
+            }}>
+            <span style={{ font: '600 13px/1 var(--font-label)', color: 'var(--color-on-surface)' }}>{label}</span>
+            <span style={{ font: '400 11px/1 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{description}</span>
+        </button>
+    )
+}
+
+// --- Note tool dock ---
+// The chrome mirror of the slim header: every selection-scoped edit control in one
+// docked bar along the editor's bottom edge, so it can never hang over the score.
+// Groups are separated by 24px of space — no dividers — and wrap onto extra rows.
+function NoteToolDock({
+    duration,
+    onDuration,
+    accidental,
+    onAccidental,
+    dotted,
+    onDot,
+    tuplet,
+    onTuplet,
+    rest,
+    onRest,
+    tied,
+    onTie,
+    clef,
+    onClef,
+    keyFifths,
+    onKey,
+    bpm,
+    onBpm,
+}) {
+    return (
+        <div style={{ ...CHROME_SURFACE, flexShrink: 0, zIndex: 20, padding: '10px 16px' }}>
+            <div
+                role="group"
+                aria-label="Note tools"
+                style={{
+                    margin: '0 auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                    columnGap: 24,
+                    rowGap: 8,
+                }}>
+                <Segmented
+                    ariaLabel="Note duration"
+                    value={duration}
+                    onChange={onDuration}
+                    options={[
+                        ['w', <DurationIcon dur="w" />],
+                        ['h', <DurationIcon dur="h" />],
+                        ['q', <DurationIcon dur="q" />],
+                        ['8', <DurationIcon dur="8" />],
+                        ['16', <DurationIcon dur="16" />],
+                    ]}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ChipToggle active={dotted} onClick={onDot} ariaLabel="Dotted">
+                        ·
+                    </ChipToggle>
+                    <ChipToggle active={tuplet} onClick={onTuplet} ariaLabel="Triplet">
+                        <TupletIcon />
+                    </ChipToggle>
+                    <ChipToggle active={rest} onClick={onRest} ariaLabel="Rest">
+                        <RestIcon />
+                    </ChipToggle>
+                    <ChipToggle active={tied} onClick={onTie}>
+                        Tie
+                    </ChipToggle>
+                </div>
+                <Segmented
+                    ariaLabel="Accidental"
+                    value={accidental}
+                    onChange={onAccidental}
+                    options={[
+                        ['', '♮'],
+                        ['b', '♭'],
+                        ['#', '♯'],
+                    ]}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ClefControl clef={clef} onSet={onClef} />
+                    <KeySignatureControl fifths={keyFifths} onSet={onKey} />
+                    <TempoControl bpm={bpm} onSet={onBpm} />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Format seconds: S"s" under a minute, M:SS under an hour, then H"h".
+function fmtRecTime(sec) {
+    const s = Math.max(0, Math.floor(sec))
+    if (s < 60) return `${s}s`
+    const m = Math.floor(s / 60)
+    if (m < 60) return `${m}:${String(s % 60).padStart(2, '0')}`
+    const h = Math.floor(m / 60)
+    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
+}
+
+// Limit-reached dialog. Tier-aware: every capped tier sees an upgrade CTA; the
+// secondary action acknowledges the cap ("OK, I'll wait"). Minute packs offer a
+// one-time escape hatch without a subscription change.
 function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClose }) {
     return (
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title={`You've used today's ${fmtRecTime(limitSec)} of recording.`}
-                eyebrow={`Your ${planName} plan resets at midnight local time. Until then, playback, editing, and export still work — only mic capture pauses.`}
+                subtitle={`Your ${planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
                 onClose={onClose}
                 width={480}
                 footer={
@@ -603,6 +871,13 @@ function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClo
                             immediately.
                         </span>
                     )}
+                    <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Just need to finish this one?{' '}
+                        <span style={{ color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer' }}>
+                            One-time minute packs
+                        </span>{' '}
+                        start at $6 and never expire.
+                    </span>
                 </div>
             </DialogPanel>
         </DialogScrim>
@@ -617,7 +892,7 @@ function ConcurrentRecordingDialog({ onClose }) {
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title="One recording at a time."
-                eyebrow="Your account already has a recording running — maybe in another tab, or on another device."
+                subtitle="Your account already has a recording running — maybe in another tab, or on another device."
                 onClose={onClose}
                 width={480}
                 footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
@@ -657,108 +932,6 @@ function ConcurrentRecordingDialog({ onClose }) {
                 </div>
             </DialogPanel>
         </DialogScrim>
-    )
-}
-
-function ControlBar({
-    duration,
-    onDuration,
-    accidental,
-    onAccidental,
-    dotted,
-    onDot,
-    tied,
-    onTie,
-    playing,
-    onPlay,
-    onStop,
-    recording,
-    onRec,
-    metro,
-    onMetro,
-    bpm,
-    onBpm,
-    recUsedSec,
-    recLimitSec,
-    recPlanName,
-    onLimitClick,
-}) {
-    const [tempoOpen, setTempoOpen] = useState(false)
-    return (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                gap: 16,
-                padding: '14px 24px 50px',
-                background: 'var(--color-surface-container-lowest)',
-                boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
-            }}>
-            {/* LEFT — note input */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
-                <Segmented
-                    ariaLabel="Note duration"
-                    value={duration}
-                    onChange={onDuration}
-                    font="serif"
-                    options={[
-                        ['w', '𝅝'],
-                        ['h', '𝅗𝅥'],
-                        ['q', '𝅘𝅥'],
-                        ['8', '𝅘𝅥𝅮'],
-                        ['16', '𝅘𝅥𝅯'],
-                    ]}
-                />
-                <ChipToggle active={dotted} onClick={onDot} ariaLabel="Dotted">
-                    ·
-                </ChipToggle>
-                <Segmented
-                    ariaLabel="Accidental"
-                    value={accidental}
-                    onChange={onAccidental}
-                    options={[
-                        ['', '♮'],
-                        ['b', '♭'],
-                        ['#', '♯'],
-                    ]}
-                />
-                <ChipToggle active={tied} onClick={onTie}>
-                    Tie
-                </ChipToggle>
-            </div>
-
-            {/* CENTER — transport: record headlines, play next to it, satellites flank */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-                <TransportBtn size={36} onClick={onStop} ariaLabel="Stop">
-                    <Icon name="square" size={14} />
-                </TransportBtn>
-                <TransportBtn size={52} tone="play" active={playing} onClick={onPlay} ariaLabel={playing ? 'Pause' : 'Play'}>
-                    <Icon name={playing ? 'pause' : 'play'} size={24} />
-                </TransportBtn>
-                <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <TransportBtn size={68} tone="record" active={recording} onClick={onRec} ariaLabel="Record">
-                        <Icon name="circle" size={28} />
-                    </TransportBtn>
-                    <RecordingUsage
-                        usedSec={recUsedSec}
-                        limitSec={recLimitSec}
-                        recording={recording}
-                        planName={recPlanName}
-                        onClickWhenExhausted={onLimitClick}
-                    />
-                </div>
-                <TransportBtn size={36} active={metro} onClick={onMetro} ariaLabel="Metronome">
-                    <Icon name="audio-lines" size={14} />
-                </TransportBtn>
-            </div>
-
-            {/* RIGHT — tempo */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', position: 'relative' }}>
-                <TempoBtn open={tempoOpen} bpm={bpm} onClick={() => setTempoOpen((o) => !o)} />
-                {tempoOpen && <TempoPopover bpm={bpm} onChange={onBpm} onClose={() => setTempoOpen(false)} />}
-            </div>
-        </div>
     )
 }
 
@@ -805,34 +978,63 @@ function PlaceholderStaff() {
     )
 }
 
-// Tier metadata duplicated here so Editor doesn't reach across modules. In
-// production this lives in a shared constants module fed by /api/polar.
-const EDITOR_TIERS = {
-    free: { name: 'Sketch', dailyLimitSec: 30, next: 'Composer' },
-    pro: { name: 'Composer', dailyLimitSec: 600, next: 'Studio' },
-    studio: { name: 'Studio', dailyLimitSec: Infinity, next: null },
+// Add/remove-measure controls — small icon buttons sitting in the score area at
+// the end of the last staff (production draws them inside the score SVG itself).
+function MeasureButtons({ onAdd, onRemove }) {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '4px 8px 0 0' }}>
+            <IconButton icon="plus" size={28} ariaLabel="Add measure" onClick={onAdd} idleBg="var(--color-surface-container-low)" />
+            <IconButton
+                icon="minus"
+                size={28}
+                ariaLabel="Remove last measure"
+                onClick={onRemove}
+                idleBg="var(--color-surface-container-low)"
+            />
+        </div>
+    )
 }
+
+// Tier metadata duplicated here so Editor doesn't reach across modules. In
+// production the tiers live in the database (GET /plans); lib/plans.ts holds the
+// display decoration. Every tier is capped — there is no unlimited recording.
+const EDITOR_TIERS = {
+    free: { name: 'Sketch', dailyLimitSec: 180, next: 'Songwriter' },
+    pro: { name: 'Songwriter', dailyLimitSec: 1200, next: 'Studio' },
+    studio: { name: 'Studio', dailyLimitSec: 10800, next: 'Arranger' },
+    arranger: { name: 'Arranger', dailyLimitSec: 28800, next: null },
+}
+
+const KIT_INSTRUMENTS = ['Piano', 'Violin', 'Flute', 'Guitar']
 
 function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, onRecUsedSecChange, onUpgrade }) {
     const [duration, setDuration] = useState('q')
     const [accidental, setAccidental] = useState('')
     const [dotted, setDotted] = useState(false)
+    const [tuplet, setTuplet] = useState(false)
+    const [rest, setRest] = useState(false)
     const [tied, setTied] = useState(false)
+    const [clef, setClef] = useState('treble')
+    const [keyFifths, setKeyFifths] = useState(0)
     const [playing, setPlaying] = useState(false)
     const [recording, setRecording] = useState(false)
     const [metro, setMetro] = useState(false)
     const [bpm, setBpm] = useState(120)
     const [title, setTitle] = useState(score?.title ?? 'Untitled composition')
+    const [instrument, setInstrument] = useState(score?.instrument ?? 'Piano')
+    const [instrumentHover, setInstrumentHover] = useState(false)
+    const [shortcutsOn, setShortcutsOn] = useState(false)
     const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const [concurrentDialogOpen, setConcurrentDialogOpen] = useState(false)
 
     const tier = EDITOR_TIERS[planId] ?? EDITOR_TIERS.free
     const limitSec = tier.dailyLimitSec
-    const exhausted = isFinite(limitSec) && recUsedSec >= limitSec
+    const exhausted = recUsedSec >= limitSec
 
-    // Tick today's recording usage while the record button is active.
-    // When the daily cap is reached, stop the recorder and open the dialog —
-    // the same dialog opens when the user taps Record on an exhausted limit.
+    // Tick today's recording usage while the record button is active. When the
+    // daily cap is reached, stop the recorder and open the dialog — the same
+    // dialog opens when the user taps Record on an exhausted limit. (There is no
+    // in-editor usage meter; the limit only surfaces through this dialog.)
     React.useEffect(() => {
         if (!recording) return
         if (exhausted) {
@@ -841,10 +1043,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
             return
         }
         const id = setInterval(() => {
-            onRecUsedSecChange?.((prev) => {
-                const next = (prev ?? 0) + 0.1
-                return next
-            })
+            onRecUsedSecChange?.((prev) => (prev ?? 0) + 0.1)
         }, 100)
         return () => clearInterval(id)
     }, [recording, exhausted])
@@ -867,86 +1066,112 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
         <div
             data-screen-label="Editor"
             style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, background: 'var(--color-surface)' }}>
+            {/* Slim header — back · wordmark · title · instrument | transport | shortcuts · export */}
             <header
                 style={{
+                    ...CHROME_SURFACE,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     gap: 16,
-                    padding: '14px 24px',
-                    background: 'rgba(246,246,246,0.85)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
+                    padding: '8px 20px',
                     zIndex: 10,
                 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
                     <button
                         onClick={onBack}
-                        aria-label="Back"
+                        aria-label="Back to library"
                         style={{
                             background: 'transparent',
                             border: 0,
                             cursor: 'pointer',
                             color: 'var(--color-on-surface-variant)',
-                            padding: 4,
+                            padding: 6,
+                            marginLeft: -6,
+                            borderRadius: 9999,
                             display: 'inline-flex',
                         }}>
                         <Icon name="arrow-left" size={20} />
                     </button>
-                    <Wordmark size={22} />
-                    <div style={{ width: 1, height: 24, background: 'rgba(172,173,173,0.15)' }} />
+                    <Wordmark size={19} />
+                    <div
+                        style={{
+                            width: 1,
+                            height: 20,
+                            background: 'color-mix(in srgb, var(--color-outline-variant) 15%, transparent)',
+                        }}
+                    />
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
+                        aria-label="Score title"
                         style={{
                             background: 'transparent',
                             border: 0,
                             outline: 0,
-                            fontFamily: 'var(--font-serif)',
-                            fontStyle: 'italic',
-                            fontSize: 22,
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 500,
+                            fontSize: 17,
+                            letterSpacing: '-0.01em',
                             color: 'var(--color-on-surface)',
-                            padding: 4,
-                            minWidth: 0,
-                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: 4,
+                            minWidth: 64,
+                            maxWidth: '40%',
+                            flexShrink: 1,
                         }}
                     />
-                    <Pill>{score?.instrument ?? 'Piano'}</Pill>
+                    {/* Instrument chip — interactive: opens the change-instrument dialog in
+                        production; the kit just cycles instruments to feel alive. */}
+                    <button
+                        type="button"
+                        onClick={() => setInstrument(KIT_INSTRUMENTS[(KIT_INSTRUMENTS.indexOf(instrument) + 1) % KIT_INSTRUMENTS.length])}
+                        onMouseEnter={() => setInstrumentHover(true)}
+                        onMouseLeave={() => setInstrumentHover(false)}
+                        aria-label={`Change instrument (current: ${instrument})`}
+                        style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            border: 0,
+                            borderRadius: 9999,
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            font: '600 11px/1 var(--font-label)',
+                            whiteSpace: 'nowrap',
+                            background: instrumentHover
+                                ? 'var(--color-secondary-soft)'
+                                : 'color-mix(in srgb, var(--color-secondary-soft) 70%, transparent)',
+                            color: 'var(--color-on-secondary-soft)',
+                            transition: 'background 150ms var(--ease)',
+                        }}>
+                        {instrument}
+                        <Icon name="sliders-horizontal" size={11} />
+                    </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <SecondaryButton>Share</SecondaryButton>
-                    <PrimaryButton emphasis="pop" icon="check">
-                        Save
-                    </PrimaryButton>
+
+                {/* Transport — centred; moves into the dock on mobile */}
+                <TransportControls
+                    playing={playing}
+                    onPlay={() => setPlaying((p) => !p)}
+                    onStop={() => {
+                        setPlaying(false)
+                        setRecording(false)
+                    }}
+                    recording={recording}
+                    onRec={handleRecClick}
+                    metro={metro}
+                    onMetro={() => setMetro((m) => !m)}
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flex: 1, justifyContent: 'flex-end' }}>
+                    <ChipToggle active={shortcutsOn} onClick={() => setShortcutsOn((o) => !o)} ariaLabel="Keyboard shortcuts">
+                        <Icon name="keyboard" size={16} />
+                    </ChipToggle>
+                    <ExportMenu />
                 </div>
             </header>
-            <ControlBar
-                duration={duration}
-                onDuration={setDuration}
-                accidental={accidental}
-                onAccidental={setAccidental}
-                dotted={dotted}
-                onDot={() => setDotted(!dotted)}
-                tied={tied}
-                onTie={() => setTied(!tied)}
-                playing={playing}
-                onPlay={() => setPlaying(!playing)}
-                onStop={() => {
-                    setPlaying(false)
-                    setRecording(false)
-                }}
-                recording={recording}
-                onRec={handleRecClick}
-                metro={metro}
-                onMetro={() => setMetro(!metro)}
-                bpm={bpm}
-                onBpm={setBpm}
-                recUsedSec={recUsedSec}
-                recLimitSec={limitSec}
-                recPlanName={tier.name}
-                onLimitClick={() => setLimitDialogOpen(true)}
-            />
+
             {limitDialogOpen && (
                 <LimitReachedDialog
                     planName={tier.name}
@@ -960,24 +1185,46 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                 />
             )}
             {concurrentDialogOpen && <ConcurrentRecordingDialog onClose={() => setConcurrentDialogOpen(false)} />}
-            <div style={{ flex: 1, overflow: 'auto', padding: 32 }}>
+
+            {/* Sanctuary canvas */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '0 32px', display: 'flex', flexDirection: 'column' }}>
                 <div
                     style={{
                         maxWidth: 960,
+                        width: '100%',
                         margin: '0 auto',
-                        minHeight: '100%',
+                        flex: 1,
                         background: 'var(--color-surface-container-lowest)',
                         padding: 40,
-                        boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
+                        boxShadow: 'var(--shadow-tonal)',
                     }}>
                     <PlaceholderStaff />
                     <PlaceholderStaff />
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 24 }}>
-                        <SecondaryButton>Add measure</SecondaryButton>
-                        <TertiaryButton>Remove last measure</TertiaryButton>
-                    </div>
+                    <MeasureButtons onAdd={() => {}} onRemove={() => {}} />
                 </div>
             </div>
+
+            {/* Bottom tool dock */}
+            <NoteToolDock
+                duration={duration}
+                onDuration={setDuration}
+                accidental={accidental}
+                onAccidental={setAccidental}
+                dotted={dotted}
+                onDot={() => setDotted(!dotted)}
+                tuplet={tuplet}
+                onTuplet={() => setTuplet(!tuplet)}
+                rest={rest}
+                onRest={() => setRest(!rest)}
+                tied={tied}
+                onTie={() => setTied(!tied)}
+                clef={clef}
+                onClef={setClef}
+                keyFifths={keyFifths}
+                onKey={setKeyFifths}
+                bpm={bpm}
+                onBpm={setBpm}
+            />
         </div>
     )
 }

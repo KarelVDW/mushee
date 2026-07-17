@@ -1,54 +1,47 @@
 // Sign-up onboarding — gather context after the user creates an account.
 const ONBOARDING_STEPS = ['name', 'background', 'instruments', 'source', 'tier', 'done']
 
-// Plan catalogue. `polarProductId` is what we hand to Polar's checkout — these
-// would come from server config in production. Free is local-only (no checkout).
+// Plan catalogue — display decoration only. In production the tiers (names,
+// prices, recording budgets, score caps) come from the database via GET /plans,
+// and checkout is Polar-hosted, configured on the API (see src/lib/plans.ts).
+// Never say "unlimited" — every sold tier has a daily recording budget.
 const PLAN_TIERS = [
     {
         id: 'free',
         name: 'Sketch',
         icon: 'feather',
-        tagline: 'For trying it out.',
+        tagline: 'For trying things out',
         priceMonthly: 0,
         priceYearly: 0,
-        dailyLimitSec: 30,
-        features: ['30 seconds of recording / day', '3 scores in your library', 'Hum-to-notation transcription', 'Export as PDF'],
-        polarProductId: null,
+        features: ['3 min of recording / day', 'Up to 5 scores', 'Live audio-to-notation', 'Full editor & playback'],
     },
     {
         id: 'pro',
-        name: 'Composer',
+        name: 'Songwriter',
         icon: 'sparkles',
-        tagline: 'For regular writing.',
-        priceMonthly: 8,
-        priceYearly: 80,
-        dailyLimitSec: 600,
-        features: [
-            '10 minutes of recording / day',
-            'Unlimited scores',
-            'MIDI + MusicXML export',
-            'Shareable score links',
-            'Editor themes & playback styles',
-        ],
+        tagline: 'For daily writers',
+        priceMonthly: 9,
+        priceYearly: 90,
+        features: ['20 min of recording / day', 'As many scores as you like', 'Everything in Sketch', 'Early access to new features'],
         popular: true,
-        polarProductId: 'prod_composer_v1',
     },
     {
         id: 'studio',
         name: 'Studio',
         icon: 'gem',
-        tagline: 'For teaching & teams.',
-        priceMonthly: 18,
-        priceYearly: 180,
-        dailyLimitSec: Infinity,
-        features: [
-            'Unlimited recording',
-            'Everything in Composer',
-            'Up to 5 collaborators per score',
-            'Custom staff templates',
-            'Priority support',
-        ],
-        polarProductId: 'prod_studio_v1',
+        tagline: 'For heavy sessions',
+        priceMonthly: 19,
+        priceYearly: 190,
+        features: ['3 h of recording / day', 'As many scores as you like', 'Everything in Songwriter', 'Priority support'],
+    },
+    {
+        id: 'arranger',
+        name: 'Arranger',
+        icon: 'crown',
+        tagline: 'For transcription as a job',
+        priceMonthly: 49,
+        priceYearly: 490,
+        features: ['8 h of recording / day', 'As many scores as you like', 'Everything in Studio', 'Direct support from the maker'],
     },
 ]
 
@@ -91,15 +84,15 @@ function TierCard({ plan, active, billing, onSelect }) {
                         position: 'absolute',
                         top: -10,
                         right: 14,
-                        background: 'var(--color-secondary-container)',
-                        color: 'var(--color-on-secondary-container)',
+                        background: 'var(--color-secondary-soft)',
+                        color: 'var(--color-on-secondary-soft)',
                         font: '600 10px/1 var(--font-label)',
                         letterSpacing: '0.12em',
                         textTransform: 'uppercase',
                         padding: '6px 10px',
                         borderRadius: 9999,
                     }}>
-                    Most picked
+                    Best value
                 </span>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -291,6 +284,8 @@ function StepProgress({ step, total }) {
 
 function Onboarding({ onComplete, onSkip }) {
     const [step, setStep] = useState(0)
+    // True while the mock Polar hand-off runs after Finish on a paid tier.
+    const [redirecting, setRedirecting] = useState(false)
     const [data, setData] = useState({
         name: '',
         background: null,
@@ -305,50 +300,9 @@ function Onboarding({ onComplete, onSkip }) {
         micState: 'idle', // 'idle' | 'requesting' | 'granted' | 'denied'
         tier: 'pro',
         billing: 'monthly',
-        checkout: 'idle', // 'idle' | 'redirecting' | 'success' | 'cancelled' | 'error'
-        checkoutError: '',
     })
 
     const totalSteps = 7 // verify + mic + name + background + instruments + source + tier (+done state)
-
-    // Polar checkout — in production this hands off to Polar's hosted checkout.
-    // We open a Polar session URL and listen for the return redirect.
-    const startCheckout = async () => {
-        const plan = PLAN_TIERS.find((p) => p.id === data.tier)
-        if (!plan) return
-        // Free tier: skip Polar entirely, mark as success locally.
-        if (!plan.polarProductId) {
-            setField('checkout', 'success')
-            return
-        }
-        setField('checkout', 'redirecting')
-        try {
-            // Production:
-            //   const session = await fetch('/api/polar/checkout', {
-            //     method: 'POST',
-            //     body: JSON.stringify({ productId: plan.polarProductId, billing: data.billing,
-            //       successUrl: `${origin}/onboarding?checkout=success`,
-            //       cancelUrl:  `${origin}/onboarding?checkout=cancelled` }),
-            //   }).then(r => r.json());
-            //   window.location.href = session.url; // Polar-hosted page
-            // Mock — pretend Polar bounces us back to ?checkout=success after 1.6s.
-            await new Promise((r) => setTimeout(r, 1600))
-            setField('checkout', 'success')
-        } catch (err) {
-            setField('checkoutError', err.message || "Couldn't reach Polar.")
-            setField('checkout', 'error')
-        }
-    }
-
-    // Honor `?checkout=success|cancelled` on return from Polar.
-    React.useEffect(() => {
-        const params = new URLSearchParams(window.location.search)
-        const result = params.get('checkout')
-        if (result === 'success' || result === 'cancelled') {
-            setData((d) => ({ ...d, checkout: result }))
-            setStep(6)
-        }
-    }, [])
 
     // Ask the browser for mic access only after the user explicitly clicks Allow.
     const requestMic = async () => {
@@ -368,7 +322,22 @@ function Onboarding({ onComplete, onSkip }) {
             instruments: d.instruments.includes(i) ? d.instruments.filter((x) => x !== i) : [...d.instruments, i],
         }))
 
-    const next = () => setStep((s) => Math.min(s + 1, totalSteps))
+    const next = () => {
+        // Finish on the tier step: a paid pick goes straight to Polar's hosted
+        // checkout — in production the success return lands on
+        // /settings?checkout=success, never back on this step. Free skips
+        // checkout entirely and shows the done screen.
+        if (step === totalSteps - 1) {
+            if (data.tier !== 'free') {
+                setRedirecting(true)
+                setTimeout(() => onComplete(data), 1600) // mock the redirect + return
+                return
+            }
+            setStep(totalSteps)
+            return
+        }
+        setStep((s) => Math.min(s + 1, totalSteps))
+    }
     const back = () => setStep((s) => Math.max(s - 1, 0))
 
     const canAdvance = (() => {
@@ -376,7 +345,10 @@ function Onboarding({ onComplete, onSkip }) {
             case 0:
                 return data.verified
             case 1:
-                return data.micState === 'granted'
+                // Denied still advances: the editor works fine without a mic
+                // (recording asks again later), and a desktop user with no
+                // microphone must not be walled out of the rest of onboarding.
+                return data.micState === 'granted' || data.micState === 'denied'
             case 2:
                 return data.name.trim().length > 0
             case 3:
@@ -386,7 +358,7 @@ function Onboarding({ onComplete, onSkip }) {
             case 5:
                 return !!data.source
             case 6:
-                return data.checkout === 'success'
+                return true
             default:
                 return true
         }
@@ -410,7 +382,7 @@ function Onboarding({ onComplete, onSkip }) {
             }}>
             <header style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Wordmark size={26} />
-                {step > 0 && step < totalSteps ? <TertiaryButton onClick={onSkip}>Skip for now</TertiaryButton> : <span />}
+                {step > 0 && step < totalSteps && !redirecting ? <TertiaryButton onClick={onSkip}>Skip for now</TertiaryButton> : <span />}
             </header>
 
             <div
@@ -433,7 +405,7 @@ function Onboarding({ onComplete, onSkip }) {
                         <ModalTitle>Verify your email.</ModalTitle>
                         <SubHeadline>
                             We sent a 6-digit code to <strong style={{ color: 'var(--color-on-surface)' }}>{data.email}</strong>. Enter it
-                            below to continue — this step is required to protect your scores.
+                            below to continue — this step protects your scores.
                         </SubHeadline>
 
                         {!data.verified ? (
@@ -557,7 +529,7 @@ function Onboarding({ onComplete, onSkip }) {
                                 <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                                     {data.micState === 'granted' && "You're ready to record. Tap Continue."}
                                     {data.micState === 'denied' &&
-                                        "We can't enable audio capture without permission. Update site permissions in your browser, then try again."}
+                                        'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
                                     {data.micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
                                     {data.micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
                                 </span>
@@ -667,174 +639,61 @@ function Onboarding({ onComplete, onSkip }) {
                     </div>
                 )}
 
-                {step === 6 && (
+                {step === 6 && !redirecting && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <ModalTitle>Pick a plan to start with.</ModalTitle>
-                            <SubHeadline>You can switch or cancel any time from Settings. Payments are processed by Polar.</SubHeadline>
+                            <SubHeadline>You can switch or cancel any time from Settings.</SubHeadline>
                         </div>
-
-                        {data.checkout === 'idle' && (
-                            <>
-                                <BillingToggle value={data.billing} onChange={(v) => setField('billing', v)} />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                                    {PLAN_TIERS.map((p) => (
-                                        <TierCard
-                                            key={p.id}
-                                            plan={p}
-                                            billing={data.billing}
-                                            active={data.tier === p.id}
-                                            onSelect={() => setField('tier', p.id)}
-                                        />
-                                    ))}
-                                </div>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 10,
-                                        font: '400 12px/1.4 var(--font-body)',
-                                        color: 'var(--color-on-surface-variant)',
-                                    }}>
-                                    <Icon name="lock" size={14} />
-                                    Card details are entered on Polar's secure checkout — Sheemu never sees them.
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                    <PrimaryButton
-                                        emphasis="pop"
-                                        onClick={startCheckout}
-                                        icon={PLAN_TIERS.find((p) => p.id === data.tier)?.polarProductId ? 'external-link' : 'arrow-right'}>
-                                        {PLAN_TIERS.find((p) => p.id === data.tier)?.polarProductId
-                                            ? 'Continue to Polar checkout'
-                                            : 'Start with Sketch'}
-                                    </PrimaryButton>
-                                </div>
-                            </>
-                        )}
-
-                        {data.checkout === 'redirecting' && (
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: 14,
-                                    padding: '32px 16px',
-                                    background: 'var(--color-surface-container-low)',
-                                    borderRadius: 12,
-                                }}>
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 9999,
-                                        border: '3px solid var(--color-surface-container)',
-                                        borderTopColor: 'var(--color-primary)',
-                                        animation: 'sheemu-spin 700ms linear infinite',
-                                    }}
+                        <BillingToggle value={data.billing} onChange={(v) => setField('billing', v)} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            {PLAN_TIERS.map((p) => (
+                                <TierCard
+                                    key={p.id}
+                                    plan={p}
+                                    billing={data.billing}
+                                    active={data.tier === p.id}
+                                    onSelect={() => setField('tier', p.id)}
                                 />
-                                <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
-                                <span style={{ font: '600 15px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                    Redirecting you to Polar's secure checkout…
-                                </span>
-                                <span
-                                    style={{
-                                        font: '400 12px/1.5 var(--font-body)',
-                                        color: 'var(--color-on-surface-variant)',
-                                        textAlign: 'center',
-                                        maxWidth: 320,
-                                    }}>
-                                    Once you complete payment, you'll come back here automatically.
-                                </span>
-                            </div>
-                        )}
+                            ))}
+                        </div>
+                    </div>
+                )}
 
-                        {data.checkout === 'success' && (
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: 14,
-                                    background: 'var(--color-surface-container-low)',
-                                    borderRadius: 12,
-                                    padding: 20,
-                                }}>
-                                <span
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 9999,
-                                        flexShrink: 0,
-                                        background: 'var(--color-primary-container)',
-                                        color: 'var(--color-on-primary-container)',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}>
-                                    <Icon name="check" size={20} />
-                                </span>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                    <span style={{ font: '600 15px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                        You're on <strong>{PLAN_TIERS.find((p) => p.id === data.tier)?.name}</strong>.
-                                    </span>
-                                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                        {PLAN_TIERS.find((p) => p.id === data.tier)?.polarProductId
-                                            ? 'Polar sent your receipt by email. You can manage billing any time from Settings → Billing.'
-                                            : 'No card needed. Upgrade later from Settings → Billing.'}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-
-                        {data.checkout === 'cancelled' && (
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 12,
-                                    background: 'var(--color-surface-container-low)',
-                                    borderRadius: 12,
-                                    padding: 20,
-                                }}>
-                                <span style={{ font: '600 15px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                    Checkout cancelled — no charge.
-                                </span>
-                                <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    Pick a plan to try again, or stick with Sketch for now.
-                                </span>
-                                <div style={{ display: 'flex', gap: 10 }}>
-                                    <SecondaryButton onClick={() => setField('checkout', 'idle')}>Pick a plan</SecondaryButton>
-                                    <TertiaryButton
-                                        onClick={() => {
-                                            setField('tier', 'free')
-                                            setField('checkout', 'success')
-                                        }}>
-                                        Continue on Sketch
-                                    </TertiaryButton>
-                                </div>
-                            </div>
-                        )}
-
-                        {data.checkout === 'error' && (
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 10,
-                                    background: 'var(--color-error-container)',
-                                    color: 'var(--color-on-error-container)',
-                                    borderRadius: 12,
-                                    padding: 20,
-                                }}>
-                                <span style={{ font: '600 15px/1.3 var(--font-body)' }}>We couldn't open the checkout.</span>
-                                <span style={{ font: '400 13px/1.5 var(--font-body)' }}>
-                                    {data.checkoutError || "Polar didn't respond. Check your connection and try again."}
-                                </span>
-                                <div>
-                                    <SecondaryButton onClick={() => setField('checkout', 'idle')}>Try again</SecondaryButton>
-                                </div>
-                            </div>
-                        )}
+                {step === 6 && redirecting && (
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 14,
+                            padding: '32px 16px',
+                            background: 'var(--color-surface-container-low)',
+                            borderRadius: 12,
+                        }}>
+                        <div
+                            style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 9999,
+                                border: '3px solid var(--color-surface-container)',
+                                borderTopColor: 'var(--color-primary)',
+                                animation: 'sheemu-spin 700ms linear infinite',
+                            }}
+                        />
+                        <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
+                        <span style={{ font: '600 15px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                            Sending you to Polar's secure checkout…
+                        </span>
+                        <span
+                            style={{
+                                font: '400 12px/1.5 var(--font-body)',
+                                color: 'var(--color-on-surface-variant)',
+                                textAlign: 'center',
+                                maxWidth: 320,
+                            }}>
+                            After payment you land back in Sheemu on the Settings page, with your new plan active.
+                        </span>
                     </div>
                 )}
 
@@ -866,7 +725,7 @@ function Onboarding({ onComplete, onSkip }) {
                     </div>
                 )}
 
-                {step < totalSteps && (
+                {step < totalSteps && !redirecting && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
                         {step > 0 ? <TertiaryButton onClick={back}>← Back</TertiaryButton> : <span />}
                         <PrimaryButton disabled={!canAdvance} icon="arrow-right" emphasis="pop" onClick={next}>

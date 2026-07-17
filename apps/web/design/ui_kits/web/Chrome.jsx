@@ -1,16 +1,17 @@
 // Top nav, footer, dialog scrim, sub-page header.
 function TopNav({ active = 'Library', user = 'Anya M.', onCreate, onSignOut, onNav }) {
-    const items = ['Library', 'Editor']
+    const items = ['Library', 'Settings']
     return (
         <nav
             style={{
                 position: 'sticky',
                 top: 0,
                 zIndex: 50,
-                background: 'rgba(246,246,246,0.85)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
+                // Chrome mirror surface — token-driven, same recipe as the editor header/dock.
+                background: 'color-mix(in srgb, var(--color-surface-container-low) 85%, transparent)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+                boxShadow: 'var(--shadow-tonal)',
             }}>
             <div
                 style={{
@@ -88,11 +89,34 @@ function PageHeader({ title, subtitle, italic = false, right }) {
     )
 }
 
+function FooterLink({ children, onClick }) {
+    const [hover, setHover] = useState(false)
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+                background: 'transparent',
+                border: 0,
+                padding: 0,
+                cursor: 'pointer',
+                font: '400 12px/1 var(--font-body)',
+                color: hover ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+                whiteSpace: 'nowrap',
+                transition: 'color 150ms var(--ease)',
+            }}>
+            {children}
+        </button>
+    )
+}
+
 function Footer() {
     return (
         <footer
             style={{
-                borderTop: '1px solid rgba(172,173,173,0.15)',
+                borderTop: '1px solid color-mix(in srgb, var(--color-outline-variant) 15%, transparent)',
                 padding: '24px 0',
                 background: 'var(--color-surface)',
             }}>
@@ -104,8 +128,16 @@ function Footer() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    gap: 24,
+                    flexWrap: 'wrap',
                 }}>
                 <Wordmark size={20} />
+                <nav aria-label="Legal" style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                    <FooterLink>Privacy</FooterLink>
+                    <FooterLink>Terms</FooterLink>
+                    <FooterLink>Contact</FooterLink>
+                    <FooterLink>Cookie settings</FooterLink>
+                </nav>
                 <span style={{ font: '400 12px/1 var(--font-body)', color: 'var(--color-on-surface-variant)', whiteSpace: 'nowrap' }}>
                     © 2026 Sheemu. Made for composers.
                 </span>
@@ -135,15 +167,18 @@ function DialogScrim({ children, onDismiss }) {
     )
 }
 
-function DialogPanel({ title, eyebrow, children, footer, onClose, width = 560 }) {
+// `subtitle` matches the production DialogPanel prop; `eyebrow` is kept as a
+// deprecated alias so older kit screens keep rendering.
+function DialogPanel({ title, subtitle, eyebrow, children, footer, onClose, width = 560 }) {
+    const sub = subtitle ?? eyebrow
     return (
         <div
+            role="dialog"
+            aria-modal="true"
+            className="glass-panel"
             style={{
-                background: 'rgba(255,255,255,0.92)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
                 borderRadius: 12,
-                boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
+                boxShadow: 'var(--shadow-tonal)',
                 width,
                 maxWidth: '90vw',
                 maxHeight: '90vh',
@@ -159,8 +194,8 @@ function DialogPanel({ title, eyebrow, children, footer, onClose, width = 560 })
                 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <ModalTitle>{title}</ModalTitle>
-                    {eyebrow && (
-                        <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{eyebrow}</span>
+                    {sub && (
+                        <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{sub}</span>
                     )}
                 </div>
                 {onClose && (

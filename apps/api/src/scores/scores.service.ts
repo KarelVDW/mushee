@@ -9,6 +9,7 @@ import { ILike, Repository } from 'typeorm';
 
 import { CacheService } from '../cache/cache.service';
 import { StorageService } from '../storage/storage.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { CreateScoreDto } from './dto/create-score.dto';
 import { UpdateScoreDto } from './dto/update-score.dto';
 import { Score } from './entities/score.entity';
@@ -20,9 +21,24 @@ export class ScoresService {
     private readonly scoreRepo: Repository<Score>,
     private readonly cacheService: CacheService,
     private readonly storageService: StorageService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   async create(userId: string, dto: CreateScoreDto): Promise<Score> {
+    const tier = await this.subscriptions.tierFor(userId);
+    if (tier.maxScores !== null) {
+      // Count-then-insert is racy, but the cap is a plan entitlement, not a
+      // security boundary — a photo-finish double click slipping one score
+      // past it is harmless.
+      const count = await this.scoreRepo.countBy({ userId });
+      if (count >= tier.maxScores) {
+        throw new ForbiddenException({
+          code: 'score-limit',
+          message: `Your ${tier.name} plan holds up to ${tier.maxScores} scores. Upgrade to add more.`,
+        });
+      }
+    }
+
     const score = this.scoreRepo.create({
       userId,
       title: dto.title,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planById, planFeatures, planPrice, recordingBudgetLabel } from '@/lib/plans'
+import { BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planById, planFeatures, planPrice, recordingBudgetLabel, scoreLimitLabel } from '@/lib/plans'
 
 describe('plan catalogue', () => {
     it('lists the four sellable tiers with unique ids', () => {
@@ -49,12 +49,22 @@ describe('plan catalogue', () => {
         expect(recordingBudgetLabel(null)).toBe('Unlimited recording')
     })
 
-    it('puts the recording budget first in the feature list, API value winning', () => {
+    it('formats score caps, with the free tier capped and the rest open', () => {
+        expect(scoreLimitLabel(5)).toBe('Up to 5 scores')
+        expect(scoreLimitLabel(null)).toBe('As many scores as you like')
+        expect(planById('free').maxScores).toBe(5)
+        expect(PLAN_TIERS.filter((p) => p.id !== 'free').every((p) => p.maxScores === null)).toBe(true)
+    })
+
+    it('puts the recording budget and score cap first in the feature list, API values winning', () => {
         const pro = planById('pro')
         expect(planFeatures(pro)[0]).toBe('20 min of recording / day')
-        // A re-tuned database budget overrides the static fallback.
+        expect(planFeatures(pro)[1]).toBe('As many scores as you like')
+        expect(planFeatures(planById('free'))[1]).toBe('Up to 5 scores')
+        // Re-tuned database entitlements override the static fallbacks.
         expect(planFeatures(pro, 600)[0]).toBe('10 min of recording / day')
-        expect(planFeatures(pro).slice(1)).toEqual(pro.features)
+        expect(planFeatures(pro, 600, 20)[1]).toBe('Up to 20 scores')
+        expect(planFeatures(pro).slice(2)).toEqual(pro.features)
     })
 })
 

@@ -1,11 +1,15 @@
 // Score library — list of saved scores with search and row hover.
+// Columns mirror production (src/app/scores/page.tsx): Title / Created / Updated / actions.
 const SAMPLE_SCORES = [
-    { id: 'a', title: 'Allegro in C minor', created: 'Mar 4, 2026', updated: '2 hours ago', instrument: 'Piano' },
-    { id: 'b', title: 'Nocturne — first draft', created: 'Feb 19, 2026', updated: 'Yesterday', instrument: 'Piano' },
-    { id: 'c', title: 'Erhu sketch no. 4', created: 'Feb 11, 2026', updated: '3 days ago', instrument: 'Erhu' },
-    { id: 'd', title: 'Pan flute étude', created: 'Jan 30, 2026', updated: 'Jan 31, 2026', instrument: 'Pan flute' },
-    { id: 'e', title: 'Untitled composition', created: 'Jan 14, 2026', updated: 'Jan 14, 2026', instrument: 'Violin' },
+    { id: 'a', title: 'Allegro in C minor', created: 'Mar 4, 2026', updated: '2 hours ago' },
+    { id: 'b', title: 'Nocturne — first draft', created: 'Feb 19, 2026', updated: 'Yesterday' },
+    { id: 'c', title: 'Erhu sketch no. 4', created: 'Feb 11, 2026', updated: '3 days ago' },
+    { id: 'd', title: 'Untitled composition', created: 'Jan 14, 2026', updated: 'Jan 14, 2026' },
 ]
+
+// The free Sketch plan keeps a shelf of up to 5 scores; the server refuses the
+// create beyond that (403 code 'score-limit') and the app shows ScoreLimitDialog.
+const SKETCH_SCORE_LIMIT = 5
 
 function ScoreRow({ score, hover, onOpen, onDelete }) {
     const [hovered, setHovered] = useState(hover ?? false)
@@ -21,7 +25,7 @@ function ScoreRow({ score, hover, onOpen, onDelete }) {
                 padding: '18px 24px',
                 boxShadow: '0 0 24px 0 rgba(45,47,47,0.06)',
                 display: 'grid',
-                gridTemplateColumns: '5fr 2fr 2fr 2fr 1fr',
+                gridTemplateColumns: '5fr 2fr 2fr 1fr',
                 gap: 16,
                 alignItems: 'center',
                 transition: 'background 220ms var(--ease)',
@@ -52,7 +56,6 @@ function ScoreRow({ score, hover, onOpen, onDelete }) {
                 }}>
                 {score.title}
             </button>
-            <Pill bg={hovered ? 'var(--color-surface-container-lowest)' : undefined}>{score.instrument}</Pill>
             <span style={{ font: '400 13px/1 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{score.created}</span>
             <span style={{ font: '400 13px/1 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{score.updated}</span>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -78,7 +81,17 @@ function ScoreRow({ score, hover, onOpen, onDelete }) {
 
 function Library({ scores, onOpen, onCreate, onDelete }) {
     const [search, setSearch] = useState('')
+    // Deleting is destructive with no undo — always confirm first.
+    const [deleteTarget, setDeleteTarget] = useState(null)
+    // Mirrors the app's score-cap flow: at the Sketch limit the create is
+    // refused and an upgrade conversation opens instead of the new-score dialog.
+    const [limitOpen, setLimitOpen] = useState(false)
     const filtered = scores.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
+
+    const handleCreate = () => {
+        if (scores.length >= SKETCH_SCORE_LIMIT) setLimitOpen(true)
+        else onCreate()
+    }
     return (
         <main
             data-screen-label="Library"
@@ -107,7 +120,7 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
             <div
                 style={{
                     display: 'grid',
-                    gridTemplateColumns: '5fr 2fr 2fr 2fr 1fr',
+                    gridTemplateColumns: '5fr 2fr 2fr 1fr',
                     gap: 16,
                     padding: '8px 24px',
                     font: '600 11px/1 var(--font-label)',
@@ -116,7 +129,6 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
                     color: 'var(--color-outline)',
                 }}>
                 <span>Title</span>
-                <span>Instrument</span>
                 <span>Created</span>
                 <span>Updated</span>
                 <span></span>
@@ -172,23 +184,114 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
                             </svg>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                                 <span style={{ font: '600 16px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                    Nothing here yet.
+                                    No scores yet.
                                 </span>
                                 <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    Start a new score and it'll show up on this shelf.
+                                    Compose your first one — it'll show up on this shelf.
                                 </span>
                             </div>
-                            <PrimaryButton icon="plus" onClick={onCreate}>
+                            <PrimaryButton icon="plus" onClick={handleCreate}>
                                 New score
                             </PrimaryButton>
                         </div>
                     )
                 ) : (
-                    filtered.map((s, i) => <ScoreRow key={s.id} score={s} onOpen={() => onOpen(s)} onDelete={() => onDelete(s)} />)
+                    filtered.map((s, i) => <ScoreRow key={s.id} score={s} onOpen={() => onOpen(s)} onDelete={() => setDeleteTarget(s)} />)
                 )}
             </div>
+
+            {deleteTarget && (
+                <DialogScrim onDismiss={() => setDeleteTarget(null)}>
+                    <DialogPanel
+                        title="Delete this score?"
+                        subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
+                        width={440}
+                        onClose={() => setDeleteTarget(null)}
+                        footer={
+                            <>
+                                <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
+                                <PrimaryButton
+                                    danger
+                                    onClick={() => {
+                                        onDelete(deleteTarget)
+                                        setDeleteTarget(null)
+                                    }}>
+                                    Delete score
+                                </PrimaryButton>
+                            </>
+                        }
+                    />
+                </DialogScrim>
+            )}
+
+            {limitOpen && <ScoreLimitDialog onUpgrade={() => setLimitOpen(false)} onClose={() => setLimitOpen(false)} />}
         </main>
     )
 }
 
-Object.assign(window, { Library, SAMPLE_SCORES })
+// Shown when the server refuses a create because the plan's score cap is
+// reached (403 code 'score-limit'). In production the cap and the upgrade
+// target come from the database catalogue via GET /plans.
+function ScoreLimitDialog({ planName = 'Sketch', limit = SKETCH_SCORE_LIMIT, nextPlanName = 'Songwriter', onUpgrade, onClose }) {
+    return (
+        <DialogScrim onDismiss={onClose}>
+            <DialogPanel
+                title={`Your ${planName} plan holds up to ${limit} scores.`}
+                subtitle="Everything you've written is safe and stays fully editable — the shelf is full, not locked."
+                onClose={onClose}
+                width={480}
+                footer={
+                    <>
+                        <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
+                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
+                            Upgrade to {nextPlanName}
+                        </PrimaryButton>
+                    </>
+                }>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 14,
+                            background: 'var(--color-surface-container-low)',
+                            borderRadius: 10,
+                            padding: 16,
+                        }}>
+                        <span
+                            style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 9999,
+                                flexShrink: 0,
+                                background: 'var(--color-error-container)',
+                                color: 'var(--color-on-error-container)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                            <Icon name="file-music" size={20} />
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                No room for a new score right now
+                            </span>
+                            <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                                Editing, playback, recording, and export keep working on every score you already have.
+                            </span>
+                        </div>
+                    </div>
+                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
+                        immediately.
+                    </span>
+                    <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Prefer to stay on {planName}? Deleting a score you no longer need frees up a slot.
+                    </span>
+                </div>
+            </DialogPanel>
+        </DialogScrim>
+    )
+}
+
+Object.assign(window, { Library, ScoreLimitDialog, SAMPLE_SCORES })

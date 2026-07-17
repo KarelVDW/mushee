@@ -1,5 +1,5 @@
 // Landing page — marketing surface for new visitors.
-// Fuller layout: nav → hero → trust strip → how-it-works → features → testimonials → pricing teaser → final CTA → footer.
+// Layout mirrors production (src/app/LandingPage.tsx): nav → hero → how-it-works → features → pricing → final CTA → footer.
 
 function Landing({ onSignIn, onGetStarted }) {
     return (
@@ -8,10 +8,8 @@ function Landing({ onSignIn, onGetStarted }) {
             style={{ background: 'var(--color-surface)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <LandingNav onSignIn={onSignIn} onGetStarted={onGetStarted} />
             <LandingHero onSignIn={onSignIn} onGetStarted={onGetStarted} />
-            <TrustStrip />
             <HowItWorks />
             <FeatureGrid />
-            <Testimonials />
             <PricingTeaser onGetStarted={onGetStarted} />
             <FinalCTA onGetStarted={onGetStarted} />
             <Footer />
@@ -20,14 +18,128 @@ function Landing({ onSignIn, onGetStarted }) {
     )
 }
 
-/* ─────────── Cookie consent ─────────── */
+/* ─────────── Cookie consent ───────────
+   Mirrors production's GDPR model (src/components/CookieConsent.tsx):
+   anonymous cookieless stats are always on; the opt-in only covers session
+   replay + account-linked analytics. "Essential only" and "Accept all" carry
+   equal visual weight, as the GDPR requires. */
 function CookieBanner() {
-    const [dismissed, setDismissed] = useState(false)
-    if (dismissed) return null
+    const [decided, setDecided] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [analyticsChoice, setAnalyticsChoice] = useState(false)
+
+    const decide = (_analytics) => {
+        setDecided(true)
+        setSettingsOpen(false)
+    }
+
+    if (settingsOpen) {
+        return (
+            <DialogScrim onDismiss={() => setSettingsOpen(false)}>
+                <DialogPanel
+                    title="Cookie preferences"
+                    subtitle="Choose what Sheemu may use. You can change this any time via 'Cookie settings' in the footer."
+                    onClose={() => setSettingsOpen(false)}
+                    width={520}
+                    footer={
+                        <>
+                            <TertiaryButton onClick={() => decide(false)}>Essential only</TertiaryButton>
+                            <PrimaryButton onClick={() => decide(analyticsChoice)}>Save preferences</PrimaryButton>
+                        </>
+                    }>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 8 }}>
+                        {[
+                            [
+                                'Essential',
+                                'Always on',
+                                "Keeps you signed in and remembers this cookie choice. Sheemu doesn't work without these.",
+                            ],
+                            [
+                                'Anonymous statistics',
+                                'Always on · no cookies',
+                                'Counts pages and feature use without cookies or anything stored on your device — never linked to who you are (PostHog, hosted in the EU).',
+                            ],
+                        ].map(([title, badge, body]) => (
+                            <div
+                                key={title}
+                                style={{
+                                    background: 'var(--color-surface-container-low)',
+                                    borderRadius: 8,
+                                    padding: '14px 16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 8,
+                                }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                    <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                        {title}
+                                    </span>
+                                    <span
+                                        style={{
+                                            font: '600 10px/1 var(--font-label)',
+                                            letterSpacing: '0.12em',
+                                            textTransform: 'uppercase',
+                                            color: 'var(--color-on-surface-variant)',
+                                        }}>
+                                        {badge}
+                                    </span>
+                                </div>
+                                <p style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                                    {body}
+                                </p>
+                            </div>
+                        ))}
+                        <div
+                            style={{
+                                background: 'var(--color-surface-container-low)',
+                                borderRadius: 8,
+                                padding: '14px 16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 8,
+                            }}>
+                            <label
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 12,
+                                    cursor: 'pointer',
+                                }}>
+                                <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                    Session replay &amp; linked analytics
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={analyticsChoice}
+                                    onChange={(e) => setAnalyticsChoice(e.target.checked)}
+                                    style={{ accentColor: 'var(--color-primary)' }}
+                                />
+                            </label>
+                            <p style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                                Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your
+                                issues. Uses one PostHog cookie. Off by default.
+                            </p>
+                        </div>
+                        <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                            Details in our{' '}
+                            <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
+                                privacy policy
+                            </a>
+                            .
+                        </p>
+                    </div>
+                </DialogPanel>
+            </DialogScrim>
+        )
+    }
+
+    if (decided) return null
+
     return (
         <div
             role="dialog"
-            aria-label="Cookie preferences"
+            aria-label="Cookie consent"
             style={{
                 position: 'fixed',
                 bottom: 20,
@@ -58,16 +170,19 @@ function CookieBanner() {
                     Cookies
                 </span>
                 <p style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface)', margin: 0 }}>
-                    We use a few cookies to remember your scores and improve the editor.{' '}
+                    Sheemu uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
+                    we'd also use session replay to improve the editor — that's entirely up to you.{' '}
                     <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
-                        Read more
+                        Learn more
                     </a>
                     .
                 </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <TertiaryButton onClick={() => setDismissed(true)}>Decline</TertiaryButton>
-                <PrimaryButton onClick={() => setDismissed(true)}>Accept</PrimaryButton>
+            {/* "Essential only" and "Accept all" carry equal visual weight. Only "Customize" steps back a level. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                <TertiaryButton onClick={() => setSettingsOpen(true)}>Customize</TertiaryButton>
+                <SecondaryButton onClick={() => decide(false)}>Essential only</SecondaryButton>
+                <SecondaryButton onClick={() => decide(true)}>Accept all</SecondaryButton>
             </div>
         </div>
     )
@@ -106,8 +221,8 @@ function LandingNav({ onSignIn, onGetStarted }) {
                         Pricing
                     </a>
                     <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>
-                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                        Start composing
+                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
+                        Start free
                     </PrimaryButton>
                 </div>
             </div>
@@ -164,20 +279,20 @@ function LandingHero({ onSignIn, onGetStarted }) {
                     alignItems: 'center',
                 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                    <Eyebrow color="var(--color-primary)">A score editor for the rest of us</Eyebrow>
+                    <Eyebrow color="var(--color-primary)">Live audio-to-notation</Eyebrow>
                     <h1
                         style={{
                             fontFamily: 'var(--font-display)',
                             fontWeight: 700,
-                            fontSize: 76,
+                            fontSize: 72,
                             lineHeight: 0.95,
                             letterSpacing: '-0.04em',
                             color: 'var(--color-on-surface)',
                             margin: 0,
                         }}>
-                        Write the music
+                        The fastest way to get a melody
                         <br />
-                        <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>in your head.</em>
+                        <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>on the page.</em>
                     </h1>
                     <p
                         style={{
@@ -186,12 +301,12 @@ function LandingHero({ onSignIn, onGetStarted }) {
                             margin: 0,
                             maxWidth: 480,
                         }}>
-                        Sheemu is a fast, quiet space for sketching scores — no fiddly menus, no twelve dialogs to find a sharp. Just you
-                        and the notes.
+                        Hum it, sing it, or play it — Sheemu listens and writes clean sheet music in front of your eyes. No note-by-note
+                        clicking, no wrestling with menus. Just press record.
                     </p>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                         <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                            Start composing — it's free
+                            Start free
                         </PrimaryButton>
                         <TertiaryButton onClick={onSignIn}>Already have an account?</TertiaryButton>
                     </div>
@@ -257,50 +372,12 @@ function LandingHero({ onSignIn, onGetStarted }) {
     )
 }
 
-/* ─────────── Trust strip ─────────── */
-function TrustStrip() {
-    return (
-        <section style={{ padding: '32px 32px', background: 'var(--color-surface-container-low)' }}>
-            <div
-                style={{
-                    maxWidth: 1280,
-                    margin: '0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 32,
-                    flexWrap: 'wrap',
-                }}>
-                <span
-                    style={{
-                        font: '600 11px/1 var(--font-label)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.12em',
-                        color: 'var(--color-on-surface-variant)',
-                        whiteSpace: 'nowrap',
-                    }}>
-                    Trusted by composers at
-                </span>
-                <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', alignItems: 'center', opacity: 0.55 }}>
-                    {['Royal Conservatory', 'Berklee', 'Juilliard', 'RNCM', 'CalArts', 'Trinity Laban'].map((name) => (
-                        <span
-                            key={name}
-                            style={{ font: '600 16px/1 var(--font-display)', letterSpacing: '-0.02em', color: 'var(--color-on-surface)' }}>
-                            {name}
-                        </span>
-                    ))}
-                </div>
-            </div>
-        </section>
-    )
-}
-
 /* ─────────── How it works ─────────── */
 function HowItWorks() {
     const steps = [
-        ['01', 'Pick your instruments', 'Start from a template or build your own ensemble. Add, remove, or transpose at any time.'],
-        ['02', 'Write the notes', 'Type, click, or play your MIDI keyboard. Sheemu handles the engraving as you go.'],
-        ['03', 'Hear it back', "Real instrument sounds. Loop a bar, slow it down, or export to MIDI when you're ready."],
+        ['01', 'Press record', 'Open a score, set your tempo, and hit record. Sheemu counts you in and starts listening — only while you record.'],
+        ['02', 'Play or sing', 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.'],
+        ['03', 'Polish & keep', "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go."],
     ]
     return (
         <section id="how" style={{ padding: '88px 32px' }}>
@@ -318,7 +395,7 @@ function HowItWorks() {
                             margin: '12px 0 0',
                             maxWidth: 640,
                         }}>
-                        From idea to score in three steps.
+                        From melody to sheet music in one take.
                     </h2>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
@@ -371,28 +448,40 @@ function FeatureGrid() {
                         margin: 0,
                         marginBottom: 48,
                     }}>
-                    Everything you need to sketch a piece, nothing you don't. Built on real SMuFL notation under the hood.
+                    Everything you need to catch an idea before it evaporates — nothing you don't.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
                     {[
-                        ['feather', 'Fast input', 'MIDI, keyboard, or click. Switch durations and accidentals without losing your place.'],
                         [
-                            'users',
-                            'Real instruments',
-                            'Pick from piano, strings, winds, brass, and traditional instruments — the staff adapts.',
+                            'mic',
+                            'Live transcription',
+                            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation, not a piano roll.',
+                        ],
+                        [
+                            'music',
+                            'Real engraving',
+                            'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
+                        ],
+                        [
+                            'keyboard',
+                            'Keyboard-first editing',
+                            'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
+                        ],
+                        [
+                            'audio-lines',
+                            'Hear it back',
+                            'Play your score with lifelike instrument samples to proof your work by ear before anyone else does.',
                         ],
                         [
                             'cloud',
                             'Saved as you go',
-                            'Every change is kept. Open the same piece on any device and pick up where you left off.',
+                            'Every change is stored instantly. Close the tab mid-phrase and pick up on another device without losing a note.',
                         ],
-                        ['audio-lines', 'Hear it back', 'Lifelike instrument samples. Loop, slow down, and proof your work by ear.'],
                         [
-                            'sliders-horizontal',
-                            'Engraver-grade output',
-                            'Spacing, beaming, and ties laid out with the same rules a pro engraver follows.',
+                            'shield',
+                            'Yours, privately',
+                            'Your music belongs to you. Recordings stay private to your account — never published, shared, or sold — and vanish when you delete it.',
                         ],
-                        ['shield', 'Yours forever', 'Export to MusicXML or PDF any time. Your music belongs to you, not us.'],
                     ].map(([icon, title, body]) => (
                         <div
                             key={title}
@@ -437,143 +526,58 @@ function FeatureGrid() {
     )
 }
 
-/* ─────────── Testimonials ─────────── */
-function Testimonials() {
-    const items = [
-        {
-            quote: 'I sketched a string quartet on a train ride. Notion would have made me cry.',
-            name: 'Maya Okafor',
-            role: 'Composer, RNCM',
-        },
-        {
-            quote: 'Finally, an editor where input feels like writing, not wrestling.',
-            name: 'Daniel Park',
-            role: 'Film scorer',
-        },
-        {
-            quote: 'My students stop asking how to make a sharp and just write music.',
-            name: 'Prof. Anya Reyes',
-            role: 'Theory faculty',
-        },
-    ]
-    return (
-        <section style={{ padding: '88px 32px' }}>
-            <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-                <div style={{ marginBottom: 48 }}>
-                    <Eyebrow color="var(--color-secondary)">Hear it from them</Eyebrow>
-                    <h2
-                        style={{
-                            fontFamily: 'var(--font-display)',
-                            fontWeight: 700,
-                            fontSize: 48,
-                            lineHeight: 1,
-                            letterSpacing: '-0.03em',
-                            color: 'var(--color-on-surface)',
-                            margin: '12px 0 0',
-                            maxWidth: 640,
-                        }}>
-                        People who write a lot of notes.
-                    </h2>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-                    {items.map((t, i) => (
-                        <figure
-                            key={i}
-                            style={{
-                                background: 'var(--color-surface-container-lowest)',
-                                borderRadius: 12,
-                                padding: 28,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 20,
-                                margin: 0,
-                            }}>
-                            <span
-                                aria-hidden
-                                style={{
-                                    font: '700 56px/0.7 var(--font-serif)',
-                                    color: 'var(--color-primary)',
-                                }}>
-                                "
-                            </span>
-                            <blockquote
-                                style={{
-                                    font: '400 17px/1.45 var(--font-serif)',
-                                    fontStyle: 'italic',
-                                    color: 'var(--color-on-surface)',
-                                    margin: 0,
-                                }}>
-                                {t.quote}
-                            </blockquote>
-                            <figcaption style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
-                                <span
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 9999,
-                                        background: 'var(--color-secondary-soft)',
-                                        color: 'var(--color-on-secondary-soft)',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        font: '600 14px/1 var(--font-display)',
-                                    }}>
-                                    {t.name
-                                        .split(' ')
-                                        .map((s) => s[0])
-                                        .join('')}
-                                </span>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <span style={{ font: '600 14px/1.2 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                        {t.name}
-                                    </span>
-                                    <span style={{ font: '400 12px/1.2 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                        {t.role}
-                                    </span>
-                                </div>
-                            </figcaption>
-                        </figure>
-                    ))}
-                </div>
-            </div>
-        </section>
-    )
+/* ─────────── Pricing ───────────
+   Mirrors production (src/app/LandingPage.tsx + src/lib/plans.ts). Tiers and
+   entitlements live in the database and are served by GET /plans; this static
+   catalogue is display decoration and must stay in sync with the seeds.
+   Never say "unlimited" — every sold tier has a daily recording budget. */
+const LANDING_TIERS = [
+    {
+        name: 'Sketch',
+        price: 'Free',
+        sub: 'forever',
+        bullets: ['3 min of recording / day', 'Up to 5 scores', 'Live audio-to-notation', 'Full editor & playback'],
+        cta: 'Start sketching',
+        emphasis: false,
+    },
+    {
+        name: 'Songwriter',
+        price: '$9',
+        sub: '/ month · $90/yr',
+        bullets: ['20 min of recording / day', 'As many scores as you like', 'Everything in Sketch', 'Early access to new features'],
+        cta: 'Go Songwriter',
+        emphasis: true,
+    },
+    {
+        name: 'Studio',
+        price: '$19',
+        sub: '/ month · $190/yr',
+        bullets: ['3 h of recording / day', 'As many scores as you like', 'Everything in Songwriter', 'Priority support'],
+        cta: 'Go Studio',
+        emphasis: false,
+    },
+]
+
+// The professional tier: present enough to anchor the ladder, slim enough not
+// to compete with the consumer cards.
+const LANDING_PRO_TIER = {
+    name: 'Arranger',
+    icon: 'crown',
+    taglineLower: 'for transcription as a job',
+    price: '$49',
+    sub: '/ month · $490/yr',
+    line: '8 h of recording / day · everything in Studio · direct support from the maker',
 }
 
-/* ─────────── Pricing teaser ─────────── */
+// One-time packs — deliberately the secondary offer, one click away.
+const LANDING_PACKS = [
+    ['Single', '$6', '15 min of recording · One song, with plenty of retakes.'],
+    ['EP', '$15', '45 min of recording · A weekend writing session.'],
+    ['Album', '$39', '150 min of recording · A whole project, start to finish.'],
+]
+
 function PricingTeaser({ onGetStarted }) {
-    const tiers = [
-        {
-            name: 'Tinkerer',
-            price: 'Free',
-            sub: 'forever',
-            bullets: ['30 sec recording / day', 'Up to 3 active scores', 'Real-instrument playback', 'Export to PDF & MusicXML'],
-            cta: 'Start tinkering',
-            emphasis: false,
-        },
-        {
-            name: 'Hobbyist',
-            price: '$15',
-            sub: '/ month',
-            bullets: ['10 min recording / day', 'Unlimited scores', 'Full instrument library', 'Lossless audio export', 'Priority support'],
-            cta: 'Try Hobbyist free',
-            emphasis: true,
-        },
-        {
-            name: 'Professional',
-            price: '$99',
-            sub: '/ month',
-            bullets: [
-                'Unlimited recording',
-                'Everything in Hobbyist',
-                'Engraver-grade layout controls',
-                'Parts & score generation',
-                'Collaborator seats',
-            ],
-            cta: 'Go Professional',
-            emphasis: false,
-        },
-    ]
+    const [packsOpen, setPacksOpen] = useState(false)
     return (
         <section id="pricing" style={{ padding: '88px 32px', background: 'var(--color-surface-container-lowest)' }}>
             <div style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -589,11 +593,21 @@ function PricingTeaser({ onGetStarted }) {
                             color: 'var(--color-on-surface)',
                             margin: '12px auto 0',
                         }}>
-                        Pick the size that fits.
+                        Pay for recording time, nothing else.
                     </h2>
+                    <p
+                        style={{
+                            font: '400 15px/1.5 var(--font-body)',
+                            color: 'var(--color-on-surface-variant)',
+                            maxWidth: 560,
+                            margin: '16px auto 0',
+                        }}>
+                        Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
+                        record per day — and Sketch keeps a shelf of up to five scores.
+                    </p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-                    {tiers.map((t) => (
+                    {LANDING_TIERS.map((t) => (
                         <div
                             key={t.name}
                             style={{
@@ -617,12 +631,12 @@ function PricingTeaser({ onGetStarted }) {
                                             font: '600 10px/1 var(--font-label)',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.12em',
-                                            background: 'var(--color-secondary-container)',
-                                            color: 'var(--color-on-secondary-container)',
+                                            background: 'var(--color-secondary-soft)',
+                                            color: 'var(--color-on-secondary-soft)',
                                             padding: '6px 10px',
                                             borderRadius: 9999,
                                         }}>
-                                        Most picked
+                                        Best value
                                     </span>
                                 )}
                             </div>
@@ -660,7 +674,7 @@ function PricingTeaser({ onGetStarted }) {
                             </ul>
                             <div style={{ marginTop: 'auto', paddingTop: 8 }}>
                                 {t.emphasis ? (
-                                    <PrimaryButton emphasis="pop" fullWidth onClick={onGetStarted}>
+                                    <PrimaryButton fullWidth onClick={onGetStarted}>
                                         {t.cta}
                                     </PrimaryButton>
                                 ) : (
@@ -671,6 +685,135 @@ function PricingTeaser({ onGetStarted }) {
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Professional tier — slim secondary card */}
+                <div
+                    style={{
+                        marginTop: 24,
+                        maxWidth: 760,
+                        marginLeft: 'auto',
+                        marginRight: 'auto',
+                        background: 'var(--color-surface)',
+                        borderRadius: 12,
+                        padding: '20px 24px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 16,
+                    }}>
+                    <span
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            flexShrink: 0,
+                            background: 'var(--color-secondary-soft)',
+                            color: 'var(--color-on-secondary-soft)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                        <Icon name={LANDING_PRO_TIER.icon} size={18} />
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 200 }}>
+                        <span style={{ font: '600 16px/1.2 var(--font-headline)', color: 'var(--color-on-surface)' }}>
+                            {LANDING_PRO_TIER.name} — {LANDING_PRO_TIER.taglineLower}
+                        </span>
+                        <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            {LANDING_PRO_TIER.line}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <span
+                            style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 600,
+                                fontSize: 22,
+                                lineHeight: 1,
+                                letterSpacing: '-0.01em',
+                                color: 'var(--color-on-surface)',
+                            }}>
+                            {LANDING_PRO_TIER.price}
+                        </span>
+                        <span style={{ font: '500 12px/1 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            {LANDING_PRO_TIER.sub}
+                        </span>
+                    </div>
+                    <SecondaryButton onClick={onGetStarted}>Go {LANDING_PRO_TIER.name}</SecondaryButton>
+                </div>
+
+                {/* One-time packs, one click away — the subscriptions above stay the offer. */}
+                <div style={{ marginTop: 32, textAlign: 'center' }}>
+                    <button
+                        type="button"
+                        onClick={() => setPacksOpen((v) => !v)}
+                        aria-expanded={packsOpen}
+                        style={{
+                            border: 0,
+                            background: 'transparent',
+                            padding: 0,
+                            cursor: 'pointer',
+                            font: '500 14px/1.3 var(--font-body)',
+                            color: 'var(--color-primary)',
+                            textDecoration: 'underline',
+                        }}>
+                        Not ready for a subscription? One-time minute packs, from $6
+                    </button>
+                    {packsOpen && (
+                        <div
+                            style={{
+                                marginTop: 20,
+                                maxWidth: 760,
+                                marginLeft: 'auto',
+                                marginRight: 'auto',
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(3, 1fr)',
+                                gap: 16,
+                                textAlign: 'left',
+                            }}>
+                            {LANDING_PACKS.map(([name, price, line]) => (
+                                <div
+                                    key={name}
+                                    style={{
+                                        background: 'var(--color-surface)',
+                                        borderRadius: 12,
+                                        padding: 20,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 6,
+                                    }}>
+                                    <span style={{ font: '600 15px/1.2 var(--font-headline)', color: 'var(--color-on-surface)' }}>
+                                        {name}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontFamily: 'var(--font-mono)',
+                                            fontWeight: 600,
+                                            fontSize: 20,
+                                            lineHeight: 1,
+                                            letterSpacing: '-0.01em',
+                                            color: 'var(--color-on-surface)',
+                                        }}>
+                                        {price}
+                                    </span>
+                                    <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                                        {line}
+                                    </span>
+                                </div>
+                            ))}
+                            <p
+                                style={{
+                                    gridColumn: '1 / -1',
+                                    font: '400 12px/1.5 var(--font-body)',
+                                    color: 'var(--color-on-surface-variant)',
+                                    textAlign: 'center',
+                                    margin: 0,
+                                }}>
+                                Packs never expire and need a free account — buy them any time from Settings.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         </section>
@@ -717,16 +860,16 @@ function FinalCTA({ onGetStarted }) {
                         color: 'var(--color-on-surface)',
                         margin: 0,
                     }}>
-                    The score is waiting.
+                    That melody in your head?
                     <br />
-                    <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>Go write it.</em>
+                    <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>It takes one take.</em>
                 </h2>
                 <p style={{ font: '400 17px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0, maxWidth: 520 }}>
-                    Free to start. No credit card. Your first piece takes about a minute to set up.
+                    Free to start. No credit card. Your first recording is on the page in under a minute.
                 </p>
                 <div style={{ marginTop: 8 }}>
                     <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                        Start composing — it's free
+                        Start free
                     </PrimaryButton>
                 </div>
             </div>

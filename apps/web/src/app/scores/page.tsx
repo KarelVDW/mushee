@@ -14,11 +14,12 @@ import {
     IconButton,
     PageHeader,
     PrimaryButton,
+    showToast,
     TertiaryButton,
     TextField,
     TopNav,
 } from '@/components/ui'
-import { NetworkError, type ScoreMeta } from '@/lib/api'
+import { ApiError, NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
@@ -26,6 +27,7 @@ import { Instrument, Score } from '@/model'
 import { ScoreSerializer } from '@/model/util/ScoreSerializer'
 
 import { CreateScoreDialog } from './CreateScoreDialog'
+import { ScoreLimitDialog } from './ScoreLimitDialog'
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -49,6 +51,7 @@ export default function ScoresPage() {
     const { data: session } = useSession()
     const [search, setSearch] = useState('')
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
+    const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<ScoreMeta | null>(null)
 
     const debouncedSearch = useDebouncedValue(search, 300)
@@ -68,7 +71,15 @@ export default function ScoresPage() {
 
         createMutation.mutate(
             { title, score: emptyScore },
-            { onSuccess: (created) => router.push(`/scores/${created.id}`) },
+            {
+                onSuccess: (created) => router.push(`/scores/${created.id}`),
+                onError: (err) => {
+                    // The server refuses the create when the plan's score cap is
+                    // reached — that's an upgrade conversation, not a failure toast.
+                    if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                    else showToast('Could not create the score. Please try again.')
+                },
+            },
         )
     }
 
@@ -161,6 +172,10 @@ export default function ScoresPage() {
                     handleCreate(title, instrument)
                 }}
             />
+
+            {limitDialogOpen && (
+                <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />
+            )}
 
             {deleteTarget && (
                 <DialogScrim onDismiss={() => setDeleteTarget(null)}>

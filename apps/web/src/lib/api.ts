@@ -7,6 +7,8 @@ export class ApiError extends Error {
     constructor(
         readonly status: number,
         message: string,
+        /** Machine-readable refusal code some endpoints attach (e.g. 'score-limit'). */
+        readonly code?: string,
     ) {
         super(message)
         this.name = 'ApiError'
@@ -33,7 +35,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
             ...init,
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json',
+                // Only claim a JSON body when there is one — the server rejects
+                // body-less requests (DELETE) that carry a content-type.
+                ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...init?.headers,
             },
         })
@@ -44,19 +48,25 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     if (!res.ok) {
         // Prefer the server's message when it sends one ({ message } or { error }).
         let message = `API error: ${res.status} ${res.statusText}`
+        let code: string | undefined
         try {
             const body: unknown = await res.clone().json()
             if (body && typeof body === 'object') {
                 const detail = (body as { message?: unknown; error?: unknown }).message ?? (body as { error?: unknown }).error
                 if (typeof detail === 'string' && detail) message = detail
+                const bodyCode = (body as { code?: unknown }).code
+                if (typeof bodyCode === 'string' && bodyCode) code = bodyCode
             }
         } catch {
             // Non-JSON error body — keep the status-line message.
         }
-        throw new ApiError(res.status, message)
+        throw new ApiError(res.status, message, code)
     }
 
-    return res.json() as Promise<T>
+    // Void endpoints (e.g. DELETE) respond with an empty body — parsing it as
+    // JSON would throw even though the request succeeded.
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
 }
 
 export interface ScoreMeta {
@@ -164,6 +174,8 @@ export interface Plan {
     name: string
     /** Daily recording budget in seconds; null = unlimited. */
     dailyRecordingCredits: number | null
+    /** Maximum saved scores; null = no cap. */
+    maxScores: number | null
     /** Whether the plan appears in pickers (beta is assigned, never sold). */
     sellable: boolean
 }
