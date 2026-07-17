@@ -19,6 +19,7 @@ export class PlansController {
       id: tier.id,
       name: tier.name,
       dailyRecordingCredits: tier.dailyRecordingCredits,
+      maxScores: tier.maxScores,
       sellable: tier.sellable,
     }));
   }

@@ -1,40 +1,80 @@
-// User settings — profile, preferences, account.
+// User settings — profile and account.
 
-// Mirrors the catalogue in Onboarding. In production both would import a shared
-// constants module fed by /api/polar/products.
+// Mirrors the catalogue in Onboarding. Display decoration only: in production
+// the tiers (names, prices, budgets, caps) come from the database via
+// GET /plans, and the live subscription state from the billing API. Never say
+// "unlimited" — every sold tier has a daily recording budget.
 const SETTINGS_PLAN_TIERS = [
     {
         id: 'free',
         name: 'Sketch',
         icon: 'feather',
-        tagline: 'For trying it out.',
+        tagline: 'For trying things out',
         priceMonthly: 0,
         priceYearly: 0,
-        polarProductId: null,
-        dailyLimitSec: 30,
-        features: ['30 sec recording / day', '3 scores', 'Transcription', 'PDF export'],
+        dailyLimitSec: 180,
+        features: ['3 min of recording / day', 'Up to 5 scores', 'Live audio-to-notation', 'Full editor & playback'],
     },
     {
         id: 'pro',
-        name: 'Composer',
+        name: 'Songwriter',
         icon: 'sparkles',
-        tagline: 'For regular writing.',
-        priceMonthly: 8,
-        priceYearly: 80,
-        polarProductId: 'prod_composer_v1',
-        dailyLimitSec: 600,
-        features: ['10 min recording / day', 'Unlimited scores', 'MIDI + MusicXML', 'Shareable links', 'Editor themes'],
+        tagline: 'For daily writers',
+        priceMonthly: 9,
+        priceYearly: 90,
+        dailyLimitSec: 1200,
+        features: ['20 min of recording / day', 'As many scores as you like', 'Everything in Sketch', 'Early access to new features'],
     },
     {
         id: 'studio',
         name: 'Studio',
         icon: 'gem',
-        tagline: 'For teaching & teams.',
-        priceMonthly: 18,
-        priceYearly: 180,
-        polarProductId: 'prod_studio_v1',
-        dailyLimitSec: Infinity,
-        features: ['Unlimited recording', 'Everything in Composer', '5 collaborators per score', 'Custom templates', 'Priority support'],
+        tagline: 'For heavy sessions',
+        priceMonthly: 19,
+        priceYearly: 190,
+        dailyLimitSec: 10800,
+        features: ['3 h of recording / day', 'As many scores as you like', 'Everything in Songwriter', 'Priority support'],
+    },
+    {
+        id: 'arranger',
+        name: 'Arranger',
+        icon: 'crown',
+        tagline: 'For transcription as a job',
+        priceMonthly: 49,
+        priceYearly: 490,
+        dailyLimitSec: 28800,
+        features: ['8 h of recording / day', 'As many scores as you like', 'Everything in Studio', 'Direct support from the maker'],
+    },
+]
+
+// One-time recording-minute packs — display catalogue only (the charged
+// amounts come from the Polar pack products on the API). Deliberately priced
+// above the subscriptions' per-minute rate: packs serve the once-in-a-while
+// user, never expire, and are spent only after the daily budget runs out.
+const SETTINGS_CREDIT_PACKS = [
+    {
+        id: 'single',
+        name: 'Single',
+        minutes: 15,
+        price: 6,
+        blurb: 'One song, with plenty of retakes.',
+        compare: 'Songwriter gives you 20 min every day for $3 more a month.',
+    },
+    {
+        id: 'ep',
+        name: 'EP',
+        minutes: 45,
+        price: 15,
+        blurb: 'A weekend writing session.',
+        compare: 'Roughly 7 weeks of Songwriter costs the same.',
+    },
+    {
+        id: 'album',
+        name: 'Album',
+        minutes: 150,
+        price: 39,
+        blurb: 'A whole project, start to finish.',
+        compare: 'Four months of Songwriter costs the same.',
     },
 ]
 
@@ -48,8 +88,9 @@ function settingsPlanPrice(plan, billing) {
 }
 
 // Change-plan dialog — lets the user pick a new tier and hands off to Polar
-// (or to Polar's customer portal for downgrades / cancellation).
-function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }) {
+// (upgrades from free go through checkout; paid-to-paid switches and
+// cancellations are applied in place through the API).
+function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, onShowPacks }) {
     const [selected, setSelected] = useState(currentPlanId)
     const [billing, setBilling] = useState(currentBilling)
     const [phase, setPhase] = useState('choose') // 'choose' | 'redirecting' | 'done' | 'error'
@@ -63,10 +104,10 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
 
     const apply = async () => {
         if (isSame) return
-        // Free plan / downgrade: handled via Polar's subscription update API — no checkout redirect.
-        // Production:
-        //   await fetch('/api/polar/subscription', { method: 'PATCH',
-        //     body: JSON.stringify({ productId: nextPlan.polarProductId, billing }) });
+        // Real Polar wiring (see src/app/settings/ChangePlanDialog.tsx):
+        // - free/beta → paid: POST /billing/checkout, then redirect to Polar's page.
+        // - paid → other paid tier/cadence: POST /billing/change (prorated in place).
+        // - paid → free: POST /billing/cancel (keeps access until the period ends).
         if (isDowngrade || isCancel) {
             setPhase('redirecting')
             try {
@@ -79,13 +120,8 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
             }
             return
         }
-        // Upgrade: hand off to Polar's hosted checkout.
-        // Production:
-        //   const session = await fetch('/api/polar/checkout', { method: 'POST',
-        //     body: JSON.stringify({ productId: nextPlan.polarProductId, billing,
-        //       successUrl: `${origin}/settings?plan=changed`,
-        //       cancelUrl:  `${origin}/settings?plan=cancelled` }) }).then(r => r.json());
-        //   window.location.href = session.url;
+        // Upgrade: hand off to Polar's hosted checkout; the success return
+        // lands on /settings?checkout=success.
         setPhase('redirecting')
         try {
             await new Promise((r) => setTimeout(r, 1400))
@@ -110,19 +146,21 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
             <DialogPanel
                 title={
                     phase === 'done'
-                        ? 'Plan updated.'
+                        ? isCancel
+                            ? 'Cancellation scheduled.'
+                            : 'Plan updated.'
                         : phase === 'redirecting'
                           ? isDowngrade || isCancel
                               ? 'Updating your subscription…'
                               : 'Redirecting to Polar…'
                           : 'Change plan'
                 }
-                eyebrow={
+                subtitle={
                     phase === 'done'
                         ? `You're now on ${nextPlan.name}.`
                         : phase === 'redirecting'
                           ? null
-                          : 'Switch tiers, change billing cadence, or cancel. Payments are processed by Polar.'
+                          : 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
                 }
                 onClose={phase === 'redirecting' || phase === 'done' ? undefined : onCancel}
                 width={720}
@@ -180,7 +218,7 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                 )
                             })}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             {SETTINGS_PLAN_TIERS.map((p) => {
                                 const active = selected === p.id
                                 const isCurrent = p.id === currentPlanId && billing === currentBilling
@@ -263,6 +301,30 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                 )
                             })}
                         </div>
+                        {onShowPacks && (
+                            <p
+                                style={{
+                                    font: '400 12px/1.5 var(--font-body)',
+                                    color: 'var(--color-on-surface-variant)',
+                                    margin: 0,
+                                }}>
+                                Just need a few minutes once?{' '}
+                                <button
+                                    type="button"
+                                    onClick={onShowPacks}
+                                    style={{
+                                        border: 0,
+                                        background: 'transparent',
+                                        padding: 0,
+                                        cursor: 'pointer',
+                                        font: '500 12px/1.5 var(--font-body)',
+                                        color: 'var(--color-primary)',
+                                        textDecoration: 'underline',
+                                    }}>
+                                    One-time minute packs
+                                </button>
+                            </p>
+                        )}
                         {isCancel && (
                             <div
                                 style={{
@@ -272,8 +334,8 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                     padding: '12px 14px',
                                     font: '400 13px/1.5 var(--font-body)',
                                 }}>
-                                You'll keep <strong>{currentPlan.name}</strong> features until your next billing date, then drop to Sketch.
-                                Scores beyond the 3-score limit become read-only — they're never deleted.
+                                You'll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then drop to
+                                Sketch. Your scores are never deleted.
                             </div>
                         )}
                         {isDowngrade && !isCancel && (
@@ -285,7 +347,7 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                                     font: '400 13px/1.5 var(--font-body)',
                                     color: 'var(--color-on-surface-variant)',
                                 }}>
-                                Downgrade takes effect at the end of your current billing cycle. Polar will prorate any difference.
+                                The switch takes effect right away; Polar prorates the difference on your next invoice.
                             </div>
                         )}
                     </div>
@@ -319,7 +381,7 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                             }}>
                             {isDowngrade || isCancel
                                 ? 'Talking to Polar to update your subscription.'
-                                : "Hand-off to Polar's secure checkout in progress…"}
+                                : "Sending you to Polar's secure checkout…"}
                         </span>
                     </div>
                 )}
@@ -341,8 +403,8 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                         </span>
                         <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                             {isCancel
-                                ? 'Subscription cancelled. We sent a confirmation to your email.'
-                                : 'Polar has the new plan on file. Receipt sent by email.'}
+                                ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
+                                : 'Polar has the new plan on file. Receipt follows by email.'}
                         </span>
                     </div>
                 )}
@@ -357,6 +419,132 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged }
                             marginBottom: 12,
                         }}>
                         {errorMsg || "Polar didn't respond. Try again in a moment."}
+                    </div>
+                )}
+            </DialogPanel>
+        </DialogScrim>
+    )
+}
+
+// One-time minute packs — deliberately the secondary offer: the dialog opens
+// with an honest "a subscription is the better deal" nudge and every card
+// carries its subscription comparison. Checkout is Polar-hosted; the minutes
+// land via the `order.paid` webhook and never expire.
+function PacksDialog({ onCancel, onSeePlans }) {
+    const [selected, setSelected] = useState('single')
+    const [phase, setPhase] = useState('choose') // 'choose' | 'redirecting'
+    const pack = SETTINGS_CREDIT_PACKS.find((p) => p.id === selected) ?? SETTINGS_CREDIT_PACKS[0]
+    const locked = phase !== 'choose'
+
+    const buy = () => {
+        if (locked) return
+        setPhase('redirecting')
+        // Mock — production redirects to Polar's hosted checkout and returns
+        // to /settings?pack=success once the payment completes.
+        setTimeout(onCancel, 1600)
+    }
+
+    return (
+        <DialogScrim onDismiss={locked ? undefined : onCancel}>
+            <DialogPanel
+                title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
+                subtitle={
+                    phase === 'choose'
+                        ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
+                        : null
+                }
+                onClose={locked ? undefined : onCancel}
+                width={640}
+                footer={
+                    phase === 'choose' ? (
+                        <>
+                            {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
+                            <PrimaryButton icon="external-link" onClick={buy}>
+                                {`Buy ${pack.name} · $${pack.price}`}
+                            </PrimaryButton>
+                        </>
+                    ) : null
+                }>
+                {phase === 'choose' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 8 }}>
+                        <div
+                            style={{
+                                background: 'var(--color-surface-container-low)',
+                                color: 'var(--color-on-surface-variant)',
+                                borderRadius: 8,
+                                padding: '12px 14px',
+                                font: '400 13px/1.5 var(--font-body)',
+                            }}>
+                            Recording regularly? <strong>Songwriter</strong> gives you 20 minutes <em>every day</em> for $9/month — packs
+                            are for the once-in-a-while.
+                        </div>
+                        <div role="radiogroup" aria-label="Minute pack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                            {SETTINGS_CREDIT_PACKS.map((p) => {
+                                const active = selected === p.id
+                                return (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={active}
+                                        onClick={() => setSelected(p.id)}
+                                        style={{
+                                            textAlign: 'left',
+                                            background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
+                                            color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                                            border: 0,
+                                            borderRadius: 12,
+                                            padding: 16,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 8,
+                                            boxShadow: active ? 'none' : 'var(--shadow-tonal)',
+                                        }}>
+                                        <span style={{ font: '600 14px/1.2 var(--font-body)' }}>{p.name}</span>
+                                        <span
+                                            style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                fontWeight: 600,
+                                                fontSize: 22,
+                                                lineHeight: 1,
+                                                letterSpacing: '-0.01em',
+                                            }}>
+                                            ${p.price}
+                                        </span>
+                                        <span style={{ font: '400 13px/1.4 var(--font-body)' }}>{p.minutes} min of recording</span>
+                                        <span style={{ font: '400 12px/1.4 var(--font-body)', opacity: 0.8 }}>{p.blurb}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                            {pack.compare}
+                        </p>
+                    </div>
+                )}
+                {phase === 'redirecting' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '24px 16px' }}>
+                        <div
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 9999,
+                                border: '3px solid var(--color-surface-container)',
+                                borderTopColor: 'var(--color-primary)',
+                                animation: 'sheemu-spin 700ms linear infinite',
+                            }}
+                        />
+                        <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
+                        <span
+                            style={{
+                                font: '400 13px/1.5 var(--font-body)',
+                                color: 'var(--color-on-surface-variant)',
+                                textAlign: 'center',
+                                maxWidth: 360,
+                            }}>
+                            Sending you to Polar's secure checkout…
+                        </span>
                     </div>
                 )}
             </DialogPanel>
@@ -466,7 +654,7 @@ function ChangePasswordDialog({ onCancel, onSuccess }) {
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title={saved ? 'Password updated.' : 'Change password'}
-                eyebrow={
+                subtitle={
                     saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'
                 }
                 onClose={onCancel}
@@ -584,7 +772,9 @@ function ChangePasswordDialog({ onCancel, onSuccess }) {
     )
 }
 
-// Delete-account dialog — irreversible, requires typed confirmation.
+// Delete-account dialog — deactivates today, purges after a 7-day grace
+// period. Signing back in before the purge date undoes it (production shows a
+// ReactivateAccountDialog on the next login).
 function DeleteAccountDialog({ user, onCancel, onConfirm }) {
     const email = user?.email ?? 'anya@example.com'
     const [stage, setStage] = useState('confirm') // 'confirm' | 'done'
@@ -594,21 +784,24 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
     const phrase = 'delete my account'
     const phraseMatch = typed.trim().toLowerCase() === phrase
     const canSubmit = phraseMatch && pw.length > 0 && ack
+    // Mock — production derives this from the API's purgeAfter timestamp.
+    const purgeDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
 
     const submit = () => {
         if (!canSubmit) return
         setStage('done')
-        setTimeout(() => onConfirm?.(), 1400)
+        // Give the goodbye note a beat to land before signing out.
+        setTimeout(() => onConfirm?.(), 3000)
     }
 
     return (
         <DialogScrim onDismiss={stage === 'done' ? undefined : onCancel}>
             <DialogPanel
-                title={stage === 'done' ? 'Account deleted.' : 'Delete your account?'}
-                eyebrow={
+                title={stage === 'done' ? 'Account scheduled for deletion.' : 'Delete your account?'}
+                subtitle={
                     stage === 'done'
                         ? 'Signing you out…'
-                        : 'This is permanent. Your scores, exports, and shared links will be removed within 24 hours.'
+                        : 'Your account is deactivated today and permanently deleted after 7 days. Signing back in before then undoes it.'
                 }
                 onClose={stage === 'done' ? undefined : onCancel}
                 width={520}
@@ -639,8 +832,10 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
                             <Icon name="check" size={20} />
                         </span>
                         <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            Thanks for being here. We've sent a final confirmation to{' '}
-                            <strong style={{ color: 'var(--color-on-surface)' }}>{email}</strong>.
+                            Thanks for being here. Changed your mind? Sign back in with{' '}
+                            <strong style={{ color: 'var(--color-on-surface)' }}>{email}</strong> before{' '}
+                            <strong style={{ color: 'var(--color-on-surface)' }}>{purgeDate}</strong> and everything will be right where
+                            you left it.
                         </span>
                     </div>
                 ) : (
@@ -655,12 +850,12 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
                                 flexDirection: 'column',
                                 gap: 10,
                             }}>
-                            <Eyebrow>You'll lose</Eyebrow>
+                            <Eyebrow>After 7 days you'll lose</Eyebrow>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 {[
-                                    ['music', '12 scores, including 3 collaborations'],
+                                    ['music', 'All your scores and recordings'],
                                     ['download', 'All MIDI and PDF exports'],
-                                    ['link', "4 share links — they'll stop working immediately"],
+                                    ['link', 'Share links — they stop working once deletion completes'],
                                 ].map(([icon, text]) => (
                                     <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <Icon name={icon} size={16} />
@@ -695,7 +890,8 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
                                 style={{ marginTop: 3, accentColor: 'var(--color-error)' }}
                             />
                             <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                I understand this can't be undone, and that exporting my scores first is recommended.
+                                I understand that after the 7-day grace period this can't be undone, and that exporting my scores first is
+                                recommended.
                             </span>
                         </label>
                     </div>
@@ -708,23 +904,21 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
 function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planId: planIdProp, onPlanChange }) {
     const [tab, setTab] = useState('profile')
     const [name, setName] = useState(user?.name ?? 'Anya Mokri')
-    const [email, setEmail] = useState(user?.email ?? 'anya@example.com')
-    const [bio, setBio] = useState('Sketches in the margins, mostly piano.')
-    const [autosave, setAutosave] = useState(true)
-    const [metronome, setMetronome] = useState(false)
-    const [emails, setEmails] = useState(true)
-    const [tips, setTips] = useState(true)
+    const email = user?.email ?? 'anya@example.com' // read-only — changed via support only
     const [changePwOpen, setChangePwOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [planOpen, setPlanOpen] = useState(false)
-    // In production these come from /api/polar/subscription. When App owns the
-    // plan (so the editor's quota stays in sync), it passes `planId` + `onPlanChange`.
+    const [packsOpen, setPacksOpen] = useState(false)
+    // In production the subscription state (plan, cadence, credits, banked
+    // pack minutes) comes from the billing API. When App owns the plan (so the
+    // editor's quota stays in sync), it passes `planId` + `onPlanChange`.
     const [planIdLocal, setPlanIdLocal] = useState(user?.planId ?? 'pro')
     const planId = planIdProp ?? planIdLocal
     const setPlanId = onPlanChange ?? setPlanIdLocal
     const [billing, setBilling] = useState(user?.billing ?? 'monthly')
     const [planChangedToast, setPlanChangedToast] = useState('')
     const currentPlan = SETTINGS_PLAN_TIERS.find((p) => p.id === planId)
+    const packSeconds = user?.packSeconds ?? 900 // demo default: 15:00 banked from packs
 
     return (
         <main
@@ -740,15 +934,13 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                 width: '100%',
                 boxSizing: 'border-box',
             }}>
-            <PageHeader title="Settings" subtitle="Tweak your profile, defaults, and account." />
+            <PageHeader title="Settings" subtitle="Tweak your profile and account." />
 
             <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 32, alignItems: 'flex-start' }}>
-                {/* Side nav */}
+                {/* Side nav — becomes a horizontal tab row below the md breakpoint in production */}
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 96 }}>
                     {[
                         ['profile', 'Profile', 'user'],
-                        ['editor', 'Editor defaults', 'sliders-horizontal'],
-                        ['notifications', 'Notifications', 'bell'],
                         ['account', 'Account', 'shield'],
                     ].map(([k, label, icon]) => (
                         <button
@@ -776,7 +968,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                 {/* Panel */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {tab === 'profile' && (
-                        <SettingsSection title="Profile" subtitle="What collaborators see when you share a score.">
+                        <SettingsSection title="Profile" subtitle="How you appear across Sheemu.">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                                 <div
                                     style={{
@@ -794,53 +986,25 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                         .split(' ')
                                         .map((s) => s[0])
                                         .join('')
-                                        .slice(0, 2)}
+                                        .slice(0, 2)
+                                        .toUpperCase()}
                                 </div>
-                                <SecondaryButton>Change photo</SecondaryButton>
                             </div>
                             <TextField label="Display name" value={name} onChange={setName} />
-                            <TextField label="Email" value={email} onChange={setEmail} type="email" />
-                            <TextArea label="Short bio" value={bio} onChange={setBio} rows={3} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <Eyebrow>Email</Eyebrow>
+                                <span style={{ font: '400 14px/1 var(--font-body)', color: 'var(--color-on-surface)', padding: '4px 0' }}>
+                                    {email}
+                                </span>
+                                <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                                    Your sign-in email. Contact support to change it.
+                                </span>
+                            </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <PrimaryButton emphasis="pop" onClick={onSave}>
+                                <PrimaryButton onClick={onSave} disabled={!name.trim()}>
                                     Save changes
                                 </PrimaryButton>
                             </div>
-                        </SettingsSection>
-                    )}
-
-                    {tab === 'editor' && (
-                        <SettingsSection title="Editor defaults" subtitle="Applied to every new score you create.">
-                            <Switch checked={autosave} onChange={setAutosave} label="Autosave changes as I edit" />
-                            <Switch checked={metronome} onChange={setMetronome} label="Show metronome by default" />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                <Eyebrow>Default tempo</Eyebrow>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    {[60, 90, 120, 144].map((bpm) => (
-                                        <button
-                                            key={bpm}
-                                            style={{
-                                                background:
-                                                    bpm === 120 ? 'var(--color-primary-container)' : 'var(--color-surface-container-low)',
-                                                color: bpm === 120 ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
-                                                border: 0,
-                                                borderRadius: 4,
-                                                padding: '8px 16px',
-                                                cursor: 'pointer',
-                                                font: '500 14px/1 var(--font-mono)',
-                                            }}>
-                                            {bpm} bpm
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </SettingsSection>
-                    )}
-
-                    {tab === 'notifications' && (
-                        <SettingsSection title="Notifications" subtitle="We keep these light. Promise.">
-                            <Switch checked={emails} onChange={setEmails} label="Product updates by email" />
-                            <Switch checked={tips} onChange={setTips} label="Occasional composition tips" />
                         </SettingsSection>
                     )}
 
@@ -851,7 +1015,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                 subtitle={
                                     currentPlan.id === 'free'
                                         ? "You're on the free Sketch plan."
-                                        : `Billed ${billing} through Polar. Next invoice June 12, 2026.`
+                                        : `You're on the ${currentPlan.name} plan. Payments are handled securely by Polar.`
                                 }>
                                 <div
                                     style={{
@@ -882,119 +1046,97 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                         </span>
                                         <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                                             {settingsPlanPrice(currentPlan, billing)}
-                                            {currentPlan.id !== 'free' && ' · •••• 4242'}
+                                            {currentPlan.id !== 'free' && ' · renews August 16, 2026'}
                                         </span>
                                     </div>
-                                    <PrimaryButton emphasis="pop" onClick={() => setPlanOpen(true)}>
-                                        Change plan
-                                    </PrimaryButton>
+                                    <PrimaryButton onClick={() => setPlanOpen(true)}>Change plan</PrimaryButton>
                                 </div>
 
-                                {/* Today's recording usage */}
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 10,
-                                        padding: '14px 16px',
-                                        background: 'var(--color-surface-container-low)',
-                                        borderRadius: 10,
-                                    }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-                                        <Eyebrow>Today's recording</Eyebrow>
-                                        <span style={{ font: '400 11px/1 var(--font-label)', color: 'var(--color-on-surface-variant)' }}>
-                                            Resets at midnight
-                                        </span>
-                                    </div>
-                                    {(() => {
-                                        const limit = currentPlan.dailyLimitSec
-                                        const unlimited = !isFinite(limit)
-                                        const exhausted = !unlimited && recUsedSec >= limit
-                                        const pct = unlimited ? 1 : Math.min(1, recUsedSec / limit)
-                                        const fmt = (s) => {
-                                            const v = Math.max(0, Math.floor(s))
-                                            if (v < 60) return `${v}s`
-                                            const m = Math.floor(v / 60)
-                                            const r = v % 60
-                                            return `${m}:${String(r).padStart(2, '0')}`
-                                        }
-                                        return (
-                                            <>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                                                    <span
-                                                        style={{
-                                                            fontFamily: 'var(--font-mono)',
-                                                            fontWeight: 600,
-                                                            fontSize: 26,
-                                                            lineHeight: 1,
-                                                            letterSpacing: '-0.01em',
-                                                            color: exhausted ? 'var(--color-error)' : 'var(--color-on-surface)',
-                                                        }}>
-                                                        {unlimited ? '∞' : fmt(recUsedSec)}
-                                                    </span>
-                                                    {!unlimited && (
-                                                        <span
-                                                            style={{
-                                                                font: '400 13px/1 var(--font-body)',
-                                                                color: 'var(--color-on-surface-variant)',
-                                                            }}>
-                                                            of {fmt(limit)} used
-                                                        </span>
-                                                    )}
-                                                    {unlimited && (
-                                                        <span
-                                                            style={{
-                                                                font: '400 13px/1 var(--font-body)',
-                                                                color: 'var(--color-on-surface-variant)',
-                                                            }}>
-                                                            No daily cap on {currentPlan.name}.
-                                                        </span>
-                                                    )}
-                                                </div>
+                                {/* Today's recording budget (resets at midnight UTC), plus any
+                                    purchased pack minutes waiting behind it. Every sold tier has a
+                                    cap — there is no "unlimited" branch. */}
+                                {(() => {
+                                    const limit = currentPlan.dailyLimitSec
+                                    const exhausted = recUsedSec >= limit
+                                    const pct = Math.min(1, recUsedSec / limit)
+                                    const fmt = (s) => {
+                                        const v = Math.max(0, Math.floor(s))
+                                        return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`
+                                    }
+                                    return (
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: 10,
+                                                padding: '14px 16px',
+                                                background: 'var(--color-surface-container-low)',
+                                                borderRadius: 10,
+                                            }}>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'baseline',
+                                                    gap: 12,
+                                                }}>
+                                                <span
+                                                    style={{
+                                                        font: '400 12px/1 var(--font-body)',
+                                                        color: 'var(--color-on-surface-variant)',
+                                                    }}>
+                                                    Recording today
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        font: '500 12px/1 var(--font-mono)',
+                                                        color: exhausted ? 'var(--color-error)' : 'var(--color-on-surface-variant)',
+                                                    }}>
+                                                    {fmt(recUsedSec)} / {fmt(limit)}
+                                                </span>
+                                            </div>
+                                            <div
+                                                role="progressbar"
+                                                aria-valuenow={Math.round(pct * 100)}
+                                                style={{
+                                                    height: 6,
+                                                    borderRadius: 6,
+                                                    background: 'var(--color-surface-container)',
+                                                    overflow: 'hidden',
+                                                }}>
                                                 <div
                                                     style={{
-                                                        height: 6,
-                                                        borderRadius: 6,
-                                                        background: 'var(--color-surface-container)',
-                                                        overflow: 'hidden',
+                                                        width: `${pct * 100}%`,
+                                                        height: '100%',
+                                                        background: exhausted
+                                                            ? 'var(--color-error-container)'
+                                                            : 'var(--color-primary-container)',
+                                                        transition: 'width 200ms linear, background 200ms var(--ease)',
+                                                    }}
+                                                />
+                                            </div>
+                                            {packSeconds > 0 && (
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 8,
+                                                        font: '400 12px/1.4 var(--font-body)',
+                                                        color: 'var(--color-on-surface-variant)',
                                                     }}>
-                                                    <div
-                                                        style={{
-                                                            width: `${pct * 100}%`,
-                                                            height: '100%',
-                                                            background: unlimited
-                                                                ? 'var(--color-primary-container)'
-                                                                : exhausted
-                                                                  ? 'var(--color-error)'
-                                                                  : pct > 0.8
-                                                                    ? 'var(--color-secondary-container)'
-                                                                    : 'var(--color-primary-container)',
-                                                            transition: 'width 200ms linear, background 200ms var(--ease)',
-                                                        }}
-                                                    />
+                                                    <Icon name="gift" size={14} />
+                                                    <span>
+                                                        <span style={{ fontFamily: 'var(--font-mono)' }}>{fmt(packSeconds)}</span> banked
+                                                        from packs — used once today's minutes run out, never expires.
+                                                    </span>
                                                 </div>
-                                                {exhausted && (
-                                                    <div
-                                                        style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            gap: 12,
-                                                            paddingTop: 4,
-                                                        }}>
-                                                        <span
-                                                            style={{
-                                                                font: '400 12px/1.4 var(--font-body)',
-                                                                color: 'var(--color-on-surface-variant)',
-                                                            }}>
-                                                            You've hit today's cap. Upgrade to keep recording, or wait until tomorrow.
-                                                        </span>
-                                                        <SecondaryButton onClick={() => setPlanOpen(true)}>Upgrade</SecondaryButton>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )
-                                    })()}
+                                            )}
+                                        </div>
+                                    )
+                                })()}
+
+                                <div>
+                                    <TertiaryButton onClick={() => setPacksOpen(true)}>Top up with a one-time pack</TertiaryButton>
                                 </div>
                                 {planChangedToast && (
                                     <div
@@ -1013,39 +1155,41 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                     </div>
                                 )}
                                 {currentPlan.id !== 'free' && (
-                                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                                        <a
-                                            href="#"
-                                            onClick={(e) => e.preventDefault()}
-                                            style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                                color: 'var(--color-primary)',
-                                                font: '500 13px/1 var(--font-body)',
-                                                textDecoration: 'none',
-                                            }}>
-                                            <Icon name="external-link" size={14} /> Manage billing on Polar
-                                        </a>
-                                        <a
-                                            href="#"
-                                            onClick={(e) => e.preventDefault()}
-                                            style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                                color: 'var(--color-primary)',
-                                                font: '500 13px/1 var(--font-body)',
-                                                textDecoration: 'none',
-                                            }}>
-                                            <Icon name="download" size={14} /> Download past invoices
-                                        </a>
+                                    <div>
+                                        {/* Opens Polar's hosted customer portal in production. */}
+                                        <TertiaryButton>Invoices &amp; payment method</TertiaryButton>
                                     </div>
                                 )}
                             </SettingsSection>
-                            <SettingsSection title="Password" subtitle="Last changed two months ago.">
+                            <SettingsSection title="Password" subtitle="Update the password you use to sign in.">
                                 <div>
                                     <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
+                                </div>
+                            </SettingsSection>
+                            <SettingsSection title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                                    <a
+                                        href="mailto:support@sheemu.com"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            color: 'var(--color-primary)',
+                                            font: '500 14px/1 var(--font-body)',
+                                            textDecoration: 'none',
+                                        }}>
+                                        <Icon name="mail" size={16} /> support@sheemu.com
+                                    </a>
+                                    <a
+                                        href="#"
+                                        onClick={(e) => e.preventDefault()}
+                                        style={{
+                                            color: 'var(--color-on-surface-variant)',
+                                            font: '400 13px/1 var(--font-body)',
+                                            textDecoration: 'underline',
+                                        }}>
+                                        All contact options
+                                    </a>
                                 </div>
                             </SettingsSection>
                             <SettingsSection title="Sign out" subtitle="Log out of this browser.">
@@ -1053,7 +1197,9 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                     <TertiaryButton onClick={onSignOut}>Sign out</TertiaryButton>
                                 </div>
                             </SettingsSection>
-                            <SettingsSection title="Delete account" subtitle="This permanently removes your scores. We can't undo it.">
+                            <SettingsSection
+                                title="Delete account"
+                                subtitle="Deactivates your account today; after 7 days everything is permanently deleted.">
                                 <div>
                                     <TertiaryButton danger onClick={() => setDeleteOpen(true)}>
                                         Delete my account
@@ -1075,10 +1221,23 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                     }}
                 />
             )}
+            {packsOpen && (
+                <PacksDialog
+                    onCancel={() => setPacksOpen(false)}
+                    onSeePlans={() => {
+                        setPacksOpen(false)
+                        setPlanOpen(true)
+                    }}
+                />
+            )}
             {planOpen && (
                 <ChangePlanDialog
                     currentPlanId={planId}
                     currentBilling={billing}
+                    onShowPacks={() => {
+                        setPlanOpen(false)
+                        setPacksOpen(true)
+                    }}
                     onCancel={() => setPlanOpen(false)}
                     onChanged={({ planId: nextId, billing: nextBilling }) => {
                         const nextPlan = SETTINGS_PLAN_TIERS.find((p) => p.id === nextId)

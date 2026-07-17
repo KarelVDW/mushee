@@ -10,10 +10,10 @@ This system encodes the visual + content vocabulary used to design and build for
 
 | Source              | Path                                     | Notes                                                                                                                                       |
 | ------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Production codebase | `web/` (mounted, read-only)              | Next 16 / React 19 / Tailwind v4. App router. The single product.                                                                           |
-| Color tokens        | `web/src/app/globals.css`                | M3-style palette with cyan + magenta accents.                                                                                               |
-| Type loader         | `web/src/app/layout.tsx`                 | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
-| Notation glyphs     | `web/src/components/notation/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
+| Production codebase | `apps/web/`                              | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.               |
+| Color tokens        | `apps/web/src/app/globals.css`           | M3-style palette with cyan + magenta accents.                                                                                               |
+| Type loader         | `apps/web/src/app/layout.tsx`            | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
+| Notation glyphs     | `apps/web/src/components/notation/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -48,11 +48,11 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 - **Sentence case** for everything in the UI: buttons, nav, labels, headings, dialogs.
 - Title Case is reserved for proper nouns (instrument names, score titles, people).
 - ALL-CAPS is used _only_ for the small `--type-label-*` schematic eyebrows — short tags like "How it works" or "Pricing" — at `0.12em` tracking.
-- Display headings use a hint of italic via Newsreader for warmth (e.g. "Write the music _in your head._"); sans-serif Space Grotesk does the structural work. **Newsreader is reserved for marketing + auth surfaces** — the landing page, the auth split-panel, the final CTA, pull-quotes, testimonials. In-app chrome (Library, Editor, Settings page titles) stays in Space Grotesk and skips italic; warmth there is earned through copy, not letterforms.
+- Display headings use a hint of italic via Newsreader for warmth (e.g. "The fastest way to get a melody _on the page._"); sans-serif Space Grotesk does the structural work. **Newsreader is reserved for marketing + auth surfaces** — the landing page, the auth split-panel, the final CTA, pull-quotes, testimonials. In-app chrome (Library, Editor, Settings page titles) stays in Space Grotesk and skips italic; warmth there is earned through copy, not letterforms.
 
 **Voice — first vs second person:**
 
-- **You.** "Write the music in your head." "Pick up where you left off."
+- **You.** "Compose your first one — it'll show up on this shelf." "Pick up where you left off."
 - **We** is fine in moderation when Sheemu is making a promise: "Your music belongs to you, not us."
 - Avoid invented in-group nicknames ("operative", "maverick", "rebel"). Just call the user _you_.
 
@@ -64,14 +64,14 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Password field label | `Password`                                                                                                                         |
 | Name field label     | `Your name`                                                                                                                        |
 | Sign-up CTA          | `Create account`                                                                                                                   |
-| Sign-up tagline      | `Get started — it's free.`                                                                                                         |
+| Sign-up tagline      | `Compose without friction.`                                                                                                        |
 | Sign-in tagline      | `Welcome back.`                                                                                                                    |
 | Sign-in link copy    | `Already have an account?`                                                                                                         |
 | Library page title   | `Your scores`                                                                                                                      |
 | Empty state          | `No scores yet. Compose your first one.`                                                                                           |
-| Hero headline        | `Write the music in your head.`                                                                                                    |
-| Hero sub             | `Sheemu is a fast, quiet space for sketching scores — no fiddly menus, no twelve dialogs to find a sharp. Just you and the notes.` |
-| Pricing free tier    | `Sketch — free, forever`                                                                                                           |
+| Hero headline        | `The fastest way to get a melody on the page.`                                                                                     |
+| Hero sub             | `Hum it, sing it, or play it — Sheemu listens and writes clean sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
+| Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                                                                |
 | Footer               | `© 2026 Sheemu. Made for composers.`                                                                                               |
 
 **Punctuation & tics:**
@@ -131,7 +131,7 @@ Four families, each with a clear job.
 | ----------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                     |
 | **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                   |
-| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_in your head._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
+| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_on the page._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
 | **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.                                                                   |
 
 The wordmark is always **`Sheemu`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
@@ -144,6 +144,10 @@ Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline
 - Page max width `1280px` for marketing; `1536px` for app chrome; modal max `42rem`.
 - Page-edge gutters: `2rem` (32px) on desktop, `1.2rem` on mobile.
 - Sections breathe — `88px` vertical padding on marketing rows, `64px` between major content groups.
+
+### Mobile (< 768px)
+
+Phones get the same design language, restructured — never a shrunken desktop. The full rulebook is `../DESIGN.md` §4b; the headlines: the score **reflows** against the container width (it never scales down), transport moves into the bottom dock with the record button as the largest control on screen, full-height surfaces use `dvh` (never `100vh`) and the dock pads `env(safe-area-inset-bottom)`, and touch targets grow via `pointer-coarse:` bumps on the shared controls rather than per-screen hand-sizing.
 
 ### Backgrounds
 
@@ -174,7 +178,7 @@ Every interactive element carries the shared keyboard-focus ring: `focus-visible
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | Hero CTA (`emphasis="pop"`) | `-translate-y-[2px]`, shadow grows 3px→5px                                                                          | (no extra; it's already lifted) |
 | Standard primary button     | bg darkens slightly                                                                                                 | bg darkens further              |
-| Icon button                 | bg `surface_container_high` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)         | —                               |
+| Icon button                 | bg `surface_container` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)              | —                               |
 | List row                    | bg `surface_container_lowest` → `surface_container_high`, plus a 4px-wide cyan accent stripe slides in from the left | —                               |
 | Tab text                    | `on_surface_variant` → `on_surface`; active tab gains a 3px cyan underline                                          | —                               |
 | Sign-out / destructive text | `on_surface` → `secondary` (magenta)                                                                                | —                               |
@@ -209,7 +213,7 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 | Token           | Value            | Usage                                                            |
 | --------------- | ---------------- | ---------------------------------------------------------------- |
-| `--radius-sm`   | `0.25rem` (4px)  | Input fields, control-bar buttons, score-row cells. The default. |
+| `--radius-sm`   | `0.25rem` (4px)  | Input fields, tool-dock buttons, score-row cells. The default. |
 | `--radius-md`   | `0.5rem` (8px)   | List rows, compact cards, grouped-button ends.                   |
 | `--radius-lg`   | `0.75rem` (12px) | Standalone cards, tool-docks, modals, glass panels.              |
 | `--radius-xl`   | `1rem` (16px)    | Full sheets, marketing hero tiles.                               |
@@ -223,15 +227,15 @@ A Sheemu card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`
 
 ## Iconography
 
-**Primary system: the custom Sheemu glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `web/src/components/ui/Icon.tsx` (used via `<Icon name="…" size={…}>`), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
+**Primary system: the custom Sheemu glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `apps/web/src/components/ui/Icon.tsx` (used via `<Icon name="…" size={…}>`), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
 
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`chevron-*`, `menu`, `more-horizontal`, `settings`), editing (`copy`, `scissors`, `undo`, `redo`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`, `metronome`), files & sharing (`upload`, `file-music`, `folder`, `printer`, `share-2`, `send`), social (`user-plus`, `globe`, `heart`, `star`, `bookmark`), status (`alert-triangle`, `check-circle`, `help-circle`, `loader`, `zap`), billing (`credit-card`, `crown`, `gift`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
-**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`web/src/components/notation/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `web/` if you actually need to render notation.
+**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`apps/web/src/components/notation/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from the app if you actually need to render notation.
 
 **No emoji.** Sheemu's voice is plain, but it's not casual in that way.
 
-**No unicode glyph icons** for chrome — except the music accidental characters `♮ ♭ ♯` in the score control bar (where they're effectively notation, not iconography).
+**No unicode glyph icons** for chrome — except the music accidental characters `♮ ♭ ♯` in the score tool dock (where they're effectively notation, not iconography).
 
 **Logos / brand marks.** Sheemu has no graphic logo. The wordmark **is** the brand: `Sheemu` set in Space Grotesk 700 italic, tracked `-0.04em`. Always render it as live text. An SVG fallback lives at `assets/sheemu-wordmark.svg` for places that demand an image.
 
@@ -240,5 +244,5 @@ The registry also carries **reserved glyphs** with no call sites yet — navigat
 ## Caveats
 
 - **Fonts are CDN-only.** The codebase uses `next/font/google` to fetch Space Grotesk, Manrope, Newsreader, and Geist Mono at build time; no `.woff2` files are committed. The design system imports them via Google Fonts `@import`, which serves the same files. If you need an offline / paid-license version, source `.woff2`s yourself and drop them in `fonts/` with a matching `@font-face` block.
-- **No marketing site / mobile app exists in the codebase.** The Landing and Onboarding screens in this UI kit are designed to fit the brand but are not direct recreations of production code — they're Sheemu-shaped extensions.
-- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from `web/`.
+- **Production has a full marketing surface.** The landing + pricing page ships in the app (`apps/web/src/app/LandingPage.tsx`); the UI kit's Landing screen approximates it but is not a 1:1 recreation. The Onboarding kit screens remain Sheemu-shaped extensions with no production counterpart. There is still no native mobile app — phones get the responsive web app (see `../DESIGN.md` §4b).
+- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the app.

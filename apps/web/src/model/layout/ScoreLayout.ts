@@ -1,6 +1,6 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH } from '@/components/notation/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH } from '@/components/notation/constants'
 
 import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
@@ -64,9 +64,18 @@ export class ScoreLayout {
     private readonly _tiesByKey = new Map<string, TieLayout>()
 
     constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
-        this.scoreWidth = scoreWidth
-        const minimumMeasureWidth = absoluteMinimumWidth(scoreWidth)
         const plans = ScoreLayout.buildPlans(score)
+
+        // A measure denser than the packing budget cannot fit any row at the requested
+        // width (responsive reflow can request as little as ~340). Widen the layout to
+        // the densest measure instead: views render scaled-to-fit against scoreWidth,
+        // so the score shrinks on screen rather than the layout failing to resolve.
+        const widestMeasureMinimum = Math.max(
+            0,
+            ...plans.map((plan) => ScoreLayout.minimalWidth(plan, { ...plan.base, showsClef: true, showsKeySignature: true }, 0)),
+        )
+        this.scoreWidth = Math.max(scoreWidth, widestMeasureMinimum + MEASURE_BUTTON_SPACING)
+        const minimumMeasureWidth = absoluteMinimumWidth(this.scoreWidth)
 
         // --- Fixed-point packing: flags → widths → rows → row-start flags, until stable ---
         let flags = plans.map((plan, i) => ({
@@ -77,7 +86,7 @@ export class ScoreLayout {
         let rowGroups: number[][] = []
         for (let iteration = 0; iteration < MAX_PACKING_ITERATIONS; iteration++) {
             const widths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i], minimumMeasureWidth))
-            rowGroups = ScoreLayout.packGreedy(widths, scoreWidth)
+            rowGroups = ScoreLayout.packGreedy(widths, this.scoreWidth)
             const next = plans.map((plan) => ({ ...plan.base }))
             for (const group of rowGroups) {
                 next[group[0]].showsClef = true
@@ -101,7 +110,7 @@ export class ScoreLayout {
                 isLastRow: rowIndex === rowGroups.length - 1,
                 measures: group.map((i) => plans[i].measure),
                 minimalWidths: new Map(group.map((i) => [plans[i].measure, minimalWidths[i]])),
-                scoreWidth,
+                scoreWidth: this.scoreWidth,
             }
             const previousRow = previous?.rows[rowIndex]
             const row = previousRow?.matches(context) ? previousRow : new RowLayout(context)

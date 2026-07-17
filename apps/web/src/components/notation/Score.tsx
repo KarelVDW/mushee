@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
+import { useObservedWidth } from '@/lib/useObservedWidth'
 import { Note, Pitch, Score as ScoreModel } from '@/model'
 import { MeasureLayout as MeasureLayoutModel } from '@/model/layout/MeasureLayout'
 
@@ -26,6 +27,8 @@ const CURSOR_Y_OFFSET = 15
  * Below this container width the layout reflows to the container instead of
  * scaling down: rows are packed against the viewport so notation keeps its
  * full glyph size on phones and narrow windows (see Score.setLayoutWidth).
+ * A measure too dense for that budget widens layout.scoreWidth instead of
+ * failing, and the viewBox scale-to-fit shrinks it on screen.
  */
 const REFLOW_BREAKPOINT = 768
 /** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
@@ -95,21 +98,18 @@ export const Score = memo(function Score({
         y: number
     } | null>(null)
 
-    useEffect(() => {
-        const el = containerRef.current
-        if (!el) return
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0]
-            if (!entry) return
-            const width = entry.contentRect.width
-            // Reflow instead of shrink: on narrow containers the layout packs rows
-            // against the available width, so glyphs render at full size on phones.
-            score.setLayoutWidth(width > 0 && width < REFLOW_BREAKPOINT ? Math.max(MIN_LAYOUT_WIDTH, Math.floor(width)) : SCORE_WIDTH)
-            setContainerWidth(width)
-        })
-        observer.observe(el)
-        return () => observer.disconnect()
-    }, [score])
+    useObservedWidth(
+        containerRef,
+        useCallback(
+            (width: number) => {
+                // Reflow instead of shrink: on narrow containers the layout packs rows
+                // against the available width, so glyphs render at full size on phones.
+                score.setLayoutWidth(width > 0 && width < REFLOW_BREAKPOINT ? Math.max(MIN_LAYOUT_WIDTH, Math.floor(width)) : SCORE_WIDTH)
+                setContainerWidth(width)
+            },
+            [score],
+        ),
+    )
 
     // The current layout snapshot (rebuilt lazily by the model when the score changed)
     const layout = score.layout

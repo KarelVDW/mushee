@@ -68,7 +68,9 @@ export function useCreateScore() {
     return useMutation({
         mutationFn: ({ title, score }: { title: string; score: Record<string, unknown> }) => createScore(title, score),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
-        meta: { errorMessage: 'Could not create the score. Please try again.' },
+        // The library page renders errors itself: a score-limit refusal opens
+        // the upgrade dialog; anything else gets its own toast.
+        meta: { silentError: true },
     })
 }
 

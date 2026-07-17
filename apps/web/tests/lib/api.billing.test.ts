@@ -13,11 +13,13 @@ import {
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
 function okResponse(body: unknown): Response {
+    const text = body === undefined ? '' : JSON.stringify(body)
     return {
         ok: true,
         status: 200,
         statusText: 'OK',
-        json: () => Promise.resolve(body),
+        text: () => Promise.resolve(text),
+        json: () => (text ? Promise.resolve(JSON.parse(text)) : Promise.reject(new SyntaxError('Unexpected end of JSON input'))),
     } as unknown as Response
 }
 

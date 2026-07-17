@@ -18,6 +18,12 @@
                 flex-direction: column;
                 min-height: 100vh;
             }
+            /* Keyboard focus ring — mirrors the app's focus-visible:outline-2
+               focus-visible:outline-offset-2 focus-visible:outline-primary utilities. */
+            :focus-visible {
+                outline: 2px solid var(--color-primary);
+                outline-offset: 2px;
+            }
             /* Tab bar that scrolls with the kit, persists across screens */
             .kit-tabs {
                 position: fixed;
@@ -52,6 +58,13 @@
             .kit-tabs button.active {
                 background: var(--color-primary-container);
                 color: var(--color-on-primary-container);
+            }
+            /* On the editor screen the tool dock owns the bottom edge (and its
+               popovers open upward over the canvas); float the kit tab bar just
+               below the header instead so the dock stays clickable. */
+            .kit-tabs.raised {
+                bottom: auto;
+                top: 64px;
             }
         </style>
     </head>
@@ -91,7 +104,8 @@
                 const [openScore, setOpenScore] = useState(null)
                 const [createOpen, setCreateOpen] = useState(false)
                 // Recording quota — in production this lives server-side, keyed on user+day.
-                // We seed Sketch with some usage so the meter shows interesting state on first load.
+                // Seeded with some usage so the Settings usage readout (and the editor's
+                // limit-reached dialog) show interesting state without a long recording.
                 const [planId, setPlanId] = useState('free')
                 const [recUsedSec, setRecUsedSec] = useState(18)
 
@@ -179,7 +193,7 @@
                         {screen === 'settings' && (
                             <>
                                 <TopNav
-                                    active={null}
+                                    active="Settings"
                                     onCreate={() => setCreateOpen(true)}
                                     onNav={(n) => setScreen(n === 'editor' ? 'editor' : n === 'library' ? 'library' : 'settings')}
                                     onSignOut={() => setScreen('landing')}
@@ -198,7 +212,7 @@
 
                         {createOpen && <CreateScoreDialog onCancel={() => setCreateOpen(false)} onCreate={handleCreate} />}
 
-                        <div className="kit-tabs">
+                        <div className={screen === 'editor' ? 'kit-tabs raised' : 'kit-tabs'}>
                             {[
                                 ['landing', 'Landing'],
                                 ['auth', 'Sign in / Sign up'],

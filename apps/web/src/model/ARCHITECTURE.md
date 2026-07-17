@@ -47,7 +47,11 @@ that exist only for drawing.
 input: `Score.layoutWidth` (set via `setLayoutWidth`), the row-packing budget used for responsive
 reflow on narrow viewports. It is not semantic state — it is never serialized and changing it
 moves neither the version nor dirty tracking (it only notifies `onChange` so views re-read
-`layout`); the cached snapshot is keyed on (version, width). The `layout` getters on `Measure`,
+`layout`); the cached snapshot is keyed on (version, width). The requested width is a *floor*,
+not a guarantee: a single measure denser than the packing budget widens the effective
+`ScoreLayout.scoreWidth` until it fits (views render scaled-to-fit against `layout.scoreWidth`,
+so the score shrinks on screen). Layout must always resolve — it never throws on any
+model + width combination. The `layout` getters on `Measure`,
 `Note`, `KeySignature`, and `Tuplet` are conveniences that delegate into the current
 `ScoreLayout`; they own no cache of their own. (`Clef`, `TimeSignature`, and `Tempo` layouts are
 context-free — they depend only on the owning object's immutable fields — so they may be cached

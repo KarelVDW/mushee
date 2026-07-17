@@ -130,7 +130,8 @@ function PageTitle({ children, italic = false }) {
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
                 fontStyle: italic ? 'italic' : 'normal',
-                fontSize: 48,
+                // Production: 34px below the sm breakpoint, 48px above.
+                fontSize: 'clamp(34px, 6vw, 48px)',
                 lineHeight: 1,
                 letterSpacing: '-0.03em',
                 color: 'var(--color-on-surface)',
@@ -147,7 +148,8 @@ function ModalTitle({ children }) {
             style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
-                fontSize: 32,
+                // Production: 26px below the sm breakpoint, 32px above.
+                fontSize: 'clamp(26px, 4.5vw, 32px)',
                 lineHeight: 1.05,
                 letterSpacing: '-0.03em',
                 color: 'var(--color-on-surface)',

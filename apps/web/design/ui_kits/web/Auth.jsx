@@ -380,15 +380,14 @@ function PasswordResetCard({ onBackToSignIn }) {
                                             font: 'inherit',
                                             textDecoration: 'underline',
                                         }}>
-                                        {resent ? 'sent again ✓' : 'resend the link'}
+                                        {resent ? 'link sent again' : 'resend the link'}
                                     </button>
                                     .
                                 </span>
                             </div>
+                            {/* No "continue" shortcut here — the only way forward is the emailed
+                                link (the kit's stage strip above stands in for it). */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
-                                <PrimaryButton size="lg" emphasis="pop" fullWidth onClick={() => setStage('set-new')}>
-                                    I have the link — continue
-                                </PrimaryButton>
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                     <TertiaryButton onClick={() => setStage('request')}>← Use a different email</TertiaryButton>
                                 </div>
@@ -471,7 +470,7 @@ function PasswordResetCard({ onBackToSignIn }) {
                                     Save new password
                                 </PrimaryButton>
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <TertiaryButton onClick={onBackToSignIn}>← Cancel</TertiaryButton>
+                                    <TertiaryButton onClick={onBackToSignIn}>Cancel</TertiaryButton>
                                 </div>
                             </div>
                         </form>

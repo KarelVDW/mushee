@@ -24,6 +24,10 @@ export class SubscriptionTier {
   @Column({ type: 'int', nullable: true })
   dailyRecordingCredits: number | null;
 
+  /** Maximum saved scores. `null` = no cap. */
+  @Column({ type: 'int', nullable: true })
+  maxScores: number | null;
+
   /** Position in plan pickers (ascending = cheaper first). */
   @Column({ type: 'int', default: 0 })
   sortOrder: number;
