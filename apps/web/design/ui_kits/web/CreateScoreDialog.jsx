@@ -1,30 +1,41 @@
 // Create-score dialog with instrument picker.
+// Representative subset of the app's real instrument catalogue — display names
+// from Instrument.selectable() in src/model/Instrument.ts. Keep names verbatim
+// (no instruments the product doesn't have).
 const ALL_INSTRUMENTS = [
     'Piano',
     'Violin',
     'Viola',
     'Cello',
+    'Contrabass',
     'Flute',
+    'Piccolo',
+    'Alto Flute',
     'Oboe',
-    'Bassoon',
+    'English Horn',
     'Clarinet',
+    'Bass Clarinet',
+    'Bassoon',
+    'Contrabassoon',
+    'Soprano Saxophone',
+    'Alto Saxophone',
+    'Tenor Saxophone',
+    'Baritone Saxophone',
     'Trumpet',
     'Trombone',
-    'French horn',
+    'French Horn',
     'Tuba',
     'Euphonium',
+    'Baritone Horn',
     'Harmonica',
     'Recorder',
-    'Tin whistle',
-    'Pan flute',
+    'Tin Whistle',
+    'Pan Flute',
     'Ocarina',
     'Bagpipe',
     'Erhu',
-    'Dizi flute',
-    'Shakuhachi',
-    'Guitar',
-    'Bass guitar',
-    'Harp',
+    'Dizi Flute',
+    'Shakuhachi Flute',
 ]
 
 function InstrumentPicker({ value, onChange }) {
@@ -50,6 +61,11 @@ function InstrumentPicker({ value, onChange }) {
                         {i}
                     </Chip>
                 ))}
+                {filtered.length === 0 && (
+                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', padding: 4 }}>
+                        No instruments match "{search}"
+                    </span>
+                )}
             </div>
         </div>
     )
@@ -63,7 +79,7 @@ function CreateScoreDialog({ onCancel, onCreate }) {
         <DialogScrim onDismiss={onCancel}>
             <DialogPanel
                 title="New score"
-                eyebrow="Give it a name and pick a lead instrument."
+                subtitle="Give it a name and pick a lead instrument."
                 onClose={onCancel}
                 width={620}
                 footer={

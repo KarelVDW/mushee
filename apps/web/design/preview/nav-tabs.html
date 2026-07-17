@@ -19,9 +19,9 @@
                 padding: 24px;
             }
 
-            /* Top nav — translucent sticky bar */
+            /* Top nav — translucent sticky bar (surface-container-low @ 85%) */
             .nav {
-                background: rgba(246, 246, 246, 0.85);
+                background: rgba(240, 241, 241, 0.85);
                 -webkit-backdrop-filter: blur(16px);
                 backdrop-filter: blur(16px);
                 box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
@@ -60,7 +60,7 @@
                 cursor: pointer;
                 font: 500 14px/1 var(--font-body);
                 color: var(--color-on-surface-variant);
-                border-bottom: 2px solid transparent;
+                border-bottom: 3px solid transparent;
                 padding-bottom: 4px;
                 white-space: nowrap;
             }
@@ -106,7 +106,7 @@
                 justify-content: center;
             }
 
-            /* Auth tabs — sit above a 1px hairline, active gets 2px cyan underline */
+            /* Auth tabs — no hairline; the active tab gets a 3px cyan underline */
             .auth-card {
                 background: var(--color-surface-container-lowest);
                 border-radius: 12px;
@@ -117,7 +117,6 @@
                 display: flex;
                 align-items: flex-end;
                 gap: 26px;
-                border-bottom: 1px solid rgba(172, 173, 173, 0.2);
                 padding-bottom: 8px;
             }
             .tab {
@@ -126,8 +125,7 @@
                 cursor: pointer;
                 font: 500 14px/1 var(--font-body);
                 color: var(--color-on-surface-variant);
-                border-bottom: 2px solid transparent;
-                margin-bottom: -9px;
+                border-bottom: 3px solid transparent;
                 padding-bottom: 8px;
                 white-space: nowrap;
             }
@@ -146,7 +144,7 @@
                         <span class="wm">Sheemu</span>
                         <div class="nav-items">
                             <button class="nav-item active">Library</button>
-                            <button class="nav-item">Editor</button>
+                            <button class="nav-item">Settings</button>
                         </div>
                     </div>
                     <div class="nav-right">
