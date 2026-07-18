@@ -26,6 +26,13 @@ const MIC_CONSTRAINTS: MediaTrackConstraints = {
     autoGainControl: false,
 }
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
+/**
+ * How long after sending `end` the socket may stay open waiting for the
+ * server's final transcription pass (`score-update`s + `recording-complete`).
+ * The server closes as soon as it has flushed; this is only the safety net
+ * against a server that never answers.
+ */
+const DRAIN_TIMEOUT_MS = 10_000
 
 /**
  * WebKit's Audio Session API (Safari 16.4+, absent everywhere else). When a
@@ -231,20 +238,28 @@ export class RecordingEngine implements Tickable {
 
         // MediaRecorder.stop() flushes its final ≤100 ms chunk asynchronously
         // (the ondataavailable handler holds its own reference to the socket),
-        // so only send `end` and close once that flush has happened — closing
-        // here would drop the last moments of every take.
+        // so only send `end` once that flush has happened. The socket then
+        // stays open: the server is still transcribing the take's tail and
+        // streams those last notes back as `score-update`s before answering
+        // `recording-complete` and closing — closing here would drop the
+        // notes from the final moments of every take.
         let finished = false
         const finish = () => {
             if (finished) return
             finished = true
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                try {
-                    ws.send(JSON.stringify({ type: 'end' }))
-                } catch {
-                    // socket may have closed mid-send; close() below still runs
-                }
+            if (!ws) return
+            if (ws.readyState !== WebSocket.OPEN) {
+                ws.close()
+                return
             }
-            ws?.close()
+            try {
+                ws.send(JSON.stringify({ type: 'end' }))
+            } catch {
+                ws.close()
+                return
+            }
+            const fallback = setTimeout(() => ws.close(), DRAIN_TIMEOUT_MS)
+            ws.addEventListener('close', () => clearTimeout(fallback), { once: true })
         }
         if (recorder && recorder.state !== 'inactive') {
             recorder.onstop = finish
@@ -400,7 +415,15 @@ export class RecordingEngine implements Tickable {
                 usedSeconds?: number
             }
             if (payload.type === 'score-update' && payload.measures) {
-                this.options?.onScoreUpdate?.({ measures: payload.measures })
+                // Via the captured opts, not this.options: stop() nulls the
+                // options while the server is still flushing the take's tail,
+                // and those late updates must still land in the score.
+                opts.onScoreUpdate?.({ measures: payload.measures })
+            } else if (payload.type === 'recording-complete') {
+                // The server has flushed everything for this take; it closes
+                // right after, but close from our side too so the post-stop
+                // drain doesn't depend on it.
+                ws.close()
             } else if (payload.type === 'recording-limit') {
                 this.options?.onLimitReached?.({
                     planId: payload.planId ?? 'free',

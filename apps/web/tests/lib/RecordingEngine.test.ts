@@ -481,13 +481,70 @@ describe('RecordingEngine', () => {
 
         expect(lastRecorder?.stop).toHaveBeenCalled()
         expect(stream.track.stop).toHaveBeenCalled()
-        // 'end' frame sent then socket closed.
+        // 'end' frame sent, but the socket stays open: the server is still
+        // flushing the take's tail and closes after recording-complete.
         expect(socket().sent.some((s) => typeof s === 'string' && s.includes('"end"'))).toBe(true)
-        expect(lastSocket?.close).toHaveBeenCalled()
+        expect(lastSocket?.close).not.toHaveBeenCalled()
         expect(cursorEl.getAttribute('display')).toBe('none')
         expect(cursorEl.getAttribute('fill')).toBe('#3b82f6')
         expect(engine.state).toBe('idle')
         expect(onStateChange).toHaveBeenLastCalledWith('idle')
+
+        // The server's flush ack arrives => now the socket is closed.
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-complete' }) })
+        expect(lastSocket?.close).toHaveBeenCalled()
+    })
+
+    it('applies score-updates that arrive after stop() while the server drains the take', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const onConnectionLost = vi.fn()
+        const { options, onScoreUpdate } = makeOptions()
+        options.onConnectionLost = onConnectionLost
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        recorder().state = 'recording'
+
+        engine.stop()
+
+        // The final transcription pass lands after the user pressed stop; its
+        // notes must still reach the score.
+        const measures = { 2: { last: 'notes' } }
+        socket().fire('message', { data: JSON.stringify({ type: 'score-update', measures }) })
+        expect(onScoreUpdate).toHaveBeenCalledWith({ measures })
+
+        // The server closing after the drain is the expected ending, not a
+        // lost connection.
+        socket().fire('close')
+        expect(onConnectionLost).not.toHaveBeenCalled()
+    })
+
+    it('closes the socket itself when the server never acknowledges the end frame', async () => {
+        vi.useFakeTimers()
+        try {
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player)
+            const { options } = makeOptions()
+            await engine.start(options)
+            raw.currentTime = 3
+            engine.tick()
+            socket().fire('open')
+            await Promise.resolve()
+            recorder().state = 'recording'
+
+            engine.stop()
+            expect(socket().close).not.toHaveBeenCalled()
+
+            // No recording-complete and no server close => the drain timeout
+            // gives up and closes the socket from our side.
+            vi.advanceTimersByTime(10_000)
+            expect(socket().close).toHaveBeenCalled()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('stop() tolerates a recorder whose stop() throws', async () => {
