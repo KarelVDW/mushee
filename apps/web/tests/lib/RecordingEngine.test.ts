@@ -200,7 +200,9 @@ describe('RecordingEngine', () => {
 
         await engine.start(options)
 
-        expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
+        expect(getUserMedia).toHaveBeenCalledWith({
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        })
         expect(engine.state).toBe('countoff')
         expect(onStateChange).toHaveBeenCalledWith('countoff')
         // Cursor painted red and moved to the count-off measure.

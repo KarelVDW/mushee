@@ -13,6 +13,18 @@ const CHUNK_MS = 100
  * frame so the server's ffmpeg decode doesn't have to guess the container.
  */
 const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+/**
+ * Browsers default to voice-call processing on the mic, which mobile devices
+ * apply aggressively: noise suppression treats sustained pure tones (whistling,
+ * held instrument notes) as background noise and removes them entirely. Ask for
+ * the raw signal — these are `ideal` hints, so browsers that can't honor them
+ * still return a stream instead of throwing.
+ */
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+}
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
 /** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
 const WAVEFORM_GAIN = 10
@@ -138,7 +150,7 @@ export class RecordingEngine implements Tickable {
 
         let stream: MediaStream
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS })
         } catch (err) {
             if (this.lifecycle === token) this.options = null
             throw err
