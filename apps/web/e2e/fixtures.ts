@@ -176,7 +176,7 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         await context.addInitScript(
             ([version]) => {
                 window.localStorage.setItem(
-                    'sheemu:consent',
+                    'solkey:consent',
                     JSON.stringify({ version, analytics: false, decidedAt: '2026-01-01T00:00:00.000Z' }),
                 )
             },

@@ -13,12 +13,12 @@ function Wordmark({ size = 28, color = 'var(--color-on-surface)' }) {
                 letterSpacing: '-0.04em',
                 color,
             }}>
-            Sheemu
+            Solkey
         </span>
     )
 }
 
-// AppIcon — the "S" from the Sheemu wordmark, rendered with a single offset
+// AppIcon — the "S" from the Solkey wordmark, rendered with a single offset
 // secondary-container drop-shadow behind the letter. Depth scales with `size`.
 function AppIcon({ size = 96, rounded = true, background = 'var(--color-surface-container-lowest)' }) {
     // Shadow offset in viewBox units — scales with size.
@@ -60,7 +60,7 @@ function AppIcon({ size = 96, rounded = true, background = 'var(--color-surface-
     }, [size])
     return (
         <span
-            aria-label="Sheemu app icon"
+            aria-label="Solkey app icon"
             role="img"
             style={{
                 display: 'inline-flex',

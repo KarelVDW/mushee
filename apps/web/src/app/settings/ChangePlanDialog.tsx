@@ -177,7 +177,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                     <div className="flex flex-col items-center gap-3.5 px-4 py-6">
                         <span
                             className="w-10 h-10 rounded-full border-[3px] border-surface-container border-t-primary"
-                            style={{ animation: 'sheemu-spin 700ms linear infinite' }}
+                            style={{ animation: 'solkey-spin 700ms linear infinite' }}
                         />
                         <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
                             {needsCheckout

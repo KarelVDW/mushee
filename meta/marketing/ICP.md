@@ -1,4 +1,4 @@
-# Sheemu — Ideal Customer Profiles
+# Solkey — Ideal Customer Profiles
 
 Working document for marketing. Grounded in what the product actually does today:
 a browser-based sheet-music editor whose differentiator is **live audio-to-notation**
@@ -8,7 +8,7 @@ Composer $8/mo (10 min/day), Studio $18/mo (unlimited).
 
 The strategic thread across all three ICPs: **people for whom notation is a
 bottleneck between "music in my head/hands" and "music on paper someone else can
-read".** Sheemu removes the slowest step (note entry) — every ICP below feels that
+read".** Solkey removes the slowest step (note entry) — every ICP below feels that
 pain differently.
 
 ---
@@ -48,7 +48,7 @@ ideas out of their head into a shareable, editable form before the idea dies.
 - Saw a creator hum into a phone and get sheet music out (this is *the* viral demo
   for this ICP).
 
-### Why Sheemu wins
+### Why Solkey wins
 - Hum/play → notation is the whole pitch; the editor is the safety net for the
   transcription's mistakes, not a separate skill to learn.
 - Browser + phone: works where the idea happens.
@@ -98,7 +98,7 @@ note entry takes longer than the musical thinking.
 ### Current tools & pains
 - MuseScore (free, powerful, desktop-bound, slow entry), Flat/Noteflight via school
   accounts (browser but no serious audio input), Sibelius/Dorico if the school pays.
-- Transcription today = loop audio at half speed + manually enter notes. Sheemu
+- Transcription today = loop audio at half speed + manually enter notes. Solkey
   collapses that loop: play the phrase on your instrument → notation.
 
 ### Trigger moments
@@ -106,7 +106,7 @@ note entry takes longer than the musical thinking.
   exam prep season (ABRSM/RCM/AP).
 - A teacher or classmate demos it.
 
-### Why Sheemu wins
+### Why Solkey wins
 - Play-in entry is *faster than typing* for people who already play fluently —
   this crowd feels that speed difference most.
 - Zero install on school Chromebooks/lab machines; autosave means no lost homework.
@@ -158,14 +158,14 @@ adopts.
   paper for anything quick. Finale's 2024 discontinuation left many teachers
   actively shopping for a new home.
 - Existing browser tools (Flat, Noteflight) are classroom-friendly but weak on
-  audio input — Sheemu's record-to-notation is a genuinely new teaching tool here.
+  audio input — Solkey's record-to-notation is a genuinely new teaching tool here.
 
 ### Trigger moments
 - Back-to-school prep (Aug–Sep) and recital season; Finale refugees migrating;
   a colleague's recommendation in a teacher community (this niche is *very*
   word-of-mouth dense).
 
-### Why Sheemu wins
+### Why Solkey wins
 - The record-your-student loop doesn't exist in their current stack.
 - Browser-based = works on the studio iPad, the school lab, and the student's
   Chromebook identically.

@@ -1,5 +1,5 @@
 /**
- * Maps Sheemu subscription tiers to Polar product ids. Each paid tier ×
+ * Maps Solkey subscription tiers to Polar product ids. Each paid tier ×
  * billing interval is one Polar product (Polar models monthly and yearly
  * prices as separate products). Configure the ids from the Polar dashboard:
  *

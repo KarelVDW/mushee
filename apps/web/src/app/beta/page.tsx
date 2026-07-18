@@ -54,7 +54,7 @@ export default function BetaWaitingPage() {
                         <Eyebrow className="text-secondary">Closed beta</Eyebrow>
                         <ModalTitle>You&apos;re on the waitlist.</ModalTitle>
                         <SubHeadline>
-                            Sheemu is in a closed beta, so access is granted personally. We&apos;ll email{' '}
+                            Solkey is in a closed beta, so access is granted personally. We&apos;ll email{' '}
                             <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is
                             approved — usually within a day.
                         </SubHeadline>
@@ -88,8 +88,8 @@ export default function BetaWaitingPage() {
                             </PrimaryButton>
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                                 This page checks automatically every 30 seconds. Questions?{' '}
-                                <a href="mailto:support@sheemu.com" className="text-primary underline">
-                                    support@sheemu.com
+                                <a href="mailto:support@solkey.io" className="text-primary underline">
+                                    support@solkey.io
                                 </a>
                             </span>
                         </div>

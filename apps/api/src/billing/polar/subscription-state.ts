@@ -4,7 +4,7 @@
  * to unit test.
  *
  * Polar's canonical customer key is `externalCustomerId`, which we always
- * set to the Sheemu user id at checkout.
+ * set to the Solkey user id at checkout.
  */
 
 export interface SubscriptionSnapshot {

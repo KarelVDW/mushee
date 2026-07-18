@@ -1,6 +1,6 @@
 # Production overlay (GKE) — everything the base deliberately leaves to the
 # cluster: namespace, registry image retags, HTTPS ingress with a
-# Google-managed certificate for api.sheemu.com, and workload identity so the
+# Google-managed certificate for api.solkey.io, and workload identity so the
 # API reaches GCS without key files. See README.md next to this file for the
 # one-time GCP provisioning steps and the api-secrets creation command.
 #

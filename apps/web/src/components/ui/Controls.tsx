@@ -28,7 +28,7 @@ export function Segmented<T extends string | undefined>({ options, value, onChan
                             'pointer-coarse:py-2.5 pointer-coarse:min-w-10',
                             'font-label font-semibold text-[14px] leading-none',
                             'inline-flex items-center justify-center',
-                            'transition-[background-color,color] duration-150 ease-sheemu',
+                            'transition-[background-color,color] duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                             active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
@@ -62,7 +62,7 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled }: C
                 'font-label font-semibold text-[13px] leading-none',
                 'inline-flex items-center justify-center',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                'transition-[background-color,color] duration-150 ease-sheemu',
+                'transition-[background-color,color] duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 active
                     ? 'bg-primary-container text-on-primary-container'
@@ -98,13 +98,13 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     'border-[3px]',
                     active ? 'bg-error border-error' : 'bg-surface-container-lowest border-error-container',
-                    'transition-[transform,background-color,border-color] duration-200 ease-sheemu',
+                    'transition-[transform,background-color,border-color] duration-200 ease-solkey',
                     'enabled:hover:scale-105',
                 ].join(' ')}
                 style={{ width: size, height: size }}>
                 <span
                     className={[
-                        'rounded-full transition-[background-color] duration-200 ease-sheemu',
+                        'rounded-full transition-[background-color] duration-200 ease-solkey',
                         active ? 'bg-on-error shadow-none' : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
                     ].join(' ')}
                     style={{ width: dotSize, height: dotSize }}
@@ -126,7 +126,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     'border-[3px] border-primary-container',
                     active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-lowest text-primary',
-                    'transition-[transform,background-color,color] duration-200 ease-sheemu',
+                    'transition-[transform,background-color,color] duration-200 ease-solkey',
                     'enabled:hover:scale-105',
                 ].join(' ')}
                 style={{ width: size, height: size }}>
@@ -146,7 +146,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'bg-surface-container-low enabled:hover:bg-surface-container',
                 active ? 'text-primary' : 'text-on-surface-variant',
-                'transition-[background-color,color] duration-150 ease-sheemu',
+                'transition-[background-color,color] duration-150 ease-solkey',
             ].join(' ')}
             style={{ width: size, height: size }}>
             {children}
@@ -171,12 +171,12 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
                 onClick={() => onChange(!checked)}
                 className={[
                     'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative',
-                    'transition-colors duration-150 ease-sheemu',
+                    'transition-colors duration-150 ease-solkey',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     checked ? 'bg-primary-container' : 'bg-surface-container-high',
                 ].join(' ')}>
                 <span
-                    className="block w-4.5 h-4.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-sheemu"
+                    className="block w-4.5 h-4.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-solkey"
                     style={{ transform: checked ? 'translateX(18px)' : 'translateX(0)' }}
                 />
             </button>

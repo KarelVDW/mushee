@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.event_name == 'push' && github.ref_name || inputs.environment }}
-      url: ${{ (github.event_name == 'push' && github.ref_name || inputs.environment) == 'production' && 'https://api.sheemu.com' || 'https://api.staging.sheemu.com' }}
+      url: ${{ (github.event_name == 'push' && github.ref_name || inputs.environment) == 'production' && 'https://api.solkey.io' || 'https://api.staging.solkey.io' }}
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2

@@ -28,17 +28,17 @@ const geistMono = Geist_Mono({
     subsets: ['latin'],
 })
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sheemu.com'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
     title: {
-        default: 'Sheemu — the fastest way to get a melody on the page',
-        template: '%s · Sheemu',
+        default: 'Solkey — the fastest way to get a melody on the page',
+        template: '%s · Solkey',
     },
     description:
-        'Sheemu turns what you play or sing into clean sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
-    applicationName: 'Sheemu',
+        'Solkey turns what you play or sing into clean sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
+    applicationName: 'Solkey',
     keywords: [
         'sheet music editor',
         'music notation software',
@@ -51,14 +51,14 @@ export const metadata: Metadata = {
     ],
     openGraph: {
         type: 'website',
-        siteName: 'Sheemu',
+        siteName: 'Solkey',
         url: SITE_URL,
-        title: 'Sheemu — the fastest way to get a melody on the page',
+        title: 'Solkey — the fastest way to get a melody on the page',
         description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Sheemu — the fastest way to get a melody on the page',
+        title: 'Solkey — the fastest way to get a melody on the page',
         description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
     },
     robots: {

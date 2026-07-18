@@ -292,7 +292,7 @@ function Onboarding({ onComplete, onSkip }) {
         instruments: [],
         source: null,
         sourceDetail: '',
-        email: 'composer@sheemu.io',
+        email: 'composer@solkey.io',
         verified: false,
         code: '',
         resending: false,
@@ -478,7 +478,7 @@ function Onboarding({ onComplete, onSkip }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ModalTitle>Allow microphone access.</ModalTitle>
                         <SubHeadline>
-                            Sheemu listens through your microphone to transcribe what you play or hum into notation. We only record while
+                            Solkey listens through your microphone to transcribe what you play or hum into notation. We only record while
                             you tap Record — never in the background.
                         </SubHeadline>
 
@@ -607,7 +607,7 @@ function Onboarding({ onComplete, onSkip }) {
 
                 {step === 5 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <ModalTitle>How did you find Sheemu?</ModalTitle>
+                        <ModalTitle>How did you find Solkey?</ModalTitle>
                         <SubHeadline>Helps us know what's working — entirely optional, no wrong answers.</SubHeadline>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                             {REFERRAL_SOURCES.map(([k, label]) => (
@@ -678,10 +678,10 @@ function Onboarding({ onComplete, onSkip }) {
                                 borderRadius: 9999,
                                 border: '3px solid var(--color-surface-container)',
                                 borderTopColor: 'var(--color-primary)',
-                                animation: 'sheemu-spin 700ms linear infinite',
+                                animation: 'solkey-spin 700ms linear infinite',
                             }}
                         />
-                        <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
+                        <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
                         <span style={{ font: '600 15px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
                             Sending you to Polar's secure checkout…
                         </span>
@@ -692,7 +692,7 @@ function Onboarding({ onComplete, onSkip }) {
                                 textAlign: 'center',
                                 maxWidth: 320,
                             }}>
-                            After payment you land back in Sheemu on the Settings page, with your new plan active.
+                            After payment you land back in Solkey on the Settings page, with your new plan active.
                         </span>
                     </div>
                 )}

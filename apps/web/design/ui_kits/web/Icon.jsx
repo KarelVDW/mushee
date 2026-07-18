@@ -1,4 +1,4 @@
-// Icon component — renders the custom Sheemu glyph set ("Precision Maverick"):
+// Icon component — renders the custom Solkey glyph set ("Precision Maverick"):
 // 24px grid, 2px strokes, squared terminals, mitered joins. Mirrors
 // src/components/ui/Icon.tsx; keep the glyph data in sync with it.
 const GLYPHS = {

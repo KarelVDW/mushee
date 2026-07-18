@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme inline {
-    /* Sheemu — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
+    /* Solkey — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
     /* Canvas */
     --color-background: #f6f6f6;
     --color-on-background: #2d2f2f;
@@ -70,7 +70,7 @@
     --shadow-cyan-3: 3px 3px 0 0 #00dbe9;
 
     /* Motion */
-    --ease-sheemu: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-solkey: cubic-bezier(0.2, 0.8, 0.2, 1);
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      Values reference the next/font CSS variables that layout.tsx sets on <body>.
@@ -109,7 +109,7 @@ body {
     -webkit-backdrop-filter: blur(12px);
 }
 
-@keyframes sheemu-spin {
+@keyframes solkey-spin {
     to {
         transform: rotate(360deg);
     }
@@ -153,11 +153,11 @@ body {
     transform-origin: center;
     opacity: 0.55;
     animation:
-        waveform-bar-in 200ms var(--ease-sheemu),
+        waveform-bar-in 200ms var(--ease-solkey),
         waveform-bar-sway 1.4s ease-in-out 200ms infinite;
 }
 .waveform-bar-exit {
-    animation: waveform-bar-out 450ms var(--ease-sheemu) forwards;
+    animation: waveform-bar-out 450ms var(--ease-solkey) forwards;
 }
 
 /* Long-form articles (privacy policy, terms). Tonal, no hard rules. */

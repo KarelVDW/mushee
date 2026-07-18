@@ -1,6 +1,6 @@
-# Sheemu Web — UI kit
+# Solkey Web — UI kit
 
-High-fidelity React/JSX recreation of the Sheemu web app. Cosmetic / interactive only — no real auth, no real audio, no real notation engine. Designed to be lifted, remixed, and mocked against.
+High-fidelity React/JSX recreation of the Solkey web app. Cosmetic / interactive only — no real auth, no real audio, no real notation engine. Designed to be lifted, remixed, and mocked against.
 
 ## Files
 
@@ -8,7 +8,7 @@ High-fidelity React/JSX recreation of the Sheemu web app. Cosmetic / interactive
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `index.html`            | Click-thru prototype: Landing → Login (modal) → Onboarding → Library → New Score → Editor → Settings.   |
 | `Brand.jsx`             | `<Wordmark>`, `<Eyebrow>`, `<Pill>` — the typographic primitives.                                       |
-| `Icon.jsx`              | `<Icon>` — the custom Sheemu glyph set; kept in sync with `src/components/ui/Icon.tsx`.                 |
+| `Icon.jsx`              | `<Icon>` — the custom Solkey glyph set; kept in sync with `src/components/ui/Icon.tsx`.                 |
 | `Buttons.jsx`           | `<PrimaryButton>`, `<SecondaryButton>`, `<TertiaryButton>`, `<IconButton>`, `<ToggleButton>`.           |
 | `Inputs.jsx`            | `<TextField>` with the cyan underline + `<TextArea>`.                                                   |
 | `Chrome.jsx`            | `<TopNav>`, `<PageHeader>`, `<Footer>`, `<DialogScrim>` + `<DialogPanel>`.                              |

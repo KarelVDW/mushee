@@ -92,7 +92,7 @@ export default function SettingsPage() {
                     <SideNav tab={tab} onTab={setTab} />
                     <div className="flex flex-col gap-4">
                         {tab === 'profile' && (
-                            <Section title="Profile" subtitle="How you appear across Sheemu.">
+                            <Section title="Profile" subtitle="How you appear across Solkey.">
                                 <div className="flex items-center gap-4">
                                     <Avatar name={name || 'You'} />
                                 </div>
@@ -129,10 +129,10 @@ export default function SettingsPage() {
                                     subtitle="Stuck, found a bug, or want to say hi? We read everything.">
                                     <div className="flex items-center gap-4">
                                         <a
-                                            href="mailto:support@sheemu.com"
+                                            href="mailto:support@solkey.io"
                                             className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
                                             <Icon name="mail" size={16} />
-                                            support@sheemu.com
+                                            support@solkey.io
                                         </a>
                                         <a
                                             href="/contact"
@@ -223,7 +223,7 @@ function BillingSection() {
             title="Plan & billing"
             subtitle={
                 isBeta
-                    ? 'Sheemu is in closed beta — your plan is on the house. Paid plans arrive at launch.'
+                    ? 'Solkey is in closed beta — your plan is on the house. Paid plans arrive at launch.'
                     : `You're on the ${billing.tierName} plan. Payments are handled securely by Polar.`
             }>
             <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-md">
@@ -355,7 +355,7 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'border-0 rounded-md px-3.5 py-2.5 text-left cursor-pointer',
                             'flex items-center gap-2.5',
                             'font-body font-medium text-[14px] leading-none',
-                            'transition-colors duration-150 ease-sheemu',
+                            'transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                             active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface',
                         ].join(' ')}>

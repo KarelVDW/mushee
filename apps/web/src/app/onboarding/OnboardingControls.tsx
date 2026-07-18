@@ -21,7 +21,7 @@ export function StepProgress({ step, total }: { step: number; total: number }) {
                 <div
                     key={i}
                     className={[
-                        'h-1 rounded-sm flex-1 max-w-12 transition-colors duration-200 ease-sheemu',
+                        'h-1 rounded-sm flex-1 max-w-12 transition-colors duration-200 ease-solkey',
                         i <= step ? 'bg-primary-container' : 'bg-surface-container',
                     ].join(' ')}
                 />
@@ -39,7 +39,7 @@ export function OptionCard({ active, onClick, title, body }: { active?: boolean;
             onClick={onClick}
             type="button"
             className={[
-                'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-sheemu',
+                'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
             ].join(' ')}>

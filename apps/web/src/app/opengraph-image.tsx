@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Sheemu — the fastest way to get a melody on the page'
+export const alt = 'Solkey — the fastest way to get a melody on the page'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -45,7 +45,7 @@ export default function OpengraphImage() {
                         filter: 'blur(80px)',
                     }}
                 />
-                <div style={{ fontSize: 64, fontStyle: 'italic', fontWeight: 700, display: 'flex' }}>Sheemu</div>
+                <div style={{ fontSize: 64, fontStyle: 'italic', fontWeight: 700, display: 'flex' }}>Solkey</div>
                 <div
                     style={{
                         fontSize: 88,
