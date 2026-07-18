@@ -14,6 +14,7 @@ export default tseslint.config(
             '**/node_modules/**',
             '**/build/**',
             '**/.next/**',
+            '**/.next-e2e/**',
             '**/out/**',
             '**/coverage/**',
             // Local Python venvs (fetch-crepe-model.sh / basic-pitch tooling) ship their own JS assets

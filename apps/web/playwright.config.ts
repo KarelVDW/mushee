@@ -55,6 +55,8 @@ export default defineConfig({
         env: {
             // Point the client at a dead origin; the tests intercept every call to it.
             NEXT_PUBLIC_API_URL: MOCK_API_URL,
+            // Own dist dir so this server can boot while a dev server holds .next's lock.
+            NEXT_DIST_DIR: '.next-e2e',
         },
     },
 })
