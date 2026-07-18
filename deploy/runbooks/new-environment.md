@@ -1,8 +1,8 @@
 # Runbook 2 — Stand up a new environment (uat / staging / dev)
 
-Goal: a second, fully working Sheemu — web + API + inference + DB + storage —
-that can't touch production data, reachable at `uat.sheemu.com` /
-`api.uat.sheemu.com`. Written for "uat"; substitute the name throughout.
+Goal: a second, fully working Solkey — web + API + inference + DB + storage —
+that can't touch production data, reachable at `uat.solkey.io` /
+`api.uat.solkey.io`. Written for "uat"; substitute the name throughout.
 
 ## 0. Decide the isolation level first
 
@@ -11,7 +11,7 @@ that can't touch production data, reachable at `uat.sheemu.com` /
 | GCP project | same `sheemu-prod` | second project (repeat the whole provisioning runbook) |
 | Cluster | same `mushee-prod`, new **namespace** `mushee-uat` | second Autopilot cluster |
 | Database | same Cloud SQL instance, new **database** `mushee_uat` + own user | second (smaller) instance |
-| Bucket | new bucket `sheemu-uat-storage` (always separate — GDPR deletion tests run here) | same |
+| Bucket | new bucket `solkey-uat-storage` (always separate — GDPR deletion tests run here) | same |
 | Images | **same images, same registry** — promote the exact SHA you tested | same |
 | Web | same Vercel project, **Preview** environment on a branch, or a second project | second project |
 
@@ -23,10 +23,10 @@ connections; `db-custom-1-3840` allows ~100. Prod (2–6 replicas) + uat
 (1 replica) fits. Set `POSTGRES_POOL_SIZE=5` in uat to be polite.
 
 **Cookie-domain rule (the classic cross-env bug):** uat must use
-`COOKIE_DOMAIN=.uat.sheemu.com`, *never* `.sheemu.com` — a `.sheemu.com`
+`COOKIE_DOMAIN=.uat.solkey.io`, *never* `.solkey.io` — a `.solkey.io`
 cookie from uat would shadow the production session cookie in any browser
-that visits both. `uat.sheemu.com` + `api.uat.sheemu.com` share the
-`.uat.sheemu.com` parent, so login works.
+that visits both. `uat.solkey.io` + `api.uat.solkey.io` share the
+`.uat.solkey.io` parent, so login works.
 
 ## 1. GCP one-timers
 
@@ -34,7 +34,7 @@ that visits both. `uat.sheemu.com` + `api.uat.sheemu.com` share the
 gcloud config set project sheemu-prod
 
 # Bucket (separate — recordings/GDPR tests must never touch prod objects)
-gcloud storage buckets create gs://sheemu-uat-storage \
+gcloud storage buckets create gs://solkey-uat-storage \
   --location=europe-west1 --uniform-bucket-level-access
 # (versioning optional in uat)
 
@@ -50,7 +50,7 @@ gcloud compute addresses describe mushee-uat-api-ip --global --format='value(add
 
 # Workload identity for the uat namespace: reuse the GSA, add the uat KSA
 # binding and grant it the uat bucket
-gcloud storage buckets add-iam-policy-binding gs://sheemu-uat-storage \
+gcloud storage buckets add-iam-policy-binding gs://solkey-uat-storage \
   --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com" \
   --role=roles/storage.objectAdmin
 gcloud iam service-accounts add-iam-policy-binding \
@@ -79,20 +79,20 @@ Then edit `deploy/k8s/overlays/uat/`:
 - `namespace.yaml`: `name: mushee-uat`.
 - `service-account.yaml`: unchanged if sharing the GSA (the annotation names
   the GSA; the KSA↔GSA binding in §1 is what scopes it to `mushee-uat/api`).
-- `api-ingress.yaml`: `domains: [api.uat.sheemu.com]`, host
-  `api.uat.sheemu.com`, `global-static-ip-name: mushee-uat-api-ip`. Rename the
+- `api-ingress.yaml`: `domains: [api.uat.solkey.io]`, host
+  `api.uat.solkey.io`, `global-static-ip-name: mushee-uat-api-ip`. Rename the
   cert/frontend/backend objects (`api-cert-uat`, …) is unnecessary — they're
   namespaced — but the static-ip annotation **must** differ or the two
   ingresses fight over one IP.
 - `api-patch.yaml` — the environment's identity, all in one reviewable place:
   ```yaml
-  - { name: BETTER_AUTH_URL, value: 'https://api.uat.sheemu.com' }
-  - { name: WEB_APP_URL,     value: 'https://uat.sheemu.com' }
-  - { name: CORS_ORIGIN,     value: 'https://uat.sheemu.com' }
-  - { name: TRUSTED_ORIGINS, value: 'https://uat.sheemu.com' }
-  - { name: COOKIE_DOMAIN,   value: '.uat.sheemu.com' }
+  - { name: BETTER_AUTH_URL, value: 'https://api.uat.solkey.io' }
+  - { name: WEB_APP_URL,     value: 'https://uat.solkey.io' }
+  - { name: CORS_ORIGIN,     value: 'https://uat.solkey.io' }
+  - { name: TRUSTED_ORIGINS, value: 'https://uat.solkey.io' }
+  - { name: COOKIE_DOMAIN,   value: '.uat.solkey.io' }
   - { name: STORAGE_DRIVER,  value: 'gcs' }
-  - { name: GCS_BUCKET,      value: 'sheemu-uat-storage' }
+  - { name: GCS_BUCKET,      value: 'solkey-uat-storage' }
   - { name: POSTGRES_SSL,    value: 'require' }
   - { name: POSTGRES_POOL_SIZE, value: '5' }
   - { name: BETA_MODE,       value: 'true' }   # or false — uat's call
@@ -102,7 +102,7 @@ Then edit `deploy/k8s/overlays/uat/`:
   costs as much as prod.
 
 Sanity-check locally: `kubectl kustomize deploy/k8s/overlays/uat | less` —
-grep that **every** occurrence of `sheemu.com` is the uat variant and the
+grep that **every** occurrence of `solkey.io` is the uat variant and the
 namespace is `mushee-uat` throughout.
 
 ## 3. Secret + first apply
@@ -113,7 +113,7 @@ kubectl create secret generic api-secrets -n mushee-uat \
   --from-literal=POSTGRES_URL="postgres://mushee_uat:$(cat /tmp/uat-db-password.txt)@10.56.0.3:5432/mushee_uat" \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<the prod key is fine — mail is real either way>' \
-  --from-literal=ADMIN_EMAILS='info@sheemu.com'
+  --from-literal=ADMIN_EMAILS='info@solkey.io'
 
 cd deploy/k8s/overlays/uat
 kustomize edit set image \
@@ -124,7 +124,7 @@ kubectl apply -k .
 ```
 
 The API self-migrates `mushee_uat` on first boot (advisory-locked, replica
-safe). The managed certificate needs the `api.uat.sheemu.com` A-record
+safe). The managed certificate needs the `api.uat.solkey.io` A-record
 resolving first, then ~15–60 min.
 
 For CI: add an `environment` input to `.github/workflows/deploy.yml` whose
@@ -141,16 +141,16 @@ its own values — a runtime env change does nothing.
 Simplest reliable shape: a long-lived `uat` git branch plus Vercel's
 Preview-environment variables.
 
-1. Vercel → Settings → Domains → add `uat.sheemu.com`, assign it to the
+1. Vercel → Settings → Domains → add `uat.solkey.io`, assign it to the
    `uat` branch (its latest Preview deployment).
 2. Settings → Environment Variables — add these scoped to **Preview**
    (Production values stay untouched):
-   `NEXT_PUBLIC_API_URL=https://api.uat.sheemu.com`,
-   `NEXT_PUBLIC_SITE_URL=https://uat.sheemu.com`,
+   `NEXT_PUBLIC_API_URL=https://api.uat.solkey.io`,
+   `NEXT_PUBLIC_SITE_URL=https://uat.solkey.io`,
    `NEXT_PUBLIC_BETA_MODE` per §2, and a **separate PostHog project's** key
    (or leave the key unset in Preview — analytics off in uat is usually
    right, and unset is exactly how the code degrades).
-3. Push the branch → Vercel builds → `uat.sheemu.com` serves it.
+3. Push the branch → Vercel builds → `uat.solkey.io` serves it.
 
 Caveat: Preview-scoped vars apply to *all* preview deployments, i.e. every PR
 preview will also point at the uat API. For this project that's a feature
@@ -178,9 +178,9 @@ Options, in order of preference:
 
 ## 6. Smoke test (same bar as production)
 
-Signup on `uat.sheemu.com` → OTP mail arrives → login survives navigation
+Signup on `uat.solkey.io` → OTP mail arrives → login survives navigation
 (cookie domain right) → editor loads → record one take → object appears under
-`gs://sheemu-uat-storage/recordings/…`. If all six pass, the environment is
+`gs://solkey-uat-storage/recordings/…`. If all six pass, the environment is
 real.
 
 ## Teardown

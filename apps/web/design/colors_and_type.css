@@ -1,5 +1,5 @@
 /*
- * Sheemu Design System — colors, type & semantic tokens.
+ * Solkey Design System — colors, type & semantic tokens.
  *
  * White-on-white tonal surfaces, two accent colours (cyan + magenta).
  * Type stack: Space Grotesk (display + UI) / Manrope (body) /
@@ -235,7 +235,7 @@ code,
     color: var(--color-on-primary-container);
 }
 
-/* Icon utility — inline SVGs from the Sheemu glyph set (24px grid, 2px
+/* Icon utility — inline SVGs from the Solkey glyph set (24px grid, 2px
    strokes, squared terminals; see src/components/ui/Icon.tsx) */
 .ico-glyph {
     display: inline-block;

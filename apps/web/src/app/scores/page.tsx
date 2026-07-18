@@ -94,7 +94,7 @@ export default function ScoresPage() {
         return (
             <ErrorScreen
                 title="Can't reach the server"
-                message="Sheemu could not connect to its server, so your library can't be shown right now. Check your internet connection, or try again in a moment."
+                message="Solkey could not connect to its server, so your library can't be shown right now. Check your internet connection, or try again in a moment."
                 onRetry={() => void refetch()}
             />
         )
@@ -241,9 +241,9 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                 'bg-surface-container-lowest hover:bg-surface-container-high',
                 'rounded-md px-4 sm:px-6 py-4.5 editorial-shadow',
                 'grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-3 md:gap-4 items-center',
-                'transition-colors duration-150 ease-sheemu',
+                'transition-colors duration-150 ease-solkey',
             ].join(' ')}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,transform] duration-150 ease-sheemu" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-container opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,transform] duration-150 ease-solkey" />
             <div role="cell" className="min-w-0 flex flex-col gap-1">
                 <button
                     onClick={onOpen}
@@ -252,7 +252,7 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                         'text-left bg-transparent border-0 p-0 cursor-pointer',
                         'font-body font-medium text-[16px] leading-[1.3]',
                         'text-on-surface group-hover:text-primary',
-                        'transition-colors duration-150 ease-sheemu',
+                        'transition-colors duration-150 ease-solkey',
                         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
                     ].join(' ')}>
                     {score.title}

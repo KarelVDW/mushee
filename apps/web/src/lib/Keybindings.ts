@@ -164,7 +164,7 @@ export class Keybindings<C extends BindableCommand> {
         options: KeybindingsOptions = {},
     ) {
         this.isMac = options.isMac ?? IS_MAC
-        this.storageKey = options.storageKey ?? 'sheemu:shortcuts'
+        this.storageKey = options.storageKey ?? 'solkey:shortcuts'
         for (const command of commands) {
             this.defaults.set(command.id, command.defaultShortcut ? Shortcut.parse(command.defaultShortcut, this.isMac) : null)
         }

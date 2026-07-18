@@ -70,7 +70,7 @@ describe('BrowserSupportBanner', () => {
         stubFloor({ colorMix: false, propertyRule: false })
         render()
         expect(banner()).not.toBeNull()
-        expect(banner()?.textContent).toContain('older than Sheemu supports')
+        expect(banner()?.textContent).toContain('older than Solkey supports')
     })
 
     it('renders nothing on a supported browser', () => {

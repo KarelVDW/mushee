@@ -31,7 +31,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
                 <div style={{ maxWidth: 420, padding: '0 2rem' }}>
                     <h1 style={{ fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Something went wrong</h1>
                     <p style={{ fontSize: 14, lineHeight: 1.5, color: '#5a5c5c', margin: '0 0 1.5rem' }}>
-                        An unexpected error stopped Sheemu from loading. Try again, and if it keeps happening, come back in a few minutes.
+                        An unexpected error stopped Solkey from loading. Try again, and if it keeps happening, come back in a few minutes.
                     </p>
                     <button
                         type="button"

@@ -368,10 +368,10 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, 
                                 borderRadius: 9999,
                                 border: '3px solid var(--color-surface-container)',
                                 borderTopColor: 'var(--color-primary)',
-                                animation: 'sheemu-spin 700ms linear infinite',
+                                animation: 'solkey-spin 700ms linear infinite',
                             }}
                         />
-                        <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
+                        <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
                         <span
                             style={{
                                 font: '400 13px/1.5 var(--font-body)',
@@ -532,10 +532,10 @@ function PacksDialog({ onCancel, onSeePlans }) {
                                 borderRadius: 9999,
                                 border: '3px solid var(--color-surface-container)',
                                 borderTopColor: 'var(--color-primary)',
-                                animation: 'sheemu-spin 700ms linear infinite',
+                                animation: 'solkey-spin 700ms linear infinite',
                             }}
                         />
-                        <style>{`@keyframes sheemu-spin { to { transform: rotate(360deg); } }`}</style>
+                        <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
                         <span
                             style={{
                                 font: '400 13px/1.5 var(--font-body)',
@@ -968,7 +968,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                 {/* Panel */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {tab === 'profile' && (
-                        <SettingsSection title="Profile" subtitle="How you appear across Sheemu.">
+                        <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                                 <div
                                     style={{
@@ -1169,7 +1169,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                             <SettingsSection title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                                     <a
-                                        href="mailto:support@sheemu.com"
+                                        href="mailto:support@solkey.io"
                                         style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -1178,7 +1178,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                             font: '500 14px/1 var(--font-body)',
                                             textDecoration: 'none',
                                         }}>
-                                        <Icon name="mail" size={16} /> support@sheemu.com
+                                        <Icon name="mail" size={16} /> support@solkey.io
                                     </a>
                                     <a
                                         href="#"

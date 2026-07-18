@@ -118,7 +118,7 @@ export function KeySignaturePopover({ active, onSelect, onDismiss, className, an
                                     onClick={() => onSelect(fifths)}
                                     className={[
                                         'flex flex-col items-center justify-end gap-0.5 w-12 h-14 rounded-md cursor-pointer border-0 shrink-0 px-1 py-1.5',
-                                        'transition-[background-color,color] duration-150 ease-sheemu',
+                                        'transition-[background-color,color] duration-150 ease-solkey',
                                         isActive
                                             ? 'bg-primary-container text-on-primary-container'
                                             : 'bg-surface-container-low text-on-surface hover:bg-surface-container',

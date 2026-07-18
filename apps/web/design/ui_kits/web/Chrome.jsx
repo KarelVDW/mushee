@@ -139,7 +139,7 @@ function Footer() {
                     <FooterLink>Cookie settings</FooterLink>
                 </nav>
                 <span style={{ font: '400 12px/1 var(--font-body)', color: 'var(--color-on-surface-variant)', whiteSpace: 'nowrap' }}>
-                    © 2026 Sheemu. Made for composers.
+                    © 2026 Solkey. Made for composers.
                 </span>
             </div>
         </footer>

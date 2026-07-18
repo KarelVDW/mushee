@@ -22,7 +22,7 @@ export default function ErrorBoundary({ error, reset }: { error: Error & { diges
             title={serverDown ? "Can't reach the server" : 'Something went wrong'}
             message={
                 serverDown
-                    ? 'Sheemu could not connect to its server. Check your internet connection, or try again in a moment — we might be doing maintenance.'
+                    ? 'Solkey could not connect to its server. Check your internet connection, or try again in a moment — we might be doing maintenance.'
                     : 'An unexpected error interrupted this page. Your scores are safe — try again, and if it keeps happening, reload the page.'
             }
             onRetry={reset}

@@ -1,4 +1,4 @@
-# Sheemu Design System — Working Rules
+# Solkey Design System — Working Rules
 
 > The full system (tokens, type specimens, UI kit, brand voice) lives in [`design/README.md`](design/README.md).
 > This file is the short rulebook for day-to-day work in `apps/web`. Where the two ever disagree, `design/README.md` wins — and please fix the discrepancy.
@@ -33,7 +33,7 @@ The editor canvas is strictly `#ffffff` with **`#2d2f2f` ink — never pure blac
 
 Four families (loaded in `app/layout.tsx`), each with one job:
 
-- **Space Grotesk** — display + UI: wordmark, headlines, buttons, labels. The wordmark is `Sheemu`, 700 italic, tracked `-0.04em`.
+- **Space Grotesk** — display + UI: wordmark, headlines, buttons, labels. The wordmark is `Solkey`, 700 italic, tracked `-0.04em`.
 - **Manrope** — body copy at reading sizes.
 - **Newsreader italic** — the warm serif clause in display headlines, **marketing + auth surfaces only**. In-app chrome (Library, Editor, Settings — including the score-title field) stays Space Grotesk.
 - **Geist Mono** — numeric readouts: bpm, prices, step numbers, time signatures.
@@ -56,7 +56,7 @@ ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). Ev
 - **Buttons:** Primary = flat loud-cyan capsule; Secondary = tonal capsule; Tertiary = bare text. Destructive = `danger` red fill (never gets the pop). All interactive elements share the focus ring: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`.
 - **Inputs:** `surface_container_low` fill, `rounded-sm`, 2px cyan bottom stroke animating in from the centre on focus. No four-sided boxes.
 - **The Tool-Dock:** the editor's note tools live in a docked bar along the editor's bottom edge — the chrome mirror of the slim header (`surface-container-low/85` + `backdrop-blur-xl`), never floating over the score. The canvas scrolls edge-to-edge between the two bars. Groups are separated by 1.5rem of space — **no dividers** — and new tool groups wrap onto additional rows rather than overflowing. Popovers open upward, away from the dock. The transport (stop / play / record / metronome) sits centred in the slim editor header.
-- **Motion:** `--ease-sheemu` (`cubic-bezier(0.2, 0.8, 0.2, 1)`); 150ms for color hovers, 200ms for shadow/transform, 300ms for tab/stroke sweeps. No bounces, no fade-up-on-scroll.
+- **Motion:** `--ease-solkey` (`cubic-bezier(0.2, 0.8, 0.2, 1)`); 150ms for color hovers, 200ms for shadow/transform, 300ms for tab/stroke sweeps. No bounces, no fade-up-on-scroll.
 
 ---
 

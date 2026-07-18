@@ -4,16 +4,16 @@ import { PublicPageShell } from '@/components/PublicPageShell'
 
 export const metadata: Metadata = {
     title: 'Contact',
-    description: 'Get in touch with the Sheemu team — support, feedback, privacy, and legal.',
+    description: 'Get in touch with the Solkey team — support, feedback, privacy, and legal.',
     alternates: { canonical: '/contact' },
 }
 
 
 const CHANNELS: { label: string; email: string; blurb: string }[] = [
-    { label: 'Support', email: 'support@sheemu.com', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
-    { label: 'Hello', email: 'hello@sheemu.com', blurb: 'Feedback, ideas, partnerships, press — or just to tell us what you wrote today.' },
-    { label: 'Privacy', email: 'privacy@sheemu.com', blurb: 'Anything about your personal data or GDPR requests.' },
-    { label: 'Legal', email: 'legal@sheemu.com', blurb: 'Terms, licensing, and other formal matters.' },
+    { label: 'Support', email: 'support@solkey.io', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
+    { label: 'Hello', email: 'hello@solkey.io', blurb: 'Feedback, ideas, partnerships, press — or just to tell us what you wrote today.' },
+    { label: 'Privacy', email: 'privacy@solkey.io', blurb: 'Anything about your personal data or GDPR requests.' },
+    { label: 'Legal', email: 'legal@solkey.io', blurb: 'Terms, licensing, and other formal matters.' },
 ]
 
 export default function ContactPage() {
@@ -35,7 +35,7 @@ export default function ContactPage() {
 
             <h2>Postal address</h2>
             <p>
-                Sheemu · Karel Van De Winkel
+                Solkey · Karel Van De Winkel
                 <br />
                 Capucienenlaan 23
                 <br />

@@ -38,7 +38,7 @@ Production sequence:
    `apps/web/src/lib/plans.ts` — change all three together or the landing
    page lies.
 2. Create an access token; add a webhook endpoint pointing at
-   `https://api.sheemu.com/billing/webhooks/polar`, subscribed to
+   `https://api.solkey.io/billing/webhooks/polar`, subscribed to
    `subscription.*` + `customer.state_changed`; note the webhook secret.
 3. Add to `Secret/api-secrets` (carry existing keys — recreate-and-apply as
    in Runbook 1 §4b) and restart the API:
@@ -48,7 +48,7 @@ Production sequence:
 4. Verify while checkout is still beta-locked (the webhook path is live even
    though purchase is blocked): Polar's dashboard can send a test event —
    expect 202 and a row in `processed_webhook_events`. A forged call must 403:
-   `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://api.sheemu.com/billing/webhooks/polar -d '{}'`.
+   `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://api.solkey.io/billing/webhooks/polar -d '{}'`.
 5. Real-money test once BETA_MODE is off (or with an admin account if
    checkout opens earlier): buy Composer monthly with a real card, watch the
    tier flip in Settings within seconds (webhook), then cancel and confirm
@@ -109,7 +109,7 @@ the web client too, so the gate drops even before the web rebuild.
   users' credits with no notes appearing (Runbook 3 §3, last rows). Under
   launch load, inference HPA lag looks exactly like that for a minute or
   two. If launch traffic is a real possibility, fix the user-facing error
-  signal first — it converts "Sheemu is broken" tweets into "it told me to
+  signal first — it converts "Solkey is broken" tweets into "it told me to
   retry".
 - Have the two rollback levers ready in a terminal: previous-SHA redeploy
   (Runbook 3 §2) and Vercel instant rollback. Nothing about launch changes

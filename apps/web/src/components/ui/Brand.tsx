@@ -13,7 +13,7 @@ export function Wordmark({ size = 28, className }: WordmarkProps) {
         <span
             className={`font-display italic font-bold tracking-[-0.04em] leading-none text-on-surface ${className ?? ''}`}
             style={{ fontSize: size }}>
-            Sheemu
+            Solkey
         </span>
     )
 }
@@ -25,7 +25,7 @@ interface AppIconProps {
     className?: string
 }
 
-// The Sheemu "S" with a single offset secondary-container drop-shadow behind the letter.
+// The Solkey "S" with a single offset secondary-container drop-shadow behind the letter.
 // We measure the letter's ink bbox in a layout effect so the combined letter+shadow is
 // optically centred — em-box centring drifts because display-italic glyphs have
 // asymmetric sidebearings.
@@ -57,7 +57,7 @@ export function AppIcon({ size = 96, rounded = true, background, className }: Ap
 
     return (
         <span
-            aria-label="Sheemu app icon"
+            aria-label="Solkey app icon"
             role="img"
             className={`inline-flex shrink-0 overflow-hidden ${className ?? ''}`}
             style={{

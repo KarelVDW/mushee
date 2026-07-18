@@ -17,7 +17,7 @@ export function TitleInput({ value, onChange }: { value: string; onChange: (v: s
                 className={[
                     TITLE_TYPE,
                     'absolute inset-0 w-full bg-transparent border-0 outline-0 text-on-surface px-2 py-2 rounded-sm',
-                    'hover:bg-surface-container focus:bg-surface-container transition-colors duration-150 ease-sheemu',
+                    'hover:bg-surface-container focus:bg-surface-container transition-colors duration-150 ease-solkey',
                 ].join(' ')}
             />
         </div>

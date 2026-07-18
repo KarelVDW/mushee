@@ -163,7 +163,7 @@ export default function ScoreEditorPage() {
                 title={serverDown ? "Can't reach the server" : notFound ? 'Score not found' : "This score couldn't be loaded"}
                 message={
                     serverDown
-                        ? 'Sheemu could not connect to its server, so this score can’t be opened right now. Check your internet connection, or try again in a moment.'
+                        ? 'Solkey could not connect to its server, so this score can’t be opened right now. Check your internet connection, or try again in a moment.'
                         : notFound
                           ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
                           : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
@@ -198,7 +198,7 @@ export default function ScoreEditorPage() {
                         aria-label="Back to library"
                         className={[
                             'bg-transparent border-0 cursor-pointer text-on-surface-variant p-1.5 -ml-1.5 inline-flex rounded-full',
-                            'hover:text-on-surface transition-colors duration-150 ease-sheemu',
+                            'hover:text-on-surface transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                         ].join(' ')}>
                         <Icon name="arrow-left" size={20} />
@@ -221,7 +221,7 @@ export default function ScoreEditorPage() {
                             'font-label font-semibold text-[11px] leading-none whitespace-nowrap',
                             'max-md:max-w-28 min-w-0',
                             'bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
-                            'transition-colors duration-150 ease-sheemu',
+                            'transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                         ].join(' ')}>
                         <span className="truncate">{score.instrument.displayName}</span>

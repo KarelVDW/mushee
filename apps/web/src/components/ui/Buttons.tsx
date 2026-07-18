@@ -57,7 +57,7 @@ export function PrimaryButton({
                 'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
                 big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
-                'transition-[transform,box-shadow,background-color,color] duration-200 ease-sheemu',
+                'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
                 'disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)',
@@ -84,7 +84,7 @@ export function SecondaryButton({ children, onClick, size = 'md', type = 'button
                 'bg-surface-container-low text-on-surface hover:bg-surface-container',
                 big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
-                'transition-colors duration-150 ease-sheemu',
+                'transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
                 fullWidth ? 'w-full' : '',
@@ -109,7 +109,7 @@ export function TertiaryButton({ children, onClick, danger = false, type = 'butt
             className={[
                 'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
                 'font-body font-medium text-[13px] leading-none',
-                'transition-colors duration-150 ease-sheemu',
+                'transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
                 danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
             ].join(' ')}>
@@ -145,7 +145,7 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
                 'text-on-surface',
                 idleClassName ?? 'bg-surface-container',
                 hoverPalette,
-                'transition-colors duration-150 ease-sheemu',
+                'transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
             ].join(' ')}
             style={{ width: size, height: size }}>

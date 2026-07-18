@@ -3,10 +3,10 @@
 Staging shares the production cluster (`mushee-prod`, europe-west1, project
 `sheemu-prod`) and the production Cloud SQL instance, but gets its own
 namespace (`mushee-staging`), database, bucket, static IP, and workload
-identity. URL scheme: web on **staging.sheemu.com** (Vercel `staging` branch
-domain), API on **api.staging.sheemu.com** — one level below the production
-hosts so the staging cookie domain (`.staging.sheemu.com`) never collides with
-production's (`.sheemu.com`).
+identity. URL scheme: web on **staging.solkey.io** (Vercel `staging` branch
+domain), API on **api.staging.solkey.io** — one level below the production
+hosts so the staging cookie domain (`.staging.solkey.io`) never collides with
+production's (`.solkey.io`).
 
 The GitHub OIDC deployer from the production README already covers staging:
 its WIF condition is repository-scoped, and `roles/container.developer` +
@@ -15,7 +15,7 @@ its WIF condition is repository-scoped, and `roles/container.developer` +
 One-time provisioning:
 
 ```sh
-# 1. Static IP for the staging ingress; point api.staging.sheemu.com (A) at it.
+# 1. Static IP for the staging ingress; point api.staging.solkey.io (A) at it.
 gcloud compute addresses create mushee-api-staging-ip --global
 gcloud compute addresses describe mushee-api-staging-ip --global --format='value(address)'
 
@@ -53,19 +53,19 @@ kubectl create secret generic api-secrets -n mushee-staging \
   --from-literal=POSTGRES_URL='postgres://mushee_staging:<password>@10.56.0.3:5432/mushee_staging' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='info@sheemu.com'
+  --from-literal=ADMIN_EMAILS='info@solkey.io'
 # Polar: use sandbox credentials here (POLAR_SERVER=sandbox), never production.
 ```
 
 ## DNS + Vercel (web side)
 
-- DNS: `api.staging.sheemu.com` A → the static IP from step 1;
-  `staging.sheemu.com` CNAME → `cname.vercel-dns.com`.
+- DNS: `api.staging.solkey.io` A → the static IP from step 1;
+  `staging.solkey.io` CNAME → `cname.vercel-dns.com`.
 - Vercel: set the project's **production branch to `production`**, then add
-  domain `staging.sheemu.com` assigned to the **`staging` branch**. Give the
+  domain `staging.solkey.io` assigned to the **`staging` branch**. Give the
   Preview environment (or branch-scoped vars for `staging`):
-  `NEXT_PUBLIC_API_URL=https://api.staging.sheemu.com`,
-  `NEXT_PUBLIC_SITE_URL=https://staging.sheemu.com`, `NEXT_PUBLIC_BETA_MODE`
+  `NEXT_PUBLIC_API_URL=https://api.staging.solkey.io`,
+  `NEXT_PUBLIC_SITE_URL=https://staging.solkey.io`, `NEXT_PUBLIC_BETA_MODE`
   matching the overlay, and leave `NEXT_PUBLIC_POSTHOG_KEY` unset so staging
   traffic never pollutes production analytics.
 
@@ -76,4 +76,4 @@ Every push to the `staging` branch builds images and applies this overlay
 the production overlay. First-time bring-up: provision above → create the
 secret → push to `staging` → wait for the ManagedCertificate to become Active
 (`kubectl describe managedcertificate api-cert -n mushee-staging`, ~15–60 min
-after DNS resolves) → smoke-test signup/login on https://staging.sheemu.com.
+after DNS resolves) → smoke-test signup/login on https://staging.solkey.io.

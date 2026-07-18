@@ -8,7 +8,7 @@ import { getConsent, saveConsent } from '@/lib/consent'
 
 /** Reopens the cookie preferences dialog (e.g. from the footer link). */
 export function openCookieSettings(): void {
-    window.dispatchEvent(new Event('sheemu:cookie-settings'))
+    window.dispatchEvent(new Event('solkey:cookie-settings'))
 }
 
 /**
@@ -32,8 +32,8 @@ export function CookieConsent() {
             setAnalyticsChoice(getConsent()?.analytics ?? false)
             setSettingsOpen(true)
         }
-        window.addEventListener('sheemu:cookie-settings', openSettings)
-        return () => window.removeEventListener('sheemu:cookie-settings', openSettings)
+        window.addEventListener('solkey:cookie-settings', openSettings)
+        return () => window.removeEventListener('solkey:cookie-settings', openSettings)
     }, [])
 
     const decide = (analytics: boolean) => {
@@ -47,7 +47,7 @@ export function CookieConsent() {
             <DialogScrim onDismiss={() => setSettingsOpen(false)}>
                 <DialogPanel
                     title="Cookie preferences"
-                    subtitle="Choose what Sheemu may use. You can change this any time via 'Cookie settings' in the footer."
+                    subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
                     onClose={() => setSettingsOpen(false)}
                     width={520}
                     footer={
@@ -65,7 +65,7 @@ export function CookieConsent() {
                                 </span>
                             </div>
                             <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                                Keeps you signed in and remembers this cookie choice. Sheemu doesn&apos;t work without these.
+                                Keeps you signed in and remembers this cookie choice. Solkey doesn&apos;t work without these.
                             </p>
                         </div>
                         <div className="bg-surface-container-low rounded-md px-4 py-3.5 flex flex-col gap-2">
@@ -114,7 +114,7 @@ export function CookieConsent() {
                     Cookies
                 </span>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
-                    Sheemu uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
+                    Solkey uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
                     we&apos;d also use session replay to improve the editor — that&apos;s entirely up to you.{' '}
                     <Link href="/privacy#cookies" className="text-primary underline">
                         Learn more

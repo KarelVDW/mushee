@@ -99,7 +99,7 @@ export function ClefPopover({ active, onSelect, onDismiss, className, anchorRef 
                                     onClick={() => onSelect(type)}
                                     className={[
                                         'flex items-center justify-center w-11 h-11 rounded-md cursor-pointer border-0 shrink-0',
-                                        'transition-[background-color,color] duration-150 ease-sheemu',
+                                        'transition-[background-color,color] duration-150 ease-solkey',
                                         isActive
                                             ? 'bg-primary-container text-on-primary-container'
                                             : 'bg-surface-container-low text-on-surface hover:bg-surface-container',

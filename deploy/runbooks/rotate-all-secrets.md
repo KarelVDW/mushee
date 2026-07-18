@@ -76,7 +76,7 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=POSTGRES_URL="postgres://mushee:$(cat /tmp/rot/db-password.txt)@10.56.0.3:5432/mushee" \
   --from-literal=BETTER_AUTH_SECRET="$(cat /tmp/rot/better-auth.txt)" \
   --from-literal=SENDGRID_API_KEY="$(cat /tmp/rot/sendgrid.txt)" \
-  --from-literal=ADMIN_EMAILS='info@sheemu.com' \
+  --from-literal=ADMIN_EMAILS='info@solkey.io' \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -97,8 +97,8 @@ The inference services hold no secrets; leave them alone.
 ## 5. Verify before you burn the old credentials
 
 ```sh
-curl -s https://api.sheemu.com/health          # {"status":"ok",...} → DB password works
-curl -s https://api.sheemu.com/plans | head -c 200   # DB reads work
+curl -s https://api.solkey.io/health          # {"status":"ok",...} → DB password works
+curl -s https://api.solkey.io/plans | head -c 200   # DB reads work
 ```
 
 Then in a browser: log in (your session was invalidated by the
@@ -136,7 +136,7 @@ backup matters).
 
 ## Accounts beyond the app
 
-A full refresh should also walk: Google Workspace (info@sheemu.com), GCP
+A full refresh should also walk: Google Workspace (info@solkey.io), GCP
 login, GitHub, Vercel, SendGrid, PostHog, Polar, and the domain registrar —
 password + 2FA each. Nothing in production references those credentials, so
 they can be done any time, no restarts, no order.

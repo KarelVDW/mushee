@@ -5,7 +5,7 @@ import { PublicPageShell } from '@/components/PublicPageShell'
 
 export const metadata: Metadata = {
     title: 'Terms of Service',
-    description: 'The agreement that governs your use of Sheemu — accounts, subscriptions, your content, and our responsibilities.',
+    description: 'The agreement that governs your use of Solkey — accounts, subscriptions, your content, and our responsibilities.',
     alternates: { canonical: '/terms' },
 }
 
@@ -15,15 +15,15 @@ export default function TermsPage() {
     return (
         <PublicPageShell title="Terms of Service" subtitle={`Last updated: ${LAST_UPDATED}`}>
             <p>
-                These terms are the agreement between you and <strong>Karel Van De Winkel, trading as Sheemu</strong> (sole
-                proprietorship, enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Sheemu&quot;,
-                &quot;we&quot;) for the use of the Sheemu web application and website. By
-                creating an account or using Sheemu you accept them. If you don&apos;t agree, please don&apos;t use the service.
+                These terms are the agreement between you and <strong>Karel Van De Winkel, trading as Solkey</strong> (sole
+                proprietorship, enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Solkey&quot;,
+                &quot;we&quot;) for the use of the Solkey web application and website. By
+                creating an account or using Solkey you accept them. If you don&apos;t agree, please don&apos;t use the service.
             </p>
 
-            <h2>1. What Sheemu is</h2>
+            <h2>1. What Solkey is</h2>
             <p>
-                Sheemu is a sheet-music editor with live audio-to-notation recording: you play or sing, and Sheemu transcribes it
+                Solkey is a sheet-music editor with live audio-to-notation recording: you play or sing, and Solkey transcribes it
                 into editable notation. Features vary by plan (see <Link href="/#pricing">pricing</Link>); recording time is limited
                 per day depending on your plan.
             </p>
@@ -38,7 +38,7 @@ export default function TermsPage() {
 
             <h2>3. Beta access</h2>
             <p>
-                While Sheemu is in <strong>closed beta</strong>, access is granted at our discretion: after signing up you may need
+                While Solkey is in <strong>closed beta</strong>, access is granted at our discretion: after signing up you may need
                 to wait until your account is approved. Beta accounts get the Beta plan (currently 30 minutes of recording per day)
                 free of charge. The beta is provided <strong>as-is for evaluation</strong>: features may change, break, or be
                 removed, availability is not guaranteed, and we may revoke beta access at any time. We&apos;ll give reasonable notice
@@ -58,14 +58,14 @@ export default function TermsPage() {
                 </li>
                 <li>
                     Statutory withdrawal and refund rights remain unaffected. For refund requests, contact{' '}
-                    <a href="mailto:support@sheemu.com">support@sheemu.com</a>.
+                    <a href="mailto:support@solkey.io">support@solkey.io</a>.
                 </li>
                 <li>We may change prices; existing subscriptions are informed at least 30 days before a change takes effect.</li>
             </ul>
 
             <h2>5. Your content</h2>
             <p>
-                The music you create or record in Sheemu is <strong>yours</strong>. You retain all rights to your scores and
+                The music you create or record in Solkey is <strong>yours</strong>. You retain all rights to your scores and
                 recordings. You grant us the limited licence needed to operate and improve the service — storing your scores and
                 recordings (including the audio itself), processing them (e.g. transcribing your audio into notation), displaying
                 the content back to you, backing it up, and using your recordings internally to{' '}
@@ -89,9 +89,9 @@ export default function TermsPage() {
 
             <h2>7. Availability and changes</h2>
             <p>
-                We work hard to keep Sheemu available and your data safe, but the service is provided{' '}
+                We work hard to keep Solkey available and your data safe, but the service is provided{' '}
                 <strong>&quot;as available&quot;</strong>: we don&apos;t guarantee uninterrupted availability, and we may modify or
-                discontinue features. If we ever discontinue Sheemu entirely, we&apos;ll give you at least 60 days to export your
+                discontinue features. If we ever discontinue Solkey entirely, we&apos;ll give you at least 60 days to export your
                 scores.
             </p>
 
@@ -113,7 +113,7 @@ export default function TermsPage() {
             <h2>10. Changes to these terms</h2>
             <p>
                 We may update these terms as the service evolves. For material changes we&apos;ll notify you by email or in the app
-                at least 14 days in advance; continuing to use Sheemu after that means you accept the new terms. If you don&apos;t,
+                at least 14 days in advance; continuing to use Solkey after that means you accept the new terms. If you don&apos;t,
                 you can delete your account and, for paid plans, receive a pro-rata refund of the unused period.
             </p>
 
@@ -130,8 +130,8 @@ export default function TermsPage() {
 
             <h2>12. Contact</h2>
             <p>
-                Karel Van De Winkel, trading as Sheemu · Capucienenlaan 23, 9300 Aalst, Belgium · enterprise no.
-                1039.906.118 · <a href="mailto:legal@sheemu.com">legal@sheemu.com</a> ·{' '}
+                Karel Van De Winkel, trading as Solkey · Capucienenlaan 23, 9300 Aalst, Belgium · enterprise no.
+                1039.906.118 · <a href="mailto:legal@solkey.io">legal@solkey.io</a> ·{' '}
                 <Link href="/contact">contact page</Link>.
             </p>
         </PublicPageShell>

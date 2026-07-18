@@ -12,7 +12,7 @@
  *  the consent toggle now covers replay + account linking + the cookie. */
 export const CONSENT_VERSION = 2
 
-const STORAGE_KEY = 'sheemu:consent'
+const STORAGE_KEY = 'solkey:consent'
 
 export interface ConsentRecord {
     version: number

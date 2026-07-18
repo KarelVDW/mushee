@@ -119,11 +119,11 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
     return (
         <StepShell
             title="Allow microphone access."
-            subtitle="Sheemu listens through your microphone to transcribe what you play or hum into notation. We only record while you tap Record — never in the background.">
+            subtitle="Solkey listens through your microphone to transcribe what you play or hum into notation. We only record while you tap Record — never in the background.">
             <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
                 <span
                     className={[
-                        'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-150 ease-sheemu',
+                        'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-150 ease-solkey',
                         micState === 'granted'
                             ? 'bg-primary-container text-on-primary-container'
                             : micState === 'denied'
@@ -254,7 +254,7 @@ export function SourceStep({
 }) {
     return (
         <StepShell
-            title="How did you find Sheemu?"
+            title="How did you find Solkey?"
             subtitle="Helps us know what's working — entirely optional, no wrong answers.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {REFERRAL_SOURCES.map(([k, label]) => (

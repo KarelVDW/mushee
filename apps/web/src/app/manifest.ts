@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Sheemu',
-        short_name: 'Sheemu',
+        name: 'Solkey',
+        short_name: 'Solkey',
         description: 'The fastest way to get a melody on the page — live audio-to-notation sheet music editing.',
         start_url: '/scores',
         display: 'standalone',

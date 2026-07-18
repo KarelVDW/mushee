@@ -18,7 +18,7 @@ export default function NotFound() {
                     className={[
                         'mt-2 inline-flex items-center rounded-full bg-primary text-on-primary',
                         'font-label font-semibold text-[13px] leading-none px-5 py-2.5',
-                        'transition-opacity duration-150 ease-sheemu hover:opacity-90',
+                        'transition-opacity duration-150 ease-solkey hover:opacity-90',
                         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     ].join(' ')}>
                     Back to your library

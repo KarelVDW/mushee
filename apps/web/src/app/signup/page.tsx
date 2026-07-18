@@ -44,7 +44,7 @@ export default function SignupPage() {
                 notice={
                     BETA_MODE ? (
                         <>
-                            <strong>Sheemu is in closed beta.</strong> Signing up puts you on the waitlist — we approve new accounts
+                            <strong>Solkey is in closed beta.</strong> Signing up puts you on the waitlist — we approve new accounts
                             personally, usually within a day.
                         </>
                     ) : undefined

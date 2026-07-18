@@ -5,7 +5,7 @@ import { PublicPageShell } from '@/components/PublicPageShell'
 
 export const metadata: Metadata = {
     title: 'Privacy Policy',
-    description: 'How Sheemu collects, uses, and protects your personal data — including audio recordings, analytics, and cookies.',
+    description: 'How Solkey collects, uses, and protects your personal data — including audio recordings, analytics, and cookies.',
     alternates: { canonical: '/privacy' },
 }
 
@@ -16,18 +16,18 @@ export default function PrivacyPolicyPage() {
     return (
         <PublicPageShell title="Privacy Policy" subtitle={`Last updated: ${LAST_UPDATED}`}>
             <p>
-                Sheemu is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of
+                Solkey is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of
                 your personal data — this policy explains exactly what we collect, why, how long we keep it, and the rights you have
                 over it. We&apos;ve tried to keep it readable; if anything is unclear, write to{' '}
-                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>.
+                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>.
             </p>
 
             <h2 id="controller">1. Who is responsible for your data</h2>
             <p>
-                The data controller for Sheemu is <strong>Karel Van De Winkel, trading as Sheemu</strong> (sole proprietorship,
-                enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Sheemu&quot;, &quot;we&quot;,
+                The data controller for Solkey is <strong>Karel Van De Winkel, trading as Solkey</strong> (sole proprietorship,
+                enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Solkey&quot;, &quot;we&quot;,
                 &quot;us&quot;). For any privacy matter, contact{' '}
-                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>.
+                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>.
             </p>
 
             <h2 id="data-we-collect">2. What we collect and why</h2>
@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
                 actively started a recording — never in the background. Your recordings are deleted when you delete your account.
                 Legal basis: <strong>performance of a contract</strong> for storing and transcribing your recordings;{' '}
                 <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving transcription quality — contact{' '}
-                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a> to object to that use.
+                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object to that use.
             </p>
 
             <h3>Payments</h3>
@@ -79,9 +79,9 @@ export default function PrivacyPolicyPage() {
             <p>
                 We use <strong>PostHog</strong> (hosted in the EU, Frankfurt) to count page visits and feature use in{' '}
                 <strong>anonymous, cookieless</strong> form: nothing is stored on your device, no profile is built, and the events
-                are not linked to your account or identity. We use these counts to understand what gets used and to improve Sheemu.
+                are not linked to your account or identity. We use these counts to understand what gets used and to improve Solkey.
                 Legal basis: <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in understanding aggregate usage of the
-                service — contact <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a> to object.
+                service — contact <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object.
             </p>
 
             <h3>Session replay &amp; account-linked analytics (opt-in)</h3>
@@ -91,7 +91,7 @@ export default function PrivacyPolicyPage() {
                 masked — link analytics events to your account id, and set one persistent PostHog cookie so your visits connect.
                 You give or refuse this consent in the cookie banner and can change your mind any time via{' '}
                 <strong>Cookie settings</strong> in the footer; withdrawing deletes the cookie and drops you back to the anonymous
-                statistics above. Refusing has no effect on how Sheemu works. Legal basis: <strong>consent</strong> (Art. 6(1)(a)
+                statistics above. Refusing has no effect on how Solkey works. Legal basis: <strong>consent</strong> (Art. 6(1)(a)
                 GDPR).
             </p>
             <p>
@@ -102,13 +102,13 @@ export default function PrivacyPolicyPage() {
 
             <h3>Onboarding answers</h3>
             <p>
-                The optional questions after signup (musical background, instruments, how you found us) tune Sheemu&apos;s defaults
+                The optional questions after signup (musical background, instruments, how you found us) tune Solkey&apos;s defaults
                 and tell us where new users come from. Answering is optional. Legal basis: <strong>legitimate interest</strong>; the
                 answers are deleted with your account.
             </p>
 
             <h2 id="cookies">3. Cookies and similar technologies</h2>
-            <p>Sheemu uses as few cookies as we can get away with:</p>
+            <p>Solkey uses as few cookies as we can get away with:</p>
             <table>
                 <thead>
                     <tr>
@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
                         <td>7 days</td>
                     </tr>
                     <tr>
-                        <td>sheemu:consent</td>
+                        <td>solkey:consent</td>
                         <td>Essential (localStorage)</td>
                         <td>Remembers your cookie choice.</td>
                         <td>Until cleared</td>
@@ -159,7 +159,7 @@ export default function PrivacyPolicyPage() {
                     notifications), configured for EU data residency.
                 </li>
                 <li>
-                    <strong>Our hosting provider</strong> — runs the Sheemu servers and database where your account and scores live.
+                    <strong>Our hosting provider</strong> — runs the Solkey servers and database where your account and scores live.
                 </li>
             </ul>
             <p>
@@ -221,7 +221,7 @@ export default function PrivacyPolicyPage() {
                 </li>
             </ul>
             <p>
-                To exercise any of these, email <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>. We respond within one
+                To exercise any of these, email <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>. We respond within one
                 month.
             </p>
 
@@ -234,7 +234,7 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="children">8. Children</h2>
             <p>
-                Sheemu is not directed at children under 16, and we don&apos;t knowingly collect their data. If you believe a child
+                Solkey is not directed at children under 16, and we don&apos;t knowingly collect their data. If you believe a child
                 has created an account, contact us and we will delete it.
             </p>
 
@@ -246,9 +246,9 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="contact">10. Contact</h2>
             <p>
-                Karel Van De Winkel, trading as Sheemu · Capucienenlaan 23, 9300 Aalst, Belgium ·{' '}
-                <a href="mailto:privacy@sheemu.com">privacy@sheemu.com</a>. General questions:{' '}
-                <a href="mailto:support@sheemu.com">support@sheemu.com</a> or the <Link href="/contact">contact page</Link>.
+                Karel Van De Winkel, trading as Solkey · Capucienenlaan 23, 9300 Aalst, Belgium ·{' '}
+                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>. General questions:{' '}
+                <a href="mailto:support@solkey.io">support@solkey.io</a> or the <Link href="/contact">contact page</Link>.
             </p>
         </PublicPageShell>
     )
