@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 
+import { PlanPicker } from '@/components/PlanPicker'
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import type { BillingState } from '@/lib/api'
-import { type Billing, PLAN_TIERS, planById, planFeatures, planPrice, type PlanTier } from '@/lib/plans'
+import { type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
 import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
-import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
@@ -29,7 +29,6 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
     const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
     const [billing, setBilling] = useState<Billing>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
-    const currency = useDisplayCurrency()
 
     const startCheckout = useStartCheckout()
     const changePlan = useChangePlan()
@@ -139,83 +138,14 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                 }>
                 {phase === 'choose' && (
                     <div className="flex flex-col gap-4.5 pb-2">
-                        <div
-                            role="radiogroup"
-                            aria-label="Billing cadence"
-                            className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
-                            {(
-                                [
-                                    ['monthly', 'Monthly'],
-                                    ['yearly', 'Yearly · save 17%'],
-                                ] as const
-                            ).map(([k, label]) => {
-                                const active = billing === k
-                                return (
-                                    <button
-                                        key={k}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={active}
-                                        onClick={() => setBilling(k)}
-                                        className={[
-                                            'border-0 px-3.5 py-1.75 rounded-full cursor-pointer',
-                                            'font-label font-semibold text-[12px] leading-none',
-                                            'transition-colors duration-150 ease-sheemu',
-                                            active
-                                                ? 'bg-primary-container text-on-primary-container'
-                                                : 'bg-transparent text-on-surface-variant',
-                                        ].join(' ')}>
-                                        {label}
-                                    </button>
-                                )
-                            })}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {plans.map((p) => {
-                                const active = selected === p.id
-                                const isCurrent = p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
-                                return (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        onClick={() => setSelected(p.id)}
-                                        aria-pressed={active}
-                                        className={[
-                                            'relative text-left border-0 rounded-lg p-4 cursor-pointer',
-                                            'flex flex-col gap-2.5',
-                                            active
-                                                ? 'bg-primary-soft text-on-primary-soft'
-                                                : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
-                                        ].join(' ')}>
-                                        {isCurrent && (
-                                            <span className="absolute -top-2.5 right-3.5 bg-surface-container-high text-on-surface font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase px-2.5 py-1.5 rounded-full">
-                                                Current
-                                            </span>
-                                        )}
-                                        <div className="flex items-center gap-2.5">
-                                            <Icon name={p.icon} size={18} />
-                                            <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
-                                        </div>
-                                        <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
-                                            {planPrice(p, billing, currency)}
-                                        </span>
-                                        <ul className="list-none p-0 m-0 flex flex-col gap-1.5">
-                                            {planFeatures(p).map((f) => (
-                                                <li
-                                                    key={f}
-                                                    className="flex items-start gap-1.5 font-body font-normal text-[12px] leading-[1.4]">
-                                                    <span className="mt-px opacity-80">
-                                                        <Icon name="check" size={12} />
-                                                    </span>
-                                                    {f}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </button>
-                                )
-                            })}
-                        </div>
+                        <PlanPicker
+                            plans={plans}
+                            billing={billing}
+                            onBillingChange={setBilling}
+                            selected={selected}
+                            onSelect={setSelected}
+                            isCurrent={(p) => p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)}
+                        />
 
                         {onShowPacks && (
                             <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">

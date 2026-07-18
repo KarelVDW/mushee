@@ -31,6 +31,9 @@ interface RecordingMetaMessage {
   mimeType?: string | null;
 }
 
+/** The client stopped capturing and has flushed its last audio chunk. The
+ *  socket stays open: the server finalizes the pipeline, streams the trailing
+ *  notes as `score-update`s, then answers `recording-complete` and closes. */
 interface RecordingEndMessage {
   type: 'end';
 }
@@ -66,6 +69,9 @@ const KEEPALIVE_INTERVAL_MS = 30_000;
 
 /** Going-away close code (RFC 6455) — sent when the server shuts down. */
 const WS_GOING_AWAY = 1001;
+
+/** Normal-closure close code (RFC 6455) — a recording completed gracefully. */
+const WS_NORMAL_CLOSURE = 1000;
 
 @WebSocketGateway({ path: '/recording', maxPayload: MAX_PAYLOAD_BYTES })
 export class RecordingsGateway
@@ -116,7 +122,7 @@ export class RecordingsGateway
 
     client.on('message', (data: RawData, isBinary: boolean) => {
       if (session) {
-        this.handleMessage(session, data, isBinary);
+        this.handleMessage(client, session, data, isBinary);
       } else {
         pendingBytes += this.byteLength(data);
         if (pendingBytes > MAX_PENDING_BYTES) {
@@ -145,7 +151,7 @@ export class RecordingsGateway
         session = created;
 
         for (const msg of pending) {
-          this.handleMessage(created, msg.data, msg.isBinary);
+          this.handleMessage(client, created, msg.data, msg.isBinary);
         }
         pending.length = 0;
       })
@@ -325,6 +331,7 @@ export class RecordingsGateway
   }
 
   private handleMessage(
+    client: WebSocket,
     session: RecordingSession,
     data: RawData,
     isBinary: boolean,
@@ -353,7 +360,24 @@ export class RecordingsGateway
         mimeType: parsed.mimeType,
       });
     } else if (parsed.type === 'end') {
-      session.finalize();
+      // The client stopped capturing and is waiting for the take's tail.
+      // Close the session (releases the per-user slot right away, then runs
+      // the final pipeline pass, which streams the remaining notes out as
+      // `score-update`s), acknowledge with `recording-complete`, and only
+      // then close the socket — the client keeps it open until that ack so
+      // the last moments of the take aren't lost.
+      void session
+        .close()
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Session close on end failed: ${message}`);
+        })
+        .then(() => {
+          if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify({ type: 'recording-complete' }));
+          }
+          client.close(WS_NORMAL_CLOSURE, 'Recording complete');
+        });
     }
   }
 

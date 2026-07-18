@@ -61,6 +61,15 @@ test('note navigator and pitch nudges edit the score and autosave', async ({ pag
     expect(body.measures ?? body.allMeasures).toBeTruthy()
 })
 
+test('the remove-note button clears the selected note and autosaves', async ({ page }) => {
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
+        timeout: 8000,
+    })
+    await page.getByRole('button', { name: 'Remove note' }).tap()
+    const body = (await patch).postDataJSON() as Record<string, unknown>
+    expect(body.measures ?? body.allMeasures).toBeTruthy()
+})
+
 test('tapping a note on the staff moves the selection', async ({ page }) => {
     const svg = page.locator('.max-w-240 svg').first()
     await expect(svg).toBeVisible()

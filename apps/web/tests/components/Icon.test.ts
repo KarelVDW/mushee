@@ -18,6 +18,7 @@ const USED_NAMES = [
     'check',
     'circle',
     'cloud',
+    'delete',
     'download',
     'error',
     'external-link',

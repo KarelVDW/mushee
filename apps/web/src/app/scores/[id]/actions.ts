@@ -1,36 +1,46 @@
 import type { ReactNode } from 'react'
 
 import type { ClefType, DurationType } from '@/components/notation'
-import { type Note, Pitch, type Score } from '@/model'
+import { Note, Pitch, type Score } from '@/model'
 
 /**
- * A single editing operation on the score, performed relative to the active note.
+ * A single editing operation on the score, performed relative to the selection.
  *
  * Actions are pure intent: they delegate to the model's own mutators (`Score.replace`,
- * `setDuration`, `setClef`, …) and return the note that should become active afterward.
+ * `setDuration`, `setClef`, …) and return the note(s) to select afterward.
  * They never touch React, autosave, or playback — the {@link ScoreManipulator} owns that
  * orchestration. Listeners (keyboard handlers, control-bar buttons) live in the page and
  * dispatch into the manipulator, which runs the matching action here.
+ *
+ * An action comes in one of two shapes: `execute` acts on the active note alone (a
+ * multi-note selection collapses onto it), while `executeBulk` receives the whole
+ * selection and owns how it is applied. `arg` carries the action's parameter — a
+ * duration, accidental token, bpm, clef, key, or pitch; parameterless actions ignore it.
  */
-export interface ScoreAction {
+interface ScoreActionBase {
     id: string
     /** Human-readable name (tooltips / future command palette). */
     label: string
-    /**
-     * Apply the action and return the note to select next (the same note when the action
-     * leaves the selection in place). `arg` carries the action's parameter — a duration,
-     * accidental token, bpm, clef, key, or pitch; parameterless actions ignore it.
-     */
-    execute: (score: Score, selectedNote: Note, arg?: unknown) => Note
-    /**
-     * When true and multiple notes are selected, the action is applied to every selected note
-     * (each independently). Only safe for 1:1 edits that preserve a note's duration/position —
-     * pitch and per-note state toggles — never for duration-changing edits, which would ripple.
-     */
-    bulk?: boolean
     /** Optional button content, derived from the current score + selection. */
     display?: (props: { score: Score; selectedNote: Note }) => ReactNode
 }
+
+/** An action on the active note alone. Returns the note to select next. */
+interface SingleNoteAction extends ScoreActionBase {
+    execute: (score: Score, selectedNote: Note, arg?: unknown) => Note
+    executeBulk?: never
+}
+
+/**
+ * An action on the whole selection at once (a single selection arrives as a one-note
+ * array). Returns the notes to re-anchor the selection on, in score order.
+ */
+interface BulkAction extends ScoreActionBase {
+    execute?: never
+    executeBulk: (score: Score, selectedNotes: Note[], arg?: unknown) => Note[]
+}
+
+export type ScoreAction = SingleNoteAction | BulkAction
 
 // --- Navigation ---
 
@@ -51,34 +61,64 @@ export const MOVE_NEXT: ScoreAction = {
 export const RAISE_PITCH: ScoreAction = {
     id: 'raise-pitch',
     label: 'Raise pitch',
-    bulk: true,
-    execute: (score, note) => {
-        const raised = note.pitch?.raised()
-        const pitch = raised ? note.keySignature.spell(raised) : undefined
-        const [newNote] = score.replace([note], [note.clone({ pitch })])
-        return newNote
-    },
+    executeBulk: (score, notes) =>
+        score.replace(
+            notes,
+            notes.map((note) => {
+                const raised = note.pitch?.raised()
+                return note.clone({ pitch: raised ? note.keySignature.spell(raised) : undefined })
+            }),
+        ),
 }
 
 export const LOWER_PITCH: ScoreAction = {
     id: 'lower-pitch',
     label: 'Lower pitch',
-    bulk: true,
-    execute: (score, note) => {
-        const lowered = note.pitch?.lowered()
-        const pitch = lowered ? note.keySignature.spell(lowered) : undefined
-        const [newNote] = score.replace([note], [note.clone({ pitch })])
-        return newNote
-    },
+    executeBulk: (score, notes) =>
+        score.replace(
+            notes,
+            notes.map((note) => {
+                const lowered = note.pitch?.lowered()
+                return note.clone({ pitch: lowered ? note.keySignature.spell(lowered) : undefined })
+            }),
+        ),
 }
 
 export const CLEAR_PITCH: ScoreAction = {
     id: 'clear-pitch',
     label: 'Clear pitch',
-    bulk: true,
-    execute: (score, note) => {
-        const [newNote] = score.replace([note], [note.clone({ pitch: undefined })])
-        return newNote
+    executeBulk: (score, notes) =>
+        score.replace(
+            notes,
+            notes.map((note) => note.clone({ pitch: undefined })),
+        ),
+}
+
+/**
+ * Remove the notes: clear their pitches like {@link CLEAR_PITCH}, and restructure every
+ * measure that is left holding only rests back to its time signature's natural rhythm —
+ * the same fill a freshly added measure gets (four quarter rests in 4/4). The
+ * Backspace/delete gesture.
+ */
+export const REMOVE_NOTE: ScoreAction = {
+    id: 'remove-note',
+    label: 'Remove note',
+    executeBulk: (score, notes) => {
+        const cleared = score.replace(
+            notes,
+            notes.map((note) => note.clone({ pitch: undefined })),
+        )
+        // Capture positions first: a restructure below replaces (detaches) a measure's notes.
+        const positions = cleared.map((note) => ({ measure: note.measure, beat: note.measure.beatOffsetOf(note) }))
+        for (const measure of new Set(positions.map((p) => p.measure))) {
+            if (measure.notes.some((note) => !note.isRest)) continue
+            score.replace(
+                measure.notes,
+                measure.timeSignature.fillRests(0).map((d) => new Note({ duration: d })),
+            )
+        }
+        // Re-anchor each result at its beat — the cleared note itself, or the rest that replaced it.
+        return positions.map((p) => p.measure.noteAtBeat(p.beat)).filter((note): note is Note => note !== null)
     },
 }
 
@@ -96,11 +136,12 @@ export const CHANGE_PITCH: ScoreAction = {
 export const SET_ACCIDENTAL: ScoreAction = {
     id: 'set-accidental',
     label: 'Set accidental',
-    bulk: true,
-    execute: (score, note, arg) => {
+    executeBulk: (score, notes, arg) => {
         const accidental = arg as string | undefined
-        const [newNote] = score.replace([note], [note.clone({ pitch: note.pitch?.withAccidental(accidental) })])
-        return newNote
+        return score.replace(
+            notes,
+            notes.map((note) => note.clone({ pitch: note.pitch?.withAccidental(accidental) })),
+        )
     },
 }
 
@@ -128,23 +169,21 @@ export const TOGGLE_TUPLET: ScoreAction = {
 export const TOGGLE_TIE: ScoreAction = {
     id: 'toggle-tie',
     label: 'Toggle tie',
-    bulk: true,
-    execute: (score, note) => {
-        const tie = note.tiesForward ? undefined : ('start' as const)
-        const [newNote] = score.replace([note], [note.clone({ tie })])
-        return newNote
-    },
+    executeBulk: (score, notes) =>
+        score.replace(
+            notes,
+            notes.map((note) => note.clone({ tie: note.tiesForward ? undefined : ('start' as const) })),
+        ),
 }
 
 export const TOGGLE_REST: ScoreAction = {
     id: 'toggle-rest',
     label: 'Toggle rest',
-    bulk: true,
-    execute: (score, note) => {
-        const pitch = note.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined
-        const [newNote] = score.replace([note], [note.clone({ pitch })])
-        return newNote
-    },
+    executeBulk: (score, notes) =>
+        score.replace(
+            notes,
+            notes.map((note) => note.clone({ pitch: note.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined })),
+        ),
 }
 
 // --- Measure context (clef / key / tempo at the active note; selection stays put) ---
@@ -186,6 +225,7 @@ export const SCORE_ACTIONS: ScoreAction[] = [
     RAISE_PITCH,
     LOWER_PITCH,
     CLEAR_PITCH,
+    REMOVE_NOTE,
     CHANGE_PITCH,
     SET_ACCIDENTAL,
     SET_DURATION,

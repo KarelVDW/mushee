@@ -69,7 +69,19 @@ async function startServer(): Promise<() => Promise<void>> {
           timeSignature: parsed.timeSignature,
         });
       } else if (parsed.type === 'end') {
-        void pipeline.finalize();
+        // Mirror the gateway: flush the pipeline (streams the tail's notes as
+        // score-updates), ack with recording-complete, then close the socket.
+        void pipeline
+          .finalize()
+          .catch((err: unknown) => {
+            console.warn('[server] finalize failed:', err);
+          })
+          .then(() => {
+            if (client.readyState === client.OPEN) {
+              client.send(JSON.stringify({ type: 'recording-complete' }));
+            }
+            client.close(1000, 'Recording complete');
+          });
       }
     });
 
@@ -150,9 +162,19 @@ async function runClient(
   console.log('[client] sent all chunks, sending end');
   ws.send(JSON.stringify({ type: 'end' }));
 
-  await new Promise((r) => setTimeout(r, POST_END_WAIT_MS));
-  ws.close();
-  await new Promise((r) => setTimeout(r, 500));
+  // The server flushes the pipeline and closes after recording-complete;
+  // the timeout is only a safety net if it never does.
+  await new Promise<void>((res) => {
+    const fallback = setTimeout(() => {
+      console.warn('[client] no close after end; closing ourselves');
+      ws.close();
+      res();
+    }, POST_END_WAIT_MS);
+    ws.once('close', () => {
+      clearTimeout(fallback);
+      res();
+    });
+  });
   console.log(`[client] done. total score-updates: ${updatesReceived}`);
   return { measures: accumulated };
 }

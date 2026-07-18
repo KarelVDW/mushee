@@ -42,6 +42,8 @@ const RANGES: Record<string, FreqRange> = {
   cello: { minHz: 60, maxHz: 920 },
   contrabass: { minHz: 38, maxHz: 400 },
   erhu: { minHz: 270, maxHz: 1500 },
+  guitar: { minHz: 75, maxHz: 1400 },
+  'bass-guitar': { minHz: 38, maxHz: 450 },
   // Voice
   'voice-lead': { minHz: 75, maxHz: 1100 },
 };

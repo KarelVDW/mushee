@@ -18,6 +18,7 @@ import {
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
+    REMOVE_NOTE,
     SET_ACCIDENTAL,
     SET_CLEF,
     SET_DURATION,
@@ -113,11 +114,12 @@ export default function ScoreEditorPage() {
         [manipulator],
     )
 
-    const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle } = usePlayback({
-        score,
-        activeNote,
-        manipulator,
-    })
+    const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
+        usePlayback({
+            score,
+            activeNote,
+            manipulator,
+        })
 
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
@@ -140,9 +142,10 @@ export default function ScoreEditorPage() {
     })
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
-    // container) mounts after the score loads, attaching the listener and focusing for capture.
-    // Suspended while a dialog is up so its keystrokes can't edit the score; when the dialog
-    // closes, re-attaching also puts focus back on the editor.
+    // container) mounts — which happens only after the score AND its instruments load, hence
+    // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
+    // up so its keystrokes can't edit the score; when the dialog closes, re-attaching also puts
+    // focus back on the editor.
     const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null
     useEffect(() => {
         const el = containerRef.current
@@ -150,7 +153,7 @@ export default function ScoreEditorPage() {
         el.addEventListener('keydown', manipulator.handleKeyDown)
         el.focus()
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
-    }, [manipulator, score, dialogOpen])
+    }, [manipulator, score, dialogOpen, instrumentsReady])
 
     if (loadError) {
         const serverDown = loadError instanceof NetworkError
@@ -172,7 +175,10 @@ export default function ScoreEditorPage() {
         )
     }
 
-    if (!score) {
+    // Hold the loading screen until the playback samples (score instrument + metronome
+    // woodblock) are in memory: pressing record must click instantly, and a half-ready
+    // editor whose transport buttons play nothing reads as broken.
+    if (!score || !instrumentsReady) {
         return (
             <div className="min-h-dvh bg-surface flex items-center justify-center">
                 <div className="text-center flex flex-col items-center gap-2">
@@ -311,6 +317,7 @@ export default function ScoreEditorPage() {
                             onNext={() => manipulator.run(MOVE_NEXT)}
                             onPitchUp={() => manipulator.run(RAISE_PITCH)}
                             onPitchDown={() => manipulator.run(LOWER_PITCH)}
+                            onRemoveNote={() => manipulator.run(REMOVE_NOTE)}
                             disabled={!activeNote}
                         />
                     ) : undefined

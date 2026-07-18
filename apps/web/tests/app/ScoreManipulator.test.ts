@@ -1,7 +1,7 @@
 import { makeScore, pitched } from '@test/helpers'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RAISE_PITCH, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
@@ -120,6 +120,70 @@ describe('ScoreManipulator bulk actions', () => {
         manipulator.extendSelectionTo(notes[2])
         manipulator.run(SET_DURATION, 'h') // not bulk-flagged
         expect(manipulator.selectedNotes).toHaveLength(1)
+    })
+})
+
+describe('ScoreManipulator remove-note measure reset', () => {
+    /** A one-measure score holding two pitched half notes (C5 D5), attached to a manipulator. */
+    function setupHalves(): { manipulator: ScoreManipulator; notes: Note[] } {
+        const score = makeScore(1)
+        const measure = score.firstMeasure
+        if (!measure) throw new Error('expected a measure')
+        const notes = score.replace(measure.notes, [pitched('C', 5, 'h'), pitched('D', 5, 'h')])
+        const manipulator = new ScoreManipulator()
+        manipulator.attach(score, () => undefined)
+        return { manipulator, notes }
+    }
+
+    it('resets a measure to the default rhythm when removing leaves it holding only rests', () => {
+        const { manipulator, notes } = setupHalves()
+        manipulator.select(notes[1])
+        manipulator.run(REMOVE_NOTE) // leaves [rest h, C5 h] — rhythm kept
+        manipulator.select(allNotes(manipulator)[0])
+        manipulator.run(REMOVE_NOTE) // last pitch removed — rhythm resets
+        const measure = manipulator.score?.firstMeasure
+        expect(measure?.notes.map((n) => n.duration.type)).toEqual(['q', 'q', 'q', 'q'])
+        expect(measure?.notes.every((n) => n.isRest)).toBe(true)
+        // The selection lands on the rest at the removed note's beat.
+        expect(manipulator.selectedNote).toBe(measure?.notes[0])
+    })
+
+    it('keeps the rhythm when a pitched note remains in the measure', () => {
+        const { manipulator, notes } = setupHalves()
+        manipulator.select(notes[1])
+        manipulator.run(REMOVE_NOTE)
+        const measure = manipulator.score?.firstMeasure
+        expect(measure?.notes.map((n) => n.duration.type)).toEqual(['h', 'h'])
+        expect(measure?.notes[0]?.pitch?.name).toBe('C')
+        expect(measure?.notes[1]?.isRest).toBe(true)
+    })
+
+    it('removes a whole selected run and re-anchors the selection on the reset rests', () => {
+        const { manipulator, notes } = setupHalves()
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1]) // both halves — the removal empties the measure
+        manipulator.run(REMOVE_NOTE)
+        const measure = manipulator.score?.firstMeasure
+        expect(measure?.notes.map((n) => n.duration.type)).toEqual(['q', 'q', 'q', 'q'])
+        expect(measure?.notes.every((n) => n.isRest)).toBe(true)
+        // The selection spans the rests at the removed notes' beats (0 through 2).
+        expect(manipulator.selectedNotes).toEqual(measure?.notes.slice(0, 3))
+    })
+
+    it('resets every emptied measure of a selection spanning multiple measures', () => {
+        const score = makeScore(2)
+        const [m1, m2] = score.measures
+        score.replace(m1.notes, [pitched('C', 5, 'h'), pitched('D', 5, 'h')])
+        score.replace(m2.notes, [pitched('E', 5, 'h'), pitched('F', 5, 'h')])
+        const manipulator = new ScoreManipulator()
+        manipulator.attach(score, () => undefined)
+        manipulator.select(m1.notes[0])
+        manipulator.extendSelectionTo(m2.notes[1])
+        manipulator.run(REMOVE_NOTE)
+        expect(m1.notes.map((n) => n.duration.type)).toEqual(['q', 'q', 'q', 'q'])
+        expect(m2.notes.map((n) => n.duration.type)).toEqual(['q', 'q', 'q', 'q'])
+        // Beat 0 of the first measure through beat 2 of the second.
+        expect(manipulator.selectedNotes).toEqual([...m1.notes, ...m2.notes.slice(0, 3)])
     })
 })
 

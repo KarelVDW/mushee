@@ -181,7 +181,18 @@ export function useRecording({
             return
         }
 
-        track('recording_started')
+        // Carry what the browser actually honored for the mic: the constraints
+        // request raw audio, but devices that force voice processing back on are
+        // the ones that switch into a call-style route and duck the metronome
+        // (Android communication mode, iOS play-and-record) — this measures how
+        // common that is before we engineer around it further.
+        const mic = transport.micSettings
+        track('recording_started', {
+            micEchoCancellation: mic?.echoCancellation ?? null,
+            micNoiseSuppression: mic?.noiseSuppression ?? null,
+            micAutoGainControl: mic?.autoGainControl ?? null,
+            micSampleRate: mic?.sampleRate ?? null,
+        })
     }, [manipulator, score, activeNote, stopAll, saveToApi, id, router, waveformStore, transportRef, playbackCursorRef])
 
     return { waveformStore, recordingState, recordingHalt, setRecordingHalt, handleRecordToggle }

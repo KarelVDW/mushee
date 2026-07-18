@@ -96,6 +96,15 @@ export function identifyUser(user: { id: string; email?: string; name?: string }
     posthog.identify(user.id)
 }
 
+/** Set person properties on the account profile — consent-gated like
+ *  identifyUser, and categorical values only, never free text or direct
+ *  identifiers: the profile must stay pseudonymous. Without consent the
+ *  same facts still travel as anonymous event properties. */
+export function setUserProperties(properties: Record<string, unknown>): void {
+    if (!initialized || !hasAnalyticsConsent()) return
+    posthog.setPersonProperties(properties)
+}
+
 /** On sign-out: unlink the device from the account. */
 export function resetAnalyticsIdentity(): void {
     currentUserId = null

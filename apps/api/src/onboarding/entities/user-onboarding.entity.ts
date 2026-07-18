@@ -15,6 +15,9 @@ export class UserOnboarding {
   @Column({ type: 'varchar', nullable: true })
   background: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  goal: string | null;
+
   @Column({ type: 'varchar', array: true, nullable: true })
   instruments: string[] | null;
 

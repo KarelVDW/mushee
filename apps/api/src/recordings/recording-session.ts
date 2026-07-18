@@ -92,7 +92,7 @@ export class RecordingSession {
     this.pipeline.appendChunk(buffer);
   }
 
-  finalize(): void {
+  private finalize(): void {
     this.stopMeter();
     void this.pipeline.finalize().catch((err: unknown) => {
       this.logger.warn(`Pipeline finalize failed: ${describeError(err)}`);

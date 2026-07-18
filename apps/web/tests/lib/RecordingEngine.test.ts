@@ -108,9 +108,9 @@ function analyser(): FakeAnalyser {
 }
 
 // --- MediaStream stub ------------------------------------------------------
-function fakeStream() {
-    const track = { stop: vi.fn() }
-    return { getTracks: () => [track], track }
+function fakeStream(settings: MediaTrackSettings = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }) {
+    const track = { stop: vi.fn(), getSettings: vi.fn(() => settings) }
+    return { getTracks: () => [track], getAudioTracks: () => [track], track }
 }
 
 function fakePlayer(currentTime = 0) {
@@ -200,7 +200,9 @@ describe('RecordingEngine', () => {
 
         await engine.start(options)
 
-        expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
+        expect(getUserMedia).toHaveBeenCalledWith({
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        })
         expect(engine.state).toBe('countoff')
         expect(onStateChange).toHaveBeenCalledWith('countoff')
         // Cursor painted red and moved to the count-off measure.
@@ -461,6 +463,44 @@ describe('RecordingEngine', () => {
         expect(socket().sent).toHaveLength(1)
     })
 
+    it('pulses the cursor opacity on the beat during countoff and clears it once recording starts', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, cursorEl } = makeOptions()
+        await engine.start(options)
+
+        // Countoff, on a click (t=0 is the first): full opacity.
+        engine.tick()
+        expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(1, 3)
+
+        // Countoff, half a beat later (90bpm => beat = 2/3s): decayed toward the trough.
+        raw.currentTime = 1 / 3
+        engine.tick()
+        expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(0.431, 3)
+
+        // Recording (past the 2.667s countoff): the moving cursor takes over, no more pulse.
+        raw.currentTime = 3
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+        raw.currentTime = 3.1
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
+    it('clears the cursor pulse when a take is stopped during countoff', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, cursorEl } = makeOptions()
+        await engine.start(options)
+
+        raw.currentTime = 1 / 3
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(true)
+
+        engine.stop()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
     it('stop() tears down recorder, stream, socket and analyser and returns to idle', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
@@ -479,13 +519,70 @@ describe('RecordingEngine', () => {
 
         expect(lastRecorder?.stop).toHaveBeenCalled()
         expect(stream.track.stop).toHaveBeenCalled()
-        // 'end' frame sent then socket closed.
+        // 'end' frame sent, but the socket stays open: the server is still
+        // flushing the take's tail and closes after recording-complete.
         expect(socket().sent.some((s) => typeof s === 'string' && s.includes('"end"'))).toBe(true)
-        expect(lastSocket?.close).toHaveBeenCalled()
+        expect(lastSocket?.close).not.toHaveBeenCalled()
         expect(cursorEl.getAttribute('display')).toBe('none')
         expect(cursorEl.getAttribute('fill')).toBe('#3b82f6')
         expect(engine.state).toBe('idle')
         expect(onStateChange).toHaveBeenLastCalledWith('idle')
+
+        // The server's flush ack arrives => now the socket is closed.
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-complete' }) })
+        expect(lastSocket?.close).toHaveBeenCalled()
+    })
+
+    it('applies score-updates that arrive after stop() while the server drains the take', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const onConnectionLost = vi.fn()
+        const { options, onScoreUpdate } = makeOptions()
+        options.onConnectionLost = onConnectionLost
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+        recorder().state = 'recording'
+
+        engine.stop()
+
+        // The final transcription pass lands after the user pressed stop; its
+        // notes must still reach the score.
+        const measures = { 2: { last: 'notes' } }
+        socket().fire('message', { data: JSON.stringify({ type: 'score-update', measures }) })
+        expect(onScoreUpdate).toHaveBeenCalledWith({ measures })
+
+        // The server closing after the drain is the expected ending, not a
+        // lost connection.
+        socket().fire('close')
+        expect(onConnectionLost).not.toHaveBeenCalled()
+    })
+
+    it('closes the socket itself when the server never acknowledges the end frame', async () => {
+        vi.useFakeTimers()
+        try {
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player)
+            const { options } = makeOptions()
+            await engine.start(options)
+            raw.currentTime = 3
+            engine.tick()
+            socket().fire('open')
+            await Promise.resolve()
+            recorder().state = 'recording'
+
+            engine.stop()
+            expect(socket().close).not.toHaveBeenCalled()
+
+            // No recording-complete and no server close => the drain timeout
+            // gives up and closes the socket from our side.
+            vi.advanceTimersByTime(10_000)
+            expect(socket().close).toHaveBeenCalled()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('stop() tolerates a recorder whose stop() throws', async () => {
@@ -756,6 +853,88 @@ describe('RecordingEngine', () => {
         raw.currentTime = 1.1
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
+    })
+
+    it('exposes the granted mic settings during a take and clears them on stop', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        // A device that forced voice processing back on despite the constraints.
+        getUserMedia.mockResolvedValueOnce(fakeStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: false }))
+
+        expect(engine.micSettings).toBeNull()
+        await engine.start(options)
+        expect(engine.micSettings).toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
+        engine.stop()
+        expect(engine.micSettings).toBeNull()
+    })
+
+    it('tolerates a stream without audio tracks (micSettings stays null)', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const stream = fakeStream()
+        getUserMedia.mockResolvedValueOnce({ ...stream, getAudioTracks: () => [] })
+
+        await engine.start(options)
+        expect(engine.micSettings).toBeNull()
+        expect(engine.state).toBe('countoff')
+    })
+
+    it('declares play-and-record on the audio session before the mic opens and restores auto on stop', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        // Capture the session type at the moment the prompt would appear: iOS
+        // must know the intent before capture starts, not after.
+        let typeWhenPrompted: string | null = null
+        const promptingGetUserMedia = vi.fn(() => {
+            typeWhenPrompted = audioSession.type
+            return Promise.resolve(fakeStream())
+        })
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: promptingGetUserMedia }, audioSession })
+
+        await engine.start(options)
+        expect(typeWhenPrompted).toBe('play-and-record')
+        expect(audioSession.type).toBe('play-and-record')
+
+        engine.stop()
+        expect(audioSession.type).toBe('auto')
+    })
+
+    it('restores the audio session when getUserMedia rejects', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'))
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia }, audioSession })
+
+        await expect(engine.start(options)).rejects.toThrow()
+        expect(audioSession.type).toBe('auto')
+    })
+
+    it('restores the audio session when stop() races the permission prompt', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        let resolvePrompt: (stream: unknown) => void = () => {}
+        const pendingGetUserMedia = vi.fn(() => new Promise((resolve) => (resolvePrompt = resolve)))
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: pendingGetUserMedia }, audioSession })
+
+        const started = engine.start(options)
+        expect(audioSession.type).toBe('play-and-record')
+        engine.stop() // user bails while the prompt is open
+        expect(audioSession.type).toBe('auto')
+        const stream = fakeStream()
+        resolvePrompt(stream)
+        await started
+        // The raced start released the stream and left the session restored.
+        expect(stream.track.stop).toHaveBeenCalled()
+        expect(audioSession.type).toBe('auto')
+        expect(engine.micSettings).toBeNull()
     })
 
     it('start() throws RecordingUnsupportedError when mediaDevices is unavailable', async () => {

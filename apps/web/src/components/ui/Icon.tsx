@@ -111,6 +111,13 @@ const GLYPHS: Record<string, ReactElement> = {
             <path d="M5 21h14" />
         </>
     ),
+    delete: (
+        <>
+            <path d="M9.5 5.5H21v13H9.5L3 12l6.5-6.5Z" />
+            <path d="m11.5 9.5 5 5" />
+            <path d="m16.5 9.5-5 5" />
+        </>
+    ),
     download: (
         <>
             <path d="M12 3.5V15" />
