@@ -2,10 +2,25 @@
 # Google-managed certificate. Needs a reserved global static IP named
 # `mushee-api-ip` (see README.md) and the api.solkey.io A record pointing at
 # it — the ManagedCertificate only provisions once DNS resolves.
+#
+# Rebrand transition (2026-07-18): two certs, one per domain. A cert's
+# domains cannot be changed in place — the controller deadlocks trying to
+# delete an SslCertificate the LB proxy still uses (this took staging down).
+# `api-cert` keeps serving api.sheemu.com (Polar webhooks, old email links)
+# while `api-cert-solkey` provisions; drop the sheemu cert + host rule only
+# once everything external points at solkey.io.
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
   name: api-cert
+spec:
+  domains:
+    - api.sheemu.com
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: api-cert-solkey
 spec:
   domains:
     - api.solkey.io
@@ -44,11 +59,23 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: gce
     kubernetes.io/ingress.global-static-ip-name: mushee-api-ip
-    networking.gke.io/managed-certificates: api-cert
+    networking.gke.io/managed-certificates: api-cert,api-cert-solkey
     networking.gke.io/v1beta1.FrontendConfig: api-frontend
 spec:
   rules:
     - host: api.solkey.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80
+    # Transition: keep the old domain routable until Polar's webhook target
+    # and other external references are moved to api.solkey.io.
+    - host: api.sheemu.com
       http:
         paths:
           - path: /
