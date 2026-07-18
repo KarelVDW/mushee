@@ -1,12 +1,12 @@
 # Production overlay — GCP provisioning
 
 GCP project: **sheemu-prod** (number 940791749471, billing 019C30-EAE17A-A82095,
-account info@sheemu.com). Region: **europe-west1** (EU, matching the EU-hosted
+account info@solkey.io). Region: **europe-west1** (EU, matching the EU-hosted
 PostHog/DB posture). Web app deploys separately on Vercel — this overlay covers
 the API + the two inference services only.
 
 Provisioned 2026-07-09: Artifact Registry repo `mushee`, global static IP
-`mushee-api-ip` = **34.117.52.77** (point the `api.sheemu.com` A record at it),
+`mushee-api-ip` = **34.117.52.77** (point the `api.solkey.io` A record at it),
 versioned bucket `gs://sheemu-prod-storage`, and the enabled APIs (container,
 sqladmin, artifactregistry, compute, servicenetworking, iamcredentials,
 storage). The remaining one-time commands:
@@ -77,7 +77,7 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=POSTGRES_URL='postgres://mushee:<password>@<private-ip>:5432/mushee' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='info@sheemu.com'
+  --from-literal=ADMIN_EMAILS='info@solkey.io'
 # Polar (add before enabling checkout; webhook path works without checkout):
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, POLAR_SERVER=production,
 #   POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY},
@@ -92,4 +92,4 @@ tags, and applies this overlay (`.github/workflows/deploy.yml`); pushes to
 resources above → create the secret → run the Deploy workflow → wait for the
 ManagedCertificate to become Active (`kubectl describe managedcertificate
 api-cert -n mushee`, takes ~15–60 min after DNS resolves) → smoke-test one
-real signup → login on https://sheemu.com.
+real signup → login on https://solkey.io.

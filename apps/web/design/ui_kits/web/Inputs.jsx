@@ -3,7 +3,7 @@ let __fieldIdCounter = 0
 function useFieldId() {
     // Stable per-mount id without React 18.useId (which trips Babel in some setups).
     const ref = React.useRef(null)
-    if (!ref.current) ref.current = `sheemu-field-${++__fieldIdCounter}`
+    if (!ref.current) ref.current = `solkey-field-${++__fieldIdCounter}`
     return ref.current
 }
 

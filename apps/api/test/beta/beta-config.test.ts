@@ -27,8 +27,8 @@ describe('beta switches', () => {
   });
 
   it('parses ADMIN_EMAILS case-insensitively', () => {
-    process.env.ADMIN_EMAILS = ' Karel@Example.com, admin@sheemu.com ,,';
-    expect(adminEmails()).toEqual(['karel@example.com', 'admin@sheemu.com']);
+    process.env.ADMIN_EMAILS = ' Karel@Example.com, admin@solkey.io ,,';
+    expect(adminEmails()).toEqual(['karel@example.com', 'admin@solkey.io']);
     expect(isAdminEmail('KAREL@example.COM')).toBe(true);
     expect(isAdminEmail('someone@else.com')).toBe(false);
   });

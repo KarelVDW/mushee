@@ -25,9 +25,9 @@ export function PublicPageShell({
                     </Link>
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-1.5 font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline hover:text-on-surface transition-colors duration-150 ease-sheemu">
+                        className="inline-flex items-center gap-1.5 font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline hover:text-on-surface transition-colors duration-150 ease-solkey">
                         <Icon name="arrow-left" size={14} />
-                        Back to Sheemu
+                        Back to Solkey
                     </Link>
                 </div>
             </nav>

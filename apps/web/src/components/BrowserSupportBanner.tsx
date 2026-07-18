@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { Icon } from '@/components/ui'
 
-const DISMISS_KEY = 'sheemu:unsupported-browser-dismissed'
+const DISMISS_KEY = 'solkey:unsupported-browser-dismissed'
 
 /**
  * Whether the browser meets the app's CSS floor. Feature-detected, not
@@ -61,7 +61,7 @@ export function BrowserSupportBanner() {
                 <Icon name="error" size={16} />
             </span>
             <p className="flex-1 font-body font-normal text-[14px] leading-normal text-on-surface m-0">
-                This browser is older than Sheemu supports, so pages may not display correctly. For the full experience — including
+                This browser is older than Solkey supports, so pages may not display correctly. For the full experience — including
                 recording — use a recent Chrome, Edge, Firefox, or Safari.
             </p>
             <button

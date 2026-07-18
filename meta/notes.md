@@ -66,19 +66,24 @@ bug-fix logs were dropped; what remains is still-true reference material.
 ### Domain / legal identity (real since 2026-07-10)
 
 - Legal identity on `/privacy`, `/terms`, `/contact`: **Karel Van De Winkel,
-  trading as Sheemu** (Belgian sole proprietorship, enterprise no.
+  trading as Solkey** (Belgian sole proprietorship, enterprise no.
   1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium. Not VAT-registered
   yet — revisit the pages (and Polar tax settings) if that changes.
   Governing law: Belgium. Lawyer review of both documents still outstanding.
-- Canonical domain is **sheemu.com** (apex; www 308-redirects to it — the
-  Vercel primary domain must stay the apex or CORS breaks). Mail from-address
-  `no-reply@sheemu.com`, domain-authenticated in SendGrid. Real mailbox is
-  `info@sheemu.com` (Google Workspace); `support@`/`privacy@`/`hello@`/
+  *Rebranded Sheemu → Solkey on 2026-07-18; KBO/CBE commercial-name update
+  still pending.*
+- Canonical domain is **solkey.io** since the 2026-07-18 rebrand (apex; www
+  308-redirects to it — the Vercel primary domain must stay the apex or CORS
+  breaks). sheemu.com should 301 to solkey.io during the transition. Mail
+  from-address `no-reply@solkey.io` — solkey.io still needs SendGrid domain
+  authentication (sheemu.com was the authenticated domain). Real mailbox is
+  `info@sheemu.com` (Google Workspace login; add solkey.io as secondary
+  domain so `info@solkey.io` works); `support@`/`privacy@`/`hello@`/
   `legal@` should be aliases of it (Admin console → user → Email aliases).
 
 ### Deploy-time musts (code is ready, config is yours)
 
-1. Topology `sheemu.com` + `api.sheemu.com`; `COOKIE_DOMAIN=.sheemu.com`. The
+1. Topology `solkey.io` + `api.solkey.io`; `COOKIE_DOMAIN=.solkey.io`. The
    proxy accepts both `__Secure-` and plain cookie names, but the cookie must
    *reach* it — same parent domain required. Smoke-test one real HTTPS login first.
 2. `POSTGRES_SSL=require` (or `verify` + `POSTGRES_SSL_CA`) against managed

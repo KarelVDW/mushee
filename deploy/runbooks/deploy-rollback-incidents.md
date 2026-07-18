@@ -3,9 +3,9 @@
 ## 1. The normal release
 
 Deploys are branch-driven (`deploy.yml`): a push to `staging` deploys the
-staging overlay (api.staging.sheemu.com, ns `mushee-staging`), a push to
+staging overlay (api.staging.solkey.io, ns `mushee-staging`), a push to
 `production` deploys production. Vercel mirrors the same branches:
-`staging` → staging.sheemu.com, `production` → sheemu.com. `master` never
+`staging` → staging.solkey.io, `production` → solkey.io. `master` never
 deploys anywhere.
 
 1. Merge/push to `master` — CI (`ci.yml`) must be green (lint, type-check,
@@ -13,7 +13,7 @@ deploys anywhere.
 2. Promote to staging: `git push origin master:staging`. The Deploy workflow
    builds all three images SHA-tagged, applies `overlays/staging`, and waits
    for the rollouts; Vercel builds the web in parallel. Smoke-test on
-   https://staging.sheemu.com.
+   https://staging.solkey.io.
 3. Promote to production: `git push origin staging:production` (the exact
    commit you verified — never rebuild from a moved master).
 4. The web deploys **separately** on Vercel from the same branch push. There
@@ -23,7 +23,7 @@ deploys anywhere.
    finishes.
 5. Post-deploy check, 60 seconds:
    ```sh
-   curl -s https://api.sheemu.com/health
+   curl -s https://api.solkey.io/health
    kubectl get pods -n mushee
    kubectl logs -n mushee -l app=api --tail=200 | grep -iv '"url":"/health"' | tail -20
    ```
@@ -87,8 +87,8 @@ kubectl logs -n mushee -l app=api --tail=500 | grep -iv '"url":"/health"' | tail
 | Killed with exit 137, empty logs | `describe pod` Last State | Boot exceeded the probe window (migrations + cold node) — the startupProbe (36×5 s) covers 3 min; if a migration legitimately needs longer, raise it. Or OOM: `describe` says `OOMKilled` → long recordings, see memory notes in `meta/notes.md` §4. |
 | `/health` 503 | logs: `database unreachable` | DB down/unreachable. `kubectl run -n mushee dbtest --rm -i --image=busybox --restart=Never -- nc -zv -w 5 10.56.0.3 5432`. Also: `/health` failing makes **liveness** fail → pods restart in a loop while the DB is down; they stabilize when it returns. |
 | Whole API down but pods Ready | `kubectl describe ingress api -n mushee`; cert status | LB/NEG desync or cert expiry event: `kubectl describe managedcertificate api-cert -n mushee` (should be `Active`; renewal is automatic **as long as the DNS A-record keeps pointing at 34.117.52.77**). |
-| Browser: CORS errors, signup hangs | which origin is the page on? | The site is being served from a non-canonical host. `sheemu.com` must be Vercel's primary domain (www 308→apex). Bit us on launch day. |
-| Everyone bounced to /login | — | Session-cookie problem: `COOKIE_DOMAIN` missing/wrong (must be `.sheemu.com`), or `BETTER_AUTH_SECRET` changed (that logs everyone out once — expected after rotation). |
+| Browser: CORS errors, signup hangs | which origin is the page on? | The site is being served from a non-canonical host. `solkey.io` must be Vercel's primary domain (www 308→apex). Bit us on launch day. |
+| Everyone bounced to /login | — | Session-cookie problem: `COOKIE_DOMAIN` missing/wrong (must be `.solkey.io`), or `BETTER_AUTH_SECRET` changed (that logs everyone out once — expected after rotation). |
 | OTP mails not arriving | API logs around signup; SendGrid dashboard → Activity | SendGrid key revoked/rotated without updating the secret, or sender-domain auth broken by a DNS change. Signup itself survives (flow proceeds to onboarding, which can re-send). |
 | Recording connects then no notes appear | inference pods Ready? their logs? | Inference outage is deliberately **silent** for the recorder (audio still archives, credits still burn — known product gap, `recording-pipeline.ts` swallows forward-pass errors). Fix inference pods, not the API. |
 | Recording sockets drop at exactly N s | — | LB timeout: BackendConfig `timeoutSec: 7200` bounds a WS connection. If takes legitimately exceed it, raise it together with `RECORDING_MAX_SECONDS`. |

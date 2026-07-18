@@ -126,7 +126,7 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                                     'flex flex-col items-start gap-1 w-56 px-3 py-2.5 rounded-md border-0 text-left',
                                     'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                                     'bg-surface-container-low hover:bg-surface-container',
-                                    'transition-colors duration-150 ease-sheemu',
+                                    'transition-colors duration-150 ease-solkey',
                                 ].join(' ')}>
                                 <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
                                     {busy === format ? `Exporting ${label}…` : label}

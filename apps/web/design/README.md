@@ -1,8 +1,8 @@
-# Sheemu Design System
+# Solkey Design System
 
-> **A score editor for the rest of us.** Sheemu is a music score editor — young, fast, and dynamic. The interface is a quiet white-on-white workspace punctuated by two accent colors. Type is calm and editorial. The voice is warm, plain, and human — Sheemu talks to musicians like another musician, not like a SaaS product.
+> **A score editor for the rest of us.** Solkey is a music score editor — young, fast, and dynamic. The interface is a quiet white-on-white workspace punctuated by two accent colors. Type is calm and editorial. The voice is warm, plain, and human — Solkey talks to musicians like another musician, not like a SaaS product.
 
-This system encodes the visual + content vocabulary used to design and build for Sheemu. Use it for production code, throwaway prototypes, marketing pages, decks — anywhere Sheemu needs to feel like itself.
+This system encodes the visual + content vocabulary used to design and build for Solkey. Use it for production code, throwaway prototypes, marketing pages, decks — anywhere Solkey needs to feel like itself.
 
 ---
 
@@ -24,11 +24,11 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | File / Folder         | Purpose                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
 | `README.md`           | This file — the master guide.                                                                           |
-| `colors_and_type.css` | All CSS variables (colors, type, radii, shadows, motion). Drop into any HTML to inherit Sheemu styling. |
+| `colors_and_type.css` | All CSS variables (colors, type, radii, shadows, motion). Drop into any HTML to inherit Solkey styling. |
 | `SKILL.md`            | Agent skill manifest — read first when invoked.                                                         |
 | `assets/`             | Logo wordmark, favicon, copied SVGs.                                                                    |
 | `preview/`            | Card specimens that populate the Design System tab.                                                     |
-| `ui_kits/web/`        | High-fidelity React/JSX UI kit recreating the Sheemu app.                                               |
+| `ui_kits/web/`        | High-fidelity React/JSX UI kit recreating the Solkey app.                                               |
 | `fonts/`              | Notes on font sourcing — see Caveats.                                                                   |
 
 ---
@@ -41,7 +41,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 ## Content fundamentals
 
-**Tone:** plain, warm, confident, slightly editorial. Sheemu writes the way a thoughtful musician talks to another musician. No hype. No jargon. No SaaS clichés ("supercharge your workflow", "AI-powered", "the future of…"). When in doubt, choose the simpler word and the shorter sentence.
+**Tone:** plain, warm, confident, slightly editorial. Solkey writes the way a thoughtful musician talks to another musician. No hype. No jargon. No SaaS clichés ("supercharge your workflow", "AI-powered", "the future of…"). When in doubt, choose the simpler word and the shorter sentence.
 
 **Casing:**
 
@@ -53,12 +53,12 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 **Voice — first vs second person:**
 
 - **You.** "Compose your first one — it'll show up on this shelf." "Pick up where you left off."
-- **We** is fine in moderation when Sheemu is making a promise: "Your music belongs to you, not us."
+- **We** is fine in moderation when Solkey is making a promise: "Your music belongs to you, not us."
 - Avoid invented in-group nicknames ("operative", "maverick", "rebel"). Just call the user _you_.
 
-**Specific examples (canonical Sheemu copy):**
+**Specific examples (canonical Solkey copy):**
 
-| Surface              | Sheemu copy                                                                                                                        |
+| Surface              | Solkey copy                                                                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Email field label    | `Email`                                                                                                                            |
 | Password field label | `Password`                                                                                                                         |
@@ -70,9 +70,9 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Library page title   | `Your scores`                                                                                                                      |
 | Empty state          | `No scores yet. Compose your first one.`                                                                                           |
 | Hero headline        | `The fastest way to get a melody on the page.`                                                                                     |
-| Hero sub             | `Hum it, sing it, or play it — Sheemu listens and writes clean sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
+| Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
 | Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                                                                |
-| Footer               | `© 2026 Sheemu. Made for composers.`                                                                                               |
+| Footer               | `© 2026 Solkey. Made for composers.`                                                                                               |
 
 **Punctuation & tics:**
 
@@ -80,7 +80,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 - Sentences end with periods, including in body copy and inside cards. Short button labels ("Create account", "Sign in") do not.
 - Numbers are bare and lowercase units: `120 bpm`, `4/4`, `8 bars`. Never spelled out.
 
-**Vibe check:** if a draft sounds like a sales pitch, a fighter-jet HUD, or a recruiter LinkedIn post — push it back toward plain. If it sounds like the way you'd describe Sheemu to a friend over coffee, you're close.
+**Vibe check:** if a draft sounds like a sales pitch, a fighter-jet HUD, or a recruiter LinkedIn post — push it back toward plain. If it sounds like the way you'd describe Solkey to a friend over coffee, you're close.
 
 ---
 
@@ -134,7 +134,7 @@ Four families, each with a clear job.
 | **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_on the page._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
 | **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.                                                                   |
 
-The wordmark is always **`Sheemu`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
+The wordmark is always **`Solkey`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
 
 Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline-lg / md`, `title-lg`, `body-lg / md / sm`, `label-lg / md`, `mono-md`.
 
@@ -221,28 +221,28 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 ### Cards
 
-A Sheemu card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`**. _No border._ On hover, a list-style card may receive a left-side cyan accent stripe slide-in. Padding: `24–28px`. Cards never sit on each other directly — always with `0.8rem` (12.8px) of gap.
+A Solkey card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`**. _No border._ On hover, a list-style card may receive a left-side cyan accent stripe slide-in. Padding: `24–28px`. Cards never sit on each other directly — always with `0.8rem` (12.8px) of gap.
 
 ---
 
 ## Iconography
 
-**Primary system: the custom Sheemu glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `apps/web/src/components/ui/Icon.tsx` (used via `<Icon name="…" size={…}>`), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
+**Primary system: the custom Solkey glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `apps/web/src/components/ui/Icon.tsx` (used via `<Icon name="…" size={…}>`), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
 
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`chevron-*`, `menu`, `more-horizontal`, `settings`), editing (`copy`, `scissors`, `undo`, `redo`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`, `metronome`), files & sharing (`upload`, `file-music`, `folder`, `printer`, `share-2`, `send`), social (`user-plus`, `globe`, `heart`, `star`, `bookmark`), status (`alert-triangle`, `check-circle`, `help-circle`, `loader`, `zap`), billing (`credit-card`, `crown`, `gift`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
 **Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`apps/web/src/components/notation/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from the app if you actually need to render notation.
 
-**No emoji.** Sheemu's voice is plain, but it's not casual in that way.
+**No emoji.** Solkey's voice is plain, but it's not casual in that way.
 
 **No unicode glyph icons** for chrome — except the music accidental characters `♮ ♭ ♯` in the score tool dock (where they're effectively notation, not iconography).
 
-**Logos / brand marks.** Sheemu has no graphic logo. The wordmark **is** the brand: `Sheemu` set in Space Grotesk 700 italic, tracked `-0.04em`. Always render it as live text. An SVG fallback lives at `assets/sheemu-wordmark.svg` for places that demand an image.
+**Logos / brand marks.** Solkey has no graphic logo. The wordmark **is** the brand: `Solkey` set in Space Grotesk 700 italic, tracked `-0.04em`. Always render it as live text. An SVG fallback lives at `assets/solkey-wordmark.svg` for places that demand an image.
 
 ---
 
 ## Caveats
 
 - **Fonts are CDN-only.** The codebase uses `next/font/google` to fetch Space Grotesk, Manrope, Newsreader, and Geist Mono at build time; no `.woff2` files are committed. The design system imports them via Google Fonts `@import`, which serves the same files. If you need an offline / paid-license version, source `.woff2`s yourself and drop them in `fonts/` with a matching `@font-face` block.
-- **Production has a full marketing surface.** The landing + pricing page ships in the app (`apps/web/src/app/LandingPage.tsx`); the UI kit's Landing screen approximates it but is not a 1:1 recreation. The Onboarding kit screens remain Sheemu-shaped extensions with no production counterpart. There is still no native mobile app — phones get the responsive web app (see `../DESIGN.md` §4b).
+- **Production has a full marketing surface.** The landing + pricing page ships in the app (`apps/web/src/app/LandingPage.tsx`); the UI kit's Landing screen approximates it but is not a 1:1 recreation. The Onboarding kit screens remain Solkey-shaped extensions with no production counterpart. There is still no native mobile app — phones get the responsive web app (see `../DESIGN.md` §4b).
 - **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the app.

@@ -38,7 +38,7 @@ function CookieBanner() {
             <DialogScrim onDismiss={() => setSettingsOpen(false)}>
                 <DialogPanel
                     title="Cookie preferences"
-                    subtitle="Choose what Sheemu may use. You can change this any time via 'Cookie settings' in the footer."
+                    subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
                     onClose={() => setSettingsOpen(false)}
                     width={520}
                     footer={
@@ -52,7 +52,7 @@ function CookieBanner() {
                             [
                                 'Essential',
                                 'Always on',
-                                "Keeps you signed in and remembers this cookie choice. Sheemu doesn't work without these.",
+                                "Keeps you signed in and remembers this cookie choice. Solkey doesn't work without these.",
                             ],
                             [
                                 'Anonymous statistics',
@@ -170,7 +170,7 @@ function CookieBanner() {
                     Cookies
                 </span>
                 <p style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface)', margin: 0 }}>
-                    Sheemu uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
+                    Solkey uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
                     we'd also use session replay to improve the editor — that's entirely up to you.{' '}
                     <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
                         Learn more
@@ -301,7 +301,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
                             margin: 0,
                             maxWidth: 480,
                         }}>
-                        Hum it, sing it, or play it — Sheemu listens and writes clean sheet music in front of your eyes. No note-by-note
+                        Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No note-by-note
                         clicking, no wrestling with menus. Just press record.
                     </p>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
@@ -375,7 +375,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
 /* ─────────── How it works ─────────── */
 function HowItWorks() {
     const steps = [
-        ['01', 'Press record', 'Open a score, set your tempo, and hit record. Sheemu counts you in and starts listening — only while you record.'],
+        ['01', 'Press record', 'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.'],
         ['02', 'Play or sing', 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.'],
         ['03', 'Polish & keep', "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go."],
     ]

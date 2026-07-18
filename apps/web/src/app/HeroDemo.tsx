@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Glyph, INTERACTION_BLUE } from '@/components/notation'
 
 /**
- * The hero demo: an idealised loop of a real recording session in the Sheemu
+ * The hero demo: an idealised loop of a real recording session in the Solkey
  * editor — the recording cursor sweeps the staff, live waveform bars (the
  * editor's cyan/magenta) sprout under it, and a strict beat-and-a-half later
  * each beat's bars burst away as clean engraved notation takes their place.

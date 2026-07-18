@@ -1,17 +1,17 @@
 # Operations runbooks
 
-Step-by-step guides for the scenarios that will come up operating Sheemu in
+Step-by-step guides for the scenarios that will come up operating Solkey in
 production. Written 2026-07-11, right after the first production bring-up, so
 every command reflects the real topology:
 
 | Piece | Value |
 |---|---|
-| GCP project | `sheemu-prod` (number 940791749471, account info@sheemu.com) |
+| GCP project | `sheemu-prod` (number 940791749471, account info@sheemu.com — Workspace login predates the solkey.io rebrand) |
 | Cluster | GKE Autopilot `mushee-prod`, region `europe-west1`, namespace `mushee` |
 | Database | Cloud SQL Postgres 17 `mushee-prod`, private IP `10.56.0.3`, db/user `mushee` |
 | Blob storage | `gs://sheemu-prod-storage` (versioned) |
-| API entry | `api.sheemu.com` → static IP `mushee-api-ip` (34.117.52.77), ManagedCertificate `api-cert` |
-| Web | Vercel, apex `sheemu.com` primary (www 308→apex — must stay that way or CORS breaks) |
+| API entry | `api.solkey.io` → static IP `mushee-api-ip` (34.117.52.77), ManagedCertificate `api-cert` |
+| Web | Vercel, apex `solkey.io` primary (www 308→apex — must stay that way or CORS breaks) |
 | Images | `europe-west1-docker.pkg.dev/sheemu-prod/mushee/{api,crepe-inference,basic-pitch-inference}:<git-sha>` |
 | CD | `.github/workflows/deploy.yml` (manual dispatch, GitHub OIDC as `github-deployer`) |
 | Secrets | `Secret/api-secrets` in ns `mushee` — the only secret store |
@@ -23,7 +23,7 @@ The guides:
    that avoids downtime, with the blast radius of each rotation spelled out.
 2. **[Stand up a new environment](new-environment.md)** — uat/dev/staging:
    what to share, what to isolate, and every step from namespace to DNS to a
-   working login on `uat.sheemu.com`.
+   working login on `uat.solkey.io`.
 3. **[Deploy, roll back, diagnose](deploy-rollback-incidents.md)** — the
    normal release flow, three rollback levers (API, web, database), and a
    symptom→cause playbook built from the failures we actually hit.

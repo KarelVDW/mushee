@@ -106,7 +106,7 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className,
                 className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft">
                 <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
                     <span
-                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-sheemu"
+                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-solkey"
                         style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
                     />
                     Tap along

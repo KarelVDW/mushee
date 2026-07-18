@@ -32,9 +32,9 @@ export const auth = betterAuth({
   trustedOrigins,
   database: pool,
   // Production serves web and API on different hosts of one site (e.g.
-  // sheemu.com + api.sheemu.com). The session cookie must be scoped to the
+  // solkey.io + api.solkey.io). The session cookie must be scoped to the
   // shared parent domain or the web middleware never sees it. Set
-  // COOKIE_DOMAIN to that parent (e.g. '.sheemu.com'); leave unset for
+  // COOKIE_DOMAIN to that parent (e.g. '.solkey.io'); leave unset for
   // same-host dev.
   ...(process.env.COOKIE_DOMAIN
     ? {

@@ -1,9 +1,9 @@
-# Staging topology. Everything lives one level down under *.staging.sheemu.com
-# so the cookie domain (.staging.sheemu.com) never overlaps production's
-# (.sheemu.com) writes — note the browser still SENDS production's .sheemu.com
+# Staging topology. Everything lives one level down under *.staging.solkey.io
+# so the cookie domain (.staging.solkey.io) never overlaps production's
+# (.solkey.io) writes — note the browser still SENDS production's .solkey.io
 # cookie to staging hosts; the staging API just won't recognise it. If auth on
 # staging ever behaves oddly while you're logged into production in the same
-# browser, clear cookies for sheemu.com first.
+# browser, clear cookies for solkey.io first.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,11 +15,11 @@ spec:
       containers:
         - name: api
           env:
-            - { name: BETTER_AUTH_URL, value: 'https://api.staging.sheemu.com' }
-            - { name: WEB_APP_URL, value: 'https://staging.sheemu.com' }
-            - { name: CORS_ORIGIN, value: 'https://staging.sheemu.com' }
-            - { name: TRUSTED_ORIGINS, value: 'https://staging.sheemu.com' }
-            - { name: COOKIE_DOMAIN, value: '.staging.sheemu.com' }
+            - { name: BETTER_AUTH_URL, value: 'https://api.staging.solkey.io' }
+            - { name: WEB_APP_URL, value: 'https://staging.solkey.io' }
+            - { name: CORS_ORIGIN, value: 'https://staging.solkey.io' }
+            - { name: TRUSTED_ORIGINS, value: 'https://staging.solkey.io' }
+            - { name: COOKIE_DOMAIN, value: '.staging.solkey.io' }
             - { name: STORAGE_DRIVER, value: 'gcs' }
             - { name: GCS_BUCKET, value: 'sheemu-staging-storage' }
             # Same Cloud SQL instance as production, separate database + user

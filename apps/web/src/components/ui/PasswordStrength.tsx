@@ -29,7 +29,7 @@ export function PasswordStrength({ password }: { password: string }) {
                       : score === 2
                         ? 'bg-secondary-soft'
                         : 'bg-primary-container'
-                return <div key={i} className={`h-0.75 flex-1 rounded-sm transition-colors duration-150 ease-sheemu ${tone}`} />
+                return <div key={i} className={`h-0.75 flex-1 rounded-sm transition-colors duration-150 ease-solkey ${tone}`} />
             })}
             <Eyebrow className="ml-1">{PW_LABELS[score]}</Eyebrow>
         </div>

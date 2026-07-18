@@ -10,11 +10,15 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 ## Phase 1 — must happen before the beta opens (blockers)
 
 1. **Real legal/business values** *(owner input — PR B6)* — **values done 2026-07-10**:
-   pages now name Karel Van De Winkel, trading as Sheemu (sole proprietorship, enterprise
+   pages now name Karel Van De Winkel, trading as Solkey (sole proprietorship, enterprise
    no. 1039.906.118), Capucienenlaan 23, 9300 Aalst; Belgium confirmed as governing law.
+   *Update 2026-07-18: rebranded Sheemu → Solkey. The commercial name in the
+   KBO/CBE register still says Sheemu — update it (or confirm with the
+   accountant that the pages may already carry the new name).*
    Remaining: add `support@`/`privacy@`/`legal@`/`hello@` as Workspace aliases of
-   `info@sheemu.com`, and have a lawyer review both documents (include the stored-
-   recording-audio section rewritten 2026-07-08).
+   `info@solkey.io` (once solkey.io is added to the Workspace), and have a lawyer
+   review both documents (include the stored-recording-audio section rewritten
+   2026-07-08).
 2. **Production storage bucket (GCS)** *(new since the rclone removal)*
    Create the GCS bucket, enable object versioning, wire workload identity (or a service
    account) for the API, set `STORAGE_DRIVER=gcs` + `GCS_BUCKET` in `Secret/api-secrets`.
@@ -23,11 +27,12 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    Provision with TLS (`POSTGRES_SSL=require|verify`), enable PITR/backups, and **rehearse
    one restore** before launch.
 4. **Domain topology + one real HTTPS login** *(PR B2 follow-through)*
-   `sheemu.com` + `api.sheemu.com`, set `COOKIE_DOMAIN=.sheemu.com`, `WEB_APP_URL`,
+   `solkey.io` + `api.solkey.io`, set `COOKIE_DOMAIN=.solkey.io`, `WEB_APP_URL`,
    `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `NEXT_PUBLIC_SITE_URL`, `TRUST_PROXY=1`. Smoke-test
    signup → login → editor on the real domains before anything else.
    *Update 2026-07-09: domain decided (sheemu.com; repo-wide sweep off the old
-   sheemu.app placeholder done). Deploy targets decided: web on Vercel, API +
+   sheemu.app placeholder done). Superseded 2026-07-18: rebranded to solkey.io,
+   repo swept again. Deploy targets decided: web on Vercel, API +
    inference on GKE. The API-side topology values are now committed in
    `deploy/k8s/overlays/production/api-patch.yaml`; the web vars go into the
    Vercel build env (all `NEXT_PUBLIC_*` are build-time baked). Remaining: DNS,

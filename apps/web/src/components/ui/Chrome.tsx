@@ -43,7 +43,7 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                                     href={n.href}
                                     className={[
                                         'no-underline cursor-pointer font-body font-medium text-[14px] leading-none pb-1',
-                                        'transition-colors duration-150 ease-sheemu',
+                                        'transition-colors duration-150 ease-solkey',
                                         active
                                             ? 'text-on-surface border-b-[3px] border-primary-container'
                                             : 'text-on-surface-variant border-b-[3px] border-transparent hover:text-on-surface',
@@ -75,7 +75,7 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                         className={[
                             'bg-surface-container text-on-surface border-0 rounded-full w-9 h-9 cursor-pointer',
                             'font-label font-semibold text-[13px] leading-none inline-flex items-center justify-center',
-                            'hover:bg-surface-container-highest transition-colors duration-150 ease-sheemu',
+                            'hover:bg-surface-container-highest transition-colors duration-150 ease-solkey',
                         ].join(' ')}>
                         {initials}
                     </button>
@@ -131,13 +131,13 @@ export function Footer({ width = 'app' }: FooterProps) {
                     <button
                         type="button"
                         // Same event CookieConsent listens on (see openCookieSettings).
-                        onClick={() => window.dispatchEvent(new Event('sheemu:cookie-settings'))}
+                        onClick={() => window.dispatchEvent(new Event('solkey:cookie-settings'))}
                         className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}>
                         Cookie settings
                     </button>
                 </nav>
                 <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © 2026 Sheemu. Made for composers.
+                    © 2026 Solkey. Made for composers.
                 </span>
             </div>
         </footer>
@@ -221,7 +221,7 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
                         aria-label="Close"
                         className={[
                             'bg-transparent border-0 text-on-surface-variant cursor-pointer p-1 rounded-full',
-                            'hover:text-on-surface transition-colors duration-150 ease-sheemu',
+                            'hover:text-on-surface transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                         ].join(' ')}>
                         <Icon name="x" size={20} />

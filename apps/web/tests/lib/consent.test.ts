@@ -37,14 +37,14 @@ describe('consent store', () => {
 
     it('re-asks when the stored record predates the current version', () => {
         saveConsent(true)
-        const raw = JSON.parse(window.localStorage.getItem('sheemu:consent') ?? '{}') as { version: number }
+        const raw = JSON.parse(window.localStorage.getItem('solkey:consent') ?? '{}') as { version: number }
         raw.version = CONSENT_VERSION - 1
-        window.localStorage.setItem('sheemu:consent', JSON.stringify(raw))
+        window.localStorage.setItem('solkey:consent', JSON.stringify(raw))
         expect(getConsent()).toBeNull()
     })
 
     it('treats corrupted storage as undecided', () => {
-        window.localStorage.setItem('sheemu:consent', 'not json {')
+        window.localStorage.setItem('solkey:consent', 'not json {')
         expect(getConsent()).toBeNull()
     })
 

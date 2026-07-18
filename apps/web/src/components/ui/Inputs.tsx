@@ -75,7 +75,7 @@ export function TextField({
                 />
                 {rightSlot}
                 <div
-                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-sheemu"
+                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey"
                     style={focused ? { left: 0, right: 0 } : { left: '50%', right: '50%' }}
                 />
             </div>
@@ -114,7 +114,7 @@ export function TextArea({ label, value, onChange, placeholder, rows = 4 }: Text
                     className="w-full bg-transparent border-0 outline-0 resize-y text-on-surface font-body font-normal text-[14px] leading-[1.55] py-3 box-border"
                 />
                 <div
-                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-sheemu"
+                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey"
                     style={focused ? { left: 0, right: 0 } : { left: '50%', right: '50%' }}
                 />
             </div>
@@ -149,7 +149,7 @@ export function Chip({ active, onClick, children, ariaLabel, size = 'sm' }: Chip
             disabled={!interactive}
             className={[
                 'inline-flex items-center gap-1.5 whitespace-nowrap leading-none rounded-full border-0',
-                'transition-colors duration-150 ease-sheemu',
+                'transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 interactive ? 'cursor-pointer' : 'cursor-default',
                 palette,

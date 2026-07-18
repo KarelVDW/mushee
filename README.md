@@ -97,7 +97,7 @@ re-migrates and re-seeds on boot.
 
 **Production (GKE)** — `deploy/k8s/overlays/production`: namespace, Artifact
 Registry image retags, HTTPS ingress with a Google-managed certificate for
-`api.sheemu.com`, and workload identity for GCS. Its `README.md` is the
+`api.solkey.io`, and workload identity for GCS. Its `README.md` is the
 one-time GCP provisioning runbook (registry, Autopilot cluster, Cloud SQL,
 bucket, static IP, `Secret/api-secrets`), and `.github/workflows/deploy.yml`
 builds/pushes the images and applies the overlay with immutable SHA tags. The
@@ -185,7 +185,7 @@ through `/ingest` to dodge ad blockers. Unset = analytics fully off.
 ## Closed beta
 
 Flip `BETA_MODE=true` on the API and `NEXT_PUBLIC_BETA_MODE=true` on the web
-app to run Sheemu as a closed beta: new signups land on the `beta` tier
+app to run Solkey as a closed beta: new signups land on the `beta` tier
 (5 min of recording/day), get a waitlist email, and must be approved before
 they can use the app. Approvals happen at `/admin` (accounts whose email is
 in `ADMIN_EMAILS` get the admin role at signup; the seeded

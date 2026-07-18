@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 
 /**
- * Custom Sheemu glyph set — "Precision Maverick". Drawn on a 24px grid with
+ * Custom Solkey glyph set — "Precision Maverick". Drawn on a 24px grid with
  * 2px strokes, squared terminals, and mitered joins so the icons read like
  * technical schematics next to Space Grotesk. Filled details (noteheads,
  * indicator dots) opt out of the stroke locally.
@@ -620,7 +620,7 @@ interface IconProps {
 }
 
 /**
- * Custom glyph from the Sheemu icon set. Color flows from `currentColor`, so
+ * Custom glyph from the Solkey icon set. Color flows from `currentColor`, so
  * the parent controls hue via `text-*` utilities. Size has to stay as a
  * `style` because it is genuinely dynamic per call site.
  */

@@ -97,7 +97,7 @@ function Hero({
                         <em className="font-serif font-normal">on the page.</em>
                     </h1>
                     <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
-                        Hum it, sing it, or play it — Sheemu listens and writes clean sheet music in front of your eyes. No
+                        Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No
                         note-by-note clicking, no wrestling with menus. Just press record.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
@@ -123,7 +123,7 @@ function HowItWorks() {
         [
             '01',
             'Press record',
-            'Open a score, set your tempo, and hit record. Sheemu counts you in and starts listening — only while you record.',
+            'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
         ],
         [
             '02',
@@ -240,7 +240,7 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                 {BETA_MODE && (
                     <div className="max-w-190 mx-auto mb-10 bg-secondary-soft text-on-secondary-soft rounded-lg px-6 py-5 text-center">
                         <p className="font-body font-medium text-[15px] leading-normal m-0">
-                            <strong>Sheemu is in closed beta.</strong> Right now every account is on the free{' '}
+                            <strong>Solkey is in closed beta.</strong> Right now every account is on the free{' '}
                             <strong>{BETA_PLAN.name}</strong> plan — 30 minutes of recording per day, no card, no charge. The plans
                             below go live at launch.
                         </p>

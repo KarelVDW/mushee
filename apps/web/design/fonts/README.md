@@ -1,6 +1,6 @@
 # Fonts
 
-Sheemu uses four families, each with a clear job:
+Solkey uses four families, each with a clear job:
 
 - **Space Grotesk** — display + UI (wordmark, headlines, buttons, labels)
 - **Manrope** — body copy at long-reading sizes
