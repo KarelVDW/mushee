@@ -8,7 +8,7 @@ import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plan
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 import { Instrument } from '@/model'
 
-import { BACKGROUNDS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
+import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { BillingToggle, OptionCard, StepShell, TierCard } from './OnboardingControls'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
@@ -189,7 +189,22 @@ export function BackgroundStep({ value, onChange }: { value: string | null; onCh
     )
 }
 
-// Step 4 — instruments
+// Step 4 — primary goal
+export function GoalStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
+    return (
+        <StepShell
+            title="What do you want to do first?"
+            subtitle="We'll point you at the right starting place — you can do all of it later.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {GOALS.map(([k, t, b]) => (
+                    <OptionCard key={k} active={value === k} onClick={() => onChange(k)} title={t} body={b} />
+                ))}
+            </div>
+        </StepShell>
+    )
+}
+
+// Step 5 — instruments
 export function InstrumentsStep({ value, onChange }: { value: string[]; onChange: Dispatch<SetStateAction<string[]>> }) {
     const toggleInstrument = (i: string) => {
         onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
@@ -225,7 +240,7 @@ export function InstrumentsStep({ value, onChange }: { value: string[]; onChange
     )
 }
 
-// Step 5 — referral source
+// Step 6 — referral source
 export function SourceStep({
     source,
     onSourceChange,
@@ -258,7 +273,7 @@ export function SourceStep({
     )
 }
 
-// Step 6 — pick a plan (outside beta mode)
+// Step 7 — pick a plan (outside beta mode)
 export function PlanStep({
     plans,
     billing,
@@ -292,7 +307,7 @@ export function PlanStep({
     )
 }
 
-// Step 6 — beta mode: nothing to pick, nothing to pay
+// Step 7 — beta mode: nothing to pick, nothing to pay
 export function BetaPlanStep({
     betaPlan,
     awaitingApproval,
