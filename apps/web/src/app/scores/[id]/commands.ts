@@ -1,11 +1,11 @@
 import type { BindableCommand } from '@/lib/Keybindings'
 
 import {
-    CLEAR_PITCH,
     LOWER_PITCH,
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
+    REMOVE_NOTE,
     type ScoreAction,
     TOGGLE_DOT,
     TOGGLE_REST,
@@ -73,7 +73,7 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     },
     fromAction(RAISE_PITCH, 'Edit notes', 'ArrowUp'),
     fromAction(LOWER_PITCH, 'Edit notes', 'ArrowDown'),
-    fromAction(CLEAR_PITCH, 'Edit notes', 'Backspace'),
+    fromAction(REMOVE_NOTE, 'Edit notes', 'Backspace'),
     fromAction(TOGGLE_REST, 'Edit notes', 'KeyR'),
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),

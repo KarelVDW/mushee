@@ -18,6 +18,7 @@ import {
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
+    REMOVE_NOTE,
     SET_ACCIDENTAL,
     SET_CLEF,
     SET_DURATION,
@@ -316,6 +317,7 @@ export default function ScoreEditorPage() {
                             onNext={() => manipulator.run(MOVE_NEXT)}
                             onPitchUp={() => manipulator.run(RAISE_PITCH)}
                             onPitchDown={() => manipulator.run(LOWER_PITCH)}
+                            onRemoveNote={() => manipulator.run(REMOVE_NOTE)}
                             disabled={!activeNote}
                         />
                     ) : undefined
