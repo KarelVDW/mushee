@@ -25,6 +25,7 @@ export function usePlayback({
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
     const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
     const [metronome, setMetronome] = useState(false)
+    const [instrumentsReady, setInstrumentsReady] = useState(false)
 
     // The Transport owns the shared clock and every playback/recording unit;
     // this page only tells it which mode to enter.
@@ -40,11 +41,19 @@ export function usePlayback({
     // Lazy-load only the instruments the score needs (its own + woodblock for the metronome click).
     // Re-runs when the score's selected instrument changes — the picker mutates `score.instrument`
     // in place, but the manipulator's onScoreChange re-render re-evaluates `score?.instrument.id`.
+    // `instrumentsReady` gates the editor's initial render: scheduling a note whose samples are
+    // still downloading is a silent skip (smplr drops it), so the record button must not exist
+    // until the metronome click is guaranteed audible. It flips once and stays true — a failed
+    // download plays degraded rather than bricking the editor, and swapping instruments
+    // mid-session must not flash the page back to its loading screen.
     useEffect(() => {
         if (!score) return
         const player = transportRef.current?.midiPlayer
         if (!player) return
-        void player.loadInstruments([score.instrument, Instrument.Woodblock])
+        void player
+            .loadInstruments([score.instrument, Instrument.Woodblock])
+            .catch(() => {})
+            .then(() => setInstrumentsReady(true))
     }, [score, score?.instrument.id])
 
     const stopAll = useCallback(() => {
@@ -112,5 +121,5 @@ export function usePlayback({
         setPlaybackState('playing')
     }, [score, activeNote, playbackState])
 
-    return { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle }
+    return { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady }
 }

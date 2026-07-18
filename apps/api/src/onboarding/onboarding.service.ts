@@ -23,6 +23,7 @@ export class OnboardingService {
     const existing = await this.repo.findOneBy({ userId });
     const patch: Partial<UserOnboarding> = {};
     if (dto.background !== undefined) patch.background = dto.background;
+    if (dto.goal !== undefined) patch.goal = dto.goal;
     if (dto.instruments !== undefined) patch.instruments = dto.instruments;
     if (dto.source !== undefined) patch.source = dto.source;
     if (dto.sourceDetail !== undefined) patch.sourceDetail = dto.sourceDetail;

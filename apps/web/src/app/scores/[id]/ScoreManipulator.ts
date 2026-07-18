@@ -13,7 +13,8 @@ const MAX_RANGE = 100_000
  * (debounced, supplied by the page) and notifies subscribers so React re-renders.
  *
  * Selection is a contiguous run of notes from an anchor to a focus (see the fields below).
- * A bulk-flagged action applied to a multi-note selection runs on every selected note.
+ * A bulk action receives the whole selection at once; a single-note action acts on the
+ * active note alone.
  *
  * It is a `useSyncExternalStore` source — {@link subscribe} + {@link getSnapshot} expose a
  * monotonic version that bumps on any selection or score change. The page reads the live
@@ -150,15 +151,16 @@ export class ScoreManipulator {
     // --- Action dispatch ---
 
     /**
-     * Run an action against the selection, then autosave and re-render. A bulk-flagged action with
-     * more than one note selected applies to every selected note (each a 1:1 edit), and the
-     * selection is re-anchored on the resulting notes; otherwise it acts on the active note alone.
+     * Run an action against the selection, then autosave and re-render. A bulk action receives
+     * every selected note and returns the notes to re-anchor the selection on; a single-note
+     * action acts on the active note alone.
      */
     run(action: ScoreAction, arg?: unknown): void {
         const score = this._score
         if (!score || !this._selectedNote) return
-        const targets = action.bulk && this._selectedNotes.length > 1 ? this._selectedNotes : [this._selectedNote]
-        const results = targets.map((note) => action.execute(score, note, arg))
+        const results = action.executeBulk
+            ? action.executeBulk(score, this._selectedNotes, arg)
+            : [action.execute(score, this._selectedNote, arg)]
         const first = results[0]
         const last = results[results.length - 1]
         if (first && last) this.setRange(first, last)

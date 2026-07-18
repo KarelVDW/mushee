@@ -19,6 +19,9 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+    // Next locks .next/dev per instance; a separate dist dir lets the e2e web
+    // server (playwright.config) boot while the regular dev server is running.
+    distDir: process.env.NEXT_DIST_DIR ?? '.next',
     rewrites() {
         return Promise.resolve([
             { source: '/ingest/static/:path*', destination: `${POSTHOG_ASSETS_HOST}/static/:path*` },

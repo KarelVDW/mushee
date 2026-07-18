@@ -136,6 +136,7 @@ export function reactivateAccount(): Promise<AccountDeletionStatus> {
 
 export interface OnboardingPatch {
     background?: string
+    goal?: string
     instruments?: string[]
     source?: string
     sourceDetail?: string

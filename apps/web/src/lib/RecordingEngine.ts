@@ -13,9 +13,39 @@ const CHUNK_MS = 100
  * frame so the server's ffmpeg decode doesn't have to guess the container.
  */
 const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+/**
+ * Browsers default to voice-call processing on the mic, which mobile devices
+ * apply aggressively: noise suppression treats sustained pure tones (whistling,
+ * held instrument notes) as background noise and removes them entirely. Ask for
+ * the raw signal — these are `ideal` hints, so browsers that can't honor them
+ * still return a stream instead of throwing.
+ */
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+}
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
+/**
+ * How long after sending `end` the socket may stay open waiting for the
+ * server's final transcription pass (`score-update`s + `recording-complete`).
+ * The server closes as soon as it has flushed; this is only the safety net
+ * against a server that never answers.
+ */
+const DRAIN_TIMEOUT_MS = 10_000
+
+/**
+ * WebKit's Audio Session API (Safari 16.4+, absent everywhere else). When a
+ * page starts capturing, iOS yanks the OS audio session from "playback" to
+ * play-and-record mid-flight, which can reroute output to the receiver
+ * (earpiece) at a fraction of the volume — WebKit bug 218012. Declaring the
+ * intent before the mic opens lets iOS pick the route up front.
+ */
+type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
 /** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
 const WAVEFORM_GAIN = 10
+/** Trough of the cursor's beat pulse; it snaps to full opacity on every metronome click. */
+const PULSE_MIN_OPACITY = 0.35
 export type RecordingState = 'idle' | 'countoff' | 'recording'
 
 /** One amplitude sample, anchored to the score position it was captured at. */
@@ -111,6 +141,7 @@ export class RecordingEngine implements Tickable {
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
     private lastSampleTime = -Infinity
+    private _micSettings: MediaTrackSettings | null = null
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
@@ -121,6 +152,17 @@ export class RecordingEngine implements Tickable {
 
     get state(): RecordingState {
         return this._state
+    }
+
+    /**
+     * The mic settings the browser actually granted for the live take (`null`
+     * outside a session). {@link MIC_CONSTRAINTS} are only hints: devices that
+     * force voice processing back on are the ones that switch into a call-style
+     * audio route and duck playback — surfaced so telemetry can measure how
+     * common that is.
+     */
+    get micSettings(): MediaTrackSettings | null {
+        return this._micSettings
     }
 
     /**
@@ -136,10 +178,15 @@ export class RecordingEngine implements Tickable {
         const token = ++this.lifecycle
         this.options = options
 
+        // Declared before the mic opens so iOS routes output correctly from the
+        // start; stop() restores 'auto' (including a stop() racing the prompt).
+        RecordingEngine.setAudioSessionType('play-and-record')
+
         let stream: MediaStream
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS })
         } catch (err) {
+            RecordingEngine.setAudioSessionType('auto')
             if (this.lifecycle === token) this.options = null
             throw err
         }
@@ -150,6 +197,7 @@ export class RecordingEngine implements Tickable {
             return
         }
         this.stream = stream
+        this._micSettings = stream.getAudioTracks()[0]?.getSettings() ?? null
 
         const measure = options.score.measures[options.startMeasureIndex]
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
@@ -177,9 +225,13 @@ export class RecordingEngine implements Tickable {
 
     stop(): void {
         // Invalidate any start() still awaiting the permission prompt, even
-        // when nothing else is running yet.
+        // when nothing else is running yet — and return the audio session to
+        // its default, since such a start() has already declared its intent.
         this.lifecycle++
+        RecordingEngine.setAudioSessionType('auto')
         if (this._state === 'idle') return
+
+        this._micSettings = null
 
         const ws = this.ws
         this.ws = null
@@ -188,20 +240,28 @@ export class RecordingEngine implements Tickable {
 
         // MediaRecorder.stop() flushes its final ≤100 ms chunk asynchronously
         // (the ondataavailable handler holds its own reference to the socket),
-        // so only send `end` and close once that flush has happened — closing
-        // here would drop the last moments of every take.
+        // so only send `end` once that flush has happened. The socket then
+        // stays open: the server is still transcribing the take's tail and
+        // streams those last notes back as `score-update`s before answering
+        // `recording-complete` and closing — closing here would drop the
+        // notes from the final moments of every take.
         let finished = false
         const finish = () => {
             if (finished) return
             finished = true
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                try {
-                    ws.send(JSON.stringify({ type: 'end' }))
-                } catch {
-                    // socket may have closed mid-send; close() below still runs
-                }
+            if (!ws) return
+            if (ws.readyState !== WebSocket.OPEN) {
+                ws.close()
+                return
             }
-            ws?.close()
+            try {
+                ws.send(JSON.stringify({ type: 'end' }))
+            } catch {
+                ws.close()
+                return
+            }
+            const fallback = setTimeout(() => ws.close(), DRAIN_TIMEOUT_MS)
+            ws.addEventListener('close', () => clearTimeout(fallback), { once: true })
         }
         if (recorder && recorder.state !== 'inactive') {
             recorder.onstop = finish
@@ -226,6 +286,7 @@ export class RecordingEngine implements Tickable {
 
         if (this.options) {
             this.options.cursorEl.setAttribute('display', 'none')
+            this.options.cursorEl.removeAttribute('fill-opacity')
             this.paintCursor('#3b82f6')
         }
 
@@ -248,7 +309,11 @@ export class RecordingEngine implements Tickable {
             if (elapsed >= this.countoffEndTime) {
                 this._state = 'recording'
                 this.options.onStateChange(this._state)
+                // The moving cursor is its own beat feedback from here on.
+                this.options.cursorEl.removeAttribute('fill-opacity')
                 void this.beginStreaming()
+            } else {
+                this.pulseCursor(elapsed)
             }
             return false
         }
@@ -357,7 +422,15 @@ export class RecordingEngine implements Tickable {
                 usedSeconds?: number
             }
             if (payload.type === 'score-update' && payload.measures) {
-                this.options?.onScoreUpdate?.({ measures: payload.measures })
+                // Via the captured opts, not this.options: stop() nulls the
+                // options while the server is still flushing the take's tail,
+                // and those late updates must still land in the score.
+                opts.onScoreUpdate?.({ measures: payload.measures })
+            } else if (payload.type === 'recording-complete') {
+                // The server has flushed everything for this take; it closes
+                // right after, but close from our side too so the post-stop
+                // drain doesn't depend on it.
+                ws.close()
             } else if (payload.type === 'recording-limit') {
                 this.options?.onLimitReached?.({
                     planId: payload.planId ?? 'free',
@@ -403,6 +476,13 @@ export class RecordingEngine implements Tickable {
         this.mediaRecorder.start(CHUNK_MS)
     }
 
+    /** Hint the OS audio session via WebKit's API; no-op on other browsers. */
+    private static setAudioSessionType(type: 'play-and-record' | 'auto'): void {
+        if (typeof navigator === 'undefined') return
+        const session = (navigator as NavigatorWithAudioSession).audioSession
+        if (session) session.type = type
+    }
+
     /**
      * First candidate this browser can record. `null` when nothing matched or
      * `isTypeSupported` is missing (pre-2021 Safari) — then the browser's
@@ -419,6 +499,19 @@ export class RecordingEngine implements Tickable {
             if (tempos.length > 0) return tempos[0]
         }
         return null
+    }
+
+    /**
+     * Blink the cursor in time with the count-off clicks: full opacity on each
+     * beat, decaying to a trough — a visual count-in while the cursor has no
+     * motion to show yet. Reads the same clock the clicks are scheduled on, so
+     * the two can't drift.
+     */
+    private pulseCursor(elapsed: number): void {
+        if (!this.options) return
+        const beatPhase = ((elapsed * this.bpm) / 60) % 1
+        const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
+        this.options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
     }
 
     private moveCursor(measureIndex: number, beat: number): void {

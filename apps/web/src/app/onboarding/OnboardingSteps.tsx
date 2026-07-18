@@ -2,13 +2,14 @@
 
 import { type Dispatch, type SetStateAction, useState } from 'react'
 
-import { Chip, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
+import { PlanPicker } from '@/components/PlanPicker'
+import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import { emailOtp } from '@/lib/auth-client'
 import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
-import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { Instrument } from '@/model'
 
-import { BACKGROUNDS, PRIMARY_INSTRUMENTS, REFERRAL_SOURCES } from './onboarding-data'
-import { BillingToggle, OptionCard, StepShell, TierCard } from './OnboardingControls'
+import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
+import { OptionCard, StepShell } from './OnboardingControls'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
@@ -188,28 +189,58 @@ export function BackgroundStep({ value, onChange }: { value: string | null; onCh
     )
 }
 
-// Step 4 — instruments
-export function InstrumentsStep({ value, onChange }: { value: string[]; onChange: Dispatch<SetStateAction<string[]>> }) {
-    const toggleInstrument = (i: string) => {
-        onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
-    }
-
+// Step 4 — primary goal
+export function GoalStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
     return (
         <StepShell
-            title="Which instruments do you play?"
-            subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
-            <div className="flex flex-wrap gap-2">
-                {PRIMARY_INSTRUMENTS.map((i) => (
-                    <Chip key={i} size="md" active={value.includes(i)} onClick={() => toggleInstrument(i)}>
-                        {i}
-                    </Chip>
+            title="What do you want to do first?"
+            subtitle="We'll point you at the right starting place — you can do all of it later.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {GOALS.map(([k, t, b]) => (
+                    <OptionCard key={k} active={value === k} onClick={() => onChange(k)} title={t} body={b} />
                 ))}
             </div>
         </StepShell>
     )
 }
 
-// Step 5 — referral source
+// Step 5 — instruments
+export function InstrumentsStep({ value, onChange }: { value: string[]; onChange: Dispatch<SetStateAction<string[]>> }) {
+    const toggleInstrument = (i: string) => {
+        onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
+    }
+
+    const renderChips = (names: string[]) => (
+        <div className="flex flex-wrap gap-2">
+            {names.map((i) => (
+                <Chip key={i} size="md" active={value.includes(i)} onClick={() => toggleInstrument(i)}>
+                    {i}
+                </Chip>
+            ))}
+        </div>
+    )
+
+    return (
+        <StepShell
+            title="Which instruments do you play?"
+            subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
+            <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
+                {Instrument.selectableByCategory().map(({ category, instruments }) => (
+                    <div key={category} className="flex flex-col gap-2">
+                        <Eyebrow>{category}</Eyebrow>
+                        {renderChips(instruments.map((i) => i.displayName))}
+                    </div>
+                ))}
+                <div className="flex flex-col gap-2">
+                    <Eyebrow>None of the above</Eyebrow>
+                    {renderChips(NON_INSTRUMENT_OPTIONS)}
+                </div>
+            </div>
+        </StepShell>
+    )
+}
+
+// Step 6 — referral source
 export function SourceStep({
     source,
     onSourceChange,
@@ -242,7 +273,7 @@ export function SourceStep({
     )
 }
 
-// Step 6 — pick a plan (outside beta mode)
+// Step 7 — pick a plan (outside beta mode)
 export function PlanStep({
     plans,
     billing,
@@ -256,27 +287,14 @@ export function PlanStep({
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
-    const currency = useDisplayCurrency()
     return (
         <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
-            <BillingToggle value={billing} onChange={onBillingChange} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {plans.map((p) => (
-                    <TierCard
-                        key={p.id}
-                        plan={p}
-                        billing={billing}
-                        currency={currency}
-                        active={tier === p.id}
-                        onSelect={() => onTierChange(p.id)}
-                    />
-                ))}
-            </div>
+            <PlanPicker plans={plans} billing={billing} onBillingChange={onBillingChange} selected={tier} onSelect={onTierChange} />
         </StepShell>
     )
 }
 
-// Step 6 — beta mode: nothing to pick, nothing to pay
+// Step 7 — beta mode: nothing to pick, nothing to pay
 export function BetaPlanStep({
     betaPlan,
     awaitingApproval,

@@ -1,6 +1,5 @@
-import { type Currency, currencySymbol, formatMoney } from '@/lib/currency'
-import { type Billing, type PlanTier } from '@/lib/plans'
-
+// The BACKGROUNDS/GOALS/REFERRAL_SOURCES keys are enum-validated by the API
+// (apps/api/src/onboarding/dto/update-onboarding.dto.ts) — change both sides together.
 export const BACKGROUNDS: [string, string, string][] = [
     ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
     ['hobbyist', 'Hobbyist', 'I play for myself — a few years in.'],
@@ -10,20 +9,19 @@ export const BACKGROUNDS: [string, string, string][] = [
     ['professional', 'Performing musician', 'I gig, record, or perform for a living.'],
 ]
 
-export const PRIMARY_INSTRUMENTS = [
-    'Piano',
-    'Guitar',
-    'Violin',
-    'Cello',
-    'Flute',
-    'Clarinet',
-    'Voice',
-    'Trumpet',
-    'Drums',
-    'Bass',
-    'Other',
-    "I don't play (yet)",
+export const GOALS: [string, string, string][] = [
+    ['transcribe', 'Capture my playing', 'Record what I play or hum and turn it into notation.'],
+    ['compose', 'Write new music', 'Compose original pieces from scratch.'],
+    ['arrange', 'Arrange existing music', 'Adapt pieces for my instrument or ensemble.'],
+    ['teach', 'Make teaching materials', 'Create exercises and pieces for my students.'],
+    ['learn', 'Learn notation', 'Get comfortable reading and writing sheet music.'],
 ]
+
+// The instruments themselves come from the shared model list (`Instrument.selectableByCategory()`),
+// the same one the score pickers use. These are the survey-only escape hatches appended after it.
+// "Other" still means the user plays something; only NO_INSTRUMENT_OPTION means they don't.
+export const NO_INSTRUMENT_OPTION = "I don't play (yet)"
+export const NON_INSTRUMENT_OPTIONS = ['Other', NO_INSTRUMENT_OPTION]
 
 export const REFERRAL_SOURCES: [string, string][] = [
     ['friend', 'A friend told me'],
@@ -35,14 +33,7 @@ export const REFERRAL_SOURCES: [string, string][] = [
     ['other', 'Somewhere else'],
 ]
 
-export function formatPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): { amount: string; cadence: string } {
-    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever' }
-    if (billing === 'yearly') {
-        const monthlyEquiv = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return { amount: `${currencySymbol(currency)}${monthlyEquiv}`, cadence: '/month, billed yearly' }
-    }
-    return { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month' }
-}
-
-// Steps in order: verify email, mic permission, name, background, instruments, source, tier.
-export const STEP_COUNT = 7
+// Steps in order: verify email, mic permission, name, background, goal, instruments, source, tier.
+// The names are the `step` property on onboarding funnel events — keep them stable.
+export const STEP_NAMES = ['verify', 'mic', 'name', 'background', 'goal', 'instruments', 'source', 'plan'] as const
+export const STEP_COUNT = STEP_NAMES.length

@@ -157,15 +157,20 @@ async function main() {
     );
   }
 
-  // 4. Happy path: stream ~3s, credits are spent and the session is persisted.
+  // 4. Happy path: stream ~3s, then `end`. The server flushes the pipeline,
+  //    acks with recording-complete, and closes the socket itself — the client
+  //    keeps it open so the take's last notes can still arrive.
   {
     const c = connect(`/recording?scoreId=${scoreId}`, cookie);
     await c.open;
     await streamAudio(c.ws, audio, 3.2);
     c.ws.send(JSON.stringify({ type: 'end' }));
-    await sleep(300);
-    c.ws.close();
-    await c.closed;
+    const close = await c.closed;
+    check(
+      'end → recording-complete, then server closes 1000',
+      c.messages.some((m) => m.type === 'recording-complete') && close.code === 1000,
+      JSON.stringify({ close, messages: c.messages.map((m) => m.type) }),
+    );
     await sleep(500);
 
     const usage = await db.query(
@@ -256,11 +261,15 @@ async function main() {
     check('no lock rows left after all sessions closed', locks.rows.length === 0, `rows=${locks.rows.length}`);
   }
 
-  // 6. Mid-recording limit: prime usage near the free cap (30/day) and stream.
+  // 6. Mid-recording limit: prime usage near the free tier's daily cap
+  //    (DB-driven since the tiers moved into subscription_tiers) and stream.
+  const freeLimit = (
+    await db.query(`SELECT "dailyRecordingCredits" FROM subscription_tiers WHERE id = 'free'`)
+  ).rows[0].dailyRecordingCredits;
   {
     await db.query(
-      `UPDATE recording_usage SET "creditsUsed" = 28 WHERE "userId" = $1`,
-      [userId],
+      `UPDATE recording_usage SET "creditsUsed" = $2 WHERE "userId" = $1`,
+      [userId, freeLimit - 2],
     );
     const c = connect(`/recording?scoreId=${scoreId}`, cookie);
     await c.open;
@@ -268,7 +277,9 @@ async function main() {
     const limitMsg = c.messages.find((m) => m.type === 'recording-limit');
     check(
       'mid-recording exhaustion → recording-limit message',
-      limitMsg?.planId === 'free' && limitMsg?.limitSeconds === 30 && limitMsg?.usedSeconds >= 30,
+      limitMsg?.planId === 'free' &&
+        limitMsg?.limitSeconds === freeLimit &&
+        limitMsg?.usedSeconds >= freeLimit,
       JSON.stringify(limitMsg ?? c.messages),
     );
     c.ws.close();
@@ -281,7 +292,7 @@ async function main() {
     );
     check(
       'spending stops at the cap (no runaway billing)',
-      usage.rows[0].creditsUsed <= 31,
+      usage.rows[0].creditsUsed <= freeLimit + 1,
       `used=${usage.rows[0].creditsUsed}`,
     );
   }
