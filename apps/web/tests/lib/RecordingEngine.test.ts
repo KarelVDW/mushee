@@ -108,9 +108,9 @@ function analyser(): FakeAnalyser {
 }
 
 // --- MediaStream stub ------------------------------------------------------
-function fakeStream() {
-    const track = { stop: vi.fn() }
-    return { getTracks: () => [track], track }
+function fakeStream(settings: MediaTrackSettings = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }) {
+    const track = { stop: vi.fn(), getSettings: vi.fn(() => settings) }
+    return { getTracks: () => [track], getAudioTracks: () => [track], track }
 }
 
 function fakePlayer(currentTime = 0) {
@@ -758,6 +758,88 @@ describe('RecordingEngine', () => {
         raw.currentTime = 1.1
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
+    })
+
+    it('exposes the granted mic settings during a take and clears them on stop', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        // A device that forced voice processing back on despite the constraints.
+        getUserMedia.mockResolvedValueOnce(fakeStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: false }))
+
+        expect(engine.micSettings).toBeNull()
+        await engine.start(options)
+        expect(engine.micSettings).toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
+        engine.stop()
+        expect(engine.micSettings).toBeNull()
+    })
+
+    it('tolerates a stream without audio tracks (micSettings stays null)', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const stream = fakeStream()
+        getUserMedia.mockResolvedValueOnce({ ...stream, getAudioTracks: () => [] })
+
+        await engine.start(options)
+        expect(engine.micSettings).toBeNull()
+        expect(engine.state).toBe('countoff')
+    })
+
+    it('declares play-and-record on the audio session before the mic opens and restores auto on stop', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        // Capture the session type at the moment the prompt would appear: iOS
+        // must know the intent before capture starts, not after.
+        let typeWhenPrompted: string | null = null
+        const promptingGetUserMedia = vi.fn(() => {
+            typeWhenPrompted = audioSession.type
+            return Promise.resolve(fakeStream())
+        })
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: promptingGetUserMedia }, audioSession })
+
+        await engine.start(options)
+        expect(typeWhenPrompted).toBe('play-and-record')
+        expect(audioSession.type).toBe('play-and-record')
+
+        engine.stop()
+        expect(audioSession.type).toBe('auto')
+    })
+
+    it('restores the audio session when getUserMedia rejects', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'))
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia }, audioSession })
+
+        await expect(engine.start(options)).rejects.toThrow()
+        expect(audioSession.type).toBe('auto')
+    })
+
+    it('restores the audio session when stop() races the permission prompt', async () => {
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        const audioSession = { type: 'auto' }
+        let resolvePrompt: (stream: unknown) => void = () => {}
+        const pendingGetUserMedia = vi.fn(() => new Promise((resolve) => (resolvePrompt = resolve)))
+        vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: pendingGetUserMedia }, audioSession })
+
+        const started = engine.start(options)
+        expect(audioSession.type).toBe('play-and-record')
+        engine.stop() // user bails while the prompt is open
+        expect(audioSession.type).toBe('auto')
+        const stream = fakeStream()
+        resolvePrompt(stream)
+        await started
+        // The raced start released the stream and left the session restored.
+        expect(stream.track.stop).toHaveBeenCalled()
+        expect(audioSession.type).toBe('auto')
+        expect(engine.micSettings).toBeNull()
     })
 
     it('start() throws RecordingUnsupportedError when mediaDevices is unavailable', async () => {

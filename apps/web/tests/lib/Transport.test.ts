@@ -40,8 +40,8 @@ class FakeWebSocket {
 }
 
 function fakeStream() {
-    const track = { stop: vi.fn() }
-    return { getTracks: () => [track], track }
+    const track = { stop: vi.fn(), getSettings: vi.fn(() => ({})) }
+    return { getTracks: () => [track], getAudioTracks: () => [track], track }
 }
 
 /** A MidiPlayer double: manual clock plus a log of every scheduled note. */
@@ -277,6 +277,17 @@ describe('Transport', () => {
         expect(transport.mode).toBe('stopped')
         transport.stop()
         expect(transport.mode).toBe('stopped')
+    })
+
+    it('exposes the granted mic settings while a take is live', async () => {
+        const { player } = fakePlayer()
+        const transport = new Transport(player)
+
+        expect(transport.micSettings).toBeNull()
+        await transport.record(recordingOptions(scoreWithNotes()))
+        expect(transport.micSettings).toEqual({})
+        transport.stop()
+        expect(transport.micSettings).toBeNull()
     })
 
     it('dispose stops everything and releases the player', () => {

@@ -26,6 +26,15 @@ const MIC_CONSTRAINTS: MediaTrackConstraints = {
     autoGainControl: false,
 }
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
+
+/**
+ * WebKit's Audio Session API (Safari 16.4+, absent everywhere else). When a
+ * page starts capturing, iOS yanks the OS audio session from "playback" to
+ * play-and-record mid-flight, which can reroute output to the receiver
+ * (earpiece) at a fraction of the volume — WebKit bug 218012. Declaring the
+ * intent before the mic opens lets iOS pick the route up front.
+ */
+type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
 /** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
 const WAVEFORM_GAIN = 10
 export type RecordingState = 'idle' | 'countoff' | 'recording'
@@ -123,6 +132,7 @@ export class RecordingEngine implements Tickable {
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
     private lastSampleTime = -Infinity
+    private _micSettings: MediaTrackSettings | null = null
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
@@ -133,6 +143,17 @@ export class RecordingEngine implements Tickable {
 
     get state(): RecordingState {
         return this._state
+    }
+
+    /**
+     * The mic settings the browser actually granted for the live take (`null`
+     * outside a session). {@link MIC_CONSTRAINTS} are only hints: devices that
+     * force voice processing back on are the ones that switch into a call-style
+     * audio route and duck playback — surfaced so telemetry can measure how
+     * common that is.
+     */
+    get micSettings(): MediaTrackSettings | null {
+        return this._micSettings
     }
 
     /**
@@ -148,10 +169,15 @@ export class RecordingEngine implements Tickable {
         const token = ++this.lifecycle
         this.options = options
 
+        // Declared before the mic opens so iOS routes output correctly from the
+        // start; stop() restores 'auto' (including a stop() racing the prompt).
+        RecordingEngine.setAudioSessionType('play-and-record')
+
         let stream: MediaStream
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS })
         } catch (err) {
+            RecordingEngine.setAudioSessionType('auto')
             if (this.lifecycle === token) this.options = null
             throw err
         }
@@ -162,6 +188,7 @@ export class RecordingEngine implements Tickable {
             return
         }
         this.stream = stream
+        this._micSettings = stream.getAudioTracks()[0]?.getSettings() ?? null
 
         const measure = options.score.measures[options.startMeasureIndex]
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
@@ -189,9 +216,13 @@ export class RecordingEngine implements Tickable {
 
     stop(): void {
         // Invalidate any start() still awaiting the permission prompt, even
-        // when nothing else is running yet.
+        // when nothing else is running yet — and return the audio session to
+        // its default, since such a start() has already declared its intent.
         this.lifecycle++
+        RecordingEngine.setAudioSessionType('auto')
         if (this._state === 'idle') return
+
+        this._micSettings = null
 
         const ws = this.ws
         this.ws = null
@@ -413,6 +444,13 @@ export class RecordingEngine implements Tickable {
             if (ws.readyState === WebSocket.OPEN) ws.send(e.data)
         }
         this.mediaRecorder.start(CHUNK_MS)
+    }
+
+    /** Hint the OS audio session via WebKit's API; no-op on other browsers. */
+    private static setAudioSessionType(type: 'play-and-record' | 'auto'): void {
+        if (typeof navigator === 'undefined') return
+        const session = (navigator as NavigatorWithAudioSession).audioSession
+        if (session) session.type = type
     }
 
     /**

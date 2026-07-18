@@ -66,6 +66,11 @@ export class Transport {
         return this.recorder.state !== 'idle'
     }
 
+    /** The mic settings the browser actually granted for the live take (`null` when idle). */
+    get micSettings(): MediaTrackSettings | null {
+        return this.recorder.micSettings
+    }
+
     /** Play the score from `startNote` (or the top). Stops whatever ran before. */
     playScore(options: PlayScoreOptions): void {
         this.stop()
