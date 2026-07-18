@@ -10,20 +10,9 @@ export const BACKGROUNDS: [string, string, string][] = [
     ['professional', 'Performing musician', 'I gig, record, or perform for a living.'],
 ]
 
-export const PRIMARY_INSTRUMENTS = [
-    'Piano',
-    'Guitar',
-    'Violin',
-    'Cello',
-    'Flute',
-    'Clarinet',
-    'Voice',
-    'Trumpet',
-    'Drums',
-    'Bass',
-    'Other',
-    "I don't play (yet)",
-]
+// The instruments themselves come from the shared model list (`Instrument.selectableByCategory()`),
+// the same one the score pickers use. These are the survey-only escape hatches appended after it.
+export const NON_INSTRUMENT_OPTIONS = ['Other', "I don't play (yet)"]
 
 export const REFERRAL_SOURCES: [string, string][] = [
     ['friend', 'A friend told me'],

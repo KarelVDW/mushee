@@ -2,12 +2,13 @@
 
 import { type Dispatch, type SetStateAction, useState } from 'react'
 
-import { Chip, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
+import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import { emailOtp } from '@/lib/auth-client'
 import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { Instrument } from '@/model'
 
-import { BACKGROUNDS, PRIMARY_INSTRUMENTS, REFERRAL_SOURCES } from './onboarding-data'
+import { BACKGROUNDS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { BillingToggle, OptionCard, StepShell, TierCard } from './OnboardingControls'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
@@ -194,16 +195,31 @@ export function InstrumentsStep({ value, onChange }: { value: string[]; onChange
         onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
     }
 
+    const renderChips = (names: string[]) => (
+        <div className="flex flex-wrap gap-2">
+            {names.map((i) => (
+                <Chip key={i} size="md" active={value.includes(i)} onClick={() => toggleInstrument(i)}>
+                    {i}
+                </Chip>
+            ))}
+        </div>
+    )
+
     return (
         <StepShell
             title="Which instruments do you play?"
             subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
-            <div className="flex flex-wrap gap-2">
-                {PRIMARY_INSTRUMENTS.map((i) => (
-                    <Chip key={i} size="md" active={value.includes(i)} onClick={() => toggleInstrument(i)}>
-                        {i}
-                    </Chip>
+            <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
+                {Instrument.selectableByCategory().map(({ category, instruments }) => (
+                    <div key={category} className="flex flex-col gap-2">
+                        <Eyebrow>{category}</Eyebrow>
+                        {renderChips(instruments.map((i) => i.displayName))}
+                    </div>
                 ))}
+                <div className="flex flex-col gap-2">
+                    <Eyebrow>None of the above</Eyebrow>
+                    {renderChips(NON_INSTRUMENT_OPTIONS)}
+                </div>
             </div>
         </StepShell>
     )

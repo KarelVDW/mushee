@@ -116,4 +116,43 @@ describe('Instrument', () => {
     it('byDisplayName falls back to Piano for an unknown name', () => {
         expect(Instrument.byDisplayName('Theremin')).toBe(Instrument.Piano)
     })
+
+    it('guitar and bass guitar sound an octave below written', () => {
+        expect(Instrument.Guitar.chromaticTranspose).toBe(-12)
+        expect(Instrument.Guitar.diatonicTranspose).toBe(-7)
+        expect(Instrument.BassGuitar.chromaticTranspose).toBe(-12)
+        expect(Instrument.BassGuitar.diatonicTranspose).toBe(-7)
+    })
+})
+
+describe('Instrument.selectableByCategory', () => {
+    it('covers every selectable instrument exactly once', () => {
+        const grouped = Instrument.selectableByCategory().flatMap((g) => g.instruments)
+        expect(grouped.length).toBe(Instrument.selectable().length)
+        expect(new Set(grouped).size).toBe(grouped.length)
+    })
+
+    it('places each instrument in its own category group', () => {
+        for (const { category, instruments } of Instrument.selectableByCategory()) {
+            for (const instrument of instruments) expect(instrument.category).toBe(category)
+        }
+    })
+
+    it('lists families in fixed display order without the percussion-only group', () => {
+        const categories = Instrument.selectableByCategory().map((g) => g.category)
+        expect(categories).toEqual(['Keyboard', 'Brass', 'Woodwinds', 'Voice', 'Strings', 'Folk & World'])
+    })
+
+    it('sorts instruments alphabetically within each family', () => {
+        for (const { instruments } of Instrument.selectableByCategory()) {
+            const names = instruments.map((i) => i.displayName)
+            expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)))
+        }
+    })
+
+    it('keeps the metronome Woodblock out of every group', () => {
+        expect(Instrument.Woodblock.category).toBe('Percussion')
+        const grouped = Instrument.selectableByCategory().flatMap((g) => g.instruments)
+        expect(grouped).not.toContain(Instrument.Woodblock)
+    })
 })
