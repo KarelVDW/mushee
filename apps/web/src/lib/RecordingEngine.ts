@@ -44,6 +44,8 @@ const DRAIN_TIMEOUT_MS = 10_000
 type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
 /** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
 const WAVEFORM_GAIN = 10
+/** Trough of the cursor's beat pulse; it snaps to full opacity on every metronome click. */
+const PULSE_MIN_OPACITY = 0.35
 export type RecordingState = 'idle' | 'countoff' | 'recording'
 
 /** One amplitude sample, anchored to the score position it was captured at. */
@@ -284,6 +286,7 @@ export class RecordingEngine implements Tickable {
 
         if (this.options) {
             this.options.cursorEl.setAttribute('display', 'none')
+            this.options.cursorEl.removeAttribute('fill-opacity')
             this.paintCursor('#3b82f6')
         }
 
@@ -306,7 +309,11 @@ export class RecordingEngine implements Tickable {
             if (elapsed >= this.countoffEndTime) {
                 this._state = 'recording'
                 this.options.onStateChange(this._state)
+                // The moving cursor is its own beat feedback from here on.
+                this.options.cursorEl.removeAttribute('fill-opacity')
                 void this.beginStreaming()
+            } else {
+                this.pulseCursor(elapsed)
             }
             return false
         }
@@ -492,6 +499,19 @@ export class RecordingEngine implements Tickable {
             if (tempos.length > 0) return tempos[0]
         }
         return null
+    }
+
+    /**
+     * Blink the cursor in time with the count-off clicks: full opacity on each
+     * beat, decaying to a trough — a visual count-in while the cursor has no
+     * motion to show yet. Reads the same clock the clicks are scheduled on, so
+     * the two can't drift.
+     */
+    private pulseCursor(elapsed: number): void {
+        if (!this.options) return
+        const beatPhase = ((elapsed * this.bpm) / 60) % 1
+        const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
+        this.options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
     }
 
     private moveCursor(measureIndex: number, beat: number): void {

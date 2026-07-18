@@ -463,6 +463,44 @@ describe('RecordingEngine', () => {
         expect(socket().sent).toHaveLength(1)
     })
 
+    it('pulses the cursor opacity on the beat during countoff and clears it once recording starts', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, cursorEl } = makeOptions()
+        await engine.start(options)
+
+        // Countoff, on a click (t=0 is the first): full opacity.
+        engine.tick()
+        expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(1, 3)
+
+        // Countoff, half a beat later (90bpm => beat = 2/3s): decayed toward the trough.
+        raw.currentTime = 1 / 3
+        engine.tick()
+        expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(0.431, 3)
+
+        // Recording (past the 2.667s countoff): the moving cursor takes over, no more pulse.
+        raw.currentTime = 3
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+        raw.currentTime = 3.1
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
+    it('clears the cursor pulse when a take is stopped during countoff', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, cursorEl } = makeOptions()
+        await engine.start(options)
+
+        raw.currentTime = 1 / 3
+        engine.tick()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(true)
+
+        engine.stop()
+        expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
     it('stop() tears down recorder, stream, socket and analyser and returns to idle', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
