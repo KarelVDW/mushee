@@ -1,6 +1,3 @@
-import { type Currency, currencySymbol, formatMoney } from '@/lib/currency'
-import { type Billing, type PlanTier } from '@/lib/plans'
-
 // The BACKGROUNDS/GOALS/REFERRAL_SOURCES keys are enum-validated by the API
 // (apps/api/src/onboarding/dto/update-onboarding.dto.ts) — change both sides together.
 export const BACKGROUNDS: [string, string, string][] = [
@@ -35,15 +32,6 @@ export const REFERRAL_SOURCES: [string, string][] = [
     ['blog', 'Read about it in an article'],
     ['other', 'Somewhere else'],
 ]
-
-export function formatPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): { amount: string; cadence: string } {
-    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever' }
-    if (billing === 'yearly') {
-        const monthlyEquiv = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return { amount: `${currencySymbol(currency)}${monthlyEquiv}`, cadence: '/month, billed yearly' }
-    }
-    return { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month' }
-}
 
 // Steps in order: verify email, mic permission, name, background, goal, instruments, source, tier.
 // The names are the `step` property on onboarding funnel events — keep them stable.

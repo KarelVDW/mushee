@@ -182,3 +182,32 @@ export function planPrice(plan: PlanTier, billing: Billing, currency: Currency =
     }
     return `${formatMoney(plan.priceMonthly, currency)}/mo`
 }
+
+/**
+ * A plan's price broken into the lines a selectable card renders. Paid plans
+ * get the same three lines in both cadences — amount, billing note, savings —
+ * so cards keep their height when the monthly/yearly toggle flips.
+ */
+export interface PlanPriceParts {
+    amount: string
+    cadence: string
+    /** Billing-cadence detail line; empty for free plans. */
+    note: string
+    /** What a year of the plan saves over twelve monthly payments. */
+    savings: number
+}
+
+export function planPriceParts(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): PlanPriceParts {
+    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever', note: '', savings: 0 }
+    const savings = plan.priceMonthly * 12 - plan.priceYearly
+    if (billing === 'yearly') {
+        const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
+        return {
+            amount: `${currencySymbol(currency)}${m}`,
+            cadence: '/month',
+            note: `billed yearly · ${formatMoney(plan.priceYearly, currency)}/yr`,
+            savings,
+        }
+    }
+    return { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month', note: 'billed monthly', savings }
+}
