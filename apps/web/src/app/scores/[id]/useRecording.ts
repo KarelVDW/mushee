@@ -1,10 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { type RefObject, useCallback, useState } from 'react'
+import { type RefObject, useCallback, useRef, useState } from 'react'
 
 import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
+import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
 import { type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
 import { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
 import type { Transport } from '@/lib/Transport'
@@ -46,6 +47,10 @@ export function useRecording({
     const [waveformStore] = useState(() => new RecordingWaveformStore())
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
     const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
+    const [micModeGuideOpen, setMicModeGuideOpen] = useState(false)
+    // The take started by confirming the guide skips the reminder toast — the
+    // user just read the full walkthrough.
+    const skipMicModeReminder = useRef(false)
 
     const handleRecordToggle = useCallback(async () => {
         if (!score || !activeNote) return
@@ -54,6 +59,15 @@ export function useRecording({
 
         if (transport.isRecording) {
             stopAll()
+            return
+        }
+
+        // iPhones filter the mic for speech; the fix is a user-only Control
+        // Center setting (src/lib/micMode.ts). First take on the device blocks
+        // on the walkthrough dialog — confirming it restarts this toggle.
+        if (needsMicModeGuide()) {
+            track('mic_mode_guide_shown')
+            setMicModeGuideOpen(true)
             return
         }
 
@@ -193,7 +207,35 @@ export function useRecording({
             micAutoGainControl: mic?.autoGainControl ?? null,
             micSampleRate: mic?.sampleRate ?? null,
         })
+
+        // The take is running — remind returning iPhone users to keep the
+        // Mic Mode setting right, while the count-off gives them a moment.
+        if (needsMicModeReminder() && !skipMicModeReminder.current) {
+            showToast('Recording on iPhone: keep Mic Mode on Wide Spectrum (Control Center) so every note comes through.', 'info', 'mic')
+        }
+        skipMicModeReminder.current = false
     }, [manipulator, score, activeNote, stopAll, saveToApi, id, router, waveformStore, transportRef, playbackCursorRef])
 
-    return { waveformStore, recordingState, recordingHalt, setRecordingHalt, handleRecordToggle }
+    /** The guide's confirm button: persist the attestation, start the take. */
+    const confirmMicModeGuide = useCallback(() => {
+        track('mic_mode_guide_confirmed')
+        markMicModeGuideConfirmed()
+        setMicModeGuideOpen(false)
+        skipMicModeReminder.current = true
+        void handleRecordToggle()
+    }, [handleRecordToggle])
+
+    /** Backing out (Escape / scrim / ✕): no take, and the guide returns next time. */
+    const dismissMicModeGuide = useCallback(() => setMicModeGuideOpen(false), [])
+
+    return {
+        waveformStore,
+        recordingState,
+        recordingHalt,
+        setRecordingHalt,
+        handleRecordToggle,
+        micModeGuideOpen,
+        confirmMicModeGuide,
+        dismissMicModeGuide,
+    }
 }

@@ -33,7 +33,7 @@ import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
-import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { ScoreManipulator } from './ScoreManipulator'
 import { TitleInput } from './TitleInput'
 import { usePlayback } from './usePlayback'
@@ -130,7 +130,16 @@ export default function ScoreEditorPage() {
         [manipulator, stopAll],
     )
 
-    const { waveformStore, recordingState, recordingHalt, setRecordingHalt, handleRecordToggle } = useRecording({
+    const {
+        waveformStore,
+        recordingState,
+        recordingHalt,
+        setRecordingHalt,
+        handleRecordToggle,
+        micModeGuideOpen,
+        confirmMicModeGuide,
+        dismissMicModeGuide,
+    } = useRecording({
         id,
         manipulator,
         score,
@@ -146,7 +155,7 @@ export default function ScoreEditorPage() {
     // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
     // up so its keystrokes can't edit the score; when the dialog closes, re-attaching also puts
     // focus back on the editor.
-    const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null
+    const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null || micModeGuideOpen
     useEffect(() => {
         const el = containerRef.current
         if (!el || dialogOpen) return
@@ -341,6 +350,7 @@ export default function ScoreEditorPage() {
                 />
             )}
             {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
+            {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
         </div>
     )
 }

@@ -8,6 +8,8 @@ export interface ToastItem {
     id: number
     message: string
     tone: 'error' | 'info'
+    /** Overrides the tone's default glyph (e.g. 'mic' for recording hints). */
+    icon?: string
 }
 
 const AUTO_DISMISS_MS = 6000
@@ -31,7 +33,7 @@ export function dismissToast(id: number) {
     emit()
 }
 
-export function showToast(message: string, tone: ToastItem['tone'] = 'error') {
+export function showToast(message: string, tone: ToastItem['tone'] = 'error', icon?: string) {
     // An identical visible toast just gets its timer reset — repeated failures
     // (e.g. a retrying auto-save) shouldn't stack into a wall of red.
     const existing = items.find((t) => t.message === message && t.tone === tone)
@@ -43,7 +45,7 @@ export function showToast(message: string, tone: ToastItem['tone'] = 'error') {
         )
         return
     }
-    const item: ToastItem = { id: nextId++, message, tone }
+    const item: ToastItem = { id: nextId++, message, tone, icon }
     items = [...items, item]
     timers.set(
         item.id,
@@ -82,7 +84,7 @@ export function Toaster() {
                                 ? 'bg-error-container text-on-error-container'
                                 : 'bg-primary-container text-on-primary-container',
                         ].join(' ')}>
-                        <Icon name={toast.tone === 'error' ? 'error' : 'info'} size={16} />
+                        <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
                     </span>
                     <span className="font-body font-medium text-[13px] leading-[1.4] text-on-surface">{toast.message}</span>
                     <button

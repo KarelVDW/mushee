@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { type CSSProperties, useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
@@ -93,6 +93,112 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                             One-time minute packs
                         </a>{' '}
                         start at {formatMoney(6, currency)} and never expire.
+                    </span>
+                </div>
+            </DialogPanel>
+        </DialogScrim>
+    )
+}
+
+/**
+ * Looping storyboard of the Control Center → Mic Mode → Wide Spectrum flow.
+ * Three schematic phases crossfade on a shared 9s loop (keyframes in
+ * globals.css); under prefers-reduced-motion they stack as a static list.
+ */
+function WideSpectrumWalkthrough() {
+    const phases = [
+        {
+            delay: '0s',
+            caption: 'Swipe down from the top-right corner',
+            scene: (
+                <div className="relative w-20 h-24 rounded-[10px] bg-surface-container-lowest tonal-layer-glow">
+                    <div className="absolute top-1.5 right-3 h-13 w-0.5 rounded-full bg-primary/30" />
+                    <div className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary" style={{ '--phase-delay': '0s' } as CSSProperties} />
+                </div>
+            ),
+        },
+        {
+            delay: '3s',
+            caption: 'Tap Mic Mode',
+            scene: (
+                <div className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3" style={{ '--phase-delay': '3s' } as CSSProperties}>
+                    <span className="w-8 h-8 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
+                        <Icon name="mic" size={16} />
+                    </span>
+                    <span className="font-body font-semibold text-[13px] text-on-surface">Mic Mode</span>
+                </div>
+            ),
+        },
+        {
+            delay: '6s',
+            caption: 'Choose Wide Spectrum',
+            scene: (
+                <div className="flex flex-col gap-1 w-44">
+                    {['Standard', 'Voice Isolation'].map((mode) => (
+                        <span key={mode} className="font-body text-[12px] text-on-surface-variant rounded-sm px-3 py-1.5">
+                            {mode}
+                        </span>
+                    ))}
+                    <span className="flex items-center justify-between bg-primary-soft text-on-primary-soft rounded-sm px-3 py-1.5">
+                        <span className="font-body font-semibold text-[12px]">Wide Spectrum</span>
+                        <span className="mic-guide-pop inline-flex">
+                            <Icon name="check" size={14} />
+                        </span>
+                    </span>
+                </div>
+            ),
+        },
+    ]
+    return (
+        <div className="mic-guide-stage relative h-[150px] flex rounded-[10px] bg-surface-container-low" aria-hidden="true">
+            {phases.map((phase) => (
+                <div
+                    key={phase.delay}
+                    className="mic-guide-phase absolute inset-0 flex flex-col items-center justify-center gap-3"
+                    style={{ '--phase-delay': phase.delay } as CSSProperties}>
+                    {phase.scene}
+                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{phase.caption}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+interface MicModeGuideDialogProps {
+    /** Confirms the setting and starts the take the user asked for. */
+    onConfirm: () => void
+    /** Backs out without confirming — the guide returns on the next attempt. */
+    onClose: () => void
+}
+
+/**
+ * Shown once per device, the first time an iPhone user hits record: iOS
+ * voice processing erases whistling and instrument tones unless the user
+ * sets Control Center's Mic Mode to Wide Spectrum, and no web (or native)
+ * API can do it for them — see src/lib/micMode.ts. The confirm button
+ * deliberately attests the setting instead of a bare "OK".
+ */
+export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogProps) {
+    useEscape(onClose)
+
+    return (
+        <DialogScrim onDismiss={onClose}>
+            <DialogPanel
+                title="iPhone user"
+                subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+                onClose={onClose}
+                width={480}
+                footer={
+                    <PrimaryButton icon="mic" onClick={onConfirm}>
+                        I&apos;ve set Wide Spectrum — record
+                    </PrimaryButton>
+                }>
+                <div className="flex flex-col gap-3.5 pb-2">
+                    <WideSpectrumWalkthrough />
+                    <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                        Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes
+                        before Solkey can hear them. The Mic Mode control appears in Control Center while a recording is running, and
+                        your iPhone remembers the choice for this browser.
                     </span>
                 </div>
             </DialogPanel>
