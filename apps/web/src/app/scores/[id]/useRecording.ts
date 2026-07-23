@@ -4,18 +4,31 @@ import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformSt
 import type { Note, Score } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useRouter } from 'next/navigation'
-import { type RefObject, useCallback, useRef, useState } from 'react'
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
 import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
-import { type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { RecordingEngine, type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
 import type { Transport } from '@/lib/Transport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
 
 // Why the recording was cut short (or refused) — drives which dialog shows.
 export type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
+
+/** Pick the toast for a mic that couldn't be opened — shared by the real take
+ *  and the Mic Mode guide's warm-up stream. */
+function micErrorToast(err: unknown): string {
+    if (err instanceof RecordingUnsupportedError) {
+        return "This browser can't record audio. Use a recent Chrome, Edge, Firefox, or Safari over HTTPS."
+    }
+    if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+        return 'Microphone access was blocked. Allow the microphone for this site, then try again.'
+    }
+    return "Recording couldn't start. Check your microphone permission and connection, then try again."
+}
+
 
 /**
  * The recording flow: owns the live waveform store, the recording state, the
@@ -51,6 +64,19 @@ export function useRecording({
     // The take started by confirming the guide skips the reminder toast — the
     // user just read the full walkthrough.
     const skipMicModeReminder = useRef(false)
+    // Held open for the guide dialog's lifetime so Control Center shows the
+    // Mic Mode tile; the pending flag spans the permission prompt, where the
+    // dialog isn't open yet to block a re-toggle.
+    const micWarmup = useRef<MediaStream | null>(null)
+    const micWarmupPending = useRef(false)
+
+    const releaseMicWarmup = useCallback(() => {
+        if (micWarmup.current) RecordingEngine.releaseStandaloneMic(micWarmup.current)
+        micWarmup.current = null
+    }, [])
+
+    // Navigating away with the guide open must not leave the mic indicator lit.
+    useEffect(() => releaseMicWarmup, [releaseMicWarmup])
 
     const handleRecordToggle = useCallback(async () => {
         if (!score || !activeNote) return
@@ -64,8 +90,22 @@ export function useRecording({
 
         // iPhones filter the mic for speech; the fix is a user-only Control
         // Center setting (src/lib/micMode.ts). First take on the device blocks
-        // on the walkthrough dialog — confirming it restarts this toggle.
+        // on the walkthrough dialog — confirming it restarts this toggle. The
+        // Mic Mode tile only exists in Control Center while capture is live,
+        // so the mic opens first (raising the permission prompt) and stays
+        // open for as long as the dialog is up.
         if (needsMicModeGuide()) {
+            if (micWarmupPending.current || micWarmup.current) return
+            micWarmupPending.current = true
+            try {
+                micWarmup.current = await RecordingEngine.openStandaloneMic()
+            } catch (err) {
+                console.error('Mic warm-up for the Mic Mode guide failed', err)
+                showToast(micErrorToast(err))
+                return
+            } finally {
+                micWarmupPending.current = false
+            }
             track('mic_mode_guide_shown')
             setMicModeGuideOpen(true)
             return
@@ -184,13 +224,7 @@ export function useRecording({
             })
         } catch (err) {
             console.error('Recording failed to start', err)
-            if (err instanceof RecordingUnsupportedError) {
-                showToast("This browser can't record audio. Use a recent Chrome, Edge, Firefox, or Safari over HTTPS.")
-            } else if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
-                showToast('Microphone access was blocked. Allow the microphone for this site, then try again.')
-            } else {
-                showToast("Recording couldn't start. Check your microphone permission and connection, then try again.")
-            }
+            showToast(micErrorToast(err))
             stopAll()
             return
         }
@@ -216,17 +250,23 @@ export function useRecording({
         skipMicModeReminder.current = false
     }, [manipulator, score, activeNote, stopAll, saveToApi, id, router, waveformStore, transportRef, playbackCursorRef])
 
-    /** The guide's confirm button: persist the attestation, start the take. */
+    /** The guide's confirm button: persist the attestation, start the take.
+     *  The warm-up stream is released first — the take re-acquires the mic
+     *  with the real constraints, and iOS keeps the Mic Mode choice per app. */
     const confirmMicModeGuide = useCallback(() => {
         track('mic_mode_guide_confirmed')
         markMicModeGuideConfirmed()
+        releaseMicWarmup()
         setMicModeGuideOpen(false)
         skipMicModeReminder.current = true
         void handleRecordToggle()
-    }, [handleRecordToggle])
+    }, [handleRecordToggle, releaseMicWarmup])
 
     /** Backing out (Escape / scrim / ✕): no take, and the guide returns next time. */
-    const dismissMicModeGuide = useCallback(() => setMicModeGuideOpen(false), [])
+    const dismissMicModeGuide = useCallback(() => {
+        releaseMicWarmup()
+        setMicModeGuideOpen(false)
+    }, [releaseMicWarmup])
 
     return {
         waveformStore,
