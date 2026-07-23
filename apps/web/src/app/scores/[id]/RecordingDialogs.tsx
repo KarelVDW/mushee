@@ -175,8 +175,11 @@ interface MicModeGuideDialogProps {
  * Shown once per device, the first time an iPhone user hits record: iOS
  * voice processing erases whistling and instrument tones unless the user
  * sets Control Center's Mic Mode to Wide Spectrum, and no web (or native)
- * API can do it for them — see src/lib/micMode.ts. The confirm button
- * deliberately attests the setting instead of a bare "OK".
+ * API can do it for them — see src/lib/micMode.ts. The tile only exists in
+ * Control Center while capture is live, so useRecording holds a warm-up mic
+ * stream open for this dialog's lifetime: the steps are performable right
+ * now, which is what lets the confirm button attest the setting instead of
+ * a bare "OK".
  */
 export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogProps) {
     useEscape(onClose)
@@ -197,8 +200,8 @@ export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogPro
                     <WideSpectrumWalkthrough />
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                         Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes
-                        before Solkey can hear them. The Mic Mode control appears in Control Center while a recording is running, and
-                        your iPhone remembers the choice for this browser.
+                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it
+                        now, come back, and your iPhone remembers the choice for this browser.
                     </span>
                 </div>
             </DialogPanel>

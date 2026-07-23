@@ -9,6 +9,10 @@
  * Spectrum" leaves music unfiltered, and the user's choice persists per app.
  * So the one lever left to a web app is education: a full walkthrough dialog
  * on the device's first recording, then a light toast reminder on later ones.
+ * One more wrinkle: the Mic Mode tile only exists in Control Center while an
+ * app is actively capturing, so the guide dialog runs over a live warm-up mic
+ * stream (opened by useRecording before the dialog shows) — otherwise the
+ * walkthrough asks for steps the user can't perform yet.
  */
 
 const STORAGE_KEY = 'solkey:mic-mode-guide'

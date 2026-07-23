@@ -7,7 +7,7 @@ import { type ReactNode, useRef, useState } from 'react'
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
-import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
+import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
     { label: '♮', value: undefined },
@@ -202,7 +202,8 @@ interface NoteToolDockProps {
 /**
  * The tool dock from DESIGN.md: every selection-scoped edit control in one docked bar
  * along the editor's bottom edge — the chrome mirror of the slim header, so it can never
- * hang over the score. Groups are separated by 1.5rem of space — no dividers — and the
+ * hang over the score. Each tool group sits in its own white capsule well (ToolGroup /
+ * the Segmented track) so it lifts off the dock's tone — no dividers — and the
  * clef/key/tempo popovers open upward, away from the dock. New tool groups wrap onto
  * additional rows instead of overflowing.
  */
@@ -244,38 +245,38 @@ export function NoteToolDock({
                     onChange={(v) => v && onDurationChange(v)}
                     options={DURATIONS.map((d) => ({ value: d, label: <DurationIcon dur={d} /> }))}
                 />
-                <div className="flex items-center gap-1.5">
-                    <ChipToggle active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
+                <ToolGroup ariaLabel="Note modifiers">
+                    <ChipToggle plain active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
                         ·
                     </ChipToggle>
-                    <ChipToggle active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
+                    <ChipToggle plain active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
                         <TupletIcon />
                     </ChipToggle>
-                    <ChipToggle active={rest} onClick={onRestToggle} ariaLabel="Rest">
+                    <ChipToggle plain active={rest} onClick={onRestToggle} ariaLabel="Rest">
                         <svg width={9} height={16} viewBox="0 0 16 30">
                             <Glyph name="restQuarter" x={1} y={20} fill="currentColor" />
                         </svg>
                     </ChipToggle>
-                    <ChipToggle active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
+                    <ChipToggle plain active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
                         Tie
                     </ChipToggle>
-                </div>
+                </ToolGroup>
                 <Segmented
                     ariaLabel="Accidental"
                     value={accidental}
                     onChange={onAccidentalChange}
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
-                <div className="flex items-center gap-1.5">
+                <ToolGroup ariaLabel="Score settings">
                     <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} compact={compact} />
                     <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
                     <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
                     {metronome && (
-                        <ChipToggle active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
+                        <ChipToggle plain active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
                             <Icon name="audio-lines" size={14} />
                         </ChipToggle>
                     )}
-                </div>
+                </ToolGroup>
             </div>
             {footer}
         </div>
@@ -307,7 +308,7 @@ function ClefControl({ clef, onSet, disabled, compact }: ClefControlProps) {
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
+            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
                 <ClefGlyph type={clef} size={26} />
             </ChipToggle>
             {open && (
@@ -342,6 +343,7 @@ function KeySignatureControl({ fifths, onSet, disabled, compact }: KeySignatureC
     return (
         <div ref={anchorRef} className="relative">
             <ChipToggle
+                plain
                 active={open}
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
@@ -379,7 +381,7 @@ function TempoControl({ bpm, onSet, disabled, compact }: TempoControlProps) {
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
+            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
                 {bpm} bpm
             </ChipToggle>
             {open && (

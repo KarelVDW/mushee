@@ -1,5 +1,24 @@
 import type { ReactNode } from 'react'
 
+interface ToolGroupProps {
+    ariaLabel: string
+    children: ReactNode
+}
+
+/**
+ * A white capsule well that makes a cluster of tool controls read as one group —
+ * the no-line rule's tonal shift (`surface_container_lowest` + tonal glow, the card
+ * lift) instead of borders or dividers. Controls inside it render `plain`
+ * (transparent at rest); the well is what separates them from the chrome behind.
+ */
+export function ToolGroup({ ariaLabel, children }: ToolGroupProps) {
+    return (
+        <div role="group" aria-label={ariaLabel} className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
+            {children}
+        </div>
+    )
+}
+
 interface SegmentedOption<T> {
     value: T
     label: ReactNode
@@ -14,7 +33,7 @@ interface SegmentedProps<T> {
 
 export function Segmented<T extends string | undefined>({ options, value, onChange, ariaLabel }: SegmentedProps<T>) {
     return (
-        <div role="group" aria-label={ariaLabel} className="inline-flex p-0.75 rounded-full bg-surface-container-low">
+        <div role="group" aria-label={ariaLabel} className="inline-flex gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
             {options.map((o, i) => {
                 const active = value === o.value
                 return (
@@ -30,7 +49,9 @@ export function Segmented<T extends string | undefined>({ options, value, onChan
                             'inline-flex items-center justify-center',
                             'transition-[background-color,color] duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                            active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
+                            active
+                                ? 'bg-primary-container text-on-primary-container'
+                                : 'bg-transparent text-on-surface-variant hover:bg-surface-container-high',
                         ].join(' ')}>
                         {o.label}
                     </button>
@@ -46,9 +67,11 @@ interface ChipToggleProps {
     ariaLabel?: string
     children: ReactNode
     disabled?: boolean
+    /** Transparent at rest — for chips inside a ToolGroup well, which provides the raised surface. */
+    plain?: boolean
 }
 
-export function ChipToggle({ active, onClick, ariaLabel, children, disabled }: ChipToggleProps) {
+export function ChipToggle({ active, onClick, ariaLabel, children, disabled, plain }: ChipToggleProps) {
     return (
         <button
             type="button"
@@ -66,7 +89,9 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled }: C
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 active
                     ? 'bg-primary-container text-on-primary-container'
-                    : 'bg-surface-container-low text-on-surface enabled:hover:bg-surface-container',
+                    : plain
+                      ? 'bg-transparent text-on-surface enabled:hover:bg-surface-container-high'
+                      : 'bg-surface-container-lowest tonal-layer-glow text-on-surface enabled:hover:bg-surface-container-high',
             ].join(' ')}>
             {children}
         </button>
@@ -144,7 +169,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                 'rounded-full border-0 inline-flex items-center justify-center shrink-0',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                'bg-surface-container-low enabled:hover:bg-surface-container',
+                'bg-surface-container-lowest enabled:hover:bg-surface-container-high',
                 active ? 'text-primary' : 'text-on-surface-variant',
                 'transition-[background-color,color] duration-150 ease-solkey',
             ].join(' ')}

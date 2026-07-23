@@ -166,6 +166,32 @@ export class RecordingEngine implements Tickable {
     }
 
     /**
+     * Open a bare mic stream outside any recording session — the Mic Mode
+     * guide holds one so iOS keeps the Control Center tile visible while the
+     * user follows it. Declares play-and-record first: WebKit refuses
+     * getUserMedia outright (InvalidStateError) while the audio session sits
+     * in a playback-only category, which a note preview leaves behind.
+     */
+    static async openStandaloneMic(): Promise<MediaStream> {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+            throw new RecordingUnsupportedError()
+        }
+        RecordingEngine.setAudioSessionType('play-and-record')
+        try {
+            return await navigator.mediaDevices.getUserMedia({ audio: true })
+        } catch (err) {
+            RecordingEngine.setAudioSessionType('auto')
+            throw err
+        }
+    }
+
+    /** Stop a standalone mic and hand the audio session back to the OS. */
+    static releaseStandaloneMic(stream: MediaStream): void {
+        stream.getTracks().forEach((t) => t.stop())
+        RecordingEngine.setAudioSessionType('auto')
+    }
+
+    /**
      * Begin a recording session. Caller is responsible for:
      *   1. inserting the empty count-off measure so `score.measures[startMeasureIndex]` is it
      *   2. inserting the first empty recording measure at `startMeasureIndex + 1`
