@@ -24,6 +24,10 @@ spec:
             # Cloud SQL over private IP with TLS; credentials come from the
             # POSTGRES_URL in api-secrets.
             - { name: POSTGRES_SSL, value: 'require' }
-            # Closed beta: signups join the waitlist until approved at /admin.
-            # Flip to 'false' (and NEXT_PUBLIC_BETA_MODE on Vercel) to open up.
+            # Closed beta: signups join the waitlist until approved in the
+            # admin console (admin.solkey.io). Flip to 'false' (and
+            # NEXT_PUBLIC_BETA_MODE on Vercel) to open up.
             - { name: BETA_MODE, value: 'true' }
+            # Admin console base URL — links in signup-notification emails.
+            # ADMIN_SECRET itself lives in Secret/api-secrets.
+            - { name: ADMIN_APP_URL, value: 'https://admin.solkey.io' }

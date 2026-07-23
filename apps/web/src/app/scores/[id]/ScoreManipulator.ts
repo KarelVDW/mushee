@@ -1,5 +1,7 @@
+import type { ClefType } from '@mushee/notation/components'
+import type { Instrument, Note, Score } from '@mushee/notation/model'
+
 import { Keybindings } from '@/lib/Keybindings'
-import type { Instrument, Note, Score } from '@/model'
 
 import type { ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
@@ -236,6 +238,22 @@ export class ScoreManipulator {
         const measure = this._score?.measures[measureIndex]
         if (!this._score || !measure) return
         this._score.setTempo(measure.noteAtBeat(beatPosition), bpm)
+        this.save()
+    }
+
+    /** Change the clef from the start of a measure (the in-score clef glyph popover). */
+    setClefAt(measureIndex: number, type: ClefType): void {
+        const measure = this._score?.measures[measureIndex]
+        if (!this._score || !measure) return
+        this._score.setClef(measure.noteAtBeat(0), type)
+        this.save()
+    }
+
+    /** Change the key signature from the start of a measure (the in-score key glyph popover). */
+    setKeyAt(measureIndex: number, fifths: number): void {
+        const measure = this._score?.measures[measureIndex]
+        if (!this._score || !measure) return
+        this._score.setKeySignature(measure.noteAtBeat(0), fifths)
         this.save()
     }
 

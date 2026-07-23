@@ -1,6 +1,5 @@
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { Soundfont, type StopFn } from 'smplr'
-
-import { Instrument } from '@/model/Instrument'
 
 export interface ScheduledNote {
     startTime: number
@@ -8,6 +7,8 @@ export interface ScheduledNote {
     midi: number
     instrument: Instrument
 }
+
+type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
 
 /**
  * Plays MIDI notes via smplr's Soundfont sampler. Has no knowledge of scores
@@ -56,6 +57,7 @@ export class MidiPlayer {
     /** Begin a playback session. Notes are scheduled individually via `schedule`. */
     start() {
         this.stop()
+        MidiPlayer.setAudioSessionType('playback')
         const ctx = this.ensureCtx()
         if (ctx.state === 'suspended') ctx.resume().catch(() => {})
         this.startOffset = ctx.currentTime
@@ -77,6 +79,7 @@ export class MidiPlayer {
     stop() {
         this.cancelStops(this.scheduledStops)
         this.scheduledStops = []
+        MidiPlayer.setAudioSessionType('auto')
     }
 
     /** Suspend playback — freezes currentTime and halts audio output without losing state. */
@@ -86,12 +89,14 @@ export class MidiPlayer {
 
     /** Resume a suspended playback context. */
     resume() {
+        MidiPlayer.setAudioSessionType('playback')
         this.audioCtx?.resume().catch(() => {})
     }
 
     /** Play a single note for the given duration. Stops any previous preview. */
     preview(midi: number, duration: number, instrument: Instrument) {
         this.stopPreview()
+        MidiPlayer.setAudioSessionType('playback')
         const ctx = this.ensureCtx()
         if (ctx.state === 'suspended') ctx.resume().catch(() => {})
         const sf = this.soundfonts.get(instrument.id)?.sf
@@ -113,6 +118,7 @@ export class MidiPlayer {
         this.soundfonts.clear()
         this.audioCtx?.close().catch(() => {})
         this.audioCtx = null
+        MidiPlayer.setAudioSessionType('auto')
     }
 
     // --- Internal ---
@@ -120,6 +126,21 @@ export class MidiPlayer {
     private ensureCtx(): AudioContext {
         if (!this.audioCtx) this.audioCtx = new AudioContext()
         return this.audioCtx
+    }
+
+    /**
+     * Hint the OS audio session via WebKit's API; no-op on other browsers.
+     * iOS mutes Web Audio while the hardware silent switch is on unless the
+     * session is declared 'playback' — without this, replay is inaudible for
+     * anyone whose phone is on silent. Never touches a 'play-and-record'
+     * session: during a take the RecordingEngine owns it, and reclaiming it
+     * for playback-only would break mic capture under the count-off.
+     */
+    private static setAudioSessionType(type: 'playback' | 'auto'): void {
+        if (typeof navigator === 'undefined') return
+        const session = (navigator as NavigatorWithAudioSession).audioSession
+        if (!session || session.type === 'play-and-record') return
+        session.type = type
     }
 
     private cancelStops(stops: StopFn[]) {

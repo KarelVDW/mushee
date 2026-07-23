@@ -1,4 +1,4 @@
-import type { Score } from '@/model'
+import type { Score } from '@mushee/notation/model'
 
 // A4 in PDF points (1/72")
 const PAGE_WIDTH = 595.28

@@ -1,13 +1,13 @@
-import { pitched, rest } from '@test/helpers'
+import { Duration } from '@mushee/notation/model/Duration'
+import { Instrument } from '@mushee/notation/model/Instrument'
+import { Note } from '@mushee/notation/model/Note'
+import { Pitch } from '@mushee/notation/model/Pitch'
+import { Score } from '@mushee/notation/model/Score'
+import { pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 import type { MidiPlayer, ScheduledNote } from '@/lib/MidiPlayer'
 import { ScoreScheduler } from '@/lib/ScoreScheduler'
-import { Duration } from '@/model/Duration'
-import { Instrument } from '@/model/Instrument'
-import { Note } from '@/model/Note'
-import { Pitch } from '@/model/Pitch'
-import { Score } from '@/model/Score'
 
 /** Minimal MidiPlayer stand-in: a settable clock plus a recording `schedule`. */
 function fakePlayer() {

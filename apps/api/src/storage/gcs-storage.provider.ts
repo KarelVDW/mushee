@@ -1,5 +1,5 @@
 import { Bucket, Storage } from '@google-cloud/storage';
-import type { Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
 
 import type { StorageProvider } from './storage-provider';
 
@@ -37,6 +37,27 @@ export class GcsStorageProvider implements StorageProvider {
       resumable: false,
       contentType: options?.contentType,
     });
+  }
+
+  createReadStream(key: string): Readable {
+    return this.bucket.file(key).createReadStream();
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    const [files] = await this.bucket.getFiles({ prefix });
+    return files.map((file) => file.name);
+  }
+
+  async signedUrl(key: string, ttlSeconds: number): Promise<string | null> {
+    // V4 signing under workload identity goes through the IAM signBlob API —
+    // the service account needs roles/iam.serviceAccountTokenCreator on
+    // itself. Callers treat a signing failure as "stream it instead".
+    const [url] = await this.bucket.file(key).getSignedUrl({
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + ttlSeconds * 1000,
+    });
+    return url;
   }
 
   async delete(key: string): Promise<void> {

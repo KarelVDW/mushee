@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-    approveBetaSignup,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
@@ -72,12 +71,5 @@ describe('billing & beta api client', () => {
     it('getBetaStatus GETs /beta/status', async () => {
         await getBetaStatus()
         expect(lastCall()[0]).toBe(`${BASE}/beta/status`)
-    })
-
-    it('approveBetaSignup POSTs to the admin route', async () => {
-        await approveBetaSignup('user-1')
-        const [url, init] = lastCall()
-        expect(url).toBe(`${BASE}/admin/beta/signups/user-1/approve`)
-        expect(init.method).toBe('POST')
     })
 })

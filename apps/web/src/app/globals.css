@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* The notation renderer lives in packages/notation (compiled by this app);
+   Tailwind must be told to scan it for classes. */
+@source '../../../../packages/notation/src/components';
 
 @theme inline {
     /* Solkey — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */
@@ -158,6 +161,111 @@ body {
 }
 .waveform-bar-exit {
     animation: waveform-bar-out 450ms var(--ease-solkey) forwards;
+}
+
+/* iPhone Mic Mode walkthrough (RecordingDialogs.tsx → MicModeGuideDialog).
+   Three phases share one 9s loop; each phase (and the motion inside it) offsets
+   its start with --phase-delay, so every animation below runs 9s and keeps its
+   action inside the first third of its own timeline. */
+@keyframes mic-guide-phase {
+    0%,
+    33.4%,
+    100% {
+        opacity: 0;
+    }
+    4%,
+    29% {
+        opacity: 1;
+    }
+}
+.mic-guide-phase {
+    opacity: 0;
+    animation: mic-guide-phase 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
+}
+/* Phase 1: the finger dot swipes down from the top-right corner. */
+@keyframes mic-guide-swipe {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    6% {
+        opacity: 1;
+    }
+    18%,
+    26% {
+        transform: translateY(38px);
+        opacity: 1;
+    }
+    30%,
+    100% {
+        transform: translateY(38px);
+        opacity: 0;
+    }
+}
+.mic-guide-swipe {
+    animation: mic-guide-swipe 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
+}
+/* Phase 2: the Mic Mode tile takes a tap. */
+@keyframes mic-guide-tap {
+    0%,
+    10% {
+        transform: scale(1);
+    }
+    15% {
+        transform: scale(0.94);
+    }
+    20%,
+    100% {
+        transform: scale(1);
+    }
+}
+.mic-guide-tap {
+    animation: mic-guide-tap 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
+}
+/* Phase 3: the Wide Spectrum check pops in. */
+@keyframes mic-guide-pop {
+    0%,
+    10% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    16% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+    21%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+.mic-guide-pop {
+    animation: mic-guide-pop 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
+}
+/* Reduced motion: the storyboard becomes a static step list. */
+@media (prefers-reduced-motion: reduce) {
+    .mic-guide-stage {
+        height: auto;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+    .mic-guide-phase,
+    .mic-guide-swipe,
+    .mic-guide-tap,
+    .mic-guide-pop {
+        animation: none;
+    }
+    .mic-guide-phase {
+        opacity: 1;
+        position: static;
+    }
+    .mic-guide-swipe {
+        opacity: 0;
+    }
+    .mic-guide-pop {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* Long-form articles (privacy policy, terms). Tonal, no hard rules. */

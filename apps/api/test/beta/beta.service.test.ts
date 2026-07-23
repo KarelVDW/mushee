@@ -3,8 +3,8 @@ import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { MailService } from '../../src/mail/mail.service';
 import { BetaService } from '../../src/beta/beta.service';
+import type { MailService } from '../../src/mail/mail.service';
 
 /**
  * The fake mirrors the postgres driver's raw-query contract, which is the

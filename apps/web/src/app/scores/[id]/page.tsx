@@ -1,16 +1,26 @@
 'use client'
 
+import {
+    type ClefClickEvent,
+    type ClefType,
+    type DurationType,
+    type KeySignatureClickEvent,
+    Score as ScoreView,
+    type TempoClickEvent,
+} from '@mushee/notation/components'
+import type { ScorePartwise } from '@mushee/notation/components/types'
+import { Instrument, type Note, type Pitch } from '@mushee/notation/model'
+import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
-import { type ClefType, type DurationType, Score as ScoreView } from '@/components/notation'
-import type { ScorePartwise } from '@/components/notation/types'
+import { ClefPopover } from '@/components/editor/ClefPopover'
+import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
+import { TempoPopover } from '@/components/editor/TempoPopover'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { Instrument, type Note, type Pitch } from '@/model'
-import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import {
     CHANGE_PITCH,
@@ -33,7 +43,7 @@ import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
-import { ConcurrentRecordingDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { ScoreManipulator } from './ScoreManipulator'
 import { TitleInput } from './TitleInput'
 import { usePlayback } from './usePlayback'
@@ -109,10 +119,21 @@ export default function ScoreEditorPage() {
     const handleKeySet = useCallback((fifths: number) => manipulator.run(SET_KEY, fifths), [manipulator])
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
-    const handleTempoChange = useCallback(
-        (measureIndex: number, beatPosition: number, bpm: number) => manipulator.setTempoAt(measureIndex, beatPosition, bpm),
-        [manipulator],
-    )
+
+    // In-score attribute glyphs (tempo / clef / key): the ScoreView only reports the
+    // click; this page owns the popover it opens and applies the change through the
+    // manipulator. The admin console renders the same ScoreView with no callbacks —
+    // that's what keeps its score page read-only.
+    const [attributePopover, setAttributePopover] = useState<
+        | ({ kind: 'tempo' } & TempoClickEvent)
+        | ({ kind: 'clef' } & ClefClickEvent)
+        | ({ kind: 'key' } & KeySignatureClickEvent)
+        | null
+    >(null)
+    const closeAttributePopover = useCallback(() => setAttributePopover(null), [])
+    const handleTempoClick = useCallback((event: TempoClickEvent) => setAttributePopover({ kind: 'tempo', ...event }), [])
+    const handleClefClick = useCallback((event: ClefClickEvent) => setAttributePopover({ kind: 'clef', ...event }), [])
+    const handleKeySignatureClick = useCallback((event: KeySignatureClickEvent) => setAttributePopover({ kind: 'key', ...event }), [])
 
     const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
         usePlayback({
@@ -130,7 +151,16 @@ export default function ScoreEditorPage() {
         [manipulator, stopAll],
     )
 
-    const { waveformStore, recordingState, recordingHalt, setRecordingHalt, handleRecordToggle } = useRecording({
+    const {
+        waveformStore,
+        recordingState,
+        recordingHalt,
+        setRecordingHalt,
+        handleRecordToggle,
+        micModeGuideOpen,
+        confirmMicModeGuide,
+        dismissMicModeGuide,
+    } = useRecording({
         id,
         manipulator,
         score,
@@ -146,7 +176,7 @@ export default function ScoreEditorPage() {
     // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
     // up so its keystrokes can't edit the score; when the dialog closes, re-attaching also puts
     // focus back on the editor.
-    const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null
+    const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null || micModeGuideOpen
     useEffect(() => {
         const el = containerRef.current
         if (!el || dialogOpen) return
@@ -260,21 +290,65 @@ export default function ScoreEditorPage() {
                 <div
                     ref={scoreAreaRef}
                     className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
-                    <ScoreView
-                        score={score}
-                        layoutId={score.layout.id}
-                        selectedNote={activeNote}
-                        selectedNotes={manipulator.selectedNotes}
-                        playbackCursorRef={playbackCursorRef}
-                        waveformStore={waveformStore}
-                        onSelectionStart={handleSelectionStart}
-                        onSelectionExtend={handleSelectionExtend}
-                        onNoteChange={handleNoteChange}
-                        onAddMeasure={handleAddMeasure}
-                        onRemoveMeasure={handleRemoveMeasure}
-                        canRemoveMeasure={score.measures.length > 1}
-                        onTempoChange={handleTempoChange}
-                    />
+                    {/* The click events carry coordinates relative to the ScoreView's own
+                        container, so the popovers anchor inside this exact wrapper. */}
+                    <div className="relative">
+                        <ScoreView
+                            score={score}
+                            layoutId={score.layout.id}
+                            selectedNote={activeNote}
+                            selectedNotes={manipulator.selectedNotes}
+                            playbackCursorRef={playbackCursorRef}
+                            waveformStore={waveformStore}
+                            onSelectionStart={handleSelectionStart}
+                            onSelectionExtend={handleSelectionExtend}
+                            onNoteChange={handleNoteChange}
+                            onAddMeasure={handleAddMeasure}
+                            onRemoveMeasure={handleRemoveMeasure}
+                            canRemoveMeasure={score.measures.length > 1}
+                            onTempoClick={handleTempoClick}
+                            onClefClick={handleClefClick}
+                            onKeySignatureClick={handleKeySignatureClick}
+                        />
+                        {attributePopover?.kind === 'tempo' && (
+                            <TempoPopover
+                                x={attributePopover.x}
+                                y={attributePopover.y - 30}
+                                initialBpm={attributePopover.bpm}
+                                onSubmit={(bpm) => {
+                                    manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
+                                    closeAttributePopover()
+                                }}
+                                onDismiss={closeAttributePopover}
+                            />
+                        )}
+                        {attributePopover?.kind === 'clef' && (
+                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
+                                <ClefPopover
+                                    active={attributePopover.clef}
+                                    className="left-0 top-0"
+                                    onSelect={(type) => {
+                                        manipulator.setClefAt(attributePopover.measureIndex, type)
+                                        closeAttributePopover()
+                                    }}
+                                    onDismiss={closeAttributePopover}
+                                />
+                            </div>
+                        )}
+                        {attributePopover?.kind === 'key' && (
+                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
+                                <KeySignaturePopover
+                                    active={attributePopover.fifths}
+                                    className="left-0 top-0"
+                                    onSelect={(fifths) => {
+                                        manipulator.setKeyAt(attributePopover.measureIndex, fifths)
+                                        closeAttributePopover()
+                                    }}
+                                    onDismiss={closeAttributePopover}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <NoteToolDock
@@ -341,6 +415,7 @@ export default function ScoreEditorPage() {
                 />
             )}
             {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
+            {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
         </div>
     )
 }

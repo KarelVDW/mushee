@@ -147,15 +147,15 @@ export class MailService {
     signupEmail: string,
     signupName: string,
   ): Promise<void> {
-    const appUrl = webAppUrl();
+    const consoleUrl = adminAppUrl();
     const subject = `New Solkey beta signup: ${signupEmail}`;
     const text =
       `${signupName} (${signupEmail}) just joined the beta waitlist.\n\n` +
-      `Approve or review signups in the admin panel:\n${appUrl}/admin`;
+      `Approve or review signups in the admin console:\n${consoleUrl}/waitlist`;
     const html = layout(
       'New beta signup',
       `<p><strong>${escapeHtml(signupName)}</strong> (${escapeHtml(signupEmail)}) just joined the beta waitlist.</p>
-       ${button(`${appUrl}/admin`, 'Review signups')}`,
+       ${button(`${consoleUrl}/waitlist`, 'Review signups')}`,
     );
     await this.send({ to, subject, html, text });
   }
@@ -185,6 +185,11 @@ function webAppUrl(): string {
     process.env.CORS_ORIGIN ??
     'http://localhost:3200'
   ).replace(/\/$/, '');
+}
+
+/** Public base URL of the standalone admin console (apps/admin). */
+function adminAppUrl(): string {
+  return (process.env.ADMIN_APP_URL ?? 'http://localhost:3500').replace(/\/$/, '');
 }
 
 function escapeHtml(s: string): string {

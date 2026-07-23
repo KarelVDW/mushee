@@ -1,11 +1,11 @@
-import { makeScore, pitched } from '@test/helpers'
+import type { Note } from '@mushee/notation/model'
+import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
-import type { Note } from '@/model'
 
 beforeEach(() => {
     localStorage.clear()
@@ -312,5 +312,33 @@ describe('ScoreManipulator keyboard dispatch', () => {
         input.dispatchEvent(event)
         expect(event.defaultPrevented).toBe(false)
         expect(manipulator.selectedNote).toBe(notes[0])
+    })
+})
+
+describe('ScoreManipulator in-score attribute setters', () => {
+    it('sets a clef from the start of the given measure', () => {
+        const { manipulator } = setupPitched()
+        manipulator.setClefAt(0, 'bass')
+        expect(allNotes(manipulator)[0].clef.type).toBe('bass')
+    })
+
+    it('sets a key signature from the start of the given measure', () => {
+        const { manipulator } = setupPitched()
+        manipulator.setKeyAt(0, 3)
+        expect(allNotes(manipulator)[0].keySignature.fifths).toBe(3)
+    })
+
+    it('sets a tempo at an explicit beat position', () => {
+        const { manipulator } = setupPitched()
+        manipulator.setTempoAt(0, 0, 132)
+        expect(manipulator.score?.bpmAt(allNotes(manipulator)[0])).toBe(132)
+    })
+
+    it('ignores out-of-range measure indexes', () => {
+        const { manipulator } = setupPitched()
+        manipulator.setClefAt(9, 'bass')
+        manipulator.setKeyAt(9, 3)
+        manipulator.setTempoAt(9, 0, 132)
+        expect(allNotes(manipulator)[0].clef.type).toBe('treble')
     })
 })

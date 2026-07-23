@@ -1,0 +1,16 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        // Mirrors the consuming Next apps: this package never compiles on its
+        // own (no build script) — apps transpile the source, tsc only checks.
+        "target": "ES2017",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "noEmit": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "incremental": true
+    },
+    "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"],
+    "exclude": ["node_modules"]
+}

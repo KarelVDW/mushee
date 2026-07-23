@@ -1,9 +1,9 @@
 'use client'
 
+import { Instrument } from '@mushee/notation/model'
 import { useMemo, useState } from 'react'
 
 import { Chip, Eyebrow, TextField } from '@/components/ui'
-import { Instrument } from '@/model'
 
 interface InstrumentPickerProps {
     value: Instrument

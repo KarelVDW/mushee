@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { resolve } from 'path';
-import type { Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
 
 import { GcsStorageProvider } from './gcs-storage.provider';
 import { LocalStorageProvider } from './local-storage.provider';
@@ -64,6 +64,18 @@ export class StorageService implements StorageProvider {
     options?: { contentType?: string },
   ): Writable {
     return this.provider.createWriteStream(key, options);
+  }
+
+  createReadStream(key: string): Readable {
+    return this.provider.createReadStream(key);
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    return this.provider.list(prefix);
+  }
+
+  async signedUrl(key: string, ttlSeconds: number): Promise<string | null> {
+    return this.provider.signedUrl(key, ttlSeconds);
   }
 
   async delete(key: string): Promise<void> {

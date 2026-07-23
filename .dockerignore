@@ -7,6 +7,8 @@
 **/debug
 **/fixtures/eval
 **/fixtures/eval-real
+**/scripts/eval/.cache
+**/*.sf2
 **/*.log
 # Exclude the web app's source, but keep its package.json so pnpm can resolve the
 # workspace for --frozen-lockfile (the API image never builds web).
