@@ -1,9 +1,9 @@
 'use client'
 
+import { Instrument } from '@mushee/notation/model'
 import { useEffect, useState } from 'react'
 
 import { DialogPanel, DialogScrim, PrimaryButton, TertiaryButton } from '@/components/ui'
-import { Instrument } from '@/model'
 
 import { InstrumentPicker } from '../InstrumentPicker'
 

@@ -1,4 +1,4 @@
-import type { Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
 
 /**
  * A blob store keyed by `/`-separated paths (e.g. `scores/<userId>/<file>` or
@@ -25,6 +25,23 @@ export interface StorageProvider {
    * 'error') — upload failures surface there, not at open time.
    */
   createWriteStream(key: string, options?: { contentType?: string }): Writable;
+
+  /**
+   * Open a readable stream of `key`'s bytes (recording audio playback).
+   * Absent keys surface as an 'error' on the stream, not at open time.
+   */
+  createReadStream(key: string): Readable;
+
+  /** List the keys directly under `prefix` (a "directory"). Absent prefixes
+   *  resolve to an empty list. */
+  list(prefix: string): Promise<string[]>;
+
+  /**
+   * A time-limited URL a browser can fetch `key` from directly, or null when
+   * the backend has no such concept (local filesystem) — callers must then
+   * stream the object themselves.
+   */
+  signedUrl(key: string, ttlSeconds: number): Promise<string | null>;
 
   /** Delete one object. Absent keys resolve silently. */
   delete(key: string): Promise<void>;

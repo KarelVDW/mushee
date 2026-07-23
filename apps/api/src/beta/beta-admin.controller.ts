@@ -1,11 +1,11 @@
 import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 
-import { AdminGuard } from '../auth/admin.guard';
+import { AdminSecretGuard } from '../admin/admin-secret.guard';
 import { BetaService } from './beta.service';
 
-/** Admin-only management of the closed-beta waitlist. */
+/** Closed-beta waitlist management for the admin console (apps/admin). */
 @Controller('admin/beta')
-@UseGuards(AdminGuard)
+@UseGuards(AdminSecretGuard)
 export class BetaAdminController {
   constructor(private readonly betaService: BetaService) {}
 

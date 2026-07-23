@@ -77,8 +77,14 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=BETTER_AUTH_SECRET="$(cat /tmp/rot/better-auth.txt)" \
   --from-literal=SENDGRID_API_KEY="$(cat /tmp/rot/sendgrid.txt)" \
   --from-literal=ADMIN_EMAILS='info@solkey.io' \
+  --from-literal=ADMIN_SECRET="$(cat /tmp/rot/admin-secret.txt)" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
+
+(`ADMIN_SECRET` is the admin-console login; rotate it like the others with
+`openssl rand -base64 32` and set the same value on the admin console's
+Vercel project — a mismatch just means console sign-ins fail until both
+sides agree.)
 
 (Once Polar is configured, carry its keys over in the same command — check
 the §2 key listing so you never silently drop a key. A dropped

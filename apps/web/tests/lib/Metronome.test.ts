@@ -1,9 +1,9 @@
-import { makeScore } from '@test/helpers'
+import { Instrument } from '@mushee/notation/model/Instrument'
+import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 import { Metronome } from '@/lib/Metronome'
 import type { MidiPlayer, ScheduledNote } from '@/lib/MidiPlayer'
-import { Instrument } from '@/model/Instrument'
 
 function fakePlayer() {
     const scheduled: ScheduledNote[] = []

@@ -113,7 +113,8 @@ kubectl create secret generic api-secrets -n mushee-uat \
   --from-literal=POSTGRES_URL="postgres://mushee_uat:$(cat /tmp/uat-db-password.txt)@10.56.0.3:5432/mushee_uat" \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<the prod key is fine — mail is real either way>' \
-  --from-literal=ADMIN_EMAILS='info@solkey.io'
+  --from-literal=ADMIN_EMAILS='info@solkey.io' \
+  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)"
 
 cd deploy/k8s/overlays/uat
 kustomize edit set image \
@@ -169,9 +170,11 @@ That guard is correct (demo accounts have a public password); don't fight it.
 Options, in order of preference:
 
 - Create accounts through the real signup flow (mail works in uat).
-- Promote a uat admin the manual way:
-  `UPDATE "user" SET role='admin', "betaStatus"='approved' WHERE email='...';`
+- Beta-approve a uat account the manual way:
+  `UPDATE "user" SET "betaStatus"='approved' WHERE email='...';`
   (see Runbook 4 §5 for how to run SQL against the private instance).
+  The admin console itself needs no account — it signs in with this
+  environment's `ADMIN_SECRET`.
 - If demo data is truly needed, run the seeder as a one-off pod with
   `NODE_ENV` unset, pointing `POSTGRES_URL` at `mushee_uat` — accept that
   those demo credentials are public and uat must never hold real user data.

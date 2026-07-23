@@ -260,27 +260,8 @@ export interface BetaStatus {
     role: string
 }
 
-/** Fresh from the database — the waiting screen polls this to spot approval. */
+/** Fresh from the database — the waiting screen polls this to spot approval.
+ *  Waitlist management lives in the standalone admin console (apps/admin). */
 export function getBetaStatus(): Promise<BetaStatus> {
     return api('/beta/status')
-}
-
-export interface BetaSignup {
-    id: string
-    name: string
-    email: string
-    status: 'pending' | 'approved'
-    createdAt: string
-}
-
-export function listBetaSignups(): Promise<BetaSignup[]> {
-    return api('/admin/beta/signups')
-}
-
-export function approveBetaSignup(userId: string): Promise<BetaSignup[]> {
-    return api(`/admin/beta/signups/${userId}/approve`, { method: 'POST', body: '{}' })
-}
-
-export function revokeBetaSignup(userId: string): Promise<BetaSignup[]> {
-    return api(`/admin/beta/signups/${userId}/revoke`, { method: 'POST', body: '{}' })
 }

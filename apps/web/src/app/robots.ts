@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
                 userAgent: '*',
                 allow: '/',
                 // Authenticated app surface + analytics proxy: nothing to index.
-                disallow: ['/scores', '/settings', '/onboarding', '/admin', '/beta', '/reset-password', '/ingest'],
+                disallow: ['/scores', '/settings', '/onboarding', '/beta', '/reset-password', '/ingest'],
             },
         ],
         sitemap: `${SITE_URL}/sitemap.xml`,

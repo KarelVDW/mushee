@@ -1,5 +1,5 @@
-import type { Note } from '@/model/Note'
-import type { Score } from '@/model/Score'
+import type { Note } from '@mushee/notation/model/Note'
+import type { Score } from '@mushee/notation/model/Score'
 
 import { MidiPlayer } from './MidiPlayer'
 import type { Tickable } from './Ticker'

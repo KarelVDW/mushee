@@ -1,6 +1,5 @@
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import { Instrument } from '@/model/Instrument'
 
 // --- smplr mock -------------------------------------------------------------
 // Each Soundfont instance records its start() calls and returns a stop fn we can spy on.
@@ -273,5 +272,57 @@ describe('MidiPlayer', () => {
         ctx.resume.mockRejectedValueOnce(new Error('nope'))
         expect(() => player.preview(60, 0.5, Instrument.Piano)).not.toThrow()
         await Promise.resolve()
+    })
+
+    describe('audio session (iOS silent-switch handling)', () => {
+        it('start() declares a playback session and stop() restores auto', () => {
+            const audioSession = { type: 'auto' }
+            vi.stubGlobal('navigator', { audioSession })
+            const player = new MidiPlayer()
+            player.start()
+            expect(audioSession.type).toBe('playback')
+            player.stop()
+            expect(audioSession.type).toBe('auto')
+        })
+
+        it('preview() and resume() declare a playback session', () => {
+            const audioSession = { type: 'auto' }
+            vi.stubGlobal('navigator', { audioSession })
+            const player = new MidiPlayer()
+            player.preview(60, 0.5, Instrument.Piano)
+            expect(audioSession.type).toBe('playback')
+
+            audioSession.type = 'auto'
+            player.resume()
+            expect(audioSession.type).toBe('playback')
+        })
+
+        it('dispose() restores the session to auto', () => {
+            const audioSession = { type: 'auto' }
+            vi.stubGlobal('navigator', { audioSession })
+            const player = new MidiPlayer()
+            player.start()
+            player.dispose()
+            expect(audioSession.type).toBe('auto')
+        })
+
+        it("never touches a session the RecordingEngine owns ('play-and-record')", () => {
+            const audioSession = { type: 'play-and-record' }
+            vi.stubGlobal('navigator', { audioSession })
+            const player = new MidiPlayer()
+            player.start() // count-off playback during a take
+            expect(audioSession.type).toBe('play-and-record')
+            player.stop()
+            expect(audioSession.type).toBe('play-and-record')
+        })
+
+        it('is a no-op on browsers without the audioSession API', () => {
+            vi.stubGlobal('navigator', {})
+            const player = new MidiPlayer()
+            expect(() => {
+                player.start()
+                player.stop()
+            }).not.toThrow()
+        })
     })
 })

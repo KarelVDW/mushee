@@ -1,12 +1,12 @@
 'use client'
 
+import { Instrument } from '@mushee/notation/model'
 import { type Dispatch, type SetStateAction, useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import { emailOtp } from '@/lib/auth-client'
 import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
-import { Instrument } from '@/model'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { OptionCard, StepShell } from './OnboardingControls'

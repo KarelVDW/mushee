@@ -1,22 +1,12 @@
 'use client'
 
+import { CLEF_DEFS, type ClefType, type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
+import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
 import { type ReactNode, useRef, useState } from 'react'
 
-import {
-    CLEF_DEFS,
-    ClefGlyph,
-    ClefPopover,
-    type ClefType,
-    type DurationType,
-    getGlyphWidth,
-    Glyph,
-    GLYPH_SCALE,
-    KeySignatureGlyph,
-    keySignatureLabel,
-    KeySignaturePopover,
-    TempoPopover,
-} from '@/components/notation'
-import { TUPLET_NUMBER_SCALE } from '@/components/notation/constants'
+import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
+import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
+import { TempoPopover } from '@/components/editor/TempoPopover'
 import { ChipToggle, Icon, Segmented, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [

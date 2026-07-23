@@ -1,9 +1,9 @@
 'use client'
 
+import type { Score } from '@mushee/notation/model'
 import { useCallback, useRef } from 'react'
 
 import { useUpdateScore } from '@/lib/queries'
-import type { Score } from '@/model'
 
 /** Debounced autosave: batches title/score changes into PATCHes, retrying on failure. */
 export function useScoreAutosave(id: string) {

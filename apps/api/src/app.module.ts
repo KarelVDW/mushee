@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AccountModule } from './account/account.module';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BetaModule } from './beta/beta.module';
 import { BillingModule } from './billing/billing.module';
@@ -41,6 +42,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     RecordingsModule,
     BetaModule,
     BillingModule,
+    AdminModule,
   ],
   controllers: [HealthController],
 })

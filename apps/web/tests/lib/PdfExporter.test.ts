@@ -1,4 +1,4 @@
-import { makeScore } from '@test/helpers'
+import { makeScore } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PdfExporter } from '@/lib/PdfExporter'

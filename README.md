@@ -5,9 +5,11 @@ Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 | Path | What it is |
 |---|---|
 | `apps/web` | Next.js app (editor UI), dev on **:3200** |
+| `apps/admin` | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500** |
 | `apps/api` | NestJS API + WebSocket recording pipeline, dev on **:4200** |
 | `apps/inference-crepe` | Python gRPC service: CREPE forward pass (**:50051**) |
 | `apps/inference-basic-pitch` | Python gRPC service: basic-pitch forward pass (**:50052**) |
+| `packages/notation` | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
 | `packages/inference-proto` | Shared gRPC contract for the inference services |
 | `deploy/k8s` | Kustomize manifests: `base/` (production-shaped) + `overlays/local/` |
 
@@ -24,11 +26,25 @@ Prereqs: Node 22 + pnpm, Docker Desktop.
 ```sh
 pnpm install
 pnpm setup        # start dev Postgres (:5632) + fresh schema + demo data
-pnpm dev          # web on :3200, api on :4200 (in-process inference)
+pnpm dev          # web on :3200, admin on :3500, api on :4200 (in-process inference)
 ```
 
 Optionally copy `apps/api/.env.example` → `apps/api/.env.development` (and the
-same in `apps/web`) to tweak settings; the defaults work out of the box.
+same in `apps/web` and `apps/admin`) to tweak settings; the defaults work out
+of the box.
+
+### Admin console
+
+`apps/admin` is a standalone Next.js app (no user accounts): you sign in with
+the shared `ADMIN_SECRET`, and its server proxies every call to the API's
+`/admin` endpoints with that secret in a header — the browser never sees it
+and the API needs no extra CORS entry. Set the same `ADMIN_SECRET` in
+`apps/api/.env.development` and `apps/admin/.env.development` (any non-empty
+value works locally; unset, the console can't sign in and the API's `/admin`
+routes answer 503). It ships a stats dashboard, user/score inspection
+(read-only piano-roll preview), pack-minute grants, session revocation, the
+beta waitlist, and the tier table. Production runs it as its own Vercel
+project on `admin.solkey.io` — see `deploy/k8s/overlays/production/README.md`.
 
 ### Demo accounts
 
@@ -110,7 +126,9 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   `BETTER_AUTH_URL`, `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `WEB_APP_URL`, SendGrid
   vars, Polar vars (`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`,
   `POLAR_SERVER`, `POLAR_PRODUCT_*`), beta switches (`BETA_MODE`,
-  `ADMIN_EMAILS`), and blob storage vars: `STORAGE_DRIVER=gcs` + `GCS_BUCKET`
+  `ADMIN_EMAILS`), admin console vars (`ADMIN_SECRET`, `ADMIN_APP_URL` —
+  without the secret the `/admin` endpoints answer 503),
+  and blob storage vars: `STORAGE_DRIVER=gcs` + `GCS_BUCKET`
   (auth via workload identity / `GOOGLE_APPLICATION_CREDENTIALS`; optional
   `GCS_PROJECT_ID`) for score MusicXML and recording archives —
   `STORAGE_DRIVER=local` + `STORAGE_LOCAL_DIR` with a mounted volume also

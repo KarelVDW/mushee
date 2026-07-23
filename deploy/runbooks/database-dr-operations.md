@@ -105,8 +105,10 @@ Interactive psql, TLS, no credentials on your machine, pod deletes itself on
 exit. The recurring admin one-liners:
 
 ```sql
--- Promote an existing account to admin (+ beta approval):
-UPDATE "user" SET role='admin', "betaStatus"='approved' WHERE email='...';
+-- Beta-approve an account by hand (the admin console signs in with
+-- ADMIN_SECRET, not a user account; role='admin' only marks ADMIN_EMAILS
+-- accounts for signup notifications + studio tier):
+UPDATE "user" SET "betaStatus"='approved' WHERE email='...';
 -- Re-tune a tier's daily credits (live within 60 s — in-memory cache):
 UPDATE subscription_tiers SET "dailyRecordingCredits"=600 WHERE id='beta';
 -- Move all beta users to free (end-of-beta, see Runbook 5):

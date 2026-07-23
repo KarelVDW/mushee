@@ -85,13 +85,15 @@ locks out existing accounts. The server's runtime `betaMode` is trusted by
 the web client too, so the gate drops even before the web rebuild.
 
 1. `deploy/k8s/overlays/production/api-patch.yaml`: `BETA_MODE: 'false'` →
-   commit → run Deploy. (Keep `ADMIN_EMAILS` — admin bootstrap still uses it.)
+   commit → run Deploy. (Keep `ADMIN_EMAILS` — it still grants the studio
+   tier at signup and receives signup notifications; console access itself
+   is `ADMIN_SECRET`.)
 2. Vercel env: `NEXT_PUBLIC_BETA_MODE=false` (Production) → redeploy web.
    This is the flip that changes the *copy* — landing CTA, pricing buttons,
    signup messaging (build-time baked, needs the rebuild).
 3. Smoke: new signup goes straight to onboarding (no waiting room), pricing
    buttons lead to Polar checkout, `/beta` for an approved user shows
-   "you're in", `/admin` still works for you.
+   "you're in", the admin console (admin.solkey.io) still signs in.
 4. Watch signups: `SELECT count(*), max("createdAt") FROM "user";` and the
    SendGrid activity feed (OTP volume = signup volume). This is where the
    missing CAPTCHA would show up first.
@@ -117,9 +119,9 @@ the web client too, so the gate drops even before the web rebuild.
 
 ## 6. The week after
 
-- Prune the beta furniture when the data says nobody's pending: `/beta`
-  waiting room and `/admin` approval UI stay (harmless, `BETA_MODE` may
-  return for future gated features), but master-todo items that were
+- Prune the beta furniture when the data says nobody's pending: the `/beta`
+  waiting room (web) and the admin console's waitlist page stay (harmless,
+  `BETA_MODE` may return for future gated features), but master-todo items that were
   beta-scoped (uptime monitoring, support inbox, refund policy, DPAs —
   `meta/notes.md` §6) graduate from "later" to "now" the day real money and
   strangers are involved.

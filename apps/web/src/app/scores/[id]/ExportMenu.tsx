@@ -1,14 +1,14 @@
 'use client'
 
+import { SCORE_WIDTH } from '@mushee/notation/components/constants'
+import type { Score } from '@mushee/notation/model'
+import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
+import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 
-import { SCORE_WIDTH } from '@/components/notation/constants'
 import { ChipToggle, Eyebrow, Icon, showToast } from '@/components/ui'
 import { PdfExporter } from '@/lib/PdfExporter'
-import type { Score } from '@/model'
-import { MidiExporter } from '@/model/util/MidiExporter'
-import { MusicXmlExporter } from '@/model/util/MusicXmlExporter'
 
 type ExportFormat = 'musicxml' | 'pdf' | 'midi'
 

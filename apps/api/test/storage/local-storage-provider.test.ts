@@ -56,4 +56,27 @@ describe('LocalStorageProvider', () => {
       /escapes root/,
     );
   });
+
+  it('lists the files directly under a prefix; absent prefixes list empty', async () => {
+    await provider.write('recordings/u/s/r/audio.webm', 'bytes');
+    await provider.write('recordings/u/s/r/debug.json', '{}');
+    await expect(provider.list('recordings/u/s/r')).resolves.toEqual([
+      'recordings/u/s/r/audio.webm',
+      'recordings/u/s/r/debug.json',
+    ]);
+    await expect(provider.list('recordings/nobody')).resolves.toEqual([]);
+  });
+
+  it('reads back bytes through a read stream', async () => {
+    await provider.write('recordings/u/s/r/audio.webm', 'audio-bytes');
+    const chunks: Buffer[] = [];
+    const stream = provider.createReadStream('recordings/u/s/r/audio.webm');
+    stream.on('data', (chunk) => chunks.push(chunk as Buffer));
+    await finished(stream);
+    expect(Buffer.concat(chunks).toString()).toBe('audio-bytes');
+  });
+
+  it('has no signed URLs (callers stream instead)', async () => {
+    await expect(provider.signedUrl()).resolves.toBeNull();
+  });
 });
