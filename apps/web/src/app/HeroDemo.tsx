@@ -1,8 +1,7 @@
 'use client'
 
+import { Glyph, INTERACTION_BLUE } from '@mushee/notation/components'
 import { useEffect, useState } from 'react'
-
-import { Glyph, INTERACTION_BLUE } from '@/components/notation'
 
 /**
  * The hero demo: an idealised loop of a real recording session in the Solkey

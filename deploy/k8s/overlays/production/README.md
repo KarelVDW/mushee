@@ -77,12 +77,41 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=POSTGRES_URL='postgres://mushee:<password>@<private-ip>:5432/mushee' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='info@solkey.io'
+  --from-literal=ADMIN_EMAILS='info@solkey.io' \
+  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)"
+# ADMIN_SECRET is shared with the admin console's Vercel project (see
+# "Admin console" below) — set both to the same value.
 # Polar (add before enabling checkout; webhook path works without checkout):
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, POLAR_SERVER=production,
 #   POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY},
 #   POLAR_PRODUCT_PACK_{SINGLE,EP,ALBUM}
 ```
+
+## Admin console (admin.solkey.io)
+
+The standalone console (`apps/admin`) deploys as its own Vercel project — it
+talks to the API **server-side only** (no CORS entry, no cookie-domain
+involvement):
+
+- Vercel: new project rooted at `apps/admin`, production branch `production`,
+  domain `admin.solkey.io`. Env (Production): `API_URL=https://api.solkey.io`
+  and `ADMIN_SECRET` equal to the value in `Secret/api-secrets` above.
+- DNS: `admin.solkey.io` CNAME → `cname.vercel-dns.com`.
+- Nothing k8s-side beyond the secret: the API's `/admin` endpoints answer 503
+  until `ADMIN_SECRET` is set, and `ADMIN_APP_URL` (api-patch.yaml) only
+  controls links in signup-notification emails.
+- Recording replay signs 15-minute GCS URLs (V4 via IAM signBlob), which
+  needs the API's service account to be able to sign as itself:
+
+  ```sh
+  gcloud iam service-accounts add-iam-policy-binding \
+    mushee-api@sheemu-prod.iam.gserviceaccount.com \
+    --role=roles/iam.serviceAccountTokenCreator \
+    --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com"
+  ```
+
+  Without it the console still plays recordings — the API just streams the
+  audio itself instead of redirecting to the bucket (see AdminService).
 
 ## Deploying
 

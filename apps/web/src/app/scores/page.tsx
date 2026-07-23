@@ -1,9 +1,11 @@
 'use client'
 
+import { Glyph } from '@mushee/notation/components'
+import { Instrument, Score } from '@mushee/notation/model'
+import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { Glyph } from '@/components/notation'
 import {
     Alert,
     DialogPanel,
@@ -23,8 +25,6 @@ import { ApiError, NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { Instrument, Score } from '@/model'
-import { ScoreSerializer } from '@/model/util/ScoreSerializer'
 
 import { CreateScoreDialog } from './CreateScoreDialog'
 import { ScoreLimitDialog } from './ScoreLimitDialog'

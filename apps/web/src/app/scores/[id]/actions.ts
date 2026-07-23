@@ -1,7 +1,6 @@
+import type { ClefType, DurationType } from '@mushee/notation/components'
+import { Note, Pitch, type Score } from '@mushee/notation/model'
 import type { ReactNode } from 'react'
-
-import type { ClefType, DurationType } from '@/components/notation'
-import { Note, Pitch, type Score } from '@/model'
 
 /**
  * A single editing operation on the score, performed relative to the selection.

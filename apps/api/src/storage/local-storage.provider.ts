@@ -1,7 +1,7 @@
-import { createWriteStream, mkdirSync } from 'fs';
-import { mkdir, readFile, rm, unlink, writeFile } from 'fs/promises';
+import { createReadStream, createWriteStream, mkdirSync } from 'fs';
+import { mkdir, readdir, readFile, rm, unlink, writeFile } from 'fs/promises';
 import { dirname, join, normalize, resolve, sep } from 'path';
-import type { Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
 
 import type { StorageProvider } from './storage-provider';
 
@@ -44,6 +44,25 @@ export class LocalStorageProvider implements StorageProvider {
     const path = this.pathFor(key);
     mkdirSync(dirname(path), { recursive: true });
     return createWriteStream(path);
+  }
+
+  createReadStream(key: string): Readable {
+    return createReadStream(this.pathFor(key));
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    try {
+      const entries = await readdir(this.pathFor(prefix), { withFileTypes: true });
+      return entries.filter((e) => e.isFile()).map((e) => `${prefix}/${e.name}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw err;
+    }
+  }
+
+  signedUrl(): Promise<string | null> {
+    // The filesystem has no URLs — callers stream through the API instead.
+    return Promise.resolve(null);
   }
 
   async delete(key: string): Promise<void> {

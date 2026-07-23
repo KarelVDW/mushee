@@ -50,6 +50,10 @@ services:
       basic-pitch-inference:
         condition: service_started
     environment:
+      # The image bakes in NODE_ENV=production (it is the deployable image);
+      # override it here because this stack runs without mail secrets and with
+      # demo seeding, both of which the API refuses under production.
+      NODE_ENV: development
       PORT: '3000'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: '5432'
@@ -69,6 +73,10 @@ services:
       # TRUST_PROXY is deliberately unset: unlike k8s there is no ingress in
       # front of this container, so client IPs arrive directly.
       BETA_MODE: 'false'
+      # Admin console (apps/admin, host-run on :3500) — same local-only dummy
+      # as the console's default; real deployments generate their own.
+      ADMIN_SECRET: local-admin-secret-not-for-prod
+      ADMIN_APP_URL: http://localhost:3500
       # Forward passes go to the per-model services; the API does no inference.
       CREPE_INFERENCE_URL: crepe-inference:50051
       BASIC_PITCH_INFERENCE_URL: basic-pitch-inference:50052

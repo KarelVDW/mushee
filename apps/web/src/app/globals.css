@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* The notation renderer lives in packages/notation (compiled by this app);
+   Tailwind must be told to scan it for classes. */
+@source '../../../../packages/notation/src/components';
 
 @theme inline {
     /* Solkey — Precision Maverick palette (see DESIGN.md + design/colors_and_type.css). */

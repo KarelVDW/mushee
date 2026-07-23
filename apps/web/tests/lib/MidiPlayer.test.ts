@@ -1,6 +1,5 @@
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import { Instrument } from '@/model/Instrument'
 
 // --- smplr mock -------------------------------------------------------------
 // Each Soundfont instance records its start() calls and returns a stop fn we can spy on.

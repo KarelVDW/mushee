@@ -1,6 +1,5 @@
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { Soundfont, type StopFn } from 'smplr'
-
-import { Instrument } from '@/model/Instrument'
 
 export interface ScheduledNote {
     startTime: number

@@ -19,6 +19,7 @@ const ENV_KEYS = [
   'NODE_ENV',
   'WEB_APP_URL',
   'CORS_ORIGIN',
+  'ADMIN_APP_URL',
 ] as const;
 let saved: Record<string, string | undefined>;
 
@@ -88,15 +89,23 @@ describe('MailService content', () => {
     expect(msg.text).not.toContain('app//login');
   });
 
-  it('falls back to CORS_ORIGIN for links when WEB_APP_URL is unset', async () => {
+  it('falls back to CORS_ORIGIN for web links when WEB_APP_URL is unset', async () => {
     process.env.CORS_ORIGIN = 'https://web.example';
+    await new MailService().sendBetaApprovedEmail('a@b.c', 'Ada');
+    const msg = sgSend.mock.calls[0][0] as { text: string };
+    expect(msg.text).toContain('https://web.example/login');
+  });
+
+  it('links beta signup notifications to the admin console via ADMIN_APP_URL', async () => {
+    process.env.ADMIN_APP_URL = 'https://admin.solkey.io/';
     await new MailService().sendBetaSignupNotification(
       'admin@b.c',
       'new@b.c',
       'Ada',
     );
     const msg = sgSend.mock.calls[0][0] as { text: string };
-    expect(msg.text).toContain('https://web.example/admin');
+    expect(msg.text).toContain('https://admin.solkey.io/waitlist');
+    expect(msg.text).not.toContain('io//waitlist');
   });
 
   it('escapes user-provided names in HTML bodies', async () => {

@@ -1,9 +1,9 @@
-import { makeScore } from '@test/helpers'
+import type { Score } from '@mushee/notation/model/Score'
+import { makeScore } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { MidiPlayer } from '@/lib/MidiPlayer'
 import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
-import type { Score } from '@/model/Score'
 
 // Shape of the JSON `meta` frame the engine sends when streaming opens.
 interface MetaFrame {

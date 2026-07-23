@@ -3,7 +3,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-    approveBetaSignup,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
@@ -15,7 +14,6 @@ import {
     getBillingState,
     getScore,
     getSettings,
-    listBetaSignups,
     listPlans,
     listScores,
     loadScore,
@@ -26,7 +24,6 @@ import {
     reactivateAccount,
     requestAccountDeletion,
     resumeSubscription,
-    revokeBetaSignup,
     type ScoreMeta,
     updateScore,
 } from './api'
@@ -243,40 +240,15 @@ export function useResumeSubscription() {
 
 export const betaKeys = {
     status: ['beta', 'status'] as const,
-    signups: ['beta', 'signups'] as const,
 }
 
-/** Polls while the user waits for approval so the screen unlocks by itself. */
+/** Polls while the user waits for approval so the screen unlocks by itself.
+ *  Waitlist management lives in the standalone admin console (apps/admin). */
 export function useBetaStatus(options?: { poll?: boolean; enabled?: boolean }) {
     return useQuery({
         queryKey: betaKeys.status,
         queryFn: getBetaStatus,
         enabled: options?.enabled ?? true,
         refetchInterval: options?.poll ? 30_000 : false,
-    })
-}
-
-export function useBetaSignups() {
-    return useQuery({
-        queryKey: betaKeys.signups,
-        queryFn: listBetaSignups,
-    })
-}
-
-export function useApproveBetaSignup() {
-    const queryClient = useQueryClient()
-    return useMutation({
-        mutationFn: (userId: string) => approveBetaSignup(userId),
-        onSuccess: (signups) => queryClient.setQueryData(betaKeys.signups, signups),
-        meta: { errorMessage: "Couldn't approve this signup. Please try again." },
-    })
-}
-
-export function useRevokeBetaSignup() {
-    const queryClient = useQueryClient()
-    return useMutation({
-        mutationFn: (userId: string) => revokeBetaSignup(userId),
-        onSuccess: (signups) => queryClient.setQueryData(betaKeys.signups, signups),
-        meta: { errorMessage: "Couldn't revoke this signup. Please try again." },
     })
 }

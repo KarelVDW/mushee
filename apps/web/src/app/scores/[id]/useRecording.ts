@@ -1,5 +1,8 @@
 'use client'
 
+import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformStore'
+import type { Note, Score } from '@mushee/notation/model'
+import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useRouter } from 'next/navigation'
 import { type RefObject, useCallback, useRef, useState } from 'react'
 
@@ -7,10 +10,7 @@ import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
 import { type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
-import { RecordingWaveformStore } from '@/lib/RecordingWaveformStore'
 import type { Transport } from '@/lib/Transport'
-import type { Note, Score } from '@/model'
-import { ScoreDeserializer } from '@/model/util/ScoreDeserializer'
 
 import type { ScoreManipulator } from './ScoreManipulator'
 

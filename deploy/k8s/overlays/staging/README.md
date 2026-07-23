@@ -53,7 +53,10 @@ kubectl create secret generic api-secrets -n mushee-staging \
   --from-literal=POSTGRES_URL='postgres://mushee_staging:<password>@10.56.0.3:5432/mushee_staging' \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
-  --from-literal=ADMIN_EMAILS='info@solkey.io'
+  --from-literal=ADMIN_EMAILS='info@solkey.io' \
+  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)"
+# ADMIN_SECRET: generate fresh (never share production's) and give the same
+# value to the admin console's staging deployment (see below).
 # Polar: use sandbox credentials here (POLAR_SERVER=sandbox), never production.
 ```
 
@@ -68,6 +71,14 @@ kubectl create secret generic api-secrets -n mushee-staging \
   `NEXT_PUBLIC_SITE_URL=https://staging.solkey.io`, `NEXT_PUBLIC_BETA_MODE`
   matching the overlay, and leave `NEXT_PUBLIC_POSTHOG_KEY` unset so staging
   traffic never pollutes production analytics.
+
+## DNS + Vercel (admin console)
+
+Same shape on the admin console's Vercel project (`apps/admin`):
+`admin.staging.solkey.io` CNAME → `cname.vercel-dns.com`, domain assigned to
+the `staging` branch, with branch-scoped env
+`API_URL=https://api.staging.solkey.io` and this environment's
+`ADMIN_SECRET`. Server-side proxying means no CORS or cookie-domain wiring.
 
 ## Deploying
 

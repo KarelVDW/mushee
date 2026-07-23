@@ -1,10 +1,10 @@
-import { makeScore, pitched } from '@test/helpers'
+import { Instrument } from '@mushee/notation/model/Instrument'
+import type { Score } from '@mushee/notation/model/Score'
+import { makeScore, pitched } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { MidiPlayer, ScheduledNote } from '@/lib/MidiPlayer'
 import { Transport } from '@/lib/Transport'
-import { Instrument } from '@/model/Instrument'
-import type { Score } from '@/model/Score'
 
 // --- Browser stubs so the recording engine can start inside record() -------
 class FakeAnalyser {

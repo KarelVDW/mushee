@@ -28,3 +28,6 @@ spec:
             - { name: POSTGRES_SSL, value: 'require' }
             # Mirrors production so the waitlist/approval flow is testable.
             - { name: BETA_MODE, value: 'true' }
+            # Admin console base URL — links in signup-notification emails.
+            # ADMIN_SECRET itself lives in Secret/api-secrets.
+            - { name: ADMIN_APP_URL, value: 'https://admin.staging.solkey.io' }
