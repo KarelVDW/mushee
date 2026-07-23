@@ -310,6 +310,62 @@ describe('RecordingEngine', () => {
         expect(onSample).toHaveBeenCalledTimes(1)
     })
 
+    it('self-calibrates the waveform gain so quiet capture paths (iOS) still fill the staff', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, onSample } = makeOptions()
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        onSample.mockClear()
+        // iOS-quiet signal: RMS = 4/128 ≈ 0.031 — the old fixed ×10 gain drew this at ~30%.
+        analyser().sample = 132
+        raw.currentTime = 2.8
+        engine.tick()
+        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBe(1)
+
+        // Half that level renders at ~half height once calibrated.
+        analyser().sample = 130
+        raw.currentTime = 2.9
+        engine.tick()
+        const amp = (onSample.mock.calls[1][0] as { amp: number }).amp
+        expect(amp).toBeGreaterThan(0.4)
+        expect(amp).toBeLessThan(0.6)
+    })
+
+    it('keeps the fixed desktop gain for hot mics and never calibrates on sub-gate noise', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options, onSample } = makeOptions()
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        onSample.mockClear()
+        // Room noise (RMS ≈ 0.008, below the gate): stays at the fixed gain, not blown up.
+        analyser().sample = 129
+        raw.currentTime = 2.8
+        engine.tick()
+        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBeCloseTo(0.078, 2)
+
+        // Hot desktop mic (RMS ≈ 0.56): clamps at 1, exactly as the fixed gain did.
+        analyser().sample = 200
+        raw.currentTime = 2.9
+        engine.tick()
+        expect((onSample.mock.calls[1][0] as { amp: number }).amp).toBe(1)
+
+        // Moderate desktop level after the hot peak: still the fixed ×10 gain.
+        analyser().sample = 136 // RMS = 8/128 = 0.0625
+        raw.currentTime = 3.0
+        engine.tick()
+        expect((onSample.mock.calls[2][0] as { amp: number }).amp).toBeCloseTo(0.625, 2)
+    })
+
     it('triggers onNeedNewMeasure as the cursor nears the end of the current measure', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
