@@ -44,6 +44,8 @@ const SETTINGS_PLAN_TIERS = [
         priceYearly: 490,
         dailyLimitSec: 28800,
         features: ['8 h of recording / day', 'As many scores as you like', 'Everything in Studio', 'Direct support from the maker'],
+        // Professional tiers render as a slim full-width row below the consumer grid.
+        professional: true,
     },
 ]
 
@@ -78,6 +80,7 @@ const SETTINGS_CREDIT_PACKS = [
     },
 ]
 
+// One-line price for the billing summary card.
 function settingsPlanPrice(plan, billing) {
     if (plan.priceMonthly === 0) return 'Free'
     if (billing === 'yearly') {
@@ -85,6 +88,180 @@ function settingsPlanPrice(plan, billing) {
         return `$${m}/mo · billed yearly`
     }
     return `$${plan.priceMonthly}/mo`
+}
+
+// Three price lines for the change-plan cards — same shape in both cadences so a
+// card keeps its height when the toggle flips (mirrors planPriceParts / PlanPicker).
+function settingsPriceParts(plan, billing) {
+    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever', note: '', savings: 0 }
+    const savings = plan.priceMonthly * 12 - plan.priceYearly
+    if (billing === 'yearly') {
+        const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
+        return { amount: `$${m}`, cadence: '/month', note: `billed yearly · $${plan.priceYearly}/yr`, savings }
+    }
+    return { amount: `$${plan.priceMonthly}`, cadence: '/month', note: 'billed monthly', savings }
+}
+
+function SettingsPriceBlock({ plan, billing, active, size = 'lg' }) {
+    const price = settingsPriceParts(plan, billing)
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span
+                    style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600,
+                        fontSize: size === 'lg' ? 26 : 22,
+                        lineHeight: 1,
+                        letterSpacing: '-0.01em',
+                    }}>
+                    {price.amount}
+                </span>
+                <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{price.cadence}</span>
+            </div>
+            {price.note && <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{price.note}</span>}
+            {price.savings > 0 && (
+                <Eyebrow
+                    style={{ visibility: billing === 'yearly' ? 'visible' : 'hidden', color: active ? 'inherit' : 'var(--color-primary)' }}>
+                    Saving ${price.savings}/yr
+                </Eyebrow>
+            )}
+        </div>
+    )
+}
+
+// Badge hanging above a card's top edge: "Best value" (magenta-soft) or "Current" (neutral).
+function PlanBadge({ tone, children }) {
+    return (
+        <span
+            style={{
+                position: 'absolute',
+                top: -10,
+                right: 14,
+                background: tone === 'secondary' ? 'var(--color-secondary-soft)' : 'var(--color-surface-container-high)',
+                color: tone === 'secondary' ? 'var(--color-on-secondary-soft)' : 'var(--color-on-surface)',
+                font: '600 10px/1 var(--font-label)',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                padding: '6px 10px',
+                borderRadius: 9999,
+            }}>
+            {children}
+        </span>
+    )
+}
+
+// Full consumer tier card for the change-plan grid — icon circle, tagline, the
+// three-line price, feature list, and a Best value / Current badge.
+function PlanTierCard({ plan, active, current, billing, onSelect }) {
+    return (
+        <button
+            onClick={onSelect}
+            aria-pressed={active}
+            style={{
+                position: 'relative',
+                textAlign: 'left',
+                background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
+                color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                border: 0,
+                borderRadius: 12,
+                padding: '20px 16px 16px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                boxShadow: active ? 'none' : 'var(--shadow-tonal)',
+                transition: 'background 150ms var(--ease)',
+            }}>
+            {current ? <PlanBadge tone="neutral">Current</PlanBadge> : plan.popular ? <PlanBadge tone="secondary">Best value</PlanBadge> : null}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span
+                    style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 9999,
+                        flexShrink: 0,
+                        background: active ? 'var(--color-on-primary-soft)' : 'var(--color-surface-container)',
+                        color: active ? 'var(--color-primary-soft)' : 'var(--color-primary)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                    <Icon name={plan.icon} size={18} />
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ font: '600 14px/1.2 var(--font-body)' }}>{plan.name}</span>
+                    <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{plan.tagline}</span>
+                </div>
+            </div>
+            <SettingsPriceBlock plan={plan} billing={billing} active={active} size="lg" />
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {plan.features.map((f) => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, font: '400 12px/1.4 var(--font-body)' }}>
+                        <span style={{ marginTop: 1, opacity: 0.8 }}>
+                            <Icon name="check" size={12} />
+                        </span>
+                        {f}
+                    </li>
+                ))}
+            </ul>
+        </button>
+    )
+}
+
+// Professional tier as a slim selectable row below the consumer grid.
+function ProTierRow({ plan, active, current, billing, onSelect }) {
+    return (
+        <button
+            onClick={onSelect}
+            aria-pressed={active}
+            style={{
+                position: 'relative',
+                textAlign: 'left',
+                background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
+                color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                border: 0,
+                borderRadius: 12,
+                padding: '16px 18px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 16,
+                boxShadow: active ? 'none' : 'var(--shadow-tonal)',
+                transition: 'background 150ms var(--ease)',
+            }}>
+            {current && <PlanBadge tone="neutral">Current</PlanBadge>}
+            <span
+                style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 9999,
+                    flexShrink: 0,
+                    background: active ? 'var(--color-on-primary-soft)' : 'var(--color-secondary-soft)',
+                    color: active ? 'var(--color-primary-soft)' : 'var(--color-on-secondary-soft)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                <Icon name={plan.icon} size={18} />
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 200 }}>
+                <span style={{ font: '600 14px/1.2 var(--font-body)' }}>
+                    {plan.name} — {plan.tagline.toLowerCase()}
+                </span>
+                <span
+                    style={{
+                        font: '400 12px/1.4 var(--font-body)',
+                        color: active ? 'inherit' : 'var(--color-on-surface-variant)',
+                        opacity: active ? 0.85 : 1,
+                    }}>
+                    {plan.features.join(' · ')}
+                </span>
+            </div>
+            <SettingsPriceBlock plan={plan} billing={billing} active={active} size="sm" />
+        </button>
+    )
 }
 
 // Change-plan dialog — lets the user pick a new tier and hands off to Polar
@@ -218,89 +395,30 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, 
                                 )
                             })}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            {SETTINGS_PLAN_TIERS.map((p) => {
-                                const active = selected === p.id
-                                const isCurrent = p.id === currentPlanId && billing === currentBilling
-                                return (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => setSelected(p.id)}
-                                        aria-pressed={active}
-                                        style={{
-                                            position: 'relative',
-                                            textAlign: 'left',
-                                            background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
-                                            color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
-                                            border: 0,
-                                            borderRadius: 12,
-                                            padding: '16px 16px 14px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 10,
-                                            boxShadow: active ? 'none' : 'var(--shadow-tonal)',
-                                        }}>
-                                        {isCurrent && (
-                                            <span
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: -10,
-                                                    right: 14,
-                                                    background: 'var(--color-surface-container-high)',
-                                                    color: 'var(--color-on-surface)',
-                                                    font: '600 10px/1 var(--font-label)',
-                                                    letterSpacing: '0.12em',
-                                                    textTransform: 'uppercase',
-                                                    padding: '6px 10px',
-                                                    borderRadius: 9999,
-                                                }}>
-                                                Current
-                                            </span>
-                                        )}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <Icon name={p.icon} size={18} />
-                                            <span style={{ font: '600 14px/1.2 var(--font-body)' }}>{p.name}</span>
-                                        </div>
-                                        <span
-                                            style={{
-                                                fontFamily: 'var(--font-mono)',
-                                                fontWeight: 600,
-                                                fontSize: 22,
-                                                lineHeight: 1,
-                                                letterSpacing: '-0.01em',
-                                            }}>
-                                            {settingsPlanPrice(p, billing)}
-                                        </span>
-                                        <ul
-                                            style={{
-                                                listStyle: 'none',
-                                                padding: 0,
-                                                margin: 0,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: 6,
-                                            }}>
-                                            {p.features.map((f) => (
-                                                <li
-                                                    key={f}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'flex-start',
-                                                        gap: 6,
-                                                        font: '400 12px/1.4 var(--font-body)',
-                                                    }}>
-                                                    <span style={{ marginTop: 1, opacity: 0.8 }}>
-                                                        <Icon name="check" size={12} />
-                                                    </span>
-                                                    {f}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </button>
-                                )
-                            })}
+                        {/* Three consumer tiers side by side; Arranger as a slim selectable row
+                            below — the same ladder as onboarding and the landing page (PlanPicker.tsx). */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                            {SETTINGS_PLAN_TIERS.filter((p) => !p.professional).map((p) => (
+                                <PlanTierCard
+                                    key={p.id}
+                                    plan={p}
+                                    billing={billing}
+                                    active={selected === p.id}
+                                    current={p.id === currentPlanId && billing === currentBilling}
+                                    onSelect={() => setSelected(p.id)}
+                                />
+                            ))}
                         </div>
+                        {SETTINGS_PLAN_TIERS.filter((p) => p.professional).map((p) => (
+                            <ProTierRow
+                                key={p.id}
+                                plan={p}
+                                billing={billing}
+                                active={selected === p.id}
+                                current={p.id === currentPlanId && billing === currentBilling}
+                                onSelect={() => setSelected(p.id)}
+                            />
+                        ))}
                         {onShowPacks && (
                             <p
                                 style={{

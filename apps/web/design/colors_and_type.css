@@ -152,12 +152,14 @@
     --shadow-cyan-3: 3px 3px 0 0 var(--color-primary-container);
     --ghost-border: 1px solid rgba(172, 173, 173, 0.15);
 
-    /* ───────────────── Motion ───────────────── */
+    /* ───────────────── Motion ─────────────────
+       The app exposes this curve as the Tailwind utility `ease-solkey`; the token
+       name here stays `--ease` for drop-in HTML. */
 
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --t-quick: 150ms;
-    --t-snap: 220ms;
-    --t-flow: 300ms;
+    --t-quick: 150ms; /* hover color */
+    --t-snap: 200ms; /* shadow / transform lift */
+    --t-flow: 300ms; /* tab + stroke sweeps */
 }
 
 /* ───────────────── Semantic element styles ───────────────── */
@@ -248,9 +250,11 @@ code,
 }
 
 /* Effect utilities — see DESIGN.md */
-.tonal-layer-glow,
-.editorial-shadow {
+.tonal-layer-glow {
     box-shadow: var(--shadow-tonal);
+}
+.editorial-shadow {
+    box-shadow: var(--shadow-editorial);
 }
 .glass-panel {
     background: rgba(255, 255, 255, 0.85);

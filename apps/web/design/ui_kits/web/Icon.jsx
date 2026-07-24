@@ -28,6 +28,7 @@ const GLYPHS = {
     'credit-card':
         '<path d="M2.5 5.5h17a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2v-11Z"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/>',
     crown: '<path d="M4.5 18 3 8l5.5 4.5L12 5l3.5 7.5L21 8l-1.5 10H4.5Z"/><path d="M5 21h14"/>',
+    delete: '<path d="M9.5 5.5H21v13H9.5L3 12l6.5-6.5Z"/><path d="m11.5 9.5 5 5"/><path d="m16.5 9.5-5 5"/>',
     download: '<path d="M12 3.5V15"/><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/><path d="M4 17v3.5h16V17"/>',
     error: '<path d="M8.6 3h6.8L21 8.6v6.8L15.4 21H8.6L3 15.4V8.6L8.6 3Z"/><path d="M12 8v5"/><circle cx="12" cy="16.5" r="1.3" fill="currentColor" stroke="none"/>',
     'external-link':

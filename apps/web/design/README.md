@@ -13,7 +13,7 @@ This system encodes the visual + content vocabulary used to design and build for
 | Production codebase | `apps/web/`                              | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.               |
 | Color tokens        | `apps/web/src/app/globals.css`           | M3-style palette with cyan + magenta accents.                                                                                               |
 | Type loader         | `apps/web/src/app/layout.tsx`            | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
-| Notation glyphs     | `apps/web/src/components/notation/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
+| Notation glyphs     | `packages/notation/src/components/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -159,13 +159,14 @@ Phones get the same design language, restructured — never a shrunken desktop. 
 
 ### Animation
 
-- Easing: `cubic-bezier(0.2, 0.8, 0.2, 1)` — quick out, soft settle. (`--ease`).
-- Durations: `150ms` (--t-quick) for hover color, `220ms` (--t-snap) for shadow lift, `300ms` (--t-flow) for tab/border-width transitions.
+- Easing: `cubic-bezier(0.2, 0.8, 0.2, 1)` — quick out, soft settle. (`--ease` in the CSS tokens; exposed in the app as the Tailwind utility `ease-solkey`).
+- Durations: `150ms` (--t-quick) for hover color, `200ms` (--t-snap) for shadow/transform lift, `300ms` (--t-flow) for tab/border-width transitions.
 - **Selected & hovered states must shift _away_ from the page background, not toward it.** Hovered list rows go from `surface_container_lowest` (#fff) up to `surface_container_high` (#e1e3e3) — never to `surface_container_low` (#f0f1f1), which is too close to the page's `surface` (#f6f6f6) and reads as blended. The same rule applies to split-panel layouts (auth, settings): the standout panel uses `surface_container_high`, not `low`, to register clearly against the page.
 
 **The signature interaction (reserved):** the hero CTA on each surface — opt-in via `emphasis="pop"` — translates `-2px` on hover and grows its magenta drop-shadow from `3px 3px` to `5px 5px`. Aim for **at most one pop visible per viewport**: the landing hero and final CTA, the "create" action in the top nav of authenticated views, a flow's single closing CTA. Dialog confirms, section actions, and utility buttons stay flat. Don't pop every primary button.
 
 - Input fields animate a **2px primary-cyan bar** from 0 → 100% width along the bottom on focus.
+- **Mic Mode guide (iPhone).** The one sanctioned storyboard motion: the first-run Wide Spectrum dialog crossfades three schematic phases (Control Center swipe → "Tap Mic Mode" → "Choose Wide Spectrum") on a shared ~9s loop; under `prefers-reduced-motion` the phases stack as a static list. Still quiet — a slow crossfade, no bounce.
 - No bounces, no spring physics, no fade-up-on-scroll. Motion is sharp and quiet.
 
 ### Focus
@@ -180,6 +181,7 @@ Every interactive element carries the shared keyboard-focus ring: `focus-visible
 | Standard primary button     | bg darkens slightly                                                                                                 | bg darkens further              |
 | Icon button                 | bg `surface_container` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)              | —                               |
 | List row                    | bg `surface_container_lowest` → `surface_container_high`, plus a 4px-wide cyan accent stripe slides in from the left | —                               |
+| Dock control (in a well)    | transparent at rest → `surface_container_high`; the white capsule well supplies the lift, so the control stays bare until hover | active = `primary_container` |
 | Tab text                    | `on_surface_variant` → `on_surface`; active tab gains a 3px cyan underline                                          | —                               |
 | Sign-out / destructive text | `on_surface` → `secondary` (magenta)                                                                                | —                               |
 
@@ -205,7 +207,8 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 ### Transparency & blur
 
-- **Glassmorphism** is reserved for **floating tool-docks** and **dialog overlays**: `surface_container_lowest` at 85% opacity + `backdrop-filter: blur(12px)`. No other use.
+- **Glassmorphism** (`.glass-panel`: `surface_container_lowest` at 85% opacity + `backdrop-filter: blur(12px)`) is reserved for **dialog panels, popovers, and menus** — surfaces that float over content. No other use.
+- The **editor tool dock is _not_ glass and never floats**: it's a docked bar on the chrome mirror tone (`surface_container_low/85` + heavy backdrop blur), in-flow along the editor's bottom edge. Its tool groups sit in white capsule wells (see the sanctuary rule).
 - The dialog scrim is `bg-on-surface/40 backdrop-blur-xs` (4px) — soft charcoal at 40% with a light blur.
 - The sticky top nav uses `surface_container_low/85` + `backdrop-blur-xl` — a barely-there glassy version of the sidebar tone.
 
@@ -213,9 +216,9 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 | Token           | Value            | Usage                                                            |
 | --------------- | ---------------- | ---------------------------------------------------------------- |
-| `--radius-sm`   | `0.25rem` (4px)  | Input fields, tool-dock buttons, score-row cells. The default. |
+| `--radius-sm`   | `0.25rem` (4px)  | Input fields, score-row cells. The default. |
 | `--radius-md`   | `0.5rem` (8px)   | List rows, compact cards, grouped-button ends.                   |
-| `--radius-lg`   | `0.75rem` (12px) | Standalone cards, tool-docks, modals, glass panels.              |
+| `--radius-lg`   | `0.75rem` (12px) | Standalone cards, modals, glass panels (dialogs/popovers/menus). |
 | `--radius-xl`   | `1rem` (16px)    | Full sheets, marketing hero tiles.                               |
 | `--radius-full` | `9999px`         | All primary buttons (capsule), chips, icon-only round buttons.   |
 
@@ -231,7 +234,7 @@ A Solkey card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`
 
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`chevron-*`, `menu`, `more-horizontal`, `settings`), editing (`copy`, `scissors`, `undo`, `redo`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`, `metronome`), files & sharing (`upload`, `file-music`, `folder`, `printer`, `share-2`, `send`), social (`user-plus`, `globe`, `heart`, `star`, `bookmark`), status (`alert-triangle`, `check-circle`, `help-circle`, `loader`, `zap`), billing (`credit-card`, `crown`, `gift`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
-**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`apps/web/src/components/notation/fonts/bravura_glyphs.ts`) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from the app if you actually need to render notation.
+**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`packages/notation/src/components/fonts/bravura_glyphs.ts`, the shared `@mushee/notation` workspace package) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `@mushee/notation` if you actually need to render notation.
 
 **No emoji.** Solkey's voice is plain, but it's not casual in that way.
 
@@ -245,4 +248,4 @@ The registry also carries **reserved glyphs** with no call sites yet — navigat
 
 - **Fonts are CDN-only.** The codebase uses `next/font/google` to fetch Space Grotesk, Manrope, Newsreader, and Geist Mono at build time; no `.woff2` files are committed. The design system imports them via Google Fonts `@import`, which serves the same files. If you need an offline / paid-license version, source `.woff2`s yourself and drop them in `fonts/` with a matching `@font-face` block.
 - **Production has a full marketing surface.** The landing + pricing page ships in the app (`apps/web/src/app/LandingPage.tsx`); the UI kit's Landing screen approximates it but is not a 1:1 recreation. The Onboarding kit screens remain Solkey-shaped extensions with no production counterpart. There is still no native mobile app — phones get the responsive web app (see `../DESIGN.md` §4b).
-- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the app.
+- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the `@mushee/notation` package (`packages/notation/src/components/fonts/`).

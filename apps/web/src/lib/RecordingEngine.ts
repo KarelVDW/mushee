@@ -42,8 +42,23 @@ const DRAIN_TIMEOUT_MS = 10_000
  * intent before the mic opens lets iOS pick the route up front.
  */
 type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
-/** RMS from typical mic input rarely exceeds ~0.2, so amplify before clamping to 0..1. */
+/** Minimum waveform gain: RMS from a desktop mic rarely exceeds ~0.2, so ×10 fills the staff. */
 const WAVEFORM_GAIN = 10
+/**
+ * Cap for the self-calibrating waveform gain (see {@link RecordingEngine.sampleAmplitude}):
+ * quiet capture paths get boosted at most this much, so a take with no real
+ * signal can't blow room noise up into full-height bars.
+ */
+const WAVEFORM_GAIN_MAX = 40
+/** RMS below this is room noise or breath, not singing — it never calibrates the meter. */
+const WAVEFORM_NOISE_GATE = 0.01
+/**
+ * Per-voiced-sample decay of the calibration peak (~30 Hz sampling → halves
+ * after ~2.3 s of singing), so one loud pop at the start doesn't pin the
+ * meter low for the rest of the take. Silence doesn't decay it: the gain
+ * would otherwise creep up between phrases and pump the noise floor.
+ */
+const WAVEFORM_PEAK_DECAY = 0.99
 /** Trough of the cursor's beat pulse; it snaps to full opacity on every metronome click. */
 const PULSE_MIN_OPACITY = 0.35
 export type RecordingState = 'idle' | 'countoff' | 'recording'
@@ -141,6 +156,8 @@ export class RecordingEngine implements Tickable {
     private analyser: AnalyserNode | null = null
     private analyserData: Uint8Array<ArrayBuffer> | null = null
     private lastSampleTime = -Infinity
+    /** Running voiced-RMS peak of the take; calibrates the waveform gain (see sampleAmplitude). */
+    private waveformPeak = 0
     private _micSettings: MediaTrackSettings | null = null
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
@@ -241,6 +258,7 @@ export class RecordingEngine implements Tickable {
         this.analyserData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize))
 
         this.lastSampleTime = -Infinity
+        this.waveformPeak = 0
 
         this.paintCursor('#ef4444')
         this.moveCursor(options.startMeasureIndex, 0)
@@ -388,11 +406,22 @@ export class RecordingEngine implements Tickable {
             sumSquares += v * v
         }
         const rms = Math.sqrt(sumSquares / this.analyserData.length)
+        // Self-calibrating gain: desktop mics deliver RMS around 0.1–0.2, but
+        // iOS forces its voice-processing capture path back on (see
+        // micSettings) and yields a fraction of that — a fixed gain leaves
+        // mobile bars barely visible. Normalize against the take's own voiced
+        // peak so the loudest singing fills the staff on every device; the
+        // gain never drops below the desktop tuning, so hot mics render
+        // exactly as before.
+        if (rms >= WAVEFORM_NOISE_GATE) {
+            this.waveformPeak = Math.max(rms, this.waveformPeak * WAVEFORM_PEAK_DECAY)
+        }
+        const gain = this.waveformPeak > 0 ? Math.min(Math.max(1 / this.waveformPeak, WAVEFORM_GAIN), WAVEFORM_GAIN_MAX) : WAVEFORM_GAIN
         this.options.onSample({
             timeMs: Math.round(recordingElapsed * 1000),
             measureIndex,
             beat,
-            amp: Math.min(rms * WAVEFORM_GAIN, 1),
+            amp: Math.min(rms * gain, 1),
         })
     }
 

@@ -1,5 +1,6 @@
 // Sign-up onboarding — gather context after the user creates an account.
-const ONBOARDING_STEPS = ['name', 'background', 'instruments', 'source', 'tier', 'done']
+// Steps in order (mirrors STEP_NAMES in src/app/onboarding/onboarding-data.ts):
+const ONBOARDING_STEPS = ['verify', 'mic', 'name', 'background', 'goal', 'instruments', 'source', 'tier', 'done']
 
 // Plan catalogue — display decoration only. In production the tiers (names,
 // prices, recording budgets, score caps) come from the database via GET /plans,
@@ -42,23 +43,81 @@ const PLAN_TIERS = [
         priceMonthly: 49,
         priceYearly: 490,
         features: ['8 h of recording / day', 'As many scores as you like', 'Everything in Studio', 'Direct support from the maker'],
+        // Professional tiers render as a slim full-width row below the consumer grid.
+        professional: true,
     },
 ]
 
-function formatPrice(plan, billing) {
-    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever' }
+// Amount + cadence note + savings — the same three lines in both cadences, so a
+// card keeps its height when the billing toggle flips (mirrors planPriceParts in
+// src/lib/plans.ts).
+function priceParts(plan, billing) {
+    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever', note: '', savings: 0 }
+    const savings = plan.priceMonthly * 12 - plan.priceYearly
     if (billing === 'yearly') {
-        const monthlyEquiv = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return { amount: `$${monthlyEquiv}`, cadence: '/month, billed yearly' }
+        const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
+        return { amount: `$${m}`, cadence: '/month', note: `billed yearly · $${plan.priceYearly}/yr`, savings }
     }
-    return { amount: `$${plan.priceMonthly}`, cadence: '/month' }
+    return { amount: `$${plan.priceMonthly}`, cadence: '/month', note: 'billed monthly', savings }
+}
+
+// The three price lines. On monthly the savings line stays as an invisible
+// placeholder so the card doesn't change height when the toggle flips.
+function PriceBlock({ plan, billing, active, size = 'lg' }) {
+    const price = priceParts(plan, billing)
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span
+                    style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600,
+                        fontSize: size === 'lg' ? 28 : 22,
+                        lineHeight: 1,
+                        letterSpacing: size === 'lg' ? '-0.02em' : '-0.01em',
+                    }}>
+                    {price.amount}
+                </span>
+                <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{price.cadence}</span>
+            </div>
+            {price.note && <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{price.note}</span>}
+            {price.savings > 0 && (
+                <Eyebrow
+                    style={{
+                        visibility: billing === 'yearly' ? 'visible' : 'hidden',
+                        color: active ? 'inherit' : 'var(--color-primary)',
+                    }}>
+                    Saving ${price.savings}/yr
+                </Eyebrow>
+            )}
+        </div>
+    )
+}
+
+// Badge that hangs above a card's top edge — "Best value" (magenta-soft) or the
+// neutral "Current" marker used in Settings' change-plan grid.
+function CardBadge({ tone, children }) {
+    return (
+        <span
+            style={{
+                position: 'absolute',
+                top: -10,
+                right: 14,
+                background: tone === 'secondary' ? 'var(--color-secondary-soft)' : 'var(--color-surface-container-high)',
+                color: tone === 'secondary' ? 'var(--color-on-secondary-soft)' : 'var(--color-on-surface)',
+                font: '600 10px/1 var(--font-label)',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                padding: '6px 10px',
+                borderRadius: 9999,
+            }}>
+            {children}
+        </span>
+    )
 }
 
 /* ─── Tier card ─── */
-function TierCard({ plan, active, billing, onSelect }) {
-    const price = formatPrice(plan, billing)
-    const showSavings = billing === 'yearly' && plan.priceMonthly > 0
-    const savings = showSavings ? plan.priceMonthly * 12 - plan.priceYearly : 0
+function TierCard({ plan, active, billing, current, onSelect }) {
     return (
         <button
             onClick={onSelect}
@@ -76,25 +135,9 @@ function TierCard({ plan, active, billing, onSelect }) {
                 flexDirection: 'column',
                 gap: 14,
                 boxShadow: active ? 'none' : '0 0 24px 0 rgba(45,47,47,0.06)',
-                transition: 'background 160ms var(--ease), transform 160ms var(--ease)',
+                transition: 'background 150ms var(--ease), transform 150ms var(--ease)',
             }}>
-            {plan.popular && (
-                <span
-                    style={{
-                        position: 'absolute',
-                        top: -10,
-                        right: 14,
-                        background: 'var(--color-secondary-soft)',
-                        color: 'var(--color-on-secondary-soft)',
-                        font: '600 10px/1 var(--font-label)',
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        padding: '6px 10px',
-                        borderRadius: 9999,
-                    }}>
-                    Best value
-                </span>
-            )}
+            {current ? <CardBadge tone="neutral">Current</CardBadge> : plan.popular ? <CardBadge tone="secondary">Best value</CardBadge> : null}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
                     style={{
@@ -115,20 +158,7 @@ function TierCard({ plan, active, billing, onSelect }) {
                     <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{plan.tagline}</span>
                 </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                <span
-                    style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 600,
-                        fontSize: 28,
-                        lineHeight: 1,
-                        letterSpacing: '-0.02em',
-                    }}>
-                    {price.amount}
-                </span>
-                <span style={{ font: '400 12px/1.3 var(--font-body)', opacity: 0.8 }}>{price.cadence}</span>
-            </div>
-            {showSavings && <Eyebrow style={{ color: active ? 'inherit' : 'var(--color-primary)' }}>Save ${savings}/yr</Eyebrow>}
+            <PriceBlock plan={plan} billing={billing} active={active} size="lg" />
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {plan.features.map((f) => (
                     <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, font: '400 13px/1.4 var(--font-body)' }}>
@@ -139,6 +169,62 @@ function TierCard({ plan, active, billing, onSelect }) {
                     </li>
                 ))}
             </ul>
+        </button>
+    )
+}
+
+// Professional tier as a selectable full-width row — present enough to anchor the
+// ladder, slim enough not to compete with the consumer cards above it.
+function ProfessionalTierCard({ plan, active, billing, current, onSelect }) {
+    return (
+        <button
+            onClick={onSelect}
+            aria-pressed={active}
+            style={{
+                position: 'relative',
+                textAlign: 'left',
+                background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
+                color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                border: 0,
+                borderRadius: 12,
+                padding: '18px 20px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 16,
+                boxShadow: active ? 'none' : '0 0 24px 0 rgba(45,47,47,0.06)',
+                transition: 'background 150ms var(--ease)',
+            }}>
+            {current && <CardBadge tone="neutral">Current</CardBadge>}
+            <span
+                style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 9999,
+                    flexShrink: 0,
+                    background: active ? 'var(--color-on-primary-soft)' : 'var(--color-secondary-soft)',
+                    color: active ? 'var(--color-primary-soft)' : 'var(--color-on-secondary-soft)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                <Icon name={plan.icon} size={18} />
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 200 }}>
+                <span style={{ font: '600 15px/1.2 var(--font-body)' }}>
+                    {plan.name} — {plan.tagline.toLowerCase()}
+                </span>
+                <span
+                    style={{
+                        font: '400 13px/1.4 var(--font-body)',
+                        color: active ? 'inherit' : 'var(--color-on-surface-variant)',
+                        opacity: active ? 0.85 : 1,
+                    }}>
+                    {plan.features.join(' · ')}
+                </span>
+            </div>
+            <PriceBlock plan={plan} billing={billing} active={active} size="sm" />
         </button>
     )
 }
@@ -204,20 +290,28 @@ const BACKGROUNDS = [
     ['professional', 'Performing musician', 'I gig, record, or perform for a living.'],
 ]
 
-const PRIMARY_INSTRUMENTS = [
-    'Piano',
-    'Guitar',
-    'Violin',
-    'Cello',
-    'Flute',
-    'Clarinet',
-    'Voice',
-    'Trumpet',
-    'Drums',
-    'Bass',
-    'Other',
-    "I don't play (yet)",
+const GOALS = [
+    ['transcribe', 'Capture my playing', 'Record what I play or hum and turn it into notation.'],
+    ['compose', 'Write new music', 'Compose original pieces from scratch.'],
+    ['arrange', 'Arrange existing music', 'Adapt pieces for my instrument or ensemble.'],
+    ['teach', 'Make teaching materials', 'Create exercises and pieces for my students.'],
+    ['learn', 'Learn notation', 'Get comfortable reading and writing sheet music.'],
 ]
+
+// A representative slice of Instrument.selectableByCategory() (the shared model
+// list at packages/notation/src/model/Instrument.ts, imported app-side as
+// `@mushee/notation/model`). Picker order: Keyboard · Brass · Woodwinds · Voice ·
+// Strings · Folk & World, alphabetical within each group. NON_INSTRUMENT_OPTIONS
+// is the survey-only escape hatch appended after the real families.
+const INSTRUMENTS_BY_CATEGORY = [
+    ['Keyboard', ['Piano']],
+    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
+    ['Woodwinds', ['Alto Saxophone', 'Bassoon', 'Clarinet', 'English Horn', 'Flute', 'Oboe', 'Piccolo', 'Recorder', 'Tenor Saxophone']],
+    ['Voice', ['Voice Lead']],
+    ['Strings', ['Bass Guitar', 'Cello', 'Contrabass', 'Guitar', 'Viola', 'Violin']],
+    ['Folk & World', ['Bagpipe', 'Erhu', 'Harmonica', 'Ocarina', 'Pan Flute', 'Tin Whistle']],
+]
+const NON_INSTRUMENT_OPTIONS = ['Other', "I don't play (yet)"]
 
 function OptionCard({ active, onClick, title, body, icon }) {
     return (
@@ -289,6 +383,7 @@ function Onboarding({ onComplete, onSkip }) {
     const [data, setData] = useState({
         name: '',
         background: null,
+        goal: null,
         instruments: [],
         source: null,
         sourceDetail: '',
@@ -302,7 +397,7 @@ function Onboarding({ onComplete, onSkip }) {
         billing: 'monthly',
     })
 
-    const totalSteps = 7 // verify + mic + name + background + instruments + source + tier (+done state)
+    const totalSteps = 8 // verify + mic + name + background + goal + instruments + source + tier (+done state)
 
     // Ask the browser for mic access only after the user explicitly clicks Allow.
     const requestMic = async () => {
@@ -354,10 +449,12 @@ function Onboarding({ onComplete, onSkip }) {
             case 3:
                 return !!data.background
             case 4:
-                return data.instruments.length > 0
+                return !!data.goal
             case 5:
-                return !!data.source
+                return data.instruments.length > 0
             case 6:
+                return !!data.source
+            case 7:
                 return true
             default:
                 return true
@@ -591,21 +688,52 @@ function Onboarding({ onComplete, onSkip }) {
 
                 {step === 4 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <ModalTitle>Which instruments do you play?</ModalTitle>
-                        <SubHeadline>
-                            Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.
-                        </SubHeadline>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {PRIMARY_INSTRUMENTS.map((i) => (
-                                <Chip key={i} size="md" active={data.instruments.includes(i)} onClick={() => toggleInstrument(i)}>
-                                    {i}
-                                </Chip>
+                        <ModalTitle>What do you want to do first?</ModalTitle>
+                        <SubHeadline>We'll point you at the right starting place — you can do all of it later.</SubHeadline>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            {GOALS.map(([k, t, b]) => (
+                                <OptionCard key={k} active={data.goal === k} onClick={() => setField('goal', k)} title={t} body={b} />
                             ))}
                         </div>
                     </div>
                 )}
 
                 {step === 5 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <ModalTitle>Which instruments do you play?</ModalTitle>
+                        <SubHeadline>
+                            Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.
+                        </SubHeadline>
+                        {/* Full model catalogue, grouped by family in a scrollable column, with the
+                            survey-only "None of the above" options appended after the real families. */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '45dvh', overflowY: 'auto', paddingRight: 4 }}>
+                            {INSTRUMENTS_BY_CATEGORY.map(([category, names]) => (
+                                <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <Eyebrow>{category}</Eyebrow>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                        {names.map((i) => (
+                                            <Chip key={i} size="md" active={data.instruments.includes(i)} onClick={() => toggleInstrument(i)}>
+                                                {i}
+                                            </Chip>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <Eyebrow>None of the above</Eyebrow>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {NON_INSTRUMENT_OPTIONS.map((i) => (
+                                        <Chip key={i} size="md" active={data.instruments.includes(i)} onClick={() => toggleInstrument(i)}>
+                                            {i}
+                                        </Chip>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {step === 6 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ModalTitle>How did you find Solkey?</ModalTitle>
                         <SubHeadline>Helps us know what's working — entirely optional, no wrong answers.</SubHeadline>
@@ -639,15 +767,17 @@ function Onboarding({ onComplete, onSkip }) {
                     </div>
                 )}
 
-                {step === 6 && !redirecting && (
+                {step === 7 && !redirecting && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <ModalTitle>Pick a plan to start with.</ModalTitle>
                             <SubHeadline>You can switch or cancel any time from Settings.</SubHeadline>
                         </div>
                         <BillingToggle value={data.billing} onChange={(v) => setField('billing', v)} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            {PLAN_TIERS.map((p) => (
+                        {/* Three consumer tiers side by side; the professional tier as a slim
+                            full-width row below — the landing page's ladder (see PlanPicker.tsx). */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                            {PLAN_TIERS.filter((p) => !p.professional).map((p) => (
                                 <TierCard
                                     key={p.id}
                                     plan={p}
@@ -657,10 +787,19 @@ function Onboarding({ onComplete, onSkip }) {
                                 />
                             ))}
                         </div>
+                        {PLAN_TIERS.filter((p) => p.professional).map((p) => (
+                            <ProfessionalTierCard
+                                key={p.id}
+                                plan={p}
+                                billing={data.billing}
+                                active={data.tier === p.id}
+                                onSelect={() => setField('tier', p.id)}
+                            />
+                        ))}
                     </div>
                 )}
 
-                {step === 6 && redirecting && (
+                {step === 7 && redirecting && (
                     <div
                         style={{
                             display: 'flex',
