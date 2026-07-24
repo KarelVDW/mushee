@@ -1,46 +1,44 @@
 // Create-score dialog with instrument picker.
-// Representative subset of the app's real instrument catalogue — display names
-// from Instrument.selectable() in src/model/Instrument.ts. Keep names verbatim
-// (no instruments the product doesn't have).
-const ALL_INSTRUMENTS = [
-    'Piano',
-    'Violin',
-    'Viola',
-    'Cello',
-    'Contrabass',
-    'Flute',
-    'Piccolo',
-    'Alto Flute',
-    'Oboe',
-    'English Horn',
-    'Clarinet',
-    'Bass Clarinet',
-    'Bassoon',
-    'Contrabassoon',
-    'Soprano Saxophone',
-    'Alto Saxophone',
-    'Tenor Saxophone',
-    'Baritone Saxophone',
-    'Trumpet',
-    'Trombone',
-    'French Horn',
-    'Tuba',
-    'Euphonium',
-    'Baritone Horn',
-    'Harmonica',
-    'Recorder',
-    'Tin Whistle',
-    'Pan Flute',
-    'Ocarina',
-    'Bagpipe',
-    'Erhu',
-    'Dizi Flute',
-    'Shakuhachi Flute',
+// Representative subset of the app's real catalogue, grouped the way the app groups
+// it: display names + families from Instrument.selectableByCategory(), which lives in
+// packages/notation/src/model/Instrument.ts (imported app-side as `@mushee/notation/model`).
+// Picker order: Keyboard · Brass · Woodwinds · Voice · Strings · Folk & World, alphabetical
+// within each group. Guitar and Bass Guitar are real Strings entries; Harp is not offered.
+const INSTRUMENT_CATEGORIES = [
+    ['Keyboard', ['Piano']],
+    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
+    [
+        'Woodwinds',
+        [
+            'Alto Flute',
+            'Alto Saxophone',
+            'Baritone Saxophone',
+            'Bass Clarinet',
+            'Bassoon',
+            'Clarinet',
+            'Contrabassoon',
+            'English Horn',
+            'Flute',
+            'Oboe',
+            'Piccolo',
+            'Recorder',
+            'Soprano Saxophone',
+            'Tenor Saxophone',
+        ],
+    ],
+    ['Voice', ['Voice']],
+    ['Strings', ['Bass Guitar', 'Cello', 'Contrabass', 'Guitar', 'Viola', 'Violin']],
+    ['Folk & World', ['Bagpipe', 'Dizi Flute', 'Erhu', 'Harmonica', 'Ocarina', 'Pan Flute', 'Shakuhachi Flute', 'Tin Whistle']],
 ]
 
 function InstrumentPicker({ value, onChange }) {
     const [search, setSearch] = useState('')
-    const filtered = ALL_INSTRUMENTS.filter((i) => i.toLowerCase().includes(search.toLowerCase()))
+    const q = search.toLowerCase()
+    // Filter within each family, then drop families with no remaining matches.
+    const groups = INSTRUMENT_CATEGORIES.map(([category, names]) => [
+        category,
+        names.filter((i) => i.toLowerCase().includes(q)),
+    ]).filter(([, names]) => names.length > 0)
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 0 }}>
             <Eyebrow>Lead instrument · {value}</Eyebrow>
@@ -51,17 +49,23 @@ function InstrumentPicker({ value, onChange }) {
                     minHeight: 160,
                     overflowY: 'auto',
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 8,
-                    alignContent: 'flex-start',
+                    flexDirection: 'column',
+                    gap: 14,
                     padding: '4px 0',
                 }}>
-                {filtered.map((i) => (
-                    <Chip key={i} active={i === value} onClick={() => onChange(i)} ariaLabel={`Pick ${i}`}>
-                        {i}
-                    </Chip>
+                {groups.map(([category, names]) => (
+                    <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <Eyebrow>{category}</Eyebrow>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {names.map((i) => (
+                                <Chip key={i} active={i === value} onClick={() => onChange(i)} ariaLabel={`Pick ${i}`}>
+                                    {i}
+                                </Chip>
+                            ))}
+                        </div>
+                    </div>
                 ))}
-                {filtered.length === 0 && (
+                {groups.length === 0 && (
                     <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', padding: 4 }}>
                         No instruments match "{search}"
                     </span>

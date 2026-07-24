@@ -19,4 +19,4 @@ No font substitutions were needed — all four families are available on Google 
 
 ## Notation glyphs
 
-Music notation in the score editor is rendered from **Bravura** SMuFL outlines bundled at `apps/web/src/components/notation/fonts/bravura_glyphs.ts` in the production codebase. These are _not_ used outside the score canvas and are not copied here — re-import from the app when working on notation features.
+Music notation in the score editor is rendered from **Bravura** SMuFL outlines bundled at `packages/notation/src/components/fonts/bravura_glyphs.ts` — the shared `@mushee/notation` workspace package the app consumes. These are _not_ used outside the score canvas and are not copied here — re-import from `@mushee/notation` when working on notation features.

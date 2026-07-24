@@ -6,16 +6,20 @@
 //                          | keyboard-shortcuts chip · Export menu
 //   dock (bottom, in-flow) → every selection-scoped edit control in one bar along the
 //                            editor's bottom edge: durations (SVG note icons) · dot/tuplet/
-//                            rest/tie · accidentals · clef/key/tempo. Groups are separated
-//                            by space — no dividers — and wrap onto extra rows. Popovers
-//                            open UPWARD, away from the dock.
+//                            rest/tie · accidentals · clef/key/tempo. Each group sits in a
+//                            white capsule well (surface-container-lowest + tonal glow); the
+//                            wells are separated by space — no dividers — and wrap onto extra
+//                            rows. Controls inside a well are transparent at rest; standalone
+//                            chrome controls carry the white fill themselves. Popovers open
+//                            UPWARD, away from the dock.
 //   Both chrome surfaces are the same tonal mirror: surface-container-low @ 85% +
 //   backdrop blur + tonal shadow. Saving is silent autosave — no Save or Share buttons.
 //
 // Mobile (<768px), not depicted in this desktop kit: the transport moves out of the
 // header into the dock as a thumb-sized action row (record grows to 54px, the biggest
-// control on screen) alongside note-nav + pitch-nudge buttons, the metronome joins the
-// tool strip, and the dock popovers become full-width sheets instead of anchored panels.
+// control on screen) alongside note-nav (◀ ▶), pitch-nudge (▼ ▲), and a delete-icon
+// "Remove note" button; the metronome joins the tool strip, and the dock popovers
+// become full-width sheets instead of anchored panels.
 
 // Chrome mirror surface — shared by the header and the dock.
 const CHROME_SURFACE = {
@@ -25,26 +29,63 @@ const CHROME_SURFACE = {
     boxShadow: 'var(--shadow-tonal)',
 }
 
-function Segmented({ value, onChange, options, ariaLabel }) {
+// White capsule "well" (surface_container_lowest + tonal glow — the card lift).
+// It's the tonal shift, not a border, that says "buttons live here" and marks
+// where one group ends. Controls inside a well render `plain` (transparent at
+// rest); the well provides the raised surface. Mirrors ToolGroup in
+// apps/web/src/components/ui/Controls.tsx.
+function ToolGroup({ ariaLabel, children }) {
     return (
         <div
             role="group"
             aria-label={ariaLabel}
             style={{
                 display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
                 padding: 3,
                 borderRadius: 9999,
-                background: 'var(--color-surface-container-low)',
+                background: 'var(--color-surface-container-lowest)',
+                boxShadow: 'var(--shadow-tonal)',
+            }}>
+            {children}
+        </div>
+    )
+}
+
+// Segmented pill track — itself a capsule well: white fill + tonal glow, options
+// transparent at rest and hovering *away* from the page (surface_container_high),
+// active option in loud cyan.
+function Segmented({ value, onChange, options, ariaLabel }) {
+    const [hovered, setHovered] = useState(null)
+    return (
+        <div
+            role="group"
+            aria-label={ariaLabel}
+            style={{
+                display: 'inline-flex',
+                gap: 2,
+                padding: 3,
+                borderRadius: 9999,
+                background: 'var(--color-surface-container-lowest)',
+                boxShadow: 'var(--shadow-tonal)',
             }}>
             {options.map(([k, g]) => {
                 const active = value === k
+                const hovering = hovered === k && !active
                 return (
                     <button
                         key={k || 'default'}
                         aria-pressed={active}
                         onClick={() => onChange(k)}
+                        onMouseEnter={() => setHovered(k)}
+                        onMouseLeave={() => setHovered((h) => (h === k ? null : h))}
                         style={{
-                            background: active ? 'var(--color-primary-container)' : 'transparent',
+                            background: active
+                                ? 'var(--color-primary-container)'
+                                : hovering
+                                  ? 'var(--color-surface-container-high)'
+                                  : 'transparent',
                             color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
                             border: 0,
                             padding: '6px 10px',
@@ -65,8 +106,17 @@ function Segmented({ value, onChange, options, ariaLabel }) {
     )
 }
 
-function ChipToggle({ active, onClick, children, ariaLabel, disabled }) {
+// `plain` chips (transparent at rest) live inside a ToolGroup/Segmented well,
+// which supplies the white lift. Standalone chips (header keyboard-shortcuts,
+// Export trigger) carry the white fill + tonal glow themselves. Both hover
+// *away* from the page tone, to surface_container_high.
+function ChipToggle({ active, onClick, children, ariaLabel, disabled, plain }) {
     const [hover, setHover] = useState(false)
+    const hovering = hover && !disabled
+    let background = 'transparent'
+    if (active) background = 'var(--color-primary-container)'
+    else if (hovering) background = 'var(--color-surface-container-high)'
+    else if (!plain) background = 'var(--color-surface-container-lowest)'
     return (
         <button
             type="button"
@@ -77,11 +127,8 @@ function ChipToggle({ active, onClick, children, ariaLabel, disabled }) {
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                background: active
-                    ? 'var(--color-primary-container)'
-                    : hover && !disabled
-                      ? 'var(--color-surface-container)'
-                      : 'var(--color-surface-container-low)',
+                background,
+                boxShadow: !active && !plain ? 'var(--shadow-tonal)' : 'none',
                 color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
                 border: 0,
                 borderRadius: 9999,
@@ -131,7 +178,7 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                     opacity: disabled ? 0.4 : 1,
                     flexShrink: 0,
                     transform: hovering ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'transform 220ms var(--ease), background 180ms var(--ease), border-color 180ms var(--ease)',
+                    transition: 'transform 200ms var(--ease), background 200ms var(--ease), border-color 200ms var(--ease)',
                 }}>
                 <span
                     style={{
@@ -139,7 +186,7 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                         height: dotSize,
                         borderRadius: 9999,
                         background: active ? 'var(--color-on-error)' : 'var(--color-error-container)',
-                        transition: 'background 180ms var(--ease)',
+                        transition: 'background 200ms var(--ease)',
                         boxShadow: active ? 'none' : 'inset 0 -2px 4px rgba(0,0,0,0.18)',
                     }}
                 />
@@ -172,15 +219,16 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                     opacity: disabled ? 0.4 : 1,
                     flexShrink: 0,
                     transform: hovering ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'transform 220ms var(--ease), background 180ms var(--ease), color 180ms var(--ease)',
+                    transition: 'transform 200ms var(--ease), background 200ms var(--ease), color 200ms var(--ease)',
                 }}>
                 {children}
             </button>
         )
     }
 
-    // Neutral satellite (stop / metronome) — quiet tonal circle
-    const bg = hovering ? 'var(--color-surface-container)' : 'var(--color-surface-container-low)'
+    // Neutral satellite (stop / metronome) — a standalone white circle on the
+    // chrome (surface_container_lowest), hovering away to surface_container_high.
+    const bg = hovering ? 'var(--color-surface-container-high)' : 'var(--color-surface-container-lowest)'
     const fg = active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
     return (
         <button
@@ -560,7 +608,7 @@ function ClefControl({ clef, onSet }) {
     const current = CLEF_OPTIONS.find(([k]) => k === clef) ?? CLEF_OPTIONS[0]
     return (
         <div style={{ position: 'relative' }}>
-            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${current[2]}`}>
+            <ChipToggle plain active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${current[2]}`}>
                 <span style={{ fontFamily: 'var(--font-serif)', fontSize: 19, lineHeight: 1 }}>{current[1]}</span>
             </ChipToggle>
             {open && (
@@ -592,7 +640,7 @@ function KeySignatureControl({ fifths, onSet }) {
     const current = KEY_OPTIONS.find(([v]) => v === fifths) ?? KEY_OPTIONS[3]
     return (
         <div style={{ position: 'relative' }}>
-            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${current[2]}`}>
+            <ChipToggle plain active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${current[2]}`}>
                 {current[1]}
             </ChipToggle>
             {open && (
@@ -622,7 +670,7 @@ function TempoControl({ bpm, onSet }) {
     const [open, setOpen] = useState(false)
     return (
         <div style={{ position: 'relative' }}>
-            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
+            <ChipToggle plain active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
                 {bpm} bpm
             </ChipToggle>
             {open && <TempoPopover bpm={bpm} onChange={onSet} onClose={() => setOpen(false)} />}
@@ -720,7 +768,9 @@ function ExportOption({ label, description, onClick }) {
 // --- Note tool dock ---
 // The chrome mirror of the slim header: every selection-scoped edit control in one
 // docked bar along the editor's bottom edge, so it can never hang over the score.
-// Groups are separated by 24px of space — no dividers — and wrap onto extra rows.
+// Each tool group sits in its own white capsule well (ToolGroup / the Segmented
+// track) — the tonal lift is what separates one group from the next, so groups
+// need only 24px of space between them, no dividers. Groups wrap onto extra rows.
 function NoteToolDock({
     duration,
     onDuration,
@@ -744,8 +794,6 @@ function NoteToolDock({
     return (
         <div style={{ ...CHROME_SURFACE, flexShrink: 0, zIndex: 20, padding: '10px 16px' }}>
             <div
-                role="group"
-                aria-label="Note tools"
                 style={{
                     margin: '0 auto',
                     display: 'flex',
@@ -767,20 +815,20 @@ function NoteToolDock({
                         ['16', <DurationIcon dur="16" />],
                     ]}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ChipToggle active={dotted} onClick={onDot} ariaLabel="Dotted">
+                <ToolGroup ariaLabel="Note modifiers">
+                    <ChipToggle plain active={dotted} onClick={onDot} ariaLabel="Dotted">
                         ·
                     </ChipToggle>
-                    <ChipToggle active={tuplet} onClick={onTuplet} ariaLabel="Triplet">
+                    <ChipToggle plain active={tuplet} onClick={onTuplet} ariaLabel="Triplet">
                         <TupletIcon />
                     </ChipToggle>
-                    <ChipToggle active={rest} onClick={onRest} ariaLabel="Rest">
+                    <ChipToggle plain active={rest} onClick={onRest} ariaLabel="Rest">
                         <RestIcon />
                     </ChipToggle>
-                    <ChipToggle active={tied} onClick={onTie}>
+                    <ChipToggle plain active={tied} onClick={onTie}>
                         Tie
                     </ChipToggle>
-                </div>
+                </ToolGroup>
                 <Segmented
                     ariaLabel="Accidental"
                     value={accidental}
@@ -791,11 +839,11 @@ function NoteToolDock({
                         ['#', '♯'],
                     ]}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ToolGroup ariaLabel="Score settings">
                     <ClefControl clef={clef} onSet={onClef} />
                     <KeySignatureControl fifths={keyFifths} onSet={onKey} />
                     <TempoControl bpm={bpm} onSet={onBpm} />
-                </div>
+                </ToolGroup>
             </div>
         </div>
     )
@@ -935,6 +983,131 @@ function ConcurrentRecordingDialog({ onClose }) {
     )
 }
 
+// Storyboard of the Control Center → Mic Mode → Wide Spectrum flow. The kit shows
+// the three phases as a static row; production crossfades them on a shared ~9s loop
+// (mic-guide-* keyframes in globals.css) and falls back to this static stack under
+// prefers-reduced-motion.
+function WideSpectrumWalkthrough() {
+    const phases = [
+        {
+            caption: 'Swipe down from the top-right corner',
+            scene: (
+                <div style={{ position: 'relative', width: 72, height: 88, borderRadius: 10, background: 'var(--color-surface-container-lowest)', boxShadow: 'var(--shadow-tonal)' }}>
+                    <div style={{ position: 'absolute', top: 6, right: 12, height: 48, width: 2, borderRadius: 9999, background: 'color-mix(in srgb, var(--color-primary) 30%, transparent)' }} />
+                    <div style={{ position: 'absolute', top: 4, right: 8, width: 14, height: 14, borderRadius: 9999, background: 'var(--color-primary)' }} />
+                </div>
+            ),
+        },
+        {
+            caption: 'Tap Mic Mode',
+            scene: (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--color-surface-container-lowest)', boxShadow: 'var(--shadow-tonal)', borderRadius: 10, padding: '10px 14px' }}>
+                    <span style={{ width: 30, height: 30, borderRadius: 9999, background: 'var(--color-primary-soft)', color: 'var(--color-on-primary-soft)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Icon name="mic" size={16} />
+                    </span>
+                    <span style={{ font: '600 13px/1 var(--font-body)', color: 'var(--color-on-surface)' }}>Mic Mode</span>
+                </div>
+            ),
+        },
+        {
+            caption: 'Choose Wide Spectrum',
+            scene: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 150 }}>
+                    {['Standard', 'Voice Isolation'].map((mode) => (
+                        <span key={mode} style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)', borderRadius: 4, padding: '6px 12px' }}>
+                            {mode}
+                        </span>
+                    ))}
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-primary-soft)', color: 'var(--color-on-primary-soft)', borderRadius: 4, padding: '6px 12px' }}>
+                        <span style={{ font: '600 12px/1.4 var(--font-body)' }}>Wide Spectrum</span>
+                        <Icon name="check" size={14} />
+                    </span>
+                </div>
+            ),
+        },
+    ]
+    return (
+        <div
+            aria-hidden="true"
+            style={{ display: 'flex', gap: 8, borderRadius: 10, background: 'var(--color-surface-container-low)', padding: 16 }}>
+            {phases.map((phase, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 12, textAlign: 'center' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{phase.scene}</div>
+                    <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{phase.caption}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// Shown once per device the first time an iPhone user hits record: iOS voice
+// processing erases whistling and instrument tones unless Control Center's Mic
+// Mode is set to Wide Spectrum, and no web API can do it for them (see
+// src/lib/micMode.ts, localStorage key `solkey:mic-mode-guide`). Production opens
+// a warm-up mic stream *before* this dialog so the Control Center tile exists and
+// the steps are performable now — which is what lets the confirm button attest the
+// setting rather than a bare "OK".
+function MicModeGuideDialog({ onConfirm, onClose }) {
+    return (
+        <DialogScrim onDismiss={onClose}>
+            <DialogPanel
+                title="iPhone user"
+                subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+                onClose={onClose}
+                width={480}
+                footer={
+                    <PrimaryButton icon="mic" onClick={onConfirm}>
+                        I've set Wide Spectrum — record
+                    </PrimaryButton>
+                }>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                    <WideSpectrumWalkthrough />
+                    <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Without <strong style={{ color: 'var(--color-on-surface)' }}>Wide Spectrum</strong>, iOS removes whistling and
+                        instrument notes before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control
+                        Center — set it now, come back, and your iPhone remembers the choice for this browser.
+                    </span>
+                </div>
+            </DialogPanel>
+        </DialogScrim>
+    )
+}
+
+// Reminder toast for returning iPhone users — fired at take start (production:
+// Toaster + showToast with a per-toast `icon`). Auto-dismisses; glass surface.
+function MicReminderToast({ onDone }) {
+    React.useEffect(() => {
+        const t = setTimeout(onDone, 5200)
+        return () => clearTimeout(t)
+    }, [])
+    return (
+        <div
+            role="status"
+            className="glass-panel"
+            style={{
+                position: 'absolute',
+                bottom: 96,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 60,
+                maxWidth: 420,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 12,
+                boxShadow: 'var(--shadow-tonal)',
+            }}>
+            <span style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: 1 }}>
+                <Icon name="mic" size={18} />
+            </span>
+            <span style={{ font: '400 13px/1.45 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                Recording on iPhone: keep Mic Mode on Wide Spectrum (Control Center) so every note comes through.
+            </span>
+        </div>
+    )
+}
+
 // Static placeholder staff — production rendering is SMuFL/Bravura.
 function PlaceholderStaff() {
     const lineGap = 10
@@ -1026,6 +1199,15 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
     const [shortcutsOn, setShortcutsOn] = useState(false)
     const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const [concurrentDialogOpen, setConcurrentDialogOpen] = useState(false)
+    const [micGuideOpen, setMicGuideOpen] = useState(false)
+    const [micReminderOn, setMicReminderOn] = useState(false)
+    // Production gates the Mic Mode guide on an iPhone user-agent; the kit defaults
+    // it on so both surfaces (first-run dialog, then the returning reminder) are
+    // demoable. "Seen" persists to the same localStorage key production uses.
+    const isIPhone = true
+    const [micGuideSeen, setMicGuideSeen] = useState(
+        () => typeof localStorage !== 'undefined' && localStorage.getItem('solkey:mic-mode-guide') === 'done',
+    )
 
     const tier = EDITOR_TIERS[planId] ?? EDITOR_TIERS.free
     const limitSec = tier.dailyLimitSec
@@ -1055,11 +1237,36 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
             setConcurrentDialogOpen(true)
             return
         }
+        // Already rolling → just stop; no mic gating on the way down.
+        if (recording) {
+            setRecording(false)
+            return
+        }
         if (exhausted) {
             setLimitDialogOpen(true)
             return
         }
-        setRecording((r) => !r)
+        // First iPhone take on this device → guide before the mic starts.
+        if (isIPhone && !micGuideSeen) {
+            setMicGuideOpen(true)
+            return
+        }
+        beginRecording()
+    }
+
+    // Starts the take. Returning iPhone users get a reminder toast at start.
+    const beginRecording = () => {
+        if (isIPhone && micGuideSeen) setMicReminderOn(true)
+        setRecording(true)
+    }
+
+    const confirmMicGuide = () => {
+        setMicGuideSeen(true)
+        try {
+            localStorage.setItem('solkey:mic-mode-guide', 'done')
+        } catch {}
+        setMicGuideOpen(false)
+        setRecording(true)
     }
 
     return (
@@ -1185,6 +1392,8 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                 />
             )}
             {concurrentDialogOpen && <ConcurrentRecordingDialog onClose={() => setConcurrentDialogOpen(false)} />}
+            {micGuideOpen && <MicModeGuideDialog onConfirm={confirmMicGuide} onClose={() => setMicGuideOpen(false)} />}
+            {micReminderOn && <MicReminderToast onDone={() => setMicReminderOn(false)} />}
 
             {/* Sanctuary canvas */}
             <div style={{ flex: 1, overflow: 'auto', padding: '0 32px', display: 'flex', flexDirection: 'column' }}>
