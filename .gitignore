@@ -37,6 +37,11 @@ apps/api/scripts/eval/.tmp/
 apps/api/scripts/eval/.cache/
 apps/api/scripts/fixtures/eval/
 apps/api/scripts/fixtures/eval-real/
+# Cached pitch trajectories for the eval harness — derived, large, and rebuilt on
+# demand by scripts/eval/lib/trackCache.ts (and, per acoustic condition, by
+# scripts/eval/lib/variantCache.ts).
+apps/api/scripts/fixtures/eval-cache/
+apps/api/scripts/fixtures/eval-cache-variant/
 # Python gRPC stubs are generated, not committed: at image build (Dockerfiles'
 # proto stage) or on the host via packages/inference-proto/generate-python.sh
 apps/inference-*/inference_pb2.py

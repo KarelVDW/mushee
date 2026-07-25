@@ -1,7 +1,25 @@
 /**
- * Note-transcription metrics, mir_eval-style. A reference note matches an
- * estimated note when their onsets fall within a tolerance window and the pitch
- * matches. We report two pitch criteria:
+ * Note-transcription metrics, mir_eval-style.
+ *
+ * ## What `f1` here actually is — read before comparing against a paper
+ *
+ * It is MIREX **COnP**: a match requires the **onset** within a tolerance and the
+ * **pitch** to agree, with **no offset gate at all**. Published note-transcription
+ * figures are frequently **COnPOff**, which additionally requires the offset within
+ * `max(50 ms, 20 % of the reference duration)` and is therefore a much harder
+ * criterion. Our default tolerance is also ±100 ms rather than the conventional
+ * ±50 ms. So this number is **not** comparable to a COnPOff figure, and only
+ * comparable to a COnP figure at matching tolerance. We have made that mistake in
+ * this repo already; the reporting scripts label their columns `COnP@0.1` for that
+ * reason.
+ *
+ * The ±100 ms default is deliberate and defensible, not laziness: the one large human
+ * study of AMT metrics (Ycart et al., TISMIR 2020, 186 participants / 4,501
+ * judgements) found agreement with human preference peaks at **75–150 ms**, and that
+ * onset-only F beats onset+offset F as a perceptual proxy.
+ *
+ * A reference note matches an estimated note when their onsets fall within a
+ * tolerance window and the pitch matches. We report two pitch criteria:
  *   - exact MIDI match -> precision / recall / F1
  *   - octave-agnostic (same pitch class) -> chroma F1, and the gap between the
  *     two surfaces the octave-error rate (the classic pitch-tracker failure).
@@ -14,7 +32,7 @@
  * window censoring large errors, the timing pass uses its own, wider tolerance.
  */
 
-import type { TruthNote } from '../types';
+import type { GroundTruth, TruthNote } from '../types';
 
 export interface EstNote {
   onsetSec: number;
@@ -214,4 +232,33 @@ export function scoreNotes(
     medianPitchErr: median(chroma.pitchErrs),
     timing,
   };
+}
+
+/**
+ * Score against the reference the estimate agrees with best ("Amax" in the
+ * vocadito paper's terms), when a clip carries more than one annotation.
+ *
+ * Two annotators of the same singing disagree mostly about *style* — whether an
+ * ornament is a note of its own or part of the note it decorates — so scoring
+ * against one of them charges the pipeline for a choice a listener would accept
+ * either way. vocadito's own published baseline moves 0.43 → 0.49 purely by
+ * swapping which annotator is the reference; taking the max is what the dataset
+ * authors recommend "if any style of transcription is acceptable".
+ *
+ * Best is decided on F1 alone, with the primary annotation winning ties, so a
+ * clip with no `alternateNotes` scores exactly as `scoreNotes` would. All other
+ * fields (timing, chroma, counts) come from the winning reference, so they stay
+ * mutually consistent instead of being maxed independently.
+ */
+export function scoreNotesBest(
+  truth: Pick<GroundTruth, 'notes' | 'alternateNotes'>,
+  est: EstNote[],
+  opts: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 },
+): Metrics {
+  let best = scoreNotes(truth.notes, est, opts);
+  for (const alt of truth.alternateNotes ?? []) {
+    const m = scoreNotes(alt, est, opts);
+    if (m.f1 > best.f1) best = m;
+  }
+  return best;
 }

@@ -301,6 +301,16 @@ function main(): void {
     instrumentId: 'voice-lead',
     source: 'http://mirlab.org/dataSet/public/MIR-QBSH.zip',
     license: 'academic/research',
+    // The corpus has no note events; ours come out of the .pv frame pitch by
+    // the derivation described above — which is the same algorithm family as
+    // the shipping segmenter, so agreeing with these labels partly means
+    // reproducing our own artefact. Measured on vocadito (the one corpus with
+    // both f0 and human notes), that derivation itself scores only F1
+    // 0.43-0.55 at 2.7-3.2x over-segmentation, i.e. a *perfect* f0 tracker
+    // would cap out near 0.50 here. Consumers filter on this flag (see
+    // lib/realCorpus.ts) to keep the clips for f0/melody metrics and realism
+    // checks while leaving them out of note-F1 aggregates.
+    noteTruthDerived: true,
     clips,
     totalNotes,
     notes:
@@ -308,7 +318,11 @@ function main(): void {
       'sung and hummed nursery rhymes by ~195 subjects. Ground truth derived from the ' +
       'corpus .pv frame-pitch labels (256-sample frames @ 8 kHz = 0.032 s/frame, semitone ' +
       'units, 0 = unvoiced): same-integer-MIDI runs of >=3 frames become notes, unvoiced ' +
-      'gaps break runs. Subset ranked by voiced ratio, vocal register, and note stability.',
+      'gaps break runs. Subset ranked by voiced ratio, vocal register, and note stability. ' +
+      'noteTruthDerived: these note events are OUR derivation of the frame-pitch labels, ' +
+      'not dataset annotations (the students who recorded the queries self-labelled the ' +
+      'pitch, "with no guarantee for their correctness") — valid for f0/melody metrics and ' +
+      'realism, NOT trustworthy as a note-F1 gate.',
   };
   writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2));
 

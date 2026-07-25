@@ -7,6 +7,7 @@
 
 import { Logger } from '@nestjs/common';
 
+import { OnsetDetector } from '../onset-detector';
 import { rangeForInstrument } from './instrument-ranges';
 import {
   DEFAULT_PROFILE,
@@ -54,6 +55,14 @@ const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5);
  * classifier itself stays on as telemetry (the NOISY flag in the resolver
  * log + the archived profile id), and the env knobs let ops re-enable the
  * actions for experiments on real-world traffic.
+ *
+ * 2026-07-25, on reverberant audio specifically: the LOSS above is not just a
+ * failed tuning, the sign is wrong. Reverb collapses CREPE's confidence, so it
+ * needs the gate LOWERED (see `applyReverb`, +0.024/+0.043 note-F1) and raising
+ * it makes the same clips worse. And this classifier is the wrong trigger in any
+ * case — it fires on 84 % of reverberant takes but also on 60 % of clean ones,
+ * because `snrDb`/`noisiness` are built for an additive stationary interferer
+ * and reverberation is neither.
  */
 const NOISY_CONFIDENCE_BUMP = envNum('RECORDING_NOISY_CONF_BUMP', 0);
 const NOISY_CONFIDENCE_CAP = 0.75;
@@ -62,6 +71,184 @@ const NOISY_DENOISE = process.env.RECORDING_NOISY_DENOISE === '1';
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
+}
+
+/**
+ * How far the voicing gate may be relaxed on a fully reverberant take, and the
+ * floor it may never go below. See `estimateReverberance` for why this is the
+ * adaptation reverb actually wants.
+ */
+const REVERB_CONFIDENCE_RELIEF = envNum('RECORDING_REVERB_CONF_RELIEF', 0.25);
+const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25);
+/**
+ * `dipDepth` anchors for the reverberance ramp: the measured medians of the
+ * clean (0.34) and reverberant (0.50–0.55) halves of the corpus. Below the low
+ * anchor a take is treated as dry, above the high anchor as fully reverberant,
+ * and in between the relief is applied proportionally — a graded response,
+ * because the feature is only weakly separating (see `estimateReverberance`) and
+ * a hard threshold would mean applying the full relief to false positives.
+ */
+const REVERB_DIP_DRY = envNum('RECORDING_REVERB_DIP_DRY', 0.36);
+const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52);
+/**
+ * Minimum envelope modulation (coefficient of variation over above-silence
+ * frames) for the fill measurement to mean anything.
+ *
+ * `dipDepth` reads "the quiet moments sit close to the loud ones". A signal with
+ * essentially NO dynamic variation — a synthesized steady tone, a sustained
+ * drone, a test fixture — satisfies that trivially and would otherwise be scored
+ * maximally reverberant. This is the same trap `PitchScan` already guards for
+ * `snrDb` ("absence of quiet frames is not evidence of noise"), and it needs the
+ * same answer: absence of dips is not evidence of FILLED dips.
+ *
+ * 0.15 is far below anything real. Measured over all 1,282 clip/condition pairs
+ * of the real corpus the minimum modulation is 0.195 (p1 = 0.233), so the guard
+ * never fires on real material; a constant-amplitude synthetic tone measures
+ * 0.027.
+ */
+const REVERB_MIN_MODULATION = envNum('RECORDING_REVERB_MIN_MODULATION', 0.15);
+
+/**
+ * Blind reverberance of a take, 0 (dry) … 1 (heavily reverberant), from the
+ * amplitude envelope alone.
+ *
+ * ## Why reverb needs its own signal, and why it is this one
+ *
+ * `PitchScan` already measures `snrDb` and `noisiness`, and neither one sees
+ * reverberation: over 197 reverberant singing clips paired against their own
+ * clean takes, `noisiness` did not move at all (0.00 → 0.00) and `snrDb` fell
+ * only 23.7 → 17.8 dB, catching 25 % of reverberant takes at a 10 % false-
+ * positive rate. That is unsurprising — both are built to find an ADDITIVE,
+ * roughly stationary interferer, and reverberation is a delayed copy of the
+ * signal itself.
+ *
+ * What reverberation does do is FILL IN the quiet moments: the tail of each note
+ * covers the gaps and the decays, so the envelope's floor rises toward its peak.
+ * `dipDepth` — the median above-silence envelope level as a fraction of the
+ * clip's peak — measures exactly that, and it moved 0.340 → 0.498 (echoey-room)
+ * and 0.346 → 0.549 (distant-mic) on the same clips, the best separation of the
+ * four candidates measured (`scripts/eval/sweep-reverb.ts`, MODE=diagnose).
+ *
+ * It is still far from a clean detector (46 % / 70 % of reverberant takes past
+ * the clean p90), which is why the caller applies it as a RAMP rather than a
+ * switch: a weak signal used proportionally is worth much more than the same
+ * signal used as a binary gate.
+ */
+export function estimateReverberance(
+  samples: Float32Array,
+  sampleRate: number,
+): number {
+  const env = new OnsetDetector().envelope(samples, sampleRate);
+  if (env.length < 20) return 0;
+  let peak = 0;
+  for (const v of env) peak = Math.max(peak, v);
+  if (peak <= 0) return 0;
+  // Frames above the silence floor only — trailing/leading silence would
+  // otherwise drag the median down and read as a dry room.
+  const loud: number[] = [];
+  for (const v of env) if (v > peak * 0.08) loud.push(v);
+  if (loud.length < 8) return 0;
+
+  // A take with no dynamic variation has no dips for a room to fill, so its
+  // fill ratio carries no information — see REVERB_MIN_MODULATION.
+  const mu = loud.reduce((a, b) => a + b, 0) / loud.length;
+  if (mu <= 0) return 0;
+  const sd = Math.sqrt(
+    loud.reduce((s, v) => s + (v - mu) ** 2, 0) / loud.length,
+  );
+  if (sd / mu < REVERB_MIN_MODULATION) return 0;
+
+  loud.sort((a, b) => a - b);
+  const dipDepth = loud[loud.length >> 1] / peak;
+  return clamp(
+    (dipDepth - REVERB_DIP_DRY) / (REVERB_DIP_WET - REVERB_DIP_DRY),
+    0,
+    1,
+  );
+}
+
+/**
+ * Relax the voicing gate in proportion to a take's measured reverberance.
+ *
+ * ## The measurement this encodes
+ *
+ * Reverberation barely disturbs CREPE's PITCH — on frames voiced in both a clip
+ * and its reverberant twin, 73 % agree within 50 ¢ and only 1.1 % are octave
+ * errors. What it does is destroy the model's CONFIDENCE: mean per-frame
+ * confidence falls 0.765 → 0.517 (echoey-room) and → 0.502 (distant-mic), so
+ * 43–45 % of the frames that were voiced when dry fall under a gate calibrated
+ * at 0.5. Crucially those frames are lost from INSIDE held notes, not from their
+ * edges: the median detected note halves in length (0.40 s → 0.23 s) while the
+ * note count barely changes, i.e. the gate chops sustained notes into fragments
+ * and precision and recall fall together.
+ *
+ * So the gate, not the pitch tracker, is what reverb breaks — and the fix is to
+ * recalibrate it for the take. Measured with paired bootstrap CIs over the
+ * corpora with trustworthy note labels (annotated-vocalset, guitarset-solo,
+ * vocadito — mir-qbsh excluded — its note labels are derived, see scripts/eval/README.md) with
+ * `scripts/eval/sweep-reverb.ts`, MODE=sweep, `EVAL_SPLIT=dev|test`, Δ note-F1
+ * (COnP @100 ms) at the detection stage, `*` = 95 % CI excludes zero:
+ *
+ * ```
+ *                     clean                    echoey-room              distant-mic
+ * dev  fixed 0.40     -0.003 [-0.008,+0.002]   +0.016 *                 +0.029 *
+ * dev  fixed 0.30     -0.009 [-0.016,-0.003]*  +0.025 *                 +0.050 *
+ * dev  THIS RAMP      -0.003 [-0.007,+0.002]   +0.022 [+0.013,+0.032]*  +0.055 [+0.044,+0.067]*
+ * test THIS RAMP      -0.000 [-0.004,+0.003]   +0.024 [+0.016,+0.032]*  +0.043 [+0.032,+0.054]*
+ * n (dev/test)        234 / 256                197 / 199                197 / 199
+ * ```
+ *
+ * On F₂ — the product-relevant weighting (a missed note costs ~40× a spurious one to repair) — the gain is larger
+ * still: dev +0.030 / +0.066, test +0.032 / +0.053, all CIs excluding zero.
+ * And the dry-audio safety check was run over the WHOLE corpus, all 17 datasets
+ * including the URMP instruments: ΔF1 -0.003 [-0.007,+0.002] on 270 dev clips
+ * and -0.001 [-0.003,+0.002] on 318 test clips. Nothing distinguishable from
+ * zero anywhere on dry audio.
+ *
+ * ### It survives the production profile lock, which is the real constraint
+ *
+ * `RecordingPipeline.resolveProfile` locks the profile from the first
+ * `DETECT_MIN_SEC` = 1.2 s of audio and never revisits it, so the estimate that
+ * ships is made from a ~1.5 s prefix, not a whole take. Re-measured that way:
+ *
+ * ```
+ *                     clean                    echoey-room   distant-mic
+ * dev  prefix 1.5 s   -0.008 [-0.015,-0.002]*  +0.026 *      +0.055 *
+ * test prefix 1.5 s   -0.003 [-0.008,+0.002]   +0.025 *      +0.040 *
+ * ```
+ *
+ * The reverb gain is fully intact — a room is audible in a second and a half.
+ * The dry cost roughly triples (and reaches significance on dev, though not on
+ * test), because a short prefix is a noisier estimate and produces more false
+ * positives. **Follow-up worth taking:** re-estimate reverberance on the FINAL
+ * pass, where the whole take is available (full-clip estimate: dry -0.002 dev /
+ * -0.000 test, same reverb gain). That needs `recording-pipeline.ts`, which
+ * re-resolves nothing today.
+ *
+ * The ramp dominates every fixed value: it buys the reverb gain of a 0.25–0.30
+ * gate while costing what a 0.40 gate costs on dry audio (which is nothing
+ * distinguishable from zero). A fixed low threshold cannot do both, because the
+ * optimum genuinely differs by condition — ~0.5 dry, ~0.25 wet.
+ *
+ * Related dead end, recorded so it is not retried: this is NOT the noise
+ * adaptation below. `applyNoise` RAISES the gate and was measured as a loss;
+ * reverb wants it LOWERED, and the NOISY flag is useless as the trigger anyway
+ * (it fires on 84 % of reverberant takes but also 60 % of clean ones).
+ *
+ * ⚠ The eval harness caches the RESOLVED PROFILE, so this function's output is
+ * baked into `scripts/fixtures/eval-cache/` and `eval-cache-variant/`. A cache
+ * built before this change stores the old gate; bump `CACHE_VERSION` in
+ * `scripts/eval/lib/trackCache.ts` (or delete the directory) before trusting
+ * absolute numbers from `ablate.ts` / `sweep-segmenter.ts` again.
+ */
+function applyReverb(base: PipelineProfile, reverberance: number): PipelineProfile {
+  if (reverberance <= 0 || base.confidenceThreshold === undefined) return base;
+  const relaxed = Math.max(
+    REVERB_CONFIDENCE_FLOOR,
+    base.confidenceThreshold - REVERB_CONFIDENCE_RELIEF * reverberance,
+  );
+  if (relaxed >= base.confidenceThreshold) return base;
+  return { ...base, id: base.id + '+reverb', confidenceThreshold: relaxed };
 }
 
 function band(id: string): PipelineProfile {
@@ -99,6 +286,7 @@ export class ProfileResolver {
     const noisy =
       (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) ||
       scan.noisiness >= NOISY_MIN_NOISINESS;
+    const reverberance = estimateReverberance(samples, sampleRate);
 
     if (!scan.voiced) {
       // No reliable pitch yet — fall back to a wide default, widened to the
@@ -127,15 +315,20 @@ export class ProfileResolver {
       highHz = Math.max(highHz, hintRange.maxHz);
     }
 
-    const base = this.applyNoise(bandFor(scan.medianHz), noisy);
+    const base = applyReverb(
+      this.applyNoise(bandFor(scan.medianHz), noisy),
+      reverberance,
+    );
     const profile = this.finalize(base, lowHz, highHz, base.id);
     this.logger.debug(
       `Resolved profile=${profile.id} provider=${profile.providerName} ` +
         `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
         `hp=${profile.highpassHz.toFixed(0)} ` +
+        `conf=${profile.confidenceThreshold?.toFixed(2) ?? 'n/a'} ` +
         `(scan p10/med/p90=${scan.p10Hz.toFixed(0)}/${scan.medianHz.toFixed(0)}/${scan.p90Hz.toFixed(0)}Hz, ` +
         `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
         `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
+        `reverberance=${reverberance.toFixed(2)}, ` +
         `hint=${hint?.instrumentId ?? 'none'})`,
     );
     return profile;
