@@ -780,12 +780,12 @@ describe('RecordingEngine', () => {
         expect(sample.beat).toBeGreaterThanOrEqual(0)
     })
 
-    it('beginStreaming returns immediately when the stream/options are gone', async () => {
+    it('connect returns immediately when the stream/options are gone', async () => {
         const { player } = fakePlayer()
         const engine = new RecordingEngine(player)
-        // Never started: stream and options are null, so beginStreaming bails before opening a socket.
-        const internal = engine as unknown as { beginStreaming(): Promise<void> }
-        await expect(internal.beginStreaming()).resolves.toBeUndefined()
+        // Never started: stream and options are null, so connect bails before opening a socket.
+        const internal = engine as unknown as { connect(): Promise<void> }
+        await expect(internal.connect()).resolves.toBeUndefined()
         expect(lastSocket).toBeNull()
     })
 
@@ -819,18 +819,124 @@ describe('RecordingEngine', () => {
         const onConnectionLost = vi.fn()
         const { options } = makeOptions()
         options.onConnectionLost = onConnectionLost
+        // The socket is opened during the COUNT-OFF (so its handshake latency is not
+        // charged to the performance), which is therefore when a failure surfaces.
         await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        // Socket never opens; signal an error and mark it closed so the OPEN guards are false.
         socket().readyState = FakeWebSocket.CLOSED
         socket().fire('error')
         await Promise.resolve()
         await Promise.resolve()
-        // No meta frame, no recorder — the user is told the connection failed.
+        expect(onConnectionLost).toHaveBeenCalled()
+
+        // Reaching beat 1 must not then start capturing into the dead socket.
+        raw.currentTime = 3
+        engine.tick()
         expect(socket().sent).toHaveLength(0)
         expect(lastRecorder).toBeNull()
-        expect(onConnectionLost).toHaveBeenCalled()
+    })
+
+    it('still delivers the recorder\u2019s final flush after stop()', async () => {
+        // Regression: stop() nulls `this.ws` and only then stops the recorder, whose
+        // last \u2264CHUNK_MS of audio arrives asynchronously afterwards. A handler that
+        // reads `this.ws` at that point silently drops the tail of every take \u2014 the
+        // socket must be held in the handler's closure instead.
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        await engine.start(options)
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+        raw.currentTime = 3
+        engine.tick()
+
+        const onData = recorderOnData()
+        engine.stop()
+        // The final flush, arriving after stop() has already torn down the fields.
+        const lastChunk = { size: 7 }
+        onData({ data: lastChunk })
+        expect(socket().sent).toContain(lastChunk)
+    })
+
+    it('announces the negotiated format even when the socket opens before capture', async () => {
+        // Regression: the meta frame usually goes out from connect()'s open handler,
+        // DURING the count-off \u2014 before startCapture() exists. Picking the MIME type
+        // inside startCapture() meant that frame carried mimeType: null in the normal
+        // ordering, and the server fell back to probing the container.
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        class Mp4OnlyRecorder extends FakeMediaRecorder {
+            static isTypeSupported = vi.fn((type: string) => type === 'audio/mp4')
+        }
+        vi.stubGlobal('MediaRecorder', Mp4OnlyRecorder)
+
+        await engine.start(options)
+        // Socket opens during the count-off \u2014 the production-normal ordering.
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
+        expect(meta.mimeType).toBe('audio/mp4')
+
+        // And the recorder created at beat 1 uses the same negotiated type.
+        raw.currentTime = 3
+        engine.tick()
+        expect(recorder().options).toEqual({ mimeType: 'audio/mp4' })
+    })
+
+    it('stays silent when the user cancels during the count-off handshake', async () => {
+        // Connecting moved into the count-off, which created a new window in which the
+        // user can press stop while the handshake is in flight. That must not surface
+        // as a connection failure — the user caused it.
+        const { player } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const onConnectionLost = vi.fn()
+        const { options } = makeOptions()
+        options.onConnectionLost = onConnectionLost
+        await engine.start(options)
+        engine.stop()
+        socket().readyState = FakeWebSocket.CLOSED
+        socket().fire('error')
+        await Promise.resolve()
+        await Promise.resolve()
+        expect(onConnectionLost).not.toHaveBeenCalled()
+    })
+
+    it('starts capturing at beat 1 even if the socket is still connecting', async () => {
+        // THE timing regression this guards: capture used to be started only after
+        // awaiting the socket handshake, which happened at beat 1 — so the whole
+        // round-trip was audio that never reached the server, and the server, which
+        // treats its first sample as beat 1, notated every note early by that much.
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const { options } = makeOptions()
+        await engine.start(options)
+
+        // Still handshaking when the count-off ends.
+        socket().readyState = 0
+        raw.currentTime = 3
+        engine.tick()
+
+        // Capture began anyway, on time.
+        expect(lastRecorder).not.toBeNull()
+        expect(lastRecorder?.state).toBe('recording')
+        // Nothing was sent yet — the socket is not open.
+        expect(socket().sent).toHaveLength(0)
+
+        // Audio captured during the handshake is held, not dropped.
+        lastRecorder?.ondataavailable?.({ data: { size: 4 } })
+        expect(socket().sent).toHaveLength(0)
+
+        // On open, the meta frame goes first, then the buffered audio in order.
+        socket().readyState = FakeWebSocket.OPEN
+        socket().fire('open')
+        await Promise.resolve()
+        await Promise.resolve()
+        const sent = socket().sent
+        expect(sent.length).toBeGreaterThanOrEqual(2)
+        expect((JSON.parse(sent[0] as string) as MetaFrame).type).toBe('meta')
+        expect(sent[1]).toEqual({ size: 4 })
     })
 
     it('fires onConnectionLost when the socket closes mid-take', async () => {
