@@ -36,6 +36,14 @@ const RANGES: Record<string, FreqRange> = {
   'tenor-saxophone': { minHz: 100, maxHz: 700 },
   harmonica: { minHz: 200, maxHz: 1800 },
   ocarina: { minHz: 400, maxHz: 2200 },
+  // Whistles, and whistling. Reached by the substring fallback for the app's
+  // `tin-whistle` (a D whistle, D5-D7), which previously matched nothing and so got
+  // no hint at all. The bound is set for *human whistling*, whose compass is
+  // genuinely C5-C8 (523-4186 Hz) rather than the 1-3 kHz usually assumed, and which
+  // contains the tin whistle's range. Erring wide is the right way round here per the
+  // resolver's own tradeoff: too high a floor clips real notes outright, while too
+  // low a one only mildly risks an octave error that post-processing still suppresses.
+  whistle: { minHz: 500, maxHz: 4300 },
   // Strings
   violin: { minHz: 190, maxHz: 2800 },
   viola: { minHz: 120, maxHz: 1500 },

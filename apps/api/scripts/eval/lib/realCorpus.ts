@@ -20,6 +20,25 @@ export interface RealDataset {
   label: string;
   kind: SourceKind;
   instrumentId?: string;
+  /**
+   * Which half of the SOURCE corpus's own published split these clips are —
+   * 'test' marks a held-out external yardstick (e.g. n20emv2-test) that must
+   * never be swept against: its only value is confirming a decision already
+   * made, and tuning on it destroys that.
+   */
+  corpusSplit?: string;
+  /**
+   * The dataset ships no note events: its `notes` were *derived* from a
+   * frame-level pitch annotation by rounding to semitones and grouping runs
+   * (mir-qbsh). That is the same algorithm family as our own segmenter, so
+   * note-level scores there reward reproducing our own artefact — a better
+   * segmenter measures *worse*. Consumers should exclude such datasets from
+   * note-F1 aggregates (run-eval.ts does by default; EVAL_INCLUDE_UNTRUSTED=1
+   * opts back in) while still using the audio for f0 / melody metrics and
+   * realism checks. Declared by `noteTruthDerived` in the dataset's
+   * dataset.json so filtering is a property, never a hard-coded dataset name.
+   */
+  noteTruthDerived?: boolean;
 }
 
 export function discoverRealDatasets(root: string): RealDataset[] {
@@ -38,6 +57,8 @@ export function discoverRealDatasets(root: string): RealDataset[] {
         label: m.label ?? d.name,
         kind: m.kind ?? 'voice',
         instrumentId: m.instrumentId,
+        corpusSplit: m.corpusSplit,
+        noteTruthDerived: m.noteTruthDerived ?? false,
       };
     });
 }

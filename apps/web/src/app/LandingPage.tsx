@@ -259,11 +259,11 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
 
                 <PacksTeaser currency={currency} />
 
-                {currency === 'eur' && (
-                    <p className="mt-6 font-body font-normal text-[12px] leading-normal text-on-surface-variant text-center m-0">
-                        Prices in euro for eurozone customers; any applicable VAT is shown at checkout.
-                    </p>
-                )}
+                <p className="mt-6 font-body font-normal text-[12px] leading-normal text-on-surface-variant text-center m-0">
+                    {currency === 'eur'
+                        ? 'Euro prices include VAT — the amount you see is the total you pay.'
+                        : 'Prices are shown before local sales tax, which is added at checkout.'}
+                </p>
             </div>
         </section>
     )

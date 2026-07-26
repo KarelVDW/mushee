@@ -18,26 +18,68 @@ export interface OnsetDetectorOptions {
   dipRatio?: number;
   /** ...then rise back to this multiple of the trough to count as a re-attack. */
   riseRatio?: number;
+  /**
+   * How long the envelope must STAY down (below `dipRatio` of the preceding
+   * peak) before a rise counts as a re-articulation, on the theory that a real
+   * inter-note gap is *sustained* (a breath, a finger lift) whereas a reverb wash
+   * only wobbles across the ratios.
+   *
+   * **SHIPS OFF (0 = the historical behaviour, one dipped frame is enough).**
+   * Measured 2026-07-25 via `scripts/eval/sweep-reverb.ts`, and the reason it is
+   * off is worth keeping so it is not retried blind:
+   *
+   * - Reverberation *does* damage this detector. Handing the degraded pipeline
+   *   the clean take's onsets and changing nothing else recovers **+0.031**
+   *   (echoey-room) / **+0.016** (distant-mic) note-F1, CIs excluding zero.
+   * - But it is not "the dips get filled and the detector goes blind". Onset
+   *   counts move in BOTH directions depending on material: on sustained singing
+   *   they rise (3.5 → 5.4 per clip against 8.5 true notes — spurious splits),
+   *   on plucked/dense material they fall (10.5 → 8.5 — missed re-attacks).
+   * - And the guard cannot tell a real gap from a wobble any better than a
+   *   blunt threshold does. On sustained singing every tightening converges on
+   *   the same ceiling as switching the splitter off entirely (200 ms trough
+   *   +0.035, `dipRatio` 0.25 +0.035, `riseRatio` 4 +0.037, splitter off +0.041)
+   *   with recall unchanged to three decimals — it is only removing splits, not
+   *   choosing better ones. On guitarset + vocadito every one of those settings
+   *   COSTS (−0.006 … −0.019 F1, −0.012 … −0.028 F₂, CIs excluding zero) in both
+   *   dry and reverberant audio, because there the re-attacks are real and are
+   *   the whole reason the splitter exists.
+   *
+   * So the useful reading is that whether to split on amplitude is a property of
+   * the MATERIAL, not of the room — the same conclusion the findings log reaches (scripts/eval/README.md)
+   * for the segmenter's change cost. Kept as an option because it is the right
+   * shape for that material-adaptive version and because it keeps the above
+   * reproducible.
+   */
+  minTroughSec?: number;
 }
 
 export class OnsetDetector {
   /** Frame hop for the envelope, in seconds (~10 ms). */
-  private readonly hopSec = 0.01;
+  readonly hopSec = 0.01;
   private readonly minIoiSec: number;
   private readonly dipRatio: number;
   private readonly riseRatio: number;
+  private readonly minTroughSec: number;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.minIoiSec = opts.minIoiSec ?? 0.09;
     this.dipRatio = opts.dipRatio ?? 0.5;
     this.riseRatio = opts.riseRatio ?? 1.8;
+    this.minTroughSec = opts.minTroughSec ?? 0;
   }
 
-  /** Returns onset times in seconds (ascending), excluding the very first attack. */
-  detect(samples: Float32Array, sampleRate: number): number[] {
+  /**
+   * Per-frame RMS at `hopSec` — the ONLY thing detection reads out of the audio.
+   * Exposed separately so an evaluation harness can cache this ~100 Hz envelope
+   * (a few hundred floats per clip) and then re-run `detectFromEnvelope` under
+   * different thresholds without re-decoding or re-running any model. Detection
+   * is arithmetic on this array; the audio is only needed to produce it.
+   */
+  envelope(samples: Float32Array, sampleRate: number): Float32Array {
     const hop = Math.max(1, Math.round(this.hopSec * sampleRate));
     const win = hop * 2;
-    if (samples.length < win * 2) return [];
+    if (samples.length < win * 2) return new Float32Array(0);
 
     const nFrames = Math.floor((samples.length - win) / hop) + 1;
     const rms = new Float32Array(nFrames);
@@ -50,6 +92,27 @@ export class OnsetDetector {
       }
       rms[f] = Math.sqrt(sum / win);
     }
+    return rms;
+  }
+
+  /** Returns onset times in seconds (ascending), excluding the very first attack. */
+  detect(samples: Float32Array, sampleRate: number): number[] {
+    const hop = Math.max(1, Math.round(this.hopSec * sampleRate));
+    return this.detectFromEnvelope(this.envelope(samples, sampleRate), hop, sampleRate);
+  }
+
+  /**
+   * The detection proper, over a pre-computed `envelope()`. `hop`/`sampleRate` are
+   * carried through rather than derived from `hopSec` so onset times are the exact
+   * same floats `detect` has always produced.
+   */
+  detectFromEnvelope(
+    rms: Float32Array,
+    hop: number,
+    sampleRate: number,
+  ): number[] {
+    const nFrames = rms.length;
+    if (nFrames === 0) return [];
     // 3-tap smoothing.
     const env = new Float32Array(nFrames);
     for (let f = 0; f < nFrames; f += 1) {
@@ -63,11 +126,16 @@ export class OnsetDetector {
     const floor = globalPeak * 0.08;
 
     const minGapFrames = Math.max(1, Math.round(this.minIoiSec / this.hopSec));
+    const minTroughFrames = Math.round(this.minTroughSec / this.hopSec);
     const onsets: number[] = [];
     let peak = 0; // running peak since last onset/note start
     let trough = Infinity; // min since the last peak
     let troughFrame = -1;
     let lastOnsetFrame = -minGapFrames;
+    // Length (frames) of the contiguous run the envelope has spent below
+    // `dipRatio` of the peak, up to and including the previous frame — the
+    // DURATION of the candidate gap, not just its depth.
+    let downFrames = 0;
 
     for (let f = 0; f < nFrames; f += 1) {
       const e = env[f];
@@ -75,14 +143,22 @@ export class OnsetDetector {
         peak = e;
         trough = e; // reset trough tracking after a new peak
         troughFrame = f;
+        downFrames = 0;
       } else if (e < trough) {
         trough = e;
         troughFrame = f;
       }
-      // A re-attack: we dipped well below the peak, then rose back up.
+      // The rise that triggers an onset can itself climb back above the dip
+      // threshold in one frame, so the gap length counts this frame only when it
+      // is still down — never resetting the run out from under the check.
+      const isDown = e < this.dipRatio * peak;
+      const gapFrames = isDown ? downFrames + 1 : downFrames;
+      // A re-attack: we dipped well below the peak and STAYED down long enough
+      // to be a real gap, then rose back up.
       if (
         peak > floor &&
         trough < this.dipRatio * peak &&
+        gapFrames >= minTroughFrames &&
         e > this.riseRatio * trough &&
         troughFrame - lastOnsetFrame >= minGapFrames
       ) {
@@ -91,6 +167,9 @@ export class OnsetDetector {
         peak = e; // start a fresh note
         trough = e;
         troughFrame = f;
+        downFrames = 0;
+      } else {
+        downFrames = isDown ? downFrames + 1 : 0;
       }
     }
     return onsets;
