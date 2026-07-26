@@ -1,7 +1,14 @@
 /**
  * Display currency for the pricing surfaces. Numerals are identical in both
- * currencies (parity pricing: $9 ↔ €9 — configure the Polar products the same
- * way); only the symbol swaps, so the catalogue needs no per-currency prices.
+ * currencies (parity pricing: $9 ↔ €9); only the symbol swaps, so the
+ * catalogue needs no per-currency prices.
+ *
+ * Tax behavior differs by region and must match how the Polar products are
+ * configured: the euro numeral is VAT-inclusive (gross — what the eurozone
+ * customer actually pays), the dollar numeral is tax-exclusive (net — US
+ * sales tax is added at checkout). Set the Polar price tax behavior to
+ * `location-based` (US/CA/IN exclusive, rest inclusive) so the charged total
+ * matches the numeral shown here.
  *
  * Display is a best-effort locale guess; the currency actually charged is
  * decided by Polar at checkout from the customer's geolocation (the API
