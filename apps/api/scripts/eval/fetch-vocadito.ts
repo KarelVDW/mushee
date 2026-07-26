@@ -3,7 +3,8 @@
  * harness's *real* corpus layout, so run-eval can score the pipeline against
  * actual human voices instead of the synthetic voice proxy.
  *
- * Output: scripts/fixtures/eval-real/vocadito/<clip>.truth.json   ({bpm, notes})
+ * Output: scripts/fixtures/eval-real/vocadito/<clip>.truth.json
+ *           ({bpm, notes, alternateNotes} — see ANNOTATORS below)
  *         scripts/fixtures/eval-real/vocadito/<clip>__real.wav
  *         scripts/fixtures/eval-real/vocadito/dataset.json         (manifest)
  *
@@ -45,9 +46,21 @@ const OUT = resolve(__dirname, '../fixtures/eval-real/vocadito');
 // tempo the live pipeline would assume absent a user-set one.
 const NOMINAL_BPM = 120;
 
-// Annotator 1 by default; the dataset also ships A2 (the paper reports low
-// inter-annotator agreement, so treat note boundaries as approximate).
-const ANNOTATOR = process.env.VOCADITO_ANNOTATOR ?? 'A1';
+// The dataset ships two independent note annotations per clip. A1 labels
+// ornaments as separate notes, A2 groups them into the note they decorate; the
+// paper reports low inter-annotator agreement for exactly that reason, and its
+// own baseline scores 0.43 vs A1 but 0.49 vs A2. Neither reading is wrong, so by
+// default we emit BOTH (A1 as `notes`, A2 as `alternateNotes`) and let the
+// metric score against whichever the estimate matches — the "Amax" figure the
+// dataset authors recommend "if any style of transcription is acceptable".
+// Setting VOCADITO_ANNOTATOR pins a single fixed annotator instead (no
+// alternates), for anyone who needs to reproduce a per-annotator number.
+const ANNOTATORS = ['A1', 'A2'] as const;
+const PINNED_ANNOTATOR = process.env.VOCADITO_ANNOTATOR;
+const REF_ANNOTATOR = PINNED_ANNOTATOR ?? ANNOTATORS[0];
+const ALT_ANNOTATORS = PINNED_ANNOTATOR
+  ? []
+  : ANNOTATORS.filter((a) => a !== REF_ANNOTATOR);
 
 function download(): void {
   if (existsSync(ZIP)) {
@@ -105,11 +118,17 @@ function main(): void {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
 
-  const suffix = `_notes${ANNOTATOR}.csv`;
+  const notesFor = (clip: string, annotator: string): TruthNote[] | undefined => {
+    const path = join(notesDir, `${clip}_notes${annotator}.csv`);
+    return existsSync(path) ? parseNotes(readFileSync(path, 'utf8')) : undefined;
+  };
+
+  const suffix = `_notes${REF_ANNOTATOR}.csv`;
   const noteFiles = readdirSync(notesDir).filter((f) => f.endsWith(suffix));
 
   let clips = 0;
   let totalNotes = 0;
+  let totalAltNotes = 0;
   for (const noteFile of noteFiles) {
     const clip = noteFile.replace(suffix, ''); // e.g. vocadito_1
     const wav = join(audioDir, `${clip}.wav`);
@@ -124,7 +143,18 @@ function main(): void {
       continue;
     }
 
-    const truth: GroundTruth = { bpm: NOMINAL_BPM, notes };
+    // A missing or empty alternate annotation is dropped rather than written as
+    // an empty reference, which would score 0 and never win the max anyway.
+    const alternateNotes = ALT_ANNOTATORS.map((a) => notesFor(clip, a)).filter(
+      (ns): ns is TruthNote[] => !!ns?.length,
+    );
+    totalAltNotes += alternateNotes.reduce((n, ns) => n + ns.length, 0);
+
+    const truth: GroundTruth = {
+      bpm: NOMINAL_BPM,
+      notes,
+      ...(alternateNotes.length ? { alternateNotes } : {}),
+    };
     writeFileSync(join(OUT, `${clip}.truth.json`), JSON.stringify(truth, null, 2));
     copyFileSync(wav, join(OUT, `${clip}__real.wav`));
     clips += 1;
@@ -140,15 +170,20 @@ function main(): void {
     instrumentId: 'voice-lead',
     source: 'https://zenodo.org/records/5578807',
     license: 'CC-BY-4.0',
-    annotator: ANNOTATOR,
+    annotator: REF_ANNOTATOR,
+    alternateAnnotators: ALT_ANNOTATORS,
     bpmAssumed: NOMINAL_BPM,
     clips,
     totalNotes,
+    totalAlternateNotes: totalAltNotes,
   };
   writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2));
 
+  const annotatorNote = ALT_ANNOTATORS.length
+    ? `annotator ${REF_ANNOTATOR} + alternates ${ALT_ANNOTATORS.join(',')}`
+    : `annotator ${REF_ANNOTATOR} only`;
   console.log(
-    `\nConverted ${clips} vocadito clips (${totalNotes} notes, annotator ${ANNOTATOR}) into ${OUT}`,
+    `\nConverted ${clips} vocadito clips (${totalNotes} notes, ${annotatorNote}) into ${OUT}`,
   );
   console.log('Run: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts');
 }

@@ -77,6 +77,10 @@ export class RecordingPipeline {
   // Watermark (absolute seconds): notes ending before this are already emitted
   // and frozen, so windowed passes never need to reprocess audio before it.
   private committedSec = 0;
+  // Highest measure index emitted so far, and the first index never emitted — used
+  // to fill in bars the performer rested through (see affectedMeasures).
+  private lastEmittedMeasure = -1;
+  private firstUnemittedMeasure = 0;
   // Earliest onset (absolute seconds) of a note seen last pass that wasn't yet
   // committed (still within the stable margin or extending past it). The next
   // window backs up to include it so a long sustained note's onset is never cut.
@@ -424,17 +428,53 @@ export class RecordingPipeline {
     this.emittedNotes.push(...newNotes);
     this.emittedNotes.sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
 
-    const affected = new Set<number>();
-    for (const n of newNotes) {
-      affected.add(this.builder.measureIndexFor(n.startTimeSeconds));
-    }
-
     const measures: Record<number, MxmlMeasure> = {};
-    for (const idx of affected) {
+    for (const idx of this.affectedMeasures(newNotes)) {
       measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
     }
     if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now();
     this.onUpdate({ measures });
+  }
+
+  /**
+   * Which measures must be rebuilt for a batch of newly committed notes.
+   *
+   * Two things beyond "the bar each note starts in", both of which were previously
+   * missing and both of which lose music:
+   *
+   *  - **Every bar a note sounds through.** A held note is written into each bar it
+   *    spans, tied across the barlines, so all of them change. Keying off the onset
+   *    alone truncated any note longer than a bar — a note held for five bars was
+   *    emitted as one.
+   *  - **Bars containing nothing at all.** A bar the performer rested through has no
+   *    onset to key off, so it was never emitted and the score simply had a hole
+   *    where a bar of rest belonged. `buildMeasure` already renders it correctly (a
+   *    whole rest) once asked, so the watermark below makes sure it is asked.
+   */
+  private affectedMeasures(newNotes: PendingNote[]): number[] {
+    const affected = new Set<number>();
+    let lowest = Infinity;
+    for (const n of newNotes) {
+      const [first, last] = this.builder.measureRangeFor(
+        n.startTimeSeconds,
+        n.durationSeconds,
+      );
+      for (let m = first; m <= last; m += 1) affected.add(m);
+      lowest = Math.min(lowest, first);
+      this.lastEmittedMeasure = Math.max(this.lastEmittedMeasure, last);
+    }
+    // Fill every bar from the first never-emitted one through this batch's end.
+    // Two kinds of silent bar hide in that range: bars the performer rested
+    // through since the previous batch, and bars BETWEEN two notes of this batch
+    // (one burst pass can commit notes spanning a multi-bar rest — filling only
+    // up to the batch's lowest bar left those interior bars as holes). Bars the
+    // range re-adds that were already emitted just rebuild idempotently.
+    if (Number.isFinite(lowest)) {
+      const from = Math.min(this.firstUnemittedMeasure, lowest);
+      for (let m = from; m <= this.lastEmittedMeasure; m += 1) affected.add(m);
+    }
+    this.firstUnemittedMeasure = this.lastEmittedMeasure + 1;
+    return [...affected].sort((a, b) => a - b);
   }
 
   private logTimings(): void {
@@ -478,11 +518,19 @@ export class RecordingPipeline {
     let scoreJson: string | undefined;
     if (this.emittedNotes.length) {
       const measures: Record<number, MxmlMeasure> = {};
-      const indices = new Set(
-        this.emittedNotes.map((n) =>
-          this.builder.measureIndexFor(n.startTimeSeconds),
-        ),
-      );
+      // The archive is a whole take, so it is every bar from the first to the last —
+      // including bars that only carry a held note's continuation and bars the
+      // performer rested through. Keying off note onsets (as this did) dropped both.
+      let highest = 0;
+      for (const n of this.emittedNotes) {
+        const [, last] = this.builder.measureRangeFor(
+          n.startTimeSeconds,
+          n.durationSeconds,
+        );
+        highest = Math.max(highest, last);
+      }
+      const indices = new Set<number>();
+      for (let m = 0; m <= highest; m += 1) indices.add(m);
       for (const idx of indices) {
         measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
       }

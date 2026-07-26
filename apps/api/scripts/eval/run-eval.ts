@@ -19,6 +19,18 @@
  *   EVAL_SCENARIOS, EVAL_CONDITIONS  comma-separated id filters
  *   EVAL_OUT          report path (default fixtures/eval/report.json)
  *   EVAL_LABEL        label stored in the report (e.g. the config name)
+ *   EVAL_INCLUDE_UNTRUSTED  pool datasets whose note truth is derived, not
+ *                     annotated (`noteTruthDerived` in dataset.json), back into
+ *                     the headline note-F1. Off by default — see below.
+ *
+ * Two scoring rules keep the headline number honest:
+ *   - A clip carrying several independent annotations is scored against the one
+ *     it matches best (`scoreNotesBest`): annotators disagree about ornament
+ *     grouping, and charging the pipeline for that measures taste, not accuracy.
+ *   - Datasets that ship no note events, only frame pitch we segmented
+ *     ourselves, are reported per-dataset but excluded from the pooled
+ *     aggregates: their labels come out of the same algorithm family as the
+ *     segmenter under test, so a better segmenter would score worse.
  */
 
 import { existsSync, readdirSync,readFileSync, writeFileSync } from 'fs';
@@ -39,7 +51,7 @@ import {
   type EstNote,
   type MatchOptions,
   type Metrics,
-  scoreNotes,
+  scoreNotesBest,
   timingStats,
 } from './lib/metrics';
 import { discoverRealDatasets } from './lib/realCorpus';
@@ -216,6 +228,21 @@ async function main(): Promise<void> {
     };
   }
 
+  // Datasets that declare `noteTruthDerived` still get run and reported, but
+  // their note-F1 stays out of the pooled numbers unless explicitly asked for:
+  // their "annotations" are a semitone-rounding-and-run-grouping derivation of
+  // frame pitch, so a segmenter is scored against a sibling of itself.
+  const derivedNoteTruth = new Set(
+    realMode
+      ? discoverRealDatasets(evalRoot)
+          .filter((d) => d.noteTruthDerived)
+          .map((d) => d.id)
+      : [],
+  );
+  const includeUntrusted = boolEnv('EVAL_INCLUDE_UNTRUSTED');
+  const pooled = (scenarioId: string): boolean =>
+    includeUntrusted || !derivedNoteTruth.has(scenarioId);
+
   const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
   const scenarios = allScenarios.filter(
     (s) => !scenarioFilter || scenarioFilter.includes(s.id),
@@ -257,7 +284,7 @@ async function main(): Promise<void> {
           scenario: scenario.id,
           melody,
           condition: condition.id,
-          metrics: scoreNotes(truth.notes, est, matchOpts),
+          metrics: scoreNotesBest(truth, est, matchOpts),
         });
       }
     }
@@ -266,7 +293,7 @@ async function main(): Promise<void> {
     const f1 = mean(sc.map((r) => r.metrics.f1));
     const oct = mean(sc.map((r) => r.metrics.octaveErrorRate));
     console.log(
-      `  ${scenario.id.padEnd(18)} F1=${f1.toFixed(2)}  octErr=${oct.toFixed(2)}  (${sc.length} clips)`,
+      `  ${scenario.id.padEnd(18)} COnP@0.1=${f1.toFixed(2)}  octErr=${oct.toFixed(2)}  (${sc.length} clips)`,
     );
   }
 
@@ -279,6 +306,9 @@ async function main(): Promise<void> {
       scenario: s.id,
       label: s.label,
       clips: rs.length,
+      /** False = reported for information only, kept out of the aggregates. */
+      pooled: pooled(s.id),
+      noteTruthDerived: derivedNoteTruth.has(s.id),
       f1: mean(rs.map((r) => r.metrics.f1)),
       chromaF1: mean(rs.map((r) => r.metrics.chromaF1)),
       precision: mean(rs.map((r) => r.metrics.precision)),
@@ -296,7 +326,9 @@ async function main(): Promise<void> {
   // circumstance costs relative to clean.
   const perCondition = conditions
     .map((c) => {
-      const rs = results.filter((r) => r.condition === c.id);
+      const rs = results.filter(
+        (r) => r.condition === c.id && pooled(r.scenario),
+      );
       return {
         condition: c.id,
         label: c.label,
@@ -309,11 +341,17 @@ async function main(): Promise<void> {
     })
     .filter((c) => c.clips > 0);
 
+  // Excluded datasets are dropped from the timing pool too: their onsets are
+  // frame-grid quantized by the same derivation, so they would bias the bias.
+  const pooledResults = results.filter((r) => pooled(r.scenario));
   const overallTiming = timingStats(
-    results.flatMap((r) => r.metrics.timing.onsetDeltasMs),
-    results.flatMap((r) => r.metrics.timing.offsetDeltasMs),
+    pooledResults.flatMap((r) => r.metrics.timing.onsetDeltasMs),
+    pooledResults.flatMap((r) => r.metrics.timing.offsetDeltasMs),
   );
-  const overallF1 = mean(perScenario.map((s) => s.f1));
+  const overallF1 = mean(perScenario.filter((s) => s.pooled).map((s) => s.f1));
+  const excludedScenarios = perScenario
+    .filter((s) => !s.pooled)
+    .map((s) => s.scenario);
   const report = {
     label,
     mode: adaptive ? (noHint ? 'adaptive-no-hint' : 'adaptive') : 'fixed',
@@ -321,6 +359,12 @@ async function main(): Promise<void> {
     config: adaptive ? { adaptive: true } : { ...pitchOptions, highpassHz },
     matchTol: matchOpts,
     overallF1,
+    /** What the headline F1 does and does not average over. */
+    notePooling: {
+      includeUntrusted,
+      derivedNoteTruth: [...derivedNoteTruth],
+      excludedFromOverall: excludedScenarios,
+    },
     overallTiming,
     perScenario,
     perCondition,
@@ -335,17 +379,18 @@ async function main(): Promise<void> {
 
   console.log(`\n=== ${label} (${report.mode}) ===`);
   console.log(
-    'scenario'.padEnd(20) + 'F1'.padEnd(7) + 'chromaF1'.padEnd(10) + 'octErr',
+    'scenario'.padEnd(20) + 'COnP'.padEnd(7) + 'chromaF1'.padEnd(10) + 'octErr',
   );
   for (const s of perScenario) {
     console.log(
       s.scenario.padEnd(20) +
         s.f1.toFixed(2).padEnd(7) +
         s.chromaF1.toFixed(2).padEnd(10) +
-        s.octaveErrorRate.toFixed(2),
+        s.octaveErrorRate.toFixed(2).padEnd(8) +
+        (s.pooled ? '' : '† not pooled (note truth derived)'),
     );
   }
-  console.log('\n' + 'condition'.padEnd(20) + 'F1'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
+  console.log('\n' + 'condition'.padEnd(20) + 'COnP'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
   for (const c of perCondition) {
     console.log(
       c.condition.padEnd(20) +
@@ -356,7 +401,17 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log(`\nOVERALL mean F1 = ${overallF1.toFixed(3)}`);
+  console.log(
+    `\nOVERALL mean COnP@0.1 (onset+pitch, no offset gate) = ${overallF1.toFixed(3)}` +
+      ` (${perScenario.filter((s) => s.pooled).length} datasets)`,
+  );
+  if (excludedScenarios.length) {
+    console.log(
+      `† excluded from the aggregates: ${excludedScenarios.join(', ')} — no note ` +
+        'annotations in the dataset, only our own derivation of its frame pitch. ' +
+        'EVAL_INCLUDE_UNTRUSTED=1 pools them anyway.',
+    );
+  }
 
   // Timing diagnostic (signed ms over exact-pitch matches; + = pipeline late).
   // bias/median = systematic offset (fixable by calibration); std = jitter

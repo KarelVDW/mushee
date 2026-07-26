@@ -98,7 +98,10 @@ const MIN_MIDI = 40;
 const MAX_MIDI = 84;
 
 // Target subset size and the per-clip minimum note count for inclusion.
-const SUBSET_TARGET = 50;
+// Overridable because the corpus has thousands of eligible clips and the harness's
+// statistical power is bounded by clip count: measured per-clip sigma is ~0.20-0.25,
+// so ~50 clips can only resolve differences of ~5 points. VOCALSET_TARGET raises it.
+const SUBSET_TARGET = Number(process.env.VOCALSET_TARGET) || 50;
 const MIN_NOTES = 5;
 
 // Techniques worth scoring: standard melodic production of written scales /

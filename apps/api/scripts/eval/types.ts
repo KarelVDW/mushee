@@ -34,6 +34,16 @@ export interface TruthNote {
 export interface GroundTruth {
   bpm: number;
   notes: TruthNote[];
+  /**
+   * Independent annotations of the same clip; an estimate is scored against
+   * whichever it matches best, because disagreement between annotators is
+   * stylistic, not error. (vocadito's two annotators differ mainly on whether
+   * an ornament is its own note or part of the note it decorates — either
+   * reading is a transcription a musician would accept, so penalising the
+   * pipeline for picking the other one measures nothing.) Scored via
+   * `scoreNotesBest` in lib/metrics.ts; plain `scoreNotes` ignores it.
+   */
+  alternateNotes?: TruthNote[][];
 }
 
 /** How a scenario's audio is produced. */

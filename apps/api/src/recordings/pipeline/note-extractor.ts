@@ -32,6 +32,22 @@ const GRID_PENALTIES = [
 const MERGE_MAX_OVERLAP_BEATS = 0.1;
 
 /**
+ * Overlap (seconds) below which two notes count as merely TOUCHING, not
+ * competing for the same instant.
+ *
+ * This matters far more than it looks. The trajectory segmenters emit *contiguous*
+ * runs — note N ends on exactly the frame where note N+1 begins — so
+ * `startTimeSeconds` and `prevStart + prevDuration` are the same instant computed
+ * two different ways, and in binary floating point they routinely differ:
+ * 0.34 + 0.14 evaluates to 0.48000000000000004, which is greater than 0.48. Read
+ * as a real overlap, that made `selectMonophonic` discard the later note unless it
+ * was 1.5× louder — silently dropping roughly every other note of any contiguous
+ * run. Half an analysis frame is comfortably larger than the error and far smaller
+ * than any overlap that means something musically.
+ */
+const TOUCH_EPSILON_SEC = 0.01;
+
+/**
  * The adaptive note-length floor engages only when the clip's median detected
  * note is at least this long (seconds) — i.e. genuinely sustained singing,
  * where wide vibrato/transition shatters held notes into spurious fragments.
@@ -91,7 +107,41 @@ export interface NoteExtractorOptions {
    * median treated as the noise floor; 0 disables. Default 0.4.
    */
   adaptiveFloorFraction?: number;
+  /**
+   * Which cleanup steps run. All default ON, so omitting this reproduces the
+   * historical behavior exactly.
+   *
+   * These are switchable because the steps were designed for a *polyphonic*
+   * upstream (basic-pitch, which emits overlapping candidate notes) and several of
+   * them are no-ops or actively harmful when the upstream is a monophonic pitch
+   * trajectory that already emits one note at a time. Which cleanup a recording
+   * wants is a property of its provider and its material, so it has to be a
+   * choice rather than a fixed sequence.
+   */
+  steps?: CleanupSteps;
 }
+
+/** Individually switchable cleanup steps — see `NoteExtractorOptions.steps`. */
+export interface CleanupSteps {
+  /** Resolve overlapping notes down to one at a time (polyphonic upstream only). */
+  monophonic?: boolean;
+  /** Drop notes spiking ≥7 semitones away from both neighbours. */
+  pitchOutliers?: boolean;
+  /** Fold A-B-A vibrato flutter back into one held note. */
+  transients?: boolean;
+  /** Rejoin a held note the provider split into near-duplicate fragments. */
+  merge?: boolean;
+  /** Split a sustained run wherever an amplitude re-attack lands inside it. */
+  onsetSplit?: boolean;
+}
+
+const ALL_STEPS: Required<CleanupSteps> = {
+  monophonic: true,
+  pitchOutliers: true,
+  transients: true,
+  merge: true,
+  onsetSplit: true,
+};
 
 export interface ExtractOptions {
   bpm: number;
@@ -127,6 +177,7 @@ export class NoteExtractor {
   private readonly seamFillBeats: number;
   private readonly vibratoMaxSec: number;
   private readonly adaptiveFloorFraction: number;
+  private readonly steps: Required<CleanupSteps>;
   private readonly gridPenalties: typeof GRID_PENALTIES;
 
   constructor(opts: NoteExtractorOptions = {}) {
@@ -139,6 +190,7 @@ export class NoteExtractor {
     // singing only marginally while costing fast humming and sustained
     // instruments more, so it ships as an opt-in tunable rather than a default.
     this.adaptiveFloorFraction = opts.adaptiveFloorFraction ?? 0;
+    this.steps = { ...ALL_STEPS, ...opts.steps };
     // Default caps onset snapping at the quarter-beat (16th-note) grid the
     // MusicXML notation can actually represent, so the deduced notes survive the
     // measure round-trip instead of being re-rounded into onset error.
@@ -147,20 +199,44 @@ export class NoteExtractor {
   }
 
   extract(raw: NoteEventTime[], options: ExtractOptions): ExtractedNotes {
-    const monophonic = this.selectMonophonic(raw, options.bpm);
-    const cleaned = this.filterPitchOutliers(monophonic);
+    return { raw, deduced: this.quantize(this.clean(raw, options), options.bpm) };
+  }
+
+  /**
+   * Stage 1 — the PERFORMANCE. Turn the provider's noisy note events into the
+   * monophonic stream of notes a listener would say were actually sung or played,
+   * with times still in real seconds. Everything here is about undoing artifacts
+   * of the detector (overlaps, octave spikes, vibrato flutter, split held notes,
+   * missed re-articulations); nothing here knows about beats, bars, or notation.
+   *
+   * Kept separate from `quantize` because the two fail for unrelated reasons and
+   * have to be measured apart: a wrong note here is a detection error, whereas a
+   * note misplaced by `quantize` was heard correctly and merely written down
+   * wrong. Fusing them made every regression ambiguous.
+   */
+  clean(raw: NoteEventTime[], options: ExtractOptions): NoteEventTime[] {
+    const s = this.steps;
+    let notes = s.monophonic ? this.selectMonophonic(raw, options.bpm) : [...raw];
+    if (s.pitchOutliers) notes = this.filterPitchOutliers(notes);
     // Remove pitch-transient artifacts (wide-vibrato flutter and portamento
     // glide notes) before merging/quantizing — see suppressTransients.
-    const deflutter = this.suppressTransients(cleaned, options.bpm);
+    if (s.transients) notes = this.suppressTransients(notes, options.bpm);
     // Optional adaptive noise floor (off by default).
-    const floorSec = this.adaptiveFloorSec(deflutter);
-    const deshort = floorSec > 0
-      ? deflutter.filter((n) => n.durationSeconds >= floorSec)
-      : deflutter;
-    const merged = this.mergeAdjacent(deshort, options.bpm);
-    const split = this.splitAtOnsets(merged, options.onsetTimesSec);
-    const deduced = this.alignAndQuantize(split, options.bpm);
-    return { raw, deduced };
+    const floorSec = this.adaptiveFloorSec(notes);
+    if (floorSec > 0) notes = notes.filter((n) => n.durationSeconds >= floorSec);
+    if (s.merge) notes = this.mergeAdjacent(notes, options.bpm);
+    if (s.onsetSplit) notes = this.splitAtOnsets(notes, options.onsetTimesSec);
+    return notes;
+  }
+
+  /**
+   * Stage 2 — the NOTATION. Place the performed notes on a metrical grid at
+   * `bpm` and give each a writable note value. Pure function of the performance
+   * and the tempo, so a tempo estimator can be swapped in (or swept) without
+   * touching detection.
+   */
+  quantize(performed: NoteEventTime[], bpm: number): NoteEventTime[] {
+    return this.alignAndQuantize(performed, bpm);
   }
 
   /**
@@ -295,7 +371,8 @@ export class NoteExtractor {
       }
       const prev = result[result.length - 1];
       const prevEnd = prev.startTimeSeconds + prev.durationSeconds;
-      if (note.startTimeSeconds >= prevEnd) {
+      // Touching counts as sequential, not overlapping — see TOUCH_EPSILON_SEC.
+      if (note.startTimeSeconds >= prevEnd - TOUCH_EPSILON_SEC) {
         result.push({ ...note });
         continue;
       }

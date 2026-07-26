@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { NoteEventTime } from '@spotify/basic-pitch';
 
+import { PitchTrack } from '../pitch-track';
 import type { ModelBackend } from './model-backend';
 import {
   localCentsFromPath,
@@ -35,11 +36,26 @@ const INFERENCE_BATCH = 256;
 /** Half-width in bins of the local weighted-mean window, centered on the
  *  Viterbi path bin. 4 → 9-bin window matches marl/crepe's reference. */
 const LOCAL_AVG_HALF_WIDTH = 4;
-/** σ in bins for the Viterbi transition kernel. 12 bins ≈ 240 cents at CREPE's
- *  ~20 cents/bin spacing — matches marl/crepe's `to_viterbi_cents`. */
+/**
+ * σ in bins for the Viterbi transition kernel. 12 bins ≈ 240 cents at CREPE's
+ * 20.0 cents/bin spacing.
+ *
+ * Note this is NOT the same construction as marl/crepe's `to_viterbi_cents`, which
+ * an earlier comment here claimed: upstream uses a *triangular* distribution with a
+ * hard cutoff at ±12 bins, whereas this is a Gaussian σ truncated at ±`bandBins`.
+ * The behaviours differ, so do not treat the two as interchangeable.
+ */
 const VITERBI_SIGMA_BINS = 12;
-/** ±band beyond which the transition kernel is truncated. 4·σ keeps us well
- *  within the tail (transitions there contribute < 3.4e-4). */
+/**
+ * ±band beyond which the transition kernel is truncated. 4·σ keeps us well within
+ * the tail (transitions there contribute < 3.4e-4).
+ *
+ * A useful consequence: CREPE's grid is exactly 60.0 bins per octave, and 48 < 60,
+ * so a one-frame octave jump lies outside the band and is **impossible** under this
+ * decode. Any octave error we see therefore cannot be born mid-phrase — it can only
+ * originate at a voicing onset, where the first frame is scored under a uniform
+ * prior with no predecessor to constrain it. That narrows where to look.
+ */
 const VITERBI_BAND_BINS = VITERBI_SIGMA_BINS * 4;
 /** Trailing cached frames recomputed every pass. ffmpeg's resampler tail
  *  produces slightly different output samples when given a longer input, so
@@ -134,23 +150,31 @@ export class CrepeProvider implements PitchProvider {
     onProgress?: (rawNotes: NoteEventTime[]) => void,
     session?: PitchSession,
   ): Promise<NoteEventTime[]> {
-    const segmentOpts: SegmentOptions = {
-      ...SEGMENT_OPTS,
-      ...(options?.minFreqHz !== undefined && { minFreqHz: options.minFreqHz }),
-      ...(options?.maxFreqHz !== undefined && { maxFreqHz: options.maxFreqHz }),
-      ...(options?.confidenceThreshold !== undefined && {
-        confidenceThreshold: options.confidenceThreshold,
-      }),
-      ...(options?.minFramesPerNote !== undefined && {
-        minFramesPerNote: options.minFramesPerNote,
-      }),
-      ...(options?.pitchBinToleranceCents !== undefined && {
-        pitchBinToleranceCents: options.pitchBinToleranceCents,
-      }),
-      ...(options?.segmentMode !== undefined && { mode: options.segmentMode }),
-      ...(options?.smoothFrames !== undefined && { smoothFrames: options.smoothFrames }),
-      ...(options?.tuningCorrect !== undefined && { tuningCorrect: options.tuningCorrect }),
-    };
+    const track = await this.track(samples, session);
+    if (!track) {
+      onProgress?.([]);
+      return [];
+    }
+    const notes = segmentNotes(
+      track.cents,
+      track.confidence,
+      track.frames,
+      this.segmentOptionsFrom(options),
+    );
+    onProgress?.(notes);
+    return notes;
+  }
+
+  /**
+   * Frame-level pitch trajectory for `samples` — the model's actual measurement,
+   * before any decision about where notes start and stop. Same caching as
+   * `transcribe` (which is now just this plus a segmenter), so callers that want
+   * the trajectory pay nothing extra.
+   */
+  async track(
+    samples: Float32Array,
+    session?: PitchSession,
+  ): Promise<PitchTrack | null> {
     const sess =
       session instanceof CrepeSession ? session : new CrepeSession();
 
@@ -158,10 +182,7 @@ export class CrepeProvider implements PitchProvider {
       0,
       Math.floor((samples.length - FRAME_SIZE) / HOP_SIZE) + 1,
     );
-    if (numFrames === 0) {
-      onProgress?.([]);
-      return [];
-    }
+    if (numFrames === 0) return null;
 
     if (numFrames < sess.cachedFrames) {
       sess.cachedFrames = 0;
@@ -224,9 +245,34 @@ export class CrepeProvider implements PitchProvider {
       LOCAL_AVG_HALF_WIDTH,
     );
 
-    const notes = segmentNotes(cents, sess.confidence, numFrames, segmentOpts);
-    onProgress?.(notes);
-    return notes;
+    return new PitchTrack(
+      cents,
+      sess.confidence.subarray(0, numFrames),
+      numFrames,
+      HOP_SIZE / SAMPLE_RATE,
+    );
+  }
+
+  private segmentOptionsFrom(
+    options?: PitchTranscribeOptions,
+  ): SegmentOptions {
+    return {
+      ...SEGMENT_OPTS,
+      ...(options?.minFreqHz !== undefined && { minFreqHz: options.minFreqHz }),
+      ...(options?.maxFreqHz !== undefined && { maxFreqHz: options.maxFreqHz }),
+      ...(options?.confidenceThreshold !== undefined && {
+        confidenceThreshold: options.confidenceThreshold,
+      }),
+      ...(options?.minFramesPerNote !== undefined && {
+        minFramesPerNote: options.minFramesPerNote,
+      }),
+      ...(options?.pitchBinToleranceCents !== undefined && {
+        pitchBinToleranceCents: options.pitchBinToleranceCents,
+      }),
+      ...(options?.segmentMode !== undefined && { mode: options.segmentMode }),
+      ...(options?.smoothFrames !== undefined && { smoothFrames: options.smoothFrames }),
+      ...(options?.tuningCorrect !== undefined && { tuningCorrect: options.tuningCorrect }),
+    };
   }
 }
 

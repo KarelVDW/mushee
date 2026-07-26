@@ -6,6 +6,13 @@ import type { Tickable } from './Ticker'
 
 const DEFAULT_BPM = 90
 const CHUNK_MS = 100
+
+/**
+ * Cap on chunks held while the socket finishes connecting. At CHUNK_MS per chunk
+ * this is a few seconds of audio — far more than a handshake needs, and bounded so
+ * a socket that never opens cannot grow the queue without limit.
+ */
+const MAX_PENDING_CHUNKS = 100
 /**
  * Recording formats in preference order. Opus (Chrome: WebM, Firefox: Ogg) is
  * what the transcription pipeline was tuned on; MP4/AAC is the only container
@@ -151,6 +158,19 @@ export class RecordingEngine implements Tickable {
     private stream: MediaStream | null = null
     private mediaRecorder: MediaRecorder | null = null
     private ws: WebSocket | null = null
+    /**
+     * Encoded chunks captured before the socket finished connecting.
+     *
+     * Capture must begin the instant beat 1 arrives, but the socket may still be
+     * completing its handshake — so chunks are queued here and flushed on open.
+     * A slow network then delays *delivery*, never *capture*, which is what keeps
+     * the audio aligned to the beat grid (see startCapture).
+     */
+    private pendingChunks: Blob[] = []
+    /** True once the `meta` frame has gone out, so it is sent exactly once. */
+    private metaSent = false
+    /** Negotiated MediaRecorder MIME type; travels to the server in `meta`. */
+    private mimeType: string | null = null
 
     private analyserCtx: AudioContext | null = null
     private analyser: AnalyserNode | null = null
@@ -265,6 +285,16 @@ export class RecordingEngine implements Tickable {
 
         this._state = 'countoff'
         options.onStateChange(this._state)
+
+        // Connect NOW, during the count-off, not at beat 1. The handshake is a
+        // full round trip to the API (TCP + TLS + HTTP upgrade); previously it was
+        // awaited *after* the count-off ended and before MediaRecorder.start(), so
+        // its entire latency was audio that never got captured — and the server,
+        // which treats its first sample as beat 1, then notated every note early by
+        // that amount. Over the internet that is 100-400 ms; at 120 bpm a beat is
+        // 500 ms, so it could shift a whole take by most of a beat. The count-off
+        // is at least a measure long, which is ample slack for the handshake.
+        void this.connect()
     }
 
     stop(): void {
@@ -276,6 +306,9 @@ export class RecordingEngine implements Tickable {
         if (this._state === 'idle') return
 
         this._micSettings = null
+        // Anything still queued belongs to the take being abandoned.
+        this.pendingChunks = []
+        this.metaSent = false
 
         const ws = this.ws
         this.ws = null
@@ -355,7 +388,7 @@ export class RecordingEngine implements Tickable {
                 this.options.onStateChange(this._state)
                 // The moving cursor is its own beat feedback from here on.
                 this.options.cursorEl.removeAttribute('fill-opacity')
-                void this.beginStreaming()
+                this.startCapture()
             } else {
                 this.pulseCursor(elapsed)
             }
@@ -425,9 +458,26 @@ export class RecordingEngine implements Tickable {
         })
     }
 
-    private async beginStreaming(): Promise<void> {
+    /**
+     * Open the socket and wire its handlers. Runs during the count-off so that
+     * nothing asynchronous sits between beat 1 and the first captured sample.
+     */
+    private async connect(): Promise<void> {
         if (!this.stream || !this.options) return
         const opts = this.options
+        // Now that connecting happens during the count-off, the user can cancel while
+        // the handshake is still in flight. `lifecycle` is the existing token for
+        // exactly this race: if it moves, this connect() lost and must stay silent
+        // rather than report a connection failure the user caused by pressing stop.
+        const token = this.lifecycle
+        this.pendingChunks = []
+        this.metaSent = false
+        // Negotiated HERE, before the handshake, because the meta frame usually goes
+        // out from the open handler below — during the count-off, before the recorder
+        // exists. Picking the type in startCapture() meant that frame carried
+        // mimeType: null and the server fell back to probing the container, which is
+        // exactly what the hint exists to avoid (a streamed Safari MP4 probes badly).
+        this.mimeType = RecordingEngine.pickMimeType()
 
         let ws: WebSocket
         try {
@@ -452,11 +502,20 @@ export class RecordingEngine implements Tickable {
             ws.addEventListener('open', () => resolve(), { once: true })
             ws.addEventListener('error', () => resolve(), { once: true })
         })
+        if (this.lifecycle !== token) {
+            // Cancelled during the handshake; stop() already tore down the socket.
+            ws.close()
+            return
+        }
         if (ws.readyState !== WebSocket.OPEN) {
             if (this.ws === ws) this.ws = null
             opts.onConnectionLost?.()
             return
         }
+        // The socket may have opened after capture already began; anything queued
+        // in the meantime goes out now, in order, behind the meta frame.
+        this.sendMeta()
+        this.flushPendingChunks()
 
         ws.addEventListener('message', (event) => {
             if (typeof event.data !== 'string') return
@@ -498,35 +557,82 @@ export class RecordingEngine implements Tickable {
             }
         })
 
+    }
+
+    /**
+     * Send the take's `meta` frame. Idempotent, because the socket may open either
+     * before or after capture starts and both paths call it.
+     */
+    private sendMeta(): void {
+        if (this.metaSent || !this.options) return
+        const ws = this.ws
+        if (!ws || ws.readyState !== WebSocket.OPEN) return
+        const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
+        ws.send(
+            JSON.stringify({
+                type: 'meta',
+                bpm: this.bpm,
+                timeSignature: ts ? { beats: ts.beatAmount, beatType: ts.beatType } : null,
+                // Score notes are stored as written pitch; the mic captures sounding pitch.
+                // The server subtracts this from each detected MIDI to land in written-pitch space.
+                chromaticTranspose: this.options.score.instrument.chromaticTranspose,
+                // Hint for the server's adaptive pitch profile (frequency window etc.).
+                // Auto-detection from the audio remains authoritative.
+                instrumentId: this.options.score.instrument.id,
+                // `null` = the browser's default container; the server probes it.
+                mimeType: this.mimeType,
+            }),
+        )
+        this.metaSent = true
+    }
+
+    /** Deliver anything captured while the socket was still connecting, in order. */
+    private flushPendingChunks(): void {
+        const ws = this.ws
+        if (!ws || ws.readyState !== WebSocket.OPEN) return
+        for (const chunk of this.pendingChunks) ws.send(chunk)
+        this.pendingChunks = []
+    }
+
+    /**
+     * Begin capturing, synchronously. Called the moment the count-off ends, so the
+     * first encoded sample really is beat 1 — the server derives every note's beat
+     * position from this instant, so anything awaited before here becomes a
+     * systematic timing error in the finished score.
+     *
+     * The socket is usually already open (it was started at count-off begin); if it
+     * is not, chunks queue in `pendingChunks` rather than blocking or being dropped.
+     */
+    private startCapture(): void {
         if (!this.stream) return
-        const mimeType = RecordingEngine.pickMimeType()
-        this.mediaRecorder = mimeType ? new MediaRecorder(this.stream, { mimeType }) : new MediaRecorder(this.stream)
+        // connect() nulls the socket when the handshake failed and has already
+        // reported it; starting a recorder with nowhere to send would just leak.
+        if (!this.ws) return
+        this.mediaRecorder = this.mimeType
+            ? new MediaRecorder(this.stream, { mimeType: this.mimeType })
+            : new MediaRecorder(this.stream)
 
-        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.options) {
-            const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
-            this.ws.send(
-                JSON.stringify({
-                    type: 'meta',
-                    bpm: this.bpm,
-                    timeSignature: ts ? { beats: ts.beatAmount, beatType: ts.beatType } : null,
-                    // Score notes are stored as written pitch; the mic captures sounding pitch.
-                    // The server subtracts this from each detected MIDI to land in written-pitch space.
-                    chromaticTranspose: this.options.score.instrument.chromaticTranspose,
-                    // Hint for the server's adaptive pitch profile (frequency window etc.).
-                    // Auto-detection from the audio remains authoritative.
-                    instrumentId: this.options.score.instrument.id,
-                    // `null` = the browser's default container; the server probes it.
-                    mimeType,
-                }),
-            )
-        }
+        this.sendMeta()
 
-        // Hold the socket directly (not via this.ws): stop() nulls this.ws
-        // before the recorder's final flush, and that last chunk must still
-        // reach the server.
+        // Captured in the closure, NOT read via `this.ws` per chunk: stop() nulls
+        // `this.ws` and only then stops the recorder, whose final ≤CHUNK_MS of audio
+        // arrives asynchronously afterwards — reading the field at that point would
+        // silently drop the tail of every take. The closure keeps the socket alive
+        // for exactly that last flush (stop() leaves it open until the server has
+        // streamed the take's final notes back).
+        const ws = this.ws
         this.mediaRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return
-            if (ws.readyState === WebSocket.OPEN) ws.send(e.data)
+            if (ws.readyState === WebSocket.OPEN) {
+                this.flushPendingChunks()
+                ws.send(e.data)
+            } else if (this.ws === ws && this.pendingChunks.length < MAX_PENDING_CHUNKS) {
+                // Socket still handshaking: hold the audio rather than drop it.
+                // Bounded so a socket that never opens cannot grow without limit; the
+                // identity check stops queueing once the take was torn down or the
+                // handshake failed (both null or replace `this.ws`).
+                this.pendingChunks.push(e.data)
+            }
         }
         this.mediaRecorder.start(CHUNK_MS)
     }

@@ -9,7 +9,10 @@
  * Prices are display-only; the amounts actually charged come from the Polar
  * products configured on the API. Numerals are the same in USD and EUR
  * (parity pricing — keep the Polar products configured that way too); the
- * display currency only swaps the symbol (lib/currency.ts).
+ * display currency only swaps the symbol (lib/currency.ts). The euro numeral
+ * is VAT-inclusive and the dollar numeral is tax-exclusive, so the Polar
+ * price tax behavior must be `location-based` for the charged total to match
+ * what's shown here (see lib/currency.ts).
  */
 
 import { type Currency, currencySymbol, formatMoney } from './currency'
