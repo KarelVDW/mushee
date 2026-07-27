@@ -92,7 +92,7 @@ export default async function OpengraphImage() {
                     </span>
                 </div>
                 <div style={{ fontFamily: 'Manrope', fontSize: 30, marginTop: 32, color: '#5a5c5c', display: 'flex' }}>
-                    Play or sing — watch clean sheet music appear, live.
+                    Play or sing — watch the sheet music appear, live.
                 </div>
             </div>
         ),

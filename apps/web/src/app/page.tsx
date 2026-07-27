@@ -19,7 +19,7 @@ const jsonLd = {
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web',
     description:
-        'Solkey turns what you play or sing into clean sheet music, live. The fastest way to get a melody on the page.',
+        'Solkey turns what you play or sing into sheet music, live. The fastest way to get a melody on the page.',
     offers: PLAN_TIERS.map((tier) => ({
         '@type': 'Offer',
         name: `Solkey ${tier.name}`,
