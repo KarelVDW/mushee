@@ -97,7 +97,7 @@ function Hero({
                         <em className="font-serif font-normal">on the page.</em>
                     </h1>
                     <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
-                        Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No
+                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No
                         note-by-note clicking, no wrestling with menus. Just press record.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">

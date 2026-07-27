@@ -70,7 +70,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Library page title   | `Your scores`                                                                                                                      |
 | Empty state          | `No scores yet. Compose your first one.`                                                                                           |
 | Hero headline        | `The fastest way to get a melody on the page.`                                                                                     |
-| Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
+| Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
 | Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                                                                |
 | Footer               | `© 2026 Solkey. Made for composers.`                                                                                               |
 

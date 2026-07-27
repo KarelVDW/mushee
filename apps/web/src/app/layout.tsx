@@ -37,7 +37,7 @@ export const metadata: Metadata = {
         template: '%s · Solkey',
     },
     description:
-        'Solkey turns what you play or sing into clean sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
+        'Solkey turns what you play or sing into sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
     applicationName: 'Solkey',
     keywords: [
         'sheet music editor',
@@ -54,12 +54,12 @@ export const metadata: Metadata = {
         siteName: 'Solkey',
         url: SITE_URL,
         title: 'Solkey — the fastest way to get a melody on the page',
-        description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
+        description: 'Play or sing, and watch the sheet music appear in real time. Free to start.',
     },
     twitter: {
         card: 'summary_large_image',
         title: 'Solkey — the fastest way to get a melody on the page',
-        description: 'Play or sing, and watch clean sheet music appear in real time. Free to start.',
+        description: 'Play or sing, and watch the sheet music appear in real time. Free to start.',
     },
     robots: {
         index: true,

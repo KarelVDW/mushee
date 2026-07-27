@@ -301,7 +301,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
                             margin: 0,
                             maxWidth: 480,
                         }}>
-                        Hum it, sing it, or play it — Solkey listens and writes clean sheet music in front of your eyes. No note-by-note
+                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No note-by-note
                         clicking, no wrestling with menus. Just press record.
                     </p>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
