@@ -1,6 +1,6 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
-import { PublicPageShell } from '@/components/PublicPageShell'
+import { PublicPageShell } from '@/components/PublicPageShell';
 
 export const metadata: Metadata = {
     title: 'Contact',
@@ -18,7 +18,7 @@ const CHANNELS: { label: string; email: string; blurb: string }[] = [
 
 export default function ContactPage() {
     return (
-        <PublicPageShell title="Contact" subtitle="Real humans, real inboxes. Pick the one that fits.">
+        <PublicPageShell title="Contact">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose m-0 mb-8">
                 {CHANNELS.map((c) => (
                     <div key={c.label} className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 flex flex-col gap-2">
@@ -32,17 +32,6 @@ export default function ContactPage() {
                     </div>
                 ))}
             </div>
-
-            <h2>Postal address</h2>
-            <p>
-                Solkey · Karel Van De Winkel
-                <br />
-                Capucienenlaan 23
-                <br />
-                9300 Aalst, Belgium
-                <br />
-                Enterprise no. 1039.906.118
-            </p>
 
             <h2>In the app</h2>
             <p>
