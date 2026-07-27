@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+
 import { ImageResponse } from 'next/og'
 
 export const alt = 'Solkey — the fastest way to get a melody on the page'
@@ -5,7 +8,14 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
 /** Brand OG card: wordmark + tagline on the canvas tone with the two neon accents. */
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+    // Satori can't reach webfonts, so the brand fonts are vendored as static TTFs.
+    const [spaceGrotesk, newsreaderItalic, manrope] = await Promise.all([
+        readFile(join(process.cwd(), 'src/app/og-fonts/SpaceGrotesk-Bold.ttf')),
+        readFile(join(process.cwd(), 'src/app/og-fonts/Newsreader-Italic.ttf')),
+        readFile(join(process.cwd(), 'src/app/og-fonts/Manrope-Regular.ttf')),
+    ])
+
     return new ImageResponse(
         (
             <div
@@ -18,7 +28,7 @@ export default function OpengraphImage() {
                     padding: '80px',
                     background: '#f6f6f6',
                     color: '#2d2f2f',
-                    fontFamily: 'Georgia, serif',
+                    fontFamily: 'Space Grotesk',
                     position: 'relative',
                 }}>
                 <div
@@ -45,12 +55,22 @@ export default function OpengraphImage() {
                         filter: 'blur(80px)',
                     }}
                 />
-                <div style={{ fontSize: 64, fontStyle: 'italic', fontWeight: 700, display: 'flex' }}>Solkey</div>
+                {/* Space Grotesk has no italic; skew mimics the browser's faux-italic wordmark. */}
+                <div
+                    style={{
+                        fontSize: 64,
+                        fontWeight: 700,
+                        letterSpacing: -2.5,
+                        transform: 'skewX(-10deg)',
+                        display: 'flex',
+                    }}>
+                    Solkey
+                </div>
                 <div
                     style={{
                         fontSize: 88,
                         fontWeight: 700,
-                        letterSpacing: '-0.03em',
+                        letterSpacing: -3.5,
                         lineHeight: 1.05,
                         marginTop: 28,
                         display: 'flex',
@@ -58,14 +78,31 @@ export default function OpengraphImage() {
                     }}>
                     <span>The fastest way to get</span>
                     <span style={{ display: 'flex' }}>
-                        a melody&nbsp;<span style={{ fontStyle: 'italic', color: '#005359' }}>on the page.</span>
+                        a melody&nbsp;
+                        <span
+                            style={{
+                                fontFamily: 'Newsreader',
+                                fontStyle: 'italic',
+                                fontWeight: 400,
+                                letterSpacing: 0,
+                                color: '#005359',
+                            }}>
+                            on the page.
+                        </span>
                     </span>
                 </div>
-                <div style={{ fontSize: 30, marginTop: 32, color: '#5a5c5c', display: 'flex' }}>
+                <div style={{ fontFamily: 'Manrope', fontSize: 30, marginTop: 32, color: '#5a5c5c', display: 'flex' }}>
                     Play or sing — watch clean sheet music appear, live.
                 </div>
             </div>
         ),
-        size,
+        {
+            ...size,
+            fonts: [
+                { name: 'Space Grotesk', data: spaceGrotesk, weight: 700, style: 'normal' },
+                { name: 'Newsreader', data: newsreaderItalic, weight: 400, style: 'italic' },
+                { name: 'Manrope', data: manrope, weight: 400, style: 'normal' },
+            ],
+        },
     )
 }
