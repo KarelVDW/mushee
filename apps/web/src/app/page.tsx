@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-import { PLAN_TIERS } from '@/lib/plans'
+import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
 
 import { LandingPage } from './LandingPage'
 
@@ -20,12 +20,16 @@ const jsonLd = {
     operatingSystem: 'Web',
     description:
         'Solkey turns what you play or sing into sheet music, live. The fastest way to get a melody on the page.',
-    offers: PLAN_TIERS.map((tier) => ({
-        '@type': 'Offer',
-        name: `Solkey ${tier.name}`,
-        price: tier.priceMonthly,
-        priceCurrency: 'USD',
-    })),
+    // During the closed beta the tier ladder is unannounced (prices may still
+    // change), so search results only see the one truthful offer: free.
+    offers: BETA_MODE
+        ? [{ '@type': 'Offer', name: 'Solkey Beta', price: 0, priceCurrency: 'USD' }]
+        : PLAN_TIERS.map((tier) => ({
+              '@type': 'Offer',
+              name: `Solkey ${tier.name}`,
+              price: tier.priceMonthly,
+              priceCurrency: 'USD',
+          })),
 }
 
 export default function Page() {

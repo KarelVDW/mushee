@@ -4,7 +4,7 @@ import { type CSSProperties, useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
-import { PLAN_TIERS } from '@/lib/plans'
+import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
 import { usePlans } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
@@ -87,13 +87,15 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                             Upgrading to <strong className="text-on-surface">{nextPlanName}</strong> lifts the cap immediately.
                         </span>
                     )}
-                    <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
-                        Just need to finish this one?{' '}
-                        <a href="/settings" className="text-primary underline">
-                            One-time minute packs
-                        </a>{' '}
-                        start at {formatMoney(6, currency)} and never expire.
-                    </span>
+                    {!BETA_MODE && (
+                        <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
+                            Just need to finish this one?{' '}
+                            <a href="/settings" className="text-primary underline">
+                                One-time minute packs
+                            </a>{' '}
+                            start at {formatMoney(6, currency)} and never expire.
+                        </span>
+                    )}
                 </div>
             </DialogPanel>
         </DialogScrim>

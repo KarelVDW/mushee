@@ -7,7 +7,7 @@ import { Eyebrow, Footer, Icon, PrimaryButton, SecondaryButton, TertiaryButton, 
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { BETA_MODE, BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
+import { BETA_MODE, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { HeroDemo } from './HeroDemo'
@@ -31,7 +31,7 @@ export function LandingPage() {
             <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
             <HowItWorks />
             <FeatureGrid />
-            <Pricing onGetStarted={() => onGetStarted('pricing')} />
+            {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing')} />}
             <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
             <Footer width="marketing" />
         </div>
@@ -237,16 +237,6 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                     </p>
                 </div>
 
-                {BETA_MODE && (
-                    <div className="max-w-190 mx-auto mb-10 bg-secondary-soft text-on-secondary-soft rounded-lg px-6 py-5 text-center">
-                        <p className="font-body font-medium text-[15px] leading-normal m-0">
-                            <strong>Solkey is in closed beta.</strong> Right now every account is on the free{' '}
-                            <strong>{BETA_PLAN.name}</strong> plan — 30 minutes of recording per day, no card, no charge. The plans
-                            below go live at launch.
-                        </p>
-                    </div>
-                )}
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
                     {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
                         <PricingCard key={tier.id} tier={tier} currency={currency} onGetStarted={onGetStarted} />
@@ -263,6 +253,28 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                     {currency === 'eur'
                         ? 'Euro prices include VAT — the amount you see is the total you pay.'
                         : 'Prices are shown before local sales tax, which is added at checkout.'}
+                </p>
+            </div>
+        </section>
+    )
+}
+
+/** The pricing section while the closed beta runs: the tier ladder and all
+ *  prices stay hidden — they may still change as real costs surface — so the
+ *  section only says what the beta costs (nothing) and that pricing follows
+ *  at launch. Keeps the #pricing anchor the nav and terms page link to. */
+function BetaPricing() {
+    return (
+        <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
+            <div className="max-w-190 mx-auto text-center">
+                <Eyebrow className="text-primary">Pricing</Eyebrow>
+                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0">
+                    Free while the beta runs.
+                </h2>
+                <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
+                    Every beta account gets the same plan: the full editor, live audio-to-notation, playback, and 30 minutes of
+                    recording per day — no card, no charge. Paid plans arrive at launch, and we&apos;ll share pricing before the
+                    beta ends.
                 </p>
             </div>
         </section>
@@ -293,7 +305,7 @@ function ProfessionalCard({ tier, currency, onGetStarted }: { tier: PlanTier; cu
                     / month · {formatMoney(tier.priceYearly, currency)}/yr
                 </span>
             </div>
-            <SecondaryButton onClick={onGetStarted}>{BETA_MODE ? 'Join the beta' : `Go ${tier.name}`}</SecondaryButton>
+            <SecondaryButton onClick={onGetStarted}>{`Go ${tier.name}`}</SecondaryButton>
         </div>
     )
 }
@@ -337,7 +349,7 @@ function PacksTeaser({ currency }: { currency: Currency }) {
 
 function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currency: Currency; onGetStarted: () => void }) {
     const emphasis = tier.popular === true
-    const cta = BETA_MODE ? 'Join the beta' : tier.priceMonthly === 0 ? 'Start sketching' : `Go ${tier.name}`
+    const cta = tier.priceMonthly === 0 ? 'Start sketching' : `Go ${tier.name}`
     return (
         <div
             className={[
