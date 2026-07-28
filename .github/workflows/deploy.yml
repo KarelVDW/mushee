@@ -1,8 +1,11 @@
 # Build the three backend images, push them to Artifact Registry with the git
 # SHA as an immutable tag, and roll the matching overlay. Pushes to the
-# `production` branch deploy the production overlay (namespace mushee),
-# pushes to `staging` deploy the staging overlay (namespace mushee-staging);
-# workflow_dispatch remains as a manual escape hatch for either.
+# `production` branch deploy the production overlay (namespace mushee).
+# Staging is opt-in: run this workflow manually (workflow_dispatch, defaults
+# to the staging overlay) only when a change actually needs a staging pass —
+# an always-on staging copy costs real money on Autopilot (billed per pod
+# request). Scale it back to zero afterwards:
+#   kubectl scale deploy --all -n mushee-staging --replicas=0
 #
 # One-time GCP setup: a workload-identity federation pool for GitHub OIDC and
 # a deployer service account with roles/artifactregistry.writer +
@@ -12,7 +15,7 @@ name: Deploy
 
 on:
   push:
-    branches: [production, staging]
+    branches: [production]
   workflow_dispatch:
     inputs:
       environment:

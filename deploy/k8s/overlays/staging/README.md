@@ -82,9 +82,18 @@ the `staging` branch, with branch-scoped env
 
 ## Deploying
 
-Every push to the `staging` branch builds images and applies this overlay
-(`.github/workflows/deploy.yml`); the same workflow deploys `production` to
-the production overlay. First-time bring-up: provision above → create the
-secret → push to `staging` → wait for the ManagedCertificate to become Active
+Staging is **opt-in** (most changes don't need a staging pass, and an idle
+staging copy bills 24/7 on Autopilot). To deploy: run the Deploy workflow
+manually — Actions → Deploy → Run workflow, environment `staging` — from the
+ref you want to test. Pushes only auto-deploy `production` (to the production
+overlay). When you're done testing, scale staging back to zero:
+
+```sh
+kubectl scale deploy --all -n mushee-staging --replicas=0
+```
+
+(The HPAs stay dormant at zero; the next manual deploy restores replicas.)
+First-time bring-up: provision above → create the secret → run the Deploy
+workflow → wait for the ManagedCertificate to become Active
 (`kubectl describe managedcertificate api-cert -n mushee-staging`, ~15–60 min
 after DNS resolves) → smoke-test signup/login on https://staging.solkey.io.

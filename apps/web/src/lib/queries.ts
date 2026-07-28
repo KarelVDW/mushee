@@ -57,6 +57,10 @@ export function useScoreDocument(id: string) {
         // a background refetch would clobber unsaved in-memory state.
         staleTime: Infinity,
         refetchOnWindowFocus: false,
+        // Drop the cached document as soon as the editor unmounts: saves PATCH
+        // dirty deltas (no full document comes back), so a cached entry can only
+        // go stale — reopening must always load fresh from the server.
+        gcTime: 0,
     })
 }
 
