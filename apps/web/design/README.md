@@ -35,7 +35,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 ## Brand voice — one line
 
-> **Quiet tools, real notation. Just you and the notes.**
+> **Simple tools, real notation. Just you and the notes.**
 
 ---
 
@@ -52,7 +52,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 **Voice — first vs second person:**
 
-- **You.** "Compose your first one — it'll show up on this shelf." "Pick up where you left off."
+- **You.** "Compose your first one." "Pick up where you left off."
 - **We** is fine in moderation when Solkey is making a promise: "Your music belongs to you, not us."
 - Avoid invented in-group nicknames ("operative", "maverick", "rebel"). Just call the user _you_.
 
@@ -64,15 +64,15 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Password field label | `Password`                                                                                                                         |
 | Name field label     | `Your name`                                                                                                                        |
 | Sign-up CTA          | `Create account`                                                                                                                   |
-| Sign-up tagline      | `Compose without friction.`                                                                                                        |
+| Sign-up tagline      | `Notation made easy.`                                                                                                        |
 | Sign-in tagline      | `Welcome back.`                                                                                                                    |
 | Sign-in link copy    | `Already have an account?`                                                                                                         |
 | Library page title   | `Your scores`                                                                                                                      |
 | Empty state          | `No scores yet. Compose your first one.`                                                                                           |
 | Hero headline        | `The fastest way to get a melody on the page.`                                                                                     |
-| Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No note-by-note clicking, no wrestling with menus. Just press record.` |
+| Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.` |
 | Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                                                                |
-| Footer               | `© 2026 Solkey. Made for composers.`                                                                                               |
+| Footer               | `© 2026 Solkey.`                                                                                               |
 
 **Punctuation & tics:**
 
@@ -80,7 +80,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 - Sentences end with periods, including in body copy and inside cards. Short button labels ("Create account", "Sign in") do not.
 - Numbers are bare and lowercase units: `120 bpm`, `4/4`, `8 bars`. Never spelled out.
 
-**Vibe check:** if a draft sounds like a sales pitch, a fighter-jet HUD, or a recruiter LinkedIn post — push it back toward plain. If it sounds like the way you'd describe Solkey to a friend over coffee, you're close.
+**Vibe check:** if a draft sounds like a sales pitch, a fighter-jet HUD, or a recruiter LinkedIn post — push it back toward plain. The same goes for the twee direction: pet metaphors ("your shelf of scores", "quiet tools"), piled-up negations ("no clicking, no menus, just record"), and sentimental sign-offs ("Made for composers") are trying too hard. If it sounds like the way you'd describe Solkey to a friend over coffee, you're close.
 
 ---
 

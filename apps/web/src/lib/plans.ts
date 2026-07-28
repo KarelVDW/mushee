@@ -137,7 +137,7 @@ export const BETA_PLAN = {
     tagline: 'Free while the beta runs',
     dailyRecordingSeconds: 1800,
     maxScores: null,
-    features: ['Full editor', 'Direct line to the makers'],
+    features: ['Full editor'],
 }
 
 /** Mirrors the API's BETA_MODE switch; set NEXT_PUBLIC_BETA_MODE=true to

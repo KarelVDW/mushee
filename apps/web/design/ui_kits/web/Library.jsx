@@ -7,7 +7,7 @@ const SAMPLE_SCORES = [
     { id: 'd', title: 'Untitled composition', created: 'Jan 14, 2026', updated: 'Jan 14, 2026' },
 ]
 
-// The free Sketch plan keeps a shelf of up to 5 scores; the server refuses the
+// The free Sketch plan is capped at 5 scores; the server refuses the
 // create beyond that (403 code 'score-limit') and the app shows ScoreLimitDialog.
 const SKETCH_SCORE_LIMIT = 5
 
@@ -108,7 +108,6 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
             }}>
             <PageHeader
                 title="Your scores"
-                subtitle="A quiet shelf for everything you're working on."
                 right={
                     <div style={{ width: 256 }}>
                         <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
@@ -187,7 +186,7 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
                                     No scores yet.
                                 </span>
                                 <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    Compose your first one — it'll show up on this shelf.
+                                    Compose your first one.
                                 </span>
                             </div>
                             <PrimaryButton icon="plus" onClick={handleCreate}>
@@ -237,7 +236,7 @@ function ScoreLimitDialog({ planName = 'Sketch', limit = SKETCH_SCORE_LIMIT, nex
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
                 title={`Your ${planName} plan holds up to ${limit} scores.`}
-                subtitle="Everything you've written is safe and stays fully editable — the shelf is full, not locked."
+                subtitle="Everything you've written is safe and stays fully editable."
                 onClose={onClose}
                 width={480}
                 footer={
