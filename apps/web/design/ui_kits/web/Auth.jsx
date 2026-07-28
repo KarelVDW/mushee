@@ -62,9 +62,9 @@ function AuthCard({ mode = 'signin', onSwitch, onSubmit }) {
                         }}>
                         {isSignup ? (
                             <>
-                                Compose
+                                Notation
                                 <br />
-                                without friction.
+                                made easy.
                             </>
                         ) : (
                             <>
@@ -81,7 +81,7 @@ function AuthCard({ mode = 'signin', onSwitch, onSubmit }) {
                             maxWidth: 280,
                             margin: 0,
                         }}>
-                        A simple, fast score editor for the music in your head.
+                        The fastest way to get a melody on the page.
                     </p>
                 </div>
             </section>

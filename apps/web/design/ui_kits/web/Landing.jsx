@@ -301,8 +301,7 @@ function LandingHero({ onSignIn, onGetStarted }) {
                             margin: 0,
                             maxWidth: 480,
                         }}>
-                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No note-by-note
-                        clicking, no wrestling with menus. Just press record.
+                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                         <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
@@ -438,7 +437,7 @@ function FeatureGrid() {
                         marginBottom: 12,
                         color: 'var(--color-on-surface)',
                     }}>
-                    Quiet tools, real notation.
+                    Simple tools, real notation.
                 </h2>
                 <p
                     style={{
@@ -448,14 +447,14 @@ function FeatureGrid() {
                         margin: 0,
                         marginBottom: 48,
                     }}>
-                    Everything you need to catch an idea before it evaporates — nothing you don't.
+                    Everything you need to catch an idea before it evaporates.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
                     {[
                         [
                             'mic',
                             'Live transcription',
-                            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation, not a piano roll.',
+                            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
                         ],
                         [
                             'music',
@@ -470,7 +469,7 @@ function FeatureGrid() {
                         [
                             'audio-lines',
                             'Hear it back',
-                            'Play your score with lifelike instrument samples to proof your work by ear before anyone else does.',
+                            'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
                         ],
                         [
                             'cloud',
@@ -603,7 +602,7 @@ function PricingTeaser({ onGetStarted }) {
                             margin: '16px auto 0',
                         }}>
                         Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
-                        record per day — and Sketch keeps a shelf of up to five scores.
+                        record per day — and Sketch holds up to five scores.
                     </p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>

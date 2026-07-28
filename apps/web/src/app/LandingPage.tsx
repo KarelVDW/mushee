@@ -97,8 +97,7 @@ function Hero({
                         <em className="font-serif font-normal">on the page.</em>
                     </h1>
                     <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
-                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes. No
-                        note-by-note clicking, no wrestling with menus. Just press record.
+                        Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
                         <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
@@ -166,7 +165,7 @@ function FeatureGrid() {
         [
             'mic',
             'Live transcription',
-            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation, not a piano roll.',
+            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
         ],
         [
             'music',
@@ -181,7 +180,7 @@ function FeatureGrid() {
         [
             'audio-lines',
             'Hear it back',
-            'Play your score with lifelike instrument samples to proof your work by ear before anyone else does.',
+            'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
         ],
         [
             'cloud',
@@ -198,10 +197,10 @@ function FeatureGrid() {
         <section id="features" className="py-14 sm:py-22 px-5 sm:px-8 bg-surface-container-lowest">
             <div className="max-w-320 mx-auto">
                 <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
-                    Quiet tools, real notation.
+                    Simple tools, real notation.
                 </h2>
                 <p className="font-body font-normal text-[16px] leading-normal text-on-surface-variant max-w-140 m-0 mb-12">
-                    Everything you need to catch an idea before it evaporates — nothing you don&apos;t.
+                    Everything you need to catch an idea before it evaporates.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {features.map(([icon, title, body]) => (
@@ -233,7 +232,7 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                     </h2>
                     <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
                         Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
-                        record per day — and Sketch keeps a shelf of up to five scores.
+                        record per day — and Sketch holds up to five scores.
                     </p>
                 </div>
 
@@ -273,8 +272,7 @@ function BetaPricing() {
                 </h2>
                 <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
                     Every beta account gets the same plan: the full editor, live audio-to-notation, playback, and 30 minutes of
-                    recording per day — no card, no charge. Paid plans arrive at launch, and we&apos;ll share pricing before the
-                    beta ends.
+                    recording per day — no card, no charge. Paid plans arrive at launch.
                 </p>
             </div>
         </section>
@@ -412,9 +410,7 @@ function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void
                     <em className="font-serif font-normal">It takes one take.</em>
                 </h2>
                 <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                    {BETA_MODE
-                        ? 'Request access, warm up your voice, and get it on paper before it slips away.'
-                        : 'Free to start. No credit card. Your first recording is on the page in under a minute.'}
+                   Sign up now and get it on paper before it slips away.
                 </p>
                 <div className="mt-2">
                     <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>

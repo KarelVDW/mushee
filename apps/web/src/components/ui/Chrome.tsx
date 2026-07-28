@@ -137,7 +137,7 @@ export function Footer({ width = 'app' }: FooterProps) {
                     </button>
                 </nav>
                 <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © 2026 Solkey. Made for composers.
+                    © 2026 Solkey.
                 </span>
             </div>
         </footer>

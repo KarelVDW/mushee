@@ -41,8 +41,7 @@ export default function TermsPage() {
                 While Solkey is in <strong>closed beta</strong>, access is granted at our discretion: after signing up you may need
                 to wait until your account is approved. Beta accounts get the Beta plan (currently 30 minutes of recording per day)
                 free of charge. The beta is provided <strong>as-is for evaluation</strong>: features may change, break, or be
-                removed, availability is not guaranteed, and we may revoke beta access at any time. We&apos;ll give reasonable notice
-                before the beta ends and tell you what happens to your account and plan.
+                removed, availability is not guaranteed, and we may revoke beta access at any time.
             </p>
 
             <h2>4. Plans, payment, and cancellation</h2>

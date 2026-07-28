@@ -48,9 +48,9 @@ function BrandPanel({ mode }: { mode: AuthMode }) {
                 <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
                     {isSignup ? (
                         <>
-                            Compose
+                            Notation
                             <br />
-                            without friction.
+                            made easy.
                         </>
                     ) : (
                         <>
@@ -61,11 +61,11 @@ function BrandPanel({ mode }: { mode: AuthMode }) {
                     )}
                 </h1>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">
-                    A simple, fast score editor for the music in your head.
+                    The fastest way to get a melody on the page.
                 </p>
             </div>
             <p className="md:hidden font-serif italic text-[17px] leading-snug text-on-surface-variant m-0 text-right">
-                {isSignup ? 'Compose without friction.' : 'Welcome back.'}
+                {isSignup ? 'Notation made easy.' : 'Welcome back.'}
             </p>
         </section>
     )

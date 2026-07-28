@@ -46,8 +46,8 @@ export function ScoreLimitDialog({ onUpgrade, onClose }: ScoreLimitDialogProps) 
     return (
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
-                title={limit !== null ? `Your ${planName} plan holds up to ${limit} scores.` : 'Your score shelf is full.'}
-                subtitle="Everything you've written is safe and stays fully editable — the shelf is full, not locked."
+                title={limit !== null ? `Your ${planName} plan holds up to ${limit} scores.` : "You've reached your plan's score limit."}
+                subtitle="Everything you've written is safe and stays fully editable."
                 onClose={onClose}
                 width={480}
                 footer={
