@@ -31,9 +31,11 @@ spec:
           resources:
             requests: { cpu: '500m', memory: 1Gi }
             limits: { cpu: '2', memory: 2Gi }
+          # 300 s boot budget — first boot on a fresh Autopilot node has
+          # exceeded 150 s (see note in crepe-inference.yaml).
           startupProbe:
             tcpSocket: { port: 50052 }
-            failureThreshold: 30
+            failureThreshold: 60
             periodSeconds: 5
           livenessProbe:
             tcpSocket: { port: 50052 }
