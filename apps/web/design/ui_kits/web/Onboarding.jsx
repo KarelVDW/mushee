@@ -702,7 +702,7 @@ function Onboarding({ onComplete, onSkip }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ModalTitle>Which instruments do you play?</ModalTitle>
                         <SubHeadline>
-                            Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.
+                            Pick any that apply — or none, if you're more of a listener.
                         </SubHeadline>
                         {/* Full model catalogue, grouped by family in a scrollable column, with the
                             survey-only "None of the above" options appended after the real families. */}

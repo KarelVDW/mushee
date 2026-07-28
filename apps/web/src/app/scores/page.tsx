@@ -107,7 +107,6 @@ export default function ScoresPage() {
             <main className="flex-1 max-w-384 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 w-full box-border">
                 <PageHeader
                     title="Your scores"
-                    subtitle="A quiet shelf for everything you're working on."
                     right={
                         <div className="w-full md:w-64">
                             <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
@@ -222,7 +221,7 @@ function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
             <div className="flex-1 flex flex-col gap-1.5 min-w-0">
                 <span className="font-body font-semibold text-[16px] leading-[1.3] text-on-surface">No scores yet.</span>
                 <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                    Compose your first one — it&apos;ll show up on this shelf.
+                    Compose your first one.
                 </span>
             </div>
             <PrimaryButton icon="plus" onClick={onCreate}>

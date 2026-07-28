@@ -223,7 +223,7 @@ export function InstrumentsStep({ value, onChange }: { value: string[]; onChange
     return (
         <StepShell
             title="Which instruments do you play?"
-            subtitle="Pick any that apply — or none, if you're more of a listener. We'll suggest staff layouts based on this.">
+            subtitle="Pick any that apply — or none, if you're more of a listener.">
             <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
                 {Instrument.selectableByCategory().map(({ category, instruments }) => (
                     <div key={category} className="flex flex-col gap-2">
