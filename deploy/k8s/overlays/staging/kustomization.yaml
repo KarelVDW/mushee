@@ -1,7 +1,10 @@
 # Staging overlay (GKE) — same cluster as production (mushee-prod), separate
 # namespace, ingress, bucket, database, and workload identity. Deployed
-# automatically on every push to the `staging` branch by
-# .github/workflows/deploy.yml. One-time GCP provisioning in README.md.
+# opt-in only: trigger the Deploy workflow manually (workflow_dispatch,
+# environment=staging) when a change needs a staging pass, and scale the
+# namespace back to zero afterwards (kubectl scale deploy --all
+# -n mushee-staging --replicas=0) — idle pods bill 24/7 on Autopilot.
+# One-time GCP provisioning in README.md.
 #
 # Scaled to a single replica per service: staging exists to verify deploys and
 # exercise flows, not to carry load. The HPA/PDB patches below keep Autopilot

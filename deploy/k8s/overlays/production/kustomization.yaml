@@ -19,6 +19,33 @@ resources:
 patches:
   - path: api-patch.yaml
   - path: api-service-patch.yaml
+  # Beta-scale floors (2026-07): one always-on replica per service — Autopilot
+  # bills per pod request 24/7, and ~50 mostly-idle beta users fit one API pod
+  # with room to spare. HPA ceilings are untouched, so real bursts still scale
+  # out; raise the floors back when sustained traffic warrants HA.
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+  # …and with lone pods, minAvailable:1 would block Autopilot node drains —
+  # same relaxation as the staging overlay.
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: remove
+        path: /spec/minAvailable
+      - op: add
+        path: /spec/maxUnavailable
+        value: 1
+replicas:
+  - name: api
+    count: 1
+  - name: crepe-inference
+    count: 1
+  - name: basic-pitch-inference
+    count: 1
 images:
   - name: mushee/api
     newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/api
