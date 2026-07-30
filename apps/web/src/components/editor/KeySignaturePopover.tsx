@@ -99,7 +99,7 @@ export function KeySignaturePopover({ active, onSelect, onDismiss, className, an
             ref={popRef}
             role="dialog"
             aria-label="Select key signature"
-            className={`glass-panel tonal-layer-glow absolute z-50 flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
+            className={`glass-panel tonal-layer-glow absolute z-50 w-max flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             <Eyebrow>Key signature</Eyebrow>
             <div role="group" aria-label="Key signature" className="flex flex-col gap-1.5 items-center">
