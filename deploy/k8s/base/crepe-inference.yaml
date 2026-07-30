@@ -31,10 +31,13 @@ spec:
           resources:
             requests: { cpu: '500m', memory: 1Gi }
             limits: { cpu: '2', memory: 2Gi }
-          # Model load takes a while; cover it with a startup probe, then liveness.
+          # Model load takes a while; cover it with a startup probe, then
+          # liveness. First boot on a fresh Autopilot node (cold image +
+          # model load throttled at the CPU request) has exceeded 150 s, so
+          # allow 300 s (seen 2026-07-28: one probe-kill restart per rollout).
           startupProbe:
             tcpSocket: { port: 50051 }
-            failureThreshold: 30
+            failureThreshold: 60
             periodSeconds: 5
           livenessProbe:
             tcpSocket: { port: 50051 }

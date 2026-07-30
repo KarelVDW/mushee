@@ -81,7 +81,7 @@ export function ClefPopover({ active, onSelect, onDismiss, className, anchorRef 
             ref={popRef}
             role="dialog"
             aria-label="Select clef"
-            className={`glass-panel tonal-layer-glow absolute z-50 flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
+            className={`glass-panel tonal-layer-glow absolute z-50 w-max flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             <Eyebrow>Clef</Eyebrow>
             <div role="group" aria-label="Clef" className="flex flex-col gap-1.5">
