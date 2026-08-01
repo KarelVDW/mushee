@@ -45,7 +45,7 @@ ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). Ev
 ## 3. Depth & surfaces
 
 - **Cards:** `surface_container_lowest` + `tonal-layer-glow` (24px blur, 6% `on_surface`). List rows and compact cards use `rounded-md`; standalone cards and panels `rounded-lg`; full sheets `rounded-xl`.
-- **Modals & glass panels:** `.glass-panel` (85% white + 12px blur) + `editorial-shadow` (19px tier) + `rounded-lg`. Scrim: `bg-on-surface/40 backdrop-blur-xs`. `DialogScrim`/`DialogPanel` already carry the a11y contract (role, focus trap, Escape, focus restore) — always build dialogs from them.
+- **Modals & glass panels:** `.glass-panel` (85% white + 12px blur) + `editorial-shadow` (19px tier) + `rounded-lg`. Scrim: `bg-on-surface/40 backdrop-blur-xs`. `DialogScrim`/`DialogPanel` already carry the a11y contract (role, focus trap, Escape, focus restore) — always build dialogs from them. Anchored popovers build from `Popover`/`PopoverOption` the same way (dialog role, Escape + outside-click dismissal).
 - **Never black shadows.** Always `on_surface` at 6%.
 - **The magenta pop** (`emphasis="pop"`: 3px→5px offset shadow + −2px hover lift) is reserved for **at most one hero CTA per viewport** — landing hero and final CTA, the top-nav "New score". Dialog confirms, section actions, and utility buttons stay flat.
 
