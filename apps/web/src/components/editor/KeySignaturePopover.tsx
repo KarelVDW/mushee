@@ -4,9 +4,8 @@ import { Glyph } from '@mushee/notation/components'
 import { getYForNote } from '@mushee/notation/components/noteUtils'
 import { KeySignature } from '@mushee/notation/model/KeySignature'
 import { Pitch } from '@mushee/notation/model/Pitch'
-import { useEffect, useRef } from 'react'
 
-import { Eyebrow } from '@/components/ui'
+import { Popover, PopoverOption } from '@/components/ui'
 
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
 const KEY_ROWS: number[][] = [
@@ -68,70 +67,33 @@ interface KeySignaturePopoverProps {
 }
 
 export function KeySignaturePopover({ active, onSelect, onDismiss, className, anchorRef }: KeySignaturePopoverProps) {
-    const popRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault()
-                onDismiss()
-            }
-            e.stopPropagation()
-        }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [onDismiss])
-
-    useEffect(() => {
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef?.current?.contains(target)) onDismiss()
-        }
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
-    }, [onDismiss, anchorRef])
-
     return (
-        <div
-            ref={popRef}
-            role="dialog"
-            aria-label="Select key signature"
-            className={`glass-panel tonal-layer-glow absolute z-50 w-max flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
-            onMouseDown={(e) => e.stopPropagation()}>
-            <Eyebrow>Key signature</Eyebrow>
+        <Popover
+            ariaLabel="Select key signature"
+            title="Key signature"
+            onDismiss={onDismiss}
+            anchorRef={anchorRef}
+            className={`w-max gap-2${className ? ` ${className}` : ''}`}>
             <div role="group" aria-label="Key signature" className="flex flex-col gap-1.5 items-center">
                 {KEY_ROWS.map((row, i) => (
                     <div key={i} className="flex flex-wrap justify-center gap-1.5">
-                        {row.map((fifths) => {
-                            const isActive = fifths === active
-                            return (
-                                <button
-                                    key={fifths}
-                                    type="button"
-                                    aria-pressed={isActive}
-                                    aria-label={`${KEY_NAMES[fifths]} major`}
-                                    title={`${KEY_NAMES[fifths]} major`}
-                                    onClick={() => onSelect(fifths)}
-                                    className={[
-                                        'flex flex-col items-center justify-end gap-0.5 w-12 h-14 rounded-md cursor-pointer border-0 shrink-0 px-1 py-1.5',
-                                        'transition-[background-color,color] duration-150 ease-solkey',
-                                        isActive
-                                            ? 'bg-primary-container text-on-primary-container'
-                                            : 'bg-surface-container-low text-on-surface hover:bg-surface-container',
-                                    ].join(' ')}>
-                                    <span className="flex flex-1 items-center">
-                                        <KeySignatureGlyph fifths={fifths} size={32} />
-                                    </span>
-                                    <span className="text-[11px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
-                                </button>
-                            )
-                        })}
+                        {row.map((fifths) => (
+                            <PopoverOption
+                                key={fifths}
+                                active={fifths === active}
+                                ariaLabel={`${KEY_NAMES[fifths]} major`}
+                                title={`${KEY_NAMES[fifths]} major`}
+                                onClick={() => onSelect(fifths)}
+                                className="flex-col justify-end gap-0.5 w-12 h-14 px-1 py-1.5">
+                                <span className="flex flex-1 items-center">
+                                    <KeySignatureGlyph fifths={fifths} size={32} />
+                                </span>
+                                <span className="text-[11px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
+                            </PopoverOption>
+                        ))}
                     </div>
                 ))}
             </div>
-        </div>
+        </Popover>
     )
 }

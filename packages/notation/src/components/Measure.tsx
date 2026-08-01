@@ -3,6 +3,7 @@ import { memo, type ReactNode } from 'react'
 import type { Measure as MeasureModel, Note } from '../model'
 import type { Clef as ClefModel } from '../model/Clef'
 import type { KeySignature as KeySignatureModel } from '../model/KeySignature'
+import type { TimeSignature as TimeSignatureModel } from '../model/TimeSignature'
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
@@ -31,6 +32,7 @@ interface MeasureProps {
      *  Omit and the glyphs render inert (read-only consumers). */
     onClefClick?: (clef: ClefModel, localX: number) => void
     onKeySignatureClick?: (keySignature: KeySignatureModel, localX: number) => void
+    onTimeSignatureClick?: (timeSignature: TimeSignatureModel, localX: number) => void
 }
 
 // Hit-area vertical extent: the full staff band (matches the selection band).
@@ -54,7 +56,7 @@ function ClickableGlyph({ width, onClick, children }: { width: number; onClick?:
     )
 }
 
-export const Measure = memo(function Measure({ measure, selectedNoteIds, hoveredNote, onClefClick, onKeySignatureClick }: MeasureProps) {
+export const Measure = memo(function Measure({ measure, selectedNoteIds, hoveredNote, onClefClick, onKeySignatureClick, onTimeSignatureClick }: MeasureProps) {
     const layout = measure.layout
     const clefWidth = (clef: ClefModel) => getGlyphWidth(clef.layout.glyphName, GLYPH_SCALE)
     const keyWidth = (key: KeySignatureModel) => {
@@ -109,7 +111,14 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
 
             {layout.showsTimeSignature && (
                 <g transform={`translate(${layout.getXForElement(measure.timeSignature)}, 0)`}>
-                    <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />
+                    <ClickableGlyph
+                        width={measure.timeSignature.width.total}
+                        onClick={
+                            onTimeSignatureClick &&
+                            (() => onTimeSignatureClick(measure.timeSignature, layout.getXForElement(measure.timeSignature)))
+                        }>
+                        <TimeSignature timeSignature={measure.timeSignature} layoutId={measure.timeSignature.layout.id} />
+                    </ClickableGlyph>
                 </g>
             )}
 

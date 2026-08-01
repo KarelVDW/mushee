@@ -2,17 +2,15 @@ import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
 import { SCORE_WIDTH } from '../components/constants'
 import type { ClefType, DurationType } from '../components/types'
-import { Duration } from './Duration'
+import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { TimeSignature } from './TimeSignature'
 import { Derived } from './util/Derived'
+import { MeasureRebar } from './util/MeasureRebar'
 import { MeasureSerializer } from './util/ScoreSerializer'
-
-/** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
-const BEAT_EPSILON = 0.001
 
 /**
  * The score: an ordered list of measures plus the lead instrument. Purely
@@ -275,6 +273,30 @@ export class Score {
         if (newLast && (newLast.endBarline === undefined || newLast.endBarline === 'single')) {
             newLast.setEndBarline('end')
         }
+        this._structureChanged = true
+        this.touch()
+    }
+
+    /**
+     * Change the time signature from `measure` onward, mirroring key-signature semantics:
+     * the new meter applies through the run of measures sharing the current one — up to
+     * the next specified change (the first following measure whose signature differs) or
+     * the end of the score. Setting the meter already in effect is a no-op, and setting
+     * the one carried in from before `measure` erases the boundary (the runs merge).
+     *
+     * The whole run is rebarred by {@link MeasureRebar}: its content flows across the new
+     * barlines, splitting with ties where it straddles, so measure and note identities in
+     * the run may change — callers holding a Note ref re-resolve by position.
+     */
+    setTimeSignature(measure: Measure, timeSignature: TimeSignature) {
+        const start = this.getIndexForMeasure(measure)
+        if (timeSignature.equals(measure.timeSignature)) return
+        let end = start + 1
+        while (end < this.measures.length && this.measures[end].timeSignature.equals(measure.timeSignature)) end++
+        const rebar = new MeasureRebar(this.measures.slice(start, end), timeSignature, end === this.measures.length)
+        this.measures.splice(start, end - start, ...rebar.measures)
+        this.propagateContext()
+        rebar.applyMarks(() => this.propagateContext())
         this._structureChanged = true
         this.touch()
     }

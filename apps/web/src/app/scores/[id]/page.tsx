@@ -7,6 +7,7 @@ import {
     type KeySignatureClickEvent,
     Score as ScoreView,
     type TempoClickEvent,
+    type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/components/types'
 import { Instrument, type Note, type Pitch } from '@mushee/notation/model'
@@ -17,6 +18,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
+import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
@@ -117,6 +119,13 @@ export default function ScoreEditorPage() {
     const handleTempoSet = useCallback((bpm: number) => manipulator.run(SET_TEMPO, bpm), [manipulator])
     const handleClefSet = useCallback((type: ClefType) => manipulator.run(SET_CLEF, type), [manipulator])
     const handleKeySet = useCallback((fifths: number) => manipulator.run(SET_KEY, fifths), [manipulator])
+    const handleTimeSet = useCallback(
+        (beatAmount: number, beatType: number) => {
+            const measure = manipulator.selectedNote?.measure
+            if (measure) manipulator.setTimeSignatureAt(measure.index, beatAmount, beatType)
+        },
+        [manipulator],
+    )
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
 
@@ -128,12 +137,14 @@ export default function ScoreEditorPage() {
         | ({ kind: 'tempo' } & TempoClickEvent)
         | ({ kind: 'clef' } & ClefClickEvent)
         | ({ kind: 'key' } & KeySignatureClickEvent)
+        | ({ kind: 'time' } & TimeSignatureClickEvent)
         | null
     >(null)
     const closeAttributePopover = useCallback(() => setAttributePopover(null), [])
     const handleTempoClick = useCallback((event: TempoClickEvent) => setAttributePopover({ kind: 'tempo', ...event }), [])
     const handleClefClick = useCallback((event: ClefClickEvent) => setAttributePopover({ kind: 'clef', ...event }), [])
     const handleKeySignatureClick = useCallback((event: KeySignatureClickEvent) => setAttributePopover({ kind: 'key', ...event }), [])
+    const handleTimeSignatureClick = useCallback((event: TimeSignatureClickEvent) => setAttributePopover({ kind: 'time', ...event }), [])
 
     const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
         usePlayback({
@@ -309,6 +320,7 @@ export default function ScoreEditorPage() {
                             onTempoClick={handleTempoClick}
                             onClefClick={handleClefClick}
                             onKeySignatureClick={handleKeySignatureClick}
+                            onTimeSignatureClick={handleTimeSignatureClick}
                         />
                         {attributePopover?.kind === 'tempo' && (
                             <TempoPopover
@@ -348,6 +360,19 @@ export default function ScoreEditorPage() {
                                 />
                             </div>
                         )}
+                        {attributePopover?.kind === 'time' && (
+                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
+                                <TimeSignaturePopover
+                                    active={{ beatAmount: attributePopover.beatAmount, beatType: attributePopover.beatType }}
+                                    className="left-0 top-0"
+                                    onSelect={(beatAmount, beatType) => {
+                                        manipulator.setTimeSignatureAt(attributePopover.measureIndex, beatAmount, beatType)
+                                        closeAttributePopover()
+                                    }}
+                                    onDismiss={closeAttributePopover}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -372,6 +397,11 @@ export default function ScoreEditorPage() {
                 onClefSet={handleClefSet}
                 keyFifths={activeNote?.keySignature.fifths ?? 0}
                 onKeySet={handleKeySet}
+                time={{
+                    beatAmount: activeNote?.measure.timeSignature.beatAmount ?? 4,
+                    beatType: activeNote?.measure.timeSignature.beatType ?? 4,
+                }}
+                onTimeSet={handleTimeSet}
                 selectionDisabled={!activeNote}
                 compact={isMobile}
                 metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
