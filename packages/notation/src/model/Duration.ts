@@ -1,5 +1,8 @@
 import type { DurationType } from '../components/types'
 
+/** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
+export const BEAT_EPSILON = 0.001
+
 /** Ordered list of duration values for greedy decomposition (largest first) */
 const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: number }> = [
     { duration: 'w', beats: 4 },
@@ -136,10 +139,10 @@ export class Duration {
     static fromBeats(beats: number, ratio?: { actualNotes: number; normalNotes: number }): Duration[] {
         const result: Duration[] = []
         let remaining = ratio ? beats * (ratio.actualNotes / ratio.normalNotes) : beats
-        while (remaining > 0.001) {
+        while (remaining > BEAT_EPSILON) {
             let matched = false
             for (const v of DURATION_VALUES) {
-                if (v.beats <= remaining + 0.001) {
+                if (v.beats <= remaining + BEAT_EPSILON) {
                     result.push(new Duration({ type: v.duration, dots: v.dots, ratio }))
                     remaining -= v.beats
                     matched = true

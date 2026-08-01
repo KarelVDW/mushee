@@ -7,6 +7,7 @@ import { type ReactNode, useRef, useState } from 'react'
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
+import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
@@ -190,6 +191,8 @@ interface NoteToolDockProps {
     onClefSet: (clef: ClefType) => void
     keyFifths: number
     onKeySet: (fifths: number) => void
+    time: { beatAmount: number; beatType: number }
+    onTimeSet: (beatAmount: number, beatType: number) => void
     selectionDisabled: boolean
     /** Tighter group spacing so the tool rows fit a phone. */
     compact?: boolean
@@ -228,6 +231,8 @@ export function NoteToolDock({
     onClefSet,
     keyFifths,
     onKeySet,
+    time,
+    onTimeSet,
     selectionDisabled,
     compact = false,
     metronome,
@@ -270,6 +275,7 @@ export function NoteToolDock({
                 <ToolGroup ariaLabel="Score settings">
                     <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} compact={compact} />
                     <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
+                    <TimeSignatureControl time={time} onSet={onTimeSet} disabled={selectionDisabled} compact={compact} />
                     <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
                     {metronome && (
                         <ChipToggle plain active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
@@ -357,6 +363,45 @@ function KeySignatureControl({ fifths, onSet, disabled, compact }: KeySignatureC
                     className={popoverPosition(compact)}
                     onSelect={(value) => {
                         onSet(value)
+                        setOpen(false)
+                    }}
+                    onDismiss={() => setOpen(false)}
+                />
+            )}
+        </div>
+    )
+}
+
+// --- Time signature control ---
+
+interface TimeSignatureControlProps {
+    time: { beatAmount: number; beatType: number }
+    onSet: (beatAmount: number, beatType: number) => void
+    disabled: boolean
+    compact: boolean
+}
+
+function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureControlProps) {
+    const anchorRef = useRef<HTMLDivElement | null>(null)
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div ref={anchorRef} className="relative">
+            <ChipToggle
+                plain
+                active={open}
+                disabled={disabled}
+                onClick={() => setOpen((o) => !o)}
+                ariaLabel={`Time signature: ${time.beatAmount}/${time.beatType}`}>
+                <TimeSignatureGlyph beatAmount={time.beatAmount} beatType={time.beatType} size={22} />
+            </ChipToggle>
+            {open && (
+                <TimeSignaturePopover
+                    active={time}
+                    anchorRef={anchorRef}
+                    className={popoverPosition(compact)}
+                    onSelect={(beatAmount, beatType) => {
+                        onSet(beatAmount, beatType)
                         setOpen(false)
                     }}
                     onDismiss={() => setOpen(false)}

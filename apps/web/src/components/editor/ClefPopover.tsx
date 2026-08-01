@@ -5,9 +5,8 @@ import { CLEF_CONFIG, CLEF_DEFS, clefOctaveMarker } from '@mushee/notation/compo
 import { getGlyphWidth } from '@mushee/notation/components/glyphUtils'
 import { getYForLine } from '@mushee/notation/components/noteUtils'
 import type { ClefType } from '@mushee/notation/components/types'
-import { useEffect, useRef } from 'react'
 
-import { Eyebrow } from '@/components/ui'
+import { Popover, PopoverOption } from '@/components/ui'
 
 // Clefs grouped into rows by sign family (G / C / F), matching how engravers present them.
 const CLEF_FAMILIES: ClefType[][] = [
@@ -50,67 +49,30 @@ interface ClefPopoverProps {
 }
 
 export function ClefPopover({ active, onSelect, onDismiss, className, anchorRef }: ClefPopoverProps) {
-    const popRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault()
-                onDismiss()
-            }
-            e.stopPropagation()
-        }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [onDismiss])
-
-    useEffect(() => {
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef?.current?.contains(target)) onDismiss()
-        }
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
-    }, [onDismiss, anchorRef])
-
     return (
-        <div
-            ref={popRef}
-            role="dialog"
-            aria-label="Select clef"
-            className={`glass-panel tonal-layer-glow absolute z-50 w-max flex flex-col gap-2 p-4 rounded-lg${className ? ` ${className}` : ''}`}
-            onMouseDown={(e) => e.stopPropagation()}>
-            <Eyebrow>Clef</Eyebrow>
+        <Popover
+            ariaLabel="Select clef"
+            title="Clef"
+            onDismiss={onDismiss}
+            anchorRef={anchorRef}
+            className={`w-max gap-2${className ? ` ${className}` : ''}`}>
             <div role="group" aria-label="Clef" className="flex flex-col gap-1.5">
                 {CLEF_FAMILIES.map((family, i) => (
                     <div key={i} className="flex flex-wrap gap-1.5">
-                        {family.map((type) => {
-                            const isActive = type === active
-                            return (
-                                <button
-                                    key={type}
-                                    type="button"
-                                    aria-pressed={isActive}
-                                    aria-label={`Set ${CLEF_DEFS[type].label} clef`}
-                                    title={CLEF_DEFS[type].label}
-                                    onClick={() => onSelect(type)}
-                                    className={[
-                                        'flex items-center justify-center w-11 h-11 rounded-md cursor-pointer border-0 shrink-0',
-                                        'transition-[background-color,color] duration-150 ease-solkey',
-                                        isActive
-                                            ? 'bg-primary-container text-on-primary-container'
-                                            : 'bg-surface-container-low text-on-surface hover:bg-surface-container',
-                                    ].join(' ')}>
-                                    <ClefGlyph type={type} size={34} />
-                                </button>
-                            )
-                        })}
+                        {family.map((type) => (
+                            <PopoverOption
+                                key={type}
+                                active={type === active}
+                                ariaLabel={`Set ${CLEF_DEFS[type].label} clef`}
+                                title={CLEF_DEFS[type].label}
+                                onClick={() => onSelect(type)}
+                                className="justify-center w-11 h-11">
+                                <ClefGlyph type={type} size={34} />
+                            </PopoverOption>
+                        ))}
                     </div>
                 ))}
             </div>
-        </div>
+        </Popover>
     )
 }

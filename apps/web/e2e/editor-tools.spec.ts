@@ -98,6 +98,23 @@ test('selecting a key signature from the popover applies it', async ({ page }) =
     await page.keyboard.press('Escape')
 })
 
+test('selecting a time signature from the popover rebars the score', async ({ page }) => {
+    await page.getByRole('button', { name: /^Time signature:/ }).click()
+    const popover = page.getByRole('dialog', { name: 'Select time signature' })
+    await expect(popover).toBeVisible()
+
+    const patch = waitForAutosave(page)
+    await popover.getByRole('button', { name: 'Set 3/4 time' }).click()
+    await patch
+    await expect(popover).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Time signature: 3/4' })).toBeVisible()
+
+    // Reopen: the chosen meter is marked selected.
+    await page.getByRole('button', { name: /^Time signature:/ }).click()
+    await expect(page.getByRole('button', { name: 'Set 3/4 time' })).toHaveAttribute('aria-pressed', 'true')
+    await page.keyboard.press('Escape')
+})
+
 test('the tempo popover sets a bpm through the input and Enter commits it', async ({ page }) => {
     await page.getByRole('button', { name: /bpm$/ }).click()
     const popover = page.getByRole('dialog', { name: 'Set tempo' })

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Eyebrow, PrimaryButton } from '@/components/ui'
+import { Popover, PrimaryButton } from '@/components/ui'
 
 interface TempoPopoverProps {
     initialBpm: number
@@ -23,7 +23,6 @@ const TAP_RESET_MS = 2000
 const TAP_WINDOW = 8
 
 export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className, anchorRef }: TempoPopoverProps) {
-    const popRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const [taps, setTaps] = useState<number[]>([])
     const [draft, setDraft] = useState(String(initialBpm))
@@ -51,55 +50,38 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className,
         if (n && n >= MIN_BPM && n <= MAX_BPM) onSubmit(n)
     }, [draft, onSubmit])
 
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
+    const handleKey = useCallback(
+        (e: KeyboardEvent) => {
             if (e.code === 'Space' && document.activeElement !== inputRef.current) {
                 e.preventDefault()
                 handleTap()
-            } else if (e.key === 'Escape') {
-                e.preventDefault()
-                onDismiss()
             } else if (e.key === 'Enter' && document.activeElement === inputRef.current) {
                 e.preventDefault()
                 commit()
             }
-            e.stopPropagation()
-        }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [handleTap, commit, onDismiss])
-
-    useEffect(() => {
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef?.current?.contains(target)) onDismiss()
-        }
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
-    }, [onDismiss, anchorRef])
+        },
+        [handleTap, commit]
+    )
 
     useEffect(() => {
         if (tappedBpm) setDraft(String(tappedBpm))
     }, [tappedBpm])
 
     return (
-        <div
-            ref={popRef}
-            role="dialog"
-            aria-label="Set tempo"
-            style={x !== undefined && y !== undefined ? { left: x, top: y } : undefined}
-            className={`glass-panel tonal-layer-glow absolute z-50 w-90 flex flex-col gap-3 p-4 rounded-lg${className ? ` ${className}` : ''}`}
-            onMouseDown={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center">
-                <Eyebrow>Tempo</Eyebrow>
+        <Popover
+            ariaLabel="Set tempo"
+            title="Tempo"
+            onDismiss={onDismiss}
+            onKeyDown={handleKey}
+            x={x}
+            y={y}
+            anchorRef={anchorRef}
+            className={`w-90 gap-3${className ? ` ${className}` : ''}`}
+            headerRight={
                 <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
                     {taps.length < 2 ? 'Tap 2+ times' : `${tappedBpm} bpm · ${taps.length} taps`}
                 </span>
-            </div>
-
+            }>
             <button
                 type="button"
                 onClick={handleTap}
@@ -133,6 +115,6 @@ export function TempoPopover({ x, y, initialBpm, onSubmit, onDismiss, className,
                 </div>
                 <PrimaryButton onClick={commit}>Set</PrimaryButton>
             </div>
-        </div>
+        </Popover>
     )
 }

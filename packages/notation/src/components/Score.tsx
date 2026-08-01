@@ -72,6 +72,7 @@ interface ScoreProps {
     onTempoClick?: (event: TempoClickEvent) => void
     onClefClick?: (event: ClefClickEvent) => void
     onKeySignatureClick?: (event: KeySignatureClickEvent) => void
+    onTimeSignatureClick?: (event: TimeSignatureClickEvent) => void
 }
 
 export interface TempoClickEvent {
@@ -96,6 +97,14 @@ export interface KeySignatureClickEvent {
     y: number
 }
 
+export interface TimeSignatureClickEvent {
+    measureIndex: number
+    beatAmount: number
+    beatType: number
+    x: number
+    y: number
+}
+
 export const Score = memo(function Score({
     score,
     selectedNote,
@@ -111,6 +120,7 @@ export const Score = memo(function Score({
     onTempoClick,
     onClefClick,
     onKeySignatureClick,
+    onTimeSignatureClick,
 }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
@@ -263,6 +273,15 @@ export const Score = memo(function Score({
             onKeySignatureClick?.({ measureIndex, fifths, x: pos.x, y: pos.y })
         },
         [svgToContainer, onKeySignatureClick],
+    )
+
+    const handleTimeSignatureClick = useCallback(
+        (measureIndex: number, beatAmount: number, beatType: number, svgX: number, svgY: number) => {
+            const pos = svgToContainer(svgX, svgY)
+            if (!pos) return
+            onTimeSignatureClick?.({ measureIndex, beatAmount, beatType, x: pos.x, y: pos.y })
+        },
+        [svgToContainer, onTimeSignatureClick],
     )
 
     // Resolve the note under a client point (row → measure → note), with the row-local Y.
@@ -431,6 +450,17 @@ export const Score = memo(function Score({
                                             handleKeySignatureClick(
                                                 score.getIndexForMeasure(measure),
                                                 key.fifths,
+                                                row.getMeasureX(measure) + localX,
+                                                layout.getYForRow(row) + staffTopY,
+                                            ))
+                                    }
+                                    onTimeSignatureClick={
+                                        onTimeSignatureClick &&
+                                        ((timeSignature, localX) =>
+                                            handleTimeSignatureClick(
+                                                score.getIndexForMeasure(measure),
+                                                timeSignature.beatAmount,
+                                                timeSignature.beatType,
                                                 row.getMeasureX(measure) + localX,
                                                 layout.getYForRow(row) + staffTopY,
                                             ))
