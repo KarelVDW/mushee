@@ -1,3 +1,4 @@
+import { BEAT_EPSILON } from '../Duration'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 import { Tuplet } from '../Tuplet'
@@ -51,7 +52,7 @@ export class TupletFinder {
             totalDuration += note.duration.effectiveBeats
 
             // Set is complete when total duration reaches the expected span
-            if (totalDuration >= normalNotes * maxBaseBeats - 0.001) {
+            if (totalDuration >= normalNotes * maxBaseBeats - BEAT_EPSILON) {
                 this.tuplets.push(new Tuplet(this.measure, currentNotes))
                 currentNotes = []
                 currentRatio = null

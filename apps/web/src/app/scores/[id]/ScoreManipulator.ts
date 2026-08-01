@@ -1,5 +1,6 @@
 import type { ClefType } from '@mushee/notation/components'
 import type { Instrument, Note, Score } from '@mushee/notation/model'
+import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
 
@@ -255,6 +256,23 @@ export class ScoreManipulator {
         if (!this._score || !measure) return
         this._score.setKeySignature(measure.noteAtBeat(0), fifths)
         this.save()
+    }
+
+    /** Change the time signature from a measure (the in-score glyph or dock popover). */
+    setTimeSignatureAt(measureIndex: number, beatAmount: number, beatType: number): void {
+        const score = this._score
+        const measure = score?.measures[measureIndex]
+        if (!score || !measure) return
+        const version = score.version
+        score.setTimeSignature(measure, new TimeSignature(beatAmount, beatType))
+        if (score.version === version) return // same meter — nothing changed
+        // Rebarring may have replaced the selected note (split or merged across the new
+        // barlines); re-anchor on it if it survived, else on the start of the changed measure.
+        const selected = this._selectedNote
+        const survived = selected && score.measures.includes(selected.measure)
+        this.setSingle(survived ? selected : (score.measures[Math.min(measureIndex, score.measures.length - 1)]?.firstNote ?? null))
+        this.save()
+        this.emit()
     }
 
     /**

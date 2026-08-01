@@ -3,7 +3,7 @@ export { CLEF_DEFS, GLYPH_SCALE, INTERACTION_BLUE, NOTATION_INK } from './consta
 export { Glyph } from './Glyph'
 export { getGlyphWidth } from './glyphUtils'
 export { getLineForY, getYForLine, getYForNote } from './noteUtils'
-export type { ClefClickEvent, KeySignatureClickEvent, TempoClickEvent } from './Score'
+export type { ClefClickEvent, KeySignatureClickEvent, TempoClickEvent, TimeSignatureClickEvent } from './Score'
 export { Score } from './Score'
 export type {
     ClefType,
