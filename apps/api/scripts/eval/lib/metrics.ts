@@ -188,6 +188,29 @@ export function timingStats(
   };
 }
 
+/**
+ * MIREX **COn**: onset-only F1, pitch ignored entirely.
+ *
+ * Reported alongside COnP because the two answer different questions and a voice
+ * change usually moves only one of them. COn is *where the boundaries are*; the
+ * COnP−COn gap is *what was written on them*. Without it a decoder that finds
+ * every note but names it a semitone off is indistinguishable from one that never
+ * found the note — and those want opposite fixes.
+ */
+export function scoreOnsets(
+  ref: TruthNote[],
+  est: EstNote[],
+  onsetTolSec = 0.1,
+): { matched: number; precision: number; recall: number; f1: number } {
+  const m = countMatches(ref, est, onsetTolSec, () => true);
+  return {
+    matched: m.matched,
+    precision: est.length ? m.matched / est.length : 0,
+    recall: ref.length ? m.matched / ref.length : 0,
+    f1: f1(m.matched, ref.length, est.length),
+  };
+}
+
 export function scoreNotes(
   ref: TruthNote[],
   est: EstNote[],

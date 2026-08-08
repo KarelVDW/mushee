@@ -25,6 +25,19 @@ interface RecordingMetaMessage {
   /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
    *  adaptive profile's frequency window; auto-detection stays authoritative. */
   instrumentId?: string;
+  /**
+   * Explicit declaration of what is being recorded. Unlike `instrumentId` this
+   * is NOT just a window hint: singing and playing want different note
+   * segmentation (see `VoiceNoteDecoder`), and the choice is worth ~0.10 COnP
+   * on real singing.
+   *
+   * Since the audio source classifier (`SourceClassifier`, 2026-08) the web
+   * client no longer sends this — absent means "classify from the audio, fall
+   * back to the score's instrument family on abstain". Kept as an accepted
+   * field because an explicit declaration still wins outright when a caller
+   * (the eval harness, a future API client) genuinely knows the source.
+   */
+  sourceKind?: 'voice' | 'instrument' | null;
   /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
    *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
    *  the browser default was used and ffmpeg probes the container. */
@@ -255,6 +268,13 @@ export class RecordingsGateway
         if (client.readyState !== client.OPEN) return;
         client.send(JSON.stringify({ type: 'recording-capped', reason }));
       },
+      onSourceResolved: (resolution) => {
+        if (client.readyState !== client.OPEN) return;
+        // What the pipeline decided is at the mic, and on what evidence — the
+        // client shows it so a wrong classification is user-visible feedback
+        // rather than a silently mangled transcription.
+        client.send(JSON.stringify({ type: 'recording-source', ...resolution }));
+      },
     });
     if (!session) {
       this.reject(client, 'concurrent-recording');
@@ -357,6 +377,7 @@ export class RecordingsGateway
         timeSignature: parsed.timeSignature,
         chromaticTranspose: parsed.chromaticTranspose,
         instrumentId: parsed.instrumentId,
+        sourceKind: parsed.sourceKind,
         mimeType: parsed.mimeType,
       });
     } else if (parsed.type === 'end') {

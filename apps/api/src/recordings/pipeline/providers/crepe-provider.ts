@@ -2,8 +2,13 @@ import { Logger } from '@nestjs/common';
 import type { NoteEventTime } from '@spotify/basic-pitch';
 
 import { PitchTrack } from '../pitch-track';
+import {
+  type VoiceDecodeOptions,
+  VoiceNoteDecoder,
+} from '../voice-note-decoder';
 import type { ModelBackend } from './model-backend';
 import {
+  frameEnergy,
   localCentsFromPath,
   normalizeFrame,
   segmentNotes,
@@ -100,6 +105,35 @@ const SEGMENT_OPTS: SegmentOptions = {
   smoothFrames: 4,
 };
 
+/**
+ * The voice decode's shipping configuration, chosen by `scripts/eval/sweep-voice.ts`
+ * on `EVAL_SPLIT=dev` and confirmed once on `test` (COnP 0.570 → 0.668,
+ * +0.123 [+0.102, +0.144], paired over 289 clips).
+ *
+ * Why these three values and not the class defaults:
+ *
+ *  - `changeCost: 2.5` with `transitionMode: 'direct'` rather than `'via-silence'`.
+ *    The sweep showed the decode saturates at cost ≥ 2.5 — c2.5/c3/c4/c6 score
+ *    identically to three decimals, i.e. the direct jump is never taken and the
+ *    model has already chosen mandatory-silence on its own. Keeping the transition
+ *    in the state space costs nothing and leaves the *evidence discount* able to
+ *    re-open it exactly where a dip argues for a slurred boundary, which is what
+ *    Dynamic HumTrans's structure cannot express.
+ *  - `evidenceDiscount: 0.35`: a boundary backed by a volume decay or a pitch dip
+ *    costs 0.88 nats instead of 2.5. This is what recovers legato transitions
+ *    (transition recall 0.62 → 0.65) without re-admitting vibrato splits.
+ *  - `trust: 0.7` rather than pYIN's 0.1. pYIN decodes a *probabilistic* pYIN
+ *    contour; we decode CREPE's Viterbi-smoothed trajectory, which is already
+ *    smoothed once, so trusting the per-frame pitch this little merges real notes
+ *    (measured: t0.1 → 0.627, t0.7 → 0.684 on dev).
+ */
+export const VOICE_OPTS: VoiceDecodeOptions = {
+  transitionMode: 'direct',
+  changeCost: 2.5,
+  evidenceDiscount: 0.35,
+  trust: 0.7,
+};
+
 /** Per-recording state for the CREPE provider. */
 class CrepeSession implements PitchSession {
   cachedFrames = 0;
@@ -155,14 +189,39 @@ export class CrepeProvider implements PitchProvider {
       onProgress?.([]);
       return [];
     }
-    const notes = segmentNotes(
-      track.cents,
-      track.confidence,
-      track.frames,
-      this.segmentOptionsFrom(options),
-    );
+    const notes =
+      options?.segmentMode === 'voice'
+        ? this.decodeVoice(track, samples, options)
+        : segmentNotes(
+            track.cents,
+            track.confidence,
+            track.frames,
+            this.segmentOptionsFrom(options),
+          );
     onProgress?.(notes);
     return notes;
+  }
+
+  /**
+   * The voice path: a note-level HMM over the trajectory *and* the envelope.
+   *
+   * The envelope is computed here rather than passed in because this is the only
+   * place holding both the decoded PCM and the frame grid it must align to — the
+   * dip and accent channels are meaningless if the two are off by a frame.
+   */
+  private decodeVoice(
+    track: PitchTrack,
+    samples: Float32Array,
+    options: PitchTranscribeOptions,
+  ): NoteEventTime[] {
+    const energy = frameEnergy(samples, SAMPLE_RATE, track.hopSec, track.frames);
+    return new VoiceNoteDecoder({
+      ...VOICE_OPTS,
+      confidenceThreshold: options.confidenceThreshold ?? SEGMENT_OPTS.confidenceThreshold,
+      minFreqHz: options.minFreqHz ?? SEGMENT_OPTS.minFreqHz,
+      maxFreqHz: options.maxFreqHz ?? SEGMENT_OPTS.maxFreqHz,
+      minFrames: options.minFramesPerNote ?? SEGMENT_OPTS.minFramesPerNote,
+    }).decode(track, energy);
   }
 
   /**
@@ -269,7 +328,10 @@ export class CrepeProvider implements PitchProvider {
       ...(options?.pitchBinToleranceCents !== undefined && {
         pitchBinToleranceCents: options.pitchBinToleranceCents,
       }),
-      ...(options?.segmentMode !== undefined && { mode: options.segmentMode }),
+      // 'voice' is handled by `decodeVoice`, never by `segmentNotes`.
+      ...(options?.segmentMode === 'median' || options?.segmentMode === 'semitone'
+        ? { mode: options.segmentMode }
+        : {}),
       ...(options?.smoothFrames !== undefined && { smoothFrames: options.smoothFrames }),
       ...(options?.tuningCorrect !== undefined && { tuningCorrect: options.tuningCorrect }),
     };

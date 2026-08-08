@@ -27,6 +27,7 @@ import { PitchTrack } from '../../../src/recordings/pipeline/pitch-track';
 import type { PipelineProfile } from '../../../src/recordings/pipeline/profiles/pipeline-profile';
 import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver';
 import { CrepeProvider } from '../../../src/recordings/pipeline/providers/crepe-provider';
+import { frameEnergy } from '../../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry';
 import type { GroundTruth } from '../types';
 import type { RealDataset } from './realCorpus';
@@ -38,8 +39,18 @@ import type { RealDataset } from './realCorpus';
  *    `profile.confidenceThreshold` from before it is no longer what the pipeline
  *    would choose for that clip — and since the segmenters read the gate straight
  *    out of the cached profile, a stale entry would silently score the old policy.
+ * 4: the resolver gained voice routing (`applyVoice`), so a cached profile carries
+ *    neither `segmentMode` nor `isVoice` and a voice clip would replay as an
+ *    instrument. The trajectory bytes themselves are unaffected — the overlay
+ *    touches no gate, window or high-pass — but the rule is bump-on-resolver-change
+ *    precisely because that judgement is easy to get wrong, so this bumps.
+ * 5: adds the 10 ms `OnsetDetector` envelope. The 20 ms trajectory-grid energy
+ *    already stored is the wrong instrument for re-attack work: at identical
+ *    thresholds the detector finds re-onset recall 0.218 on it against 0.329 on its
+ *    own 10 ms grid, because a re-articulation dip lasts 30–50 ms. A sweep over the
+ *    coarse envelope measures the frame rate, not the rule.
  */
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 5;
 const DETECT_SR = 16000;
 
 interface CacheMeta {
@@ -53,6 +64,9 @@ interface CacheMeta {
   onsetTimesSec: number[];
   /** Per-frame RMS of the decoded audio, aligned to the track's frame grid. */
   hasEnergy: boolean;
+  /** Frames in `fineEnergy`, and its hop — `OnsetDetector`'s own 10 ms grid. */
+  fineFrames: number;
+  fineHopSec: number;
 }
 
 /** One clip, with the expensive part already computed. */
@@ -63,10 +77,23 @@ export interface CachedClip {
   profile: PipelineProfile;
   providerName: string;
   track: PitchTrack;
+  /**
+   * Where the clip's audio lives, and where a derived spectral-flux sidecar
+   * may be cached (`lib/spectralFlux.ts`). Derived at load time — neither is
+   * part of the persisted blob, so adding them costs no CACHE_VERSION bump.
+   */
+  wavPath: string;
+  fluxPath: string;
   /** Amplitude re-attack times (seconds) from `OnsetDetector`. */
   onsetTimesSec: number[];
   /** Per-frame RMS energy on the track's frame grid — for onset/boundary work. */
   energy: Float32Array;
+  /**
+   * `OnsetDetector`'s own envelope, at its 10 ms hop — the ONLY grid on which a
+   * re-attack threshold sweep means anything (see CACHE_VERSION 5).
+   */
+  fineEnergy: Float32Array;
+  fineHopSec: number;
   durationSec: number;
 }
 
@@ -126,6 +153,9 @@ export class TrackCache {
     });
     const profile = this.resolver.resolve(det.samples, DETECT_SR, {
       instrumentId: ds.instrumentId,
+      // Explicit so the audio source classifier never votes during a cache
+      // build — a cached profile must be a pure function of the dataset.
+      sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
     });
     const provider = this.registry.get(profile.providerName);
     if (!(provider instanceof CrepeProvider)) return null;
@@ -138,11 +168,26 @@ export class TrackCache {
     const track = await provider.track(decoded.samples);
     if (!track) return null;
 
-    const onsetTimesSec = this.onsetDetector.detect(
+    // Computed once and kept, rather than re-derived from `detect`: the harness
+    // needs the envelope itself to sweep thresholds over, and it must be the same
+    // array the shipping detector saw.
+    const fineEnergy = this.onsetDetector.envelope(
       decoded.samples,
       provider.sampleRate,
     );
-    const energy = this.frameEnergy(
+    const fineHop = Math.max(
+      1,
+      Math.round(this.onsetDetector.hopSec * provider.sampleRate),
+    );
+    const onsetTimesSec = this.onsetDetector.detectFromEnvelope(
+      fineEnergy,
+      fineHop,
+      provider.sampleRate,
+    );
+    // Shared with the production decode (see `frameEnergy`): the voice decoder's
+    // dip and accent channels read this exact envelope at runtime, so a private
+    // copy here would tune the sweep against something the pipeline never sees.
+    const energy = frameEnergy(
       decoded.samples,
       provider.sampleRate,
       track.hopSec,
@@ -160,13 +205,16 @@ export class TrackCache {
       profile,
       onsetTimesSec,
       hasEnergy: true,
+      fineFrames: fineEnergy.length,
+      fineHopSec: this.onsetDetector.hopSec,
     };
     writeFileSync(metaPath, JSON.stringify(meta));
-    // cents | confidence | energy, each `frames` float32s, in that order.
-    const blob = new Float32Array(track.frames * 3);
+    // cents | confidence | energy (each `frames`), then fineEnergy.
+    const blob = new Float32Array(track.frames * 3 + fineEnergy.length);
     blob.set(track.cents.subarray(0, track.frames), 0);
     blob.set(track.confidence.subarray(0, track.frames), track.frames);
     blob.set(energy, track.frames * 2);
+    blob.set(fineEnergy, track.frames * 3);
     writeFileSync(binPath, Buffer.from(blob.buffer, 0, blob.byteLength));
 
     return {
@@ -176,8 +224,12 @@ export class TrackCache {
       profile,
       providerName: provider.name,
       track,
+      wavPath: join(ds.dir, `${clip}__real.wav`),
+      fluxPath: join(dir, `${clip}.flux.bin`),
       onsetTimesSec,
       energy,
+      fineEnergy,
+      fineHopSec: this.onsetDetector.hopSec,
       durationSec: decoded.duration,
     };
   }
@@ -204,7 +256,8 @@ export class TrackCache {
       raw.byteLength / 4,
     );
     const n = meta.frames;
-    if (floats.length < n * 3) return null;
+    const fine = meta.fineFrames ?? 0;
+    if (floats.length < n * 3 + fine) return null;
     return {
       dataset: ds.id,
       clip,
@@ -217,35 +270,14 @@ export class TrackCache {
         n,
         meta.hopSec,
       ),
+      wavPath: join(ds.dir, `${clip}__real.wav`),
+      fluxPath: binPath.replace(/\.bin$/, '.flux.bin'),
       onsetTimesSec: meta.onsetTimesSec,
       energy: floats.slice(n * 2, n * 3),
+      fineEnergy: floats.slice(n * 3, n * 3 + fine),
+      fineHopSec: meta.fineHopSec,
       durationSec: meta.durationSec,
     };
   }
 
-  /**
-   * RMS per track frame, computed over a window centred on the frame start so it
-   * lines up with the pitch trajectory. Used by boundary logic that wants to know
-   * whether a pitch change is accompanied by an amplitude dip (a real
-   * re-articulation) or not (vibrato / portamento).
-   */
-  private frameEnergy(
-    samples: Float32Array,
-    sampleRate: number,
-    hopSec: number,
-    frames: number,
-  ): Float32Array {
-    const hop = Math.max(1, Math.round(hopSec * sampleRate));
-    const half = hop;
-    const out = new Float32Array(frames);
-    for (let f = 0; f < frames; f += 1) {
-      const centre = f * hop;
-      const lo = Math.max(0, centre - half);
-      const hi = Math.min(samples.length, centre + half);
-      let sum = 0;
-      for (let i = lo; i < hi; i += 1) sum += samples[i] * samples[i];
-      out[f] = hi > lo ? Math.sqrt(sum / (hi - lo)) : 0;
-    }
-    return out;
-  }
 }

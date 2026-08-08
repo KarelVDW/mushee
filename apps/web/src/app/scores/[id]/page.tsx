@@ -165,6 +165,7 @@ export default function ScoreEditorPage() {
     const {
         waveformStore,
         recordingState,
+        detectedSource,
         recordingHalt,
         setRecordingHalt,
         handleRecordToggle,
@@ -268,6 +269,34 @@ export default function ScoreEditorPage() {
                         <span className="truncate">{score.instrument.displayName}</span>
                         <Icon name="sliders-horizontal" size={11} />
                     </button>
+                    {/* No mic-source CONTROL: the server classifies voice vs
+                        instrument from the audio itself (see the API's
+                        SourceClassifier), falling back to the score's instrument
+                        family when it abstains. What it decided IS shown — the
+                        user is the only observer who can tell us it got a take
+                        wrong, and a mis-routed transcription is otherwise a
+                        silent quality bug. */}
+                    {detectedSource && (
+                        <span
+                            role="status"
+                            aria-label={`Mic heard: ${detectedSource.source}`}
+                            title={
+                                detectedSource.decidedBy === 'classifier'
+                                    ? `Heard ${detectedSource.source === 'voice' ? 'a voice' : 'an instrument'} in the recording`
+                                    : `Assumed ${detectedSource.source === 'voice' ? 'a voice' : 'an instrument'} from the score's instrument`
+                            }
+                            className={[
+                                'shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1.5',
+                                'font-label font-semibold text-[11px] leading-none whitespace-nowrap',
+                                'bg-surface-container-high/70 text-on-surface-variant',
+                            ].join(' ')}>
+                            <Icon name={detectedSource.source === 'voice' ? 'mic' : 'music'} size={11} />
+                            <span className="max-md:hidden">
+                                {detectedSource.source === 'voice' ? 'Voice' : 'Instrument'}
+                                {detectedSource.decidedBy !== 'classifier' && '?'}
+                            </span>
+                        </span>
+                    )}
                 </div>
                 {!isMobile && (
                     <TransportControls

@@ -54,7 +54,20 @@ import {
   scoreNotesBest,
   timingStats,
 } from './lib/metrics';
+import {
+  addOnsetClassStats,
+  emptyOnsetClassStats,
+  formatOnsetClasses,
+  type OnsetClassStats,
+  onsetRecallByClass,
+} from './lib/onsetClasses';
 import { discoverRealDatasets } from './lib/realCorpus';
+import {
+  formatSegErrors,
+  repairSecondsPer100,
+  type SegErrorCounts,
+  segErrors,
+} from './lib/segErrors';
 import { CONDITIONS,SCENARIOS } from './scenarios';
 import type { Condition, GroundTruth, Scenario } from './types';
 
@@ -123,6 +136,39 @@ interface ClipResult {
   melody: string;
   condition: string;
   metrics: Metrics;
+  /**
+   * Molina split/merged/missed/spurious for this clip, and the onset taxonomy.
+   *
+   * Reported in the HEADLINE run, not only in `sweep-segmenter.ts`, because these
+   * are the numbers the whole segmentation effort targets and F1 hides them: "12
+   * notes for 8" and "6 notes for 8" can share an F1 and be very different
+   * products (a missing note costs ~145 s of expert repair, a spurious one ~3.5 s).
+   */
+  seg: SegErrorCounts;
+  onsets: OnsetClassStats;
+}
+
+function emptySegErrors(): SegErrorCounts {
+  return {
+    clean: 0, split: 0, merged: 0, missed: 0, spurious: 0,
+    tangled: 0, pitchWrong: 0, refTotal: 0, estTotal: 0,
+  };
+}
+
+function sumSegErrors(rs: ClipResult[]): SegErrorCounts {
+  const total = emptySegErrors();
+  for (const r of rs) {
+    for (const k of Object.keys(total) as Array<keyof SegErrorCounts>) {
+      total[k] += r.seg[k];
+    }
+  }
+  return total;
+}
+
+function sumOnsetClasses(rs: ClipResult[]): OnsetClassStats {
+  const total = emptyOnsetClassStats();
+  for (const r of rs) addOnsetClassStats(total, r.onsets);
+  return total;
 }
 
 function mean(xs: number[]): number {
@@ -179,6 +225,13 @@ async function main(): Promise<void> {
       });
       const profile = resolver.resolve(det.samples, DETECT_SR, {
         instrumentId: noHint ? undefined : scenario.instrumentId,
+        // The corpus knows what each dataset is; in the app this is either the
+        // client's declaration or (since the source classifier) the audio
+        // itself. ALWAYS explicit here — including for instruments — so eval
+        // numbers measure the pipeline, not the classifier's day. Suppressed
+        // under EVAL_NO_HINT, which is also how to exercise the classifier
+        // end-to-end over the corpus.
+        sourceKind: noHint ? undefined : scenario.kind === 'voice' ? 'voice' : 'instrument',
       });
       const provider = registry.get(profile.providerName);
       const decoded = await decoder.decode(buf, provider.sampleRate, {
@@ -186,19 +239,19 @@ async function main(): Promise<void> {
         highpassHz: profile.highpassHz,
         denoise: profile.denoise,
       });
-      const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
-        decoded.samples,
-        { bpm },
-        undefined,
-        {
-          minFreqHz: profile.minFreqHz,
-          maxFreqHz: profile.maxFreqHz,
-          confidenceThreshold: profile.confidenceThreshold,
-          onsetThreshold: profile.onsetThreshold,
-          frameThreshold: profile.frameThreshold,
-          minFramesPerNote: profile.minFramesPerNote,
-        },
-      );
+      const extracted = await new AudioConverter(provider, {
+        enableOnsetSplit: onsetSplit,
+        profile,
+      }).convert(decoded.samples, { bpm }, undefined, {
+        minFreqHz: profile.minFreqHz,
+        maxFreqHz: profile.maxFreqHz,
+        confidenceThreshold: profile.confidenceThreshold,
+        onsetThreshold: profile.onsetThreshold,
+        frameThreshold: profile.frameThreshold,
+        minFramesPerNote: profile.minFramesPerNote,
+        segmentMode: profile.segmentMode,
+        smoothFrames: profile.smoothFrames,
+      });
       return extracted.deduced.map((n) => ({
         onsetSec: n.startTimeSeconds,
         durSec: n.durationSeconds,
@@ -214,12 +267,9 @@ async function main(): Promise<void> {
         highpassHz,
         denoise: fixedDenoise,
       });
-      const extracted = await new AudioConverter(provider, undefined, onsetSplit).convert(
-        decoded.samples,
-        { bpm },
-        undefined,
-        pitchOptions,
-      );
+      const extracted = await new AudioConverter(provider, {
+        enableOnsetSplit: onsetSplit,
+      }).convert(decoded.samples, { bpm }, undefined, pitchOptions);
       return extracted.deduced.map((n) => ({
         onsetSec: n.startTimeSeconds,
         durSec: n.durationSeconds,
@@ -285,6 +335,8 @@ async function main(): Promise<void> {
           melody,
           condition: condition.id,
           metrics: scoreNotesBest(truth, est, matchOpts),
+          seg: segErrors(truth.notes, est),
+          onsets: onsetRecallByClass(truth.notes, est, matchOpts.onsetTolSec),
         });
       }
     }
@@ -319,6 +371,9 @@ async function main(): Promise<void> {
         rs.flatMap((r) => r.metrics.timing.onsetDeltasMs),
         rs.flatMap((r) => r.metrics.timing.offsetDeltasMs),
       ),
+      seg: sumSegErrors(rs),
+      repairSecondsPer100: repairSecondsPer100(sumSegErrors(rs)),
+      onsets: sumOnsetClasses(rs),
     };
   });
 
@@ -368,11 +423,15 @@ async function main(): Promise<void> {
     overallTiming,
     perScenario,
     perCondition,
+    segErrors: sumSegErrors(pooledResults),
+    repairSecondsPer100: repairSecondsPer100(sumSegErrors(pooledResults)),
+    onsetClasses: sumOnsetClasses(pooledResults),
     clips: results.map((r) => ({
       scenario: r.scenario,
       melody: r.melody,
       condition: r.condition,
       ...r.metrics,
+      seg: r.seg,
     })),
   };
   writeFileSync(outPath, JSON.stringify(report, null, 2));
@@ -448,7 +507,30 @@ async function main(): Promise<void> {
       `offsetBias=${overallTiming.offsetBiasMs.toFixed(1)}ms ` +
       `(n=${overallTiming.matched})`,
   );
-  console.log(`Report written to ${outPath}`);
+  // Segmentation breakdown: HOW each dataset is wrong. Read `missed` first — a
+  // missing note costs ~145 s of expert time to restore against ~3.5 s to delete a
+  // spurious one, so two datasets with equal F1 are not equally good products.
+  console.log('\n--- segmentation errors, per 100 reference notes ---');
+  for (const s of perScenario) {
+    if (!s.clips) continue;
+    console.log(`${s.scenario.padEnd(20)} ${formatSegErrors(s.seg)}`);
+  }
+  const pooledSeg = sumSegErrors(pooledResults);
+  console.log(`${'POOLED'.padEnd(20)} ${formatSegErrors(pooledSeg)}`);
+
+  // Onset taxonomy (Yong et al.): a re-onset is a same-pitch re-articulation ≤20 ms
+  // after the previous note ends. A pitch-trajectory decode cannot see one at all,
+  // so this column is the only place a boundary-channel change proves itself.
+  console.log(
+    '\n--- onset recall by class (re-onset = same pitch, ≤20 ms gap) ---',
+  );
+  for (const s of perScenario) {
+    if (!s.clips) continue;
+    console.log(`${s.scenario.padEnd(20)} ${formatOnsetClasses(s.onsets)}`);
+  }
+  console.log(`${'POOLED'.padEnd(20)} ${formatOnsetClasses(sumOnsetClasses(pooledResults))}`);
+
+  console.log(`\nReport written to ${outPath}`);
 }
 
 main().catch((err) => {

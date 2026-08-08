@@ -139,6 +139,17 @@ export interface RecordingOptions {
      * socket while the UI still looks live.
      */
     onConnectionLost?: () => void
+    /**
+     * The server's verdict on what is at the microphone (voice vs instrument)
+     * and on what evidence — 'classifier' (the audio decided), 'explicit'
+     * (this client declared, which it currently never does) or 'prior' (the
+     * score's instrument family; also the classifier-abstain fallback).
+     * Arrives once per take, ~1.2 s in, when the server locks its profile.
+     */
+    onSourceResolved?: (resolution: {
+        source: 'voice' | 'instrument'
+        decidedBy: 'explicit' | 'classifier' | 'prior'
+    }) => void
 }
 
 /**
@@ -534,6 +545,8 @@ export class RecordingEngine implements Tickable {
                 planName?: string
                 limitSeconds?: number | null
                 usedSeconds?: number
+                source?: 'voice' | 'instrument'
+                decidedBy?: 'explicit' | 'classifier' | 'prior'
             }
             if (payload.type === 'score-update' && payload.measures) {
                 // Via the captured opts, not this.options: stop() nulls the
@@ -554,6 +567,11 @@ export class RecordingEngine implements Tickable {
                 })
             } else if (payload.type === 'recording-error' && payload.code) {
                 this.options?.onRecordingError?.(payload.code)
+            } else if (payload.type === 'recording-source' && payload.source) {
+                this.options?.onSourceResolved?.({
+                    source: payload.source,
+                    decidedBy: payload.decidedBy ?? 'prior',
+                })
             }
         })
 
@@ -577,7 +595,13 @@ export class RecordingEngine implements Tickable {
                 // The server subtracts this from each detected MIDI to land in written-pitch space.
                 chromaticTranspose: this.options.score.instrument.chromaticTranspose,
                 // Hint for the server's adaptive pitch profile (frequency window etc.).
-                // Auto-detection from the audio remains authoritative.
+                // Auto-detection from the audio remains authoritative — including
+                // for voice vs instrument, which the server now classifies from
+                // the audio itself (stock YAMNet, no fitted head) and only falls
+                // back to this instrument's family when the classifier abstains.
+                // Deliberately NO sourceKind here: sending one would override the
+                // classifier with a guess that is wrong exactly in the case that
+                // matters (singing a line into an instrument staff).
                 instrumentId: this.options.score.instrument.id,
                 // `null` = the browser's default container; the server probes it.
                 mimeType: this.mimeType,

@@ -36,8 +36,15 @@ export interface PitchTranscribeOptions {
   frameThreshold?: number;
   minFramesPerNote?: number;
   pitchBinToleranceCents?: number;
-  /** Trajectory-provider note segmentation strategy ('median' | 'semitone'). */
-  segmentMode?: 'median' | 'semitone';
+  /**
+   * Trajectory-provider note segmentation strategy.
+   *
+   * `'voice'` runs `VoiceNoteDecoder` instead of the semitone-run segmenter — a
+   * note-level HMM with a silence state, which needs the frame envelope as well as
+   * the pitch trajectory and is therefore the provider's job to drive (it is the
+   * only thing holding both).
+   */
+  segmentMode?: 'median' | 'semitone' | 'voice';
   /** Semitone-mode median smoother half-window, in frames. */
   smoothFrames?: number;
   /** Semitone-mode per-clip tuning-offset correction; default on. */

@@ -32,8 +32,8 @@
 import { resolve } from 'path';
 
 import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor';
-import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import { cleanupAsProduction, performanceAsProduction } from './lib/decodeCached';
 import { type BeatNote, NotationScorer, toBeats, truthToBeats } from './lib/notation';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import { inSplit, splitFromEnv } from './lib/split';
@@ -76,7 +76,6 @@ async function main(): Promise<void> {
   const registry = new ProviderRegistry(MODELS);
   await registry.initAll();
   const cache = new TrackCache(registry, CACHE_ROOT);
-  const extractor = new NoteExtractor();
   const scorer = new NotationScorer();
   // Phase-LOCKED scorer: no global offset search. GuitarSet was played to a click,
   // so beat 1 is at a known instant and a displaced take is genuinely wrong — and
@@ -112,12 +111,15 @@ async function main(): Promise<void> {
     'lag=100ms',
     'lag=200ms',
   ] as const;
-  const extractorFor = (strat: string): NoteExtractor =>
-    strat === 'grid=8th'
-      ? new NoteExtractor({ maxGridDivisor: 2 })
-      : strat === 'grid=quarter'
-        ? new NoteExtractor({ maxGridDivisor: 1 })
-        : extractor;
+  // The quantiser for a strategy, built on the CLIP's own cleanup policy — a voice
+  // take and an instrument take no longer share a post-processor, and scoring both
+  // through one would measure a configuration nothing runs.
+  const extractorFor = (strat: string, c: CachedClip): NoteExtractor => {
+    const base = cleanupAsProduction(c);
+    if (strat === 'grid=8th') return new NoteExtractor({ ...base, maxGridDivisor: 2 });
+    if (strat === 'grid=quarter') return new NoteExtractor({ ...base, maxGridDivisor: 1 });
+    return new NoteExtractor(base);
+  };
 
   for (const ds of datasets) {
     const clips: CachedClip[] = [];
@@ -141,18 +143,7 @@ async function main(): Promise<void> {
     for (const s of STRATEGIES) acc[s] = newAcc();
 
     for (const c of clips) {
-      const raw = segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
-        hopSize: 1,
-        sampleRate: 1 / c.track.hopSec,
-        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
-        minFreqHz: c.profile.minFreqHz,
-        maxFreqHz: c.profile.maxFreqHz,
-        minFramesPerNote: c.profile.minFramesPerNote ?? 4,
-        pitchBinToleranceCents: 50,
-        mode: 'semitone',
-        smoothFrames: 4,
-      });
-      const cleaned = extractor.clean(raw, { bpm: 120, onsetTimesSec: c.onsetTimesSec });
+      const cleaned = performanceAsProduction(c);
 
       const refBeats: BeatNote[] = truthToBeats(c.truth.notes, c.truth.bpm);
 
@@ -173,7 +164,7 @@ async function main(): Promise<void> {
           ...n,
           startTimeSeconds: n.startTimeSeconds - phase - lagSec,
         }));
-        const notated = extractorFor(strat).quantize(shifted, bpm).map((n) => ({
+        const notated = extractorFor(strat, c).quantize(shifted, bpm).map((n) => ({
           onsetSec: n.startTimeSeconds + phase,
           durSec: n.durationSeconds,
           midi: n.pitchMidi,

@@ -181,6 +181,9 @@ export class VariantTrackCache {
     };
     const profile = this.resolver.resolve(det.samples, DETECT_SR, {
       instrumentId: ds.instrumentId,
+      // Explicit so the audio source classifier never votes during a cache
+      // build — a cached profile must be a pure function of the dataset.
+      sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
     });
     const provider = this.registry.get(profile.providerName);
     if (!(provider instanceof CrepeProvider)) return null;
