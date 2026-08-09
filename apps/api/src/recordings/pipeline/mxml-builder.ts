@@ -6,6 +6,13 @@ import type {
   MxmlStep,
   MxmlTie,
 } from './mxml.types';
+import {
+  chooseNamingOffset,
+  estimateGridPhaseBeats,
+  estimateTuningOffsetCents,
+  keyPitchClasses,
+  spellMidi,
+} from './voice-notation';
 
 const DIVISIONS_PER_QUARTER = 12;
 
@@ -48,16 +55,37 @@ export interface BuilderOptions {
   beatType: number;
   /** Sounding − written, in semitones. The mic captures sounding pitch; we subtract this to land in written-pitch space. Default 0 (concert pitch). */
   chromaticTranspose?: number;
+  /**
+   * The score's key signature at the recording start (positive = sharps),
+   * from the client's meta frame. Only consulted for sung takes, and only for
+   * notes still ambiguous after tuning normalization — see voice-notation.ts.
+   */
+  keyFifths?: number | null;
 }
 
 export interface PendingNote {
   startTimeSeconds: number;
   durationSeconds: number;
   pitchMidi: number;
+  /** Unrounded pitch from the voice decoder; absent for instrument takes. */
+  pitchMidiFloat?: number;
 }
 
 export class MxmlBuilder {
+  /**
+   * Spell pitches on the take's own tuning grid (+ key-aware snapping) instead
+   * of the absolute keyboard. Enabled by the pipeline once the profile locks
+   * as voice; a mid-take estimate can differ from the final one, but the
+   * finalize pass rebuilds every measure, so the shipped score is spelled
+   * consistently from the whole take.
+   */
+  private voiceSpelling = false;
+
   constructor(private readonly options: BuilderOptions) {}
+
+  setVoiceSpelling(on: boolean): void {
+    this.voiceSpelling = on;
+  }
 
   measureIndexFor(timeSeconds: number): number {
     const beats = (timeSeconds * this.options.bpm) / 60;
@@ -87,19 +115,42 @@ export class MxmlBuilder {
     const measureStartBeat = index * this.options.beats;
     const measureEndBeat = measureStartBeat + this.options.beats;
 
+    // Sung takes are spelled on the take's own tuning grid: the offset must be
+    // estimated over ALL notes (one constant per take, never per note), which
+    // is why this happens here — the one place that always sees the whole
+    // performance so far — and not per emitted measure fragment.
+    const keyClasses =
+      this.voiceSpelling && this.options.keyFifths != null
+        ? keyPitchClasses(this.options.keyFifths)
+        : null;
+    const offsetCents = this.voiceSpelling
+      ? chooseNamingOffset(allNotes, estimateTuningOffsetCents(allNotes), keyClasses)
+      : 0;
+    // The rhythm twin of the tuning offset: a take dragged uniformly behind
+    // the click is written back on the beat. Vote-gated (see the estimator);
+    // clamped so the first note cannot shift before zero.
+    const phaseShift = this.voiceSpelling
+      ? Math.min(
+          estimateGridPhaseBeats(allNotes, this.options.bpm),
+          allNotes.length ? (allNotes[0].startTimeSeconds * this.options.bpm) / 60 : 0,
+        )
+      : 0;
+
     const segments: Array<{
       startBeat: number;
       endBeat: number;
       pitchMidi: number;
     }> = [];
     for (const n of allNotes) {
-      const startBeat = (n.startTimeSeconds * this.options.bpm) / 60;
+      const startBeat = (n.startTimeSeconds * this.options.bpm) / 60 - phaseShift;
       const endBeat = startBeat + (n.durationSeconds * this.options.bpm) / 60;
       if (endBeat <= measureStartBeat || startBeat >= measureEndBeat) continue;
       segments.push({
         startBeat: Math.max(startBeat, measureStartBeat),
         endBeat: Math.min(endBeat, measureEndBeat),
-        pitchMidi: n.pitchMidi,
+        pitchMidi: this.voiceSpelling
+          ? spellMidi(n, offsetCents, keyClasses)
+          : n.pitchMidi,
       });
     }
     segments.sort((a, b) => a.startBeat - b.startBeat);

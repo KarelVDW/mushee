@@ -165,6 +165,7 @@ export default function ScoreEditorPage() {
     const {
         waveformStore,
         recordingState,
+        detectedSource,
         recordingHalt,
         setRecordingHalt,
         handleRecordToggle,

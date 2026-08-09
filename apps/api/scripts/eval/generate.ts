@@ -17,7 +17,7 @@ import { join,resolve } from 'path';
 import { degrade } from './lib/degrade';
 import { melodyToTruth } from './lib/groundTruth';
 import { melodyToMidi } from './lib/midi';
-import { synthesize } from './lib/synth';
+import { synthesize, synthesizeArticulated } from './lib/synth';
 import { floatToWav } from './lib/wav';
 import { MELODIES } from './melodies';
 import { CONDITIONS, SCENARIOS } from './scenarios';
@@ -42,11 +42,20 @@ function renderClean(scenario: Scenario, melody: Melody, rawWav: string): void {
     );
   } else {
     const truth = melodyToTruth(melody, scenario.rootMidi);
-    const samples = synthesize(truth, {
-      sampleRate: SAMPLE_RATE,
-      kind: scenario.kind,
-      seed: scenario.rootMidi + melody.notes.length,
-    });
+    const seed = scenario.rootMidi + melody.notes.length + scenario.id.length;
+    const samples =
+      scenario.articulation !== undefined
+        ? synthesizeArticulated(truth, {
+            sampleRate: SAMPLE_RATE,
+            kind: 'voice',
+            articulation: scenario.articulation,
+            seed,
+          })
+        : synthesize(truth, {
+            sampleRate: SAMPLE_RATE,
+            kind: scenario.kind,
+            seed: scenario.rootMidi + melody.notes.length,
+          });
     writeFileSync(rawWav, floatToWav(samples, SAMPLE_RATE));
   }
 }

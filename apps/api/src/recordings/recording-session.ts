@@ -2,7 +2,11 @@ import { Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 
 import { Recording } from './entities/recording.entity';
-import type { RecordingPipeline, ScoreUpdate } from './pipeline/recording-pipeline';
+import type {
+  RecordingPipeline,
+  ScoreUpdate,
+  SourceResolution,
+} from './pipeline/recording-pipeline';
 import type { RecordingArchiver } from './recording-archiver';
 import type { RecordingCreditBalance } from './recording-credits.service';
 import { RecordingCreditsService } from './recording-credits.service';
@@ -14,6 +18,12 @@ export interface RecordingSessionEvents {
   onLimitReached(balance: RecordingCreditBalance): void;
   /** Fired once when a hard session cap (duration/bytes) stops the take. */
   onSessionCap?(reason: SessionCapReason): void;
+  /**
+   * Fired once when the adaptive profile locks: what the pipeline decided is at
+   * the microphone (voice vs instrument) and on what evidence. Shown to the
+   * user as live feedback so a mis-classified take is visible, not silent.
+   */
+  onSourceResolved?(resolution: SourceResolution): void;
 }
 
 export type SessionCapReason = 'max-duration' | 'max-bytes';
@@ -61,6 +71,9 @@ export class RecordingSession {
     private readonly createArchiver: (recordingId: string) => RecordingArchiver,
   ) {
     this.pipeline.setOnUpdate((update) => this.events.onUpdate(update));
+    this.pipeline.setOnSourceResolved((resolution) =>
+      this.events.onSourceResolved?.(resolution),
+    );
   }
 
   async open(): Promise<void> {

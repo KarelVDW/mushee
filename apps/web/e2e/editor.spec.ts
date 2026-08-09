@@ -31,6 +31,12 @@ test('renders the editor chrome and the engraved score', async ({ page }) => {
     expect(await scoreSvg.locator('path').count()).toBeGreaterThan(3)
 })
 
+test('no mic-source chip: the server classifies voice vs instrument itself', async ({ page }) => {
+    // The mic-source choice moved server-side (SourceClassifier on the audio
+    // prefix), so the header must NOT ask the user what they are recording.
+    await expect(page.getByRole('button', { name: /^Mic input:/ })).toHaveCount(0)
+})
+
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
     const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
         timeout: 8000,

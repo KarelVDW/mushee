@@ -32,6 +32,27 @@ export const SCENARIOS: Scenario[] = [
   { id: 'voice-soprano', label: 'Voice — soprano (high)', kind: 'voice', instrumentId: 'voice-lead', rootMidi: 74 },
 
   // --- Whistling (synthesized proxy) ---
+  // Articulation-stratified voice tier. One register (alto) × four articulations,
+  // sharing `voice-alto`'s root so all five carry BYTE-IDENTICAL ground truth and
+  // the only variable is the acoustics — articulation is the thing that decides
+  // voice accuracy (Li et al. 2021 measured a 19-point spread across it), so it is
+  // the thing worth isolating.
+  //
+  // These are also the only clips whose AUDIO realises a re-onset — continuous
+  // voicing across a repeated pitch. Note the distinction: every synthetic melody's
+  // *truth* has always contained re-onsets (7 per scenario, from the repeated notes
+  // in `tune`/`rhythm`), but `synthesize` detaches every note by `gapSec` = 40 ms,
+  // so the rendered audio silently disagrees with its own labels and those onsets
+  // arrive as trivially easy silence-onsets. That is why `voice-alto` scores
+  // re-onset recall 1.000 and means nothing by it. Left as-is rather than fixed:
+  // closing the gap would change the bytes of every clip in the standing corpus and
+  // invalidate the numbers in the findings log, and the articulated synthesizer
+  // (which honours the truth's timing) is the supported way to get real ones.
+  { id: 'voice-plosive', label: 'Voice — "ta-ta-ta" (plosive)', kind: 'voice', instrumentId: 'voice-lead', articulation: 'plosive', rootMidi: 57 },
+  { id: 'voice-continuant', label: 'Voice — "la-la-la" (continuant)', kind: 'voice', instrumentId: 'voice-lead', articulation: 'continuant', rootMidi: 57 },
+  { id: 'voice-hum', label: 'Voice — closed-mouth hum', kind: 'voice', instrumentId: 'voice-lead', articulation: 'hum', rootMidi: 57 },
+  { id: 'voice-legato', label: 'Voice — sustained legato vowel', kind: 'voice', instrumentId: 'voice-lead', articulation: 'vowel', rootMidi: 57 },
+
   { id: 'whistle-mid', label: 'Whistle (mid ~1 kHz)', kind: 'whistle', rootMidi: 84 },
   { id: 'whistle-high', label: 'Whistle (high ~1.5-3 kHz)', kind: 'whistle', rootMidi: 90 },
 ];

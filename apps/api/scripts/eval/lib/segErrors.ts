@@ -183,13 +183,19 @@ export function repairSecondsPer100(c: SegErrorCounts): number {
   return (100 * total) / c.refTotal;
 }
 
-/** `clean 62% split 14 merged 9 missed 21 spur 18 tangled 3` — per 100 reference notes. */
+/**
+ * `clean 62% split 14 merged 9 missed 21 spur 18 tangled 3 pWrong 11` — per 100
+ * reference notes. `pWrong` counts the cleanly-segmented notes carrying the wrong
+ * pitch: it is the share of the loss that better *boundaries* cannot fix, and
+ * without it a decode that segments perfectly but names notes wrong reads as a
+ * segmentation success.
+ */
 export function formatSegErrors(c: SegErrorCounts): string {
   const per100 = (n: number): string =>
     c.refTotal ? ((100 * n) / c.refTotal).toFixed(0) : '0';
   return (
     `clean=${per100(c.clean)}% split=${per100(c.split)} merged=${per100(c.merged)} ` +
     `missed=${per100(c.missed)} spur=${per100(c.spurious)} tangle=${per100(c.tangled)} ` +
-    `| repair=${repairSecondsPer100(c).toFixed(0)}s/100notes`
+    `pWrong=${per100(c.pitchWrong)} | repair=${repairSecondsPer100(c).toFixed(0)}s/100notes`
   );
 }

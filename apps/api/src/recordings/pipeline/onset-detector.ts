@@ -52,17 +52,29 @@ export interface OnsetDetectorOptions {
    * reproducible.
    */
   minTroughSec?: number;
+  /**
+   * Envelope frame hop, in seconds (default 0.01).
+   *
+   * Configurable because `detectFromEnvelope` is meant to be driven over a
+   * *pre-computed* envelope — that is the whole reason it is split out — and the
+   * eval harness's `TrackCache` stores energy on the pitch trajectory's 20 ms grid,
+   * not this detector's 10 ms one. Without this, every duration threshold
+   * (`minIoiSec`, `minTroughSec`) silently doubles when the harness drives it, and
+   * a sweep of those thresholds measures the wrong thing.
+   */
+  hopSec?: number;
 }
 
 export class OnsetDetector {
-  /** Frame hop for the envelope, in seconds (~10 ms). */
-  readonly hopSec = 0.01;
+  /** Frame hop for the envelope, in seconds (~10 ms by default). */
+  readonly hopSec: number;
   private readonly minIoiSec: number;
   private readonly dipRatio: number;
   private readonly riseRatio: number;
   private readonly minTroughSec: number;
 
   constructor(opts: OnsetDetectorOptions = {}) {
+    this.hopSec = opts.hopSec ?? 0.01;
     this.minIoiSec = opts.minIoiSec ?? 0.09;
     this.dipRatio = opts.dipRatio ?? 0.5;
     this.riseRatio = opts.riseRatio ?? 1.8;
