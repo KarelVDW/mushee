@@ -70,7 +70,7 @@ Licenses marked [verified] were read from the Zenodo REST API (`/api/records/<id
 | **iKala** | 252 clips | vocal f0 + lyrics | withdrawn | ❌ **NO** | ❌ **GONE** — `mirdata` marks both audio and annotations unavailable [verified] | historical only |
 | **GuitarSet** | 360 excerpts, 6 players, hex-pickup | note-level (onset/offset/pitch) + f0 + beats/chords/key | **CC-BY-4.0** [verified] | ✅ **YES** | ✅ [Zenodo 3371780](https://zenodo.org/records/3371780) | polyphonic-guitar AMT numbers exist; not our task shape |
 | **TinySOL** | 2,913 isolated notes, 14 instruments | note pitch + instrument + technique (one note per file) | **CC-BY-4.0** [verified] | ✅ **YES** | ✅ [Zenodo 3685367](https://zenodo.org/records/3685367) | ❌ none (not a transcription benchmark) |
-| **Dagstuhl ChoirSet** | 108 tracks | f0 + **notes** + beats; multitrack choir, incl. individual singer stems | **CC-BY-4.0** [verified: [Zenodo 4618287](https://zenodo.org/records/4618287)] | ✅ **YES** | ✅ Zenodo | ❌ none |
+| **Dagstuhl ChoirSet** | 108 tracks | ⚠️ **NOT note-annotated** — see below. f0 (CREPE/pYIN-derived) + *score representation* + beats; amateur multitrack choir, individual singer stems | **CC-BY-4.0** [verified: [Zenodo 4618287](https://zenodo.org/records/4618287)] | ✅ licence yes, ⛔ **unusable as note truth** | ✅ Zenodo | ❌ none |
 | **Slakh2100** | 2,100 synthesized multitracks (1,710 in `mirdata`) | note-level (from source MIDI) + instrument | **CC-BY-4.0** [verified: [Zenodo 4599666](https://zenodo.org/records/4599666)] | ✅ **YES** | ✅ | multi-instrument AMT numbers; synthetic |
 | **MAESTRO v3** | **1,276 performances, 198.7 h** | note-level, Disklavier-captured (near-perfect alignment); MIDI keeps velocities + pedals | **CC-BY-NC-SA-4.0** [verified: [Magenta](https://magenta.withgoogle.com/datasets/maestro)] | ❌ **NO** (NC) | ✅ | piano AMT SOTA is very high (>95 note F1) but irrelevant to voice |
 | **MedleyDB / -pitch / -melody** | 93 / 103 / 108 | f0 only (no notes) | **CC-BY-NC-SA-4.0** [secondary]; Zenodo 'MedleyDB 2.0 Audio' record shows **license `null`** (restricted) [verified] | ❌ **NO** | 🔑 request required | melody-extraction numbers |
@@ -845,9 +845,48 @@ Two of those are under-modelled everywhere and are likely top failure modes for 
 - **Beware third-party Zenodo re-uploads.** Searching Zenodo for "MAESTRO" surfaces several
   derivative records labelled CC-BY-4.0, while the authoritative Magenta page says CC-BY-NC-SA-4.0.
   A re-uploader cannot broaden a license. Always resolve to the originating project's own page.
-- **ISMIR2014/Molina dataset**: confirmed dead at its published URL. Not checked: whether any
-  author or third-party mirror exists (worth an email to the Málaga ATIC group — 38
-  cross-annotated untrained-singer melodies is exactly our distribution).
+- **ISMIR2014/Molina dataset — ⛔ CLOSED, 2026-08-08: it is NON-COMMERCIAL, and that was never
+  the question anyone asked.** Every previous note in these docs framed this as an *availability*
+  problem ("dead URL", "mirror unconfirmed", "worth an email"). It is a *licence* problem, and the
+  primary source says so plainly. The real published URL is
+  `http://www.atic.uma.es/ismir2014singing` (not `…singingdataset` — earlier notes had the path
+  wrong), and its `readme.txt`, recovered from the Wayback Machine, states:
+
+  > "All the .WAV files provided, transcriptions and all the annotations are offered free of
+  > charge for **non-commercial use only**. You can not redistribute it nor modify them.
+  > Distribution rights granted to ATIC Research Group, Universidad de Malaga."
+
+  That is the same restriction as HumTrans, M4Singer, CSD and GTSinger, so §7's "don't touch NC
+  data" rule bars it outright. **Stop chasing it.** Note the split: the *toolbox* (CommandLineTool
+  + GUI) is GPL-3.0 and could be reused, but we already implement Molina's taxonomy independently
+  in `scripts/eval/lib/segErrors.ts`; only the data is barred, and the data is the part we wanted.
+
+  For the record, the availability question is also settled and the answer is "gone": the live path
+  soft-404s (143 KB of UMA homepage, identical SHA to `/`), and the Wayback Machine holds the page,
+  `readme.txt`, `MTGQBH_renaming.m`, the paper and the poster — but **never** the
+  `EvaluationFramework_ISMIR2014.rar` that contained the annotations and the 14 children's clips.
+  Crawlers skipped the binary. archive.today has nothing.
+
+  One structural detail worth keeping, since it explains why partial recovery would not have helped
+  either: only 14 of the 38 clips (the children) were ATIC recordings shipped in the `.rar`. The
+  other 24 are **MTG-QBH** clips (`MTGQBH_renaming.m` maps `q1→afemale1`, `q21→amale1`, …), and
+  MTG-QBH is a query-by-humming *retrieval* corpus — song-identity metadata, no note-level truth,
+  the same category as the `mir-qbsh` we already hold and flag `noteTruthDerived`. The value was
+  always in ATIC's annotations, and those are the NC part.
+- **Dagstuhl ChoirSet is NOT a note corpus — verified against the artifact, 2026-08-08.** The row
+  in §1.1 said "f0 + notes + beats"; range-reading the release zip's central directory
+  (`DagstuhlChoirSet_V1.2.3.zip`, 5.1 GB) shows what it actually ships:
+  `annotations_csv_F0_CREPE` (1,186 files), `annotations_csv_F0_PYIN` (1,186),
+  `annotations_csv_F0_manual` (**9**), `annotations_csv_beat` (21),
+  `annotations_csv_scorerepresentation` (81), `audio_wav_22050_mono` (1,658).
+  There is **no performed-note annotation anywhere in it**: the "notes" are a *score*
+  representation — the written music, not what was sung — and the f0 is our own estimator's output
+  for all but nine files. Deriving note truth from either would reproduce the mir-qbsh mistake
+  (scoring a segmenter against a sibling of itself) with the extra sin of using CREPE to judge
+  CREPE. Genuinely a shame: it is amateur singers on close-up per-singer mics, which is closer to
+  our users than Annotated-VocalSet's professionals. Its **beat** annotations remain interesting on
+  their own — no voice corpus we hold has real tempo, which is why `notation-eval.ts` can score the
+  notation stage in beats only on GuitarSet.
 - **TONAS / cante100 / Filosax**: request-gated, terms unknown; MTG's download host 403s.
 - **Realistic-user-corpus practice** (crowdsourcing mechanics, GDPR posture, nightly-eval
   engineering): that stream had not reported at the time of writing. I verified the Smule DAMP

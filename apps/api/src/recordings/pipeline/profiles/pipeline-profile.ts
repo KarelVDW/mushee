@@ -32,6 +32,41 @@ export interface PipelineProfile {
   denoise?: boolean;
   /** Minimum voiced run length (frames) a note needs — raised under noise. */
   minFramesPerNote?: number;
+  /**
+   * Which note segmentation the trajectory providers run.
+   *
+   * Until 2026-08 this was not on the profile at all — the pipeline could adapt
+   * *where* it listened (register, gates, denoise) but not *how* it decided where
+   * notes begin, so every source got the same segmenter. That is the plumbing gap
+   * the voice flow needed closed: `'voice'` selects `VoiceNoteDecoder`, which is
+   * a large win on singing and a large loss on instruments, so it has to be a
+   * per-source choice rather than a global one.
+   */
+  segmentMode?: 'median' | 'semitone' | 'voice';
+  /** Semitone-mode median smoother half-window, in frames. */
+  smoothFrames?: number;
+  /**
+   * True when the resolver believes this recording is a human voice. Distinct
+   * from `segmentMode === 'voice'` because it also selects the voice cleanup set
+   * downstream (`AudioConverter.cleanupFor`) and is what gets archived as the
+   * routing decision.
+   */
+  isVoice?: boolean;
+  /**
+   * What the resolver believes is at the microphone — distinct from `isVoice`,
+   * which is the ROUTING outcome: on the no-reliable-pitch fallback the profile
+   * runs basic-pitch, where the voice overlay deliberately never applies, so a
+   * voice take can be believed 'voice' while `isVoice` stays unset. The belief
+   * is what the client shows the user and what gets archived for debugging.
+   */
+  sourceBelief?: 'voice' | 'instrument';
+  /**
+   * Which evidence produced `sourceBelief`, in priority order: an explicit
+   * caller declaration, the audio source classifier's verdict, or the
+   * score-instrument prior (also the fallback when the classifier abstains).
+   * A mis-routed recording is only debuggable if this is recorded.
+   */
+  sourceDecidedBy?: 'explicit' | 'classifier' | 'prior';
 }
 
 /** Absolute clamps for any resolved window. ~A0 to a hair above C8. */
@@ -96,6 +131,26 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     frameThreshold: 0.3,
   },
 ];
+
+/**
+ * The **voice band family**: same register routing as the instrument bands, but
+ * carrying the voice decode and its own gate.
+ *
+ * Kept as an overlay applied by `ProfileResolver.applyVoice` rather than as extra
+ * rows in `PROFILE_BANDS`, because register and source are independent — a bass
+ * voice and a tuba share a register and want different segmentation, and
+ * duplicating every band per source would double the table for one flag.
+ *
+ * Measured on the voice slice of the real corpus (annotated-vocalset, N20EMv2,
+ * vocadito) with `scripts/eval/sweep-voice.ts`, paired bootstrap over clips:
+ * COnP@±100 ms **0.570 → 0.668 on held-out test** (+0.123 [+0.102, +0.144]),
+ * dev +0.145. The instrument corpora are untouched because nothing routes them
+ * here — and if they were, it would cost them ~0.03.
+ */
+export const VOICE_OVERLAY = {
+  segmentMode: 'voice',
+  isVoice: true,
+} as const satisfies Partial<PipelineProfile>;
 
 /** Safe profile used before detection completes / when audio is too short. */
 export const DEFAULT_PROFILE: PipelineProfile = {

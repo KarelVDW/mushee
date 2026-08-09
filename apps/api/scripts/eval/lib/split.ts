@@ -37,6 +37,9 @@ export type Split = 'dev' | 'test' | 'all';
  *   n20emv2*            `sub03_1-27-a-17`          → subject `sub03`
  *   vocadito            `vocadito_1`               → one clip each; no grouping
  *   mir-qbsh            `year2003_person00010_...` → person  `person00010`
+ *   csd                 `alto1_ER_w0`              → singer  `alto1`
+ *   esmuc-choir         `A1_DG_take1`              → singer  `A1`
+ *   hust-solfege        `hust_1011`                → one recording per subject; no grouping
  *
  * For n20emv2 we group by **subject**, not by song, even though that corpus's own
  * published split is by song. The two answer different questions: theirs keeps a
@@ -52,6 +55,8 @@ function groupKeyFor(dataset: string, clip: string): string {
   if (
     dataset === 'annotated-vocalset' ||
     dataset === 'guitarset-solo' ||
+    dataset === 'csd' ||
+    dataset === 'esmuc-choir' ||
     dataset.startsWith('urmp-') ||
     dataset.startsWith('n20emv2')
   ) {

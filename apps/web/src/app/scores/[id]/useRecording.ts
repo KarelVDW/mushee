@@ -158,6 +158,7 @@ export function useRecording({
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
+                onSourceResolved: (resolution) => console.log('source', resolution),
                 onSample: (sample) => {
                     waveformStore.add({
                         id: sample.timeMs,

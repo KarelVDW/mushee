@@ -39,6 +39,17 @@ export interface ScoreUpdate {
   measures: Record<number, MxmlMeasure>;
 }
 
+/**
+ * How the locked profile decided what is at the microphone. Emitted once per
+ * session so the client can show the user what the pipeline believes it is
+ * hearing — a mis-routed take is invisible otherwise, and the user is the one
+ * person who knows the truth.
+ */
+export interface SourceResolution {
+  source: 'voice' | 'instrument';
+  decidedBy: 'explicit' | 'classifier' | 'prior';
+}
+
 function describeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -99,6 +110,8 @@ export class RecordingPipeline {
   private beats = DEFAULT_BEATS;
   private beatType = DEFAULT_BEAT_TYPE;
   private chromaticTranspose = 0;
+  // Key signature at the recording start (fifths), for voice pitch spelling.
+  private keyFifths: number | null = null;
   private builder = new MxmlBuilder({
     bpm: this.bpm,
     beats: this.beats,
@@ -111,6 +124,7 @@ export class RecordingPipeline {
   private finalRequested = false;
   private debounceTimer: NodeJS.Timeout | null = null;
   private onUpdate: (update: ScoreUpdate) => void = () => {};
+  private onSourceResolved: (resolution: SourceResolution) => void = () => {};
 
   // Resolved once, from the first ~1.2 s of audio (or on finalize), then locked
   // for the session: which provider runs and with what frequency window /
@@ -118,6 +132,9 @@ export class RecordingPipeline {
   private profile: PipelineProfile | null = null;
   private converter: AudioConverter | null = null;
   private instrumentHint: string | undefined;
+  // Explicit "what are you recording?" choice from the client, when it made one.
+  // Overrides the score's instrument as the voice-routing signal.
+  private sourceKind: 'voice' | 'instrument' | undefined;
   // ffmpeg input-format hint derived from the client's negotiated MIME type.
   // Undefined (unknown type / no meta) means ffmpeg probes the container.
   private inputFormat: string | undefined;
@@ -132,6 +149,8 @@ export class RecordingPipeline {
     timeSignature?: { beats: number; beatType: number } | null;
     chromaticTranspose?: number;
     instrumentId?: string;
+    sourceKind?: 'voice' | 'instrument' | null;
+    keyFifths?: number | null;
     mimeType?: string | null;
   }): void {
     if (meta.bpm) this.bpm = meta.bpm;
@@ -143,6 +162,10 @@ export class RecordingPipeline {
       this.chromaticTranspose = meta.chromaticTranspose;
     }
     if (meta.instrumentId) this.instrumentHint = meta.instrumentId;
+    if (meta.sourceKind === 'voice' || meta.sourceKind === 'instrument') {
+      this.sourceKind = meta.sourceKind;
+    }
+    if (typeof meta.keyFifths === 'number') this.keyFifths = meta.keyFifths;
     if (typeof meta.mimeType === 'string') {
       this.inputFormat = AudioDecoder.inputFormatFor(meta.mimeType);
     }
@@ -151,11 +174,19 @@ export class RecordingPipeline {
       beats: this.beats,
       beatType: this.beatType,
       chromaticTranspose: this.chromaticTranspose,
+      keyFifths: this.keyFifths,
     });
+    // The builder is rebuilt on meta, but the routing decision (voice spelling
+    // on the take's own tuning grid) belongs to the locked profile.
+    this.builder.setVoiceSpelling(this.profile?.isVoice ?? false);
   }
 
   setOnUpdate(cb: (update: ScoreUpdate) => void): void {
     this.onUpdate = cb;
+  }
+
+  setOnSourceResolved(cb: (resolution: SourceResolution) => void): void {
+    this.onSourceResolved = cb;
   }
 
   setArchiver(archiver: RecordingArchiver): void {
@@ -361,14 +392,31 @@ export class RecordingPipeline {
 
     const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
       instrumentId: this.instrumentHint,
+      sourceKind: this.sourceKind,
     });
     this.profile = profile;
-    this.converter = new AudioConverter(this.registry.get(profile.providerName));
+    this.converter = new AudioConverter(this.registry.get(profile.providerName), {
+      profile,
+    });
     this.logger.log(
       `Adaptive profile locked: ${profile.id} provider=${profile.providerName} ` +
         `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
-        `hp=${profile.highpassHz.toFixed(0)}Hz (hint=${this.instrumentHint ?? 'none'})`,
+        `hp=${profile.highpassHz.toFixed(0)}Hz seg=${profile.segmentMode ?? 'default'} ` +
+        `(hint=${this.instrumentHint ?? 'none'}, source=${this.sourceKind ?? 'auto'}, ` +
+        `decidedBy=${profile.sourceDecidedBy ?? 'n/a'})`,
     );
+    // Sung takes are SPELLED on their own tuning grid at the notation layer
+    // (voice-notation.ts); the flag lives on the builder, which setMeta may
+    // have created before the profile existed — so set it here too.
+    this.builder.setVoiceSpelling(profile.isVoice ?? false);
+    // Tell the client what the pipeline believes it is hearing — the user is
+    // the one observer who can tell us when this is wrong. `sourceBelief`, not
+    // `isVoice`: on the no-pitch fallback the profile routes to basic-pitch
+    // (where the voice overlay never applies) while the belief still stands.
+    this.onSourceResolved({
+      source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
+      decidedBy: profile.sourceDecidedBy ?? 'prior',
+    });
     return true;
   }
 
@@ -380,6 +428,10 @@ export class RecordingPipeline {
       onsetThreshold: profile.onsetThreshold,
       frameThreshold: profile.frameThreshold,
       minFramesPerNote: profile.minFramesPerNote,
+      // Segmentation is a profile decision as of the voice flow: the resolver picks
+      // WHERE to listen and now also HOW to decide where notes are.
+      segmentMode: profile.segmentMode,
+      smoothFrames: profile.smoothFrames,
     };
   }
 
@@ -420,6 +472,11 @@ export class RecordingPipeline {
         startTimeSeconds: startSec,
         durationSeconds: n.durationSeconds,
         pitchMidi: n.pitchMidi,
+        // The voice decoder's unrounded pitch — the builder spells sung takes
+        // on the take's own tuning grid from it (voice-notation.ts). This copy
+        // is field-by-field, so forgetting the field here silently reverts
+        // voice spelling to absolute names; it did, once.
+        pitchMidiFloat: (n as PendingNote).pitchMidiFloat,
       });
     }
     this.uncommittedFromSec = earliestUncommitted;
@@ -428,8 +485,17 @@ export class RecordingPipeline {
     this.emittedNotes.push(...newNotes);
     this.emittedNotes.sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
 
+    const affected = new Set(this.affectedMeasures(newNotes));
+    // Voice spelling is a TAKE-GLOBAL decision: the tuning offset (and the
+    // key's vote on the naming) is estimated over every note so far, so early
+    // measures were spelled from a half-built estimate. The final pass knows
+    // the whole take — re-emit everything so the score the user keeps is
+    // spelled from one consistent grid.
+    if (isFinal && this.profile?.isVoice) {
+      for (let m = 0; m <= this.lastEmittedMeasure; m += 1) affected.add(m);
+    }
     const measures: Record<number, MxmlMeasure> = {};
-    for (const idx of this.affectedMeasures(newNotes)) {
+    for (const idx of [...affected].sort((a, b) => a - b)) {
       measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
     }
     if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now();
@@ -546,8 +612,22 @@ export class RecordingPipeline {
         beatType: this.beatType,
         chromaticTranspose: this.chromaticTranspose,
         instrumentHint: this.instrumentHint ?? null,
+        sourceKind: this.sourceKind ?? null,
         profile: this.profile
-          ? { id: this.profile.id, provider: this.profile.providerName }
+          ? {
+              id: this.profile.id,
+              provider: this.profile.providerName,
+              segmentMode: this.profile.segmentMode ?? null,
+              isVoice: this.profile.isVoice ?? false,
+              // Debuggability of mis-routing: what the resolver believed was at
+              // the mic and on which evidence — 'explicit' (client declared),
+              // 'classifier' (audio verdict), or 'prior' (score instrument;
+              // also the classifier-abstain fallback). `isVoice` above is the
+              // routing outcome; belief and routing diverge on the no-pitch
+              // basic-pitch fallback.
+              sourceBelief: this.profile.sourceBelief ?? null,
+              sourceDecidedBy: this.profile.sourceDecidedBy ?? null,
+            }
           : null,
         audioDurationSec: this.lastDuration,
         emittedNoteCount: this.emittedNotes.length,

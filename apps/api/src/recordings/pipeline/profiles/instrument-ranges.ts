@@ -56,6 +56,23 @@ const RANGES: Record<string, FreqRange> = {
   'voice-lead': { minHz: 75, maxHz: 1100 },
 };
 
+/**
+ * Instrument ids that mean "a person is singing into the microphone".
+ *
+ * The score's instrument is the pipeline's voice prior of last resort. Since
+ * 2026-08 the audio itself decides first (`SourceClassifier`, stock YAMNet
+ * class scores — no fitted head, so the no-training policy is respected); this
+ * prior is what an abstention falls back to, and an explicit
+ * `ProfileHint.sourceKind` from the caller overrides both.
+ */
+const VOICE_INSTRUMENT_IDS = new Set(['voice-lead']);
+
+/** Whether the score's instrument implies a sung source. */
+export function isVoiceInstrument(id: string | undefined): boolean {
+  if (!id) return false;
+  return VOICE_INSTRUMENT_IDS.has(id) || id.startsWith('voice');
+}
+
 export function rangeForInstrument(id: string | undefined): FreqRange | undefined {
   if (!id) return undefined;
   if (RANGES[id]) return RANGES[id];

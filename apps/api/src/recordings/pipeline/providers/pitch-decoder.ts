@@ -373,6 +373,36 @@ export function segmentNotesBySemitone(
   return notes;
 }
 
+/**
+ * RMS per trajectory frame, over a window centred on the frame start so it lines
+ * up with the pitch contour rather than lagging it.
+ *
+ * Lives here, beside the other shared frame→note math, because two callers must
+ * agree on it exactly: the production decode (`CrepeProvider`, feeding
+ * `VoiceNoteDecoder`'s dip and accent channels) and the eval harness's
+ * `TrackCache`, which persists this array. If they drifted, every sweep would be
+ * tuning against an envelope the pipeline never sees.
+ */
+export function frameEnergy(
+  samples: Float32Array,
+  sampleRate: number,
+  hopSec: number,
+  frames: number,
+): Float32Array {
+  const hop = Math.max(1, Math.round(hopSec * sampleRate));
+  const half = hop;
+  const out = new Float32Array(frames);
+  for (let f = 0; f < frames; f += 1) {
+    const centre = f * hop;
+    const lo = Math.max(0, centre - half);
+    const hi = Math.min(samples.length, centre + half);
+    let sum = 0;
+    for (let i = lo; i < hi; i += 1) sum += samples[i] * samples[i];
+    out[f] = hi > lo ? Math.sqrt(sum / (hi - lo)) : 0;
+  }
+  return out;
+}
+
 /** Per-frame zero-mean / unit-variance normalization, matching what most
  *  pitch CNNs (CREPE, etc.) expect on raw windows. */
 export function normalizeFrame(window: Float32Array): Float32Array {

@@ -49,12 +49,23 @@ export interface GroundTruth {
 /** How a scenario's audio is produced. */
 export type SourceKind = 'instrument' | 'voice' | 'whistle';
 
+import type { Articulation } from './lib/synth';
+
+export type { Articulation };
+
 export interface Scenario {
   /** Stable id, used as the output directory name. */
   id: string;
   /** Human label for reports. */
   label: string;
   kind: SourceKind;
+  /**
+   * How the singer separates notes (voice scenarios only). Set on the
+   * articulation-stratified tier; absent means the original continuous-vowel
+   * proxy, which has no consonants and therefore cannot produce a re-onset at all.
+   * See `lib/synth.ts` for why this is the dominant variable for voice.
+   */
+  articulation?: Articulation;
   /** MIDI note the melody's degree 0 maps to (sets the register). */
   rootMidi: number;
   /** General MIDI program (0-indexed) — instruments only. */

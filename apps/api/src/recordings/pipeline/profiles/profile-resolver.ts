@@ -8,7 +8,7 @@
 import { Logger } from '@nestjs/common';
 
 import { OnsetDetector } from '../onset-detector';
-import { rangeForInstrument } from './instrument-ranges';
+import { isVoiceInstrument, rangeForInstrument } from './instrument-ranges';
 import {
   DEFAULT_PROFILE,
   GLOBAL_MAX_FREQ_HZ,
@@ -16,11 +16,31 @@ import {
   type PipelineProfile,
   PROFILE_BANDS,
   TRAJECTORY_MODEL_CEILING_HZ,
+  VOICE_OVERLAY,
 } from './pipeline-profile';
 import { scanPitch } from './pitch-scan';
+import { SourceClassifier } from './source-classifier';
 
+/**
+ * What the caller knows about the source before any audio is analysed.
+ *
+ * `sourceKind` is authoritative when set — it comes from an explicit caller
+ * declaration (the eval harness knows each dataset; an API client may still
+ * send one) — and `instrumentId` is the fallback prior drawn from the score's
+ * own staff. Deliberately two fields rather than one: "the caller told us" and
+ * "the score suggests" are different levels of evidence, and collapsing them
+ * would make the second silently override a correction of the first.
+ *
+ * When `sourceKind` is absent the resolver asks the audio itself
+ * (`SourceClassifier`, stock YAMNet at the lock prefix, 98.7 % decided
+ * accuracy) and only falls back to the instrument prior when the classifier
+ * abstains — which is what made the recording UI's mandatory mic-source chip
+ * removable.
+ */
 export interface ProfileHint {
   instrumentId?: string;
+  /** Explicit caller declaration of what is being recorded. */
+  sourceKind?: 'voice' | 'instrument';
 }
 
 /**
@@ -31,6 +51,17 @@ export interface ProfileHint {
  */
 /** A/B kill-switch shared with pitch-scan.ts: RECORDING_NOISE_ADAPT=0 = legacy. */
 const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0';
+/**
+ * Kill-switch for voice routing: `RECORDING_VOICE_DECODE=0` sends singing back
+ * through the shared semitone-run segmenter.
+ *
+ * Two jobs. In the eval harness it is the only way to get a clean A/B of the
+ * voice decode over the *production* path — `EVAL_NO_HINT` also removes the
+ * frequency-window hint, so it cannot isolate this. In production it is the
+ * rollback: the decode is a large behavioural change on the one input class the
+ * product exists for, and reverting it should not need a deploy.
+ */
+const VOICE_DECODE = process.env.RECORDING_VOICE_DECODE !== '0';
 
 /** Env override with default — lets the eval sweep explore without code edits. */
 function envNum(key: string, fallback: number): number {
@@ -251,6 +282,27 @@ function applyReverb(base: PipelineProfile, reverberance: number): PipelineProfi
   return { ...base, id: base.id + '+reverb', confidenceThreshold: relaxed };
 }
 
+/**
+ * Overlay the voice decode onto a resolved band.
+ *
+ * Follows the `applyReverb` template (an adaptation on top of a band anchor, with
+ * an `id` suffix so the routing decision is visible in logs and in the archived
+ * session metadata) but is a **binary switch rather than a ramp**, and for a
+ * reason: reverberance is a weak continuous measurement, so applying it
+ * proportionally is worth more than thresholding it, whereas "is this a human
+ * voice" is a fact the caller either knows or does not. Where we do not know, we
+ * do not guess — the instrument bands stay exactly as they were.
+ *
+ * Only trajectory providers reach the voice decode; basic-pitch has its own note
+ * head, and the `very-high` band that uses it is whistling/piccolo territory,
+ * which the voice literature explicitly does not cover (whistling is a documented
+ * gap with opposite needs — see research-pitch-models P3.4).
+ */
+function applyVoice(base: PipelineProfile, isVoice: boolean): PipelineProfile {
+  if (!isVoice || !VOICE_DECODE || base.providerName === 'basic-pitch') return base;
+  return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice' };
+}
+
 function band(id: string): PipelineProfile {
   const found = PROFILE_BANDS.find((b) => b.id === id);
   return found ?? DEFAULT_PROFILE;
@@ -271,6 +323,8 @@ function bandFor(medianHz: number): PipelineProfile {
 
 export class ProfileResolver {
   private readonly logger = new Logger(ProfileResolver.name);
+  // Shared model under the hood, so per-recording resolver instances are free.
+  private readonly sourceClassifier = new SourceClassifier();
 
   /**
    * @param samples     mono PCM of the first ~seconds of the recording
@@ -283,6 +337,29 @@ export class ProfileResolver {
   ): PipelineProfile {
     const scan = scanPitch(samples, sampleRate);
     const hintRange = rangeForInstrument(hint?.instrumentId);
+    // An explicit caller declaration wins outright. Absent one, the audio
+    // itself decides (stock-YAMNet classifier, 98.7 % decided accuracy at this
+    // very prefix), and only an abstention — near-silence, ambiguity, model
+    // not loaded yet — falls back to the score's instrument prior.
+    const classified =
+      hint?.sourceKind === undefined
+        ? this.sourceClassifier.classify(samples, sampleRate)
+        : undefined;
+    const isVoice =
+      hint?.sourceKind === 'voice' ||
+      (hint?.sourceKind === undefined &&
+        (classified !== undefined
+          ? classified === 'voice'
+          : isVoiceInstrument(hint?.instrumentId)));
+    const sourceDecidedBy: PipelineProfile['sourceDecidedBy'] =
+      hint?.sourceKind !== undefined
+        ? 'explicit'
+        : classified !== undefined
+          ? 'classifier'
+          : 'prior';
+    const sourceBelief: PipelineProfile['sourceBelief'] = isVoice
+      ? 'voice'
+      : 'instrument';
     const noisy =
       (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) ||
       scan.noisiness >= NOISY_MIN_NOISINESS;
@@ -292,7 +369,11 @@ export class ProfileResolver {
       // No reliable pitch yet — fall back to a wide default, widened to the
       // hint range if we have one. (With the harmonicity gate this is also
       // where pure-backdrop lead-ins land, instead of locking a garbage band.)
-      const base = this.applyNoise(DEFAULT_PROFILE, noisy);
+      const base = {
+        ...applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
+        sourceBelief,
+        sourceDecidedBy,
+      };
       if (!hintRange) return base;
       return this.finalize(base, hintRange.minHz, hintRange.maxHz, base.id + '+hint');
     }
@@ -315,10 +396,14 @@ export class ProfileResolver {
       highHz = Math.max(highHz, hintRange.maxHz);
     }
 
-    const base = applyReverb(
-      this.applyNoise(bandFor(scan.medianHz), noisy),
-      reverberance,
-    );
+    const base = {
+      ...applyVoice(
+        applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance),
+        isVoice,
+      ),
+      sourceBelief,
+      sourceDecidedBy,
+    };
     const profile = this.finalize(base, lowHz, highHz, base.id);
     this.logger.debug(
       `Resolved profile=${profile.id} provider=${profile.providerName} ` +
@@ -329,7 +414,9 @@ export class ProfileResolver {
         `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
         `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
         `reverberance=${reverberance.toFixed(2)}, ` +
-        `hint=${hint?.instrumentId ?? 'none'})`,
+        `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +
+        `${hint?.sourceKind === undefined ? `, classified=${classified ?? 'abstain'}` : ''}` +
+        `${profile.isVoice ? ' VOICE' : ''})`,
     );
     return profile;
   }
