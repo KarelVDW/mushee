@@ -59,16 +59,6 @@ export function useRecording({
     // the waveform layer inside the score SVG, never this page.
     const [waveformStore] = useState(() => new RecordingWaveformStore())
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
-    /**
-     * The server's verdict on what it hears (voice vs instrument), shown as a
-     * live badge once its profile locks ~1.2 s into the take. `null` until the
-     * verdict arrives; reset when a new take starts. Kept after the take ends
-     * so the user can connect a bad transcription to a wrong classification.
-     */
-    const [detectedSource, setDetectedSource] = useState<{
-        source: 'voice' | 'instrument'
-        decidedBy: 'explicit' | 'classifier' | 'prior'
-    } | null>(null)
     const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
     const [micModeGuideOpen, setMicModeGuideOpen] = useState(false)
     // The take started by confirming the guide skips the reminder toast — the
@@ -127,10 +117,6 @@ export function useRecording({
         // Stop any ongoing playback before beginning a recording session.
         stopAll()
 
-        // A fresh take gets a fresh verdict — the previous take's badge would
-        // read as if the server had already decided this one.
-        setDetectedSource(null)
-
         let measureIndex = activeNote.measure.index
         // The clef the take records into: transcribed notes are octave-normalized
         // onto its staff. Decided once, from the first update's notes, then locked
@@ -172,7 +158,7 @@ export function useRecording({
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
-                onSourceResolved: (resolution) => setDetectedSource(resolution),
+                onSourceResolved: (resolution) => console.log('source', resolution),
                 onSample: (sample) => {
                     waveformStore.add({
                         id: sample.timeMs,
@@ -286,7 +272,6 @@ export function useRecording({
     return {
         waveformStore,
         recordingState,
-        detectedSource,
         recordingHalt,
         setRecordingHalt,
         handleRecordToggle,
