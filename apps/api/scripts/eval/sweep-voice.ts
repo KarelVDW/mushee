@@ -106,6 +106,22 @@ const SHIPPED_CLEANUP: NoteExtractorOptions = {
   adaptiveFloorFraction: 0.3,
 };
 
+/**
+ * The VOICE cleanup as production ships it (`AudioConverter.cleanupFor`,
+ * `isVoice` branch): onsetSplit + adaptive floor + the widened syllabic
+ * seam-fill. The seam-fill only extends durations toward the next onset, so
+ * COnP (onset+pitch, no offset gate) must not move — the `ship seam-fill`
+ * config exists to keep that claim measured rather than assumed.
+ */
+const VOICE_SHIPPED_CLEANUP: NoteExtractorOptions = {
+  maxGridDivisor: 4,
+  adaptiveFloorFraction: 0.3,
+  seamFillBeats: 0.6,
+  steps: {
+    pitchOutliers: false, merge: false, transients: false, monophonic: false,
+  },
+};
+
 interface Config {
   name: string;
   group: string;
@@ -619,6 +635,7 @@ function buildConfigs(groups: Set<string>): Config[] {
         },
       }],
       ['shipped-cleanup', SHIPPED_CLEANUP],
+      ['voice-shipped', VOICE_SHIPPED_CLEANUP],
     ];
     for (const [label, cleanup] of variants) {
       configs.push({

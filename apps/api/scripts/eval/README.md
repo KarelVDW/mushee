@@ -371,6 +371,45 @@ remains the plateau (s80 +0.001–0.005, inside noise; t0.5/t1 flat-to-worse),
 and the +0.15-class win over the semitone segmenter reproduces (+0.137 dev /
 +0.123 test for the bare decode). The constants were not re-tuned.
 
+### Voice notation spelling (2026-08-08, night): the eval cannot see it, on purpose
+
+A real dogfood take (Frère Jacques, sung a cappella against a click) exposed the
+gap the §5 research predicted: routing, decode and melody were all CORRECT — the
+sung scale sat ~59 cents off the keyboard with near-perfect intervals — and the
+notation still came out as chromatic soup, because pitch NAMES were assigned by
+nearest absolute key while the singer's degrees straddled semitone boundaries.
+
+Three product-layer changes, all in the NOTATION stage (`voice-notation.ts` +
+`MxmlBuilder`), none in the decode:
+
+1. **Per-take tuning normalization** — Dressler & Streich circular mean over the
+   decoder's unrounded pitches (`pitchMidiFloat`, new on voice notes), applied
+   before naming. Confidence-gated: incoherent scatter → offset 0 (today's
+   behaviour). The naming of a reference-free take is inherently ±1 semitone
+   ambiguous (a take 41 c flat of B *is* 59 c sharp of B♭ — same lattice);
+2. **the key signature votes** — `keyFifths` now travels in the client's meta
+   frame; it breaks the naming ambiguity (duration-weighted in-key count) and
+   snaps individual notes only inside the ≥35 c ambiguity band, never moving a
+   confidently-sung accidental;
+3. **syllabic seam-fill** — voice cleanup sets `seamFillBeats: 0.6` (default
+   0.3): sung syllables phonate ~50–70 % of the slot, and the old value wrote
+   every quarter as fragment+rest+ties.
+
+Verified against the take that motivated it: the same audio now notates as
+B♭–C–D–B♭ ×2, D–E♭–F ×2 — textbook Frère Jacques, zero accidental churn.
+
+**Why the eval headline is deliberately blind to 1–2, and how neutrality was
+still measured.** COnP scores against measured-absolute truth, where renaming
+toward the singer's grid is *by construction* a mismatch (the old "tuning
+correction hurts" finding) — yet it is exactly what the product must write.
+So spelling happens after `deduced` (which run-eval scores) and only in
+`buildMeasure`. The seam-fill DOES touch `deduced` (durations only):
+`ship voice-shipped` on held-out test = **0.686, identical per-dataset to
+split+floor** — COnP has no offset gate, so the claim is measured, not assumed.
+One pipeline fix rode along: the finalize pass now re-emits ALL measures for
+voice takes, because spelling is take-global and early measures were spelled
+from a half-built estimate (the live demo showed exactly that).
+
 ### The §10d gate, run: Yong-2023 vs the shipped decoder (2026-08-08, night)
 
 The external-checkpoint benchmark the research doc gated the learned-model

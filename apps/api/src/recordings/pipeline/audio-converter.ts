@@ -110,6 +110,14 @@ export class AudioConverter {
         // `monophonic` stay off: re-adding them buys +0.006 more only on
         // choral bleed, at +18 % repair time and a vocadito loss.
         adaptiveFloorFraction: 0.3,
+        // Syllabic singing phonates ~50–70 % of the beat slot ("Frè-re
+        // Jac-ques" at 120 BPM sounds ~300 ms per 500 ms quarter), so the
+        // default 0.3-beat seam-fill leaves every note a fragment followed by
+        // a rest and ties. Widening the fill to the gaps consonants and
+        // breaths actually leave writes the slot, not the phonation. Real
+        // rests (phrase breaths, ≳ a beat) stay above the threshold. Voice
+        // only — instruments articulate their own gaps deliberately.
+        seamFillBeats: 0.6,
         steps: {
           pitchOutliers: false,
           merge: false,

@@ -439,8 +439,13 @@ export class VoiceNoteDecoder {
         startTimeSeconds: start,
         durationSeconds: end - start,
         pitchMidi: Math.round(cents / 100),
+        // The unrounded pitch rides along for the NOTATION layer: a take sung
+        // consistently between keys is renamed there on its own grid
+        // (voice-notation.ts). Rounding here stays absolute — the eval's truth
+        // is absolute — and extractor steps spread-copy, so the field survives.
+        pitchMidiFloat: cents / 100,
         amplitude: this.peakConfidence(track, run),
-      });
+      } as NoteEventTime);
     }
     return this.applyMergeGuard(notes, track, voiced);
   }
@@ -1004,7 +1009,11 @@ export class VoiceNoteDecoder {
         end: Math.min(track.frames, Math.round(mergedEnd / track.hopSec)),
         state: 0,
       });
-      if (merged !== null) prev.pitchMidi = Math.round(merged / 100);
+      if (merged !== null) {
+        prev.pitchMidi = Math.round(merged / 100);
+        (prev as NoteEventTime & { pitchMidiFloat?: number }).pitchMidiFloat =
+          merged / 100;
+      }
     }
     return out;
   }

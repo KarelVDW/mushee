@@ -603,6 +603,13 @@ export class RecordingEngine implements Tickable {
                 // classifier with a guess that is wrong exactly in the case that
                 // matters (singing a line into an instrument staff).
                 instrumentId: this.options.score.instrument.id,
+                // Key signature at the take's start measure: sung takes are
+                // spelled on the singer's own tuning grid server-side, and the
+                // key breaks the remaining ties (F♯ vs G♭-territory notes sung
+                // between keys). The score is the one place that knows it.
+                keyFifths:
+                    this.options.score.measures[this.options.startMeasureIndex]
+                        ?.keySignature.fifths ?? null,
                 // `null` = the browser's default container; the server probes it.
                 mimeType: this.mimeType,
             }),

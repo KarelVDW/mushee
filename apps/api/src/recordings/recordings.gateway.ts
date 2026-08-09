@@ -38,6 +38,15 @@ interface RecordingMetaMessage {
    * (the eval harness, a future API client) genuinely knows the source.
    */
   sourceKind?: 'voice' | 'instrument' | null;
+  /**
+   * The score's key signature at the recording start, in fifths (positive =
+   * sharps). Sung takes are spelled on the singer's own tuning grid, and for
+   * the notes still ambiguous after that normalization the key gets a vote —
+   * a user recording into a D-major score almost certainly means F♯, not the
+   * F they sang 40 cents flat. Optional: without it, spelling still
+   * normalizes, it just cannot key-snap.
+   */
+  keyFifths?: number | null;
   /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
    *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
    *  the browser default was used and ffmpeg probes the container. */
@@ -378,6 +387,7 @@ export class RecordingsGateway
         chromaticTranspose: parsed.chromaticTranspose,
         instrumentId: parsed.instrumentId,
         sourceKind: parsed.sourceKind,
+        keyFifths: parsed.keyFifths,
         mimeType: parsed.mimeType,
       });
     } else if (parsed.type === 'end') {

@@ -110,6 +110,8 @@ export class RecordingPipeline {
   private beats = DEFAULT_BEATS;
   private beatType = DEFAULT_BEAT_TYPE;
   private chromaticTranspose = 0;
+  // Key signature at the recording start (fifths), for voice pitch spelling.
+  private keyFifths: number | null = null;
   private builder = new MxmlBuilder({
     bpm: this.bpm,
     beats: this.beats,
@@ -148,6 +150,7 @@ export class RecordingPipeline {
     chromaticTranspose?: number;
     instrumentId?: string;
     sourceKind?: 'voice' | 'instrument' | null;
+    keyFifths?: number | null;
     mimeType?: string | null;
   }): void {
     if (meta.bpm) this.bpm = meta.bpm;
@@ -162,6 +165,7 @@ export class RecordingPipeline {
     if (meta.sourceKind === 'voice' || meta.sourceKind === 'instrument') {
       this.sourceKind = meta.sourceKind;
     }
+    if (typeof meta.keyFifths === 'number') this.keyFifths = meta.keyFifths;
     if (typeof meta.mimeType === 'string') {
       this.inputFormat = AudioDecoder.inputFormatFor(meta.mimeType);
     }
@@ -170,7 +174,11 @@ export class RecordingPipeline {
       beats: this.beats,
       beatType: this.beatType,
       chromaticTranspose: this.chromaticTranspose,
+      keyFifths: this.keyFifths,
     });
+    // The builder is rebuilt on meta, but the routing decision (voice spelling
+    // on the take's own tuning grid) belongs to the locked profile.
+    this.builder.setVoiceSpelling(this.profile?.isVoice ?? false);
   }
 
   setOnUpdate(cb: (update: ScoreUpdate) => void): void {
@@ -397,6 +405,10 @@ export class RecordingPipeline {
         `(hint=${this.instrumentHint ?? 'none'}, source=${this.sourceKind ?? 'auto'}, ` +
         `decidedBy=${profile.sourceDecidedBy ?? 'n/a'})`,
     );
+    // Sung takes are SPELLED on their own tuning grid at the notation layer
+    // (voice-notation.ts); the flag lives on the builder, which setMeta may
+    // have created before the profile existed — so set it here too.
+    this.builder.setVoiceSpelling(profile.isVoice ?? false);
     // Tell the client what the pipeline believes it is hearing — the user is
     // the one observer who can tell us when this is wrong. `sourceBelief`, not
     // `isVoice`: on the no-pitch fallback the profile routes to basic-pitch
@@ -460,6 +472,11 @@ export class RecordingPipeline {
         startTimeSeconds: startSec,
         durationSeconds: n.durationSeconds,
         pitchMidi: n.pitchMidi,
+        // The voice decoder's unrounded pitch — the builder spells sung takes
+        // on the take's own tuning grid from it (voice-notation.ts). This copy
+        // is field-by-field, so forgetting the field here silently reverts
+        // voice spelling to absolute names; it did, once.
+        pitchMidiFloat: (n as PendingNote).pitchMidiFloat,
       });
     }
     this.uncommittedFromSec = earliestUncommitted;
@@ -468,8 +485,17 @@ export class RecordingPipeline {
     this.emittedNotes.push(...newNotes);
     this.emittedNotes.sort((a, b) => a.startTimeSeconds - b.startTimeSeconds);
 
+    const affected = new Set(this.affectedMeasures(newNotes));
+    // Voice spelling is a TAKE-GLOBAL decision: the tuning offset (and the
+    // key's vote on the naming) is estimated over every note so far, so early
+    // measures were spelled from a half-built estimate. The final pass knows
+    // the whole take — re-emit everything so the score the user keeps is
+    // spelled from one consistent grid.
+    if (isFinal && this.profile?.isVoice) {
+      for (let m = 0; m <= this.lastEmittedMeasure; m += 1) affected.add(m);
+    }
     const measures: Record<number, MxmlMeasure> = {};
-    for (const idx of this.affectedMeasures(newNotes)) {
+    for (const idx of [...affected].sort((a, b) => a - b)) {
       measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes);
     }
     if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now();
