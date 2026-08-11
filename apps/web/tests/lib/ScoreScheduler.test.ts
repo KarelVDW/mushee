@@ -176,6 +176,27 @@ describe('ScoreScheduler', () => {
         expect(scheduled[0].duration).toBeCloseTo((2 * 60) / 90, 5)
     })
 
+    it('does not re-strike the continuation of a start-only tie (no explicit stop, as the editor creates)', () => {
+        const { player, scheduled, raw } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const score = new Score()
+        const m = score.addMeasure(0)
+        // Editor- and model-created ties only mark 'start' on the first note.
+        const start = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
+        const continuation = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        m.addNotes([start, continuation])
+        scheduler.score = score
+        scheduler.reset()
+
+        raw.currentTime = 100
+        scheduler.tick()
+
+        expect(scheduled).toHaveLength(1)
+        expect(scheduled[0].duration).toBeCloseTo((2 * 60) / 90, 5)
+        // The continuation still gets a timeline entry so the cursor advances over it.
+        expect(scheduler.entries).toHaveLength(2)
+    })
+
     it('getTiedAudioDuration stops at the end of the chain when no next note exists', () => {
         const { player, scheduled, raw } = fakePlayer()
         const scheduler = new ScoreScheduler(player)

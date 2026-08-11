@@ -91,8 +91,16 @@ export class Note {
         return this.tie === 'start' || this.tie === 'start-stop'
     }
 
+    /**
+     * Whether this note sounds as the continuation of a tie rather than a fresh
+     * attack. An explicit 'stop' only exists on imported notes (MusicXML); ties
+     * created in the model or editor carry just 'start' on the first note, so
+     * the back-link is derived from the predecessor, mirroring `Score.tiePartner`.
+     */
     get tiesBack(): boolean {
-        return this.tie === 'stop' || this.tie === 'start-stop'
+        if (this.tie === 'stop' || this.tie === 'start-stop') return true
+        if (!this._measure) return false
+        return this.getPrevious()?.tiesForward ?? false
     }
 
     get stemDir(): 'up' | 'down' {
