@@ -48,6 +48,20 @@ describe('Note', () => {
         expect(new Note({ duration: new Duration() }).tiesBack).toBe(false)
     })
 
+    it('tiesBack is derived from a predecessor that ties forward (start-only ties)', () => {
+        const score = new Score()
+        score.addMeasure().complete()
+        const first = placeNote(score, 0, 'C', 4)
+        const second = first.getNext() as Note
+        const [tied] = score.replace([second], [pitched('D', 4)])
+
+        expect(tied.tiesBack).toBe(false)
+
+        const [starts] = score.replace([first], [first.clone({ tie: 'start' })])
+        expect(starts.tiesForward).toBe(true)
+        expect((starts.getNext() as Note).tiesBack).toBe(true)
+    })
+
     describe('stemDir', () => {
         it('rests stem up (default)', () => {
             const r = new Note({ duration: new Duration() })
