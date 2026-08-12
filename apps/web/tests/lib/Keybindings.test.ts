@@ -7,6 +7,7 @@ const COMMANDS: BindableCommand[] = [
     { id: 'left', defaultShortcut: 'ArrowLeft' },
     { id: 'rest', defaultShortcut: 'KeyR' },
     { id: 'free', defaultShortcut: null },
+    { id: 'select-all', defaultShortcut: 'Mod+KeyA', fixed: true },
 ]
 
 const STORAGE_KEY = 'test:shortcuts'
@@ -91,8 +92,8 @@ describe('Keybindings resolution', () => {
 describe('Keybindings customization', () => {
     it('rebinds a command to a new key and releases its old one', () => {
         const keybindings = makeKeybindings()
-        const displaced = keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
-        expect(displaced).toBeNull()
+        const result = keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
+        expect(result).toEqual({ ok: true, displaced: null })
         expect(keybindings.resolve(keydown({ code: 'KeyJ', key: 'j' }))?.id).toBe('rest')
         expect(keybindings.resolve(keydown({ code: 'KeyR', key: 'r' }))).toBeNull()
         expect(keybindings.isCustomized('rest')).toBe(true)
@@ -101,8 +102,8 @@ describe('Keybindings customization', () => {
 
     it('taking a shortcut unbinds and reports its previous holder', () => {
         const keybindings = makeKeybindings()
-        const displaced = keybindings.rebind('free', Shortcut.parse('ArrowLeft', false))
-        expect(displaced?.id).toBe('left')
+        const result = keybindings.rebind('free', Shortcut.parse('ArrowLeft', false))
+        expect(result).toMatchObject({ ok: true, displaced: { id: 'left' } })
         expect(keybindings.resolve(keydown({ code: 'ArrowLeft', key: 'ArrowLeft' }))?.id).toBe('free')
         expect(keybindings.shortcutFor('left')).toBeNull()
         expect(keybindings.isCustomized('left')).toBe(true)
@@ -152,6 +153,77 @@ describe('Keybindings customization', () => {
         keybindings.rebind('rest', recorded({ code: 'KeyJ', key: 'j' }))
         expect(calls).toBe(1)
         expect(keybindings.getSnapshot()).toBeGreaterThan(before)
+    })
+})
+
+describe('Keybindings fixed commands', () => {
+    it('reports fixedness and refuses to rebind a fixed command', () => {
+        const keybindings = makeKeybindings()
+        expect(keybindings.isFixed('select-all')).toBe(true)
+        expect(keybindings.isFixed('rest')).toBe(false)
+        const result = keybindings.rebind('select-all', recorded({ code: 'KeyJ', key: 'j' }))
+        expect(result).toMatchObject({ ok: false, reservedBy: { id: 'select-all' } })
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        expect(keybindings.hasCustomizations).toBe(false)
+    })
+
+    it("refuses to give a fixed command's keystroke to another command", () => {
+        const keybindings = makeKeybindings()
+        const result = keybindings.rebind('free', Shortcut.parse('Mod+KeyA', false))
+        expect(result).toMatchObject({ ok: false, reservedBy: { id: 'select-all' } })
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        expect(keybindings.shortcutFor('free')).toBeNull()
+        expect(keybindings.hasCustomizations).toBe(false)
+    })
+
+    it('matches fixed commands by produced character on any layout (AZERTY ⌘A sits on physical KeyQ)', () => {
+        const keybindings = makeKeybindings()
+        // AZERTY: pressing the key labeled A emits code KeyQ but key 'a' — the OS convention fires.
+        expect(keybindings.resolve(keydown({ code: 'KeyQ', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        // QWERTY (character and physical position coincide) keeps working.
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        // Modifiers still must match exactly, and the bare character means nothing.
+        expect(keybindings.resolve(keydown({ code: 'KeyQ', key: 'a' }))).toBeNull()
+        expect(keybindings.resolve(keydown({ code: 'KeyQ', key: 'a', ctrlKey: true, shiftKey: true }))).toBeNull()
+    })
+
+    it('rebindable commands stay physical-key based — no character matching', () => {
+        const keybindings = makeKeybindings()
+        // Physical KeyR triggers rest whatever character the layout prints on it…
+        expect(keybindings.resolve(keydown({ code: 'KeyR', key: 'p' }))?.id).toBe('rest')
+        // …and the character 'r' on another physical key does not.
+        expect(keybindings.resolve(keydown({ code: 'KeyP', key: 'r' }))).toBeNull()
+    })
+
+    it("refuses to record a keystroke that types a fixed convention's character", () => {
+        const keybindings = makeKeybindings()
+        // AZERTY user records Ctrl + the key labeled A (physical KeyQ): that IS Ctrl+A.
+        const result = keybindings.rebind('free', recorded({ code: 'KeyQ', key: 'a', ctrlKey: true }))
+        expect(result).toMatchObject({ ok: false, reservedBy: { id: 'select-all' } })
+        expect(keybindings.hasCustomizations).toBe(false)
+    })
+
+    it('ignores unbind and reset on a fixed command', () => {
+        const keybindings = makeKeybindings()
+        keybindings.unbind('select-all')
+        keybindings.reset('select-all')
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        expect(keybindings.hasCustomizations).toBe(false)
+    })
+
+    it('drops stored overrides on fixed commands (data from before the command became fixed)', () => {
+        const keybindings = makeKeybindings()
+        keybindings.hydrate({ version: 1, overrides: { 'select-all': { keys: 'KeyZ' }, rest: null } })
+        // The fixed command keeps its convention; the ordinary override still applies.
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
+        expect(keybindings.resolve(keydown({ code: 'KeyZ', key: 'z' }))).toBeNull()
+        expect(keybindings.shortcutFor('rest')).toBeNull()
+    })
+
+    it("a stale override colliding with a fixed keystroke can't shadow the fixed command", () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, overrides: { free: { keys: 'Ctrl+KeyA' } } }))
+        const keybindings = makeKeybindings()
+        expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')
     })
 })
 

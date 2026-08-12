@@ -127,6 +127,76 @@ test('copies a range and pastes it with the keyboard', async ({ page }) => {
     await expect(bands).toHaveCount(2)
 })
 
+test('select-all spans every note and a bulk edit hits them all', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    await expect(bands).toHaveCount(1)
+
+    // ⌘A selects the whole score — the fixture holds 8 notes (4 pitched + 4 rests).
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('ControlOrMeta+a')
+    await expect(bands).toHaveCount(8)
+
+    // A bulk action applies across the full selection and autosaves; the range stays selected.
+    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('ArrowUp')
+    await patch
+    await expect(bands).toHaveCount(8)
+})
+
+test('select-all matches the typed character on non-QWERTY layouts (AZERTY ⌘A = physical KeyQ)', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    await expect(bands).toHaveCount(1)
+
+    // Playwright's keyboard is US-layout only, so synthesize the AZERTY keystroke: the key
+    // labeled A reports physical code KeyQ while typing the character 'a'.
+    const container = page.locator('div[tabindex="0"]').first()
+    await container.focus()
+    const isMac = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))
+    await container.dispatchEvent('keydown', { code: 'KeyQ', key: 'a', metaKey: isMac, ctrlKey: !isMac, bubbles: true })
+    await expect(bands).toHaveCount(8)
+})
+
+test('cuts a range with the keyboard and pastes it back elsewhere', async ({ page }) => {
+    const bands = page.locator(SELECTION_BANDS)
+    await expect(bands).toHaveCount(1)
+
+    // Select the first two notes (C5 D5) and cut them: copied, then removed from the score.
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(bands).toHaveCount(2)
+    const restToggle = page.getByRole('button', { name: 'Rest' })
+    const patchCut = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('ControlOrMeta+x')
+    await patchCut
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
+
+    // Step onto the next pitched note and paste the cut run over it.
+    await page.keyboard.press('ArrowRight')
+    const patchPaste = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    await page.keyboard.press('ControlOrMeta+v')
+    await patchPaste
+    await expect(bands).toHaveCount(2)
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('clipboard shortcuts are fixed: listed, not rebindable, and reserved from other commands', async ({ page }) => {
+    await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+
+    // Fixed commands are listed as plain facts — no change / remove / reset affordances.
+    for (const label of ['Copy selection', 'Cut selection', 'Paste', 'Select all']) {
+        await expect(page.getByText(label, { exact: true })).toBeVisible()
+        await expect(page.getByRole('button', { name: `Change shortcut for ${label}` })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: `Remove shortcut for ${label}` })).toHaveCount(0)
+    }
+
+    // Recording a reserved keystroke for another command is refused with an explanation.
+    await page.getByRole('button', { name: 'Change shortcut for Toggle rest' }).click()
+    await expect(page.getByText('Press a key…')).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+c')
+    await expect(page.getByText(/reserved for “Copy selection”/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Change shortcut for Toggle rest' })).toContainText('R')
+})
+
 test('keyboard shortcuts dialog lists bindings and rebinding persists across a reload', async ({ page }) => {
     await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
 

@@ -1,6 +1,6 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH } from '../../components/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH, TEMPO_MARKING_Y } from '../../components/constants'
 import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
@@ -285,5 +285,31 @@ export class ScoreLayout {
 
     getRowForY(y: number): RowLayout | undefined {
         return this.rows[Math.floor(y / (this.rowHeight + this.rowGap))]
+    }
+
+    /**
+     * Where the selection-actions menu hovers, in layout coordinates: horizontally the
+     * center of the selected span on the topmost selected row (the span the selection
+     * bands paint — note slots, measured with their allotted widths), vertically at that
+     * row's tempo-marking height, so the menu floats above the staff the way a bpm
+     * marking does. Null when no note in `notes` belongs to this layout.
+     */
+    selectionMenuAnchor(notes: Note[]): { x: number; y: number } | null {
+        let row: RowLayout | undefined
+        for (const note of notes) {
+            const noteRow = this._rowByMeasure.get(note.measure)
+            if (noteRow && (!row || noteRow.index < row.index)) row = noteRow
+        }
+        if (!row) return null
+        let start = Infinity
+        let end = -Infinity
+        for (const note of notes) {
+            if (this._rowByMeasure.get(note.measure) !== row) continue
+            const measureLayout = this.measureLayoutFor(note.measure)
+            const x = row.getMeasureX(note.measure) + measureLayout.getXForElement(note)
+            start = Math.min(start, x)
+            end = Math.max(end, x + measureLayout.getAllottedWidth(note))
+        }
+        return { x: (start + end) / 2, y: this.getYForRow(row) + TEMPO_MARKING_Y }
     }
 }

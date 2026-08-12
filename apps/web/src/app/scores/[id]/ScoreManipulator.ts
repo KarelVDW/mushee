@@ -4,7 +4,7 @@ import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
 
-import type { ScoreAction } from './actions'
+import { REMOVE_NOTE, type ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 
 /** Guard so a malformed anchor/focus pair can never spin the range walk forever. */
@@ -116,6 +116,15 @@ export class ScoreManipulator {
         if (this._selectedNote) this.select(this._selectedNote)
     }
 
+    /** Select every note in the score (⌘A / the selection menu), anchored at the first note. */
+    selectAll(): void {
+        const first = this._score?.firstMeasure?.firstNote ?? null
+        const last = this._score?.lastMeasure?.lastNote ?? null
+        if (!first || !last) return
+        this.setRange(first, last)
+        this.emit()
+    }
+
     private setSingle(note: Note | null): void {
         this._anchorNote = note
         this._selectedNote = note
@@ -196,6 +205,13 @@ export class ScoreManipulator {
     /** Snapshot the selected notes into the clipboard as detached clones. */
     copy(): void {
         this._clipboard = this._selectedNotes.map((note) => note.clone({}))
+    }
+
+    /** Copy the selection into the clipboard, then remove it from the score (⌘X). */
+    cut(): void {
+        if (this._selectedNotes.length === 0) return
+        this.copy()
+        this.run(REMOVE_NOTE)
     }
 
     /**
