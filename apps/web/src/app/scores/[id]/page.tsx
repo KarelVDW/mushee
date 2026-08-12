@@ -6,6 +6,7 @@ import {
     type DurationType,
     type KeySignatureClickEvent,
     Score as ScoreView,
+    type SelectionMenuEvent,
     type TempoClickEvent,
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
@@ -17,6 +18,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
+import { SelectionPopover } from '@/components/editor/SelectionPopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
@@ -145,6 +147,25 @@ export default function ScoreEditorPage() {
     const handleClefClick = useCallback((event: ClefClickEvent) => setAttributePopover({ kind: 'clef', ...event }), [])
     const handleKeySignatureClick = useCallback((event: KeySignatureClickEvent) => setAttributePopover({ kind: 'key', ...event }), [])
     const handleTimeSignatureClick = useCallback((event: TimeSignatureClickEvent) => setAttributePopover({ kind: 'time', ...event }), [])
+
+    // The floating selection-actions bar (mobile): opened by the score's selection-menu
+    // gestures — long-press, double-tap, or lifting a range drag. Selection-scoped actions
+    // (copy/paste/delete/select all) live here, never as dedicated dock buttons.
+    const [selectionMenuOpen, setSelectionMenuOpen] = useState(false)
+    const closeSelectionMenu = useCallback(() => setSelectionMenuOpen(false), [])
+    const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => setSelectionMenuOpen(true), [])
+    // Position is derived from the live selection (not the gesture point) every render, so
+    // the bar tracks a growing selection — e.g. Select all moves it over the first row.
+    // The layout anchor is in layout units; the SVG renders scaled-to-fit, so scale into
+    // wrapper pixels (the SVG sits at the wrapper's origin).
+    const selectionMenuAnchor = (() => {
+        if (!selectionMenuOpen || !score) return null
+        const anchor = score.layout.selectionMenuAnchor(manipulator.selectedNotes)
+        const svg = scoreAreaRef.current?.querySelector('svg')
+        if (!anchor || !svg) return null
+        const scale = svg.getBoundingClientRect().width / score.layout.scoreWidth
+        return { x: anchor.x * scale, y: anchor.y * scale }
+    })()
 
     const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
         usePlayback({
@@ -313,6 +334,7 @@ export default function ScoreEditorPage() {
                             waveformStore={waveformStore}
                             onSelectionStart={handleSelectionStart}
                             onSelectionExtend={handleSelectionExtend}
+                            onSelectionMenu={isMobile ? handleSelectionMenu : undefined}
                             onNoteChange={handleNoteChange}
                             onAddMeasure={handleAddMeasure}
                             onRemoveMeasure={handleRemoveMeasure}
@@ -322,6 +344,29 @@ export default function ScoreEditorPage() {
                             onKeySignatureClick={handleKeySignatureClick}
                             onTimeSignatureClick={handleTimeSignatureClick}
                         />
+                        {selectionMenuAnchor && activeNote && (
+                            <SelectionPopover
+                                x={selectionMenuAnchor.x}
+                                y={selectionMenuAnchor.y}
+                                canPaste={manipulator.canPaste}
+                                onCopy={() => {
+                                    manipulator.copy()
+                                    closeSelectionMenu()
+                                }}
+                                onPaste={() => {
+                                    manipulator.paste()
+                                    closeSelectionMenu()
+                                }}
+                                onDelete={() => {
+                                    manipulator.run(REMOVE_NOTE)
+                                    closeSelectionMenu()
+                                }}
+                                // Stays open, like the OS menu: growing the selection is a step
+                                // toward copying or deleting it, not an end in itself.
+                                onSelectAll={() => manipulator.selectAll()}
+                                onDismiss={closeSelectionMenu}
+                            />
+                        )}
                         {attributePopover?.kind === 'tempo' && (
                             <TempoPopover
                                 x={attributePopover.x}
@@ -421,7 +466,6 @@ export default function ScoreEditorPage() {
                             onNext={() => manipulator.run(MOVE_NEXT)}
                             onPitchUp={() => manipulator.run(RAISE_PITCH)}
                             onPitchDown={() => manipulator.run(LOWER_PITCH)}
-                            onRemoveNote={() => manipulator.run(REMOVE_NOTE)}
                             disabled={!activeNote}
                         />
                     ) : undefined

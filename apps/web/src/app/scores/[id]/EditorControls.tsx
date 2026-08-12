@@ -122,26 +122,18 @@ interface MobileEditorActionsProps {
     onNext: () => void
     onPitchUp: () => void
     onPitchDown: () => void
-    onRemoveNote: () => void
     /** No note selected (nothing to navigate from or nudge). */
     disabled: boolean
 }
 
 /**
  * Touch replaces the keyboard: arrows become the note navigator, ArrowUp/Down become
- * pitch nudges, Backspace becomes the remove-note button, and the transport moves
- * down here where thumbs live. The record button stays the biggest, loudest control
- * on the screen.
+ * pitch nudges, and the transport moves down here where thumbs live. The record button
+ * stays the biggest, loudest control on the screen. Selection-scoped actions (copy /
+ * delete / select all) are NOT buttons here — they live in the score's selection
+ * popover, opened by long-press / double-tap / drag-release.
  */
-export function MobileEditorActions({
-    transport,
-    onPrevious,
-    onNext,
-    onPitchUp,
-    onPitchDown,
-    onRemoveNote,
-    disabled,
-}: MobileEditorActionsProps) {
+export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled }: MobileEditorActionsProps) {
     return (
         <div role="group" aria-label="Note navigation and transport" className="flex items-center justify-between gap-1.5 pt-2">
             <div className="flex items-center gap-1">
@@ -160,9 +152,6 @@ export function MobileEditorActions({
                     <Icon name="chevron-up" size={18} />
                 </TransportBtn>
             </div>
-            <TransportBtn size={36} onClick={onRemoveNote} ariaLabel="Remove note" disabled={disabled}>
-                <Icon name="delete" size={18} />
-            </TransportBtn>
             <TransportControls {...transport} large showMetronome={false} />
         </div>
     )

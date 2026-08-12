@@ -61,6 +61,14 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         run: (manipulator) => manipulator.extendSelectionByStep(1),
     },
     {
+        id: 'select-all',
+        label: 'Select all',
+        group: 'Select',
+        defaultShortcut: 'Mod+KeyA',
+        fixed: true,
+        run: (manipulator) => manipulator.selectAll(),
+    },
+    {
         id: 'collapse-selection',
         label: 'Collapse selection',
         group: 'Select',
@@ -78,18 +86,30 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),
     fromAction(TOGGLE_TUPLET, 'Edit notes', 'Digit3'),
+    // Clipboard shortcuts are `fixed`: ⌘C/⌘X/⌘V (and ⌘A above) are OS-wide conventions, so
+    // they're listed in the shortcuts dialog but never rebindable.
     {
         id: 'copy',
         label: 'Copy selection',
         group: 'Clipboard',
         defaultShortcut: 'Mod+KeyC',
+        fixed: true,
         run: (manipulator) => manipulator.copy(),
+    },
+    {
+        id: 'cut',
+        label: 'Cut selection',
+        group: 'Clipboard',
+        defaultShortcut: 'Mod+KeyX',
+        fixed: true,
+        run: (manipulator) => manipulator.cut(),
     },
     {
         id: 'paste',
         label: 'Paste',
         group: 'Clipboard',
         defaultShortcut: 'Mod+KeyV',
+        fixed: true,
         run: (manipulator) => manipulator.paste(),
     },
 ]

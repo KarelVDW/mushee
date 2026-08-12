@@ -81,6 +81,20 @@ describe('ScoreManipulator selection', () => {
         expect(manipulator.selectedNotes).toHaveLength(1)
     })
 
+    it('selects every note in the score, anchored at the first', () => {
+        const score = makeScore(2)
+        const manipulator = new ScoreManipulator()
+        manipulator.attach(score, () => undefined)
+        const notes = allNotes(manipulator)
+        manipulator.select(notes[3])
+        manipulator.selectAll()
+        expect(ids(manipulator.selectedNotes)).toEqual(ids(notes))
+        expect(manipulator.selectedNote).toBe(notes[notes.length - 1])
+        // The anchor is the first note: shrinking by a step trims from the far end.
+        manipulator.extendSelectionByStep(-1)
+        expect(ids(manipulator.selectedNotes)).toEqual(ids(notes.slice(0, -1)))
+    })
+
     it('re-renders subscribers on a selection change', () => {
         const { manipulator, notes } = setupPitched()
         let calls = 0
@@ -243,6 +257,20 @@ describe('ScoreManipulator clipboard', () => {
         manipulator.paste()
         expect(pitchNames(allNotes(manipulator))).toEqual(before)
     })
+
+    it('cut copies the selection and removes it from the score', () => {
+        const { manipulator, notes } = setupPitched() // C5 D5 E5 F5
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1]) // cut C5 D5
+        manipulator.cut()
+
+        expect(allNotes(manipulator).slice(0, 2).every((n) => n.isRest)).toBe(true)
+        expect(manipulator.canPaste).toBe(true)
+
+        manipulator.select(allNotes(manipulator)[2]) // paste onto E5 → overwrites E5 F5
+        manipulator.paste()
+        expect(pitchNames(allNotes(manipulator))).toEqual([undefined, undefined, 'C', 'D'])
+    })
 })
 
 describe('ScoreManipulator keyboard dispatch', () => {
@@ -272,6 +300,20 @@ describe('ScoreManipulator keyboard dispatch', () => {
         manipulator.select(notes[2])
         expect(press(manipulator, { code: 'KeyV', key: 'v', ctrlKey: true })).toBe(true)
         expect(allNotes(manipulator)[2]?.pitch?.name).toBe('C')
+    })
+
+    it('selects all with the platform modifier and consumes the keystroke', () => {
+        const { manipulator } = setupPitched()
+        expect(press(manipulator, { code: 'KeyA', key: 'a', ctrlKey: true })).toBe(true)
+        expect(manipulator.selectedNotes).toHaveLength(4)
+    })
+
+    it('cuts with the platform modifier', () => {
+        const { manipulator, notes } = setupPitched() // C5 D5 E5 F5
+        manipulator.select(notes[1])
+        expect(press(manipulator, { code: 'KeyX', key: 'x', ctrlKey: true })).toBe(true)
+        expect(allNotes(manipulator)[1]?.isRest).toBe(true)
+        expect(manipulator.canPaste).toBe(true)
     })
 
     it('extends the selection with shift+arrows and collapses it with Escape', () => {

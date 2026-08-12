@@ -52,8 +52,12 @@ export function KeyboardShortcutsDialog({ open, keybindings, onClose }: Keyboard
             }
             const shortcut = Shortcut.fromEvent(e)
             if (!shortcut) return
-            const displaced = keybindings.rebind(editingId, shortcut)
-            setNotice(displaced ? `This shortcut was taken from “${displaced.label}”, which is now unbound.` : null)
+            const result = keybindings.rebind(editingId, shortcut)
+            if (result.ok) {
+                setNotice(result.displaced ? `This shortcut was taken from “${result.displaced.label}”, which is now unbound.` : null)
+            } else {
+                setNotice(`That shortcut is reserved for “${result.reservedBy.label}”.`)
+            }
             setEditingId(null)
         }
         window.addEventListener('keydown', record, { capture: true })
@@ -134,6 +138,18 @@ interface ShortcutRowProps {
 
 function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: ShortcutRowProps) {
     const shortcut = keybindings.shortcutFor(command.id)
+    // Fixed commands (⌘C/⌘X/⌘V/⌘A) follow the OS convention: listed, but with no
+    // rebind / unbind / reset affordances — the keys render as a plain fact. No layout
+    // map here: the convention is character-based (⌘A is the key that *types* A, whatever
+    // its physical position), so the label is the character itself.
+    if (command.fixed) {
+        return (
+            <div className="flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
+                <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
+                {shortcut && <ShortcutKeys shortcut={shortcut} layout={null} isMac={keybindings.isMac} />}
+            </div>
+        )
+    }
     return (
         <div className="group flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
             <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
