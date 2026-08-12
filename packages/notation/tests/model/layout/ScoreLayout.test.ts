@@ -1,4 +1,11 @@
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH } from '@mushee/notation/components/constants'
+import {
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_SPACING,
+    ROW_GAP,
+    ROW_HEIGHT,
+    SCORE_WIDTH,
+    TEMPO_MARKING_Y,
+} from '@mushee/notation/components/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
@@ -105,6 +112,59 @@ describe('ScoreLayout', () => {
 
             const orphan = new Measure(score, 'treble', new TimeSignature(4, 4)) // never registered via addMeasure
             expect(() => orphan.layout).toThrow('Measure not part of this score layout')
+        })
+    })
+
+    describe('selectionMenuAnchor', () => {
+        /** The selected span of `notes` within one row: slot start of the first to slot end of the last. */
+        function span(score: Score, notes: Note[]): { start: number; end: number } {
+            const xOf = (note: Note) =>
+                score.layout.rowFor(note.measure).getMeasureX(note.measure) + note.measure.layout.getXForElement(note)
+            const first = notes[0]
+            const last = notes[notes.length - 1]
+            return { start: xOf(first), end: xOf(last) + last.measure.layout.getAllottedWidth(last) }
+        }
+
+        it('centers on a single selected note slot, at tempo-marking height', () => {
+            const score = makeScore(1)
+            const note = score.measures[0].notes[1]
+            const anchor = score.layout.selectionMenuAnchor([note])
+            const { start, end } = span(score, [note])
+            expect(anchor).toEqual({ x: (start + end) / 2, y: TEMPO_MARKING_Y })
+        })
+
+        it('centers on the full band span of a multi-note run', () => {
+            const score = makeScore(1)
+            const notes = score.measures[0].notes.slice(0, 3)
+            const anchor = score.layout.selectionMenuAnchor(notes)
+            const { start, end } = span(score, notes)
+            expect(anchor?.x).toBe((start + end) / 2)
+        })
+
+        it('uses only the topmost row of a selection spanning rows', () => {
+            const score = makeScore(8) // 2 rows of 4
+            const [row0, row1] = score.layout.rows
+            const notes = [...row0.measures[3].notes, ...row1.measures[0].notes]
+            const anchor = score.layout.selectionMenuAnchor(notes)
+            const { start, end } = span(score, row0.measures[3].notes)
+            // Centered on the row-0 part of the selection, hovering over row 0.
+            expect(anchor).toEqual({ x: (start + end) / 2, y: TEMPO_MARKING_Y })
+
+            // Note order doesn't matter — the topmost row wins either way.
+            expect(score.layout.selectionMenuAnchor([...notes].reverse())).toEqual(anchor)
+        })
+
+        it("anchors over a later row at that row's y offset", () => {
+            const score = makeScore(8)
+            const note = score.layout.rows[1].measures[0].notes[0]
+            expect(score.layout.selectionMenuAnchor([note])?.y).toBe(ROW_HEIGHT + ROW_GAP + TEMPO_MARKING_Y)
+        })
+
+        it('returns null for an empty selection or notes foreign to this layout', () => {
+            const score = makeScore(1)
+            expect(score.layout.selectionMenuAnchor([])).toBeNull()
+            const stranger = makeScore(1).measures[0].notes[0]
+            expect(score.layout.selectionMenuAnchor([stranger])).toBeNull()
         })
     })
 

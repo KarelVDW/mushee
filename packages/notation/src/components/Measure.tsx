@@ -134,6 +134,7 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (
                             <rect
+                                data-export-exclude
                                 x={0}
                                 y={SELECTION_BAND_Y}
                                 width={bandWidth}

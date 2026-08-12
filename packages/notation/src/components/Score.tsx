@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
+import { useSelectionGestures } from '../lib/useSelectionGestures'
 import { Note, Pitch, Score as ScoreModel } from '../model'
 import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
 import { Barline } from './Barline'
@@ -58,6 +59,15 @@ interface ScoreProps {
     onSelectionStart?: (note: Note) => void
     /** Extend the selection to `note` (drag move / shift-click). */
     onSelectionExtend?: (note: Note) => void
+    /**
+     * A selection-menu gesture completed on `note`: long-press, double-tap, or lifting a
+     * drag that extended the selection (the grammar of Android's text selection). Passing
+     * this enables those gestures — the editor passes it on touch layouts to open its
+     * selection popover; omit it and plain tap/drag selection is all there is. The menu's
+     * position is the parent's business: derive it from the selection via
+     * `ScoreLayout.selectionMenuAnchor`, so it can track selection changes while open.
+     */
+    onSelectionMenu?: (event: SelectionMenuEvent) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void
     onAddMeasure?: () => void
     onRemoveMeasure?: () => void
@@ -73,6 +83,10 @@ interface ScoreProps {
     onClefClick?: (event: ClefClickEvent) => void
     onKeySignatureClick?: (event: KeySignatureClickEvent) => void
     onTimeSignatureClick?: (event: TimeSignatureClickEvent) => void
+}
+
+export interface SelectionMenuEvent {
+    note: Note
 }
 
 export interface TempoClickEvent {
@@ -113,6 +127,7 @@ export const Score = memo(function Score({
     waveformStore,
     onSelectionStart,
     onSelectionExtend,
+    onSelectionMenu,
     onNoteChange,
     onAddMeasure,
     onRemoveMeasure,
@@ -124,10 +139,6 @@ export const Score = memo(function Score({
 }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
-    // Pointer-drag state for range selection: whether the button is down, and whether the pointer
-    // has moved onto a different note since mousedown (a drag, which suppresses the click action).
-    const pointerDownRef = useRef(false)
-    const dragMovedRef = useRef(false)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
     const [ghostNote, setGhostNote] = useState<Note | null>(null)
@@ -300,10 +311,23 @@ export const Score = memo(function Score({
         [clientToSvg, score],
     )
 
+    // Gesture recognition (press/drag selection, and the long-press / double-tap /
+    // drag-release menu gestures) lives in the reusable recognizer; this component only
+    // resolves hits and renders. Menu gestures exist only when the parent passes
+    // `onSelectionMenu` — the editor does so on touch layouts.
+    const gestures = useSelectionGestures<Note>({
+        targetId: (note) => note.id,
+        isSelected: (note) => selectedIds.has(note.id),
+        onSelectionStart,
+        onSelectionExtend,
+        onSelectionMenu: onSelectionMenu && ((gesture) => onSelectionMenu({ note: gesture.target })),
+    })
+
     const handlePointerMove = useCallback(
         (e: React.PointerEvent<SVGSVGElement>) => {
             const hit = resolveHit(e.clientX, e.clientY)
             if (!hit) {
+                gestures.pointerMove(e, null)
                 if (hoveredNote) setHoveredNote(null)
                 if (ghostNote) setGhostNote(null)
                 return
@@ -311,15 +335,12 @@ export const Score = memo(function Score({
             const { note, localY } = hit
             if (note.id !== hoveredNote?.id) setHoveredNote(note)
 
-            // Button down: only once the pointer reaches a *different* note is it a drag — extend
-            // the selection then. Staying on the press note leaves the ghost intact so a press +
-            // release in place still commits a pitch change (below).
-            if (pointerDownRef.current) {
-                if (note.id !== selectedNote?.id) {
-                    if (ghostNote) setGhostNote(null)
-                    dragMovedRef.current = true
-                    onSelectionExtend?.(note)
-                }
+            gestures.pointerMove(e, note)
+            // Button down: a drag extends the selection (inside the recognizer). Staying on the
+            // press note leaves the ghost intact so a press + release in place still commits a
+            // pitch change (below).
+            if (gestures.pressed()) {
+                if (gestures.dragged() && ghostNote) setGhostNote(null)
                 return
             }
 
@@ -332,35 +353,16 @@ export const Score = memo(function Score({
             if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
             else setGhostNote(note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }).previewUnder(note.clef))
         },
-        [resolveHit, hoveredNote, ghostNote, selectedNote, onSelectionExtend],
+        [resolveHit, gestures, hoveredNote, ghostNote, selectedNote],
     )
 
     const handlePointerDown = useCallback(
         (e: React.PointerEvent<SVGSVGElement>) => {
             const hit = resolveHit(e.clientX, e.clientY)
-            if (!hit) return
-            pointerDownRef.current = true
-            dragMovedRef.current = false
-            // Shift extends the existing selection to the pressed note; a plain press starts a new one.
-            if (e.shiftKey) onSelectionExtend?.(hit.note)
-            else onSelectionStart?.(hit.note)
+            if (hit) gestures.pointerDown(e, hit.note)
         },
-        [resolveHit, onSelectionStart, onSelectionExtend],
+        [resolveHit, gestures],
     )
-
-    // A drag can end with the pointer outside the score (or be taken over by a
-    // scroll gesture on touch), so listen on the window.
-    useEffect(() => {
-        const endDrag = () => {
-            pointerDownRef.current = false
-        }
-        window.addEventListener('pointerup', endDrag)
-        window.addEventListener('pointercancel', endDrag)
-        return () => {
-            window.removeEventListener('pointerup', endDrag)
-            window.removeEventListener('pointercancel', endDrag)
-        }
-    }, [])
 
     const handlePointerLeave = useCallback(() => {
         setHoveredNote(null)
@@ -368,14 +370,14 @@ export const Score = memo(function Score({
     }, [])
 
     const handleClick = useCallback(() => {
-        // A drag selected a range — that's not a click, so don't also commit a pitch change.
-        if (dragMovedRef.current) return
+        // A drag or menu gesture already consumed this press — its trailing click is exhaust.
+        if (gestures.clickSuppressed()) return
         // Clicking the active note at a different staff line commits the previewed (ghost) pitch.
         if (ghostNote?.pitch && selectedNote && onNoteChange) {
             setGhostNote(null)
             onNoteChange(selectedNote, ghostNote.pitch)
         }
-    }, [ghostNote, selectedNote, onNoteChange])
+    }, [gestures, ghostNote, selectedNote, onNoteChange])
 
     // Measure button positions (last row only)
     const measureButtonPos = useMemo(() => {
@@ -405,10 +407,12 @@ export const Score = memo(function Score({
                     xmlns="http://www.w3.org/2000/svg"
                     // pan-y: vertical touch gestures keep scrolling the page, while taps and
                     // horizontal drags reach the pointer handlers (select / drag-extend).
-                    className="touch-pan-y"
+                    // touch-callout off: an iOS long-press must open the selection menu, not the OS callout.
+                    className="touch-pan-y [-webkit-touch-callout:none]"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerLeave={handlePointerLeave}
+                    onContextMenu={gestures.contextMenu}
                     onClick={handleClick}>
                     {/* Live recording waveform — its own store-subscribed layer, so
                         sample-rate updates never re-render the score itself */}

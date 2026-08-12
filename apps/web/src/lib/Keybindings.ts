@@ -110,7 +110,20 @@ export interface BindableCommand {
     id: string
     /** Default shortcut spec (see {@link Shortcut.parse}) — null for commands unbound by default. */
     defaultShortcut: string | null
+    /**
+     * The shortcut is an OS-wide convention (⌘C, ⌘V, ⌘A, …): the command stays listed but can
+     * never be rebound or unbound, and no other command can take its keystroke. Unlike
+     * rebindable commands, fixed ones match by the *character* the key produces — ⌘A means
+     * "⌘ plus the key that types 'a'" on every layout (physical KeyQ on AZERTY), exactly as
+     * the OS itself resolves its conventions.
+     */
+    fixed?: boolean
 }
+
+/** Outcome of {@link Keybindings.rebind}: applied (possibly displacing a command) or refused. */
+export type RebindResult<C extends BindableCommand> =
+    | { ok: true; displaced: C | null }
+    | { ok: false; reservedBy: C }
 
 /** One persisted deviation from a command's default; null in a {@link StoredShortcuts} map means "explicitly unbound". */
 export interface StoredOverride {
@@ -147,8 +160,11 @@ export class Keybindings<C extends BindableCommand> {
     readonly isMac: boolean
     private readonly storageKey: string
     private readonly defaults = new Map<string, Shortcut | null>()
+    private readonly fixedIds = new Set<string>()
     private readonly overrides = new Map<string, Shortcut | null>()
     private byShortcut = new Map<string, C>()
+    /** Fixed (OS-convention) commands, indexed by character identity instead of physical key. */
+    private byFixedChar = new Map<string, C>()
     private _version = 0
     private readonly listeners = new Set<() => void>()
 
@@ -167,6 +183,7 @@ export class Keybindings<C extends BindableCommand> {
         this.storageKey = options.storageKey ?? 'solkey:shortcuts'
         for (const command of commands) {
             this.defaults.set(command.id, command.defaultShortcut ? Shortcut.parse(command.defaultShortcut, this.isMac) : null)
+            if (command.fixed) this.fixedIds.add(command.id)
         }
         this.load()
         this.reindex()
@@ -196,31 +213,67 @@ export class Keybindings<C extends BindableCommand> {
 
     /** The command a keydown should trigger, or null when the keystroke isn't bound. */
     resolve(e: KeyboardEvent): C | null {
+        // OS conventions first, by produced character: ⌘A is "⌘ + the key that types 'a'"
+        // whatever the layout, so a fixed command can never be shadowed by a physical binding.
+        if (e.key.length === 1) {
+            const fixed = this.byFixedChar.get(Keybindings.charId(e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.key))
+            if (fixed) return fixed
+        }
         const shortcut = Shortcut.fromEvent(e)
         return shortcut ? (this.byShortcut.get(shortcut.id) ?? null) : null
     }
 
+    /** Character identity for OS-convention matching: modifiers plus the character a key produces. */
+    private static charId(ctrl: boolean, alt: boolean, shift: boolean, meta: boolean, key: string): string {
+        const mods = [ctrl && 'Ctrl', alt && 'Alt', shift && 'Shift', meta && 'Meta'].filter(Boolean)
+        return [...mods, key.toLowerCase()].join('+')
+    }
+
+    /** A shortcut's character identity — from its recorded label, else its Key* code — or null for non-letter keys. */
+    private charIdFor(shortcut: Shortcut): string | null {
+        const key = shortcut.label ?? (shortcut.code.startsWith('Key') ? shortcut.code.slice(3) : null)
+        if (!key || key.length !== 1) return null
+        return Keybindings.charId(shortcut.ctrl, shortcut.alt, shortcut.shift, shortcut.meta, key)
+    }
+
+    /** Whether a command's shortcut is an OS convention that can never be changed. */
+    isFixed(commandId: string): boolean {
+        return this.fixedIds.has(commandId)
+    }
+
     /**
-     * Bind a shortcut to a command. A different command previously holding that shortcut is
-     * unbound and returned, so the UI can call the reassignment out.
+     * Bind a shortcut to a command. A different (rebindable) command previously holding that
+     * shortcut is unbound and reported, so the UI can call the reassignment out. Refused when
+     * either side is fixed: the target command keeps its OS-convention keystroke, and a fixed
+     * command's keystroke can't be given away.
      */
-    rebind(commandId: string, shortcut: Shortcut): C | null {
+    rebind(commandId: string, shortcut: Shortcut): RebindResult<C> {
+        const self = this.commands.find((command) => command.id === commandId)
+        if (self?.fixed) return { ok: false, reservedBy: self }
+        // A keystroke that produces a fixed convention's character is reserved, whatever
+        // physical key it sits on — it would be shadowed at resolve time anyway.
+        const charId = this.charIdFor(shortcut)
+        const charHolder = charId ? this.byFixedChar.get(charId) : undefined
+        if (charHolder && charHolder.id !== commandId) return { ok: false, reservedBy: charHolder }
         const holder = this.byShortcut.get(shortcut.id)
+        if (holder && holder.id !== commandId && holder.fixed) return { ok: false, reservedBy: holder }
         const displaced = holder && holder.id !== commandId ? holder : null
         if (displaced) this.override(displaced.id, null)
         this.override(commandId, shortcut)
         this.commit()
-        return displaced
+        return { ok: true, displaced }
     }
 
-    /** Remove a command's shortcut entirely. */
+    /** Remove a command's shortcut entirely (no-op for fixed commands). */
     unbind(commandId: string): void {
+        if (this.fixedIds.has(commandId)) return
         this.override(commandId, null)
         this.commit()
     }
 
     /** Put a command back on its default, unbinding whichever command holds that shortcut now. */
     reset(commandId: string): void {
+        if (this.fixedIds.has(commandId)) return
         const fallback = this.defaults.get(commandId)
         if (fallback) {
             const holder = this.byShortcut.get(fallback.id)
@@ -279,9 +332,19 @@ export class Keybindings<C extends BindableCommand> {
 
     private reindex(): void {
         this.byShortcut = new Map()
+        this.byFixedChar = new Map()
         for (const command of this.commands) {
             const shortcut = this.shortcutFor(command.id)
-            if (shortcut && !this.byShortcut.has(shortcut.id)) this.byShortcut.set(shortcut.id, command)
+            if (!shortcut) continue
+            if (command.fixed) {
+                const charId = this.charIdFor(shortcut)
+                if (charId) {
+                    if (!this.byFixedChar.has(charId)) this.byFixedChar.set(charId, command)
+                    continue
+                }
+                // A fixed non-letter shortcut has no character identity — match it physically.
+            }
+            if (!this.byShortcut.has(shortcut.id)) this.byShortcut.set(shortcut.id, command)
         }
     }
 
@@ -309,6 +372,7 @@ export class Keybindings<C extends BindableCommand> {
     private applyStored(stored: StoredShortcuts | null): void {
         for (const [id, entry] of Object.entries(stored?.overrides ?? {})) {
             if (!this.defaults.has(id)) continue // the command no longer exists
+            if (this.fixedIds.has(id)) continue // stale override on a command that became fixed
             if (entry === null) this.overrides.set(id, null)
             else if (typeof entry.keys === 'string') this.overrides.set(id, Shortcut.parse(entry.keys, this.isMac, entry.label))
         }
