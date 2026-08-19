@@ -1476,3 +1476,47 @@ has **no remaining route**.
   `ProviderRegistry` still constructs and requires basic-pitch and `get()` falls back to
   it; `check-inference-parity.ts` still gates the remote path; k8s still deploys the
   sidecar. Turn the flag on in production first and let real traffic vote.
+
+### Per-band gated features: a null with a mechanism — band is a proxy for MATERIAL (`sweep-bands.ts`)
+
+Every cached clip carries the band the resolver chose, so every gated feature was re-scored
+as a paired Δ vs the production config **within band × path strata** (dev 525 clips:
+low/voice 133, mid/voice 301, high/voice 42, mid/instr 38 — low/high instrument strata are
+n ≤ 6 on the real corpus and cannot power a conclusion; the per-band tuning of the CORE
+knobs on synthetic instruments is how `PROFILE_BANDS` was built in the first place).
+
+**Everything that looked like band structure on dev decomposed into material or died on
+test:**
+
+- `quorum .75/60 ms` (high/voice +0.019*), `minNoteSec 120 ms` (high/voice +0.016*), and
+  the R15 long-quiet filter (high/voice +0.013*) all put their entire gain inside
+  **esmuc-choir, at every band** (+0.014…+0.027*), while hurting solo corpora
+  (n20emv2/low −0.023*/−0.011*, csd/low −0.017*, guitarset −0.015*). Bleed effects wearing
+  a band costume — the axis that separates them is one the resolver cannot observe.
+- `v.trust 0.4` was the one candidate with a within-dataset register gradient
+  (annotated-vocalset low +0.029* vs mid +0.010) and no observed harm in any low stratum:
+  dev low/voice +0.019*. **Held-out test: +0.007 [−0.006, +0.019] — not confirmed.**
+- `v.onsetShiftSec 90 ms`: dev low/voice +0.021*, test +0.002 [−0.007, +0.011] — gone; on
+  dev it also split by dataset, not band (esmuc/mid +0.013* vs csd/mid −0.033*, both choral).
+- Reverb-flag strata (`BAND_STRATA=band-rev`): on `+reverb` clips the relief is already
+  right — lowering the gate further costs (mid/voice/rev −0.029* at −0.15), raising it back
+  is n.s. everywhere — so the ramp's false-fires on sustained clean singing cost nothing
+  measurable and `REVERB_CONFIDENCE_RELIEF` earns no per-band value.
+- Uniform across strata, matching the standing global verdicts: gate offsets (lowering
+  hurts everywhere), R21 fill (negative on clean in every stratum), smoother width,
+  changeCost ≥ 2.5 saturation, evidenceDiscount, adaptiveFloorFraction 0.3 (both directions
+  worse everywhere), onsetSplit (keep global: −0.030* to remove on mid/instr, COnP-neutral
+  on voice).
+
+**Answered by mechanism, no sweep needed:** `silenceRule` (R25 — it never reclassifies a
+single frame on any clip, so no per-band assignment can make it matter), `adaptiveThreshold`
+(R3 — wrong novelty function, band-independent), `candidates`/`intervalChange`/
+`silenceMemory`/`unvoicedChangeRelease` (E3/E4/E7 — band-independent structural kills),
+the pitch-estimator family (R17/R24 — closed), the noise-adaptation actions + afftdn
+(2026-07 — sign-wrong/neutral with a band-independent mechanism).
+
+The register lesson mirrors the 2026-08 routing lesson: segmentation quality is a property
+of the **source**, and the axis that pays is material (voice vs instrument vs bleed) — which
+the profile system already routes on. `PROFILE_BANDS` supports per-band values today; the
+evidence says there is nothing new to put in them. If a bleed/ensemble detector ever exists,
+the esmuc trio above (+0.02-class, three independent knobs) is what it would unlock.
