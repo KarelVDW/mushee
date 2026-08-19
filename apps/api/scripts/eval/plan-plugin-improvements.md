@@ -189,7 +189,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   ground-truthed. Cheaper after task 4 (R21) has taken the trivial gaps.
 - **Why:** §3.3.
 
-### [ ] E8 — R2 (+R14/R18): take-key fallback, two-mask design  *(needs Batch 2; design doc first)*
+### [n] E8 — R2 (+R14/R18): take-key fallback, two-mask design  *(needs Batch 2; design doc first)*
 - Before code: write the short design per §12.3/§7.3/§8.2 — **two masks** (take-key for
   interpretation, score key signature for spelling), an **abstain** outcome that competes as a
   candidate, profile type as a parameter. Then: duration-weighted pitch-class histogram +

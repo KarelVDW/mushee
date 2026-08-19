@@ -1291,3 +1291,35 @@ everything". In a three-state note model the two jobs R6 wants split are already
 different states, and the r10b silence-memory null says re-adding identity across that route hurts.
 Option stays, documented-off; this also closes the "cheaper after R21" branch — R21 itself stayed
 off, and the release is unreachable regardless.
+
+### E8 (R2+R14/R18): take-key spelling fallback — built to its design, and it does not ship (2026-08-19)
+
+Design first per the plan (`design-take-key.md`): TalentedHack's two-mask correction (take-key =
+interpretation, score key = spelling; the score's `keyFifths` stays absolutely authoritative and
+the take-key is a FALLBACK for keyless takes only), profile as a parameter
+(Krumhansl/Temperley/diatonic), abstain competing as the incumbent (libKeyFinder's all-zeros
+profile). Built as `estimateTakeKeyClasses` in `voice-notation.ts` (duration-weighted pitch-class
+histogram over offset-normalised floats, 24-rotation Pearson), judged on the page by
+`bench-take-key.ts` (new): spelling error + accidentals/100 against INTENDED notes on the
+intonation tier, fallback on vs off.
+
+**It does not ship, and both failure modes are the estimator's, not the wiring's:**
+
+| detune | wrong% off→key | keyRight | abstain |
+|---|---|---|---|
+| ±0¢ | 1.8 → 1.8 | 9/16 | 0/16 |
+| ±20¢ | 1.8 → **2.4** | 9/16 | 0/16 |
+| ±40¢ | 31.1 → 32.2 | 7/16 | 0/16 |
+| ±60/80¢ | 65.7→66.9 / 98.8→97.1 | 1/16 / 0/16 | 0/16 |
+
+1. **The abstain-as-incumbent never fires** (0/80): Pearson against all-positive profiles on a
+   12-bin histogram essentially never lands ≤ 0, so the survey's "cleanest possible answer" needs
+   a real bar (a margin over the second-best key, or zero-mean chroma) before it means anything.
+2. **Short diatonic takes under-determine the profiles**: on 15-note single-scale melodies the
+   estimator recovers the actual key only 9/16 even at perfect intonation (relative-key and
+   neighbour confusions — textbook K-S behaviour), and a wrong key snaps borderline notes AWAY
+   from the intended spelling, which is exactly the "confidently mis-spelling" risk §8.2 warned
+   about. The builder keeps the score-key-only mask; the estimator, design doc and bench stay for
+   a future attempt with a real abstain bar and longer material.
+
+That closes the plugin-improvements plan: 15 tasks executed, every outcome logged above.
