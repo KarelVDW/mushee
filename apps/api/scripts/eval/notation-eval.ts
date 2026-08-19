@@ -137,7 +137,11 @@ async function main(): Promise<void> {
     // A dataset has a real tempo only if its clips disagree about it; a corpus-wide
     // constant 120 is the harness's nominal placeholder, not an annotation.
     const distinctBpm = new Set(clips.map((c) => c.truth.bpm));
-    const tempoAnnotated = distinctBpm.size > 1;
+    // A hand-annotated beat grid is a real tempo axis by construction, whatever
+    // the scalar bpm says — it is the stronger signal of the two, so check it
+    // first (Dagstuhl ChoirSet; see GroundTruth.beatGrid).
+    const gridded = clips.filter((c) => (c.truth.beatGrid?.length ?? 0) >= 2).length;
+    const tempoAnnotated = gridded > 0 || distinctBpm.size > 1;
 
     const acc: Record<string, Acc> = {};
     for (const s of STRATEGIES) acc[s] = newAcc();
@@ -145,7 +149,11 @@ async function main(): Promise<void> {
     for (const c of clips) {
       const cleaned = performanceAsProduction(c);
 
-      const refBeats: BeatNote[] = truthToBeats(c.truth.notes, c.truth.bpm);
+      const refBeats: BeatNote[] = truthToBeats(
+        c.truth.notes,
+        c.truth.bpm,
+        c.truth.beatGrid,
+      );
 
       for (const strat of STRATEGIES) {
         let bpm = 120;
@@ -191,7 +199,13 @@ async function main(): Promise<void> {
 
     console.log(
       `\n=== ${ds.id} — ${clips.length} clips (split=${split}` +
-        `${tempoAnnotated ? `, REAL tempo: ${distinctBpm.size} distinct bpm` : ', nominal bpm only → readability metrics only'})`,
+        `${
+          tempoAnnotated
+            ? gridded
+              ? `, REAL tempo: hand-annotated beat grid on ${gridded}/${clips.length} clips`
+              : `, REAL tempo: ${distinctBpm.size} distinct bpm`
+            : ', nominal bpm only → readability metrics only'
+        })`,
     );
     const head = tempoAnnotated
       ? 'strategy'.padEnd(12) + 'beatF1'.padEnd(9) + 'beatF1lock'.padEnd(12) +

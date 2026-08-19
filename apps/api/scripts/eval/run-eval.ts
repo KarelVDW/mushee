@@ -52,6 +52,7 @@ import {
   type MatchOptions,
   type Metrics,
   scoreNotesBest,
+  scoreOnsets,
   timingStats,
 } from './lib/metrics';
 import {
@@ -146,6 +147,13 @@ interface ClipResult {
    */
   seg: SegErrorCounts;
   onsets: OnsetClassStats;
+  /**
+   * MIREX COn (onset-only, pitch ignored) — computed for every clip, cheap,
+   * and the only meaningful score for `pitchless` datasets (lib/realCorpus.ts),
+   * whose truth carries no real MIDI. Reported alongside the pitch-aware
+   * metrics for every other dataset too, as a secondary number.
+   */
+  onsetOnly: { precision: number; recall: number; f1: number };
 }
 
 function emptySegErrors(): SegErrorCounts {
@@ -289,9 +297,21 @@ async function main(): Promise<void> {
           .map((d) => d.id)
       : [],
   );
+  // `pitchless` datasets (lib/realCorpus.ts) ship no real MIDI at all (e.g.
+  // AVP's vocal-percussion onsets): note-F1/chroma/octave-error and the
+  // onset-class taxonomy are meaningless for them, on top of (not instead of)
+  // the noteTruthDerived exclusion above.
+  const pitchlessIds = new Set(
+    realMode
+      ? discoverRealDatasets(evalRoot)
+          .filter((d) => d.pitchless)
+          .map((d) => d.id)
+      : [],
+  );
   const includeUntrusted = boolEnv('EVAL_INCLUDE_UNTRUSTED');
   const pooled = (scenarioId: string): boolean =>
-    includeUntrusted || !derivedNoteTruth.has(scenarioId);
+    includeUntrusted ||
+    (!derivedNoteTruth.has(scenarioId) && !pitchlessIds.has(scenarioId));
 
   const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
   const scenarios = allScenarios.filter(
@@ -337,6 +357,7 @@ async function main(): Promise<void> {
           metrics: scoreNotesBest(truth, est, matchOpts),
           seg: segErrors(truth.notes, est),
           onsets: onsetRecallByClass(truth.notes, est, matchOpts.onsetTolSec),
+          onsetOnly: scoreOnsets(truth.notes, est, matchOpts.onsetTolSec),
         });
       }
     }
@@ -361,6 +382,17 @@ async function main(): Promise<void> {
       /** False = reported for information only, kept out of the aggregates. */
       pooled: pooled(s.id),
       noteTruthDerived: derivedNoteTruth.has(s.id),
+      pitchless: pitchlessIds.has(s.id),
+      // MIREX COn — onset-only, pitch ignored. The headline number for
+      // `pitchless` datasets; a secondary number for everyone else. Precision
+      // and recall are reported separately because for some onset corpora only
+      // one of them is meaningful: where the truth marks SYLLABLE onsets on
+      // melismatic singing (jacrc), a note onset inside a melisma is a correct
+      // detection that the truth does not list, so precision is understated by
+      // construction and recall is the number to read.
+      onsetF1: mean(rs.map((r) => r.onsetOnly.f1)),
+      onsetPrecision: mean(rs.map((r) => r.onsetOnly.precision)),
+      onsetRecall: mean(rs.map((r) => r.onsetOnly.recall)),
       f1: mean(rs.map((r) => r.metrics.f1)),
       chromaF1: mean(rs.map((r) => r.metrics.chromaF1)),
       precision: mean(rs.map((r) => r.metrics.precision)),
@@ -418,6 +450,7 @@ async function main(): Promise<void> {
     notePooling: {
       includeUntrusted,
       derivedNoteTruth: [...derivedNoteTruth],
+      pitchless: [...pitchlessIds],
       excludedFromOverall: excludedScenarios,
     },
     overallTiming,
@@ -432,13 +465,19 @@ async function main(): Promise<void> {
       condition: r.condition,
       ...r.metrics,
       seg: r.seg,
+      onsetOnly: r.onsetOnly,
     })),
   };
   writeFileSync(outPath, JSON.stringify(report, null, 2));
 
   console.log(`\n=== ${label} (${report.mode}) ===`);
   console.log(
-    'scenario'.padEnd(20) + 'COnP'.padEnd(7) + 'chromaF1'.padEnd(10) + 'octErr',
+    'scenario'.padEnd(20) +
+      'COnP'.padEnd(7) +
+      'chromaF1'.padEnd(10) +
+      'octErr'.padEnd(8) +
+      'COn'.padEnd(6) +
+      'COnRec'.padEnd(9),
   );
   for (const s of perScenario) {
     console.log(
@@ -446,7 +485,13 @@ async function main(): Promise<void> {
         s.f1.toFixed(2).padEnd(7) +
         s.chromaF1.toFixed(2).padEnd(10) +
         s.octaveErrorRate.toFixed(2).padEnd(8) +
-        (s.pooled ? '' : '† not pooled (note truth derived)'),
+        s.onsetF1.toFixed(2).padEnd(6) +
+        s.onsetRecall.toFixed(2).padEnd(9) +
+        (s.pooled
+          ? ''
+          : s.pitchless
+            ? '† not pooled (pitchless — read COn(onset) instead)'
+            : '† not pooled (note truth derived)'),
     );
   }
   console.log('\n' + 'condition'.padEnd(20) + 'COnP'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
@@ -466,9 +511,27 @@ async function main(): Promise<void> {
   );
   if (excludedScenarios.length) {
     console.log(
-      `† excluded from the aggregates: ${excludedScenarios.join(', ')} — no note ` +
-        'annotations in the dataset, only our own derivation of its frame pitch. ' +
-        'EVAL_INCLUDE_UNTRUSTED=1 pools them anyway.',
+      `† excluded from the aggregates: ${excludedScenarios.join(', ')}. ` +
+        // Two different reasons, and conflating them misreads the numbers: a
+        // derived-truth dataset HAS pitch we should not trust, a pitchless one
+        // has no pitch at all, so its COnP is meaningless rather than merely
+        // unreliable and only the COn/COnRec columns say anything.
+        [
+          excludedScenarios.filter((s) => derivedNoteTruth.has(s)).length
+            ? `Note truth derived, not annotated (${excludedScenarios
+                .filter((s) => derivedNoteTruth.has(s))
+                .join(', ')}) — our own derivation of the corpus's frame pitch.`
+            : '',
+          excludedScenarios.filter((s) => pitchlessIds.has(s)).length
+            ? `Pitchless (${excludedScenarios
+                .filter((s) => pitchlessIds.has(s))
+                .join(', ')}) — onset-only truth, so COnP/chromaF1/octErr are ` +
+              'meaningless for them; read the COn and COnRec columns.'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ') +
+        ' EVAL_INCLUDE_UNTRUSTED=1 pools them anyway.',
     );
   }
 

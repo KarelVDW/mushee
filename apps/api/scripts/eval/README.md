@@ -107,6 +107,9 @@ to exercise it end-to-end. `probe-source-classifier.ts` measures it directly
 | `fetch-esmuc.ts` | ESMUC Choir Dataset (CC-BY-4.0) — 271 per-singer choral stems (~4.8 h), **manually corrected per-singer note truth**, 13 conservatoire singers. Real mic bleed (simultaneous recording) — a genuine adverse condition, kept as its own dataset. |
 | `fetch-csd.ts` | Choral Singing Dataset (CC-BY-4.0) — 96×30 s per-singer stem excerpts, Tony-extracted + **hand-corrected** notes. ⚠️ truth is per SECTION (4 unison singers share one note file) and stems carry bleed. |
 | `fetch-hust-solfege.ts` | HUST_Solfege (MIT) — 73 real solo solfège recordings (amateur incl. juvenile voices, ~44 min, 3.7k notes). Offsets in the source are synthetic → durations derived from inter-onset gaps; the pitch column's ~+19.8 st convention is calibrated per file against the audio. See research-voice-datasets.md §1d. |
+| `fetch-dagstuhl.ts` | Dagstuhl ChoirSet (CC-BY-4.0) — 102×30 s quartet singer-stem excerpts. **The harness's only real tempo on singing**: 20 hand-tapped, second-annotator-reviewed beat/measure grids, emitted as `GroundTruth.beatGrid` (63–91 BPM, genuinely expressive) so `notation-eval.ts` can score notated rhythm on a *voice* corpus for the first time. Its NOTE truth is a 70 ms-MAE DTW score alignment → `noteTruthDerived`, never pooled. Mic bleed throughout. See research-voice-datasets.md §5l. |
+| `fetch-avp.ts` | AVP (CC-BY-4.0) — 280 clips / 9.8k **human-labelled onsets** on real amateur vocal percussion (kick/snare/hihat imitations). `pitchless`: no pitch exists anywhere in the chain, so it scores the `OnsetDetector` in isolation via COn. See research-voice-datasets.md §5a. |
+| `fetch-jacrc.ts` | JaCRC students (CC-BY-4.0) — 175×30 s excerpts / 5.2k **manual syllable onsets** from 25 amateur conservatory students singing jingju. `pitchless`. ⚠️ **read `onsetRecall`, not F1**: syllable onsets are a strict subset of note onsets on melismatic singing, so precision is understated by construction. Students-only folder (documented performer consent); the collection's professional/commercial rows are deliberately untouched. See research-voice-datasets.md §5l. |
 | `fetch-soundfont.sh` | FluidR3_GM soundfont for `generate.ts`. |
 | `degrade-real.ts` | Adverse-condition variants of the fetched real clips (run after the fetchers). |
 
@@ -776,6 +779,60 @@ which is why the fix was a profile flag rather than a better global config.
   measured stakes, kept as motivation for keeping the click honest: fixed-120 scores 0.245
   onset-beat F1 where the true tempo scores 0.714.)
 
+### Three new corpora + two new scoring paths (2026-08-13) — and what measuring them exposed
+
+Adopted `avp`, `dagstuhl-choir` and `jacrc-students` (all CC-BY-4.0; see the fetcher table and
+`research-voice-datasets.md` §5). Two harness capabilities had to exist first:
+
+- **`pitchless`** (`lib/realCorpus.ts`) — a corpus with real human-placed onsets but no pitch.
+  Excluded from pooled note-F1 like `noteTruthDerived`, scored via MIREX **COn**. `scoreOnsets()`
+  had been sitting unused in `lib/metrics.ts`; it is now wired in, and `run-eval` reports onset
+  **precision and recall separately** because for some corpora only one of them is meaningful.
+- **`GroundTruth.beatGrid`** (`types.ts`) + `beatsFromGrid()` (`lib/notation.ts`) — a hand-tapped
+  beat axis, used in preference to the scalar `bpm`. One `bpm` cannot describe rubato; a grid can.
+  **This gives `notation-eval.ts` its first real tempo on a voice corpus** (previously GuitarSet
+  only, an instrument).
+
+`lib/split.ts` gained performer grouping for all three at the same time — all three emit many
+clips per performer, so the default per-clip fallback would have leaked the same voice into both
+halves. Verified 0 leaked groups.
+
+**Measured, `EVAL_REAL=1 EVAL_ADAPTIVE=1`, all three excluded from the headline by design:**
+
+| dataset | COnP | COn | COnRec | split | missed | spurious |
+|---|---|---|---|---|---|---|
+| avp (280 clips) | 0.00 | 0.19 | 0.16 | 2 | **71** | 3 |
+| dagstuhl-choir (102) | 0.01 | 0.13 | 0.18 | **28** | 20 | **36** |
+| jacrc-students (175) | 0.01 | 0.28 | **0.52** | 60 | **3** | 42 |
+
+🔴 **AVP is mis-scoped for `run-eval`, and only measuring it showed that.** It misses **71 of
+every 100** onsets — not because the onset detector is weak, but because `run-eval` exercises the
+*whole pitch-based pipeline*, and AVP is unpitched percussion: CREPE finds no notes, so no onsets
+are ever emitted to score. The register's pitch — "a clean way to test `OnsetDetector` in
+isolation" — is right about the corpus and wrong about the path. **To get value from AVP, drive
+the onset detector directly (the `sweep-segmenter.ts` route), not `run-eval`.** Its `run-eval`
+row should be read as a property of the harness wiring, not of the detector.
+
+✅ **JaCRC behaves exactly as designed** and is the most informative of the three: **0.52
+syllable-onset recall** with only **3 per 100 syllables missed entirely**. The high split (60) and
+spurious (42) are the melisma effect predicted up front — in-melisma note onsets are correct
+detections the syllable truth does not list — which is why its manifest says read recall, not F1.
+
+⚠️ **Dagstuhl quantifies a warning that was previously only editorial.** vocadito's authors say
+DCS stems are "not well suited for monophonic voice evaluation" because of bleed. Measured: COnP
+0.01 with **28 splits and 36 spurious per 100 notes** — the pipeline over-segments badly on
+bleed-laden legato choral audio, and the profile resolver flags every clip `NOISY` at ~0 dB SNR.
+`notation-eval` accordingly gives beat-F1 **0.03** vs GuitarSet's 0.637. That number is *not*
+evidence about the notation stage: transcription has already failed upstream, and the reference's
+own pitch is 32 % more than 50 cents off. **Dagstuhl's worth is the beat-grid capability and the
+rubato probe, not an accuracy score** — treat any headline use of it as a mistake.
+
+(One real defect was found and fixed while checking that 0.03: the fetcher rebased excerpt *times*
+to t=0 but left beat *numbers* absolute, so a late excerpt carried beats 380–420 against an
+estimate counting from 0. Phase search was hiding most of it while making `beatF1lock` measure
+nothing else. Beats are now shifted by whole bars, preserving metrical phase. The corrected score
+is unchanged at ~0.03, confirming the cause is the audio, not the alignment.)
+
 ### Open items
 
 Decisions for the team:
@@ -799,3 +856,10 @@ Research directions (in expected-value order):
 4. **Whistle-specific FFT peak tracker** (whistling is near-sinusoidal; blocked on real whistle audio).
 5. MV2H metre+value integration for publication-comparable notation numbers; MRSSing corpus
    (CC-BY 4.0, verify annotation granularity + a paper/card licence mismatch first).
+   **Status 2026-08-13:** `verstar/MRSAudio` is now live on HuggingFace (CC-BY-4.0, ungated,
+   94k files) but the uploaded parts are MRSMusic (16 *instruments*) and MRSLife — **MRSSing,
+   the solo singing, is still not there.** Still a watch item.
+6. **Wire AVP to the onset detector directly.** The corpus is fetched and its truth is sound
+   (9.8k human-placed onsets on real amateur audio), but `run-eval`'s pitch-based path cannot
+   score unpitched percussion — see the 2026-08-13 entry. A `sweep-segmenter`-style runner
+   would turn an already-paid-for corpus into the isolated onset benchmark we lack.

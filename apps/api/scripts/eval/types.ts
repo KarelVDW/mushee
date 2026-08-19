@@ -44,6 +44,23 @@ export interface GroundTruth {
    * `scoreNotesBest` in lib/metrics.ts; plain `scoreNotes` ignores it.
    */
   alternateNotes?: TruthNote[][];
+  /**
+   * A manually annotated beat axis for the clip: `timeSec` is when a beat is
+   * heard, `beat` is its position in quarter-note beats from the piece's beat 0
+   * (negative for an anacrusis).
+   *
+   * Why this exists separately from `bpm`: `bpm` is one scalar, which can only
+   * describe a *constant* tempo. A performance with real rubato — a choir
+   * following a conductor, ritardando into a cadence — has no such scalar, and
+   * pushing its notes through one misplaces every beat after the first tempo
+   * change. Where a corpus ships a hand-annotated grid (Dagstuhl ChoirSet:
+   * tapped in Sonic Visualiser, then reviewed by a second annotator), the grid
+   * IS the reference beat axis and `lib/notation.ts`'s `truthToBeats` uses it
+   * in preference to `bpm`. `bpm` remains set — to the clip's median local
+   * tempo — because the rest of the harness (and the pipeline's quantizer)
+   * still needs a single number.
+   */
+  beatGrid?: { timeSec: number; beat: number }[];
 }
 
 /** How a scenario's audio is produced. */

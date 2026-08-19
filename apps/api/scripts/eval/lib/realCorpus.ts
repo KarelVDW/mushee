@@ -39,6 +39,18 @@ export interface RealDataset {
    * dataset.json so filtering is a property, never a hard-coded dataset name.
    */
   noteTruthDerived?: boolean;
+  /**
+   * The dataset carries no pitch information at all — only onset timestamps
+   * (e.g. AVP's vocal-percussion CSVs: onset + drum-class label, no MIDI).
+   * `TruthNote.midi` is filled with a placeholder so the type still holds,
+   * but note-F1/chroma/octave-error and the onset-class taxonomy (which all
+   * assume real pitch) are meaningless for these clips and must stay out of
+   * the pooled aggregates. The clip's onset-only score (MIREX COn, pitch
+   * ignored) is the number that means something — see `scoreOnsets` in
+   * lib/metrics.ts and its use in run-eval.ts. Declared by `pitchless` in the
+   * dataset's dataset.json.
+   */
+  pitchless?: boolean;
 }
 
 export function discoverRealDatasets(root: string): RealDataset[] {
@@ -59,6 +71,7 @@ export function discoverRealDatasets(root: string): RealDataset[] {
         instrumentId: m.instrumentId,
         corpusSplit: m.corpusSplit,
         noteTruthDerived: m.noteTruthDerived ?? false,
+        pitchless: m.pitchless ?? false,
       };
     });
 }
