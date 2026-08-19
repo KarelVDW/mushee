@@ -1223,3 +1223,33 @@ produces octave candidates; ours does not survive to the note layer.
 
 Both options stay, documented-off. With e7, r10a and r10b together: **stop trying to buy
 transition recall with transition prices** — the remaining misses are the learned-note-model gap.
+
+### E5 (R12): asymmetric confirmation + delay compensation — mostly not applicable, and the
+### applicable part is now measured (2026-08-19)
+
+Two of R12's three ideas do not map onto this pipeline, and saying so precisely is the finding:
+
+- **Asymmetric onset confirmation** (Essentia's 75 ms note-on): our streaming commit unit is a
+  WHOLE note — an onset is never committed before its offset — so there is no separate onset
+  confirmation to shorten. (A tentative-note-on emission protocol would be a product feature, not
+  a threshold.)
+- **Delay compensation**: we report measured note times, never confirmation times, so there is no
+  confirmation delay in any timestamp — and R7's calibration independently measured the reported-
+  time bias at −1 ms. Nothing to subtract; nothing was being double-compensated.
+
+The applicable third: `STABLE_MARGIN_SEC` (0.4 s) IS an offset confirmation — a note commits once
+that much audio exists past its end. Now env-overridable (`RECORDING_STABLE_MARGIN_SEC`) and
+measured with `check-streaming.ts` (paced-feed vs whole-buffer, 6 scenarios incl. all four
+articulations × 2 melodies, margins 0.4/0.3/0.2/0.1):
+
+| margin | paced vs whole-buffer |
+|---|---|
+| 0.4 (ships) / 0.3 | identical rows (incl. the same pre-existing 1-note cello quirk) |
+| 0.2 | first divergence (voice-continuant tune 0.815 → 0.769) |
+| 0.1 | broad divergence, 2-note deltas on the legato scenarios |
+
+So 300 ms is validated-equal and 200 ms — Essentia's own default — is the measured edge, because
+our margin is not confirming the note-off acoustically; it is confirming that CREPE's trailing
+window context can no longer change the tail decode, a stricter requirement. **Default stays
+0.4** (the check is 12 clips and the prize is 100 ms of mid-recording commit latency); anyone
+wanting the latency has a measured, env-gated knob and this table.

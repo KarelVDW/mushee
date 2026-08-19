@@ -170,7 +170,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   states (pYIN, §5.2) *or* Praat's cheaper path-lookback (§6.4). Run (a) first.
 - **Why:** §5.3, §6.2, §16.7.
 
-### [ ] E5 — R12: asymmetric onset/offset confirmation + delay compensation
+### [x] E5 — R12: asymmetric onset/offset confirmation + delay compensation
 - Split `STABLE_MARGIN_SEC` (0.4, `recording-pipeline.ts`) into onset/offset confirmations and
   subtract the confirmation delay from timestamps. Essentia's 75/200 ms is the starting point.
   Sweep on the articulated synthetic tier + Dagstuhl beat grids. Coordinate with task 5 (R7) so the

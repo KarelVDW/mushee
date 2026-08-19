@@ -19,7 +19,19 @@ const DEFAULT_BEAT_TYPE = 4;
 // Pass cadence. Overridable so eval harnesses can drive many incremental passes
 // without waiting in real time; unset in production, where it stays 1 s.
 const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000;
-const STABLE_MARGIN_SEC = 0.4;
+/**
+ * OFFSET-confirmation margin (E5/R12): a note is committed once this much
+ * audio exists past its END — the streaming analogue of Essentia Pitch2Midi's
+ * note-off confirmation (its default is 200 ms; ours has been 400 ms). The
+ * same margin bounds how far a later window may reach back, so it is the
+ * commit-latency knob. Env-overridable so `check-streaming.ts` can measure
+ * where paced-feed commits start to contradict the whole-buffer result.
+ * (R12's asymmetric ONSET confirmation has no analogue here: our commit unit
+ * is a whole note, so an onset is never committed before its offset. And its
+ * delay compensation does not apply either — we report measured note times,
+ * not confirmation times; R7 calibrated the reported-time bias at 0.)
+ */
+const STABLE_MARGIN_SEC = Number(process.env.RECORDING_STABLE_MARGIN_SEC) || 0.4;
 /**
  * Lead-in of already-seen audio prepended to each windowed transcription pass
  * (stateless providers only). basic-pitch runs 2 s analysis windows internally,
