@@ -1069,6 +1069,32 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R6 (E7) — fat1's two-stage voicing decay: release the note-change
+  // resistance after N unvoiced frames while `unvoicedPitchCost` alone keeps
+  // deciding survival. The case it targets: a slurred pitch change THROUGH a
+  // consonant, which the saturated change cost currently forbids.
+  if (on('r6')) {
+    configs.push({
+      name: 'r6 OFF (anchor)',
+      group: 'r6',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const afterSec of [0.04, 0.08]) {
+      for (const discount of [0.5, 0.2, 0]) {
+        configs.push({
+          name: `r6 a${afterSec * 1000} d${discount}`,
+          group: 'r6',
+          segment: voiceSegment({
+            ...BEST,
+            unvoicedChangeRelease: { afterSec, discount },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
   // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
   // consumers of the detector's onsets. The bar its own doc comment sets: beat
   // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at

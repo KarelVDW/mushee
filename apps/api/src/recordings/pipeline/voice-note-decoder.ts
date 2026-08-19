@@ -142,6 +142,18 @@ export interface VoiceDecodeOptions {
    * fixed prior across any rest. Omit for the historical free jump.
    */
   silenceMemory?: { perOctaveNats?: number; amortize?: boolean };
+  /**
+   * E7/R6: fat1's two-stage voicing decay — split `unvoicedPitchCost`'s two
+   * jobs. Today one scalar decides both whether a note SURVIVES a dropout and
+   * whether its PITCH IDENTITY does. This releases the second first: once
+   * `afterSec` of consecutive unvoiced frames have passed, the note-change
+   * cost is multiplied by `discount` until voicing returns — a breath costs a
+   * note its resistance to changing pitch before it costs the note its life
+   * (which stays `unvoicedPitchCost`'s job alone). Under the shipping
+   * saturated change cost this is what could let a slur through a consonant
+   * be written without re-admitting vibrato splits on voiced frames.
+   */
+  unvoicedChangeRelease?: { afterSec?: number; discount?: number };
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -495,7 +507,7 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the ten that are meaningfully absent. */
+  /** Every knob resolved, except the eleven that are meaningfully absent. */
   private readonly o: Required<
     Omit<
       VoiceDecodeOptions,
@@ -509,6 +521,7 @@ export class VoiceNoteDecoder {
       | 'candidates'
       | 'intervalChange'
       | 'silenceMemory'
+      | 'unvoicedChangeRelease'
     >
   > &
     Pick<
@@ -523,6 +536,7 @@ export class VoiceNoteDecoder {
       | 'candidates'
       | 'intervalChange'
       | 'silenceMemory'
+      | 'unvoicedChangeRelease'
     >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
@@ -819,6 +833,14 @@ export class VoiceNoteDecoder {
     const smPerOct = sm ? sm.perOctaveNats ?? 3 : 0;
     let silenceFromPitch = -1;
     let silenceGapFrames = 0;
+    // E7/R6: consecutive unvoiced frames ending just before t — once past the
+    // release point, the note-change cost is discounted until voicing returns.
+    const ucr = this.o.unvoicedChangeRelease;
+    const ucrAfterFrames = ucr
+      ? Math.max(1, Math.round((ucr.afterSec ?? 0.06) / track.hopSec))
+      : 0;
+    const ucrDiscount = ucr ? ucr.discount ?? 0.2 : 1;
+    let unvoicedRun = 0;
 
     const cost = new Float32Array(numStates);
     const next = new Float32Array(numStates);
@@ -910,7 +932,8 @@ export class VoiceNoteDecoder {
       // note change (direct mode) and a note start out of silence (both modes) —
       // the latter is what carries the mechanism in via-silence mode.
       const ev = evidence ? evidence[t] : 1;
-      const change = this.o.changeCost * ev;
+      const released = ucr !== undefined && unvoicedRun >= ucrAfterFrames;
+      const change = this.o.changeCost * ev * (released ? ucrDiscount : 1);
       const on = this.o.onCost * ev;
       const silencePrev = cost[0];
       let bestStable = Infinity;
@@ -1037,6 +1060,7 @@ export class VoiceNoteDecoder {
           back[t * numStates + STABLE + p] = from;
         }
       }
+      if (ucr) unvoicedRun = voiced[t] ? 0 : unvoicedRun + 1;
       // Advance the silence path memory AFTER every use at this frame: the
       // from-silence jumps above priced against the path as of t−1.
       if (sm) {

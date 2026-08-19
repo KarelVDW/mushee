@@ -184,7 +184,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   unchanged — a pure ordering change, so any delta is real.
 - **Why:** §7.1.
 
-### [ ] E7 — R6: split `unvoicedPitchCost` into note-survival vs pitch-identity
+### [n] E7 — R6: split `unvoicedPitchCost` into note-survival vs pitch-identity
 - Second transition cost behind a flag; sweep on the articulated synthetic tier where dropouts are
   ground-truthed. Cheaper after task 4 (R21) has taken the trivial gaps.
 - **Why:** §3.3.

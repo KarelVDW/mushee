@@ -1273,3 +1273,21 @@ banks what this baseline offers. It stays in the sweep as the calibration point 
 (the eval's truth is absolute; per-note scatter, not take drift, dominates). §7.1's "genuine
 correctness point" is genuine only under tuning-relative truth, which is the notation layer's
 domain — where the offset is already consumed.
+
+### E7 (R6): splitting unvoicedPitchCost — an exact null, and the reason is the silence state (2026-08-19)
+
+fat1's two-stage voicing decay as `unvoicedChangeRelease: { afterSec, discount }`: after N
+consecutive unvoiced frames the note-change cost is discounted (down to 0) while
+`unvoicedPitchCost` alone keeps pricing survival. Swept afterSec {40,80 ms} × discount
+{0.5, 0.2, 0} on the dev VOICE slice: **every row reproduces the anchor to the last digit** —
+even a FREE change after 40 ms of dropout is never on the winning path.
+
+The structural reason, worth keeping: riding a dropout as a pitch state costs
+`unvoicedPitchCost` = 1.5 nats/frame while the silence route costs `off + on` = 1.0 total, so any
+gap long enough to trigger the release has already been taken through silence — where pitch
+identity is forgotten globally. **The silence state IS the released path.** fat1 needs a two-stage
+decay because it has no silence state: its only options are "hold the note" or "release
+everything". In a three-state note model the two jobs R6 wants split are already assigned to two
+different states, and the r10b silence-memory null says re-adding identity across that route hurts.
+Option stays, documented-off; this also closes the "cheaper after R21" branch — R21 itself stayed
+off, and the release is unreachable regardless.
