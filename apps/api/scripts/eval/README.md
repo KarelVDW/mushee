@@ -14,6 +14,21 @@ pnpm --filter @mushee/api exec tsx scripts/eval/<script>.ts
 The two everyday entry points are also wired into package.json:
 `pnpm --filter @mushee/api eval:generate` and `pnpm --filter @mushee/api eval:run`.
 
+## Research notes
+
+Standing research documents live beside the harness. They are the durable record; the Findings
+logs below are the measurements.
+
+| File | Covers |
+|---|---|
+| `research-benchmarks.md` | Datasets, metrics, tolerances, benchmark-suite design |
+| `research-pitch-models.md` | Frame-level f0 and note-level transcription state of the art |
+| `research-voice-transcription.md` | The voice-specific flow: syllables, silence-state decode, V0–V3 plan |
+| `research-voice-datasets.md` | Licence-and-provenance register for every voice corpus considered |
+| `research-rhythm.md` | Tempo/beat tracking and score-level rhythm quantisation |
+| `research-daw-products.md` | How commercial products do it (docs, patents, press) |
+| `research-plugin-sources.md` | Twelve open-source projects' **source code** mined for transferable ideas — plugins, the reference implementations we cite, and autotune |
+
 ## Prerequisites
 
 - **fluidsynth** on PATH (`brew install fluid-synth`) — renders instrument
