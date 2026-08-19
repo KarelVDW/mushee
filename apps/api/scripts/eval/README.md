@@ -1350,3 +1350,14 @@ RMVPE. Per the plan's own blocking clause, nothing was downloaded and no benchma
   N20EMv2 yardstick alone; GAME does not change that answer's evidence either way.
 
 Sources: github.com/openvpi/GAME (MIT LICENSE; releases page v1.0.0, licence statement quoted above).
+
+### R24: angle-band-gated slope rotation — the fourth estimator null closes the family (2026-08-19)
+
+OpenTune's conditional detrend (§20.5: slope from endpoint medians, normalised at 7 st/s, rotate
+flat only inside the 10°–30° band) as `pitchEstimator: 'slope-gated'`. Dev VOICE slice, r17's
+setup: **+0.090 vs trimmed-mean's +0.094** (pWrong 17→18, chromaF1 0.522→0.516). The gate was the
+one untested twist, and it changes nothing: notes whose residual ramp falls in the band are
+precisely the expressive ones the trim already handles, and rotating them re-centres toward the
+ramp's midpoint — away from the sung pitch — exactly as the unconditional variants did. Four
+estimators (Hann median, slew-limit, one-pole, detrend ± gate) have now reproduced-or-worsened the
+trimmed mean; the family is closed. Do not add a fifth.

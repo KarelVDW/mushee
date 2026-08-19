@@ -219,7 +219,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   external-yardstick row already says a learned note model is where the remaining headroom is.
 - **Why:** §20.1–§20.2.
 
-### [ ] 10. R24 — angle-band-gated slope rotation as a fourth `pitchEstimator` variant  *(XS, optional)*
+### [n] 10. R24 — angle-band-gated slope rotation as a fourth `pitchEstimator` variant  *(XS, optional)*
 - Detrend only when the note's slope angle (normalised at 7 st/s) is in the 10°–30° band; leave
   flat notes and deliberate glides alone. Joins the task-7 sweep, whose three unconditional
   variants all measured null — expectation is low; a fourth null closes the family for good.

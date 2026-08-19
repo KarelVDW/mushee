@@ -1095,6 +1095,30 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R24 (Batch 4) — the angle-band-gated slope rotation, the conditional twist
+  // on detrend that task 7's three unconditional variants lacked. Same SPLIT
+  // cleanup as r17 so the rows compare against that family's log.
+  if (on('r24')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r24 trimmed (ships)',
+      group: 'r24',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+    });
+    configs.push({
+      name: 'r24 slope-gated',
+      group: 'r24',
+      segment: voiceSegment({ ...BEST, pitchEstimator: 'slope-gated' }),
+      cleanup: SPLIT,
+    });
+  }
+
   // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
   // consumers of the detector's onsets. The bar its own doc comment sets: beat
   // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at

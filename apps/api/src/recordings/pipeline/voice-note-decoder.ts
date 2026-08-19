@@ -424,8 +424,20 @@ export interface VoiceDecodeOptions {
    *    line over the contour; the note's pitch is the line at the note's
    *    temporal centre plus the median residual — pulled less by a monotonic
    *    scoop or portamento tail than a median of the raw contour is.
+   *  - `'slope-gated'` — R24 (OpenTune §20.5): the CONDITIONAL twist on
+   *    detrend the unconditional variants lacked. Slope from medians of the
+   *    first/last max(3, n/5) frames, converted to an angle normalised at
+   *    7 st/s; only when 10° ≤ |angle| ≤ 30° is the contour rotated flat
+   *    around its centre before the trimmed mean — scoops get straightened,
+   *    flat notes and deliberate glides are left alone.
    */
-  pitchEstimator?: 'trimmed-mean' | 'hann-median' | 'slew-limit' | 'one-pole' | 'detrend';
+  pitchEstimator?:
+    | 'trimmed-mean'
+    | 'hann-median'
+    | 'slew-limit'
+    | 'one-pole'
+    | 'detrend'
+    | 'slope-gated';
   /** `'slew-limit'`: seconds the limiter takes to close a full step. */
   slewTimeSec?: number;
   /** `'one-pole'`: the smoother's time constant, in seconds. */
@@ -1309,10 +1321,10 @@ export class VoiceNoteDecoder {
       return medianOf(onePoleSmooth(vals, track.hopSec, this.o.onePoleTauSec));
     }
     if (this.o.pitchEstimator === 'detrend') return detrendCentre(vals);
-    vals.sort((a, b) => a - b);
-    const cut = Math.floor(vals.length * this.o.pitchTrim);
-    const kept = vals.length - 2 * cut >= 1 ? vals.slice(cut, vals.length - cut) : vals;
-    return kept.reduce((a, b) => a + b, 0) / kept.length;
+    if (this.o.pitchEstimator === 'slope-gated') {
+      return slopeGatedEstimate(vals, track.hopSec, this.o.pitchTrim);
+    }
+    return trimmedMean(vals, this.o.pitchTrim);
   }
 
   /**
@@ -1456,6 +1468,39 @@ function hannWeightedMedian(vals: number[]): number {
 function medianOf(vals: number[]): number {
   const s = [...vals].sort((a, b) => a - b);
   return s[s.length >> 1];
+}
+
+/** α-trimmed mean (Molina et al.) — sorts a copy; `vals` keeps its time order. */
+function trimmedMean(vals: number[], trim: number): number {
+  const s = [...vals].sort((a, b) => a - b);
+  const cut = Math.floor(s.length * trim);
+  const kept = s.length - 2 * cut >= 1 ? s.slice(cut, s.length - cut) : s;
+  return kept.reduce((a, b) => a + b, 0) / kept.length;
+}
+
+/**
+ * R24: OpenTune's angle-band-gated slope rotation (§20.5). Slope from the
+ * medians of the first/last max(3, n/5) frames; angle normalised at 7 st/s.
+ * Inside 10°–30° the contour is rotated flat around its centre before the
+ * trimmed mean; outside the band (flat notes below, deliberate glides above)
+ * the plain trimmed mean stands.
+ */
+function slopeGatedEstimate(vals: number[], hopSec: number, trim: number): number {
+  const n = vals.length;
+  if (n < 6) return trimmedMean(vals, trim);
+  const k = Math.max(3, Math.floor(n / 5));
+  const medFirst = medianOf(vals.slice(0, k));
+  const medLast = medianOf(vals.slice(n - k));
+  const sepFrames = Math.max(1, n - k);
+  const slopeStPerSec = (medLast - medFirst) / 100 / (sepFrames * hopSec);
+  const angleDeg = Math.abs((Math.atan(slopeStPerSec / 7) * 180) / Math.PI);
+  if (angleDeg < 10 || angleDeg > 30) return trimmedMean(vals, trim);
+  const slopeCentsPerFrame = (medLast - medFirst) / sepFrames;
+  const centre = (n - 1) / 2;
+  return trimmedMean(
+    vals.map((v, i) => v - slopeCentsPerFrame * (i - centre)),
+    trim,
+  );
 }
 
 /**
