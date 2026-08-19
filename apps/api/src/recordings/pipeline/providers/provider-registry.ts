@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 
 import { BasicPitchProvider } from './basic-pitch-provider';
+import { CrepePitchdownProvider } from './crepe-pitchdown-provider';
 import { CrepeProvider } from './crepe-provider';
 import { LocalModelBackend } from './local-model-backend';
 import type { ModelBackend, ProviderModelDirs } from './model-backend';
@@ -30,6 +31,14 @@ export class ProviderRegistry {
     }
     if (modelBackend.available('crepe-tiny')) {
       this.providers.set('crepe-tiny', new CrepeProvider(modelBackend, 'crepe-tiny'));
+      // Same checkpoint, octave-down analysis — the very-high band's candidate
+      // replacement for basic-pitch (see CrepePitchdownProvider). Registered
+      // whenever CREPE is (no extra model); routed to only when
+      // RECORDING_VERY_HIGH_CREPE=1 swaps the band anchor.
+      this.providers.set(
+        'crepe-tiny-down1',
+        new CrepePitchdownProvider(modelBackend),
+      );
     }
     if (!this.providers.has('basic-pitch')) {
       throw new Error('ProviderRegistry: basic-pitch model unavailable from backend');

@@ -183,6 +183,10 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | `bench-external-notes.ts` | Score an EXTERNAL system's per-clip note JSONs under the harness's conventions — the §10d gate for "should we acquire a learned model". `EXT_DIR=<dir> EVAL_SPLIT=test`. |
 | `bench-yong-runner.py` | The runner half for Yong-2023 (ICASSP 2023, MIT checkpoint): batch inference into the JSON format above. Setup + measured verdict in its header. |
 | `probe-source-classifier.ts` | Measures the stock-YAMNet voice/instrument classifier over every labeled real clip: forced-choice accuracy and the abstain-band trade table. |
+| `probe-provider-routing.ts` | Census of where the resolver sends traffic — provider × band × condition over every wav of both corpora — plus a JSON list of every basic-pitch routing. The evidence base for the provider-consolidation question (see the 2026-08-20 findings log). |
+| `bench-crepe-pitchdown.ts` | Can CREPE cover the `very-high` band if the audio is analysed an octave down (decode at 32 kHz, read as 16 kHz, rescale the notes back)? Fixed-config comparison against basic-pitch on the very-high scenarios. |
+| `bench-default-provider.ts` | Scores every clip the resolver actually routes to `DEFAULT_PROFILE` under basic-pitch vs CREPE-default candidates. Requires `probe-provider-routing.ts`'s JSON. |
+| `sweep-bands.ts` | Does any gated feature want a PER-BAND (`PROFILE_BANDS`) setting? Paired Δ vs the production config within band × path strata over the cached corpus; `BAND_STRATA=band-rev\|ds-band` swaps in the confound strata (reverb flag / dataset) that decide whether an apparent band effect is real. |
 
 ## Pruning log
 
@@ -1382,3 +1386,93 @@ tuning, measured dead twice.
 
 **Batch 4 complete.** All 19 plan tasks resolved: 6 done ([x]), 13 measured nulls ([n]), every
 outcome above with its mechanism.
+
+---
+
+## Findings log (2026-08-20, overnight: provider consolidation + per-band gating)
+
+Two questions, asked together: what would **dropping the basic-pitch provider** cost in
+accuracy (and can a pitch-shift front end or one of the gated features pay it), and does any
+gated feature want a **per-band** (`PROFILE_BANDS`) setting instead of its global one.
+
+### Where basic-pitch actually gets traffic (`probe-provider-routing.ts`)
+
+Every wav of both corpora resolved through the production resolver (harness hints,
+full-clip scan): **331 of 3 633 routings are basic-pitch, and not one of them carries
+pitched real material.**
+
+| route | real corpus | synthetic |
+|---|---|---|
+| `very-high` band | 20 — all AVP vocal percussion (pitchless) | 53 (whistle/piccolo scenarios) |
+| `default-wide` fallback | 198 — 188 annotated-vocalset echoey-room/distant-mic variants where the scan fails, 10 AVP | 60 (degraded variants with unscannable lead-ins) |
+
+Every pitched real clip routes to crepe-tiny (mid ≈ 1 510, low ≈ 1 006, high ≈ 231). The
+consolidation question therefore lives entirely on the synthetic very-high scenarios and
+the scan-failure fallback.
+
+### The very-high band on CREPE, analysed one octave down (`bench-crepe-pitchdown.ts`)
+
+The shift is exact and artifact-free: decode at 32 kHz and let CREPE read the samples as
+16 kHz — the take plays at half speed, every frequency halves with harmonic structure
+intact (a tape machine, not a phase vocoder) — then rescale times ÷2 and pitches +12 st.
+Effective coverage ~3.9 kHz real, above the corpus's highest note (3 729 Hz). Fixed-config
+comparison at the band anchor (whistle-mid/high + piccolo × 7 conditions, COnP@±100 ms,
+paired over 84 clips):
+
+| config | pooled | clean | echoey-room | distant-mic | Δ vs basic-pitch |
+|---|---|---|---|---|---|
+| basic-pitch (ships) | 0.556 | 0.881 | 0.341 | 0.227 | — |
+| crepe, no shift (naive drop) | 0.546 | 0.843 | 0.322 | 0.200 | −0.010 [−0.046,+0.026]; whistle-high −0.114 (39 % of its notes sit above the ceiling) |
+| crepe −1 oct | 0.578 | 0.966 | 0.244 | 0.169 | +0.022 [−0.010,+0.054] |
+| **crepe −1 oct + reverb ramp** | **0.583** | 0.966 | 0.271 | 0.181 | **+0.028 [−0.003,+0.059]** |
+| crepe −2 oct | 0.548 | 0.945 | 0.235 | 0.165 | −0.008 — no content needs the depth, 4× cost |
+
+Both hypotheses behind the question confirm in direction: the pitch-down closes the
+ceiling gap (the naive drop's whistle-high −0.114 becomes −0.02), and a gated feature
+recovers part of the rest — the reverberance relief ramp, which the basic-pitch band could
+never use because it has no confidence gate to relax. Heavy reverb is the one remaining
+deficit (−0.05…−0.07 vs basic-pitch), consistent with the 2026-07 diagnosis: reverb
+collapses CREPE's confidence, and basic-pitch's CNN note head is less gate-bound there.
+
+### Full integration, gated: `RECORDING_VERY_HIGH_CREPE=1`
+
+`CrepePitchdownProvider` (a 32 kHz wrapper over the same crepe-tiny checkpoint — no new
+model, registered whenever CREPE is), the `very-high` band-table swap (which also re-arms
+`applyReverb` there), a per-provider window ceiling in the resolver (2 × 1 900 Hz), and the
+voice overlay explicitly excluded (whistling is a documented voice-decode gap). Adaptive
+production path over the same scenarios:
+
+| | baseline (basic-pitch band) | consolidated | Δ paired |
+|---|---|---|---|
+| pooled COnP | 0.589 | **0.605** | **+0.016 [−0.010, +0.042]** |
+| piccolo / whistle-mid / whistle-high | 0.70 / 0.53 / 0.54 | 0.73 / 0.55 / 0.54 | |
+| missed per 100 | 36 | 30 | est. repair −16 % (5 297 → 4 445 s/100) |
+| re-onset / transition recall | 0.69 / 0.52 | 0.80 / 0.61 | |
+| echoey-room / distant-mic | 0.36 / 0.26 | 0.33 / 0.22 | the reverb deficit |
+
+### The DEFAULT_PROFILE is provider-immaterial (`bench-default-provider.ts`)
+
+All 248 non-pitchless clips the resolver actually routes to the fallback, scored under
+four defaults: basic-pitch (ships) **0.001**, crepe-tiny **0.001** (paired Δ +0.000
+[+0.000, +0.000]), crepe + reverb ramp 0.003, octave-down crepe 0.001. The fallback only
+fires on audio so degraded that no provider transcribes anything — so the flag's second
+half swaps `DEFAULT_PROFILE` to crepe-tiny at zero measured cost, and with it basic-pitch
+has **no remaining route**.
+
+### Decision summary — what dropping basic-pitch would buy and cost
+
+- **Accuracy**: parity-or-better on the only scenarios that route there (+0.016 pooled,
+  CI spans zero; two independent measurements agree), with heavy reverb on
+  whistling/piccolo the one regressing condition (−0.03…−0.04). Zero exposure on pitched
+  real traffic.
+- **The caveat that travels with every number**: the very-high band has no real test data
+  in either direction (standing open item) — this is synthetic whistling/piccolo only,
+  exactly as the shipping basic-pitch path's own validation always was.
+- **Cost/ops**: removal would delete one of the two Python gRPC inference services, the
+  basic-pitch TF.js path and model directory, and streaming's 36 164-sample hop-alignment
+  constraint. The pitch-down costs 2× inference on the very-high band only — a band with
+  ~zero production traffic.
+- **What the flag deliberately does NOT do** (the actual removal, a separate decision):
+  `ProviderRegistry` still constructs and requires basic-pitch and `get()` falls back to
+  it; `check-inference-parity.ts` still gates the remote path; k8s still deploys the
+  sidecar. Turn the flag on in production first and let real traffic vote.

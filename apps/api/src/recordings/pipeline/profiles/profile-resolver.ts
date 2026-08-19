@@ -13,6 +13,8 @@ import {
   DEFAULT_PROFILE,
   GLOBAL_MAX_FREQ_HZ,
   GLOBAL_MIN_FREQ_HZ,
+  PITCHDOWN_MODEL_CEILING_HZ,
+  PITCHDOWN_PROVIDER_NAME,
   type PipelineProfile,
   PROFILE_BANDS,
   TRAJECTORY_MODEL_CEILING_HZ,
@@ -299,7 +301,17 @@ function applyReverb(base: PipelineProfile, reverberance: number): PipelineProfi
  * gap with opposite needs — see research-pitch-models P3.4).
  */
 function applyVoice(base: PipelineProfile, isVoice: boolean): PipelineProfile {
-  if (!isVoice || !VOICE_DECODE || base.providerName === 'basic-pitch') return base;
+  // The pitch-down wrapper is excluded for the same reason basic-pitch is: the
+  // very-high band is whistling territory, which the voice decode's literature
+  // and calibration explicitly do not cover — and its cleanup set must not
+  // switch to the voice one either.
+  if (
+    !isVoice ||
+    !VOICE_DECODE ||
+    base.providerName === 'basic-pitch' ||
+    base.providerName === PITCHDOWN_PROVIDER_NAME
+  )
+    return base;
   return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice' };
 }
 
@@ -447,12 +459,17 @@ export class ProfileResolver {
     highHz: number,
     id: string,
   ): PipelineProfile {
-    const isTrajectory = base.providerName !== 'basic-pitch';
     // The CREPE trajectory provider can't see above its ~1997 Hz
     // ceiling, so cap their window there rather than demoting the whole clip to
     // the (much weaker) basic-pitch — the band router already sends sources
     // whose register sits above the ceiling to the basic-pitch `very-high` band.
-    const ceiling = isTrajectory ? TRAJECTORY_MODEL_CEILING_HZ : GLOBAL_MAX_FREQ_HZ;
+    // The octave-down wrapper hears to 2× that ceiling; basic-pitch to the top.
+    const ceiling =
+      base.providerName === 'basic-pitch'
+        ? GLOBAL_MAX_FREQ_HZ
+        : base.providerName === PITCHDOWN_PROVIDER_NAME
+          ? PITCHDOWN_MODEL_CEILING_HZ
+          : TRAJECTORY_MODEL_CEILING_HZ;
 
     const minFreqHz = clamp(lowHz, GLOBAL_MIN_FREQ_HZ, ceiling - 100);
     const maxFreqHz = clamp(
