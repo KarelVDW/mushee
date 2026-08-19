@@ -46,6 +46,7 @@
  *   r19   block-level voiced-fraction quorum on the gate (plugin pass task 3)
  *   r21   fill 1–2-frame unvoiced dropouts on the track (plugin pass task 4)
  *   r7    re-attack detector report delay, both consumers (plugin pass task 5)
+ *   r9    pYIN multi-candidate emission + octave tie-break (plugin pass E3)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
@@ -970,6 +971,36 @@ function buildConfigs(groups: Set<string>): Config[] {
       segment: voiceSegment({ ...BEST, pitchEstimator: 'detrend' }),
       cleanup: SPLIT,
     });
+  }
+
+  // R9/R16 (E3) — the headline experiment: pYIN's multi-candidate emission.
+  // Kill criteria (from the plan, verbatim): kill if the single-candidate
+  // baseline is not beaten on the VOICE slice at k=3 AND k=5.
+  if (on('r9')) {
+    configs.push({
+      name: 'r9 OFF (anchor)',
+      group: 'r9',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const k of [3, 5]) {
+      for (const yinTrust of [0.5, 1, 2]) {
+        configs.push({
+          name: `r9 k${k} y${yinTrust}`,
+          group: 'r9',
+          segment: voiceSegment({ ...BEST, candidates: { k, yinTrust } }),
+          cleanup: null,
+        });
+      }
+    }
+    for (const octaveBias of [1, 1.5]) {
+      configs.push({
+        name: `r9 k5 y1 oct${octaveBias}`,
+        group: 'r9',
+        segment: voiceSegment({ ...BEST, candidates: { k: 5, yinTrust: 1, octaveBias } }),
+        cleanup: null,
+      });
+    }
   }
 
   // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both

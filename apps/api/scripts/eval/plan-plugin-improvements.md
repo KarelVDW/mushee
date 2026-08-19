@@ -153,7 +153,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   `inference.proto` change.
 - **Why:** §2.1, §4.5, §17b.
 
-### [ ] E3 — R9 + R16: multi-candidate pitch track  *(the headline experiment)*
+### [n] E3 — R9 + R16: multi-candidate pitch track  *(the headline experiment)*
 - Extract top-k (k=3–5) local maxima per frame from the CREPE activations `crepePredict` already
   returns; widen `PitchTrack` to carry them **behind a flag**; give the decoder pYIN's
   `minDistProb^yinTrust` emission and the octave tie-break (when two candidates are ~an octave

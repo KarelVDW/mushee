@@ -132,6 +132,68 @@ export function localCentsFromPath(
   return cents;
 }
 
+/**
+ * Per-frame top-k pitch candidates from the raw activation matrix (E3/R9 —
+ * pYIN §5.6 of the plugin survey): the k strongest LOCAL MAXIMA of each
+ * frame's activation row, each lifted to sub-bin cents by the same ±halfWidth
+ * weighted mean the main trajectory uses. Flattened `[frames × k]`;
+ * `strength` 0 marks an empty slot. Slots are ordered strongest-first.
+ *
+ * This is what lets a note-level decoder choose a NON-argmax candidate when
+ * note context favours it — the recoverability pYIN gets from YIN's threshold
+ * sweep, which a single collapsed trajectory structurally cannot offer.
+ */
+export function topKCandidates(
+  activations: Float32Array,
+  frames: number,
+  centMap: Float32Array,
+  numBins: number,
+  halfWidth: number,
+  k: number,
+): { cents: Float32Array; strength: Float32Array } {
+  const cents = new Float32Array(frames * k);
+  const strength = new Float32Array(frames * k);
+  const topBin: number[] = new Array(k);
+  const topVal: number[] = new Array(k);
+  for (let t = 0; t < frames; t += 1) {
+    const off = t * numBins;
+    let count = 0;
+    for (let b = 0; b < numBins; b += 1) {
+      const a = activations[off + b];
+      const left = b > 0 ? activations[off + b - 1] : -1;
+      const right = b < numBins - 1 ? activations[off + b + 1] : -1;
+      // Local maximum; plateau ties break to the leftmost bin.
+      if (a < left || a <= right) continue;
+      // Insertion into the running top-k (k ≤ 5, so linear is fine).
+      let i = count < k ? count : k - 1;
+      if (i === k - 1 && count === k && a <= topVal[i]) continue;
+      while (i > 0 && topVal[i - 1] < a) {
+        topBin[i] = topBin[i - 1];
+        topVal[i] = topVal[i - 1];
+        i -= 1;
+      }
+      topBin[i] = b;
+      topVal[i] = a;
+      if (count < k) count += 1;
+    }
+    for (let j = 0; j < count; j += 1) {
+      const center = topBin[j];
+      const lo = Math.max(0, center - halfWidth);
+      const hi = Math.min(numBins - 1, center + halfWidth);
+      let weighted = 0;
+      let total = 0;
+      for (let b = lo; b <= hi; b += 1) {
+        const a = activations[off + b];
+        weighted += a * centMap[b];
+        total += a;
+      }
+      cents[t * k + j] = total > 0 ? weighted / total : centMap[center];
+      strength[t * k + j] = topVal[j];
+    }
+  }
+  return { cents, strength };
+}
+
 export interface SegmentOptions {
   /** Hop length in samples. */
   hopSize: number;

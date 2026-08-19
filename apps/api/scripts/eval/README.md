@@ -1162,3 +1162,36 @@ one-bin mapping offset matters to ANY consumer of the TS port's `pitchBends` (e.
 MIDI-with-bends export would be a third-tone sharp); (2) if real whistle/piccolo corpora ever
 materialise with tuning error, the sub-bin read in this bench is the calibrated instrument to
 revisit with.
+
+### E3 (R9+R16): multi-candidate pitch track — killed by its own criteria (2026-08-19)
+
+The headline experiment, fully built: `topKCandidates` extracts the 5 strongest activation maxima
+per frame with sub-bin cents (`pitch-decoder.ts`), `PitchTrack` carries them, both caches store
+them (`CACHE_VERSION` 6 / 2 — the rebuild this forced is done), and the voice decoder gained
+pYIN's §5.6 emission behind `candidates` (nearest candidate per state + `yinTrust·−ln` relative
+weakness) plus the §16.11 octave tie-break (`octaveBias`).
+
+**Kill criteria were "beaten at k=3 AND k=5"; it lost at both** (dev VOICE slice, vs SHIPPED):
+
+| config | VOICE | splits/100 | pWrong | chromaF1 |
+|---|---|---|---|---|
+| single-candidate anchor | **+0.095** | 13 | 17 | 0.520 |
+| k=3 (y 0.5/1/2 identical) | +0.088 | 14–15 | 16 | 0.514 |
+| k=5 | +0.078 | 16–17 | 16 | 0.507 |
+| k=5 + octave tie-break | +0.075…+0.077 | 17 | 16 | 0.506 |
+
+The failure is monotone in k and indifferent to `yinTrust` — it is the *availability* of
+alternatives, not their weighting: every extra candidate is another place a pitch state can sit,
+and the decode spends that freedom on splits (13→17/100) while buying only pWrong 17→16. The
+octave tie-break has nothing to fix (octErr was already 0.006).
+
+**Why pYIN needs this and we do not:** our per-frame trajectory is already Viterbi-smoothed over
+the full 360-bin activation — frame-level continuity is applied *before* the note model — so the
+note layer's candidate freedom re-admits exactly the stray maxima that smoothing removed. pYIN's
+YIN candidates carry no frame-level smoothing; its note model is the only continuity there. The
+"single-candidate approximation" the research doc worried about is not an approximation of pYIN —
+it is a different, and for this front end better, factorisation of the same total smoothing.
+
+Infrastructure stays (candidates on the track and in the caches — ~14 % blob growth): the decoder
+option is documented-off with these numbers, and the per-frame candidates are the right input for
+any future octave-repair or whistle-tracker work. Do not re-sweep this grid.

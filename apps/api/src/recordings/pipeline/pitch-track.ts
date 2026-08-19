@@ -27,6 +27,17 @@ export class PitchTrack {
     readonly frames: number,
     /** Seconds between consecutive frame starts. */
     readonly hopSec: number,
+    /**
+     * Optional per-frame pitch CANDIDATES (E3/R9 — pYIN §5.6): the `candK`
+     * strongest local maxima of the raw activation row, strongest first,
+     * flattened `[frames × candK]`. `candStrength` 0 marks an empty slot.
+     * The main `cents` trajectory stays the collapsed best path; candidates
+     * exist so a note-level decoder can pick a non-argmax hypothesis when
+     * note context favours it.
+     */
+    readonly candCents?: Float32Array,
+    readonly candStrength?: Float32Array,
+    readonly candK: number = 0,
   ) {}
 
   /** Pitch in Hz. */
@@ -73,7 +84,15 @@ export class PitchTrack {
       }
       i = end;
     }
-    return new PitchTrack(cents, confidence, this.frames, this.hopSec);
+    return new PitchTrack(
+      cents,
+      confidence,
+      this.frames,
+      this.hopSec,
+      this.candCents,
+      this.candStrength,
+      this.candK,
+    );
   }
 
   /**

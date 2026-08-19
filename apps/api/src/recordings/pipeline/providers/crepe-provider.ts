@@ -13,6 +13,7 @@ import {
   normalizeFrame,
   segmentNotes,
   type SegmentOptions,
+  topKCandidates,
   viterbi,
   type ViterbiOptions,
 } from './pitch-decoder';
@@ -41,6 +42,8 @@ const INFERENCE_BATCH = 256;
 /** Half-width in bins of the local weighted-mean window, centered on the
  *  Viterbi path bin. 4 → 9-bin window matches marl/crepe's reference. */
 const LOCAL_AVG_HALF_WIDTH = 4;
+/** Candidates carried per frame on the track (E3/R9 — pYIN §5.6). */
+const PITCH_CANDIDATES_K = 5;
 /**
  * σ in bins for the Viterbi transition kernel. 12 bins ≈ 240 cents at CREPE's
  * 20.0 cents/bin spacing.
@@ -306,12 +309,25 @@ export class CrepeProvider implements PitchProvider {
       NUM_BINS,
       LOCAL_AVG_HALF_WIDTH,
     );
+    // Per-frame top-k candidates (E3/R9): cheap (one scan of the activation
+    // row), and what lets the voice decode consider a non-argmax hypothesis.
+    const cand = topKCandidates(
+      sess.activations,
+      numFrames,
+      this.centMapping,
+      NUM_BINS,
+      LOCAL_AVG_HALF_WIDTH,
+      PITCH_CANDIDATES_K,
+    );
 
     return new PitchTrack(
       cents,
       sess.confidence.subarray(0, numFrames),
       numFrames,
       HOP_SIZE / SAMPLE_RATE,
+      cand.cents,
+      cand.strength,
+      PITCH_CANDIDATES_K,
     );
   }
 

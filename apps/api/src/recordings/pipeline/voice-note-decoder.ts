@@ -88,6 +88,27 @@ export interface VoiceDecodeOptions {
    * `unvoicedPitchCost` to ride across it. Omit for the raw track.
    */
   fillUnvoicedGapSec?: number;
+  /**
+   * pYIN's multi-candidate emission (E3/R9/R16 — §5.6 of the plugin survey):
+   * score each pitch state against the NEAREST of the frame's top-k activation
+   * maxima (`PitchTrack.candCents`), adding `yinTrust · −ln(strength/maxStrength)`
+   * nats for how much weaker that candidate is than the frame's best. The decode
+   * can then keep a note on a non-argmax hypothesis — the recoverability that
+   * makes pYIN's note model work, which a single collapsed trajectory
+   * structurally cannot offer.
+   *
+   *  - `k`: candidates considered per frame (≤ the track's `candK`).
+   *  - `yinTrust`: nats per e-fold of relative candidate weakness.
+   *  - `octaveBias`: the survey's four-way convergent tie-break (§16.11 —
+   *    "prefer the higher fundamental unless the lower is clearly better"):
+   *    when two candidates sit within ±50 ¢ of an octave apart and the lower's
+   *    strength is below `octaveBias` × the higher's, the lower is dropped.
+   *    Omit to keep every candidate.
+   *
+   * Requires a track that carries candidates; omit for the single-trajectory
+   * emission (the historical decode, bit-for-bit).
+   */
+  candidates?: { k?: number; yinTrust?: number; octaveBias?: number };
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -441,7 +462,7 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the seven that are meaningfully absent. */
+  /** Every knob resolved, except the eight that are meaningfully absent. */
   private readonly o: Required<
     Omit<
       VoiceDecodeOptions,
@@ -452,6 +473,7 @@ export class VoiceNoteDecoder {
       | 'dropLongQuiet'
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
+      | 'candidates'
     >
   > &
     Pick<
@@ -463,6 +485,7 @@ export class VoiceNoteDecoder {
       | 'dropLongQuiet'
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
+      | 'candidates'
     >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
@@ -769,6 +792,10 @@ export class VoiceNoteDecoder {
       }
     }
 
+    // Multi-candidate emission (E3): per frame, the kept candidates with their
+    // relative-weakness cost in nats, octave tie-break already applied.
+    const cand = this.candidateTable(track);
+
     const emit = (t: number, state: number): number => {
       if (state === 0) return voiced[t] ? this.o.voicedSilenceCost : 0;
       const isAttack = state < STABLE;
@@ -776,10 +803,30 @@ export class VoiceNoteDecoder {
         return this.o.unvoicedPitchCost + (isAttack ? attackFrameCost : 0);
       }
       const p = isAttack ? state - ATTACK : state - STABLE;
-      const d = (track.cents[t] - centres[p]) / 100;
+      let d = (track.cents[t] - centres[p]) / 100;
+      let weak = 0;
+      if (cand) {
+        // pYIN §5.6: a state is scored against its NEAREST candidate, plus that
+        // candidate's weakness relative to the frame's strongest.
+        const base = t * cand.k;
+        let bestAbs = Infinity;
+        let bj = -1;
+        for (let j = 0; j < cand.k; j += 1) {
+          if (cand.strength[base + j] <= 0) break;
+          const dd = Math.abs(cand.cents[base + j] - centres[p]);
+          if (dd < bestAbs) {
+            bestAbs = dd;
+            bj = j;
+          }
+        }
+        if (bj >= 0) {
+          d = bestAbs / 100;
+          weak = cand.weakness[base + bj];
+        }
+      }
       const twoSigSq = isAttack ? twoSigAttackSq : twoSigStableSq;
       const dwell = isAttack ? attackFrameCost : 0;
-      return (this.o.trust * (d * d)) / twoSigSq + dwell;
+      return (this.o.trust * (d * d)) / twoSigSq + weak + dwell;
     };
 
     for (let s = 0; s < numStates; s += 1) cost[s] = emit(0, s);
@@ -943,6 +990,62 @@ export class VoiceNoteDecoder {
       }
     }
     return { pitches, attack, reonset };
+  }
+
+  /**
+   * The per-frame candidate table the multi-candidate emission reads (E3; see
+   * `candidates`). Slots are strongest-first; `strength` 0 ends a frame's list.
+   * `weakness` is `yinTrust · −ln(strength / frame's strongest)` — 0 for the
+   * strongest candidate, growing for weaker ones. The octave tie-break drops
+   * the LOWER of two candidates within ±50 ¢ of an octave apart unless it is
+   * clearly stronger (strength ≥ `octaveBias` × the higher's).
+   */
+  private candidateTable(
+    track: PitchTrack,
+  ): { k: number; cents: Float32Array; strength: Float32Array; weakness: Float32Array } | null {
+    const o = this.o.candidates;
+    if (!o || !track.candCents || !track.candStrength || track.candK <= 0) return null;
+    const k = Math.max(1, Math.min(o.k ?? 3, track.candK));
+    const yinTrust = o.yinTrust ?? 1;
+    const frames = track.frames;
+    const cents = new Float32Array(frames * k);
+    const strength = new Float32Array(frames * k);
+    const weakness = new Float32Array(frames * k);
+    for (let t = 0; t < frames; t += 1) {
+      const srcBase = t * track.candK;
+      const list: { c: number; s: number }[] = [];
+      for (let j = 0; j < track.candK; j += 1) {
+        const s = track.candStrength[srcBase + j];
+        if (s <= 0) break;
+        list.push({ c: track.candCents[srcBase + j], s });
+      }
+      let kept = list;
+      if (o.octaveBias !== undefined && list.length > 1) {
+        const drop = new Set<number>();
+        for (let a = 0; a < list.length; a += 1) {
+          for (let b = 0; b < list.length; b += 1) {
+            if (a === b || drop.has(a)) continue;
+            // `a` sits ~an octave ABOVE `b`: keep `b` only if clearly stronger.
+            if (
+              Math.abs(list[a].c - list[b].c - 1200) <= 50 &&
+              list[b].s < (o.octaveBias ?? 1) * list[a].s
+            ) {
+              drop.add(b);
+            }
+          }
+        }
+        kept = list.filter((_, i) => !drop.has(i));
+      }
+      kept = kept.slice(0, k);
+      const maxS = kept.length ? kept[0].s : 0;
+      for (let j = 0; j < kept.length; j += 1) {
+        cents[t * k + j] = kept[j].c;
+        strength[t * k + j] = kept[j].s;
+        weakness[t * k + j] =
+          yinTrust * -Math.log(Math.max(1e-6, kept[j].s / maxS));
+      }
+    }
+    return { k, cents, strength, weakness };
   }
 
   /**

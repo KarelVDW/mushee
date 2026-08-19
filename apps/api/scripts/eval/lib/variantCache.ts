@@ -37,7 +37,8 @@ import type { GroundTruth } from '../types';
 import type { AudioFrontEnd } from './dereverb';
 import type { RealDataset } from './realCorpus';
 
-const CACHE_VERSION = 1;
+/** 2: the track gained per-frame pitch candidates (E3/R9) — see trackCache v6. */
+const CACHE_VERSION = 2;
 const DETECT_SR = 16000;
 
 /** The clean take plus the two reverberant conditions this study is about. */
@@ -68,6 +69,8 @@ interface CacheMeta {
   onsetHop: number;
   onsetSampleRate: number;
   envelopeFrames: number;
+  /** Pitch candidates per frame stored in the blob (0 = none). */
+  candK?: number;
 }
 
 /** One (clip, variant) pair, with the expensive part already computed. */
@@ -237,14 +240,22 @@ export class VariantTrackCache {
       onsetHop,
       onsetSampleRate: provider.sampleRate,
       envelopeFrames: envelope.length,
+      candK: track.candK,
     };
     writeFileSync(metaPath, JSON.stringify(meta));
-    // cents | confidence | energy (each `frames`), then the envelope.
-    const blob = new Float32Array(track.frames * 3 + envelope.length);
+    // cents | confidence | energy (each `frames`), the envelope, then the
+    // pitch candidates (candCents | candStrength, each `frames × candK`).
+    const candLen = track.frames * track.candK;
+    const blob = new Float32Array(track.frames * 3 + envelope.length + candLen * 2);
     blob.set(track.cents.subarray(0, track.frames), 0);
     blob.set(track.confidence.subarray(0, track.frames), track.frames);
     blob.set(energy, track.frames * 2);
     blob.set(envelope, track.frames * 3);
+    if (track.candK > 0 && track.candCents && track.candStrength) {
+      const base = track.frames * 3 + envelope.length;
+      blob.set(track.candCents.subarray(0, candLen), base);
+      blob.set(track.candStrength.subarray(0, candLen), base + candLen);
+    }
     writeFileSync(binPath, Buffer.from(blob.buffer, 0, blob.byteLength));
 
     return {
@@ -288,7 +299,10 @@ export class VariantTrackCache {
       raw.byteLength / 4,
     );
     const n = meta.frames;
-    if (floats.length < n * 3 + meta.envelopeFrames) return null;
+    const candK = meta.candK ?? 0;
+    const candLen = n * candK;
+    if (floats.length < n * 3 + meta.envelopeFrames + candLen * 2) return null;
+    const candBase = n * 3 + meta.envelopeFrames;
     return {
       dataset: ds.id,
       clip,
@@ -302,6 +316,9 @@ export class VariantTrackCache {
         floats.slice(n, n * 2),
         n,
         meta.hopSec,
+        candK > 0 ? floats.slice(candBase, candBase + candLen) : undefined,
+        candK > 0 ? floats.slice(candBase + candLen, candBase + candLen * 2) : undefined,
+        candK,
       ),
       onsetTimesSec: meta.onsetTimesSec,
       envelope: floats.slice(n * 3, n * 3 + meta.envelopeFrames),
