@@ -1323,3 +1323,30 @@ intonation tier, fallback on vs off.
    a future attempt with a real abstain bar and longer material.
 
 That closes the plugin-improvements plan: 15 tasks executed, every outcome logged above.
+
+---
+
+## Findings log (2026-08 plugin-source pass, Batch 4)
+
+### R23: OpenVPI GAME — resolved at the licence gate; no benchmark run (2026-08-19)
+
+The plan's blocking check came first, and it is decisive: the GAME repository's *code* is MIT, but
+the pretrained checkpoints (v1.0.0 release, small ~12M / medium ~50M / large ~100M) state plainly
+that **"The model files apply CC BY-NC-SA 4.0 license"** — non-commercial. Per the licence
+register's standing rule (the artifact's own published licence governs, at face value, in both
+directions), NC weights are **barred** for this product — the same class of exposure that rejected
+RMVPE. Per the plan's own blocking clause, nothing was downloaded and no benchmark was run.
+
+**Verdict: ignore (licence-barred).** Recorded for the day that changes:
+
+- The runner design is fully specified in the plan (bench-yong-runner.py style →
+  `bench-external-notes.ts`, `EXT_DIR=<dir> EVAL_SPLIT=test`), and OpenTune's deployment lore is
+  in §20.2 (chunk > 45 s at silence midpoints, 50 ms seam dedupe keeping the earlier note, never
+  the CoreML EP). If OpenVPI ever relicenses — they relicensed SOME's ancestor tooling before —
+  the benchmark is an afternoon.
+- Training-data note from the release page, for the register: ~32 h manually-labelled singing +
+  DEMAND/MUSAN/MIR-1K/MusicNet/MUSDB18-HQ + private recordings.
+- The §10d question ("is a learned note model where the headroom is?") remains answered by the
+  N20EMv2 yardstick alone; GAME does not change that answer's evidence either way.
+
+Sources: github.com/openvpi/GAME (MIT LICENSE; releases page v1.0.0, licence statement quoted above).

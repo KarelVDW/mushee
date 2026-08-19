@@ -204,7 +204,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 
 ## Batch 4 — round-4 addendum (research doc §20; added 2026-08-19 after Batches 1–3 ran)
 
-### [ ] 9. R23 — benchmark OpenVPI GAME as an external note transcriber  *(the live item)*
+### [n] 9. R23 — benchmark OpenVPI GAME as an external note transcriber  *(the live item)*
 - **Licence check first (blocking):** GAME's checkpoints are OpenVPI's, not in OpenTune's repo, and
   their licence is unverified. No download into the repo, no benchmark result in the Findings log,
   until the checkpoint licence is confirmed compatible. (OpenTune itself is AGPL-3 — ideas only.)
