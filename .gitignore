@@ -46,3 +46,4 @@ apps/api/scripts/fixtures/eval-cache-variant/
 # proto stage) or on the host via packages/inference-proto/generate-python.sh
 apps/inference-*/inference_pb2.py
 apps/inference-*/inference_pb2_grpc.py
+apps/api/scripts/eval/.tmp-contour/

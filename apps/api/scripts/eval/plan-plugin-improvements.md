@@ -143,7 +143,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   spelling improve on the instrument corpora (needs the Batch 2 tier for spelling; COnP as guard)?
 - **Why:** §2.1 *(validation)* scope note in §17b's R1 row.
 
-### [ ] E2 — R1: is the contour posteriorgram worth the wire?  *(after E1)*
+### [n] E2 — R1: is the contour posteriorgram worth the wire?  *(after E1)*
 - Offline only, in `scripts/eval`: the **local backend already computes the contour head and drops
   it at the seam**, so no service change is needed to measure. Compute `pitchMidiFloat` per
   NeuralNote's Gaussian argmax (±25 bins, σ=5 — adapt under Apache-2.0 with attribution), then

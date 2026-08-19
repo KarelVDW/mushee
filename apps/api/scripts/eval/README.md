@@ -1134,3 +1134,31 @@ the point. The measurable spelling benefit is judged with E8's instrument (accid
 error on the intonation tier + `notation-eval.ts` counters), where this float is a prerequisite;
 E2 will additionally compare this in-process float against the contour-posteriorgram version on
 the basic-pitch path.
+
+### E2 (R1): the contour posteriorgram is NOT worth the wire — and it hides an off-by-one (2026-08-19)
+
+`bench-contour-pitch.ts` (new): basic-pitch's contour head read offline on the very-high band
+(whistle-mid/high + piccolo × 7 conditions, 96 clips), via the library's own
+`addPitchBendsToNoteEvents` (Apache-2.0) plus a parabolic **sub-bin** refinement of the same
+Gaussian-argmax. The plan's three questions, answered:
+
+- **Q1 (tuning offset): the mechanism works, through a calibration constant.** Clean in-tune
+  audio reads a constant **+33 ¢ ≈ exactly one contour bin** against `midiPitchToContourBin` —
+  an off-by-one between the TS port's bin mapping and the model's actual contour grid (the
+  detuned control reads −0.1 ¢ = +33 − 35, confirming the constant). After calibrating it, a
+  known −35 ¢ global detune is recovered to ~2 ¢ by the sub-bin read; the library's **integer**
+  bends are quantized to 1/3 semitone and recover 0.0 ¢ — structurally unable to see tuning.
+- **Q2 (histogram): no change** (cosine vs truth 0.910 → 0.910) — offset-corrected rounding
+  reproduces the integer pitches on this band.
+- **Q3 (R5, contour note pitch): no change anywhere** — f1(int) = f1(sub) to three decimals on
+  all seven conditions; aubio's frames-3..9 window *hurts* under reverb (echoey −0.006,
+  distant-mic −0.032) because degraded notes are short enough that skipping the attack starves
+  the median.
+
+**Verdict: 0–1 of 3 pay → `inference.proto` does not change.** The fractional contour pitch
+never alters which semitone is written on the one band that rides basic-pitch, and the notation
+layer's offset machinery has nothing to correct there. Two by-products worth keeping: (1) the
+one-bin mapping offset matters to ANY consumer of the TS port's `pitchBends` (e.g. a future
+MIDI-with-bends export would be a third-tone sharp); (2) if real whistle/piccolo corpora ever
+materialise with tuning error, the sub-bin read in this bench is the calibrated instrument to
+revisit with.
