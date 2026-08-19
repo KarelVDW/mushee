@@ -220,7 +220,10 @@ export class CrepeProvider implements PitchProvider {
       confidenceThreshold: options.confidenceThreshold ?? SEGMENT_OPTS.confidenceThreshold,
       minFreqHz: options.minFreqHz ?? SEGMENT_OPTS.minFreqHz,
       maxFreqHz: options.maxFreqHz ?? SEGMENT_OPTS.maxFreqHz,
-      minFrames: options.minFramesPerNote ?? SEGMENT_OPTS.minFramesPerNote,
+      // The profile's floor is declared in provider frames; the decoder wants
+      // seconds, converted here where the frame grid is known.
+      minNoteSec:
+        (options.minFramesPerNote ?? SEGMENT_OPTS.minFramesPerNote) * track.hopSec,
     }).decode(track, energy);
   }
 

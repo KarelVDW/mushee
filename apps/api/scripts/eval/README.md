@@ -879,3 +879,40 @@ Research directions (in expected-value order):
    (9.8k human-placed onsets on real amateur audio), but `run-eval`'s pitch-based path cannot
    score unpitched percussion — see the 2026-08-13 entry. A `sweep-segmenter`-style runner
    would turn an already-paid-for corpus into the isolated onset benchmark we lack.
+
+---
+
+## Findings log (2026-08 plugin-source pass)
+
+Execution of `plan-plugin-improvements.md` (the batched proposals from
+`research-plugin-sources.md` §17). One entry per task, nulls included, as usual.
+
+### R11: every frame-denominated knob is now hop-independent (2026-08-19)
+
+Praat's convention (`research-plugin-sources.md` §6.1, §16.10), applied to the four constants
+§16.10 lists: per-frame *costs* are now declared in nats **per 10 ms** and rescaled by
+`hopSec / 0.01` at decode time; frame *counts* are now declared in **seconds** and rounded onto
+the track's own grid per decode. A hop change can no longer silently re-tune the model, and the
+hand-derived "3.4×" note in `note-segmenter.ts` is gone. `minFramesPerNote` (profile/provider
+seam) deliberately stays in provider frames — it is converted where the frame grid is known
+(`crepe-provider.decodeVoice`, the sweeps).
+
+**Conversion table** — read this to translate historical sweep numbers:
+
+| knob | was | now declared | at the 20 ms hop |
+|---|---|---|---|
+| `NoteSegmenterOptions.attackFrameCost` | 0.35 nats/frame | **0.175 nats / 10 ms** | ×2 → 0.35, unchanged |
+| `NoteSegmenterOptions.minFrames` | 5 frames | **`minNoteSec` 0.1 s** | round → 5, unchanged |
+| `VoiceDecodeOptions.attackFrameCost` | 0.35 nats/frame | **0.175 nats / 10 ms** | ×2 → 0.35, unchanged |
+| `VoiceDecodeOptions.minFrames` | 4 frames | **`minNoteSec` 0.08 s** | round → 4, unchanged |
+| basic-pitch `MIN_NOTE_LEN_FRAMES` | 11 frames | **`MIN_NOTE_LEN_SEC` 0.128 s** | ÷(256/22050) → 11, unchanged |
+| basic-pitch `ENERGY_TOLERANCE` | 11 frames | **`ENERGY_TOLERANCE_SEC` 0.128 s** | → 11, unchanged |
+
+Sweep-name translation: `e1c minFrames3/4/5/6` → `e1c minNote60/80/100/120ms`;
+`e1c attackFrame0.15/0.35/0.7` (per frame) → `e1c attackFrame0.075/0.175/0.35` (per 10 ms).
+
+**Verified bit-identical at the current hop** (every conversion is floating-point-exact:
+`0.175 × (0.02/0.01) === 0.35` etc.): `sweep-segmenter.ts` (dev, 742 clips, all configs) and
+`sweep-voice.ts` (dev, groups base+e1c+ship, 693 voice + 49 guard clips) both reproduce the
+pre-change output to the last digit, including the paired-bootstrap CIs. No `CACHE_VERSION`
+bump needed — the cached CREPE decode is upstream of everything touched.

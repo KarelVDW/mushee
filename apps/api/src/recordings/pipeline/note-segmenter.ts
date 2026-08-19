@@ -85,16 +85,16 @@ export interface NoteSegmenterOptions {
   /** Cost of a note's attack phase giving way to its stable phase. */
   attackCost?: number;
   /**
-   * Cost charged for each frame spent in a note's attack phase — what makes the
-   * attack **transient**.
+   * Cost charged for time spent in a note's attack phase — what makes the
+   * attack **transient**. Declared in nats **per 10 ms** of dwell and rescaled
+   * to the track's actual hop at decode time (Praat's convention), so the knob
+   * keeps its meaning if the hop ever changes.
    *
    * Without it the model collapses: the attack state's wide σ fits any pitch
    * almost free, so the cheapest path is to enter one attack state and never
    * leave, emitting a single note for the whole take (measured: 14 notes where 27
    * were sung). pYIN gets this for nothing from its attack self-transition
-   * probability of 0.9 (vs 0.99 for stable), i.e. ~0.105 nats per frame at its
-   * ~6 ms hop. Our hop is 20 ms, so an equivalent time-domain decay needs roughly
-   * 3.4× that per frame.
+   * probability of 0.9 (vs 0.99 for stable).
    */
   attackFrameCost?: number;
   /** Cost of starting a note out of silence. */
@@ -109,8 +109,8 @@ export interface NoteSegmenterOptions {
   unvoicedPitchCost?: number;
   /** Emission cost charged to silence on a VOICED frame. */
   voicedSilenceCost?: number;
-  /** Shortest note kept, in frames. Absorbed into a neighbour, not just dropped. */
-  minFrames?: number;
+  /** Shortest note kept, in seconds. Absorbed into a neighbour, not just dropped. */
+  minNoteSec?: number;
   /**
    * Minimum interval, in semitones, that a note change may be. Below this a pitch
    * difference is treated as expression within one note rather than a new note —
@@ -145,12 +145,13 @@ export class NoteSegmenter {
   private readonly trust: number;
   private readonly changeCost: number;
   private readonly attackCost: number;
+  /** Nats per 10 ms of attack dwell; rescaled to the track's hop at decode. */
   private readonly attackFrameCost: number;
   private readonly onCost: number;
   private readonly offCost: number;
   private readonly unvoicedPitchCost: number;
   private readonly voicedSilenceCost: number;
-  private readonly minFrames: number;
+  private readonly minNoteSec: number;
   private readonly minChangeSemitones: number;
   private readonly dipDiscount: number | undefined;
   private readonly dipRatio: number;
@@ -165,12 +166,12 @@ export class NoteSegmenter {
     this.trust = opts.trust ?? 0.1;
     this.changeCost = opts.changeCost ?? 1.2;
     this.attackCost = opts.attackCost ?? 0.2;
-    this.attackFrameCost = opts.attackFrameCost ?? 0.35;
+    this.attackFrameCost = opts.attackFrameCost ?? 0.175;
     this.onCost = opts.onCost ?? 0.5;
     this.offCost = opts.offCost ?? 0.5;
     this.unvoicedPitchCost = opts.unvoicedPitchCost ?? 1.5;
     this.voicedSilenceCost = opts.voicedSilenceCost ?? 1.5;
-    this.minFrames = opts.minFrames ?? 5;
+    this.minNoteSec = opts.minNoteSec ?? 0.1;
     this.minChangeSemitones = opts.minChangeSemitones ?? 2 / 3;
     this.dipDiscount = opts.dipDiscount;
     this.dipRatio = opts.dipRatio ?? 0.6;
@@ -195,7 +196,8 @@ export class NoteSegmenter {
 
     const discount = this.changeDiscount(frames, energy);
     const path = this.decode(track, voiced, grid, frames, discount);
-    const runs = this.absorbShortRuns(this.runsOf(path, frames));
+    const minFrames = Math.max(1, Math.round(this.minNoteSec / track.hopSec));
+    const runs = this.absorbShortRuns(this.runsOf(path, frames), minFrames);
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
@@ -296,17 +298,19 @@ export class NoteSegmenter {
 
     const twoSigAttackSq = 2 * this.sigmaAttack * this.sigmaAttack;
     const twoSigStableSq = 2 * this.sigmaStable * this.sigmaStable;
+    // Per-10 ms dwell cost rescaled to this track's hop (Praat's convention).
+    const attackFrameCost = this.attackFrameCost * (track.hopSec / 0.01);
 
     const emit = (t: number, state: number): number => {
       if (state === 0) return voiced[t] ? this.voicedSilenceCost : 0;
       const isAttack = state < STABLE;
       if (!voiced[t]) {
-        return this.unvoicedPitchCost + (isAttack ? this.attackFrameCost : 0);
+        return this.unvoicedPitchCost + (isAttack ? attackFrameCost : 0);
       }
       const p = isAttack ? state - ATTACK : state - STABLE;
       const d = (track.cents[t] - centres[p]) / 100;
       const twoSigSq = isAttack ? twoSigAttackSq : twoSigStableSq;
-      const dwell = isAttack ? this.attackFrameCost : 0;
+      const dwell = isAttack ? attackFrameCost : 0;
       return (this.trust * (d * d)) / twoSigSq + dwell;
     };
 
@@ -454,13 +458,13 @@ export class NoteSegmenter {
   }
 
   /**
-   * Remove runs shorter than `minFrames` without punching holes: a short pitch run
-   * between two pitch runs is absorbed into whichever neighbour is closer in
-   * pitch (the longer one on a tie), while one adjacent to silence is dropped as
-   * noise. Repeats, because absorbing can leave a neighbour newly adjacent to
-   * another short run.
+   * Remove runs shorter than `minNoteSec` (given here as `minFrames` on the
+   * track's own grid) without punching holes: a short pitch run between two pitch
+   * runs is absorbed into whichever neighbour is closer in pitch (the longer one
+   * on a tie), while one adjacent to silence is dropped as noise. Repeats,
+   * because absorbing can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[]): Run[] {
+  private absorbShortRuns(runs: Run[], minFrames: number): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -469,7 +473,7 @@ export class NoteSegmenter {
         const r = work[i];
         if (r.state < 0) continue;
         const len = r.end - r.start;
-        if (len < this.minFrames && len < shortest) {
+        if (len < minFrames && len < shortest) {
           shortest = len;
           idx = i;
         }

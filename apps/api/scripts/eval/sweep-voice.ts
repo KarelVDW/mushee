@@ -198,7 +198,7 @@ function voiceSegment(over: VoiceDecodeOptions, useRegister = false) {
       confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
       minFreqHz: c.profile.minFreqHz,
       maxFreqHz: c.profile.maxFreqHz,
-      minFrames: c.profile.minFramesPerNote ?? 4,
+      minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
       ...(useRegister && { registerCents: registerCentsOf(c) }),
       ...over,
     }).decode(c.track, c.energy);
@@ -354,11 +354,12 @@ function buildConfigs(groups: Set<string>): Config[] {
         cleanup: null,
       });
     }
-    for (const minFrames of [3, 4, 5, 6]) {
+    // 60–120 ms = 3–6 frames at the trajectory's 20 ms hop.
+    for (const minNoteSec of [0.06, 0.08, 0.1, 0.12]) {
       configs.push({
-        name: `e1c minFrames${minFrames}`,
+        name: `e1c minNote${minNoteSec * 1000}ms`,
         group: 'e1c',
-        segment: voiceSegment({ ...BEST, minFrames }),
+        segment: voiceSegment({ ...BEST, minNoteSec }),
         cleanup: null,
       });
     }
@@ -370,7 +371,8 @@ function buildConfigs(groups: Set<string>): Config[] {
         cleanup: null,
       });
     }
-    for (const attackFrameCost of [0.15, 0.35, 0.7]) {
+    // Per 10 ms (0.075/0.175/0.35 ≡ the old per-frame 0.15/0.35/0.7 at 20 ms hop).
+    for (const attackFrameCost of [0.075, 0.175, 0.35]) {
       configs.push({
         name: `e1c attackFrame${attackFrameCost}`,
         group: 'e1c',

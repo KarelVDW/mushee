@@ -13,23 +13,32 @@ import type { PitchProvider, PitchTranscribeOptions } from './pitch-provider';
  * looser TS-port defaults.
  *
  * - Higher onset/frame thresholds suppress ghost notes.
- * - 11-frame minimum at 22050/256 hop ≈ 127 ms (drops sub-eighth-note blips).
+ * - ~128 ms note minimum (drops sub-eighth-note blips).
  * - min/max frequency window cuts harmonic octave errors at the source.
  * - melodiaTrick disabled: it invents extra notes from sustained harmonics,
  *   which is harmful for monophonic sources.
+ *
+ * Durations are declared in seconds and converted to model frames against the
+ * model's own hop below, so they keep their meaning independent of the grid.
  */
 const ONSET_THRESHOLD = 0.5;
 const FRAME_THRESHOLD = 0.3;
-const MIN_NOTE_LEN_FRAMES = 11;
+/** Shortest note kept, in seconds (Spotify CLI: 11 frames ≈ 127.7 ms). */
+const MIN_NOTE_LEN_SEC = 0.128;
 const INFER_ONSETS = true;
 /** Hz. ~C6, top of normal vocal range. */
 const MAX_FREQ = 1100;
 /** Hz. C2, bottom of normal vocal range. */
 const MIN_FREQ = 65;
 const MELODIA_TRICK = false;
-const ENERGY_TOLERANCE = 11;
+/** How long a note may dip below `FRAME_THRESHOLD` before it ends, in seconds. */
+const ENERGY_TOLERANCE_SEC = 0.128;
 
 const TARGET_SAMPLE_RATE = 22050;
+/** The model's frame hop: FFT_HOP = 256 samples at 22050 Hz ≈ 11.6 ms. */
+const MODEL_HOP_SEC = 256 / TARGET_SAMPLE_RATE;
+const MIN_NOTE_LEN_FRAMES = Math.round(MIN_NOTE_LEN_SEC / MODEL_HOP_SEC);
+const ENERGY_TOLERANCE_FRAMES = Math.round(ENERGY_TOLERANCE_SEC / MODEL_HOP_SEC);
 
 export class BasicPitchProvider implements PitchProvider {
   readonly name = 'basic-pitch';
@@ -83,7 +92,7 @@ export class BasicPitchProvider implements PitchProvider {
       maxFreq,
       minFreq,
       MELODIA_TRICK,
-      ENERGY_TOLERANCE,
+      ENERGY_TOLERANCE_FRAMES,
     );
     const notes = noteFramesToTime(rawEvents);
     onProgress?.(notes);

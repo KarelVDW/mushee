@@ -390,7 +390,7 @@ async function main(): Promise<void> {
         confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
         minFreqHz: c.profile.minFreqHz,
         maxFreqHz: c.profile.maxFreqHz,
-        minFrames: c.profile.minFramesPerNote ?? 4,
+        minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
         ...cfg.seg,
       };
       const raw = cfg.legacy

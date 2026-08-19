@@ -43,7 +43,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 
 ## Batch 1 — mechanical, self-contained (research doc §17a)
 
-### [ ] 1. R11 — hop-normalise every per-frame cost  *(XS; do first)*
+### [x] 1. R11 — hop-normalise every per-frame cost  *(XS; do first)*
 - **Change:** declare per-frame costs in `NoteSegmenterOptions` / `VoiceDecoderOptions` per **10 ms**
   and scale by `hopSec / 0.01` at construction. Convert the frame-denominated constants to seconds:
   `minFrames`, `attackFrameCost` (both files), `ENERGY_TOLERANCE` and `MIN_NOTE_LEN_FRAMES`

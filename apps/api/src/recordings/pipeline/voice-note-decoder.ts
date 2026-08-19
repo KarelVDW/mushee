@@ -91,7 +91,11 @@ export interface VoiceDecodeOptions {
   changeCost?: number;
   /** Cost of a note's attack phase giving way to its stable phase. */
   attackCost?: number;
-  /** Per-frame cost of dwelling in attack — what makes the attack transient. */
+  /**
+   * Cost of dwelling in attack — what makes the attack transient. Declared in
+   * nats **per 10 ms** and rescaled to the track's hop at decode time (Praat's
+   * convention), so a hop change cannot silently re-tune the model.
+   */
   attackFrameCost?: number;
   /** Cost of starting a note out of silence. */
   onCost?: number;
@@ -153,8 +157,8 @@ export interface VoiceDecodeOptions {
    * transition entirely.
    */
   reonsetCost?: number;
-  /** Shortest note kept, in frames. Absorbed into a neighbour, not dropped. */
-  minFrames?: number;
+  /** Shortest note kept, in seconds. Absorbed into a neighbour, not dropped. */
+  minNoteSec?: number;
 
   /**
    * Where in the decoded run a note's onset is reported.
@@ -354,7 +358,7 @@ const DEFAULTS = {
   transitionMode: 'direct' as VoiceTransitionMode,
   changeCost: 1.2,
   attackCost: 0.2,
-  attackFrameCost: 0.35,
+  attackFrameCost: 0.175,
   onCost: 0.5,
   offCost: 0.5,
   unvoicedPitchCost: 1.5,
@@ -362,7 +366,7 @@ const DEFAULTS = {
   minChangeSemitones: 2 / 3,
   wideIntervalSemitones: 3,
   reonsetCost: Infinity,
-  minFrames: 4,
+  minNoteSec: 0.08,
   pitchEstimator: 'trimmed-mean' as 'trimmed-mean' | 'hann-median',
   pitchWindow: 'run' as 'run' | 'onset',
   onsetAt: 'attack' as 'attack' | 'arrival' | 'stable' | 'mid',
@@ -413,7 +417,8 @@ export class VoiceNoteDecoder {
     const { pitches, attack, reonset } = this.viterbi(
       track, voiced, grid, frames, evidence, accent,
     );
-    const runs = this.absorbShortRuns(this.runsOf(pitches, frames, reonset));
+    const minFrames = Math.max(1, Math.round(this.o.minNoteSec / track.hopSec));
+    const runs = this.absorbShortRuns(this.runsOf(pitches, frames, reonset), minFrames);
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
@@ -629,6 +634,8 @@ export class VoiceNoteDecoder {
 
     const twoSigAttackSq = 2 * this.o.sigmaAttackSemitones ** 2;
     const twoSigStableSq = 2 * this.o.sigmaStableSemitones ** 2;
+    // Per-10 ms dwell cost rescaled to this track's hop (Praat's convention).
+    const attackFrameCost = this.o.attackFrameCost * (track.hopSec / 0.01);
 
     // Octave prior: nats charged for entering a note this far from the session's
     // register centre. Zero when no register is known, which is the old behaviour.
@@ -644,12 +651,12 @@ export class VoiceNoteDecoder {
       if (state === 0) return voiced[t] ? this.o.voicedSilenceCost : 0;
       const isAttack = state < STABLE;
       if (!voiced[t]) {
-        return this.o.unvoicedPitchCost + (isAttack ? this.o.attackFrameCost : 0);
+        return this.o.unvoicedPitchCost + (isAttack ? attackFrameCost : 0);
       }
       const p = isAttack ? state - ATTACK : state - STABLE;
       const d = (track.cents[t] - centres[p]) / 100;
       const twoSigSq = isAttack ? twoSigAttackSq : twoSigStableSq;
-      const dwell = isAttack ? this.o.attackFrameCost : 0;
+      const dwell = isAttack ? attackFrameCost : 0;
       return (this.o.trust * (d * d)) / twoSigSq + dwell;
     };
 
@@ -859,12 +866,13 @@ export class VoiceNoteDecoder {
   }
 
   /**
-   * Remove runs shorter than `minFrames` without punching holes: a short pitch run
-   * between two pitch runs is absorbed into whichever neighbour is closer in pitch
-   * (the longer on a tie); one adjacent to silence is dropped as noise. Repeats,
-   * because absorbing can leave a neighbour newly adjacent to another short run.
+   * Remove runs shorter than `minNoteSec` (given here as `minFrames` on the
+   * track's own grid) without punching holes: a short pitch run between two pitch
+   * runs is absorbed into whichever neighbour is closer in pitch (the longer on a
+   * tie); one adjacent to silence is dropped as noise. Repeats, because absorbing
+   * can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[]): Run[] {
+  private absorbShortRuns(runs: Run[], minFrames: number): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -873,7 +881,7 @@ export class VoiceNoteDecoder {
         const r = work[i];
         if (r.state < 0) continue;
         const len = r.end - r.start;
-        if (len < this.o.minFrames && len < shortest) {
+        if (len < minFrames && len < shortest) {
           shortest = len;
           idx = i;
         }
