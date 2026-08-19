@@ -86,7 +86,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   the sign it was doing two jobs.
 - **Why:** §14.2.
 
-### [ ] 5. R7 — constant onset-delay compensation per profile  *(XS)*
+### [x] 5. R7 — constant onset-delay compensation per profile  *(XS)*
 - **Change:** aubio-style `delay` constant subtracted from reported onsets, calibrated per profile.
   Target: the measured −52 ms mean / −44 ms median bias documented at
   `voice-note-decoder.ts` (`onsetShiftSec` docstring).

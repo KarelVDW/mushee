@@ -48,7 +48,9 @@ export class AudioConverter {
     // amplitude re-attack splitter; basic-pitch already emits onsets, so adding
     // it there would double-split and hurt precision.
     this.onsetDetector =
-      enableOnsetSplit && !provider.hasNativeOnsets ? new OnsetDetector() : null;
+      enableOnsetSplit && !provider.hasNativeOnsets
+        ? new OnsetDetector({ delaySec: profile?.onsetDelaySec })
+        : null;
   }
 
   /**

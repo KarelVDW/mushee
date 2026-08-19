@@ -53,6 +53,15 @@ export interface OnsetDetectorOptions {
    */
   minTroughSec?: number;
   /**
+   * Constant added to every reported onset time, in seconds (+ = later) —
+   * aubio's `delay` parameter, the explicit admission that a detector has a
+   * systematic latency (R7). This detector reports the TROUGH of the dip,
+   * which precedes the audible re-attack (the energy rise back out of it), so
+   * a calibrated correction is expected to be positive. 0 (the default)
+   * preserves the historical output exactly.
+   */
+  delaySec?: number;
+  /**
    * Envelope frame hop, in seconds (default 0.01).
    *
    * Configurable because `detectFromEnvelope` is meant to be driven over a
@@ -72,6 +81,7 @@ export class OnsetDetector {
   private readonly dipRatio: number;
   private readonly riseRatio: number;
   private readonly minTroughSec: number;
+  private readonly delaySec: number;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.hopSec = opts.hopSec ?? 0.01;
@@ -79,6 +89,7 @@ export class OnsetDetector {
     this.dipRatio = opts.dipRatio ?? 0.5;
     this.riseRatio = opts.riseRatio ?? 1.8;
     this.minTroughSec = opts.minTroughSec ?? 0;
+    this.delaySec = opts.delaySec ?? 0;
   }
 
   /**
@@ -174,7 +185,7 @@ export class OnsetDetector {
         e > this.riseRatio * trough &&
         troughFrame - lastOnsetFrame >= minGapFrames
       ) {
-        onsets.push((troughFrame * hop) / sampleRate);
+        onsets.push(Math.max(0, (troughFrame * hop) / sampleRate + this.delaySec));
         lastOnsetFrame = troughFrame;
         peak = e; // start a fresh note
         trough = e;

@@ -1019,3 +1019,25 @@ sustained clean singing is now worth real effort — it unlocks ~+0.13 sitting i
 (2) exclude filled frames from `noteCents` (the chromaF1 slide says they pollute pitch naming);
 (3) gap-statistics gating (count of 1–2-frame dropouts/sec) was considered and rejected on
 mechanism: consonant dips and reverb punctures have the same width signature.
+
+### R7: per-profile onset-delay constant — the knob now exists, and calibration says 0 (2026-08-19)
+
+aubio's `delay` parameter (§4.2/§16.6 of the survey), added as `OnsetDetectorOptions.delaySec`
+(signed; + = report later, since our detector reports the trough of the inter-note dip) and
+`PipelineProfile.onsetDelaySec` for per-profile calibration, wired through `AudioConverter`.
+
+**Calibrated on dev (sweep-voice r7 group, delay −30…+50 ms on BOTH consumers of the detector's
+onsets), and the answer is 0:**
+
+- Shipping segmenter path: overall onset bias at d0 is **−1 ms** — there is nothing to subtract.
+  d±10–30 ms are zeros-to-negative; d+50 costs GUARD −0.018*. The historical output is the optimum.
+- Voice-decode path: +10…50 ms trend +0.001 (inside noise, mde 0.015); the residual +19 ms mean /
+  +29 ms median lateness there belongs to `onsetShiftSec` (70 ms), which the e1a/e1c sweeps chose
+  on COnP over the bias-zero ~50 ms — deliberately, re-confirmed by this grid. Do not "fix" the
+  bias to zero at the cost of the F1 optimum.
+
+So the −52 ms target the plan quotes was already fully absorbed by the voice decoder's shipped
+constant, and the re-attack detector — the one uncalibrated source — measures as needing no
+correction. The knob ships (unset = 0) so any future profile that develops a bias has the aubio
+mechanism waiting, and E5 (asymmetric confirmation delays) now has a single documented place to
+put a compensation.

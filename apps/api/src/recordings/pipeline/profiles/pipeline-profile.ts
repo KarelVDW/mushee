@@ -33,6 +33,16 @@ export interface PipelineProfile {
   /** Minimum voiced run length (frames) a note needs — raised under noise. */
   minFramesPerNote?: number;
   /**
+   * Calibrated report-time correction for the amplitude re-attack detector, in
+   * seconds (+ = later) — aubio's `delay` parameter, per profile (R7). The
+   * detector reports the trough of the inter-note dip, which precedes the
+   * audible re-attack, so a positive constant is expected once calibrated.
+   * Unset = 0 = the historical behaviour. (The voice decode's own analogous
+   * constant is `onsetShiftSec` on `VoiceNoteDecoder` — a different path with
+   * its own calibration; see E5/R12 before unifying them.)
+   */
+  onsetDelaySec?: number;
+  /**
    * Which note segmentation the trajectory providers run.
    *
    * Until 2026-08 this was not on the profile at all — the pipeline could adapt

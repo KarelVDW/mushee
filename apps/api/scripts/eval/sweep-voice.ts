@@ -45,6 +45,7 @@
  *   r15   WaoN joint duration × velocity note filters (plugin pass task 2)
  *   r19   block-level voiced-fraction quorum on the gate (plugin pass task 3)
  *   r21   fill 1–2-frame unvoiced dropouts on the track (plugin pass task 4)
+ *   r7    re-attack detector report delay, both consumers (plugin pass task 5)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
@@ -136,7 +137,7 @@ interface Config {
    * instead of using the ones the cache stored at the shipping defaults. Only
    * meaningful together with a cleanup that runs `onsetSplit`.
    */
-  onsets?: { dipRatio?: number; riseRatio?: number; minIoiSec?: number };
+  onsets?: { dipRatio?: number; riseRatio?: number; minIoiSec?: number; delaySec?: number };
   /** Notes straight from the decoder, before any `NoteExtractor` cleanup. */
   segment: (c: CachedClip) => NoteEventLike[];
   /** Cleanup to run after segmentation; omit for none. */
@@ -893,6 +894,39 @@ function buildConfigs(groups: Set<string>): Config[] {
           })(c);
         },
         cleanup: null,
+      });
+    }
+  }
+
+  // R7 — the re-attack detector's aubio-style report delay (plugin pass task 5).
+  // The detector reports the trough of the inter-note dip, which precedes the
+  // audible re-attack; this calibrates the constant on both consumers of its
+  // onsets. Anchors also go through re-detection (delay 0) so the comparison
+  // isolates the delay itself.
+  if (on('r7')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    const delays = [-0.03, -0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.05];
+    for (const d of delays) {
+      configs.push({
+        name: `r7 v d${d * 1000}ms`,
+        group: 'r7',
+        segment: voiceSegment(BEST),
+        cleanup: SPLIT,
+        onsets: { delaySec: d },
+      });
+    }
+    for (const d of delays) {
+      configs.push({
+        name: `r7 s d${d * 1000}ms`,
+        group: 'r7',
+        segment: shippedSegment,
+        cleanup: SHIPPED_CLEANUP,
+        onsets: { delaySec: d },
       });
     }
   }
