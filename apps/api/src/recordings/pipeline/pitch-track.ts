@@ -35,6 +35,48 @@ export class PitchTrack {
   }
 
   /**
+   * A copy of this track with short unvoiced gaps filled (R21, Deep Autotuner's
+   * `interpolate_pyin.py` — corrected): an unvoiced run of at most
+   * `maxGapFrames` whose BOTH flanks pass the gate gets linearly interpolated
+   * pitch and the quieter flank's confidence, so a consonant or breath punching
+   * a 1–2 frame hole mid-note no longer needs the decoder's `unvoicedPitchCost`
+   * to ride across it. Voiced frames are never touched — the reference smooths
+   * them too, which is a bug for us (its §14.2 validation note).
+   */
+  fillDropouts(opts: {
+    confidenceThreshold: number;
+    minFreqHz: number;
+    maxFreqHz: number;
+    maxGapFrames: number;
+  }): PitchTrack {
+    const voiced = this.voicedMask(opts);
+    const cents = this.cents.slice();
+    const confidence = this.confidence.slice();
+    let i = 0;
+    while (i < this.frames) {
+      if (voiced[i]) {
+        i += 1;
+        continue;
+      }
+      let end = i;
+      while (end < this.frames && !voiced[end]) end += 1;
+      const len = end - i;
+      if (i > 0 && end < this.frames && len <= opts.maxGapFrames) {
+        const c0 = this.cents[i - 1];
+        const c1 = this.cents[end];
+        const conf = Math.min(this.confidence[i - 1], this.confidence[end]);
+        for (let j = i; j < end; j += 1) {
+          const t = (j - (i - 1)) / (len + 1);
+          cents[j] = c0 + (c1 - c0) * t;
+          confidence[j] = conf;
+        }
+      }
+      i = end;
+    }
+    return new PitchTrack(cents, confidence, this.frames, this.hopSec);
+  }
+
+  /**
    * Per-frame voicing mask: confident enough AND inside the register window.
    * Broken out because every segmenter needs exactly this gate, and because the
    * frequency window is the pipeline's single most important adaptive knob — a

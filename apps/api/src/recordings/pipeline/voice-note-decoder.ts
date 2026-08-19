@@ -81,6 +81,13 @@ export interface VoiceDecodeOptions {
    * few stray voiced frames — a reverb-tail flicker — cannot become a note.
    */
   voicedQuorum?: { minFraction?: number; windowSec?: number };
+  /**
+   * Fill unvoiced gaps up to this long (seconds) on the track before decoding
+   * (R21; see `PitchTrack.fillDropouts`): a consonant or breath punching a
+   * 1–2 frame hole mid-note gets interpolated pitch instead of relying on
+   * `unvoicedPitchCost` to ride across it. Omit for the raw track.
+   */
+  fillUnvoicedGapSec?: number;
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -412,7 +419,7 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the six that are meaningfully absent. */
+  /** Every knob resolved, except the seven that are meaningfully absent. */
   private readonly o: Required<
     Omit<
       VoiceDecodeOptions,
@@ -422,6 +429,7 @@ export class VoiceNoteDecoder {
       | 'keepShortLoudRatio'
       | 'dropLongQuiet'
       | 'voicedQuorum'
+      | 'fillUnvoicedGapSec'
     >
   > &
     Pick<
@@ -432,6 +440,7 @@ export class VoiceNoteDecoder {
       | 'keepShortLoudRatio'
       | 'dropLongQuiet'
       | 'voicedQuorum'
+      | 'fillUnvoicedGapSec'
     >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
@@ -446,6 +455,18 @@ export class VoiceNoteDecoder {
   decode(track: PitchTrack, energy?: Float32Array): NoteEventTime[] {
     const frames = track.frames;
     if (frames === 0) return [];
+
+    if (this.o.fillUnvoicedGapSec !== undefined) {
+      track = track.fillDropouts({
+        confidenceThreshold: this.o.confidenceThreshold,
+        minFreqHz: this.o.minFreqHz,
+        maxFreqHz: this.o.maxFreqHz,
+        maxGapFrames: Math.max(
+          1,
+          Math.round(this.o.fillUnvoicedGapSec / track.hopSec),
+        ),
+      });
+    }
 
     const voiced = track.voicedMask({
       confidenceThreshold: this.o.confidenceThreshold,

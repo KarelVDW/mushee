@@ -70,6 +70,8 @@ export interface NoteSegmenterOptions {
   maxFreqHz?: number;
   /** Block-level voiced-fraction quorum on the gate (R19; see `PitchTrack.voicedMask`). */
   voicedQuorum?: { minFraction?: number; windowSec?: number };
+  /** Fill unvoiced gaps up to this long (seconds) before decoding (R21; see `PitchTrack.fillDropouts`). */
+  fillUnvoicedGapSec?: number;
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
   stepsPerSemitone?: number;
   /** Emission σ for a note's attack phase, in semitones — deliberately wide. */
@@ -173,6 +175,7 @@ export class NoteSegmenter {
   private readonly keepShortLoudRatio: number | undefined;
   private readonly dropLongQuiet: { minSec?: number; quietRatio?: number } | undefined;
   private readonly voicedQuorum: { minFraction?: number; windowSec?: number } | undefined;
+  private readonly fillUnvoicedGapSec: number | undefined;
 
   constructor(opts: NoteSegmenterOptions = {}) {
     this.confidenceThreshold = opts.confidenceThreshold ?? 0.5;
@@ -196,6 +199,7 @@ export class NoteSegmenter {
     this.keepShortLoudRatio = opts.keepShortLoudRatio;
     this.dropLongQuiet = opts.dropLongQuiet;
     this.voicedQuorum = opts.voicedQuorum;
+    this.fillUnvoicedGapSec = opts.fillUnvoicedGapSec;
   }
 
   /**
@@ -205,6 +209,15 @@ export class NoteSegmenter {
   segment(track: PitchTrack, energy?: Float32Array): NoteEventTime[] {
     const frames = track.frames;
     if (frames === 0) return [];
+
+    if (this.fillUnvoicedGapSec !== undefined) {
+      track = track.fillDropouts({
+        confidenceThreshold: this.confidenceThreshold,
+        minFreqHz: this.minFreqHz,
+        maxFreqHz: this.maxFreqHz,
+        maxGapFrames: Math.max(1, Math.round(this.fillUnvoicedGapSec / track.hopSec)),
+      });
+    }
 
     const voiced = track.voicedMask({
       confidenceThreshold: this.confidenceThreshold,

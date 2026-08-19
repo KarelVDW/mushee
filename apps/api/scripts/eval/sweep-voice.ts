@@ -44,15 +44,19 @@
  *   e8    Hann-weighted-median vs α-trimmed-mean note pitch           (null)
  *   r15   WaoN joint duration × velocity note filters (plugin pass task 2)
  *   r19   block-level voiced-fraction quorum on the gate (plugin pass task 3)
+ *   r21   fill 1–2-frame unvoiced dropouts on the track (plugin pass task 4)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
  */
 
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
 import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector';
+import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver';
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import {
@@ -144,7 +148,16 @@ interface Config {
    */
   post?: (notes: NoteEventLike[], c: CachedClip) => NoteEventLike[];
   needsFlux?: boolean;
+  /**
+   * Run the per-clip production reverberance estimate (an ffmpeg decode, no
+   * model) before the config loop, into `clipReverberance` — for configs that
+   * gate a mechanism on the room the way `ProfileResolver` would.
+   */
+  needsReverberance?: boolean;
 }
+
+/** `${dataset}/${clip}` → `estimateReverberance` over the take, as production sees it. */
+const clipReverberance = new Map<string, number>();
 
 interface NoteEventLike {
   startTimeSeconds: number;
@@ -830,6 +843,60 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R21 — fill 1–2-frame unvoiced dropouts on the track before decoding (Deep
+  // Autotuner's interpolate_pyin, corrected to fill unvoiced frames only). The
+  // "done when" is a two-part claim: no regression anywhere, AND the
+  // `unvoicedPitchCost` optimum flattens — the sign that cost was doing two
+  // jobs (note survival across consonants + pitch identity), of which the fill
+  // just took the trivial half.
+  if (on('r21')) {
+    for (const fill of [undefined, 0.02, 0.04]) {
+      for (const unvoicedPitchCost of [0.8, 1.5, 3]) {
+        configs.push({
+          name: `r21 ${fill === undefined ? 'raw' : `fill${fill * 1000}`} u${unvoicedPitchCost}`,
+          group: 'r21',
+          segment: voiceSegment({
+            ...BEST,
+            unvoicedPitchCost,
+            ...(fill !== undefined && { fillUnvoicedGapSec: fill }),
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R21ad — the reverberance-ADAPTIVE dropout fill (fillSec = scale × the
+  // production `estimateReverberance`, off below 20 ms). The always-on fill
+  // wins big under reverb and costs the clean slice; this asks whether the
+  // production signal can keep the fill away from the clean corpora — esmuc/csd
+  // are real choir rooms, so "clean" is not automatically "dry" here. Needs the
+  // per-clip reverberance pre-pass (`needsReverberance`).
+  if (on('r21ad')) {
+    configs.push({
+      name: 'r21ad OFF (anchor)',
+      group: 'r21ad',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const scale of [0.1, 0.15, 0.2]) {
+      configs.push({
+        name: `r21ad x${scale}`,
+        group: 'r21ad',
+        needsReverberance: true,
+        segment: (c) => {
+          const r = clipReverberance.get(`${c.dataset}/${c.clip}`) ?? 0;
+          const fillSec = scale * r;
+          return voiceSegment({
+            ...BEST,
+            ...(fillSec >= 0.02 && { fillUnvoicedGapSec: fillSec }),
+          })(c);
+        },
+        cleanup: null,
+      });
+    }
+  }
+
   // FLUX — §3.2's selective in-note SuperFlux splitter, the one untried
   // model-free re-onset idea. The broadband envelope is proven unable to see a
   // re-articulation (e9 + the reonsetCost/accentBonus nulls); band-wise flux is
@@ -998,6 +1065,27 @@ async function main(): Promise<void> {
       await ensureFluxCache(c);
       built += 1;
       if (built % 100 === 0) console.log(`  flux sidecars: ${built}/${voiceClips.length}`);
+    }
+  }
+
+  // Per-clip production reverberance for room-gated configs — decoded exactly
+  // the way `ProfileResolver` sees the audio (16 kHz, high-pass 30 Hz, no
+  // loudnorm). ffmpeg only; no model inference.
+  if (configs.some((c) => c.needsReverberance)) {
+    const decoder = new AudioDecoder();
+    let built = 0;
+    for (const c of clips) {
+      const key = `${c.dataset}/${c.clip}`;
+      if (clipReverberance.has(key)) continue;
+      try {
+        const wav = readFileSync(c.wavPath);
+        const det = await decoder.decode(wav, 16000, { loudnorm: false, highpassHz: 30 });
+        clipReverberance.set(key, estimateReverberance(det.samples, 16000));
+      } catch {
+        clipReverberance.set(key, 0);
+      }
+      built += 1;
+      if (built % 100 === 0) console.log(`  reverberance: ${built}/${clips.length}`);
     }
   }
 

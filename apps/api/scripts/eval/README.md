@@ -979,3 +979,43 @@ Reading: the voice decode already has the quorum's job covered — the silence s
 voiced flickers out of the path, and `minNoteSec` absorbs what leaks through. A frame-level vote
 adds nothing on top of a note-level decode; the references that ship it (Essentia's Pitch2Midi,
 outotune) have **no note-level decode** to lean on. Option stays, defaulted off.
+
+### R21: single-frame dropout fill — fails its gate on clean voice, but is the largest reverb
+### relief ever measured here (2026-08-19)
+
+Deep Autotuner's `interpolate_pyin` (corrected to fill **unvoiced** frames only), as
+`PitchTrack.fillDropouts` + `fillUnvoicedGapSec` options on both trajectory decoders. An unvoiced
+run ≤ maxGap whose both flanks pass the gate gets interpolated cents and the quieter flank's
+confidence. No cache bump (decode-time, defaulted off).
+
+**The plan's two predictions both confirmed, and the second is why it cannot ship as-is:**
+
+- `unvoicedPitchCost` flattens exactly as predicted: with fill on, u0.8/1.5/3 score identically
+  (0.503 ×3); raw they spread (0.509/0.515/0.514). The cost was doing two jobs; the fill takes the
+  trivial one.
+- But "no regression anywhere" FAILS: the clean VOICE slice pays ~1 pt (0.515 → 0.503 at
+  fill=20 ms, → 0.494 at 40 ms), concentrated in the legato/choir corpora (esmuc, csd, vocadito,
+  n20emv2) — because **the 1–2-frame unvoiced dips ARE the legato boundary evidence**, and the
+  fill erases them. chromaF1 also slides (0.520 → 0.511), the interpolated frames polluting
+  `noteCents`.
+
+**The bonus finding is the real news.** On the reverb tier (`sweep-reverb`, vs `voice OFF`):
+fill40 +0.096*/+0.088* (echoey/distant), monotone to fill120 (+0.137*/+0.151*) — reverb halves
+CREPE's mid-note confidence (the 2026-07 diagnosis), and the fill repairs exactly those punctures.
+Against the standing reverb oracle (+0.14/+0.23 for a perfect front end), a reverberance-adaptive
+fill (`fillSec = 0.15 × estimateReverberance`) captures **+0.125*/+0.153*** — most of the
+echoey-room oracle — from the trajectory side, with sweep-reverb's own clean condition at −0.005
+(n.s.).
+
+**Why it still doesn't ship:** the gate isn't selective. `probe-reverberance.ts` (new diagnostic)
+shows the distributions overlap — clean corpora sit at median 0 but with heavy tails
+(annotated-vocalset clean p90 = 0.79, vocadito p90 = 1.00, n20emv2 p90 = 0.84) while some degraded
+takes register 0 — so every gating variant tried (proportional, ×0.1…0.2; profile-locked 1.5/3 s)
+still costs the broad clean VOICE slice −0.010…−0.016. A REVERB win bought with a clean-slice
+dent is the same trade the house rule forbids for GUARD; off by default.
+
+**Follow-ups recorded, in value order:** (1) a reverberance feature that does not false-fire on
+sustained clean singing is now worth real effort — it unlocks ~+0.13 sitting in a merged option;
+(2) exclude filled frames from `noteCents` (the chromaF1 slide says they pollute pitch naming);
+(3) gap-statistics gating (count of 1–2-frame dropouts/sec) was considered and rejected on
+mechanism: consonant dips and reverb punctures have the same width signature.

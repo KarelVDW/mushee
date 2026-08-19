@@ -77,7 +77,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   `CACHE_VERSION`s if implemented at track level.
 - **Why:** §11.3, §7.2, §4.5.
 
-### [ ] 4. R21 — fill single-frame voicing dropouts on the track  *(XS)*
+### [n] 4. R21 — fill single-frame voicing dropouts on the track  *(XS)*
 - **Change:** pre-pass on `PitchTrack`: an **unvoiced** frame whose both neighbours are voiced gets
   the interpolated pitch (max gap 1–2 frames, behind an option). NOTE: the reference implementation
   also smooths voiced frames — ours must not (§14.2 *(validation)* note).

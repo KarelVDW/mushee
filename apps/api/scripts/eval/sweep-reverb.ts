@@ -948,7 +948,46 @@ const CONFIGS: SweepConfig[] = [
   { name: 'voice q.75w60', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.06 } }), vsName: 'voice OFF' },
   { name: 'voice q.75w120', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.12 } }), vsName: 'voice OFF' },
   { name: 'voice q.75w200', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.2 } }), vsName: 'voice OFF' },
+
+  // R21: fill 1–2-frame unvoiced dropouts before decoding. Reverb HALVES
+  // CREPE's mid-note confidence (the 2026-07 diagnosis), so short gate dropouts
+  // inside held notes are exactly what this tier produces — if the fill is
+  // worth anything, it is here.
+  { name: 'voice fill20', segment: voiceDecode({ fillUnvoicedGapSec: 0.02 }), vsName: 'voice OFF' },
+  { name: 'voice fill40', segment: voiceDecode({ fillUnvoicedGapSec: 0.04 }), vsName: 'voice OFF' },
+  { name: 'voice fill60', segment: voiceDecode({ fillUnvoicedGapSec: 0.06 }), vsName: 'voice OFF' },
+  { name: 'voice fill80', segment: voiceDecode({ fillUnvoicedGapSec: 0.08 }), vsName: 'voice OFF' },
+  { name: 'voice fill120', segment: voiceDecode({ fillUnvoicedGapSec: 0.12 }), vsName: 'voice OFF' },
+
+  // …and the condition-adaptive version. The clean VOICE slice says an
+  // always-on fill costs boundaries (the 1–2-frame dips ARE the legato
+  // boundary evidence), while reverb gains up to +0.15 — the same split the
+  // confidence relief faced, so it gets the same answer: scale the fill by the
+  // production reverberance estimate, including under the profile lock
+  // production actually decides with.
+  { name: 'voice fillAd x.10', segment: adaptiveFill(0.1), vsName: 'voice OFF' },
+  { name: 'voice fillAd x.15', segment: adaptiveFill(0.15), vsName: 'voice OFF' },
+  { name: 'voice fillAd x.20', segment: adaptiveFill(0.2), vsName: 'voice OFF' },
+  { name: 'voice fillAd x.15 lock1.5', segment: adaptiveFill(0.15, 1.5), vsName: 'voice OFF' },
+  { name: 'voice fillAd x.15 lock3', segment: adaptiveFill(0.15, 3), vsName: 'voice OFF' },
 ];
+
+/**
+ * Reverberance-scaled dropout fill: `fillSec = scale × r`, off below 20 ms so a
+ * dry take keeps the exact raw decode. `lockSec` reads the estimate from only
+ * the first N seconds — what production has when it locks the profile.
+ */
+function adaptiveFill(scale: number, lockSec?: number) {
+  return (c: CachedVariant): ReturnType<typeof segmentNotes> => {
+    const key = `${c.dataset}/${c.clip}/${c.variant}`;
+    const r =
+      lockSec === undefined
+        ? (productionReverberance.get(key) ?? 0)
+        : (lockedReverberance.get(key)?.get(lockSec) ?? 0);
+    const fillSec = scale * r;
+    return voiceDecode(fillSec >= 0.02 ? { fillUnvoicedGapSec: fillSec } : {})(c);
+  };
+}
 
 /** The voice decode as production ships it, driven off a cached variant. */
 function voiceDecode(over: VoiceDecodeOptions = {}) {
