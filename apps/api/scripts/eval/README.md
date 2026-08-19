@@ -27,7 +27,7 @@ logs below are the measurements.
 | `research-voice-datasets.md` | Licence-and-provenance register for every voice corpus considered |
 | `research-rhythm.md` | Tempo/beat tracking and score-level rhythm quantisation |
 | `research-daw-products.md` | How commercial products do it (docs, patents, press) |
-| `research-plugin-sources.md` | Sixteen open-source projects' **source code** mined for transferable ideas — plugins, the reference implementations we cite, and autotune |
+| `research-plugin-sources.md` | Eighteen open-source projects' **source code** mined for transferable ideas — plugins, the reference implementations we cite, and autotune |
 | `plan-plugin-improvements.md` | **Execution plan** for research-plugin-sources.md §17 — batched tasks with gates, for an implementing agent |
 
 ## Prerequisites

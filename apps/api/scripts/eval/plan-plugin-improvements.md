@@ -202,6 +202,38 @@ they are measured against. Within Batch 3, E1 precedes E2.
 
 ---
 
+## Batch 4 — round-4 addendum (research doc §20; added 2026-08-19 after Batches 1–3 ran)
+
+### [ ] 9. R23 — benchmark OpenVPI GAME as an external note transcriber  *(the live item)*
+- **Licence check first (blocking):** GAME's checkpoints are OpenVPI's, not in OpenTune's repo, and
+  their licence is unverified. No download into the repo, no benchmark result in the Findings log,
+  until the checkpoint licence is confirmed compatible. (OpenTune itself is AGPL-3 — ideas only.)
+- **Change:** a runner in the style of `bench-yong-runner.py` — batch GAME inference (encoder →
+  D3PM segmenter ×8 passes → bd2dur → estimator, ONNX, CPU-only) into per-clip note JSONs, scored
+  by `bench-external-notes.ts` under house conventions (`EXT_DIR=<dir> EVAL_SPLIT=test`).
+- **Deployment lore (from OpenTune's wrapper, §20.2):** chunk clips > 45 s at silence midpoints;
+  dedupe seams at 50 ms keeping the earlier chunk's note; do not use the CoreML EP (silent kernel
+  failures on GAME's graph).
+- **Done when:** GAME's COnP on the VOICE slice is measured against ours (0.668 held-out test) and
+  the verdict — acquire, ignore, or hybrid — is in the Findings log. This is the §10d gate; the
+  external-yardstick row already says a learned note model is where the remaining headroom is.
+- **Why:** §20.1–§20.2.
+
+### [ ] 10. R24 — angle-band-gated slope rotation as a fourth `pitchEstimator` variant  *(XS, optional)*
+- Detrend only when the note's slope angle (normalised at 7 st/s) is in the 10°–30° band; leave
+  flat notes and deliberate glides alone. Joins the task-7 sweep, whose three unconditional
+  variants all measured null — expectation is low; a fourth null closes the family for good.
+- **Why:** §20.5.
+
+### [ ] 11. R25 — two-tier silence rule in the onset detector  *(XS, optional)*
+- Silent if total RMS ≤ −40 dBFS, or ≤ −30 dBFS while the 60 Hz–3 kHz band is < −40 dBFS. Sweep on
+  the adverse tier (wind/rumble is the target shape).
+- **Why:** §20.5.
+
+*(R26 — the RMVPE "uv" inversion trap — is a recorded note, not a task: research doc §20.4.)*
+
+---
+
 ## Explicitly not in scope (do not implement; see research doc §17c)
 
 MXTune's segmentation or in-scale grid · `melodiaTrick` while input is monophonic · aubio's

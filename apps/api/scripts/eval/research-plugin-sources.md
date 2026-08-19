@@ -4,7 +4,8 @@ Research notes, 2026-08-19. **Fourteen** open-source projects whose source was r
 for pre/post-processing that could improve our pipeline. Read in three rounds: §1–§4 audio plugins,
 §5–§9 the reference implementations behind algorithms we already claim to follow, §10–§14 autotune
 software (which must analyse pitch before it can correct it). §15 lists two more that were read and
-yielded nothing.
+yielded nothing. §20 is a **round-4 addendum** (same day, post-validation): OpenTune — the first
+surveyed project that decides note boundaries automatically — and PytoTune, dismissed.
 
 **Validated 2026-08-19.** Every [P] citation was re-verified against fresh clones of all sixteen
 repos, and every claim about our own pipeline against current source. The externals held up clean
@@ -84,6 +85,15 @@ problem, and it is the one thing a notation tool cannot outsource.
 | **R20** | ⭐ **A per-note intonation degradation tier for the eval harness**: take an in-tune corpus, apply *known* per-note detunings of 20-60 cents, check the pipeline recovers the intended notes | Deep Autotuner's de-tune augmentation (`rnn.py:180-196`) | `scripts/eval/scenarios.ts` + `lib/synth.ts` | **High** — our tiers cover the room, not the *performer*; it is the only way to put ground truth under R1/R2/R13 and the spelling code |
 | **R21** | **Fill single-frame voicing dropouts on the pitch track** (both neighbours voiced → interpolate) | Deep Autotuner `interpolate_pyin.py` | `pitch-track.ts` pre-pass | **Medium / three lines** — removes the easiest third of the work `unvoicedPitchCost` is doing, making that sweep cleaner |
 | **R22** | Implementation note, not a task: if a licence-clean DSP f0 path is ever built, use the patent's **recursive running-sum ASDF** (O(1) per lag per sample) with coarse-to-fine refinement | Auto_Tune `AutoTune.py`; WORLD (§11.4) | — | **Deferred** — recorded so §11.4's option has a known-good shape |
+
+### Round 4 — the addendum (§20)
+
+| # | Idea | Source | Where it lands | Expected value |
+|---|---|---|---|---|
+| **R23** | ⭐ **GAME (OpenVPI), a pretrained neural note transcriber, as external benchmark/challenger** to our note decode — with OpenTune's deployment lore (45 s chunk cap, silence-midpoint chunking, 50 ms seam dedup, CPU-only) | OpenTune `GameNoteGenerator` | `bench-external-notes.ts` (the §10d "should we acquire a learned model" gate) | **High** — the Findings log's own conclusion ("remaining singing headroom is a learned note model, not more post-processing") now has a concrete, no-training-compliant candidate. **Check the GAME checkpoints' licence first** |
+| **R24** | **Angle-band-gated slope rotation**: per-note detrend applied only when the slope angle ∈ 10°–30° (normalised at 7 st/s) — straightens scoops, leaves flat notes and deliberate glides alone | OpenTune `PitchCurve` | `pitchEstimator` sweep | **Low-medium** — the three unconditional variants all measured null (plan task 7); the gate is the only untested twist |
+| **R25** | **Two-tier silence rule**: silent if total RMS ≤ −40 dBFS, *or* ≤ −30 dBFS while the 60 Hz–3 kHz band is < −40 dBFS | OpenTune `SilentGapDetector` | `onset-detector.ts` silence floor | **Low-medium** — classifies low-frequency rumble as silence above the strict gate |
+| **R26** | Implementation note, not a task: RMVPE's shipped checkpoint labels its unvoiced-probability output "uv" — enabling the mask as documented zeroes every voiced frame | OpenTune `RMVPEExtractor.h:116-136` | — | **Deferred** — recorded so an RMVPE evaluation doesn't rediscover it |
 
 ### Combined top five, across all three rounds
 
@@ -1329,6 +1339,14 @@ delegate to a control input, a user gesture, or an upstream tool. That is the ar
 effort on §5's finding rather than treating it as marginal tuning — there is no shortcut waiting behind
 it, and the one asset we hold that they do not is the score itself (§11.1).
 
+**Round-4 amendment (§20).** OpenTune is the first surveyed source that *does* decide note boundaries
+automatically — by outsourcing to a **pretrained neural transcriber** (OpenVPI GAME, a discrete-diffusion
+segmenter), with a 50-cent running-mean heuristic as fallback and the user's piano roll as final
+authority. The finding survives in sharpened form: nothing in the autotune world decides boundaries with
+DSP alone beyond trivial running-mean splits; the one project that does it well bought a model — exactly
+the pattern our own pipeline follows, and consistent with the no-training / pretrained-checkpoints rule.
+That makes GAME a benchmark candidate (R23), not a counterexample.
+
 ### 16.4 Nobody ships detection alone
 MXTune: a full note editor with zoom, drag-to-add, right-click-delete, undo/redo.
 NeuralNote: piano roll, audio-region overlay, drag-out-to-DAW, per-scale snapping.
@@ -1419,6 +1437,8 @@ implementations are.
 | **Deep Autotuner** (`data_driven_pitch_corrector`) | **none — all rights reserved** | **No, same as above.** Only the *published paper* (arXiv 2002.05511) and the ideas in §14 are usable. R20 and R21 are both things we write ourselves from the description |
 | PyVocalSync | MIT | Yes, but nothing worth taking (§15) |
 | opentune | MIT | Yes, but nothing worth taking (§15) |
+| **OpenTune** (YuFeng926 — unrelated to the above) | **AGPL-3** | **No, emphatically** — same standing as Essentia: read for ideas, never vendor, link or port, not even in the harness. Its GAME *checkpoints* are OpenVPI's and their licence is **unverified** — check before any R23 adoption |
+| PytoTune | MIT | Yes, but nothing worth taking (§20) |
 
 **Three cautions.** (0) **Two projects carry no licence at all** (§13, §14). Absent a grant, default
 copyright applies and they are *more* restricted than the GPL items, not less — the GPL at least grants
@@ -1470,6 +1490,10 @@ git clone --depth 1 https://github.com/sannawag/data_driven_pitch_corrector.git 
 # read and set aside (§15)
 git clone --depth 1 https://github.com/hamiltonbarber/PyVocalSync.git  # e372847
 git clone --depth 1 https://github.com/bemtorres/opentune.git          # 4b352bb
+
+# round 4 — addendum (§20)
+git clone --depth 1 https://github.com/YuFeng926/OpenTune.git          # 72432aa
+git clone --depth 1 https://github.com/brokkoli71/PytoTune.git         # 81bcdb1
 ```
 
 The files that carry the whole content of this note:
@@ -1504,3 +1528,104 @@ The files that carry the whole content of this note:
 | `data_driven_pitch_corrector/rnn.py` | 157-196 | **the de-tuning augmentation (R20)**; silence-dropping with an index map |
 | `data_driven_pitch_corrector/utils.py` | `parse_note_csv` | proof that note boundaries are an *input* (§14.1) |
 | `data_driven_pitch_corrector/globals.py` | whole file (~56) | grid + CQT parameters; `max_semitone`, `bins_per_note` |
+| `OpenTune/Source/Inference/GameNoteGenerator.{h,cpp}` | whole files | **the neural note transcriber wrapper (R23)** — chunking, seam dedup, defaults |
+| `OpenTune/Source/Inference/RMVPEExtractor.{h,cpp}` | 116-136 (uv trap), 160-242 (octave repair, gap fill) | RMVPE integration + the R26 trap |
+| `OpenTune/Source/Utils/LegacyNoteGenerator.cpp` | 118-127, 229-245 | 50-cent running-mean split — §7.1's fourth appearance |
+| `OpenTune/Source/Utils/PitchCurve.cpp` | 223-294, 515-523 | angle-band-gated slope rotation (R24) |
+| `OpenTune/Source/Utils/SilentGapDetector.{h,cpp}` | h:99-114, cpp:186-200 | the two-tier silence rule (R25) |
+| `PytoTune/src/algorithms/yin_pitch_detector.cpp` | whole file | textbook YIN; nothing new (§20.6) |
+
+---
+
+## 20. Round-4 addendum (2026-08-19, post-validation): OpenTune and PytoTune
+
+Two more repos, read after the validation pass and after the §17 plan had largely been executed
+(most of §17a/§17b measured, mostly null — see the plan file and the Findings log). That context
+matters: with the post-processing avenue now measured out, §20.1 is the live item here.
+
+### 20.1 OpenTune (YuFeng926) — **AGPL-3**, and not the §15 opentune
+
+https://github.com/YuFeng926/OpenTune · read at `72432aa` (last commit **2026-08-19** — the day of
+this survey; actively developed, bilingual zh/en). Unrelated to bemtorres/opentune (§15).
+
+A Melodyne-class desktop app + VST3/ARA2 plugin, ~80k lines of C++/JUCE: RMVPE (pretrained ONNX)
+extracts F0 → notes are generated (neural or heuristic, §20.2) → the user edits in a full piano
+roll → the corrected curve is re-synthesised by a **PC-NSF-HiFiGAN neural vocoder** rather than
+DSP-shifted. The only project in this survey whose architecture matches ours: pretrained neural
+estimators, no training, explicit note layer.
+
+### 20.2 ⭐ The first automatic note-boundary decision in the survey (R23)
+
+`GameNoteGenerator` wraps **OpenVPI GAME** ("Generative Adaptive MIDI Extractor") — a pretrained
+4-model ONNX pipeline: `encoder → segmenter → bd2dur → estimator`, where the segmenter is a **D3PM
+discrete-diffusion model run 8 refinement passes** over a boundary bitmask (`ts = d3pmT0·(1−i/steps)`,
+`d3pmT0 = 0.95`; defaults `segThreshold 0.2, segRadius 2, estThreshold 0.2`,
+`GameNoteGenerator.h:99-104`). The estimator emits per-segment presence plus **continuous MIDI**;
+notes keep the integer as `pitch` and the float as `originalPitch` (`cpp:219-226`) — §16.12's
+representation again. **[P]**
+
+This amends §16.13 (see the amendment there): the finding survives sharpened — the one project that
+decides boundaries automatically bought a pretrained model, which is our own pattern and our rule.
+GAME is the successor family to ROSVOT (already a candidate in `research-voice-transcription.md`),
+and the harness already has the gate for it: **`bench-external-notes.ts`**, the §10d
+"should we acquire a learned model" gate. That is R23.
+
+**Deployment lore worth keeping** (hard-won in OpenTune's wrapper, free for us) **[P]**: clips
+> 45 s must be chunked (O(T²) attention), chunk at **silence midpoints**, dedupe chunk seams with a
+50 ms tolerance keeping the *earlier* chunk's note ("its onset is more reliable",
+`GameNoteGenerator.h:110-117`); CPU-only, because ORT's CoreML EP **silently** swallows kernel
+errors on GAME's graph (`cpp:52-54`). **Blocker before adoption: the GAME checkpoints are OpenVPI's
+and their licence is unverified** — OpenTune's repo ships only `rmvpe.onnx`.
+
+### 20.3 The heuristic fallback — §7.1's fourth appearance
+
+`LegacyNoteGenerator` (still live) splits when a frame deviates **≥ 50 cents from the running mean
+of the current segment** (`|1200·log2(f0/avg)| ≥ 50`, `LegacyNoteGenerator.cpp:229-245`; defaults
+`gapBridgeMs 10, minDurationMs 20`). **[P]** That is Essentia's running-mean island building (§7.1,
+60 cents) independently reinvented at 50 — a fourth vote for the mechanism and a third value for the
+threshold (cf. §18's note on quoted numbers). Scale snap is deliberately a separate post-generation
+step (`NoteGeneratorTypes.h:10-15`), matching R18's two-mask separation.
+
+### 20.4 Pitch layer: RMVPE, an octave repair, a gap fill — and a trap (R26)
+
+RMVPE at 10 ms hop, 50–1100 Hz, preceded by a 50 Hz Butterworth high-pass and a −50 dBFS gate
+(`RMVPEExtractor.cpp:302-322`). Post-hoc: a one-directional octave-drop repair
+(`ratio ∈ (0.45, 0.55) → ×2`, `cpp:160-177`) and **log-domain gap fill up to 8 frames / 80 ms**
+(`cpp:179-242`) — a data point that R21's max-gap (swept at 1–2 frames, measured null) had a far
+larger published sibling. **The R26 trap [P]:** the shipped checkpoint's "uv" output is the
+*unvoiced* probability; the code carries a long warning that enabling the mask as documented zeroes
+every voiced frame (`RMVPEExtractor.h:116-136`). Recorded so an RMVPE evaluation doesn't rediscover
+it.
+
+### 20.5 Correction machinery worth noting (R24, R25)
+
+- ⭐ **Angle-band-gated slope rotation** (`PitchCurve.cpp:223-294, 515-523`): per note, estimate the
+  slope from medians of the first/last `max(3, n/5)` voiced frames, convert to an angle normalised
+  at 7 st/s, and **only if 10° ≤ |angle| ≤ 30°** rotate the contour flat around the note's centre.
+  **[P]** A *conditional* version of §1.3's linear detrend: scoops get straightened, flat notes and
+  deliberate glides are untouched. The unconditional estimator variants all measured null (plan
+  task 7); the gate is the one untested twist (R24).
+- **Two-tier silence rule** (`SilentGapDetector.h:99-114`): silent if total (60 Hz-HP'd) RMS
+  ≤ −40 dBFS, **or** total ≤ −30 dBFS *while* the 60 Hz–3 kHz band is < −40 dBFS; min gap 100 ms.
+  **[P]** Rumble-dominated frames classify as silence above the strict gate (R25).
+- **Drift/vibrato separation** by a per-note zero-phase ~500 ms moving average (≈2 Hz cutoff),
+  scaling only the drift component and preserving modulation (`PitchCurve.cpp:71-114, 532-557`).
+  Correction-side, but a clean formulation of the error-vs-expression distinction §14.4 frames.
+
+### 20.6 Non-findings in both repos
+
+From OpenTune: Krumhansl–Schmuckler key detection with best-minus-second-best confidence (§16.9
+covers abstention; we take key from the score), scale-snap grids, the "PIP" energy-weighted note
+pitch estimator (comparable to, not better than, our trimmed mean / Hann median), the −50 dBFS
+pre-inference gate (gates measured as dead ends here), and everything synthesis-side (vocoder,
+retune-speed mixing, synthetic vibrato, the patent-style real-time shifter).
+
+**PytoTune** (https://github.com/brokkoli71/PytoTune, `81bcdb1`, **MIT**) — a 2,700-line C++20
+university *algorithm engineering* project (SIMD/OpenMP is the point; "audio quality was not the
+sole optimization target" per its own README): textbook YIN (CMND threshold 0.05, parabolic
+interpolation, median-5 smoothing, one-directional octave repair) with **zero note-boundary logic**
+— targets come from a MIDI track (highest active note wins, `midi_file.cpp:290-317`) or a per-frame
+nearest-in-scale snap. A clean seventh confirmation of §16.13's original form; every mechanism is
+already in the catalogue. Its two novelties (anti-aliased 4× decimation before YIN; a generalised
+non-octave `Scale{baseNote, repeatFactor, ratios}` type) are irrelevant to neural estimators and to
+score-based spelling. Nothing to take.
