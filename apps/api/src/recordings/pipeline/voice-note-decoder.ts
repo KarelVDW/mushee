@@ -74,6 +74,13 @@ export interface VoiceDecodeOptions {
   confidenceThreshold?: number;
   minFreqHz?: number;
   maxFreqHz?: number;
+  /**
+   * Block-level voiced-fraction quorum on the gate (R19; see
+   * `PitchTrack.voicedMask`): a frame only stays voiced when at least
+   * `minFraction` of its `windowSec` neighbourhood passes the raw gate, so a
+   * few stray voiced frames — a reverb-tail flicker — cannot become a note.
+   */
+  voicedQuorum?: { minFraction?: number; windowSec?: number };
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -405,7 +412,7 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the five that are meaningfully absent. */
+  /** Every knob resolved, except the six that are meaningfully absent. */
   private readonly o: Required<
     Omit<
       VoiceDecodeOptions,
@@ -414,6 +421,7 @@ export class VoiceNoteDecoder {
       | 'wideChangeCost'
       | 'keepShortLoudRatio'
       | 'dropLongQuiet'
+      | 'voicedQuorum'
     >
   > &
     Pick<
@@ -423,6 +431,7 @@ export class VoiceNoteDecoder {
       | 'wideChangeCost'
       | 'keepShortLoudRatio'
       | 'dropLongQuiet'
+      | 'voicedQuorum'
     >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
@@ -442,6 +451,7 @@ export class VoiceNoteDecoder {
       confidenceThreshold: this.o.confidenceThreshold,
       minFreqHz: this.o.minFreqHz,
       maxFreqHz: this.o.maxFreqHz,
+      quorum: this.o.voicedQuorum,
     });
 
     const grid = this.pitchGrid(track, voiced);
@@ -539,6 +549,7 @@ export class VoiceNoteDecoder {
         confidenceThreshold: this.o.confidenceThreshold,
         minFreqHz: this.o.minFreqHz,
         maxFreqHz: this.o.maxFreqHz,
+        quorum: this.o.voicedQuorum,
       }),
     );
   }

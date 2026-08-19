@@ -68,6 +68,8 @@ export interface NoteSegmenterOptions {
   /** Register window; voiced frames outside it are treated as unvoiced. */
   minFreqHz?: number;
   maxFreqHz?: number;
+  /** Block-level voiced-fraction quorum on the gate (R19; see `PitchTrack.voicedMask`). */
+  voicedQuorum?: { minFraction?: number; windowSec?: number };
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
   stepsPerSemitone?: number;
   /** Emission σ for a note's attack phase, in semitones — deliberately wide. */
@@ -170,6 +172,7 @@ export class NoteSegmenter {
   private readonly dipRatio: number;
   private readonly keepShortLoudRatio: number | undefined;
   private readonly dropLongQuiet: { minSec?: number; quietRatio?: number } | undefined;
+  private readonly voicedQuorum: { minFraction?: number; windowSec?: number } | undefined;
 
   constructor(opts: NoteSegmenterOptions = {}) {
     this.confidenceThreshold = opts.confidenceThreshold ?? 0.5;
@@ -192,6 +195,7 @@ export class NoteSegmenter {
     this.dipRatio = opts.dipRatio ?? 0.6;
     this.keepShortLoudRatio = opts.keepShortLoudRatio;
     this.dropLongQuiet = opts.dropLongQuiet;
+    this.voicedQuorum = opts.voicedQuorum;
   }
 
   /**
@@ -206,6 +210,7 @@ export class NoteSegmenter {
       confidenceThreshold: this.confidenceThreshold,
       minFreqHz: this.minFreqHz,
       maxFreqHz: this.maxFreqHz,
+      quorum: this.voicedQuorum,
     });
 
     const grid = this.pitchGrid(track, voiced);

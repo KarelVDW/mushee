@@ -67,7 +67,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 - **Done when:** precision rises on the reverb/adverse tier with recall unchanged — or logged null.
 - **Why:** §9.3.
 
-### [ ] 3. R19 — voiced-fraction quorum before reporting pitch  *(XS)*
+### [n] 3. R19 — voiced-fraction quorum before reporting pitch  *(XS)*
 - **Change:** block-level quorum (fourth independent instance in the survey: >¼ voiced in outotune,
   ≥50 %/15 ms in Essentia, median-of-6 in aubio) as a new option on `PitchTrack.voicedMask` or as a
   decoder voicing term.

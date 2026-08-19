@@ -43,6 +43,7 @@
  *   e7    a second, cheaper price for wide intervals                  (null, informative)
  *   e8    Hann-weighted-median vs α-trimmed-mean note pitch           (null)
  *   r15   WaoN joint duration × velocity note filters (plugin pass task 2)
+ *   r19   block-level voiced-fraction quorum on the gate (plugin pass task 3)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
@@ -802,6 +803,31 @@ function buildConfigs(groups: Set<string>): Config[] {
       }),
       cleanup: null,
     });
+  }
+
+  // R19 — block-level voiced-fraction quorum on the voicing gate (plugin survey
+  // §11.3/§7.2/§4.5). The adverse-tier measurement lives in sweep-reverb.ts
+  // (`voice q*` rows); this group is the clean-corpus safety check.
+  if (on('r19')) {
+    configs.push({
+      name: 'r19 OFF (anchor)',
+      group: 'r19',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const minFraction of [0.25, 0.5, 0.75]) {
+      for (const windowSec of [0.06, 0.12, 0.2]) {
+        configs.push({
+          name: `r19 q${minFraction}w${windowSec * 1000}`,
+          group: 'r19',
+          segment: voiceSegment({
+            ...BEST,
+            voicedQuorum: { minFraction, windowSec },
+          }),
+          cleanup: null,
+        });
+      }
+    }
   }
 
   // FLUX — §3.2's selective in-note SuperFlux splitter, the one untried

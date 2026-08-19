@@ -936,6 +936,18 @@ const CONFIGS: SweepConfig[] = [
   { name: 'voice lq.3@.6s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.6, quietRatio: 0.3 } }), vsName: 'voice OFF' },
   { name: 'voice lq.45@.6s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.6, quietRatio: 0.45 } }), vsName: 'voice OFF' },
   { name: 'voice sl1.5+lq.3@.35s', segment: voiceDecode({ keepShortLoudRatio: 1.5, dropLongQuiet: { minSec: 0.35, quietRatio: 0.3 } }), vsName: 'voice OFF' },
+
+  // R19: block-level voiced-fraction quorum on the gate (outotune >¼ / Essentia
+  // ≥50 % / aubio median-of-6 — the survey's fourth independent instance). The
+  // claim under test: spurious short notes fall on the reverb tier, clean audio
+  // unchanged. Anchored against the same decode without the quorum.
+  { name: 'voice q.25w60', segment: voiceDecode({ voicedQuorum: { minFraction: 0.25, windowSec: 0.06 } }), vsName: 'voice OFF' },
+  { name: 'voice q.5w60', segment: voiceDecode({ voicedQuorum: { minFraction: 0.5, windowSec: 0.06 } }), vsName: 'voice OFF' },
+  { name: 'voice q.5w120', segment: voiceDecode({ voicedQuorum: { minFraction: 0.5, windowSec: 0.12 } }), vsName: 'voice OFF' },
+  { name: 'voice q.5w200', segment: voiceDecode({ voicedQuorum: { minFraction: 0.5, windowSec: 0.2 } }), vsName: 'voice OFF' },
+  { name: 'voice q.75w60', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.06 } }), vsName: 'voice OFF' },
+  { name: 'voice q.75w120', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.12 } }), vsName: 'voice OFF' },
+  { name: 'voice q.75w200', segment: voiceDecode({ voicedQuorum: { minFraction: 0.75, windowSec: 0.2 } }), vsName: 'voice OFF' },
 ];
 
 /** The voice decode as production ships it, driven off a cached variant. */

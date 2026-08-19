@@ -39,11 +39,20 @@ export class PitchTrack {
    * Broken out because every segmenter needs exactly this gate, and because the
    * frequency window is the pipeline's single most important adaptive knob — a
    * frame whose f0 falls outside the resolved band is not evidence of a note.
+   *
+   * `quorum` adds the survey's fourth-time-independent block-level rule
+   * (outotune: >¼ of the block voiced, Essentia Pitch2Midi: ≥50 % over 15 ms,
+   * aubio: median-of-6): a frame only *stays* voiced when at least
+   * `minFraction` of the raw mask within a centred `windowSec` window is
+   * voiced — a few stray voiced frames cannot manufacture a pitch. It only
+   * ever demotes frames; nothing unvoiced is promoted (gap-filling is a
+   * different mechanism). Omit for the historical per-frame gate.
    */
   voicedMask(opts: {
     confidenceThreshold: number;
     minFreqHz: number;
     maxFreqHz: number;
+    quorum?: { minFraction?: number; windowSec?: number };
   }): Uint8Array {
     const mask = new Uint8Array(this.frames);
     for (let i = 0; i < this.frames; i += 1) {
@@ -55,6 +64,26 @@ export class PitchTrack {
           ? 1
           : 0;
     }
-    return mask;
+    if (!opts.quorum) return mask;
+
+    const minFraction = opts.quorum.minFraction ?? 0.5;
+    const half = Math.max(
+      1,
+      Math.round((opts.quorum.windowSec ?? 0.12) / this.hopSec / 2),
+    );
+    const out = new Uint8Array(this.frames);
+    // Prefix sums so the window vote is O(1) per frame; edges use the frames
+    // that actually exist rather than padding, so a note against the clip edge
+    // is not penalised for the silence beyond it.
+    const prefix = new Int32Array(this.frames + 1);
+    for (let i = 0; i < this.frames; i += 1) prefix[i + 1] = prefix[i] + mask[i];
+    for (let i = 0; i < this.frames; i += 1) {
+      if (!mask[i]) continue;
+      const lo = Math.max(0, i - half);
+      const hi = Math.min(this.frames - 1, i + half);
+      const voted = prefix[hi + 1] - prefix[lo];
+      if (voted >= minFraction * (hi - lo + 1)) out[i] = 1;
+    }
+    return out;
   }
 }

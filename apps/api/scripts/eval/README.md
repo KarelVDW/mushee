@@ -950,3 +950,32 @@ anchored paired CIs incl. ΔP/ΔR) to measure them on the adverse tier they were
 Options stay in the code, defaulted off, documented with these numbers. Do not re-sweep the same
 grid; the one setting with any signal (lq ≤ 0.3) is worth revisiting only if a future front end
 starts letting tails through the voicing gate.
+
+### R19: voiced-fraction quorum before reporting pitch — null (2026-08-19)
+
+The survey's fourth independent block-quorum design (outotune >¼ per block, Essentia ≥50 %/15 ms,
+aubio median-of-6; `research-plugin-sources.md` §11.3/§7.2/§4.5), implemented as
+`quorum?: { minFraction, windowSec }` on `PitchTrack.voicedMask` (demote-only: a frame that fails
+the raw gate is never promoted) and plumbed through `voicedQuorum` options on both trajectory
+consumers. **No `CACHE_VERSION` bump**, deviating from the plan's precaution deliberately: the
+caches store cents/confidence/energy and the mask is derived downstream at decode time, so a
+defaulted-off option cannot invalidate a cached byte.
+
+**Null on its own target.** The claim was "spurious short notes fall on the reverb tier, clean
+unchanged" (grid: minFraction 0.25/0.5/0.75 × window 60/120/200 ms, `sweep-reverb` voice rows
+anchored on `voice OFF`, plus the `sweep-voice` r19 clean group):
+
+- Mild quorums (≤0.5) are zeros everywhere; the best cell in the whole grid is echoey-room
+  q.5w60 at ΔP +0.002 [+0.001,+0.004]* — real, microscopic, far under the ~1 pt bar.
+- Strict quorums collapse under reverb, and the direction is the mechanism's own: reverb HALVES
+  CREPE's confidence inside held notes (the 2026-07 diagnosis), so mid-note frames barely clear
+  the gate and a strict neighbourhood vote guts exactly the notes it was meant to protect —
+  q.75w120: echoey-room ΔR −0.081*, distant-mic ΔR −0.053*.
+- The one tempting cell, q.75w60 (+0.006 over anchor on the clean VOICE slice), was checked on
+  the adverse tier and is the same trade: echoey-room −0.027*, distant-mic −0.023* — a clean-only
+  gain bought by breaking the condition the mechanism exists for.
+
+Reading: the voice decode already has the quorum's job covered — the silence state prices stray
+voiced flickers out of the path, and `minNoteSec` absorbs what leaks through. A frame-level vote
+adds nothing on top of a note-level decode; the references that ship it (Essentia's Pitch2Midi,
+outotune) have **no note-level decode** to lean on. Option stays, defaulted off.
