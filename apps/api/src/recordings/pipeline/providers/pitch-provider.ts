@@ -49,6 +49,20 @@ export interface PitchTranscribeOptions {
   smoothFrames?: number;
   /** Semitone-mode per-clip tuning-offset correction; default on. */
   tuningCorrect?: boolean;
+  /**
+   * WaoN's joint duration × velocity filters, for providers with per-note
+   * amplitudes (basic-pitch). "Quiet"/"loud" are relative to the pass's own
+   * median note amplitude, so the filters adapt to the take's level.
+   *
+   *  - `keepShortLoudRatio`: keep a note shorter than the provider's minimum
+   *    length when its amplitude reaches this multiple of the median — short
+   *    AND quiet is a glitch, short and loud is real staccato.
+   *  - `dropLongQuiet`: drop a note at least `minSec` long whose amplitude sits
+   *    below `quietRatio` × the median — the shape of a reverb tail, which no
+   *    duration-only filter can express.
+   */
+  keepShortLoudRatio?: number;
+  dropLongQuiet?: { minSec?: number; quietRatio?: number };
 }
 
 /**

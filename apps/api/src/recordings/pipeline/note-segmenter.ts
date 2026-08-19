@@ -112,6 +112,19 @@ export interface NoteSegmenterOptions {
   /** Shortest note kept, in seconds. Absorbed into a neighbour, not just dropped. */
   minNoteSec?: number;
   /**
+   * Exempt a run shorter than `minNoteSec` from absorption when its peak energy
+   * reaches this multiple of the clip's median voiced energy — WaoN's joint
+   * duration × velocity rule: short AND quiet is a glitch, short and loud is
+   * staccato. Needs `energy`; omit to absorb every short run.
+   */
+  keepShortLoudRatio?: number;
+  /**
+   * Drop a note that is long AND quiet — at least `minSec` long with mean energy
+   * below `quietRatio` × the clip's median voiced energy (WaoN's second pass:
+   * the shape of a reverb tail). Needs `energy`; omit to keep every long note.
+   */
+  dropLongQuiet?: { minSec?: number; quietRatio?: number };
+  /**
    * Minimum interval, in semitones, that a note change may be. Below this a pitch
    * difference is treated as expression within one note rather than a new note —
    * pYIN allows only "the same, or at least 2/3 of a semitone different".
@@ -155,6 +168,8 @@ export class NoteSegmenter {
   private readonly minChangeSemitones: number;
   private readonly dipDiscount: number | undefined;
   private readonly dipRatio: number;
+  private readonly keepShortLoudRatio: number | undefined;
+  private readonly dropLongQuiet: { minSec?: number; quietRatio?: number } | undefined;
 
   constructor(opts: NoteSegmenterOptions = {}) {
     this.confidenceThreshold = opts.confidenceThreshold ?? 0.5;
@@ -175,6 +190,8 @@ export class NoteSegmenter {
     this.minChangeSemitones = opts.minChangeSemitones ?? 2 / 3;
     this.dipDiscount = opts.dipDiscount;
     this.dipRatio = opts.dipRatio ?? 0.6;
+    this.keepShortLoudRatio = opts.keepShortLoudRatio;
+    this.dropLongQuiet = opts.dropLongQuiet;
   }
 
   /**
@@ -197,11 +214,40 @@ export class NoteSegmenter {
     const discount = this.changeDiscount(frames, energy);
     const path = this.decode(track, voiced, grid, frames, discount);
     const minFrames = Math.max(1, Math.round(this.minNoteSec / track.hopSec));
-    const runs = this.absorbShortRuns(this.runsOf(path, frames), minFrames);
+    // Joint duration × velocity filters (WaoN), anchored to the clip's own
+    // median voiced energy so "quiet" adapts to the take's level.
+    const energyRef =
+      this.keepShortLoudRatio !== undefined || this.dropLongQuiet
+        ? medianVoicedEnergy(voiced, frames, energy)
+        : null;
+    const keepShortLoud =
+      this.keepShortLoudRatio !== undefined && energyRef !== null && energy
+        ? (run: Run): boolean =>
+            peakOver(energy, run) >= this.keepShortLoudRatio! * energyRef
+        : undefined;
+    const longQuiet =
+      this.dropLongQuiet && energyRef !== null && energy
+        ? {
+            minFrames: Math.max(
+              1,
+              Math.round((this.dropLongQuiet.minSec ?? 0.35) / track.hopSec),
+            ),
+            floor: (this.dropLongQuiet.quietRatio ?? 0.3) * energyRef,
+          }
+        : null;
+    const runs = this.absorbShortRuns(this.runsOf(path, frames), minFrames, keepShortLoud);
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
       if (run.state < 0) continue;
+      if (
+        longQuiet &&
+        energy &&
+        run.end - run.start >= longQuiet.minFrames &&
+        meanOver(energy, run) < longQuiet.floor
+      ) {
+        continue;
+      }
       const midi = this.medianMidi(track, voiced, run);
       if (midi === null) continue;
       notes.push({
@@ -464,7 +510,11 @@ export class NoteSegmenter {
    * on a tie), while one adjacent to silence is dropped as noise. Repeats,
    * because absorbing can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[], minFrames: number): Run[] {
+  private absorbShortRuns(
+    runs: Run[],
+    minFrames: number,
+    keepShortLoud?: (run: Run) => boolean,
+  ): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -474,6 +524,8 @@ export class NoteSegmenter {
         if (r.state < 0) continue;
         const len = r.end - r.start;
         if (len < minFrames && len < shortest) {
+          // WaoN's joint rule: a short run that is LOUD is real staccato.
+          if (keepShortLoud?.(r)) continue;
           shortest = len;
           idx = i;
         }
@@ -548,4 +600,39 @@ export class NoteSegmenter {
     }
     return peak;
   }
+}
+
+/**
+ * The clip's own loudness anchor for the WaoN filters: median per-frame energy
+ * over voiced frames. Null when there is no energy or nothing voiced, which
+ * turns both filters off rather than comparing against a meaningless zero.
+ */
+function medianVoicedEnergy(
+  voiced: Uint8Array,
+  frames: number,
+  energy: Float32Array | undefined,
+): number | null {
+  if (!energy || energy.length < frames) return null;
+  const vals: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    if (voiced[i]) vals.push(energy[i]);
+  }
+  if (!vals.length) return null;
+  vals.sort((a, b) => a - b);
+  return vals[vals.length >> 1];
+}
+
+function peakOver(energy: Float32Array, run: { start: number; end: number }): number {
+  let peak = 0;
+  const to = Math.min(energy.length, run.end);
+  for (let i = run.start; i < to; i += 1) if (energy[i] > peak) peak = energy[i];
+  return peak;
+}
+
+function meanOver(energy: Float32Array, run: { start: number; end: number }): number {
+  const to = Math.min(energy.length, run.end);
+  if (to <= run.start) return 0;
+  let sum = 0;
+  for (let i = run.start; i < to; i += 1) sum += energy[i];
+  return sum / (to - run.start);
 }

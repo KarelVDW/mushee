@@ -77,24 +77,65 @@ export class BasicPitchProvider implements PitchProvider {
     const maxFreq = options?.maxFreqHz ?? MAX_FREQ;
     const onsetThreshold = options?.onsetThreshold ?? ONSET_THRESHOLD;
     const frameThreshold = options?.frameThreshold ?? FRAME_THRESHOLD;
+    const keepShortLoud = options?.keepShortLoudRatio;
+    const dropLongQuiet = options?.dropLongQuiet;
 
     // The backend runs only the model forward pass (framing + predict + the
     // overlap-trim stitch); note decoding stays here for parity with the eval.
     const { frames, onsets } = await this.backend.basicPitchForward(samples);
 
+    // With the joint short-note rule active, the library's own duration floor
+    // drops to ~3 frames and the duration × amplitude decision is made here —
+    // the library filter is duration-only and cannot spare a loud staccato note.
+    const minLenFrames =
+      keepShortLoud !== undefined
+        ? Math.max(1, Math.round(0.035 / MODEL_HOP_SEC))
+        : MIN_NOTE_LEN_FRAMES;
     const rawEvents = outputToNotesPoly(
       frames,
       onsets,
       onsetThreshold,
       frameThreshold,
-      MIN_NOTE_LEN_FRAMES,
+      minLenFrames,
       INFER_ONSETS,
       maxFreq,
       minFreq,
       MELODIA_TRICK,
       ENERGY_TOLERANCE_FRAMES,
     );
-    const notes = noteFramesToTime(rawEvents);
+    let notes = noteFramesToTime(rawEvents);
+    if (keepShortLoud !== undefined || dropLongQuiet) {
+      // "Loud"/"quiet" are relative to this pass's own median amplitude, taken
+      // over full-length notes so glitches cannot drag the anchor down.
+      const fullLength = notes
+        .filter((n) => n.durationSeconds >= MIN_NOTE_LEN_SEC)
+        .map((n) => n.amplitude)
+        .sort((a, b) => a - b);
+      const anchor = fullLength.length
+        ? fullLength[fullLength.length >> 1]
+        : undefined;
+      if (anchor !== undefined) {
+        notes = notes.filter((n) => {
+          if (n.durationSeconds < MIN_NOTE_LEN_SEC) {
+            return (
+              keepShortLoud !== undefined &&
+              n.amplitude >= keepShortLoud * anchor
+            );
+          }
+          if (
+            dropLongQuiet &&
+            n.durationSeconds >= (dropLongQuiet.minSec ?? 0.35) &&
+            n.amplitude < (dropLongQuiet.quietRatio ?? 0.3) * anchor
+          ) {
+            return false;
+          }
+          return true;
+        });
+      } else if (keepShortLoud !== undefined) {
+        // No full-length note to anchor on: fall back to the duration-only rule.
+        notes = notes.filter((n) => n.durationSeconds >= MIN_NOTE_LEN_SEC);
+      }
+    }
     onProgress?.(notes);
     return notes;
   }

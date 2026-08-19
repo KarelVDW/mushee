@@ -218,6 +218,25 @@ async function main(): Promise<void> {
       ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
     });
   }
+  // R15: WaoN's joint duration × velocity filters on the HMM segmenter (plugin
+  // survey §9.3). Compare within the family: SWEEP_BASELINE='hmm r15 OFF'.
+  configs.push({ name: 'hmm r15 OFF', seg: {}, ext: { maxGridDivisor: 4 }, noClean: true });
+  for (const keepShortLoudRatio of [1.2, 1.5, 2]) {
+    configs.push({
+      name: `hmm r15 sl${keepShortLoudRatio}`,
+      seg: { keepShortLoudRatio },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
+  for (const quietRatio of [0.2, 0.3, 0.45]) {
+    configs.push({
+      name: `hmm r15 lq${quietRatio}`,
+      seg: { dropLongQuiet: { minSec: 0.35, quietRatio } },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
   // Median-smoother width on the semitone track — the other lever against flutter.
   for (const smoothFrames of [2, 6, 8]) {
     configs.push({

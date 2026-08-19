@@ -42,6 +42,7 @@
  *   e6    pitch measured over the arrived part of the note only       (null)
  *   e7    a second, cheaper price for wide intervals                  (null, informative)
  *   e8    Hann-weighted-median vs α-trimmed-mean note pitch           (null)
+ *   r15   WaoN joint duration × velocity note filters (plugin pass task 2)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
@@ -761,6 +762,46 @@ function buildConfigs(groups: Set<string>): Config[] {
         onsets: { dipRatio: 0.65, riseRatio: 1.4, minIoiSec },
       });
     }
+  }
+
+  // R15 — WaoN's joint duration × velocity filters (plugin survey §9.3): the
+  // short-note floor spares short LOUD runs (real staccato), and a new
+  // long-AND-quiet drop targets reverb tails. On this clean corpus the question
+  // is safety plus any free win; the adverse-tier measurement these filters were
+  // built for lives in sweep-reverb.ts (the `voice *` rows).
+  if (on('r15')) {
+    configs.push({
+      name: 'r15 OFF (anchor)',
+      group: 'r15',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const keepShortLoudRatio of [1.2, 1.5, 2]) {
+      configs.push({
+        name: `r15 sl${keepShortLoudRatio}`,
+        group: 'r15',
+        segment: voiceSegment({ ...BEST, keepShortLoudRatio }),
+        cleanup: null,
+      });
+    }
+    for (const quietRatio of [0.2, 0.3, 0.45]) {
+      configs.push({
+        name: `r15 lq${quietRatio}@.35s`,
+        group: 'r15',
+        segment: voiceSegment({ ...BEST, dropLongQuiet: { minSec: 0.35, quietRatio } }),
+        cleanup: null,
+      });
+    }
+    configs.push({
+      name: 'r15 sl1.5+lq.3',
+      group: 'r15',
+      segment: voiceSegment({
+        ...BEST,
+        keepShortLoudRatio: 1.5,
+        dropLongQuiet: { minSec: 0.35, quietRatio: 0.3 },
+      }),
+      cleanup: null,
+    });
   }
 
   // FLUX — §3.2's selective in-note SuperFlux splitter, the one untried

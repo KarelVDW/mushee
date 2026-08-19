@@ -160,6 +160,27 @@ export interface VoiceDecodeOptions {
   /** Shortest note kept, in seconds. Absorbed into a neighbour, not dropped. */
   minNoteSec?: number;
 
+  // --- joint duration × velocity filters (WaoN §9.3 of the plugin survey) ---
+  /**
+   * Exempt a run shorter than `minNoteSec` from absorption when it is LOUD: its
+   * peak energy reaches this multiple of the clip's median voiced energy.
+   *
+   * WaoN's reading of the short-note filter (`notes.c:232`): a short note that is
+   * also loud is a real staccato note; only short AND quiet is a glitch. Our
+   * duration-only floor cannot make that distinction. Needs `energy`; omit to
+   * absorb every short run (the historical rule).
+   */
+  keepShortLoudRatio?: number;
+  /**
+   * Drop an emitted note that is long AND quiet — at least `minSec` long with
+   * mean energy below `quietRatio` × the clip's median voiced energy.
+   *
+   * WaoN's second pass (`notes.c:319`), the filter we never had: a long, quiet
+   * note is the shape of a reverb tail or bleed-through, which no duration-only
+   * filter can express. Needs `energy`; omit to keep every long note.
+   */
+  dropLongQuiet?: { minSec?: number; quietRatio?: number };
+
   /**
    * Where in the decoded run a note's onset is reported.
    *
@@ -384,11 +405,25 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the three that are meaningfully absent. */
+  /** Every knob resolved, except the five that are meaningfully absent. */
   private readonly o: Required<
-    Omit<VoiceDecodeOptions, 'registerCents' | 'mergeGuard' | 'wideChangeCost'>
+    Omit<
+      VoiceDecodeOptions,
+      | 'registerCents'
+      | 'mergeGuard'
+      | 'wideChangeCost'
+      | 'keepShortLoudRatio'
+      | 'dropLongQuiet'
+    >
   > &
-    Pick<VoiceDecodeOptions, 'registerCents' | 'mergeGuard' | 'wideChangeCost'>;
+    Pick<
+      VoiceDecodeOptions,
+      | 'registerCents'
+      | 'mergeGuard'
+      | 'wideChangeCost'
+      | 'keepShortLoudRatio'
+      | 'dropLongQuiet'
+    >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
     this.o = { ...DEFAULTS, ...stripUndefined(opts) };
@@ -418,11 +453,44 @@ export class VoiceNoteDecoder {
       track, voiced, grid, frames, evidence, accent,
     );
     const minFrames = Math.max(1, Math.round(this.o.minNoteSec / track.hopSec));
-    const runs = this.absorbShortRuns(this.runsOf(pitches, frames, reonset), minFrames);
+    // Joint duration × velocity filters (WaoN): both are anchored to the clip's
+    // own median voiced energy, so "quiet" adapts to the take's level.
+    const energyRef =
+      this.o.keepShortLoudRatio !== undefined || this.o.dropLongQuiet
+        ? medianVoicedEnergy(voiced, frames, energy)
+        : null;
+    const keepShortLoud =
+      this.o.keepShortLoudRatio !== undefined && energyRef !== null && energy
+        ? (run: Run): boolean =>
+            peakOver(energy, run) >= this.o.keepShortLoudRatio! * energyRef
+        : undefined;
+    const longQuiet =
+      this.o.dropLongQuiet && energyRef !== null && energy
+        ? {
+            minFrames: Math.max(
+              1,
+              Math.round((this.o.dropLongQuiet.minSec ?? 0.35) / track.hopSec),
+            ),
+            floor: (this.o.dropLongQuiet.quietRatio ?? 0.3) * energyRef,
+          }
+        : null;
+    const runs = this.absorbShortRuns(
+      this.runsOf(pitches, frames, reonset),
+      minFrames,
+      keepShortLoud,
+    );
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
       if (run.state < 0) continue;
+      if (
+        longQuiet &&
+        energy &&
+        run.end - run.start >= longQuiet.minFrames &&
+        meanOver(energy, run) < longQuiet.floor
+      ) {
+        continue;
+      }
       let cents = this.noteCents(track, voiced, run);
       if (cents === null) continue;
       const startFrame = this.onsetFrameOf(run, attack, track, cents);
@@ -872,7 +940,11 @@ export class VoiceNoteDecoder {
    * tie); one adjacent to silence is dropped as noise. Repeats, because absorbing
    * can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[], minFrames: number): Run[] {
+  private absorbShortRuns(
+    runs: Run[],
+    minFrames: number,
+    keepShortLoud?: (run: Run) => boolean,
+  ): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -882,6 +954,9 @@ export class VoiceNoteDecoder {
         if (r.state < 0) continue;
         const len = r.end - r.start;
         if (len < minFrames && len < shortest) {
+          // WaoN's joint rule: a short run that is LOUD is a real staccato
+          // note, not a glitch — exempt it from absorption.
+          if (keepShortLoud?.(r)) continue;
           shortest = len;
           idx = i;
         }
@@ -1096,6 +1171,41 @@ function hannWeightedMedian(vals: number[]): number {
     if (acc >= total / 2) return x.v;
   }
   return weighted[weighted.length - 1].v;
+}
+
+/**
+ * The clip's own loudness anchor for the WaoN filters: median per-frame energy
+ * over voiced frames. Null when there is no energy or nothing voiced, which
+ * turns both filters off rather than comparing against a meaningless zero.
+ */
+function medianVoicedEnergy(
+  voiced: Uint8Array,
+  frames: number,
+  energy: Float32Array | undefined,
+): number | null {
+  if (!energy || energy.length < frames) return null;
+  const vals: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    if (voiced[i]) vals.push(energy[i]);
+  }
+  if (!vals.length) return null;
+  vals.sort((a, b) => a - b);
+  return vals[vals.length >> 1];
+}
+
+function peakOver(energy: Float32Array, run: { start: number; end: number }): number {
+  let peak = 0;
+  const to = Math.min(energy.length, run.end);
+  for (let i = run.start; i < to; i += 1) if (energy[i] > peak) peak = energy[i];
+  return peak;
+}
+
+function meanOver(energy: Float32Array, run: { start: number; end: number }): number {
+  const to = Math.min(energy.length, run.end);
+  if (to <= run.start) return 0;
+  let sum = 0;
+  for (let i = run.start; i < to; i += 1) sum += energy[i];
+  return sum / (to - run.start);
 }
 
 function stripUndefined<T extends object>(o: T): Partial<T> {

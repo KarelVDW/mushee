@@ -916,3 +916,37 @@ Sweep-name translation: `e1c minFrames3/4/5/6` → `e1c minNote60/80/100/120ms`;
 `sweep-voice.ts` (dev, groups base+e1c+ship, 693 voice + 49 guard clips) both reproduce the
 pre-change output to the last digit, including the paired-bootstrap CIs. No `CACHE_VERSION`
 bump needed — the cached CREPE decode is upstream of everything touched.
+
+### R15: joint duration × velocity note filters — null, and the mechanism is legible (2026-08-19)
+
+WaoN's two-condition filters (`research-plugin-sources.md` §9.3) implemented behind options on all
+three planned paths — `keepShortLoudRatio` (a short run survives the note floor when its peak
+energy reaches k × the clip's median voiced energy) and `dropLongQuiet` (drop a note ≥ minSec long
+whose mean energy sits below q × that median): `voice-note-decoder.ts`, `note-segmenter.ts`, and
+`basic-pitch-provider.ts` (env-sweepable via `EVAL_KEEP_SHORT_LOUD` / `EVAL_LQ_QUIET` /
+`EVAL_LQ_MINSEC`). `sweep-reverb.ts` gained `segment`/`vsName` config hooks (voice-decode rows,
+anchored paired CIs incl. ΔP/ΔR) to measure them on the adverse tier they were built for.
+
+**Every leg is a null.** The gate was "precision up on the adverse tier, recall unchanged":
+
+- **Voice decode, adverse tier** (`sweep-reverb`, annotated-vocalset+vocadito dev, vs `voice OFF`):
+  short-loud is *exactly* zero everywhere (Δ 0.000 on real/echoey-room/distant-mic — at
+  changeCost 2.5 the decode emits essentially no short runs for the exemption to save). Long-quiet
+  is zero-to-negative: echoey-room lq.45 ΔR −0.005*, ΔP −0.002; distant-mic lq.45 ΔP −0.007*,
+  ΔR −0.012* — under reverb it removes real quiet notes, not tails.
+- **Why the tail theory fails here:** a reverb tail never becomes a note on the trajectory path —
+  CREPE's confidence collapses on tails, so the voicing gate has already eaten the thing the
+  long-quiet filter was built to catch (same reason the 2026-07 gates/afftdn attempts were dead
+  ends).
+- **Clean corpus** (`sweep-voice` r15 group, 693 voice/49 guard; `sweep-segmenter`, 742 clips):
+  lq ≤ 0.3 trims spurious (23→21 voice, 22→20 hmm) with recall intact — +0.002
+  [+0.002,+0.003]*, real but far under the ~1 pt bar; lq 0.45 starts eating true notes.
+  Short-loud on the HMM: +0.000 [−0.000,+0.001].
+- **basic-pitch, very-high band** (run-eval, whistle-mid/high + piccolo × 7 conditions, fixed
+  provider at the band's 500–4500 Hz window): baseline COnP 0.556; lq.3@.35s identical 0.556
+  (pooled spurious is already 0/100 — nothing long-and-quiet exists to drop); keepShortLoud 1.5
+  slightly WORSE at 0.552 (lowering the library floor readmits glitches the joint rule then keeps).
+
+Options stay in the code, defaulted off, documented with these numbers. Do not re-sweep the same
+grid; the one setting with any signal (lq ≤ 0.3) is worth revisiting only if a future front end
+starts letting tails through the voicing gate.

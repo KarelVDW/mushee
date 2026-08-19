@@ -74,8 +74,13 @@ import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/p
 import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/pipeline/onset-detector';
 import type { PipelineProfile } from '../../src/recordings/pipeline/profiles/pipeline-profile';
 import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver';
+import { VOICE_OPTS } from '../../src/recordings/pipeline/providers/crepe-provider';
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
+import {
+  type VoiceDecodeOptions,
+  VoiceNoteDecoder,
+} from '../../src/recordings/pipeline/voice-note-decoder';
 import { dereverbFrontEnd,type DereverbOptions } from './lib/dereverb';
 import { type EstNote, scoreNotes } from './lib/metrics';
 import { discoverRealDatasets, listRealClips, type RealDataset } from './lib/realCorpus';
@@ -811,6 +816,22 @@ interface SweepConfig {
    * which shifts every detected note earlier by exactly this much.
    */
   shiftMs?: number;
+  /**
+   * Replace segmentation + cleanup entirely: the row scores exactly what this
+   * returns. For candidates that live in a different decoder (the voice decode),
+   * which `runPipeline`'s legacy-segmenter shape cannot express.
+   */
+  segment?: (c: CachedVariant) => {
+    startTimeSeconds: number;
+    durationSeconds: number;
+    pitchMidi: number;
+  }[];
+  /**
+   * Name of the config this row's paired CI is measured against (default
+   * 'baseline'). A mechanism riding a non-shipping decode has to be compared
+   * against that same decode without the mechanism, not against the legacy path.
+   */
+  vsName?: string;
 }
 
 /**
@@ -897,7 +918,38 @@ const CONFIGS: SweepConfig[] = [
   { name: 'shift 60ms', shiftMs: 60 },
   { name: 'shift 40ms +minFrames6', shiftMs: 40, seg: { minFramesPerNote: 6 } },
   { name: 'shift 40ms +conf0.6', shiftMs: 40, seg: { confidenceThreshold: 0.6 } },
+
+  // R15 (WaoN §9.3): joint duration × velocity filters, riding the VOICE decode
+  // at its shipping configuration. The reverb tier is where the long-AND-quiet
+  // filter should earn its keep — a tail is precisely a long, quiet note — so
+  // the gate is: precision up on echoey-room/distant-mic, recall unchanged,
+  // clean audio unharmed. Rows are compared against the same decode with the
+  // filters OFF (`vsName`), never against the legacy baseline. Run these on the
+  // voice datasets (SWEEP_REVERB_DATASETS=annotated-vocalset,vocadito).
+  { name: 'voice OFF', segment: voiceDecode() },
+  { name: 'voice sl1.2', segment: voiceDecode({ keepShortLoudRatio: 1.2 }), vsName: 'voice OFF' },
+  { name: 'voice sl1.5', segment: voiceDecode({ keepShortLoudRatio: 1.5 }), vsName: 'voice OFF' },
+  { name: 'voice sl2', segment: voiceDecode({ keepShortLoudRatio: 2 }), vsName: 'voice OFF' },
+  { name: 'voice lq.2@.35s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.35, quietRatio: 0.2 } }), vsName: 'voice OFF' },
+  { name: 'voice lq.3@.35s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.35, quietRatio: 0.3 } }), vsName: 'voice OFF' },
+  { name: 'voice lq.45@.35s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.35, quietRatio: 0.45 } }), vsName: 'voice OFF' },
+  { name: 'voice lq.3@.6s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.6, quietRatio: 0.3 } }), vsName: 'voice OFF' },
+  { name: 'voice lq.45@.6s', segment: voiceDecode({ dropLongQuiet: { minSec: 0.6, quietRatio: 0.45 } }), vsName: 'voice OFF' },
+  { name: 'voice sl1.5+lq.3@.35s', segment: voiceDecode({ keepShortLoudRatio: 1.5, dropLongQuiet: { minSec: 0.35, quietRatio: 0.3 } }), vsName: 'voice OFF' },
 ];
+
+/** The voice decode as production ships it, driven off a cached variant. */
+function voiceDecode(over: VoiceDecodeOptions = {}) {
+  return (c: CachedVariant): ReturnType<typeof segmentNotes> =>
+    new VoiceNoteDecoder({
+      ...VOICE_OPTS,
+      confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+      minFreqHz: c.profile.minFreqHz,
+      maxFreqHz: c.profile.maxFreqHz,
+      minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
+      ...over,
+    }).decode(c.track, c.energy);
+}
 
 async function sweep(
   cache: VariantTrackCache,
@@ -910,6 +962,13 @@ async function sweep(
   const configs = CONFIGS.filter(
     (c) => c.name === 'baseline' || !only || c.name.includes(only),
   );
+  // A filtered run must still carry every row used as a comparison anchor.
+  for (const c of [...configs]) {
+    if (c.vsName && !configs.some((p) => p.name === c.vsName)) {
+      const anchor = CONFIGS.find((p) => p.name === c.vsName);
+      if (anchor) configs.push(anchor);
+    }
+  }
 
   // `real` first so the clean-audio cost of every row is visible.
   for (const variant of [CLEAN_VARIANT, ...variants]) {
@@ -936,11 +995,13 @@ async function sweep(
         const onsetTimesSec = detector
           ? detector.detectFromEnvelope(c.envelope, c.onsetHop, c.onsetSampleRate)
           : c.onsetTimesSec;
-        const { cleaned } = runPipeline(c, {
-          seg: cfg.segFor ? cfg.segFor(c) : cfg.seg,
-          extractor: cfg.extractor,
-          onsetTimesSec,
-        });
+        const cleaned = cfg.segment
+          ? toEst(cfg.segment(c))
+          : runPipeline(c, {
+              seg: cfg.segFor ? cfg.segFor(c) : cfg.seg,
+              extractor: cfg.extractor,
+              onsetTimesSec,
+            }).cleaned;
         const est = cfg.shiftMs ? shiftEarlier(cleaned, cfg.shiftMs / 1000) : cleaned;
         const m = scoreNotes(c.truth.notes, est, {
           onsetTolSec: ONSET_TOL,
@@ -963,14 +1024,15 @@ async function sweep(
       counts.set(cfg.name, estN);
     }
 
-    const base = scores.get('baseline') ?? [];
-    const baseF2 = f2s.get('baseline') ?? [];
     console.log(`\n=== ${variant} — ${pairs.length} clips, split=${split} ===`);
     console.log(
       'config'.padEnd(24) + 'F1'.padEnd(8) + 'F2'.padEnd(8) + 'P'.padEnd(8) +
-        'R'.padEnd(8) + 'est'.padEnd(7) + 'ΔF1 vs baseline'.padEnd(48) + 'ΔF2',
+        'R'.padEnd(8) + 'est'.padEnd(7) + 'ΔF1 vs anchor'.padEnd(48) + 'ΔF2',
     );
     for (const cfg of configs) {
+      const anchor = cfg.vsName ?? 'baseline';
+      const base = scores.get(anchor) ?? [];
+      const baseF2 = f2s.get(anchor) ?? [];
       const f1 = scores.get(cfg.name) ?? [];
       const f2 = f2s.get(cfg.name) ?? [];
       console.log(
@@ -980,11 +1042,24 @@ async function sweep(
           mean(precisions.get(cfg.name) ?? []).toFixed(3).padEnd(8) +
           mean(recalls.get(cfg.name) ?? []).toFixed(3).padEnd(8) +
           mean(counts.get(cfg.name) ?? []).toFixed(1).padEnd(7) +
-          (cfg.name === 'baseline'
+          (cfg.name === anchor
             ? '—'.padEnd(48) + '—'
             : formatComparison(pairedDiffCI(base, f1)).padEnd(48) +
               formatComparison(pairedDiffCI(baseF2, f2))),
       );
+      // Anchored rows exist to answer "precision up, recall unchanged" — print
+      // the paired CIs those two claims actually rest on.
+      if (cfg.vsName && cfg.name !== anchor) {
+        console.log(
+          '  ↳ vs ' + anchor.padEnd(17) +
+            'ΔP ' + formatComparison(
+              pairedDiffCI(precisions.get(anchor) ?? [], precisions.get(cfg.name) ?? []),
+            ).padEnd(45) +
+            'ΔR ' + formatComparison(
+              pairedDiffCI(recalls.get(anchor) ?? [], recalls.get(cfg.name) ?? []),
+            ),
+        );
+      }
     }
   }
 }

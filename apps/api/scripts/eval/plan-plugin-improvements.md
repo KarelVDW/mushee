@@ -57,7 +57,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   model. Record the conversion table in the Findings log so historical sweep numbers stay readable.
 - **Why:** §6.1, §16.10.
 
-### [ ] 2. R15 — joint duration × velocity note filter  *(XS)*
+### [n] 2. R15 — joint duration × velocity note filter  *(XS)*
 - **Change:** drop a note only if short **AND** quiet; add the missing long-**AND**-quiet filter
   (reverb-tail shape). Inputs already exist: basic-pitch events carry `amplitude`, the pitch track
   carries `energy`. Behind options, swept.

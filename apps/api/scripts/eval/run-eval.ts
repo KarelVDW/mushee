@@ -192,6 +192,12 @@ async function main(): Promise<void> {
     onsetThreshold: numEnv('EVAL_ONSET'),
     frameThreshold: numEnv('EVAL_FRAME'),
     minFramesPerNote: numEnv('EVAL_MIN_FRAMES'),
+    // WaoN's joint duration × velocity filters (basic-pitch only; R15).
+    keepShortLoudRatio: numEnv('EVAL_KEEP_SHORT_LOUD'),
+    dropLongQuiet:
+      numEnv('EVAL_LQ_QUIET') !== undefined || numEnv('EVAL_LQ_MINSEC') !== undefined
+        ? { quietRatio: numEnv('EVAL_LQ_QUIET'), minSec: numEnv('EVAL_LQ_MINSEC') }
+        : undefined,
   };
   const highpassHz = numEnv('EVAL_HIGHPASS') ?? 80;
   const fixedDenoise = boolEnv('EVAL_DENOISE');
