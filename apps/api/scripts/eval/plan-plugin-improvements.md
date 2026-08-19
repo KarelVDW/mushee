@@ -94,7 +94,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 - **Done when:** the bias goes to ~0 without hurting F1 (`sweep-voice.ts` COn/COnP both slices).
 - **Why:** §4.2, §16.6. Pairs with E5 (R12) later — don't double-compensate.
 
-### [ ] 6. R3 — adaptive onset threshold  *(S)*
+### [n] 6. R3 — adaptive onset threshold  *(S)*
 - **Change:** add `adaptiveThreshold?: { windowSec, k }` to `OnsetDetectorOptions`:
   `novelty − movingMedian(window) − k·movingMean(window)`, replacing the fixed
   `dipRatio`/`riseRatio` pair when enabled.

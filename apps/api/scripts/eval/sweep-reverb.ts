@@ -901,6 +901,15 @@ const CONFIGS: SweepConfig[] = [
   { name: 'onset trough 200ms', onset: { minTroughSec: 0.2 } },
   { name: 'onset trough 80 dip 0.35', onset: { minTroughSec: 0.08, dipRatio: 0.35 } },
   { name: 'onset minIoi 0.2', onset: { minIoiSec: 0.2 } },
+  // R3: aubio's adaptive threshold (median + k·mean over the novelty's own
+  // neighbourhood) instead of the fixed dip/rise ratios — the self-calibrating
+  // answer to "reverb makes the detector fire MORE". Scored per condition, so
+  // the clean-audio cost stays visible.
+  { name: 'onset adapt w300 k0.5', onset: { adaptiveThreshold: { windowSec: 0.3, k: 0.5 } } },
+  { name: 'onset adapt w300 k1', onset: { adaptiveThreshold: { windowSec: 0.3, k: 1 } } },
+  { name: 'onset adapt w300 k2', onset: { adaptiveThreshold: { windowSec: 0.3, k: 2 } } },
+  { name: 'onset adapt w150 k1', onset: { adaptiveThreshold: { windowSec: 0.15, k: 1 } } },
+  { name: 'onset adapt w500 k1', onset: { adaptiveThreshold: { windowSec: 0.5, k: 1 } } },
   { name: 'onset off', onset: undefined, extractor: { ...SHIPPING_EXTRACTOR, steps: { pitchOutliers: false, merge: false, onsetSplit: false } } },
 
   // Cleanup priors.

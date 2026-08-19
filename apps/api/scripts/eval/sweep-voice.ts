@@ -56,7 +56,7 @@ import { resolve } from 'path';
 
 import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
-import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector';
+import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/pipeline/onset-detector';
 import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver';
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
@@ -137,7 +137,7 @@ interface Config {
    * instead of using the ones the cache stored at the shipping defaults. Only
    * meaningful together with a cleanup that runs `onsetSplit`.
    */
-  onsets?: { dipRatio?: number; riseRatio?: number; minIoiSec?: number; delaySec?: number };
+  onsets?: OnsetDetectorOptions;
   /** Notes straight from the decoder, before any `NoteExtractor` cleanup. */
   segment: (c: CachedClip) => NoteEventLike[];
   /** Cleanup to run after segmentation; omit for none. */
@@ -928,6 +928,51 @@ function buildConfigs(groups: Set<string>): Config[] {
         cleanup: SHIPPED_CLEANUP,
         onsets: { delaySec: d },
       });
+    }
+  }
+
+  // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
+  // consumers of the detector's onsets. The bar its own doc comment sets: beat
+  // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at
+  // once, which no fixed setting managed.
+  if (on('r3')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r3 v fixed (anchor)',
+      group: 'r3',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+      onsets: {},
+    });
+    configs.push({
+      name: 'r3 s fixed (anchor)',
+      group: 'r3',
+      segment: shippedSegment,
+      cleanup: SHIPPED_CLEANUP,
+      onsets: {},
+    });
+    for (const windowSec of [0.15, 0.3, 0.5]) {
+      for (const k of [0.5, 1, 2, 4]) {
+        configs.push({
+          name: `r3 v w${windowSec * 1000} k${k}`,
+          group: 'r3',
+          segment: voiceSegment(BEST),
+          cleanup: SPLIT,
+          onsets: { adaptiveThreshold: { windowSec, k } },
+        });
+        configs.push({
+          name: `r3 s w${windowSec * 1000} k${k}`,
+          group: 'r3',
+          segment: shippedSegment,
+          cleanup: SHIPPED_CLEANUP,
+          onsets: { adaptiveThreshold: { windowSec, k } },
+        });
+      }
     }
   }
 

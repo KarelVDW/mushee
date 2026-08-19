@@ -1041,3 +1041,24 @@ constant, and the re-attack detector — the one uncalibrated source — measure
 correction. The knob ships (unset = 0) so any future profile that develops a bias has the aubio
 mechanism waiting, and E5 (asymmetric confirmation delays) now has a single documented place to
 put a compensation.
+
+### R3: aubio's adaptive onset threshold — null, and the reason is structural (2026-08-19)
+
+`adaptiveThreshold: { windowSec, k }` on `OnsetDetectorOptions`: onsets become local maxima of the
+half-wave-rectified envelope rise that clear `movingMedian + k·movingMean` of their own
+neighbourhood, replacing the fixed dip-then-rise state machine (§4.1/§16.5's five-for-five
+"nobody ships a fixed threshold").
+
+**Null everywhere, at every setting** (window 150/300/500 ms × k 0.5–4, both consumers, both
+sweeps): the detector fires ~2× as often (est 21 → 40+ per clip on the trusted-3), precision
+halves, and the least-bad cell (`w500 k4` on the voice path) is still −0.003 VOICE / −0.096*
+GUARD. Under reverb it is −0.06…−0.10* on top of an already-degraded baseline.
+
+The mechanism, worth keeping: the fixed "ratios" this was meant to replace are not mere
+thresholds — **the dip requirement is a structural gate** (energy must genuinely leave the note
+before a rise counts), and no threshold *level* on a plain RMS-rise novelty can substitute for it,
+because vibrato/tremolo swells produce rises without dips at every dynamic. aubio's scheme
+presupposes a real novelty function (spectral flux/HFC); applied to the broadband envelope it
+answers a different question. **If R3 is ever revived, put the median+mean threshold on the
+spectral-flux sidecar** (`lib/spectralFlux.ts`, already in the harness for the `flux` group) —
+not on the RMS envelope. Option stays, defaulted off.

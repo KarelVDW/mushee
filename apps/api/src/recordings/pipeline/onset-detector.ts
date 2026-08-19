@@ -53,6 +53,18 @@ export interface OnsetDetectorOptions {
    */
   minTroughSec?: number;
   /**
+   * aubio's adaptive peak-picking (R3: `onset/peakpicker.c`), replacing the
+   * fixed `dipRatio`/`riseRatio` state machine when set: an onset is a local
+   * maximum of the energy-rise novelty that clears
+   * `movingMedian(window) + k · movingMean(window)` of its own neighbourhood —
+   * a threshold that self-calibrates to local dynamics instead of asking one
+   * global ratio to serve both sustained singing and plucked material (the
+   * split this file's own doc comment documents). `minIoiSec` and the global
+   * silence floor still apply. The window is centred; the fixed detector's
+   * trough-vs-rise timing difference is absorbed by `delaySec` if it matters.
+   */
+  adaptiveThreshold?: { windowSec?: number; k?: number };
+  /**
    * Constant added to every reported onset time, in seconds (+ = later) —
    * aubio's `delay` parameter, the explicit admission that a detector has a
    * systematic latency (R7). This detector reports the TROUGH of the dip,
@@ -82,6 +94,7 @@ export class OnsetDetector {
   private readonly riseRatio: number;
   private readonly minTroughSec: number;
   private readonly delaySec: number;
+  private readonly adaptiveThreshold: { windowSec?: number; k?: number } | undefined;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.hopSec = opts.hopSec ?? 0.01;
@@ -90,6 +103,7 @@ export class OnsetDetector {
     this.riseRatio = opts.riseRatio ?? 1.8;
     this.minTroughSec = opts.minTroughSec ?? 0;
     this.delaySec = opts.delaySec ?? 0;
+    this.adaptiveThreshold = opts.adaptiveThreshold;
   }
 
   /**
@@ -141,6 +155,9 @@ export class OnsetDetector {
     for (let f = 0; f < nFrames; f += 1) {
       env[f] =
         (rms[Math.max(0, f - 1)] + rms[f] + rms[Math.min(nFrames - 1, f + 1)]) / 3;
+    }
+    if (this.adaptiveThreshold) {
+      return this.detectAdaptive(env, hop, sampleRate);
     }
 
     // Ignore frames quieter than a small fraction of the global peak (silence).
@@ -194,6 +211,59 @@ export class OnsetDetector {
       } else {
         downFrames = isDown ? downFrames + 1 : 0;
       }
+    }
+    return onsets;
+  }
+
+  /**
+   * The adaptive path (see `adaptiveThreshold`): novelty = half-wave-rectified
+   * envelope rise; an onset is a 3-frame local maximum of it that clears
+   * `movingMedian + k · movingMean` of its centred neighbourhood. The same
+   * global silence floor and `minIoiSec` spacing as the fixed detector.
+   */
+  private detectAdaptive(
+    env: Float32Array,
+    hop: number,
+    sampleRate: number,
+  ): number[] {
+    const nFrames = env.length;
+    const windowSec = this.adaptiveThreshold?.windowSec ?? 0.3;
+    const k = this.adaptiveThreshold?.k ?? 1;
+    const half = Math.max(1, Math.round(windowSec / this.hopSec / 2));
+
+    const novelty = new Float32Array(nFrames);
+    for (let f = 1; f < nFrames; f += 1) {
+      novelty[f] = Math.max(0, env[f] - env[f - 1]);
+    }
+
+    let globalPeak = 0;
+    for (let f = 0; f < nFrames; f += 1) globalPeak = Math.max(globalPeak, env[f]);
+    const floor = globalPeak * 0.08;
+
+    const minGapFrames = Math.max(1, Math.round(this.minIoiSec / this.hopSec));
+    const onsets: number[] = [];
+    let lastOnsetFrame = -minGapFrames;
+    const win: number[] = [];
+    for (let f = 1; f < nFrames; f += 1) {
+      if (novelty[f] <= 0 || env[f] <= floor) continue;
+      // Local maximum over the immediate 3-frame neighbourhood.
+      if (novelty[f] < novelty[f - 1]) continue;
+      if (f + 1 < nFrames && novelty[f] < novelty[f + 1]) continue;
+      if (f - lastOnsetFrame < minGapFrames) continue;
+      const lo = Math.max(0, f - half);
+      const hi = Math.min(nFrames - 1, f + half);
+      win.length = 0;
+      let sum = 0;
+      for (let j = lo; j <= hi; j += 1) {
+        win.push(novelty[j]);
+        sum += novelty[j];
+      }
+      win.sort((a, b) => a - b);
+      const median = win[win.length >> 1];
+      const mean = sum / win.length;
+      if (novelty[f] - median - k * mean <= 0) continue;
+      onsets.push(Math.max(0, (f * hop) / sampleRate + this.delaySec));
+      lastOnsetFrame = f;
     }
     return onsets;
   }
