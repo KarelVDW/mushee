@@ -163,7 +163,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   beaten on the VOICE slice at k=3 **and** k=5.
 - **Why:** §5.6, §12.1, §13.2, §16.8, §16.11.
 
-### [ ] E4 — R10: interval-proportional change cost + pitch memory across silence
+### [n] E4 — R10: interval-proportional change cost + pitch memory across silence
 - (a) **Start from the shelved `wideChangeCost`/`wideIntervalSemitones`** (`voice-note-decoder.ts`
   :137-139, defaulted off) and its recorded O(states) rationale; then try pYIN's Gaussian (σ 0.7,
   cap 13 st) and Praat's linear-in-log form. (b) Give silence pitch memory: per-pitch silence

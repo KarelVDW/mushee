@@ -1195,3 +1195,31 @@ it is a different, and for this front end better, factorisation of the same tota
 Infrastructure stays (candidates on the track and in the caches — ~14 % blob growth): the decoder
 option is documented-off with these numbers, and the per-frame candidates are the right input for
 any future octave-repair or whistle-tracker work. Do not re-sweep this grid.
+
+### E4 (R10): interval-proportional change cost + pitch memory across silence — both null (2026-08-19)
+
+The survey's single strongest cross-reference (§16.7: pYIN's Gaussian, Praat's per-octave cost)
+and its companion (§6.4/§5.2: a jump across a rest is not free), implemented as
+`intervalChange: { form: 'gaussian'|'linear', σ/perOctave, capSemitones }` (capped scan replaces
+the O(1) prefix/suffix relaxation — pYIN's maxJump 13 is what keeps it bounded) and
+`silenceMemory: { perOctaveNats, amortize }` (Praat's greedy path-lookback: charge the interval
+from the pitch the silence run left, optionally amortised by gap length).
+
+**(a) Interval-proportional cost — the e7 flat frontier, now confirmed for smooth shapes.**
+Grid: base changeCost {0.5,1,1.5} × gaussian σ {0.7,1.5,3} / linear {2,5,10} nats/octave, dev
+VOICE slice. Steep shapes at base 1.5 reproduce the saturated flat anchor exactly (+0.095/+0.096
+— the direct jump is again never taken); softer shapes do exactly what the theory promises —
+transition recall 0.760 → 0.793 at linear c1.5 o2 — and COnP still falls (+0.085), because the
+same cheapening splits held notes faster than it recovers slurs. Two tiers (e7), smooth Gaussian,
+and smooth linear now all land on the same frontier: the decode's transition misses are not a
+mis-priced cost at ANY shape. That closes R10(a) as a family, not a setting.
+
+**(b) Silence memory — the prior is wrong for singing.** perOctave {1,3,6,12} × {amortised,
+fixed}: the weakest settings equal the anchor (+0.096, inside mde), and every stronger one is
+monotonically worse (fixed o12: +0.081, GUARD −0.072). Singers legitimately re-enter after a rest
+anywhere in their register; a return-to-pitch prior taxes real phrase starts to prevent an octave
+error that no longer occurs (octErr 0.006). pYIN needs per-pitch silence because its front end
+produces octave candidates; ours does not survive to the note layer.
+
+Both options stay, documented-off. With e7, r10a and r10b together: **stop trying to buy
+transition recall with transition prices** — the remaining misses are the learned-note-model gap.

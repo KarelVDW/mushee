@@ -109,6 +109,39 @@ export interface VoiceDecodeOptions {
    * emission (the historical decode, bit-for-bit).
    */
   candidates?: { k?: number; yinTrust?: number; octaveBias?: number };
+  /**
+   * E4/R10(a): price a note change in PROPORTION to its interval — the single
+   * strongest cross-reference agreement in the plugin survey (§16.7: pYIN's
+   * Gaussian over semitone distance, Praat's cost per octave of leap), where we
+   * charge a flat `changeCost`. The flat cost conflates the two events it must
+   * separate: vibrato flutter is a ±1-step excursion, a melodic move is larger.
+   *
+   * cost(Δ) = changeCost · evidence + shape(Δ):
+   *  - `'gaussian'` — Δ²/(2σ²) nats (pYIN §5.3; its σ is 0.7 semitones)
+   *  - `'linear'`   — perOctaveNats · Δ/12 (Praat §6.2)
+   * Jumps beyond `capSemitones` (pYIN's maxJump 13) are forbidden. Replaces the
+   * O(1) prefix/suffix relaxation with a capped scan — the cap is what keeps
+   * the frame cost bounded, the concern that shelved `wideChangeCost`'s smooth
+   * form. Direct mode only; omit for the flat cost.
+   */
+  intervalChange?: {
+    form: 'gaussian' | 'linear';
+    sigmaSemitones?: number;
+    perOctaveNats?: number;
+    capSemitones?: number;
+  };
+  /**
+   * E4/R10(b): pitch memory ACROSS SILENCE — Praat's path-lookback (§6.4),
+   * the cheaper of the survey's two designs (pYIN's is per-pitch silence
+   * states). Today a step and a minor tenth cost exactly the same after any
+   * rest; with this, entering a note from silence adds
+   * `perOctaveNats · |Δ|` nats, where Δ is the interval (in octaves) from the
+   * pitch the current silence run left — read greedily off the running Viterbi
+   * path, exactly as Praat does. `amortize` divides by the gap's length in
+   * frames (Praat's form: a long rest forgets); without it the memory is a
+   * fixed prior across any rest. Omit for the historical free jump.
+   */
+  silenceMemory?: { perOctaveNats?: number; amortize?: boolean };
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -462,7 +495,7 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the eight that are meaningfully absent. */
+  /** Every knob resolved, except the ten that are meaningfully absent. */
   private readonly o: Required<
     Omit<
       VoiceDecodeOptions,
@@ -474,6 +507,8 @@ export class VoiceNoteDecoder {
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
       | 'candidates'
+      | 'intervalChange'
+      | 'silenceMemory'
     >
   > &
     Pick<
@@ -486,6 +521,8 @@ export class VoiceNoteDecoder {
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
       | 'candidates'
+      | 'intervalChange'
+      | 'silenceMemory'
     >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
@@ -768,6 +805,20 @@ export class VoiceNoteDecoder {
     );
     const wideChange = this.o.wideChangeCost;
     const viaSilence = this.o.transitionMode === 'via-silence';
+    // E4/R10(a): interval-proportional change pricing (see `intervalChange`).
+    const ic = this.o.intervalChange;
+    const icCapSteps = ic
+      ? Math.max(1, Math.round(((ic.capSemitones ?? 13) * 100) / step))
+      : 0;
+    const icTwoSigSq = ic ? 2 * (ic.sigmaSemitones ?? 0.7) ** 2 : 1;
+    const icPerOct = ic ? ic.perOctaveNats ?? 5 : 0;
+    // E4/R10(b): the pitch the current best path into silence left, and how
+    // long ago — Praat's greedy path-lookback (see `silenceMemory`). Read when
+    // an attack is entered from silence; updated at the end of each frame.
+    const sm = this.o.silenceMemory;
+    const smPerOct = sm ? sm.perOctaveNats ?? 3 : 0;
+    let silenceFromPitch = -1;
+    let silenceGapFrames = 0;
 
     const cost = new Float32Array(numStates);
     const next = new Float32Array(numStates);
@@ -888,7 +939,16 @@ export class VoiceNoteDecoder {
         {
           let best = cost[ATTACK + p];
           let from = ATTACK + p;
-          const fromSilence = silencePrev + on + octaveCost[p];
+          let fromSilence = silencePrev + on + octaveCost[p];
+          if (sm && silenceFromPitch >= 0) {
+            // A jump across a rest is not free (Praat §6.4): charge for the
+            // interval from the pitch the silence run left, amortised by the
+            // gap's length when configured.
+            const octaves = (Math.abs(p - silenceFromPitch) * step) / 1200;
+            fromSilence +=
+              (smPerOct * octaves) /
+              (sm.amortize ? Math.max(1, silenceGapFrames) : 1);
+          }
           if (fromSilence < best) {
             best = fromSilence;
             from = 0;
@@ -932,12 +992,33 @@ export class VoiceNoteDecoder {
                 from = STABLE + at;
               }
             };
-            tryFrom(p - guard + 1, 'left', change);
-            tryFrom(p + guard - 1, 'right', change);
-            if (wideChange !== undefined) {
-              const wide = wideChange * ev;
-              tryFrom(p - wideGuard + 1, 'left', wide);
-              tryFrom(p + wideGuard - 1, 'right', wide);
+            if (ic) {
+              // E4/R10(a): interval-proportional pricing — a capped scan over
+              // the reachable stable states (pYIN's maxJump is what bounds it).
+              const lo = Math.max(0, p - icCapSteps);
+              const hi = Math.min(n - 1, p + icCapSteps);
+              for (let q = lo; q <= hi; q += 1) {
+                const dq = Math.abs(q - p);
+                if (dq < guard) continue;
+                const dSemis = (dq * step) / 100;
+                const shape =
+                  ic.form === 'linear'
+                    ? icPerOct * (dSemis / 12)
+                    : (dSemis * dSemis) / icTwoSigSq;
+                const c = cost[STABLE + q] + change + shape;
+                if (c < best) {
+                  best = c;
+                  from = STABLE + q;
+                }
+              }
+            } else {
+              tryFrom(p - guard + 1, 'left', change);
+              tryFrom(p + guard - 1, 'right', change);
+              if (wideChange !== undefined) {
+                const wide = wideChange * ev;
+                tryFrom(p - wideGuard + 1, 'left', wide);
+                tryFrom(p + wideGuard - 1, 'right', wide);
+              }
             }
           }
           next[ATTACK + p] = best + emit(t, ATTACK + p);
@@ -954,6 +1035,17 @@ export class VoiceNoteDecoder {
           }
           next[STABLE + p] = best + emit(t, STABLE + p);
           back[t * numStates + STABLE + p] = from;
+        }
+      }
+      // Advance the silence path memory AFTER every use at this frame: the
+      // from-silence jumps above priced against the path as of t−1.
+      if (sm) {
+        const from0 = back[t * numStates];
+        if (from0 === 0) {
+          silenceGapFrames += 1;
+        } else {
+          silenceFromPitch = from0 - STABLE;
+          silenceGapFrames = 1;
         }
       }
       cost.set(next);

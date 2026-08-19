@@ -1003,6 +1003,72 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R10(a) (E4) — interval-proportional change cost, the survey's strongest
+  // cross-reference (§16.7). The flat BEST cost is saturated at 2.5 (direct
+  // jumps never taken); an interval shape re-opens SMALL intervals cheaply,
+  // which is exactly the transition-recall gap (0.65 vs the shipping
+  // segmenter's 0.80). Base cost × shape swept together — they trade.
+  if (on('r10')) {
+    configs.push({
+      name: 'r10 OFF (anchor)',
+      group: 'r10',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const changeCost of [0.5, 1, 1.5]) {
+      for (const sigmaSemitones of [0.7, 1.5, 3]) {
+        configs.push({
+          name: `r10 g c${changeCost} s${sigmaSemitones}`,
+          group: 'r10',
+          segment: voiceSegment({
+            ...BEST,
+            changeCost,
+            intervalChange: { form: 'gaussian', sigmaSemitones },
+          }),
+          cleanup: null,
+        });
+      }
+      for (const perOctaveNats of [2, 5, 10]) {
+        configs.push({
+          name: `r10 l c${changeCost} o${perOctaveNats}`,
+          group: 'r10',
+          segment: voiceSegment({
+            ...BEST,
+            changeCost,
+            intervalChange: { form: 'linear', perOctaveNats },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R10(b) (E4) — pitch memory across silence, Praat's path-lookback. Today a
+  // step and a minor tenth cost the same after any rest; this prices the
+  // interval from the pitch the silence run left. Amortised (Praat's form —
+  // long rests forget) and fixed variants.
+  if (on('r10b')) {
+    configs.push({
+      name: 'r10b OFF (anchor)',
+      group: 'r10b',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const perOctaveNats of [1, 3, 6, 12]) {
+      for (const amortize of [true, false]) {
+        configs.push({
+          name: `r10b ${amortize ? 'am' : 'fix'} o${perOctaveNats}`,
+          group: 'r10b',
+          segment: voiceSegment({
+            ...BEST,
+            silenceMemory: { perOctaveNats, amortize },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
   // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
   // consumers of the detector's onsets. The bar its own doc comment sets: beat
   // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at
