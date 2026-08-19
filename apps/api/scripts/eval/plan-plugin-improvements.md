@@ -135,7 +135,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 
 ## Batch 3 — experiments (research doc §17b; each is measure-first, ship-second)
 
-### [ ] E1 — fractional pitch for trajectory-path instruments  *(new, from validation; before E2)*
+### [x] E1 — fractional pitch for trajectory-path instruments  *(new, from validation; before E2)*
 - Normal-register instruments ride the CREPE path, where fractional pitch already exists in-process
   (`PitchTrack.cents`) but is never attached to their notes (`pitchMidiFloat` is set only by the
   voice decoder). Attach a `noteCents`-style estimate over each segmented note's span in the

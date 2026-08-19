@@ -1116,3 +1116,21 @@ notes lost at 40¢ (vibrato + trim decide which side of the line each lands on),
 ±50¢ where the nearest semitone is genuinely the wrong one. That collapse row is the tier's whole
 value: past ±50¢ "transcribe what was sung" and "recover what the singer intended" diverge, and
 COnP-against-written-notes measures the second. E2/E6/E8 are now measurable.
+
+### E1: fractional pitch attached on the instrument segmentation path (2026-08-19)
+
+Both trajectory segmenters (`segmentNotes` median mode and `segmentNotesBySemitone`) now attach
+`pitchMidiFloat` — the median of the run's own voiced contour, absolute (A=440) — exactly as the
+voice decoder does. No wire change; `pitchMidi` and every scored number are untouched (the eval
+reads `pitchMidi` only), verified by re-running the sweep-voice base group: SHIPPED reproduces to
+the last digit (VOICE 0.430, GUARD 0.805).
+
+What this buys: the notation layer's tuning-aware spelling (`voice-notation.ts`, applied in
+`MxmlBuilder`) acts on any note carrying the float and was previously voice-only by omission —
+"notes without it (instruments, basic-pitch) pass through untouched". Trajectory instruments now
+participate. On today's in-tune instrument corpora the offset estimator sits below its confidence
+floor (`MIN_OFFSET_CONFIDENCE`), so behaviour changes only for genuinely off-grid takes — which is
+the point. The measurable spelling benefit is judged with E8's instrument (accidental-spelling
+error on the intonation tier + `notation-eval.ts` counters), where this float is a prerequisite;
+E2 will additionally compare this in-process float against the contour-posteriorgram version on
+the basic-pitch path.
