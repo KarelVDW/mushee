@@ -1062,3 +1062,25 @@ presupposes a real novelty function (spectral flux/HFC); applied to the broadban
 answers a different question. **If R3 is ever revived, put the median+mean threshold on the
 spectral-flux sidecar** (`lib/spectralFlux.ts`, already in the harness for the `flux` group) —
 not on the RMS envelope. Option stays, defaulted off.
+
+### R17/R4/§1.3: the survey's three remaining pitch estimators — all nulls (2026-08-19)
+
+Three new `pitchEstimator` variants in `voice-note-decoder.ts`, tried in the doc's own order:
+`'slew-limit'` (TalentedHack's rate limiter with momentum — arrives and holds), `'one-pole'`
+(fat1's within-note smoother, hard reset per note), `'detrend'` (MXTune's per-note linear
+detrend-then-centre). Swept on dev with the e8 SPLIT cleanup:
+
+| estimator | vs SHIPPED (anchor +0.094) | pWrong/100 | chromaF1 |
+|---|---|---|---|
+| trimmed-mean (ships) | +0.094 | 17 | 0.522 |
+| slew 30 ms | +0.094 (identical) | 17 | 0.522 |
+| one-pole τ20 ms | +0.093 | 17 | 0.519 |
+| slew 50 / pole 40 / detrend | +0.091 / +0.088 / +0.085 | 18 | 0.516→0.508 |
+| slew 100 / pole 80 | +0.076 / +0.075 | 19–20 | ≤0.493 |
+
+The pattern is monotone and unambiguous: **any smoothing gentle enough not to hurt reproduces the
+trimmed mean's answer, and anything stronger strictly worsens semitone-level naming.** This is the
+third estimator family to hit the same wall (after e8's Hann median and e6's onset-window), and it
+closes the question: the residual `pWrong` ≈ 15–17/100 is not an estimator problem — it is the
+learned-note-model gap the N20EMv2 yardstick measures. Variants stay in the code with these
+numbers; do not sweep more smoothers.

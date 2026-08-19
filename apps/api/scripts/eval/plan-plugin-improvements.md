@@ -104,7 +104,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   one slice improves, log the split result and keep it off.
 - **Why:** §4.1, §16.5.
 
-### [ ] 7. R17 → R4 → §1.3 — three `pitchEstimator` variants, in that order  *(S)*
+### [n] 7. R17 → R4 → §1.3 — three `pitchEstimator` variants, in that order  *(S)*
 - **Change:** new variants in `voice-note-decoder.ts` `noteCents`, joining the existing
   trimmed-mean/Hann-median sweep: (1) slew-rate limiter with momentum (arrives and holds — try
   first), (2) causal one-pole with hard reset at boundaries, (3) linear-detrend-then-centre.

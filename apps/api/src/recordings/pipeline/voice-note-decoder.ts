@@ -342,8 +342,28 @@ export interface VoiceDecodeOptions {
    *
    * Ships as `'trimmed-mean'`, i.e. the published α rather than the marginally
    * higher number, since choosing between them on 0.003 would be fitting noise.
+   *
+   * Three further variants from the plugin survey (task 7 of the plugin pass),
+   * each a different answer to "the boundaries are the expressive part":
+   *
+   *  - `'slew-limit'`  — TalentedHack's rate limiter with momentum (§12.2):
+   *    smooth the contour causally with a slew limit (small differences bypass
+   *    it entirely; momentum accelerates, then snaps to the target when the
+   *    remaining distance is smaller than the step), then take the median of
+   *    the smoothed contour. Unlike a one-pole this *arrives and holds*.
+   *  - `'one-pole'`    — fat1/zita-at1's within-note smoother (§3.2): causal
+   *    one-pole (time constant `onePoleTauSec`), hard-reset at the note start
+   *    since it runs per note; median of the smoothed contour.
+   *  - `'detrend'`     — MXTune's per-note linear detrend (§1.3): least-squares
+   *    line over the contour; the note's pitch is the line at the note's
+   *    temporal centre plus the median residual — pulled less by a monotonic
+   *    scoop or portamento tail than a median of the raw contour is.
    */
-  pitchEstimator?: 'trimmed-mean' | 'hann-median';
+  pitchEstimator?: 'trimmed-mean' | 'hann-median' | 'slew-limit' | 'one-pole' | 'detrend';
+  /** `'slew-limit'`: seconds the limiter takes to close a full step. */
+  slewTimeSec?: number;
+  /** `'one-pole'`: the smoother's time constant, in seconds. */
+  onePoleTauSec?: number;
   /**
    * Which frames of the run the note's pitch is measured over.
    *
@@ -402,7 +422,9 @@ const DEFAULTS = {
   wideIntervalSemitones: 3,
   reonsetCost: Infinity,
   minNoteSec: 0.08,
-  pitchEstimator: 'trimmed-mean' as 'trimmed-mean' | 'hann-median',
+  pitchEstimator: 'trimmed-mean' as NonNullable<VoiceDecodeOptions['pitchEstimator']>,
+  slewTimeSec: 0.05,
+  onePoleTauSec: 0.04,
   pitchWindow: 'run' as 'run' | 'onset',
   onsetAt: 'attack' as 'attack' | 'arrival' | 'stable' | 'mid',
   arrivalCents: 50,
@@ -1061,6 +1083,13 @@ export class VoiceNoteDecoder {
     }
     if (!vals.length) return null;
     if (this.o.pitchEstimator === 'hann-median') return hannWeightedMedian(vals);
+    if (this.o.pitchEstimator === 'slew-limit') {
+      return medianOf(slewSmooth(vals, track.hopSec, this.o.slewTimeSec));
+    }
+    if (this.o.pitchEstimator === 'one-pole') {
+      return medianOf(onePoleSmooth(vals, track.hopSec, this.o.onePoleTauSec));
+    }
+    if (this.o.pitchEstimator === 'detrend') return detrendCentre(vals);
     vals.sort((a, b) => a - b);
     const cut = Math.floor(vals.length * this.o.pitchTrim);
     const kept = vals.length - 2 * cut >= 1 ? vals.slice(cut, vals.length - cut) : vals;
@@ -1203,6 +1232,83 @@ function hannWeightedMedian(vals: number[]): number {
     if (acc >= total / 2) return x.v;
   }
   return weighted[weighted.length - 1].v;
+}
+
+function medianOf(vals: number[]): number {
+  const s = [...vals].sort((a, b) => a - b);
+  return s[s.length >> 1];
+}
+
+/**
+ * TalentedHack's slew-rate limiter with momentum (`SmoothPitch`,
+ * pitch_smoother.c), run causally over a note's contour. Differences ≤ 4 cents
+ * bypass smoothing entirely; otherwise the step closes the remaining distance
+ * over `slewTimeSec`, with a three-way momentum rule — accelerate while the
+ * fresh step is larger, SNAP to the target when the momentum already exceeds
+ * the remaining distance (this is what makes it arrive instead of creeping),
+ * otherwise coast.
+ */
+function slewSmooth(vals: number[], hopSec: number, slewTimeSec: number): number[] {
+  const out = new Array<number>(vals.length);
+  let s = vals[0];
+  let momentum = 0;
+  out[0] = s;
+  const stepsToClose = Math.max(1, slewTimeSec / hopSec);
+  for (let i = 1; i < vals.length; i += 1) {
+    const diff = vals[i] - s;
+    if (Math.abs(diff) <= 4) {
+      s = vals[i];
+      momentum = 0;
+    } else {
+      const toadd = diff / stepsToClose;
+      if (Math.abs(momentum) < Math.abs(toadd)) momentum = toadd;
+      if (Math.abs(momentum) > Math.abs(diff)) {
+        s = vals[i];
+        momentum = 0;
+      } else {
+        s += momentum;
+      }
+    }
+    out[i] = s;
+  }
+  return out;
+}
+
+/** fat1's within-note one-pole, hard-reset at the note start. */
+function onePoleSmooth(vals: number[], hopSec: number, tauSec: number): number[] {
+  const alpha = 1 - Math.exp(-hopSec / Math.max(1e-6, tauSec));
+  const out = new Array<number>(vals.length);
+  let s = vals[0];
+  out[0] = s;
+  for (let i = 1; i < vals.length; i += 1) {
+    s += alpha * (vals[i] - s);
+    out[i] = s;
+  }
+  return out;
+}
+
+/**
+ * MXTune's per-note linear detrend (§1.3): least-squares line over the contour;
+ * the note's pitch is the line's value at the temporal centre plus the median
+ * residual, so a monotonic scoop or portamento tail pulls the estimate less
+ * than it pulls a median of the raw contour.
+ */
+function detrendCentre(vals: number[]): number {
+  const n = vals.length;
+  if (n < 3) return medianOf(vals);
+  const xMean = (n - 1) / 2;
+  let yMean = 0;
+  for (const v of vals) yMean += v;
+  yMean /= n;
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxy += (i - xMean) * (vals[i] - yMean);
+    sxx += (i - xMean) * (i - xMean);
+  }
+  const slope = sxx > 0 ? sxy / sxx : 0;
+  const residuals = vals.map((v, i) => v - (yMean + slope * (i - xMean)));
+  return yMean + medianOf(residuals);
 }
 
 /**

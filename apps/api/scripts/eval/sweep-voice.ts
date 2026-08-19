@@ -931,6 +931,47 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R17 — the survey's three remaining pitch estimators (plugin pass task 7),
+  // in the order the doc ranks them: TalentedHack's slew-limit-with-momentum
+  // (arrives and holds), fat1's one-pole (creeps), MXTune's per-note linear
+  // detrend. Same SPLIT cleanup as e8, so rows compare against that log.
+  if (on('r17')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r17 trimmed (ships)',
+      group: 'r17',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+    });
+    for (const slewTimeSec of [0.03, 0.05, 0.1]) {
+      configs.push({
+        name: `r17 slew${slewTimeSec * 1000}`,
+        group: 'r17',
+        segment: voiceSegment({ ...BEST, pitchEstimator: 'slew-limit', slewTimeSec }),
+        cleanup: SPLIT,
+      });
+    }
+    for (const onePoleTauSec of [0.02, 0.04, 0.08]) {
+      configs.push({
+        name: `r17 pole${onePoleTauSec * 1000}`,
+        group: 'r17',
+        segment: voiceSegment({ ...BEST, pitchEstimator: 'one-pole', onePoleTauSec }),
+        cleanup: SPLIT,
+      });
+    }
+    configs.push({
+      name: 'r17 detrend',
+      group: 'r17',
+      segment: voiceSegment({ ...BEST, pitchEstimator: 'detrend' }),
+      cleanup: SPLIT,
+    });
+  }
+
   // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
   // consumers of the detector's onsets. The bar its own doc comment sets: beat
   // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at
