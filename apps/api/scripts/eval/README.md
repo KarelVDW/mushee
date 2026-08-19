@@ -1253,3 +1253,23 @@ our margin is not confirming the note-off acoustically; it is confirming that CR
 window context can no longer change the tail decode, a stricter requirement. **Default stays
 0.4** (the check is 12 clips and the prize is 100 ms of mid-recording commit latency); anyone
 wanting the latency has a measured, env-gated knob and this table.
+
+### E6 (R13): the running-mean baseline earns its place as a baseline — not as a ship (2026-08-19)
+
+(a) Essentia's `PitchContourSegmentation`, written from §7.1's prose (AGPL — never read/ported),
+now lives in `sweep-segmenter.ts` as `runningMean` configs (island building against the note's own
+accumulated mean; per-segment RMS z-cut). At ±80 ¢ it beats the LEGACY shipping segmenter pooled:
+**+0.011 [+0.002, +0.020]*** over 742 dev clips — the survey's "cheapest thing that could
+plausibly beat the semitone-run segmenter" claim confirmed. But the decomposition kills the ship:
+the gain is entirely on VOICE corpora (vocadito 0.68→0.73, csd 0.57→0.66, hust 0.69→0.74), where
+production routes to `VoiceNoteDecoder`, which beats rm80c decisively (annotated-vocalset 0.62 vs
+0.38, n20emv2 0.68 vs 0.61); on the instruments the legacy segmenter actually serves it is a
+wash-to-negative (guitarset +0.01, urmp-violin **−0.09**). So the 2026-07 lesson repeats in
+miniature: segmentation quality is a property of the SOURCE, and the per-source routing already
+banks what this baseline offers. It stays in the sweep as the calibration point it was meant to be.
+
+(b) Tuning-first ordering re-measured on the widened corpus via the existing `tuningCorrect`
+(2026-07: off, harmful vs absolute truth): −0.006 [−0.013, +0.002] — still a null, same reason
+(the eval's truth is absolute; per-note scatter, not take drift, dominates). §7.1's "genuine
+correctness point" is genuine only under tuning-relative truth, which is the notation layer's
+domain — where the offset is already consumed.

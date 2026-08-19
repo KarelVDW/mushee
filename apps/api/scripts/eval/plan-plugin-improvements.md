@@ -177,7 +177,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   bias is compensated exactly once.
 - **Why:** §7.2, §16.6.
 
-### [ ] E6 — R13: running-mean segmenter baseline + tuning-first ordering  *(needs Batch 2)*
+### [x] E6 — R13: running-mean segmenter baseline + tuning-first ordering  *(needs Batch 2)*
 - Two separable questions: (a) add Essentia's ±60-cent running-mean island-building segmenter
   (~20 lines, written from the §7.1 prose — AGPL, do not port) as a **baseline** in
   `sweep-segmenter.ts`; (b) move `estimateTuningOffsetCents` upstream of segmentation and re-run
