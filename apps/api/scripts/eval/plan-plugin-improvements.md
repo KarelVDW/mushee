@@ -115,7 +115,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
 
 ## Batch 2 — the intonation eval tier (R20; before Batch 3's E2/E6/E8)
 
-### [ ] 8. R20 — per-note intonation degradation tier  *(S)*
+### [x] 8. R20 — per-note intonation degradation tier  *(S)*
 - **Scope decision (made):** **synthetic-only.** `synthesizeArticulated` already applies per-note
   detune natively (`pitchScatterCents`, 19 ¢ Gaussian per note, plus drift/scoop) — the tier
   parameterises an existing render knob. Detuning the **real** corpora (what Deep Autotuner did)

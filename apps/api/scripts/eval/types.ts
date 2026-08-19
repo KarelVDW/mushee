@@ -114,4 +114,13 @@ export interface Condition {
    * if any): mic EQ coloration, band-limiting. Empty = none.
    */
   postFilter?: string;
+  /**
+   * R20 intonation tier: per-note detune of exactly this magnitude (cents,
+   * random sign per note), applied at the SYNTHESIZER — not an audio
+   * degradation — with clean acoustics and the written notes as ground truth.
+   * Rendered only for articulated voice scenarios; `generate.ts` skips every
+   * other scenario, and `degrade-real.ts` must never select these (real-audio
+   * per-note detuning is parked behind this tier's gate).
+   */
+  detuneCents?: number;
 }

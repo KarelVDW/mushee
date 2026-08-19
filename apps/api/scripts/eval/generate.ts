@@ -86,6 +86,30 @@ function main(): void {
 
       for (const condition of CONDITIONS) {
         const out = join(dir, `${melody.name}__${condition.id}.wav`);
+        if (condition.detuneCents !== undefined) {
+          // R20 intonation tier: the "degradation" is the performer's, applied
+          // at the synthesizer — articulated voice scenarios only, clean
+          // acoustics, and a sidecar recording the detune each note received.
+          if (scenario.articulation === undefined) continue;
+          const detunes: number[] = [];
+          const seed =
+            scenario.rootMidi + melody.notes.length + scenario.id.length + condition.detuneCents;
+          const samples = synthesizeArticulated(truth, {
+            sampleRate: SAMPLE_RATE,
+            kind: 'voice',
+            articulation: scenario.articulation,
+            seed,
+            detuneCents: condition.detuneCents,
+            outDetunes: detunes,
+          });
+          writeFileSync(out, floatToWav(samples, SAMPLE_RATE));
+          writeFileSync(
+            join(dir, `${melody.name}__${condition.id}.detune.json`),
+            JSON.stringify({ detuneCents: detunes }),
+          );
+          clips += 1;
+          continue;
+        }
         degrade(rawWav, out, condition, SAMPLE_RATE, clipDur);
         clips += 1;
       }

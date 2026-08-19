@@ -65,6 +65,14 @@ Two tiers: the moderate originals (`clean`, `room-mic`, `noisy-phone`) and the
 (wet-dominant RT60 1.3 s + noise + air absorption). Reports aggregate per
 condition as well as per scenario.
 
+Plus the **intonation tier** (`intonation-0c` … `intonation-80c`, R20): the
+performer's error rather than the room's — every note detuned by exactly N
+cents with a random sign, clean acoustics, applied at the synthesizer for the
+articulated voice scenarios only. Ground truth stays the written notes; the
+applied per-note detunes are recorded in `<melody>__<condition>.detune.json`.
+This is the ground truth for tuning-offset / spelling / key experiments
+(plan tasks E2/E6/E8).
+
 ### Noise-adaptation env knobs (production code, sweepable)
 
 The pipeline's noise adaptation reads these (defaults in parentheses):
@@ -1084,3 +1092,27 @@ third estimator family to hit the same wall (after e8's Hann median and e6's ons
 closes the question: the residual `pWrong` ≈ 15–17/100 is not an estimator problem — it is the
 learned-note-model gap the N20EMv2 yardstick measures. Variants stay in the code with these
 numbers; do not sweep more smoothers.
+
+### R20: the per-note intonation tier exists, and its gate passes (2026-08-19)
+
+Deep Autotuner's synthetic de-tuning (§14.3), as five new conditions on the articulated voice
+scenarios: `intonation-{0,20,40,60,80}c` — every note detuned by **exactly N cents, random sign**
+(a controlled dose, deliberately not the synth's Gaussian `pitchScatterCents`, which stays the
+realistic error model on the standing clips), clean acoustics, truth = the written notes, applied
+detunes recorded per clip in a `.detune.json` sidecar. Real-audio detuning stays parked per the
+plan. `generate.ts` reruns confirmed byte-safe: the regenerated clean condition reproduces the
+standing articulation-tier numbers exactly (1.000/0.869/0.812/0.676 vs the logged
+1.00/0.87/0.81/0.68).
+
+**The hard gate — monotone accuracy loss with dose — passes** (adaptive production pipeline,
+pooled over the four articulated scenarios):
+
+| ±0¢ | ±20¢ | ±40¢ | ±60¢ | ±80¢ |
+|---|---|---|---|---|
+| 0.836 | 0.832 | 0.761 | 0.099 | 0.011 |
+
+The shape is the mechanically-honest one: near-lossless below the rounding boundary, ~half the
+notes lost at 40¢ (vibrato + trim decide which side of the line each lands on), collapse past
+±50¢ where the nearest semitone is genuinely the wrong one. That collapse row is the tier's whole
+value: past ±50¢ "transcribe what was sung" and "recover what the singer intended" diverge, and
+COnP-against-written-notes measures the second. E2/E6/E8 are now measurable.

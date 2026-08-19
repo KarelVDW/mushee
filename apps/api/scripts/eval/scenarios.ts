@@ -118,4 +118,18 @@ export const CONDITIONS: Condition[] = [
     noise: { color: 'pink', amplitude: 0.006 },
     postFilter: 'volume=-11dB,lowpass=f=8000',
   },
+
+  // --- R20 intonation tier (Deep Autotuner's synthetic de-tuning, §14.3) ---
+  // The performer's error, not the room's: every note exactly N cents off with
+  // a random sign, clean acoustics, truth = the notes the singer INTENDED.
+  // Fixed magnitude rather than the synth's Gaussian scatter so the dose is
+  // controlled; `intonation-0c` (scatterless) is the tier's own baseline —
+  // deliberately not `clean`, whose articulated renders carry the 19 ¢ scatter.
+  // Rendered for articulated voice scenarios only; ±100 ¢ stays the outer
+  // bound and 20–60 ¢ is where spelling decisions actually flip.
+  { id: 'intonation-0c', label: 'Intonation ±0 ¢ (tier baseline)', detuneCents: 0 },
+  { id: 'intonation-20c', label: 'Intonation ±20 ¢ per note', detuneCents: 20 },
+  { id: 'intonation-40c', label: 'Intonation ±40 ¢ per note', detuneCents: 40 },
+  { id: 'intonation-60c', label: 'Intonation ±60 ¢ per note', detuneCents: 60 },
+  { id: 'intonation-80c', label: 'Intonation ±80 ¢ per note', detuneCents: 80 },
 ];
