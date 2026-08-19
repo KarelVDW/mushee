@@ -187,6 +187,8 @@ interface NoteToolDockProps {
     compact?: boolean
     /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
     metronome?: { active: boolean; onToggle: () => void }
+    /** When set, undo/redo join the tool strip (mobile: the header has no room for them and there is no ⌘Z). */
+    history?: { canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void }
     /** Extra dock row rendered below the tools (the mobile action row). */
     footer?: ReactNode
 }
@@ -225,6 +227,7 @@ export function NoteToolDock({
     selectionDisabled,
     compact = false,
     metronome,
+    history,
     footer,
 }: NoteToolDockProps) {
     return (
@@ -272,6 +275,16 @@ export function NoteToolDock({
                         </ChipToggle>
                     )}
                 </ToolGroup>
+                {history && (
+                    <ToolGroup ariaLabel="History">
+                        <ChipToggle plain onClick={history.onUndo} disabled={!history.canUndo} ariaLabel="Undo">
+                            <Icon name="undo" size={14} />
+                        </ChipToggle>
+                        <ChipToggle plain onClick={history.onRedo} disabled={!history.canRedo} ariaLabel="Redo">
+                            <Icon name="redo" size={14} />
+                        </ChipToggle>
+                    </ToolGroup>
+                )}
             </div>
             {footer}
         </div>

@@ -48,6 +48,11 @@ export class Note {
         return this._measure
     }
 
+    /** Whether the note currently belongs to a measure (replaced/removed notes are detached). */
+    get isAttached(): boolean {
+        return this._measure !== undefined
+    }
+
     setMeasure(measure: Measure | undefined) {
         this._measure = measure
     }

@@ -103,7 +103,9 @@ export default function ScoreEditorPage() {
         setTitle(scoreDocument.meta.title)
         const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
         const s = deserializer.toScore(manipulator.onScoreChange)
-        manipulator.attach(s, () => saveToApi({ score: s }))
+        // The save callback takes the score as a parameter (not a closure over `s`):
+        // undo/redo swap the manipulator's Score instance, and the autosave must follow.
+        manipulator.attach(s, (score) => saveToApi({ score }))
     }, [scoreDocument, manipulator, saveToApi])
 
     // Listeners are thin: each maps a control-bar callback or mouse event to a manipulator
@@ -130,6 +132,8 @@ export default function ScoreEditorPage() {
     )
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
+    const handleUndo = useCallback(() => manipulator.undo(), [manipulator])
+    const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
 
     // In-score attribute glyphs (tempo / clef / key): the ScoreView only reports the
     // click; this page owns the popover it opens and applies the change through the
@@ -202,6 +206,13 @@ export default function ScoreEditorPage() {
         stopAll,
         saveToApi,
     })
+
+    // A live take streams transcription into the score; undoing then would swap the Score
+    // instance out from under the transport's refs, so history travel is locked for the
+    // take's duration. The finished take folds into one undoable step (see the manager).
+    useEffect(() => {
+        manipulator.historyLocked = recordingState !== 'idle'
+    }, [manipulator, recordingState])
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
@@ -302,6 +313,20 @@ export default function ScoreEditorPage() {
                     />
                 )}
                 <div className="flex items-center gap-2 shrink-0 sm:flex-1 justify-end">
+                    {/* Undo/redo sit in the header, not the tool dock: the dock's tools edit the
+                        selection, while history travel is a document-level (meta) operation —
+                        like export, it belongs with the chrome. On phones the pair moves into
+                        the dock's tool strip instead (thumb reach, and there is no ⌘Z). */}
+                    {!isMobile && (
+                        <div role="group" aria-label="History" className="flex items-center gap-1">
+                            <ChipToggle onClick={handleUndo} disabled={!manipulator.canUndo} ariaLabel="Undo">
+                                <Icon name="undo" size={16} />
+                            </ChipToggle>
+                            <ChipToggle onClick={handleRedo} disabled={!manipulator.canRedo} ariaLabel="Redo">
+                                <Icon name="redo" size={16} />
+                            </ChipToggle>
+                        </div>
+                    )}
                     {!isMobile && (
                         <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
                             <Icon name="keyboard" size={16} />
@@ -450,6 +475,11 @@ export default function ScoreEditorPage() {
                 selectionDisabled={!activeNote}
                 compact={isMobile}
                 metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
+                history={
+                    isMobile
+                        ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
+                        : undefined
+                }
                 footer={
                     isMobile ? (
                         <MobileEditorActions

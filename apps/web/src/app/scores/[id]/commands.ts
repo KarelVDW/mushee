@@ -15,7 +15,7 @@ import {
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Display groups for the shortcuts dialog, in presentation order. */
-export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Clipboard'] as const
+export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Clipboard', 'History'] as const
 export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 
 /**
@@ -111,5 +111,23 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         defaultShortcut: 'Mod+KeyV',
         fixed: true,
         run: (manipulator) => manipulator.paste(),
+    },
+    // History shortcuts are fixed for the same reason: ⌘Z / ⇧⌘Z are OS-wide conventions.
+    // With nothing to travel to, the keystroke is left to the browser (undo/redo return false).
+    {
+        id: 'undo',
+        label: 'Undo',
+        group: 'History',
+        defaultShortcut: 'Mod+KeyZ',
+        fixed: true,
+        run: (manipulator) => manipulator.undo(),
+    },
+    {
+        id: 'redo',
+        label: 'Redo',
+        group: 'History',
+        defaultShortcut: 'Mod+Shift+KeyZ',
+        fixed: true,
+        run: (manipulator) => manipulator.redo(),
     },
 ]
