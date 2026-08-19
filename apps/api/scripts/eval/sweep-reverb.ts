@@ -832,6 +832,13 @@ interface SweepConfig {
    * against that same decode without the mechanism, not against the legacy path.
    */
   vsName?: string;
+  /**
+   * Run the FULL `OnsetDetector.detect` over freshly decoded audio instead of
+   * replaying the cached envelope — required by mechanisms that need more than
+   * the envelope (R25's band-limited silence tier). Slow (one ffmpeg decode per
+   * clip per row); keep these rows on small dataset/variant selections.
+   */
+  onsetFromAudio?: OnsetDetectorOptions;
 }
 
 /**
@@ -979,6 +986,16 @@ const CONFIGS: SweepConfig[] = [
   { name: 'voice fillAd x.20', segment: adaptiveFill(0.2), vsName: 'voice OFF' },
   { name: 'voice fillAd x.15 lock1.5', segment: adaptiveFill(0.15, 1.5), vsName: 'voice OFF' },
   { name: 'voice fillAd x.15 lock3', segment: adaptiveFill(0.15, 3), vsName: 'voice OFF' },
+
+  // R25: OpenTune's two-tier absolute silence rule in the onset detector —
+  // rumble-dominated frames classify as silence above the strict gate. Needs
+  // the band envelope, so these rows decode audio (slow): run them on small
+  // selections, e.g. SWEEP_REVERB_DATASETS=vocadito
+  // SWEEP_REVERB_VARIANTS=wind-outdoor,street-noise. `onset audioCtrl` is the
+  // control that isolates the decode-path difference from the rule itself.
+  { name: 'onset audioCtrl', onsetFromAudio: {} },
+  { name: 'onset 2tier', onsetFromAudio: { silenceRule: {} }, vsName: 'onset audioCtrl' },
+  { name: 'onset 2tier strict', onsetFromAudio: { silenceRule: { totalDbfs: -45, relaxedTotalDbfs: -35, bandFloorDbfs: -45 } }, vsName: 'onset audioCtrl' },
 ];
 
 /**
@@ -1050,11 +1067,25 @@ async function sweep(
       const rec: number[] = [];
       const estN: number[] = [];
       const detector = cfg.onset ? new OnsetDetector(cfg.onset) : null;
+      const audioDecoder = cfg.onsetFromAudio ? new AudioDecoder() : null;
       for (const pair of pairs) {
         const c = target(pair);
-        const onsetTimesSec = detector
+        let onsetTimesSec = detector
           ? detector.detectFromEnvelope(c.envelope, c.onsetHop, c.onsetSampleRate)
           : c.onsetTimesSec;
+        if (audioDecoder && cfg.onsetFromAudio) {
+          const wav = readFileSync(
+            join(pair.ds.dir, `${pair.clip}__${c.variant}.wav`),
+          );
+          const decoded = await audioDecoder.decode(wav, c.onsetSampleRate, {
+            loudnorm: false,
+            highpassHz: c.profile.highpassHz,
+          });
+          onsetTimesSec = new OnsetDetector(cfg.onsetFromAudio).detect(
+            decoded.samples,
+            c.onsetSampleRate,
+          );
+        }
         const cleaned = cfg.segment
           ? toEst(cfg.segment(c))
           : runPipeline(c, {

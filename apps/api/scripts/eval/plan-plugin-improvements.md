@@ -225,7 +225,7 @@ they are measured against. Within Batch 3, E1 precedes E2.
   variants all measured null — expectation is low; a fourth null closes the family for good.
 - **Why:** §20.5.
 
-### [ ] 11. R25 — two-tier silence rule in the onset detector  *(XS, optional)*
+### [n] 11. R25 — two-tier silence rule in the onset detector  *(XS, optional)*
 - Silent if total RMS ≤ −40 dBFS, or ≤ −30 dBFS while the 60 Hz–3 kHz band is < −40 dBFS. Sweep on
   the adverse tier (wind/rumble is the target shape).
 - **Why:** §20.5.

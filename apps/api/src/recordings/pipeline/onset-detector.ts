@@ -65,6 +65,16 @@ export interface OnsetDetectorOptions {
    */
   adaptiveThreshold?: { windowSec?: number; k?: number };
   /**
+   * R25 (OpenTune's `SilentGapDetector`): a two-tier ABSOLUTE silence rule on
+   * top of the relative 8 %-of-peak floor. A frame is silent when its total
+   * RMS is ≤ `totalDbfs` (−40), OR ≤ `relaxedTotalDbfs` (−30) while the
+   * 60 Hz–3 kHz voice band is < `bandFloorDbfs` (−40) — a rumble-dominated
+   * frame classifies as silence above the strict gate, which is exactly the
+   * wind/handling shape that fools a broadband floor. Needs the band envelope
+   * (`detect` computes it; `detectFromEnvelope` takes it as an argument).
+   */
+  silenceRule?: { totalDbfs?: number; relaxedTotalDbfs?: number; bandFloorDbfs?: number };
+  /**
    * Constant added to every reported onset time, in seconds (+ = later) —
    * aubio's `delay` parameter, the explicit admission that a detector has a
    * systematic latency (R7). This detector reports the TROUGH of the dip,
@@ -95,6 +105,9 @@ export class OnsetDetector {
   private readonly minTroughSec: number;
   private readonly delaySec: number;
   private readonly adaptiveThreshold: { windowSec?: number; k?: number } | undefined;
+  private readonly silenceRule:
+    | { totalDbfs?: number; relaxedTotalDbfs?: number; bandFloorDbfs?: number }
+    | undefined;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.hopSec = opts.hopSec ?? 0.01;
@@ -104,6 +117,7 @@ export class OnsetDetector {
     this.minTroughSec = opts.minTroughSec ?? 0;
     this.delaySec = opts.delaySec ?? 0;
     this.adaptiveThreshold = opts.adaptiveThreshold;
+    this.silenceRule = opts.silenceRule;
   }
 
   /**
@@ -135,7 +149,34 @@ export class OnsetDetector {
   /** Returns onset times in seconds (ascending), excluding the very first attack. */
   detect(samples: Float32Array, sampleRate: number): number[] {
     const hop = Math.max(1, Math.round(this.hopSec * sampleRate));
-    return this.detectFromEnvelope(this.envelope(samples, sampleRate), hop, sampleRate);
+    return this.detectFromEnvelope(
+      this.envelope(samples, sampleRate),
+      hop,
+      sampleRate,
+      this.silenceRule ? this.bandEnvelope(samples, sampleRate) : undefined,
+    );
+  }
+
+  /**
+   * Per-frame RMS of the 60 Hz–3 kHz voice band, on `envelope()`'s grid — the
+   * second tier of `silenceRule`. One-pole high- and low-pass are crude but
+   * the rule only needs "is the energy rumble or voice", not a flat passband.
+   */
+  bandEnvelope(samples: Float32Array, sampleRate: number): Float32Array {
+    const hpAlpha = Math.exp((-2 * Math.PI * 60) / sampleRate);
+    const lpAlpha = 1 - Math.exp((-2 * Math.PI * 3000) / sampleRate);
+    const banded = new Float32Array(samples.length);
+    let hpPrevIn = 0;
+    let hpPrevOut = 0;
+    let lp = 0;
+    for (let i = 0; i < samples.length; i += 1) {
+      const x = samples[i];
+      hpPrevOut = hpAlpha * (hpPrevOut + x - hpPrevIn);
+      hpPrevIn = x;
+      lp += lpAlpha * (hpPrevOut - lp);
+      banded[i] = lp;
+    }
+    return this.envelope(banded, sampleRate);
   }
 
   /**
@@ -147,9 +188,22 @@ export class OnsetDetector {
     rms: Float32Array,
     hop: number,
     sampleRate: number,
+    bandRms?: Float32Array,
   ): number[] {
     const nFrames = rms.length;
     if (nFrames === 0) return [];
+    // R25: absolute two-tier silence classification (see `silenceRule`).
+    let silent: Uint8Array | null = null;
+    if (this.silenceRule) {
+      const total = Math.pow(10, (this.silenceRule.totalDbfs ?? -40) / 20);
+      const relaxed = Math.pow(10, (this.silenceRule.relaxedTotalDbfs ?? -30) / 20);
+      const bandFloor = Math.pow(10, (this.silenceRule.bandFloorDbfs ?? -40) / 20);
+      silent = new Uint8Array(nFrames);
+      for (let f = 0; f < nFrames; f += 1) {
+        const inBand = bandRms && f < bandRms.length ? bandRms[f] : rms[f];
+        silent[f] = rms[f] <= total || (rms[f] <= relaxed && inBand < bandFloor) ? 1 : 0;
+      }
+    }
     // 3-tap smoothing.
     const env = new Float32Array(nFrames);
     for (let f = 0; f < nFrames; f += 1) {
@@ -197,6 +251,7 @@ export class OnsetDetector {
       // to be a real gap, then rose back up.
       if (
         peak > floor &&
+        (!silent || !silent[f]) &&
         trough < this.dipRatio * peak &&
         gapFrames >= minTroughFrames &&
         e > this.riseRatio * trough &&

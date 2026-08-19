@@ -1361,3 +1361,24 @@ precisely the expressive ones the trim already handles, and rotating them re-cen
 ramp's midpoint — away from the sung pitch — exactly as the unconditional variants did. Four
 estimators (Hann median, slew-limit, one-pole, detrend ± gate) have now reproduced-or-worsened the
 trimmed mean; the family is closed. Do not add a fifth.
+
+### R25: two-tier silence rule — exactly inert, for the reason gates always are here (2026-08-19)
+
+OpenTune's `SilentGapDetector` rule (silent if total RMS ≤ −40 dBFS, or ≤ −30 dBFS while the
+60 Hz–3 kHz band is < −40 dBFS) as `OnsetDetectorOptions.silenceRule` + a `bandEnvelope`, measured
+via sweep-reverb's new `onsetFromAudio` rows (full `detect()` over freshly decoded audio;
+`onset audioCtrl` — the decode-path control — reproduces the cached onsets exactly, so the new
+path is verified) on vocadito × real/wind-outdoor/street-noise.
+
+**Every row is identical to the control, +0.000 exactly**: the rule never reclassifies a single
+frame. The thresholds are ABSOLUTE dBFS and this pipeline's material sits far above them — healthy
+recording levels everywhere, wind bed included — so the tier the rule adds is unreachable, while
+the existing relative 8 %-of-peak floor already does the job level-independently. This is the same
+lesson as 2026-07's gate dead-ends and §20.6's own listing of OpenTune's −50 dBFS pre-inference
+gate as a non-finding: absolute-level gates assume a DAW's level discipline that recorded input
+does not have. Option and band envelope stay (they are the right shape if a calibrated-level
+source ever appears); do not re-tune the thresholds toward "where they would fire" — that is gate
+tuning, measured dead twice.
+
+**Batch 4 complete.** All 19 plan tasks resolved: 6 done ([x]), 13 measured nulls ([n]), every
+outcome above with its mechanism.
