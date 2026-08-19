@@ -14,7 +14,7 @@ import type { ScorePartwise } from '@mushee/notation/components/types'
 import { Instrument, type Note, type Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -44,7 +44,7 @@ import {
     TOGGLE_TUPLET,
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
-import { MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
+import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
@@ -151,6 +151,64 @@ export default function ScoreEditorPage() {
     const handleClefClick = useCallback((event: ClefClickEvent) => setAttributePopover({ kind: 'clef', ...event }), [])
     const handleKeySignatureClick = useCallback((event: KeySignatureClickEvent) => setAttributePopover({ kind: 'key', ...event }), [])
     const handleTimeSignatureClick = useCallback((event: TimeSignatureClickEvent) => setAttributePopover({ kind: 'time', ...event }), [])
+
+    // The open attribute popover's panel. Rendered from two spots so it matches the dock's
+    // equivalent popovers: on desktop anchored at the clicked glyph (clamped inside the
+    // score wrapper), on mobile as the same full-width sheet above the dock that the dock's
+    // own clef/key/time/tempo chips open — anchored panels clip at the viewport edge.
+    const renderAttributePopover = (className: string) => {
+        if (!attributePopover) return null
+        switch (attributePopover.kind) {
+            case 'tempo':
+                return (
+                    <TempoPopover
+                        className={className}
+                        initialBpm={attributePopover.bpm}
+                        onSubmit={(bpm) => {
+                            manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
+                            closeAttributePopover()
+                        }}
+                        onDismiss={closeAttributePopover}
+                    />
+                )
+            case 'clef':
+                return (
+                    <ClefPopover
+                        active={attributePopover.clef}
+                        className={className}
+                        onSelect={(type) => {
+                            manipulator.setClefAt(attributePopover.measureIndex, type)
+                            closeAttributePopover()
+                        }}
+                        onDismiss={closeAttributePopover}
+                    />
+                )
+            case 'key':
+                return (
+                    <KeySignaturePopover
+                        active={attributePopover.fifths}
+                        className={className}
+                        onSelect={(fifths) => {
+                            manipulator.setKeyAt(attributePopover.measureIndex, fifths)
+                            closeAttributePopover()
+                        }}
+                        onDismiss={closeAttributePopover}
+                    />
+                )
+            case 'time':
+                return (
+                    <TimeSignaturePopover
+                        active={{ beatAmount: attributePopover.beatAmount, beatType: attributePopover.beatType }}
+                        className={className}
+                        onSelect={(beatAmount, beatType) => {
+                            manipulator.setTimeSignatureAt(attributePopover.measureIndex, beatAmount, beatType)
+                            closeAttributePopover()
+                        }}
+                        onDismiss={closeAttributePopover}
+                    />
+                )
+        }
+    }
 
     // The floating selection-actions bar (mobile): opened by the score's selection-menu
     // gestures — long-press, double-tap, or lifting a range drag. Selection-scoped actions
@@ -392,115 +450,76 @@ export default function ScoreEditorPage() {
                                 onDismiss={closeSelectionMenu}
                             />
                         )}
-                        {attributePopover?.kind === 'tempo' && (
-                            <TempoPopover
+                        {attributePopover && !isMobile && (
+                            <AttributePopoverAnchor
                                 x={attributePopover.x}
-                                y={attributePopover.y - 30}
-                                initialBpm={attributePopover.bpm}
-                                onSubmit={(bpm) => {
-                                    manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
-                                    closeAttributePopover()
-                                }}
-                                onDismiss={closeAttributePopover}
-                            />
-                        )}
-                        {attributePopover?.kind === 'clef' && (
-                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
-                                <ClefPopover
-                                    active={attributePopover.clef}
-                                    className="left-0 top-0"
-                                    onSelect={(type) => {
-                                        manipulator.setClefAt(attributePopover.measureIndex, type)
-                                        closeAttributePopover()
-                                    }}
-                                    onDismiss={closeAttributePopover}
-                                />
-                            </div>
-                        )}
-                        {attributePopover?.kind === 'key' && (
-                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
-                                <KeySignaturePopover
-                                    active={attributePopover.fifths}
-                                    className="left-0 top-0"
-                                    onSelect={(fifths) => {
-                                        manipulator.setKeyAt(attributePopover.measureIndex, fifths)
-                                        closeAttributePopover()
-                                    }}
-                                    onDismiss={closeAttributePopover}
-                                />
-                            </div>
-                        )}
-                        {attributePopover?.kind === 'time' && (
-                            <div className="absolute z-50" style={{ left: attributePopover.x, top: attributePopover.y + 40 }}>
-                                <TimeSignaturePopover
-                                    active={{ beatAmount: attributePopover.beatAmount, beatType: attributePopover.beatType }}
-                                    className="left-0 top-0"
-                                    onSelect={(beatAmount, beatType) => {
-                                        manipulator.setTimeSignatureAt(attributePopover.measureIndex, beatAmount, beatType)
-                                        closeAttributePopover()
-                                    }}
-                                    onDismiss={closeAttributePopover}
-                                />
-                            </div>
+                                y={attributePopover.y + (attributePopover.kind === 'tempo' ? -30 : 40)}>
+                                {renderAttributePopover('left-0 top-0')}
+                            </AttributePopoverAnchor>
                         )}
                     </div>
                 </div>
             </div>
-            <NoteToolDock
-                accidental={activeNote?.pitch?.accidentalValue}
-                duration={activeNote?.duration.type}
-                accidentalDisabled={activeNote?.isRest ?? true}
-                onAccidentalChange={handleAccidentalChange}
-                onDurationChange={handleDurationChange}
-                dotted={(activeNote?.duration.dots ?? 0) > 0}
-                onDotToggle={handleDotToggle}
-                tuplet={activeNote?.inTuplet ?? false}
-                tupletDisabled={!activeNote || (!activeNote.inTuplet && !activeNote.duration.tripletDivision())}
-                onTupletToggle={handleTupletToggle}
-                tie={activeNote?.tiesForward ?? false}
-                onTieToggle={handleTieToggle}
-                rest={activeNote?.isRest ?? false}
-                onRestToggle={handleRestToggle}
-                bpm={score.bpmAt(activeNote)}
-                onTempoSet={handleTempoSet}
-                clef={activeNote?.clef.type ?? 'treble'}
-                onClefSet={handleClefSet}
-                keyFifths={activeNote?.keySignature.fifths ?? 0}
-                onKeySet={handleKeySet}
-                time={{
-                    beatAmount: activeNote?.measure.timeSignature.beatAmount ?? 4,
-                    beatType: activeNote?.measure.timeSignature.beatType ?? 4,
-                }}
-                onTimeSet={handleTimeSet}
-                selectionDisabled={!activeNote}
-                compact={isMobile}
-                metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
-                history={
-                    isMobile
-                        ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
-                        : undefined
-                }
-                footer={
-                    isMobile ? (
-                        <MobileEditorActions
-                            transport={{
-                                playbackState,
-                                onPlayToggle: handlePlayToggle,
-                                onStop: stopAll,
-                                recordingState,
-                                onRecordToggle: () => void handleRecordToggle(),
-                                metronome,
-                                onMetronomeToggle: () => setMetronome((m) => !m),
-                            }}
-                            onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
-                            onNext={() => manipulator.run(MOVE_NEXT)}
-                            onPitchUp={() => manipulator.run(RAISE_PITCH)}
-                            onPitchDown={() => manipulator.run(LOWER_PITCH)}
-                            disabled={!activeNote}
-                        />
-                    ) : undefined
-                }
-            />
+            {/* On mobile the in-score attribute popovers render here instead, as the same
+                full-width sheet above the dock that the dock's own chips open. */}
+            <div className="relative shrink-0">
+                {isMobile && renderAttributePopover(COMPACT_POPOVER_SHEET)}
+                <NoteToolDock
+                    accidental={activeNote?.pitch?.accidentalValue}
+                    duration={activeNote?.duration.type}
+                    accidentalDisabled={activeNote?.isRest ?? true}
+                    onAccidentalChange={handleAccidentalChange}
+                    onDurationChange={handleDurationChange}
+                    dotted={(activeNote?.duration.dots ?? 0) > 0}
+                    onDotToggle={handleDotToggle}
+                    tuplet={activeNote?.inTuplet ?? false}
+                    tupletDisabled={!activeNote || (!activeNote.inTuplet && !activeNote.duration.tripletDivision())}
+                    onTupletToggle={handleTupletToggle}
+                    tie={activeNote?.tiesForward ?? false}
+                    onTieToggle={handleTieToggle}
+                    rest={activeNote?.isRest ?? false}
+                    onRestToggle={handleRestToggle}
+                    bpm={score.bpmAt(activeNote)}
+                    onTempoSet={handleTempoSet}
+                    clef={activeNote?.clef.type ?? 'treble'}
+                    onClefSet={handleClefSet}
+                    keyFifths={activeNote?.keySignature.fifths ?? 0}
+                    onKeySet={handleKeySet}
+                    time={{
+                        beatAmount: activeNote?.measure.timeSignature.beatAmount ?? 4,
+                        beatType: activeNote?.measure.timeSignature.beatType ?? 4,
+                    }}
+                    onTimeSet={handleTimeSet}
+                    selectionDisabled={!activeNote}
+                    compact={isMobile}
+                    metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
+                    history={
+                        isMobile
+                            ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
+                            : undefined
+                    }
+                    footer={
+                        isMobile ? (
+                            <MobileEditorActions
+                                transport={{
+                                    playbackState,
+                                    onPlayToggle: handlePlayToggle,
+                                    onStop: stopAll,
+                                    recordingState,
+                                    onRecordToggle: () => void handleRecordToggle(),
+                                    metronome,
+                                    onMetronomeToggle: () => setMetronome((m) => !m),
+                                }}
+                                onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
+                                onNext={() => manipulator.run(MOVE_NEXT)}
+                                onPitchUp={() => manipulator.run(RAISE_PITCH)}
+                                onPitchDown={() => manipulator.run(LOWER_PITCH)}
+                                disabled={!activeNote}
+                            />
+                        ) : undefined
+                    }
+                />
+            </div>
 
             <ChangeInstrumentDialog
                 open={instrumentDialogOpen}
@@ -520,6 +539,34 @@ export default function ScoreEditorPage() {
             )}
             {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
             {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
+        </div>
+    )
+}
+
+/** Space kept between an anchored attribute popover and the score wrapper's side edges. */
+const POPOVER_EDGE_MARGIN = 8
+
+/**
+ * Positions an in-score attribute popover at the clicked glyph, pulled left just enough to
+ * stay inside the score wrapper (its offsetParent) — the same measure-and-clamp approach as
+ * SelectionPopover. Re-measured every render: the panel's width depends on which popover is
+ * inside, and there is no ResizeObserver.
+ */
+function AttributePopoverAnchor({ x, y, children }: { x: number; y: number; children: ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null)
+    const [left, setLeft] = useState<number | null>(null)
+    useLayoutEffect(() => {
+        const el = ref.current
+        const parent = el?.offsetParent as HTMLElement | null
+        // Measure the popover panel, not the anchor: the panel is absolutely positioned
+        // inside it, so the anchor itself has no size.
+        const panel = el?.firstElementChild as HTMLElement | null
+        if (!el || !parent || !panel) return
+        setLeft(Math.min(x, Math.max(POPOVER_EDGE_MARGIN, parent.clientWidth - panel.offsetWidth - POPOVER_EDGE_MARGIN)))
+    })
+    return (
+        <div ref={ref} className="absolute z-50" style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
+            {children}
         </div>
     )
 }

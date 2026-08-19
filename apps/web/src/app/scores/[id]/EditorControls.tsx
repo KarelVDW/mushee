@@ -292,13 +292,20 @@ export function NoteToolDock({
 }
 
 /**
+ * The compact popover sheet: full viewport width just above the dock, scrolling when tall.
+ * Shared with the in-score attribute popovers (page.tsx), which position it against a
+ * `relative` wrapper around the dock rather than the dock's own containing block.
+ */
+export const COMPACT_POPOVER_SHEET = 'inset-x-2 bottom-full mb-2 w-auto! max-h-[60vh] overflow-y-auto'
+
+/**
  * Popovers open upward from the dock, clear of its glass panel. In compact (mobile)
  * mode they become a sheet spanning the dock's width instead — anchored popovers
  * would clip at the viewport edges. (`fixed` resolves against the dock, whose
  * backdrop-filter makes it the containing block; the dock spans the viewport.)
  */
 function popoverPosition(compact: boolean): string {
-    return compact ? 'fixed! inset-x-2 bottom-full mb-2 w-auto! max-h-[60vh] overflow-y-auto' : 'right-0 bottom-[calc(100%+0.75rem)]'
+    return compact ? `fixed! ${COMPACT_POPOVER_SHEET}` : 'right-0 bottom-[calc(100%+0.75rem)]'
 }
 
 // --- Clef control ---
@@ -316,7 +323,12 @@ function ClefControl({ clef, onSet, disabled, compact }: ClefControlProps) {
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
+            <ChipToggle
+                plain
+                active={open}
+                disabled={disabled}
+                onClick={() => setOpen((o) => !o)}
+                ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
                 <ClefGlyph type={clef} size={26} />
             </ChipToggle>
             {open && (
