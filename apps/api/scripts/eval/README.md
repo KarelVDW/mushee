@@ -892,6 +892,52 @@ Research directions (in expected-value order):
    score unpitched percussion — see the 2026-08-13 entry. A `sweep-segmenter`-style runner
    would turn an already-paid-for corpus into the isolated onset benchmark we lack.
 
+### Real-corpus gap register (2026-08-20)
+
+Consolidated from the 2026-08-20 provider/per-band pass, which ran into most of these as
+confounds or unpowered strata. Items already tracked above are cross-referenced, not
+repeated. (Corpus *acquisition* is exhausted per research-voice-datasets.md §5 — most rows
+below therefore mean "record and annotate our own" or "build a harness capability", not
+"find another dataset".)
+
+**Registers / sources with zero real data:**
+- Whistling (→ team-decision bullet above); piccolo and everything above ~700 Hz — the
+  routing census confirmed zero pitched real clips reach the `very-high` band, so both its
+  shipping path and the 2026-08-20 CREPE-pitchdown replacement are synthetic-validated only.
+- Harmonica — in the synthetic matrix, no real counterpart (URMP's 13 instruments lack it).
+
+**Strata too thin to power conclusions:**
+- Low/high-band INSTRUMENTS: n = 6 / 5 real clips in the per-band sweep (URMP is 2–4 clips
+  × 15 s per instrument). Any register-specific instrument question is unanswerable on
+  real data today.
+- Solo high-register voice: the high/voice stratum is almost entirely choral bleed stems
+  (ESMUC/CSD sopranos) — anything tuned "for the high band" is actually tuned on bleed,
+  the exact confound that manufactured the per-band false positives.
+- Low/voice balance: annotated-vocalset's operatic males are ~⅔ of the stratum, so
+  "low band" reads as "AV operatic vibrato". Amateur low-register solo singing would fix it.
+
+**Conditions:**
+- Genuinely RECORDED adverse takes: the adverse tier is synthetic degradation of real
+  performances — honest, but no take was performed in a real echoey room / outdoors. Ditto
+  the product capture path: no annotated corpus of phone-mic webm/opus recordings
+  (probe-realpath.ts probes the codec path with no truth behind it).
+- N20EMv2 has no degraded variants (`degrade-real.ts` never run on it) — the adverse voice
+  evidence rests on annotated-vocalset + vocadito alone.
+- Real out-of-tune singing with intended-note truth: the R20 intonation tier is synthetic
+  by design; the one real specimen is the Frère Jacques dogfood take.
+
+**Truth-quality limits on corpora we have** (each documented at its fetcher/log entry —
+listed here so nobody tunes against them): annotated-vocalset's systematic semitone-sharp
+labels; CSD's per-section truth; HUST's derived durations + per-file pitch offset;
+Dagstuhl/mir-qbsh derived note events (excluded from headlines).
+
+**Fetched but not wired:** AVP (→ direction 6); MRSSing (→ direction 5's watch item).
+
+**A label, not a corpus:** nothing marks "this clip carries neighbour bleed" except dataset
+identity. The per-band pass measured three independent +0.02-class wins on choral material
+(quorum .75, 120 ms floor, long-quiet filter) that only a bleed/ensemble detector could
+gate; a bleed annotation — even per-dataset-section — is the cheapest way to develop one.
+
 ---
 
 ## Findings log (2026-08 plugin-source pass)
