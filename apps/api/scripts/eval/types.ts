@@ -115,6 +115,21 @@ export interface Condition {
    */
   postFilter?: string;
   /**
+   * Re-encode the finished clip through a lossy CODEC and decode it back, so the
+   * eval can score the path the product actually captures on: the browser's
+   * MediaRecorder hands us webm/Opus (Chrome/Edge/Firefox) or mp4/AAC (Safari),
+   * never WAV. Applied LAST — after loudnorm, room, noise and mic EQ — because
+   * that is the physical order: the codec sees whatever reached the microphone.
+   *
+   * This is the one condition family whose ground truth needs no annotation
+   * work: a codec round trip does not move the notes, so every clip's existing
+   * truth still applies. `probe-realpath.ts` covers the same ground for the
+   * streaming path but has no truth behind it; this puts the codec on the
+   * scored corpus. Verify the round trip is sample-aligned before trusting any
+   * onset-bias number from it (measured: see the findings log).
+   */
+  codec?: { container: string; encoder: string; bitrateKbps: number };
+  /**
    * R20 intonation tier: per-note detune of exactly this magnitude (cents,
    * random sign per note), applied at the SYNTHESIZER — not an audio
    * degradation — with clean acoustics and the written notes as ground truth.

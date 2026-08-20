@@ -119,6 +119,40 @@ export const CONDITIONS: Condition[] = [
     postFilter: 'volume=-11dB,lowpass=f=8000',
   },
 
+  // --- Capture-path tier: the codec the product actually records through ------
+  // Every number in this harness is measured on WAV; no user ever sends us one.
+  // The browser's MediaRecorder gives us webm/Opus (Chrome, Edge, Firefox) or
+  // mp4/AAC (Safari), and `probe-realpath.ts` probes that path with no truth
+  // behind it. These conditions put it on the scored corpus instead: the codec
+  // round trip cannot move a note, so the clip's existing ground truth still
+  // applies exactly. Opt-in — `DEGRADE_CONDITIONS=phone-opus-96k,…` — because
+  // they multiply corpus runtime like any other condition.
+  //
+  // Bitrates bracket what browsers actually negotiate: ~96 kbps is the common
+  // MediaRecorder default for mono Opus, 32 kbps is a constrained connection,
+  // and 16 kbps is where Opus starts band-limiting hard — which matters more for
+  // whistling (1–3 kHz fundamentals) than for any other input we take.
+  {
+    id: 'phone-opus-96k',
+    label: 'webm/Opus 96 kbps (browser default)',
+    codec: { container: 'webm', encoder: 'libopus', bitrateKbps: 96 },
+  },
+  {
+    id: 'phone-opus-32k',
+    label: 'webm/Opus 32 kbps (constrained)',
+    codec: { container: 'webm', encoder: 'libopus', bitrateKbps: 32 },
+  },
+  {
+    id: 'phone-opus-16k',
+    label: 'webm/Opus 16 kbps (band-limiting)',
+    codec: { container: 'webm', encoder: 'libopus', bitrateKbps: 16 },
+  },
+  {
+    id: 'phone-aac-64k',
+    label: 'mp4/AAC 64 kbps (Safari path)',
+    codec: { container: 'mp4', encoder: 'aac', bitrateKbps: 64 },
+  },
+
   // --- R20 intonation tier (Deep Autotuner's synthetic de-tuning, §14.3) ---
   // The performer's error, not the room's: every note exactly N cents off with
   // a random sign, clean acoustics, truth = the notes the singer INTENDED.

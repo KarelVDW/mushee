@@ -70,7 +70,10 @@ function wavDurationSec(path: string): number | undefined {
 
 // The adverse tier only — room-mic/noisy-phone add little over the raw takes
 // (several real datasets are already low-fi), and every extra condition
-// multiplies eval runtime over ~140 clips.
+// multiplies eval runtime over ~140 clips. The capture-path tier
+// (`phone-opus-96k` etc.) is deliberately NOT here either: it answered its
+// question once (null, ±0.03 — see the README's findings log) and is reached by
+// naming it, e.g. DEGRADE_CONDITIONS=phone-opus-16k.
 const DEFAULT_CONDITION_IDS = ['echoey-room', 'wind-outdoor', 'street-noise', 'distant-mic'];
 
 /**
