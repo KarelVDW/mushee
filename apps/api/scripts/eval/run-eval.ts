@@ -314,10 +314,24 @@ async function main(): Promise<void> {
           .map((d) => d.id)
       : [],
   );
+  // `constructedPerformance` datasets (lib/realCorpus.ts) have exact truth over
+  // real timbre, but the phrasing is ours — spliced isolated notes. Excluded for
+  // the opposite reason to the two above: not because the labels are weak, but
+  // because a constructed performance in the pooled mean would make the headline
+  // easier without the pipeline changing.
+  const constructedIds = new Set(
+    realMode
+      ? discoverRealDatasets(evalRoot)
+          .filter((d) => d.constructedPerformance)
+          .map((d) => d.id)
+      : [],
+  );
   const includeUntrusted = boolEnv('EVAL_INCLUDE_UNTRUSTED');
   const pooled = (scenarioId: string): boolean =>
     includeUntrusted ||
-    (!derivedNoteTruth.has(scenarioId) && !pitchlessIds.has(scenarioId));
+    (!derivedNoteTruth.has(scenarioId) &&
+      !pitchlessIds.has(scenarioId) &&
+      !constructedIds.has(scenarioId));
 
   const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
   const scenarios = allScenarios.filter(
@@ -389,6 +403,7 @@ async function main(): Promise<void> {
       pooled: pooled(s.id),
       noteTruthDerived: derivedNoteTruth.has(s.id),
       pitchless: pitchlessIds.has(s.id),
+      constructedPerformance: constructedIds.has(s.id),
       // MIREX COn — onset-only, pitch ignored. The headline number for
       // `pitchless` datasets; a secondary number for everyone else. Precision
       // and recall are reported separately because for some onset corpora only
@@ -457,6 +472,7 @@ async function main(): Promise<void> {
       includeUntrusted,
       derivedNoteTruth: [...derivedNoteTruth],
       pitchless: [...pitchlessIds],
+      constructedPerformance: [...constructedIds],
       excludedFromOverall: excludedScenarios,
     },
     overallTiming,
@@ -497,7 +513,9 @@ async function main(): Promise<void> {
           ? ''
           : s.pitchless
             ? '† not pooled (pitchless — read COn(onset) instead)'
-            : '† not pooled (note truth derived)'),
+            : s.constructedPerformance
+              ? '† not pooled (constructed performance — real timbre, spliced notes)'
+              : '† not pooled (note truth derived)'),
     );
   }
   console.log('\n' + 'condition'.padEnd(20) + 'COnP'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
@@ -527,6 +545,12 @@ async function main(): Promise<void> {
             ? `Note truth derived, not annotated (${excludedScenarios
                 .filter((s) => derivedNoteTruth.has(s))
                 .join(', ')}) — our own derivation of the corpus's frame pitch.`
+            : '',
+          excludedScenarios.filter((s) => constructedIds.has(s)).length
+            ? `Constructed performance (${excludedScenarios
+                .filter((s) => constructedIds.has(s))
+                .join(', ')}) — real recorded timbre, but the notes were spliced ` +
+              'by us, so the truth is exact and the phrasing is not human.'
             : '',
           excludedScenarios.filter((s) => pitchlessIds.has(s)).length
             ? `Pitchless (${excludedScenarios

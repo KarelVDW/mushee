@@ -259,7 +259,15 @@ async function main(): Promise<void> {
 
   const excludedDatasets = new Set(
     discoverRealDatasets(REAL_ROOT)
-      .filter((d) => d.noteTruthDerived || d.pitchless || d.corpusSplit === 'test')
+      .filter(
+        (d) =>
+          d.noteTruthDerived ||
+          d.pitchless ||
+          // Real timbre, spliced phrasing (tinysol-*): exact truth, but tuning
+          // against a performance we assembled would tune against our splice.
+          d.constructedPerformance ||
+          d.corpusSplit === 'test',
+      )
       .map((d) => d.id),
   );
 

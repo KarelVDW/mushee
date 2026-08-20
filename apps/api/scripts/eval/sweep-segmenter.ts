@@ -288,13 +288,18 @@ async function main(): Promise<void> {
   //    — gating on those rewards reproducing the derivation artefact;
   //  - held-out halves of a source corpus's own split (`corpusSplit: 'test'`) —
   //    they exist solely as external yardsticks, and sweeping against one
-  //    destroys its only purpose.
+  //    destroys its only purpose;
+  //  - datasets whose PERFORMANCE we assembled (`constructedPerformance`, i.e.
+  //    tinysol-*) — their truth is exact, but gating a config on spliced
+  //    phrasing tunes for our splice, not for a player.
   // Setting SWEEP_EXCLUDE (even to '') replaces the default entirely.
   const excluded = new Set(
     process.env.SWEEP_EXCLUDE !== undefined
       ? process.env.SWEEP_EXCLUDE.split(',').map((x) => x.trim()).filter(Boolean)
       : discoverRealDatasets(REAL_ROOT)
-          .filter((d) => d.noteTruthDerived || d.corpusSplit === 'test')
+          .filter(
+            (d) => d.noteTruthDerived || d.constructedPerformance || d.corpusSplit === 'test',
+          )
           .map((d) => d.id),
   );
 

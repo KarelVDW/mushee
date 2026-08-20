@@ -51,6 +51,21 @@ export interface RealDataset {
    * dataset's dataset.json.
    */
   pitchless?: boolean;
+  /**
+   * The AUDIO is real recorded instrument tone, but the PERFORMANCE was
+   * assembled by us: isolated single notes spliced into a melody (TinySOL). The
+   * truth is therefore exact rather than annotated — we placed every onset — so
+   * this is the opposite failure mode from `noteTruthDerived`: nothing about the
+   * labels is untrustworthy, but nothing about the phrasing is human either.
+   * There is no performer timing, no legato shaping and no expressive rubato, so
+   * pooling these clips into the real corpus's headline would make it easier for
+   * a reason that has nothing to do with the pipeline. They are kept out of the
+   * pooled aggregate and reported on their own, which is what they are for:
+   * answering register questions (the `very-high` band has no other real
+   * pitched audio at all) without moving a number anyone compares over time.
+   * Declared by `constructedPerformance` in dataset.json.
+   */
+  constructedPerformance?: boolean;
 }
 
 export function discoverRealDatasets(root: string): RealDataset[] {
@@ -72,6 +87,7 @@ export function discoverRealDatasets(root: string): RealDataset[] {
         corpusSplit: m.corpusSplit,
         noteTruthDerived: m.noteTruthDerived ?? false,
         pitchless: m.pitchless ?? false,
+        constructedPerformance: m.constructedPerformance ?? false,
       };
     });
 }

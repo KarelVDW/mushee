@@ -1292,8 +1292,10 @@ async function main(): Promise<void> {
     (process.env.VOICE_EXP ?? 'base,e1').split(',').map((s) => s.trim()).filter(Boolean),
   );
 
+  // `constructedPerformance` (tinysol-*) is excluded with the same reasoning as
+  // derived truth: the guard slice must be real playing, not our own splices.
   const datasets = discoverRealDatasets(REAL_ROOT).filter(
-    (d) => !d.noteTruthDerived && d.corpusSplit !== 'test',
+    (d) => !d.noteTruthDerived && !d.constructedPerformance && d.corpusSplit !== 'test',
   );
   const voiceIds = datasets.filter((d) => d.kind === 'voice').map((d) => d.id).sort();
   const guardIds = withGuard
