@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-126669",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 8,
+  "draftMedianCentsOffset": 14,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 3.250294784580499,
+    "sha256": "793fcf80623c2752463b0710c41e1e8df49dfa68db90692e8ca5159092b371c3"
+  },
+  "provenance": {
+    "id": "freesound-126669",
+    "dataset": "whistle-real",
+    "sha256": "793fcf80623c2752463b0710c41e1e8df49dfa68db90692e8ca5159092b371c3",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user erihamster (CC0)",
+    "source": "https://freesound.org/people/erihamster/sounds/126669/",
+    "sourceUrl": "https://cdn.freesound.org/previews/126/126669_2240820-hq.mp3",
+    "note": "\"loudwhistle.wav\", 3.3 s, 128 kbps mp3 preview; screen tonal=0.96 median=1657Hz notes=8/5 pitches"
+  }
+}

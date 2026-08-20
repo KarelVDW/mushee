@@ -1,0 +1,40 @@
+{
+  "clip": "commons-soft",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 22,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 5.4287981859410435,
+    "sha256": "0addb29255b2f3da6cf2c9418dbb5766657b3cd738874786e26ccfcbf5d66cec"
+  },
+  "provenance": {
+    "id": "commons-soft",
+    "dataset": "whistle-real",
+    "sha256": "0addb29255b2f3da6cf2c9418dbb5766657b3cd738874786e26ccfcbf5d66cec",
+    "licence": "pd",
+    "licenceVerified": true,
+    "attribution": "stilgar — pd",
+    "source": "https://commons.wikimedia.org/wiki/File:Soft_whistle.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/8/86/Soft_whistle.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "note": "~5.4 s, quiet breathy whistling, median f0 ~1.45 kHz"
+  }
+}

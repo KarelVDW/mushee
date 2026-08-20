@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-577385",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 15,
+  "draftMedianCentsOffset": 7,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 4.179591836734694,
+    "sha256": "cfa9b9e666b5d48a78d917cd211fa5495467947872e7b8c1a79d2b0cd3056b60"
+  },
+  "provenance": {
+    "id": "freesound-577385",
+    "dataset": "whistle-real",
+    "sha256": "cfa9b9e666b5d48a78d917cd211fa5495467947872e7b8c1a79d2b0cd3056b60",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Podcapocalipsis (CC0)",
+    "source": "https://freesound.org/people/Podcapocalipsis/sounds/577385/",
+    "sourceUrl": "https://cdn.freesound.org/previews/577/577385_11490791-hq.mp3",
+    "note": "\"whistle\", 4.2 s, 128 kbps mp3 preview; screen tonal=0.75 median=1765Hz notes=15/7 pitches"
+  }
+}

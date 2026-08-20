@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-585650",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 27,
+  "draftMedianCentsOffset": 25,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 10.357641723356009,
+    "sha256": "6be133b621af95352099f717bc3b7eb869da660c2e257373d3b445ea07682ed0"
+  },
+  "provenance": {
+    "id": "freesound-585650",
+    "dataset": "whistle-real",
+    "sha256": "6be133b621af95352099f717bc3b7eb869da660c2e257373d3b445ea07682ed0",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user lidalee34 (CC0)",
+    "source": "https://freesound.org/people/lidalee34/sounds/585650/",
+    "sourceUrl": "https://cdn.freesound.org/previews/585/585650_13163194-hq.mp3",
+    "note": "\"BP Whistle Song\", 10.4 s, 128 kbps mp3 preview; screen tonal=0.91 median=1481Hz notes=27/12 pitches"
+  }
+}

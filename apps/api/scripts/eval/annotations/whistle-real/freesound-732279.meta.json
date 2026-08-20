@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-732279",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 9,
+  "draftMedianCentsOffset": 41,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 2.509591836734694,
+    "sha256": "fad18da468ac48c4d6d07fc77715b893e38f6658d8e4f58e2a0313c38ddb2df3"
+  },
+  "provenance": {
+    "id": "freesound-732279",
+    "dataset": "whistle-real",
+    "sha256": "fad18da468ac48c4d6d07fc77715b893e38f6658d8e4f58e2a0313c38ddb2df3",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user ssud_motion (CC0)",
+    "source": "https://freesound.org/people/ssud_motion/sounds/732279/",
+    "sourceUrl": "https://cdn.freesound.org/previews/732/732279_15900605-hq.mp3",
+    "note": "\"Luc_sound_whistle\", 2.5 s, 128 kbps mp3 preview; screen tonal=0.91 median=715Hz notes=9/2 pitches"
+  }
+}

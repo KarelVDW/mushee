@@ -1,0 +1,40 @@
+{
+  "clip": "commons-glide",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 24,
+  "draftMedianCentsOffset": 12,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 11.796213151927438,
+    "sha256": "4dabdc3eefbe2b5de4ac35b08f07556fd6b09d8b8c227fdad17645c837be81e5"
+  },
+  "provenance": {
+    "id": "commons-glide",
+    "dataset": "whistle-real",
+    "sha256": "4dabdc3eefbe2b5de4ac35b08f07556fd6b09d8b8c227fdad17645c837be81e5",
+    "licence": "cc-by-sa-3.0",
+    "licenceVerified": true,
+    "attribution": "Ruan123 — cc-by-sa-3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Whistle.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Whistle.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "note": "~11.8 s, reaches ~4.4 kHz — the highest real pitched audio the harness has"
+  }
+}

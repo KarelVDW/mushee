@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-848211",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 57,
+  "draftMedianCentsOffset": 13,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 11.946666666666667,
+    "sha256": "1cdfec2621807b24ea6b0821ec25d3722e96623691b3addee2e2c7fc7401be16"
+  },
+  "provenance": {
+    "id": "freesound-848211",
+    "dataset": "whistle-real",
+    "sha256": "1cdfec2621807b24ea6b0821ec25d3722e96623691b3addee2e2c7fc7401be16",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Goomba87000 (CC0)",
+    "source": "https://freesound.org/people/Goomba87000/sounds/848211/",
+    "sourceUrl": "https://cdn.freesound.org/previews/848/848211_18440392-hq.mp3",
+    "note": "\"Very Loud Whistling\", 11.9 s, 128 kbps mp3 preview; screen tonal=0.62 median=1503Hz notes=57/15 pitches"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-418564",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 3,
+  "draftMedianCentsOffset": 12,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 2.478684807256236,
+    "sha256": "a67ba41805cd4e6eaa56a4b305e538dc733cf7b8301fc398fdadd1cefe649173"
+  },
+  "provenance": {
+    "id": "freesound-418564",
+    "dataset": "whistle-real",
+    "sha256": "a67ba41805cd4e6eaa56a4b305e538dc733cf7b8301fc398fdadd1cefe649173",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user 14FPanskaBubik_Lukas (CC0)",
+    "source": "https://freesound.org/people/14FPanskaBubik_Lukas/sounds/418564/",
+    "sourceUrl": "https://cdn.freesound.org/previews/418/418564_8333239-hq.mp3",
+    "note": "\"Whistle.WAV\", 2.5 s, 128 kbps mp3 preview; screen tonal=0.92 median=2336Hz notes=3/2 pitches"
+  }
+}

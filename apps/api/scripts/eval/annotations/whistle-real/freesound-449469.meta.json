@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-449469",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 15,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 2.5218820861678006,
+    "sha256": "ef329e2bfd9db0cf32c287ed77bd54b213256d5193097df8e328f7b941960c1c"
+  },
+  "provenance": {
+    "id": "freesound-449469",
+    "dataset": "whistle-real",
+    "sha256": "ef329e2bfd9db0cf32c287ed77bd54b213256d5193097df8e328f7b941960c1c",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user 12064988 (CC0)",
+    "source": "https://freesound.org/people/12064988/sounds/449469/",
+    "sourceUrl": "https://cdn.freesound.org/previews/449/449469_9288533-hq.mp3",
+    "note": "\"Whistling_mixdown.mp3\", 2.5 s, 128 kbps mp3 preview; screen tonal=0.83 median=1484Hz notes=15/4 pitches"
+  }
+}

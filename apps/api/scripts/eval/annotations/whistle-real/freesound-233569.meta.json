@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-233569",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 4,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 13.905102040816326,
+    "sha256": "9d2bc0c93cbb0614a3057beeec6597f7ac8ecffbe6f86550166f88c9663a0921"
+  },
+  "provenance": {
+    "id": "freesound-233569",
+    "dataset": "whistle-real",
+    "sha256": "9d2bc0c93cbb0614a3057beeec6597f7ac8ecffbe6f86550166f88c9663a0921",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user nbild (CC0)",
+    "source": "https://freesound.org/people/nbild/sounds/233569/",
+    "sourceUrl": "https://cdn.freesound.org/previews/233/233569_3859581-hq.mp3",
+    "note": "\"Whistle\", 13.9 s, 128 kbps mp3 preview; screen tonal=0.96 median=1065Hz notes=4/4 pitches"
+  }
+}

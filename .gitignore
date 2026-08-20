@@ -35,6 +35,9 @@ apps/api/.venv-basicpitch/
 apps/api/scripts/eval/assets/
 apps/api/scripts/eval/.tmp/
 apps/api/scripts/eval/.cache/
+# Freesound API key (token auth) for fetch-whistle-real.ts's CC0 sweep — one line,
+# never committed. FREESOUND_TOKEN in the environment does the same job.
+apps/api/scripts/eval/.freesound-token
 apps/api/scripts/fixtures/eval/
 apps/api/scripts/fixtures/eval-real/
 # Cached pitch trajectories for the eval harness — derived, large, and rebuilt on

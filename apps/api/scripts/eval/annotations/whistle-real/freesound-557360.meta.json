@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-557360",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 18,
+  "draftMedianCentsOffset": 30,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 16.704013605442178,
+    "sha256": "1704b6ce04769f2e1cd6155cefa4a7cf85501b2537af21846c800266ac084215"
+  },
+  "provenance": {
+    "id": "freesound-557360",
+    "dataset": "whistle-real",
+    "sha256": "1704b6ce04769f2e1cd6155cefa4a7cf85501b2537af21846c800266ac084215",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user launchsite (CC0)",
+    "source": "https://freesound.org/people/launchsite/sounds/557360/",
+    "sourceUrl": "https://cdn.freesound.org/previews/557/557360_7281605-hq.mp3",
+    "note": "\"Hyacinthe_single long whistle_double long whistle.wav\", 16.7 s, 128 kbps mp3 preview; screen tonal=0.99 median=1358Hz notes=18/4 pitches"
+  }
+}

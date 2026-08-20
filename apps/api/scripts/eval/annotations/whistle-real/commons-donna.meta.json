@@ -1,0 +1,40 @@
+{
+  "clip": "commons-donna",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 33,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.928072562358278,
+    "sha256": "35309a77efb5a9dca0b516c0d9c5e126be4a5a109fd59664e6776221e3707b62"
+  },
+  "provenance": {
+    "id": "commons-donna",
+    "dataset": "whistle-real",
+    "sha256": "35309a77efb5a9dca0b516c0d9c5e126be4a5a109fd59664e6776221e3707b62",
+    "licence": "cc-by-sa-4.0",
+    "licenceVerified": true,
+    "attribution": "Stanislav Kozlovskiy — cc-by-sa-4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Whistling_la_donna_a_mobile.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/3/33/Whistling_la_donna_a_mobile.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "note": "whistled \"La donna è mobile\" (Verdi, PD composition), ~8.9 s, median f0 ~1.08 kHz"
+  }
+}

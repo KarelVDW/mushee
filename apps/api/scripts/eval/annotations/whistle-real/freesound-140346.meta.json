@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-140346",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 89,
+  "draftMedianCentsOffset": 20,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 30.490113378684807,
+    "sha256": "438c93089d9c9a84030237643ca1c65cba4da1861fb352488e0e4a3f19f974ce"
+  },
+  "provenance": {
+    "id": "freesound-140346",
+    "dataset": "whistle-real",
+    "sha256": "438c93089d9c9a84030237643ca1c65cba4da1861fb352488e0e4a3f19f974ce",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user P.Howe (CC0)",
+    "source": "https://freesound.org/people/P.Howe/sounds/140346/",
+    "sourceUrl": "https://cdn.freesound.org/previews/140/140346_1868257-hq.mp3",
+    "note": "\"Lillibullero Whistled.wav\", 30.5 s, 128 kbps mp3 preview; screen tonal=0.95 median=1171Hz notes=89/14 pitches"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-452131",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 24,
+  "draftMedianCentsOffset": 14,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 10.884013605442178,
+    "sha256": "b6ae8350d41bca07aa08249403e3c90c1a26058a05e826b37507a67b18462d06"
+  },
+  "provenance": {
+    "id": "freesound-452131",
+    "dataset": "whistle-real",
+    "sha256": "b6ae8350d41bca07aa08249403e3c90c1a26058a05e826b37507a67b18462d06",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user key-sto (CC0)",
+    "source": "https://freesound.org/people/key-sto/sounds/452131/",
+    "sourceUrl": "https://cdn.freesound.org/previews/452/452131_9015290-hq.mp3",
+    "note": "\"ZOOM0041_MN.WAV\", 10.9 s, 128 kbps mp3 preview; screen tonal=1.00 median=2007Hz notes=24/10 pitches"
+  }
+}

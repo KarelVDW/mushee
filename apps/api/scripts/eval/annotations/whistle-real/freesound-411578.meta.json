@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-411578",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 18,
+  "draftMedianCentsOffset": 19,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 3.076643990929705,
+    "sha256": "3c3ff22ed79443b0fa3ac6b45e7b7ecb6db8b90dcb0b2a20e79361554688b7c2"
+  },
+  "provenance": {
+    "id": "freesound-411578",
+    "dataset": "whistle-real",
+    "sha256": "3c3ff22ed79443b0fa3ac6b45e7b7ecb6db8b90dcb0b2a20e79361554688b7c2",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user elijahgoodson (CC0)",
+    "source": "https://freesound.org/people/elijahgoodson/sounds/411578/",
+    "sourceUrl": "https://cdn.freesound.org/previews/411/411578_7994683-hq.mp3",
+    "note": "\"Whistle.mp3\", 3.1 s, 128 kbps mp3 preview; screen tonal=0.68 median=1618Hz notes=18/11 pitches"
+  }
+}

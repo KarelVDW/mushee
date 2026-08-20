@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-130251",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 33,
+  "draftMedianCentsOffset": 29,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 18.856780045351474,
+    "sha256": "0953b9602b7234a13bf298a2dbcb7f1ddd877437d06c9b4d821f37c4fd5ce012"
+  },
+  "provenance": {
+    "id": "freesound-130251",
+    "dataset": "whistle-real",
+    "sha256": "0953b9602b7234a13bf298a2dbcb7f1ddd877437d06c9b4d821f37c4fd5ce012",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user iut_Paris8 (CC0)",
+    "source": "https://freesound.org/people/iut_Paris8/sounds/130251/",
+    "sourceUrl": "https://cdn.freesound.org/previews/130/130251_907124-hq.mp3",
+    "note": "\"MaevaDosimont_2012_02.wav\", 18.9 s, 128 kbps mp3 preview; screen tonal=0.80 median=802Hz notes=33/16 pitches"
+  }
+}

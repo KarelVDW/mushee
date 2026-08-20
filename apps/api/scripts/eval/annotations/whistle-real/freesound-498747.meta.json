@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-498747",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 23,
+  "draftMedianCentsOffset": 23,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.797619047619047,
+    "sha256": "2b39ef44c856418a487129029cb796b05cc3532beaef8eb77183f28c6850842e"
+  },
+  "provenance": {
+    "id": "freesound-498747",
+    "dataset": "whistle-real",
+    "sha256": "2b39ef44c856418a487129029cb796b05cc3532beaef8eb77183f28c6850842e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user 16H_Panska_Andelova_Lucia (CC0)",
+    "source": "https://freesound.org/people/16H_Panska_Andelova_Lucia/sounds/498747/",
+    "sourceUrl": "https://cdn.freesound.org/previews/498/498747_10797009-hq.mp3",
+    "note": "\"whistle_02.WAV\", 8.8 s, 128 kbps mp3 preview; screen tonal=0.66 median=1633Hz notes=23/10 pitches"
+  }
+}

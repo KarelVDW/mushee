@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-789470",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 57,
+  "draftMedianCentsOffset": 19,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 18.819773242630387,
+    "sha256": "2e3ff11ffb64dceb5b65ef7984f38754f5ee37122be3dee8879fc86922cdd82f"
+  },
+  "provenance": {
+    "id": "freesound-789470",
+    "dataset": "whistle-real",
+    "sha256": "2e3ff11ffb64dceb5b65ef7984f38754f5ee37122be3dee8879fc86922cdd82f",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user milcahrawr (CC0)",
+    "source": "https://freesound.org/people/milcahrawr/sounds/789470/",
+    "sourceUrl": "https://cdn.freesound.org/previews/789/789470_11995365-hq.mp3",
+    "note": "\"Whistling Marble Halls\", 18.8 s, 128 kbps mp3 preview; screen tonal=0.79 median=1427Hz notes=57/15 pitches"
+  }
+}

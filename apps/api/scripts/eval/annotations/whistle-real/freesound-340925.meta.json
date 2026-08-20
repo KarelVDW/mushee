@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-340925",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 34,
+  "draftMedianCentsOffset": 31,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 12.335600907029479,
+    "sha256": "3a0779b2f243dee08e549c5afe9df878f96ec8e2c4587ed66a32cf7940152152"
+  },
+  "provenance": {
+    "id": "freesound-340925",
+    "dataset": "whistle-real",
+    "sha256": "3a0779b2f243dee08e549c5afe9df878f96ec8e2c4587ed66a32cf7940152152",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user depaz33 (CC0)",
+    "source": "https://freesound.org/people/depaz33/sounds/340925/",
+    "sourceUrl": "https://cdn.freesound.org/previews/340/340925_5067263-hq.mp3",
+    "note": "\"weirdwhistle.wav\", 12.3 s, 128 kbps mp3 preview; screen tonal=0.72 median=1335Hz notes=34/7 pitches"
+  }
+}

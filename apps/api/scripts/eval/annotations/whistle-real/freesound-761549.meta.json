@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-761549",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 20,
+  "draftMedianCentsOffset": 9,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 4.269342403628118,
+    "sha256": "290d7d1ae8bc0b370f030bfa39919110cf970d10c64371eca03ce93690a70a7e"
+  },
+  "provenance": {
+    "id": "freesound-761549",
+    "dataset": "whistle-real",
+    "sha256": "290d7d1ae8bc0b370f030bfa39919110cf970d10c64371eca03ce93690a70a7e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user KlickQuik (CC0)",
+    "source": "https://freesound.org/people/KlickQuik/sounds/761549/",
+    "sourceUrl": "https://cdn.freesound.org/previews/761/761549_15559134-hq.mp3",
+    "note": "\"Ghostly Whistling\", 4.3 s, 128 kbps mp3 preview; screen tonal=0.72 median=1131Hz notes=20/8 pitches"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-390815",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 15,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 5.06297052154195,
+    "sha256": "2e801756a9a06ebc67fe5c7599214a4329270b98aaad3a4651b594cf1db56b9f"
+  },
+  "provenance": {
+    "id": "freesound-390815",
+    "dataset": "whistle-real",
+    "sha256": "2e801756a9a06ebc67fe5c7599214a4329270b98aaad3a4651b594cf1db56b9f",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user nickyg11p (CC0)",
+    "source": "https://freesound.org/people/nickyg11p/sounds/390815/",
+    "sourceUrl": "https://cdn.freesound.org/previews/390/390815_5956166-hq.mp3",
+    "note": "\"Whistling01.wav\", 5.1 s, 128 kbps mp3 preview; screen tonal=0.98 median=1098Hz notes=15/8 pitches"
+  }
+}

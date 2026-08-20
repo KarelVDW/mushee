@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-411879",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 30,
+  "draftMedianCentsOffset": 20,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7.891111111111111,
+    "sha256": "7af4f45aeab2a0975c74907edc76a818d0623ce0e851c61d292712d12d234132"
+  },
+  "provenance": {
+    "id": "freesound-411879",
+    "dataset": "whistle-real",
+    "sha256": "7af4f45aeab2a0975c74907edc76a818d0623ce0e851c61d292712d12d234132",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Yin_Yang_Jake007 (CC0)",
+    "source": "https://freesound.org/people/Yin_Yang_Jake007/sounds/411879/",
+    "sourceUrl": "https://cdn.freesound.org/previews/411/411879_7919598-hq.mp3",
+    "note": "\"Cheery Whistling.mp3\", 7.9 s, 128 kbps mp3 preview; screen tonal=0.85 median=1764Hz notes=30/12 pitches"
+  }
+}

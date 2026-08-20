@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-532754",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 36,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.010884353741497,
+    "sha256": "af9917e1b187232ec6641301f68c4fd9b763c0125083da3f741c6dc86cc530e4"
+  },
+  "provenance": {
+    "id": "freesound-532754",
+    "dataset": "whistle-real",
+    "sha256": "af9917e1b187232ec6641301f68c4fd9b763c0125083da3f741c6dc86cc530e4",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user schinew.de (CC0)",
+    "source": "https://freesound.org/people/schinew.de/sounds/532754/",
+    "sourceUrl": "https://cdn.freesound.org/previews/532/532754_7882619-hq.mp3",
+    "note": "\"Human Happy Whistle\", 8.0 s, 128 kbps mp3 preview; screen tonal=0.85 median=1525Hz notes=36/10 pitches"
+  }
+}

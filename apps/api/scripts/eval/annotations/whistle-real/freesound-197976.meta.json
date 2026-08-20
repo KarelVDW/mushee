@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-197976",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 41,
+  "draftMedianCentsOffset": 20,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 11.263854875283446,
+    "sha256": "5e207c15f0071051f49556dd9a15391bfcab9f06cb7b27860e234a3d33887d36"
+  },
+  "provenance": {
+    "id": "freesound-197976",
+    "dataset": "whistle-real",
+    "sha256": "5e207c15f0071051f49556dd9a15391bfcab9f06cb7b27860e234a3d33887d36",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user MacSounds1 (CC0)",
+    "source": "https://freesound.org/people/MacSounds1/sounds/197976/",
+    "sourceUrl": "https://cdn.freesound.org/previews/197/197976_3685064-hq.mp3",
+    "note": "\"Whistle Project 5.wav\", 11.3 s, 128 kbps mp3 preview; screen tonal=0.85 median=1166Hz notes=41/19 pitches"
+  }
+}

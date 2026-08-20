@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-808989",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 20,
+  "draftMedianCentsOffset": 14,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 6.3218367346938775,
+    "sha256": "c2340f1a93a37b5953181c0c49085161a8b992d5526051d4b6dac99a4aae47ac"
+  },
+  "provenance": {
+    "id": "freesound-808989",
+    "dataset": "whistle-real",
+    "sha256": "c2340f1a93a37b5953181c0c49085161a8b992d5526051d4b6dac99a4aae47ac",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user mk-la (CC0)",
+    "source": "https://freesound.org/people/mk-la/sounds/808989/",
+    "sourceUrl": "https://cdn.freesound.org/previews/808/808989_15147285-hq.mp3",
+    "note": "\"Whistling up and down\", 6.3 s, 128 kbps mp3 preview; screen tonal=0.70 median=1360Hz notes=20/11 pitches"
+  }
+}

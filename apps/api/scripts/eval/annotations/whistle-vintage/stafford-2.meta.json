@@ -1,0 +1,42 @@
+{
+  "clip": "stafford-2",
+  "dataset": "whistle-vintage",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 700,
+      "maxHz": 5000,
+      "minTonality": 0.55,
+      "minLevel": 0.08
+    },
+    "segment": {
+      "minNoteSec": 0.08,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 42,
+  "draftMedianCentsOffset": 31,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 30.00233560090703,
+    "sha256": "160f9577af55550e82dc89ef78e33b3714f90cc2e6948d88179dbead8bc16071"
+  },
+  "provenance": {
+    "id": "stafford-2",
+    "dataset": "whistle-vintage",
+    "sha256": "160f9577af55550e82dc89ef78e33b3714f90cc2e6948d88179dbead8bc16071",
+    "licence": "pd",
+    "licenceVerified": true,
+    "attribution": "Carl Flisch — pd",
+    "source": "https://commons.wikimedia.org/wiki/File:Gramophone-gc-2-40644-2405e.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/Gramophone-gc-2-40644-2405e.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "startSec": 55,
+    "durSec": 30,
+    "note": "accompanied art whistling, 160 s source, median f0 ~1.33 kHz"
+  }
+}

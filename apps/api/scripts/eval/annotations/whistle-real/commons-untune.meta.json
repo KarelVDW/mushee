@@ -1,0 +1,40 @@
+{
+  "clip": "commons-untune",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 25,
+  "draftMedianCentsOffset": 17,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 6.489977324263038,
+    "sha256": "bc58ae76668c503549f0a20aba978fb1e4683c4b4ed620cfbf505b560e11ca69"
+  },
+  "provenance": {
+    "id": "commons-untune",
+    "dataset": "whistle-real",
+    "sha256": "bc58ae76668c503549f0a20aba978fb1e4683c4b4ed620cfbf505b560e11ca69",
+    "licence": "pd",
+    "licenceVerified": true,
+    "attribution": "El aprendelenguas — pd",
+    "source": "https://commons.wikimedia.org/wiki/File:Unidentified_Tune.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/b/ba/Unidentified_Tune.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "note": "~6.5 s whistled tune (uploaded to Commons for identification)"
+  }
+}

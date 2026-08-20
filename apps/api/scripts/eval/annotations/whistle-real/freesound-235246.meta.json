@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-235246",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 35,
+  "draftMedianCentsOffset": 19,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.033333333333333,
+    "sha256": "f763b3ac79d1e5e35ec2b7933878e644c1f1d7188b7d750393736fd1a13d6e2d"
+  },
+  "provenance": {
+    "id": "freesound-235246",
+    "dataset": "whistle-real",
+    "sha256": "f763b3ac79d1e5e35ec2b7933878e644c1f1d7188b7d750393736fd1a13d6e2d",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user jaredpass24 (CC0)",
+    "source": "https://freesound.org/people/jaredpass24/sounds/235246/",
+    "sourceUrl": "https://cdn.freesound.org/previews/235/235246_2522504-hq.mp3",
+    "note": "\"Whistle_3_High.wav\", 8.0 s, 128 kbps mp3 preview; screen tonal=0.65 median=1684Hz notes=35/8 pitches"
+  }
+}
