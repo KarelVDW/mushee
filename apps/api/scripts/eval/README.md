@@ -134,6 +134,10 @@ to exercise it end-to-end. `probe-source-classifier.ts` measures it directly
 | `fetch-dagstuhl.ts` | Dagstuhl ChoirSet (CC-BY-4.0) — 102×30 s quartet singer-stem excerpts. **The harness's only real tempo on singing**: 20 hand-tapped, second-annotator-reviewed beat/measure grids, emitted as `GroundTruth.beatGrid` (63–91 BPM, genuinely expressive) so `notation-eval.ts` can score notated rhythm on a *voice* corpus for the first time. Its NOTE truth is a 70 ms-MAE DTW score alignment → `noteTruthDerived`, never pooled. Mic bleed throughout. See research-voice-datasets.md §5l. |
 | `fetch-avp.ts` | AVP (CC-BY-4.0) — 280 clips / 9.8k **human-labelled onsets** on real amateur vocal percussion (kick/snare/hihat imitations). `pitchless`: no pitch exists anywhere in the chain, so it scores the `OnsetDetector` in isolation via COn. See research-voice-datasets.md §5a. |
 | `fetch-jacrc.ts` | JaCRC students (CC-BY-4.0) — 175×30 s excerpts / 5.2k **manual syllable onsets** from 25 amateur conservatory students singing jingju. `pitchless`. ⚠️ **read `onsetRecall`, not F1**: syllable onsets are a strict subset of note onsets on melismatic singing, so precision is understated by construction. Students-only folder (documented performer consent); the collection's professional/commercial rows are deliberately untouched. See research-voice-datasets.md §5l. |
+| `fetch-whistle-real.ts` | **The only real whistling the harness has.** Stages permissively-licensed whistling audio for annotation: `whistle-real` = 112 Freesound CC0 clips (screened from 537 candidates) + 5 Wikimedia Commons clips (PD / CC BY-SA) = 18.3 min; `whistle-vintage` = 6×30 s excerpts of public-domain art-whistling 78s (Alice J. Shaw, Frank Stafford), accompanied and noisy by nature. Verifies each file's licence live against the source's API, then applies a metadata gate (must be *described* as whistling; vetoes tin/slide whistles, synths, animals, machines) and an acoustic screen (`whistleScreen`) — both needed, see the findings log. Needs a Freesound key in `FREESOUND_TOKEN` or `scripts/eval/.freesound-token` (gitignored) for the CC0 sweep; `FREESOUND_MAX` sets how many candidates to screen; `WHISTLE_LOCAL_DIR` ingests our own takes; `WHISTLE_INCLUDE_ENCUMBERED=1` adds clips whose *composition* is still in copyright. See research-whistle-corpus.md. |
+| `draft-note-labels.ts` | Draft note labels for staged audio via `lib/sineTrack.ts` (framewise FFT peak → semitone runs; deliberately NOT our model family), written as Audacity label TSVs under `annotations/` — **tracked**, because a corrected label file is the one artefact nobody can regenerate. Never overwrites an existing TSV without `--force`. |
+| `import-note-labels.ts` | Hand-corrected label TSVs → a scoreable dataset. Enforces the provenance rule: while any clip's `.meta.json` still says `verifiedBy: null`, the dataset is written `noteTruthDerived` and stays out of every pooled number. `--verified-by="<name>"` stamps a reviewed set. |
+| `fetch-tinysol.ts` | TinySOL (CC-BY-4.0) — the harness's **only real audio in the `very-high` band**. Splices Ircam single notes into 8-note clips: 64 clips / 512 notes over flute/oboe/clarinet/violin/viola/accordion × 2 bands × 3 dynamics × {legato, detached}. Truth is exact by construction and the performance is not human, so the datasets declare `constructedPerformance` and are reported but never pooled. |
 | `fetch-soundfont.sh` | FluidR3_GM soundfont for `generate.ts`. |
 | `degrade-real.ts` | Adverse-condition variants of the fetched real clips (run after the fetchers). |
 
@@ -867,9 +871,14 @@ Decisions for the team:
 - **Model-weight provenance**: CREPE-tiny (shipping) was trained partly on NC-licensed data
   (MDB-stem-synth CC-BY-NC; RWC research licence) — same class of exposure as the rejected RMVPE.
   If ever forced, the remedy is a retrain, not a swap. Decide deliberately.
-- **Whistling has zero real test data** (no note-annotated whistling corpus exists anywhere; Belyk is
-  CC0 but f0-only and download-gated). The `very-high`/basic-pitch path is validated on synthetic
-  audio only — the real corpus's highest note is MIDI 84 and 99.5 % of frames sit below 700 Hz.
+- ~~**Whistling has zero real test data**~~ — **superseded 2026-08-20.** The premise still
+  holds (no note-annotated whistling corpus exists anywhere, and `research-whistle-corpus.md`
+  now proves acquisition is exhausted), but the harness is no longer at zero: `whistle-real`
+  (5 clips / 34 s, PD + CC BY-SA) and `whistle-vintage` (6 × 30 s, public-domain art whistling)
+  are fetched with draft labels, and `tinysol-*` puts 512 notes of real timbre into the
+  `high`/`very-high` bands. The remaining decision is not acquisition, it is **whether to spend
+  ~40 minutes recording and verifying a dogfood set** (protocol: research-whistle-corpus.md §6)
+  and whether to get a free Freesound token for its CC0 slice.
   Closing this means **recording and annotating our own clips**.
 - A browser-level `/verify` pass of the recording flow before shipping the `RecordingEngine` changes
   (all three review-found bugs lived in the one path without end-to-end coverage).
@@ -881,7 +890,12 @@ Research directions (in expected-value order):
 2. **Density/vibrato-adaptive change cost** for the note HMM (the measured diagnosis of why one
    global config cannot serve both sustained vibrato and fast humming).
 3. **Reverb front end that preserves harmonics** (oracle: +0.14/+0.23 still on the table).
-4. **Whistle-specific FFT peak tracker** (whistling is near-sinusoidal; blocked on real whistle audio).
+4. **Whistle-specific FFT peak tracker** (whistling is near-sinusoidal). ~~Blocked on real
+   whistle audio~~ — **unblocked 2026-08-20**: `whistle-real` / `whistle-vintage` exist, and
+   `lib/sineTrack.ts` is already a working baseline of exactly this shape. ⚠️ Ordering
+   constraint: the whistle datasets' labels were DRAFTED by that same tracker, so **verify them
+   by hand before evaluating a tracker of the same family against them** or the result is
+   circular by construction (research-whistle-corpus.md §1).
 5. MV2H metre+value integration for publication-comparable notation numbers; MRSSing corpus
    (CC-BY 4.0, verify annotation granularity + a paper/card licence mismatch first).
    **Status 2026-08-13:** `verstar/MRSAudio` is now live on HuggingFace (CC-BY-4.0, ungated,
@@ -901,10 +915,17 @@ below therefore mean "record and annotate our own" or "build a harness capabilit
 "find another dataset".)
 
 **Registers / sources with zero real data:**
-- Whistling (→ team-decision bullet above); piccolo and everything above ~700 Hz — the
-  routing census confirmed zero pitched real clips reach the `very-high` band, so both its
-  shipping path and the 2026-08-20 CREPE-pitchdown replacement are synthetic-validated only.
-- Harmonica — in the synthetic matrix, no real counterpart (URMP's 13 instruments lack it).
+- ~~Whistling~~ — **partly closed 2026-08-20.** Acquisition is exhausted and the evidence is in
+  `research-whistle-corpus.md`: no whistling corpus exists, and the licensable audio that does
+  is now fetched (`whistle-real`, 5 clips / 34 s; `whistle-vintage`, 6 clips / 180 s). Both
+  carry draft labels flagged `noteTruthDerived` until a human verifies them. What remains is
+  *volume*, and it is ours to record — capture protocol in that file's §6.
+- ~~piccolo and everything above ~700 Hz~~ — **partly closed 2026-08-20** by `fetch-tinysol.ts`
+  (64 clips / 512 notes of real Ircam timbre, `high` 0.924 vs `very-high` 0.654). Still
+  `constructedPerformance`: real tone, spliced phrasing. A real *performance* above 700 Hz
+  remains unrepresented, and piccolo specifically has no permissive corpus at all.
+- Harmonica — in the synthetic matrix, no real counterpart (URMP's 13 instruments lack it, and
+  the 2026-08-20 sweep found none anywhere — research-voice-datasets.md §6k).
 
 **Strata too thin to power conclusions:**
 - Low/high-band INSTRUMENTS: n = 6 / 5 real clips in the per-band sweep (URMP is 2–4 clips
@@ -918,9 +939,15 @@ below therefore mean "record and annotate our own" or "build a harness capabilit
 
 **Conditions:**
 - Genuinely RECORDED adverse takes: the adverse tier is synthetic degradation of real
-  performances — honest, but no take was performed in a real echoey room / outdoors. Ditto
-  the product capture path: no annotated corpus of phone-mic webm/opus recordings
-  (probe-realpath.ts probes the codec path with no truth behind it).
+  performances — honest, but no take was performed in a real echoey room / outdoors. (Partial
+  2026-08-20: `whistle-vintage` is real whistling over real piano/orchestra with real 78-rpm
+  surface noise — nobody synthesised it — and measured RIR/noise corpora to replace the
+  modelled room and babble are researched with DOIs in research-voice-datasets.md §6b–6d.)
+- ~~the product capture path: no annotated corpus of phone-mic webm/opus recordings~~ —
+  **closed 2026-08-20** by `Condition.codec`: a codec round trip cannot move a note, so the
+  existing truth applies. Four conditions (`phone-opus-96k/32k/16k`, `phone-aac-64k`),
+  alignment verified at 0.00 ms lag, effect measured null (±0.03). What remains uncovered is
+  the browser's *audio processing*, which the app disables by constraint.
 - N20EMv2 has no degraded variants (`degrade-real.ts` never run on it) — the adverse voice
   evidence rests on annotated-vocalset + vocadito alone.
 - Real out-of-tune singing with intended-note truth: the R20 intonation tier is synthetic
@@ -1566,3 +1593,195 @@ of the **source**, and the axis that pays is material (voice vs instrument vs bl
 the profile system already routes on. `PROFILE_BANDS` supports per-band values today; the
 evidence says there is nothing new to put in them. If a bleed/ensemble detector ever exists,
 the esmuc trio above (+0.02-class, three independent knobs) is what it would unlock.
+
+---
+
+## Findings log (2026-08-20 gap-filling pass)
+
+Executed against the **real-corpus gap register** above. Two of its rows now have real audio
+behind them for the first time; the acquisition question for whistling is closed with evidence.
+Research: **`research-whistle-corpus.md`** (whistling, in full) and
+`research-voice-datasets.md` §6 (every other licence verdict this pass produced).
+
+### Whistling: 0 → 11 real clips, and the acquisition question is closed
+
+**There is no whistling corpus, and there will not be one.** `research-whistle-corpus.md` §2
+records the sweep with the evidence attached: FSD50K has **no `Whistling` class at all**
+(measured from its `vocabulary.csv`, not inferred); AudioSet has the class but no grant over
+the audio; **MLEnd Hums and Whistles** — 6,000 files, 235 people, the biggest whistling
+collection in existence — reports `licenseName: "Unknown"` on Kaggle's own metadata API and
+states no terms anywhere, on top of eight in-copyright compositions; the Silbo Gomero corpus is
+CC BY-NC-SA; AID's Zenodo field says CC-BY-4.0 while the LICENSE *inside its archive* says
+CC BY-NC-SA (→ NC, per §5e's precedent), and its whistling is 18.5 s of incidental material
+anyway; both Belyk Dryad deposits are CC0 with **no timing anywhere** in the annotation chain.
+
+What does exist is now fetched, drafted and wired in. **Freesound's CC0 slice is what makes
+this a corpus rather than a smoke test** — an API key (free, instant) reaches previews under
+token auth, and 537 candidates screened down to 112 usable clips:
+
+| dataset | clips | notes | audio | licences |
+|---|---|---|---|---|
+| `whistle-real` | **117** | **2,777** | **18.3 min** (median clip 7.8 s) | CC0 (112 Freesound) + PD / CC BY-SA 3.0/4.0 (5 Wikimedia Commons) |
+| `whistle-vintage` | 6 | 249 | 3 min | public domain (Alice J. Shaw, Frank Stafford — pre-1923 sides) |
+
+⚠️ **Assembling that by search needed two filters, and the acoustic one was not enough.**
+`whistleScreen()` gates on the property that defines whistling — nearly all energy in one moving
+partial (real whistling 0.61–1.00; trains, crowds, wind, a shower head ≤0.08). It kept 82 of the
+first 170 candidates, and reading those 82 titles found `tin whistle.wav`, `Celtic Whistle
+Melody`, `Slide-whistle.wav`, `Hoary marmot whistles`, `Retro video game sfx - Wolf Whistle` and
+`synth Crystal`. **No threshold fixes that**: a tin whistle, a slide whistle, a sine synth and a
+marmot are acoustically the same class of signal as a person whistling. So the metadata gate
+(`FREESOUND_REQUIRE` + `FREESOUND_VETO`) requires the sound to be *described* as whistling in
+name or tags and vetoes instruments, synthesis, cartoons, animals, machines, heavy processing
+and non-melodic whistles — biased to precision, since a wrong clip costs a human's verification
+time and then poisons the truth. Funnel: 537 → 372 (described as whistling) → ~282 (not vetoed)
+→ **112** (acoustic). Verdicts are cached per `SCREEN_VERSION`, so re-runs neither re-download
+nor inherit superseded criteria. Also worth knowing: **Freesound's `next` link points at
+`/apiv2/search/` with no `/text/` and does not answer**, so paging must be `page=1,2,3…` — the
+first sweep silently stopped at 150 results.
+
+New chain, four scripts: `fetch-whistle-real.ts` (acquire + verify each licence live against
+the source's API + normalise) → `draft-note-labels.ts` (`lib/sineTrack.ts` drafts labels) →
+*human corrects the TSVs* → `import-note-labels.ts` (→ scoreable dataset). **Audio is cached,
+labels are committed** (`scripts/eval/annotations/`, Audacity's own three-column format) —
+the labels are the only artefact nobody can regenerate. Both datasets carry
+`noteTruthDerived: true` until a human verifies them, which is the flag that keeps unverified
+drafts out of every pooled number; §1 of the research file spells out why that matters
+specifically here (ship the whistle-FFT-tracker of open direction 4 before verifying, and the
+labels become a sibling of the estimator).
+
+**Real-whistle measurement (adaptive, draft truth, n = 117 clips / ~2.8k notes — read as
+diagnosis, not accuracy):**
+
+| dataset | COnP@100 ms | octErr | missed | spurious/100 | onset bias | trans recall |
+|---|---|---|---|---|---|---|
+| `whistle-real` | 0.36 | **0.00** | 55 % | **3** | +31 ms (med +20) | 0.258 (n=1270) |
+| `whistle-vintage` | 0.02 | 0.16 | 58 % | **102** | +62 ms | 0.293 (n=41) |
+
+1. **No octave errors on clean real whistling — confirmed at scale.** 0.00 over ~2,800 notes.
+   The failure mode a near-sinusoidal source was expected to provoke does not appear at all, so
+   a whistle-specific octave prior has nothing to fix. On the accompanied vintage tier it does
+   appear (0.16), which is the accompaniment.
+2. **The failure is conservative, not noisy**: 55 % of drafted notes missed against only **3
+   spurious per 100**. The pipeline drops whistled notes rather than inventing them. (Part of
+   that missed rate is the draft's own over-segmentation — 2.5 notes/s — so read the
+   missed:spurious *ratio*, which is the robust part, not the absolute.)
+3. **Transitions are the loss, now with real weight**: transition recall 0.258 over **1,270**
+   real transitions vs 0.344 on silence onsets. Whistling has no consonant to mark a re-onset,
+   and this is the first non-synthetic measurement of what that costs.
+4. ⚠️ **Correction to the earlier n=5 reading: the band ceiling is NOT the problem.** With five
+   clips it looked as though the resolver's 1900 Hz `high` ceiling routinely sat under the
+   material (2 of 5). Over 117 clips it is **3 of 120 analyses (2 %)**, and the overflow is
+   trivial — median 26 Hz, worst 53 Hz. The routing is mostly right: 71 clips (61 %) →
+   `very-high`/basic-pitch (4300 Hz ceiling, median scan 1570 Hz), 40 (34 %) → `high`/crepe-tiny
+   (1900 Hz ceiling, median scan 1106 Hz — legitimately inside CREPE's range). The remaining 9
+   resolved `mid`/`low` on median scans of 377/121 Hz, which almost certainly means the whistle
+   is not the loudest thing in those clips; they are the first candidates for the verification
+   pass to look at.
+5. **On accompanied material the resolver locks onto the accompaniment.** Every vintage clip
+   resolved `mid+noise` or `high+noise` with a 1900 Hz ceiling from a scan reporting
+   p10/med/p90 ≈ 215–530 Hz — the *piano*, while the whistled line sits at 1.3–2.2 kHz. The
+   102-spurious-per-100 rate is the same fact from the metric's side. This is a genuine
+   pipeline finding, and the only reason it is visible is that nobody synthesised it.
+
+### The `very-high` band, measured on real timbre for the first time (`fetch-tinysol.ts`)
+
+The register's flat statement was that **zero real pitched clips reach the `very-high` band**,
+so both its shipping path and the 2026-08-20 CREPE-pitchdown replacement were
+synthetic-validated only. TinySOL (CC-BY-4.0, Ircam Studio On Line, 2,913 isolated notes) has
+**742 notes at or above MIDI 77 and 353 at or above MIDI 86** — flute to D7, violin to E7,
+accordion to C♯8 — so `fetch-tinysol.ts` splices them into 8-note clips: **64 clips / 512 notes**
+across six instrument datasets, two bands (`high` 77–85 vs `very-high` 86–100), three dynamics,
+and two layouts (`legato`, 0 ms gap → real pitch transitions; `detached`, 80 ms gap).
+
+⚠️ Truth is **exact** (we placed every onset) and the performance is **not human** — no
+performer timing, no shaping. That is the opposite of `noteTruthDerived`, so it got its own
+manifest flag, **`constructedPerformance`** (`lib/realCorpus.ts`, honoured by `run-eval.ts`
+with its own footnote): reported, never pooled. Read it as register evidence only.
+
+| stratum | n clips | COnP@100 ms |
+|---|---|---|
+| `high` (MIDI 77–85) | 36 | **0.924** |
+| `very-high` (MIDI 86–100) | 28 | **0.654** |
+| | | **Δ −0.270** |
+
+And the interaction that says where to look:
+
+| band | pp | mf | ff |
+|---|---|---|---|
+| `high` | 0.854 | 0.979 | 0.939 |
+| `very-high` | **0.451** | 0.752 | 0.780 |
+
+Per instrument, `high` → `very-high`: flute 1.000 → 0.656, violin 0.938 → 0.643, oboe 0.938 →
+0.754, viola 0.856 → 0.625, accordion 0.896 → 0.627 (clarinet tops out at MIDI 91 so it has no
+`very-high` clips; its `high` mean is 0.917). **`octErr` is 0.00 in every stratum** — the band
+does not lose notes to octave confusion, it loses them outright, and the loss concentrates in
+*quiet* high notes (`very-high` pp 0.451 vs ff 0.780). Onset bias runs +26…+40 ms late on
+flute/violin/viola/accordion and −16…+4 ms on clarinet/oboe, but that comparison is confounded
+by the splice convention (a note is trimmed at −34 dBFS of its own peak, which places the truth
+onset earlier than the perceptual attack on slow bowed/breathy attacks) — do not read it as a
+calibration constant.
+
+Also worth noting for anyone using these clips: many resolved `high+reverb` / `very-high+noise`
+despite being dry Ircam recordings, because the spliced decay tails read as reverberance. That
+is a property of the construction, not of the audio.
+
+### The capture codec costs nothing measurable — a null with the alignment proven first
+
+The register's other standing complaint was that *"no annotated corpus of phone-mic webm/opus
+recordings"* exists and `probe-realpath.ts` probes the codec path *with no truth behind it*.
+That one needed no data at all: a codec round trip cannot move a note, so every clip's existing
+truth still applies. `Condition.codec` (types.ts) + a two-pass branch in `lib/degrade.ts` now
+re-encode a finished clip through the encoders browsers actually negotiate, and four new
+opt-in conditions exercise them: `phone-opus-96k` (the common MediaRecorder default for mono
+Opus), `phone-opus-32k`, `phone-opus-16k` (where Opus starts band-limiting hard — which matters
+more for whistling's 1–3 kHz fundamentals than for anything else we take) and `phone-aac-64k`
+(Safari's mp4/AAC path).
+
+**Alignment was verified before any score was read**, because an onset metric on a
+time-shifted clip measures the shift: best-correlation lag is **0.00 ms** for all four codecs.
+The round trip did come back ~72 ms short on Opus and ~58 ms on AAC (the encoder's frame
+padding, trimmed off the tail), which would have silently eaten the last note of every spliced
+TinySOL clip — so the encode input is padded (`apad`, 0.25 s) and the decode trimmed back;
+lengths now match within 0.6 ms with alignment still exact.
+
+| dataset | `real` (WAV) | opus 96k | opus 32k | opus 16k | aac 64k |
+|---|---|---|---|---|---|
+| `tinysol-flute` (12) | 0.828 | 0.838 | 0.841 | 0.802 | 0.852 |
+| `tinysol-violin` (12) | 0.790 | 0.785 | 0.763 | 0.763 | 0.784 |
+| `whistle-real` (5) | 0.315 | 0.325 | 0.321 | 0.359 | 0.321 |
+
+**Verdict: null, and a reassuring one.** Every delta is inside ±0.03 with no monotone trend in
+bitrate — even 16 kbps Opus, which is well below anything a browser negotiates. The WAV-based
+numbers in this log do transfer to the path users actually record on. Two honest limits: 29
+clips is far too few for a confidence interval (this is a "no large effect" result, not a
+measured zero), and it covers the **codec only** — not the browser's audio processing. That
+part happens to be safe by construction here: `RecordingEngine`'s `MIC_CONSTRAINTS` set
+`echoCancellation`, `noiseSuppression` and `autoGainControl` all to `false`, so on any platform
+that honours them the codec IS the capture-path transform. Where a platform ignores them
+(Safari/iOS is the usual suspect) this measurement says nothing.
+
+### What this pass did NOT close
+
+- **`whistle-real` has no performer metadata.** 117 clips is enough for a mean, but
+  `lib/split.ts` groups by performer and Freesound gives us an uploader, not a whistler — so the
+  split there is per-clip, and one uploader's several takes can land on both sides. Treat the
+  number as a corpus mean, not as a tuning target.
+- **Nothing is human-verified yet.** Both whistle datasets are flagged derived until someone
+  spends the ~40 minutes the research file's §6 budgets.
+- **Dogfood is the route still unexercised**: Freesound gave us 18 minutes of other people's
+  whistling, but nothing captured through the product and nothing performed in a real room, and
+  `WHISTLE_LOCAL_DIR=<dir>` ingests our own takes — the capture protocol (registers,
+  articulations, deliberately bad intonation, ~10 takes through the product's webm/opus path,
+  ~6 in a real echoey room) is written out in `research-whistle-corpus.md` §6.
+- **Real measured acoustics** are researched but not implemented: DEMAND (CC-BY-4.0,
+  `10.5281/zenodo.1227121`) for recorded noise beds and Arni/dEchorate/OK5 (all CC-BY-4.0, DOIs
+  in `research-voice-datasets.md` §6c) for measured RIRs would turn the adverse tier's
+  *modelled* room and babble into *recorded* ones. Both need one optional field on `Condition`
+  and NEW condition ids — never a redefinition of the existing four, or every historical
+  adverse number silently changes meaning. The MIT IR Survey, the obvious first choice, is
+  **barred**: its own page states no terms and the CC-BY-4.0 claim comes from a third-party
+  re-upload (§6d).
+- **Harmonica** has no real permissive counterpart anywhere (§6k), so the synthetic
+  `harmonica-mid` scenario stays the only evidence — now a documented state rather than an
+  unexplored one.

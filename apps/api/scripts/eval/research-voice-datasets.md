@@ -1645,3 +1645,140 @@ Per instruction to keep working §3a's unexplored leads, not just the corpora bl
   buried "conditions of use" or `Impressum` page, not yet located. Still open; needed before
   building the SVD fetcher regardless of the Zenodo-mirror block, since §5h already flagged
   that the mirror's terms may not equal the primary site's.
+
+---
+
+## 6. The 2026-08-20 gap-filling sweep — the register's non-whistle findings
+
+Executed against the README's **real-corpus gap register (2026-08-20)**. Whistling — the gap
+this pass was mainly aimed at — got its own file: **`research-whistle-corpus.md`**, which
+carries the full sweep, the acquisition verdicts, the two adopted datasets and the capture
+protocol. This section records everything else the pass touched, so this file stays the single
+register of licence verdicts.
+
+### 6a. ✅ TinySOL — ADOPTED. Real timbre in the `very-high` band, which had none.
+
+`10.5281/zenodo.3685367`, **CC-BY-4.0** on its own Zenodo record (Cella, Ghisi, Lostanlen,
+Lévy, Fineberg, Maresz; 2,913 isolated notes recorded at Ircam for Studio On Line 1996–99,
+44.1 kHz mono, 1.0 GB tar.gz + a 0.3 MB metadata CSV).
+
+Why it matters here: the 2026-08-20 provider-routing census found **zero real pitched clips
+reaching the `very-high` band**, so that band's shipping path and its CREPE-pitchdown
+replacement are synthetic-validated only. Measured from `TinySOL_metadata.csv`: **742 notes at
+or above MIDI 77 (698 Hz)** and **353 at or above MIDI 86 (1175 Hz)** — chromatic coverage to
+D7 on flute (2349 Hz), E7 on violin (2637 Hz), C♯8 on accordion (4435 Hz), each at pp / mf / ff.
+
+⚠️ **The catch, and the new manifest flag it needed.** TinySOL is one note per file, so a
+melody has to be assembled. `fetch-tinysol.ts` trims each note at −34 dBFS of its own peak,
+cuts it to 350 ms with a 6 ms fade at the splice, and lays eight of them out in two layouts
+(`legato`, 0 ms gap → real pitch transitions; `detached`, 80 ms gap → the silence-onset
+control). Truth is therefore **exact** — we placed every onset — but the *performance* is ours:
+no performer timing, no legato shaping, no rubato. That is the opposite failure mode from
+`noteTruthDerived` (weak labels, real performance), so it needed its own flag rather than a
+reuse of that one: **`constructedPerformance: true`** in `dataset.json`, honoured by
+`lib/realCorpus.ts` and `run-eval.ts`, which keep such datasets out of the pooled headline
+while scoring and reporting them with their own footnote. Built: **64 clips / 512 notes** across
+`tinysol-{flute,oboe,clarinet,violin,viola,accordion}`.
+
+### 6b. ✅ DEMAND — adopt for the adverse tier's noise beds (not yet implemented)
+
+`10.5281/zenodo.1227121`, **CC-BY-4.0**, first-party deposit: 16-channel recordings of real
+acoustic noise in 18 environments across 6 categories (café, office, street, park, transport,
+domestic), at 16 kHz and 48 kHz, ~100–300 MB per environment.
+
+The register's complaint is that *"the adverse tier is synthetic degradation of real
+performances — honest, but no take was performed in a real echoey room / outdoors"*. Half of
+that is fixable cheaply: `lib/degrade.ts` currently mixes `synthesizeSpeechNoise` /
+`synthesizeWind` beds from `lib/acoustics.ts`, and a `Condition` that names a real DEMAND wav
+instead would make `street-noise` and `wind-outdoor` **recorded** maskers rather than modelled
+ones. Not implemented this pass; the plumbing needed is one optional `noiseBedFile` field on
+`Condition` plus a fetcher, and the conditions must be added as NEW ids (never a redefinition
+of the existing four) or every historical adverse number silently changes meaning.
+
+### 6c. ✅ Real measured room impulse responses — several CC-BY-4.0 options, verified
+
+Same motive as 6b for the reverb axis: `degrade()` convolves with a *synthesised* exponential
+IR (`synthesizeRoomImpulse`). Real measured IRs are abundant and permissively licensed; checked
+via the Zenodo API, all **cc-by-4.0** on their own records:
+
+| dataset | DOI | shape |
+|---|---|---|
+| **Arni** (Aalto, variable acoustics) | `10.5281/zenodo.6985104` | one room, thousands of IRs across panel configurations → a measured RT60 *continuum*, which is exactly what a graded reverb axis wants |
+| **dEchorate** | `10.5281/zenodo.6576203` | 6 rooms, calibrated, echo-annotated |
+| **OK5** | `10.5281/zenodo.18622201` | spatial IRs from 25 real work-environment spaces → room *diversity* |
+| **FLAIR** | `10.5281/zenodo.17037517` | laser-calibrated room geometry alongside the IRs |
+| **RAVes** | `10.5281/zenodo.19809790` | spatial + binaural, room-acoustic variance study |
+
+Recommended pick if this gets built: **Arni for the axis, OK5 for the diversity check.** Same
+warning as 6b — new condition ids, and note that a measured IR needs its direct path normalised
+to unity before `afir gtype=none`, or the level design of every existing adverse condition
+shifts.
+
+### 6d. ⛔ MIT Acoustical Reverberation Scene Statistics Survey — re-host licence laundering
+
+271 measured IRs (Traer & McDermott, PNAS 2016), and the obvious first candidate for 6c. **The
+original page (`mcdermottlab.mit.edu/Reverb/IR_Survey.html`) states no licence, no terms and no
+permission** — just *"Download all 271 IRs (zip of audio files)"*. A HuggingFace re-upload
+(`benjamin-paine/mit-impulse-response-survey`) asserts **CC-BY-4.0**, which the original does
+not support. That is §2's re-host laundering pattern, third-party-assertion variety, and the
+rule is that the original's published terms are the record: **silence is not a grant → barred.**
+Use 6c's first-party CC-BY-4.0 deposits instead; there is no reason to take the risk for the
+same data.
+
+### 6e. ⛔ FSD50K — no `Whistling` class exists (measured, not inferred)
+
+Downloaded `FSD50K.ground_truth.zip` (334 kB) and read `vocabulary.csv`: **zero of the 200
+classes match `/whistl/i`.** Recorded here as well as in the whistle file because FSD50K keeps
+coming up as "the obvious Freesound-derived answer" for any sound class. It is not, for this
+one. See `research-whistle-corpus.md` §2b.
+
+### 6f. ⛔ AID (Anechoic Interferer Dataset) — the record contradicts its own archive
+
+`10.5281/zenodo.6974033`: Zenodo licence field `cc-by-4.0`; the `AID/LICENSE` file inside the
+283 MB archive is `Attribution-NonCommercial-ShareAlike 4.0 International`. §5e's precedent
+(Jingju part 2) applies — a record that self-contradicts is treated as NC. Content, for the
+avoidance of a re-check: 43 domestic source types recorded anechoically with three mics, of
+which `whistle` is 4 recordings (18.5 s per mic). **Barred**; cheap escalation available (ask
+the depositors which licence is operative — first-party deposit, likely an upload-form slip).
+
+### 6g. ⛔ MLEnd Hums and Whistles — 6,000 files, 235 people, no licence
+
+Kaggle `jesusrequena/mlend-hums-and-whistles` (QMUL), 16.5 GB. Kaggle's metadata API returns
+`"licenseName": "Unknown"`; neither the project site nor its docs states terms. No licence is
+not a grant (the SSVD / MIR-ST500 rule), and all eight songs are in-copyright compositions on
+top of that. **KILL** — see `research-whistle-corpus.md` §2d.
+
+### 6h. ⛔ Silbo Gomero Speech Corpus (OpenSLR 137) — CC BY-NC-SA 4.0
+
+49 min of whistled Spanish, 4 whistlers, with transcripts. NC → barred by §4.0. It would have
+been a real pitch-tracker stress test in the whistle band; it is closed.
+
+### 6i. ⛔ Belyk et al. real-time-MRI whistling — CC0, and still no timing
+
+`10.5061/dryad.kb56cd1`. Ships audio (MRI-noise-filtered) plus **F0 per MRI frame at 16.67 Hz**
+and tongue coordinates — a frame-level contour, so gate 2 fails exactly as for any frame-f0
+corpus, and the audio is processed beyond recognition of any real mic path. Distinct from the
+already-killed §5c (`10.5061/dryad.504t7`); both are dead for note truth.
+
+### 6j. ⛔ Vocal Imitation Set / VocalSketch — CC-BY-4.0, wrong content
+
+`10.5281/zenodo.1340763`, `10.5281/zenodo.3538534`, `10.5281/zenodo.13862`. Thousands of vocal
+imitations of sound effects, permissively licensed, no melody and no note truth. Listed so a
+future pass is not tempted by the licence.
+
+### 6k. Gaps this pass could NOT fill — with what was actually checked
+
+- **Harmonica** — no real permissive corpus exists. Searched MIR dataset indexes and the
+  instrument-classification literature; harmonica appears only inside polyphonic mixes
+  (HamNava, jazz sets) or in NC/anechoic orchestral sets. The synthetic matrix
+  (`harmonica-mid`) stays the only evidence, and that is now a documented state rather than an
+  unexplored one.
+- **Real out-of-tune singing with intended-note truth** — the only corpora that exist are
+  Smule's: `Intonation` and DAMP, both distributed *on request* through CCRMA under
+  research-scoped terms → barred on the same footing as SingStyle111. The R20 synthetic
+  intonation tier remains the only route, as designed.
+- **Amateur low-register solo singing** (to break annotated-vocalset's operatic-male dominance
+  of the low/voice stratum) — nothing new found; §2b's annotatable-audio candidates (Fundación
+  Joaquín Díaz, Library of Congress AFC, ccMixter) remain the route, i.e. in-house annotation.
+- **Bleed / ensemble labelling** — unchanged; no corpus marks it, and the register's point
+  stands that even a per-dataset-section annotation would be enough to develop a detector.
