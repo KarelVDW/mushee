@@ -10,11 +10,13 @@
  *                                               whether the truth is trusted)
  *   .cache/whistle-staging/<dataset>/<clip>.wav
  *
- * and writes the standard layout every other fetcher produces:
+ * and writes the standard layout every other fetcher produces, into the TIER
+ * the labels have earned (context/ while any clip is unverified, benchmark/
+ * once a human has verified them all — see lib/realCorpus.ts):
  *
- *   fixtures/eval-real/<dataset>/<clip>.truth.json
- *   fixtures/eval-real/<dataset>/<clip>__real.wav
- *   fixtures/eval-real/<dataset>/dataset.json
+ *   fixtures/eval-real/<tier>/<dataset>/<clip>.truth.json
+ *   fixtures/eval-real/<tier>/<dataset>/<clip>__real.wav
+ *   fixtures/eval-real/<tier>/<dataset>/dataset.json
  *
  * 🔴 The provenance rule this script enforces. A clip whose `.meta.json` still
  * has `verifiedBy: null` carries labels that came out of an algorithm, and
@@ -46,6 +48,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from 'fs';
@@ -185,7 +188,10 @@ function main(): void {
     const labelFiles = readdirSync(annDir).filter((f) => f.endsWith('.labels.tsv')).sort();
     if (!labelFiles.length) continue;
 
-    const out = join(OUT_ROOT, ds.name);
+    // The dataset's TIER (benchmark/ vs context/, see lib/realCorpus.ts) depends
+    // on whether every imported clip is verified — which is only known after the
+    // loop. Build into a temp dir, then move it into the tier it earned.
+    const out = join(OUT_ROOT, `.import-${ds.name}`);
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
 
@@ -256,6 +262,7 @@ function main(): void {
     }
 
     if (!clips) {
+      rmSync(out, { recursive: true, force: true });
       console.log(`  ${ds.name}: nothing to import`);
       continue;
     }
@@ -278,8 +285,24 @@ function main(): void {
     };
     writeFileSync(join(out, 'dataset.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
+    // Verification decides the tier: drafts stay in context/, a fully
+    // human-verified set graduates to benchmark/. Clear every location the
+    // dataset may have occupied (either tier, or the pre-tier flat layout) so
+    // a promotion never leaves a stale copy behind.
+    const tier = unverified > 0 ? 'context' : 'benchmark';
+    const finalOut = join(OUT_ROOT, tier, ds.name);
+    for (const stale of [
+      join(OUT_ROOT, 'benchmark', ds.name),
+      join(OUT_ROOT, 'context', ds.name),
+      join(OUT_ROOT, ds.name),
+    ]) {
+      rmSync(stale, { recursive: true, force: true });
+    }
+    mkdirSync(join(OUT_ROOT, tier), { recursive: true });
+    renameSync(out, finalOut);
+
     console.log(
-      `  ${ds.name}: ${clips} clips, ${totalNotes} notes` +
+      `  ${ds.name}: ${clips} clips, ${totalNotes} notes → ${tier}/` +
         (emptyLabels ? `, ${emptyLabels} clips with empty labels skipped` : '') +
         (driftSkipped ? `, ⛔ ${driftSkipped} clips skipped on audio drift` : '') +
         (unverified

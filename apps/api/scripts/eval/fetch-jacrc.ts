@@ -2,9 +2,9 @@
  * Fetch the STUDENT subset of JaCRC (Jingju a Cappella Recordings Collection)
  * as a PITCHLESS / onset-only dataset built from manual syllable boundaries.
  *
- * Output: scripts/fixtures/eval-real/jacrc-students/<clip>.truth.json
- *         scripts/fixtures/eval-real/jacrc-students/<clip>__real.wav
- *         scripts/fixtures/eval-real/jacrc-students/dataset.json
+ * Output: scripts/fixtures/eval-real/benchmark/jacrc-students/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/jacrc-students/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/jacrc-students/dataset.json
  *
  * Source : https://zenodo.org/records/6536490
  * License: CC-BY-4.0 (Zenodo record licence field, verified 2026-08-13), and the
@@ -73,7 +73,7 @@ const AUDIO_ZIP_URL =
 const CACHE = resolve(__dirname, '.cache', 'jacrc');
 const ANNOT_ZIP = join(CACHE, 'JaCRC-annotations.zip');
 const ANNOT_DIR = join(CACHE, 'annotations');
-const OUT = resolve(__dirname, '../fixtures/eval-real/jacrc-students');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/jacrc-students');
 
 const NOMINAL_BPM = 120;
 const EXCERPT_SEC = Number(process.env.JACRC_EXCERPT_SEC) || 30;

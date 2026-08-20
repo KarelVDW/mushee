@@ -17,7 +17,7 @@
  *   1. fetch-whistle-real.ts    → .cache/whistle-staging/<dataset>/<clip>.wav
  *   2. draft-note-labels.ts     → annotations/<dataset>/<clip>.labels.tsv   (TRACKED)
  *   3. (human corrects the TSVs in Audacity / Sonic Visualiser)
- *   4. import-note-labels.ts    → fixtures/eval-real/<dataset>/            (scoreable)
+ *   4. import-note-labels.ts    → fixtures/eval-real/<tier>/<dataset>/            (scoreable)
  *
  * Audio is cached, never committed (it is re-fetchable from the URLs below).
  * The label TSVs ARE committed — they are the only part nobody can regenerate.

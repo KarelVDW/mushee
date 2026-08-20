@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 import { degrade } from './lib/degrade';
+import { discoverRealDatasets } from './lib/realCorpus';
 import { CONDITIONS } from './scenarios';
 
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
@@ -108,10 +109,9 @@ function main(): void {
   const conditions = CONDITIONS.filter((c) => wantConditions.includes(c.id));
 
   let made = 0;
-  for (const dataset of readdirSync(REAL_ROOT, { withFileTypes: true })) {
-    if (!dataset.isDirectory()) continue;
-    if (wantDatasets.length && !wantDatasets.includes(dataset.name)) continue;
-    const dir = join(REAL_ROOT, dataset.name);
+  for (const dataset of discoverRealDatasets(REAL_ROOT)) {
+    if (wantDatasets.length && !wantDatasets.includes(dataset.id)) continue;
+    const dir = dataset.dir;
     const clips = readdirSync(dir).filter((f) => f.endsWith('__real.wav'));
 
     for (const clip of clips) {
@@ -128,7 +128,7 @@ function main(): void {
         made += 1;
       }
     }
-    console.log(`  ${dataset.name}: ${clips.length} clips × ${conditions.length} conditions`);
+    console.log(`  ${dataset.id}: ${clips.length} clips × ${conditions.length} conditions`);
   }
   console.log(`\nWrote ${made} degraded variants under ${REAL_ROOT}`);
 }

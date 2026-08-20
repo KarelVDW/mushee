@@ -2,9 +2,9 @@
  * Fetch Dagstuhl ChoirSet (DCS) quartet singer-stems into the eval harness's
  * real corpus layout — the harness's FIRST voice corpus with a real tempo.
  *
- * Output: scripts/fixtures/eval-real/dagstuhl-choir/<clip>.truth.json
- *         scripts/fixtures/eval-real/dagstuhl-choir/<clip>__real.wav
- *         scripts/fixtures/eval-real/dagstuhl-choir/dataset.json
+ * Output: scripts/fixtures/eval-real/benchmark/dagstuhl-choir/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/dagstuhl-choir/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/dagstuhl-choir/dataset.json
  *
  * Source : https://zenodo.org/records/4618287 (DagstuhlChoirSet_V1.2.3.zip, 5.1 GB)
  * License: CC-BY-4.0 (Zenodo record licence field, re-verified 2026-08-13).
@@ -77,7 +77,7 @@ const ZIP_URL =
   'https://zenodo.org/api/records/4618287/files/DagstuhlChoirSet_V1.2.3.zip/content';
 
 const CACHE = resolve(__dirname, '.cache', 'dagstuhl');
-const OUT = resolve(__dirname, '../fixtures/eval-real/dagstuhl-choir');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/dagstuhl-choir');
 
 /** Excerpt length; a whole take is ~5 min, far longer than any real recording. */
 const EXCERPT_SEC = Number(process.env.DCS_EXCERPT_SEC) || 30;

@@ -2,9 +2,9 @@
  * Fetch the Choral Singing Dataset (CSD, MTG/UPF) and convert per-singer stems
  * into the eval harness's real corpus layout.
  *
- * Output: scripts/fixtures/eval-real/csd/<clip>.truth.json
- *         scripts/fixtures/eval-real/csd/<clip>__real.wav
- *         scripts/fixtures/eval-real/csd/dataset.json
+ * Output: scripts/fixtures/eval-real/benchmark/csd/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/csd/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/csd/dataset.json
  *
  * Source : https://zenodo.org/records/2649950  (1.07 GB zip)
  * License: CC-BY-4.0 (the record's own licence field; first-party MTG deposit).
@@ -61,7 +61,7 @@ const ZIP_URL =
 const CACHE = resolve(__dirname, '.cache');
 const ZIP = join(CACHE, 'csd.zip');
 const EXTRACT = join(CACHE, 'csd');
-const OUT = resolve(__dirname, '../fixtures/eval-real/csd');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/csd');
 
 const NOMINAL_BPM = 120; // metrics compare seconds; bpm only feeds the quantizer
 const WINDOW_SEC = 30;

@@ -2,9 +2,9 @@
  * Fetch AVP (Amateur Vocal Percussion) into the eval harness's real corpus
  * layout, as a PITCHLESS / onset-only dataset.
  *
- * Output: scripts/fixtures/eval-real/avp/<clip>.truth.json
- *         scripts/fixtures/eval-real/avp/<clip>__real.wav
- *         scripts/fixtures/eval-real/avp/dataset.json  (manifest, pitchless: true)
+ * Output: scripts/fixtures/eval-real/benchmark/avp/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/avp/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/avp/dataset.json  (manifest, pitchless: true)
  *
  * Source : https://zenodo.org/records/5036529 — "AVP_Dataset.zip" (~220 MB)
  * License: CC-BY-4.0 (Zenodo record licence field, verified 2026-08-12).
@@ -53,7 +53,7 @@ const AUDIO_URL = 'https://zenodo.org/api/records/5036529/files/AVP_Dataset.zip/
 const CACHE = resolve(__dirname, '.cache', 'avp');
 const ZIP = join(CACHE, 'AVP_Dataset.zip');
 const EXTRACT = join(CACHE, 'extracted');
-const OUT = resolve(__dirname, '../fixtures/eval-real/avp');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/avp');
 
 const NOMINAL_BPM = 120;
 // Onset-only scoring ignores duration; this just keeps notes non-degenerate.

@@ -32,7 +32,7 @@
  *   `detached` — 80 ms of silence between notes: the easy silence-onset case,
  *                kept as the paired control.
  *
- * Output: fixtures/eval-real/tinysol-<instrument>/…  (one dataset per instrument,
+ * Output: fixtures/eval-real/context/tinysol-<instrument>/…  (one dataset per instrument,
  * mirroring fetch-urmp.ts's convention so a per-instrument question stays askable)
  *
  * Source : https://zenodo.org/records/3685367   (TinySOL v6, 1.0 GB tar.gz)
@@ -54,7 +54,7 @@ const CACHE = resolve(__dirname, '.cache');
 const TARBALL = join(CACHE, 'TinySOL.tar.gz');
 const META = join(CACHE, 'TinySOL_metadata.csv');
 const EXTRACT = join(CACHE, 'tinysol');
-const OUT_ROOT = resolve(__dirname, '../fixtures/eval-real');
+const OUT_ROOT = resolve(__dirname, '../fixtures/eval-real/context');
 
 const SAMPLE_RATE = 44100;
 

@@ -17,7 +17,8 @@ The two everyday entry points are also wired into package.json:
 ## Research notes
 
 Standing research documents live beside the harness. They are the durable record; the Findings
-logs below are the measurements.
+logs below are the measurements. **Start with `CORPORA.md`** — the corpus register: which
+datasets are benchmark-worthy vs context-only, the gaps, and everything researched and rejected.
 
 | File | Covers |
 |---|---|
@@ -43,12 +44,19 @@ logs below are the measurements.
 - `scripts/fixtures/eval/` — **synthetic** corpus, built by `generate.ts`:
   one clean clip plus degraded variants per (scenario × melody), each with
   `<melody>.truth.json`.
-- `scripts/fixtures/eval-real/<dataset>/` — **real** recorded corpora (singing
-  *and* monophonic instruments), built by the `fetch-*.ts` scripts:
+- `scripts/fixtures/eval-real/<tier>/<dataset>/` — **real** recorded corpora
+  (singing *and* monophonic instruments), built by the `fetch-*.ts` scripts:
   `<clip>__real.wav` + `<clip>.truth.json` + `dataset.json` manifest.
   `degrade-real.ts` adds `<clip>__<condition>.wav` variants for the adverse
   conditions — real performances under synthetic wind/reverb/babble are the most
   honest robustness measure we have.
+
+  The tier is the corpus's standing, visible in the tree (see **`CORPORA.md`**,
+  the register, and `lib/realCorpus.ts` for the discovery rules):
+  - `benchmark/` — trusted truth, real human performance, permissive licence;
+    these numbers may gate decisions.
+  - `context/` — kept for realism/register coverage (mir-qbsh, the TinySOL
+    splices, the unverified whistling); reported, never pooled, never gates.
 
   Each dataset dir carries ONE `instrumentId` hint (`lib/realCorpus.ts`), so a
   corpus that spans instruments is split per instrument — hence `urmp-violin`,
@@ -136,7 +144,7 @@ to exercise it end-to-end. `probe-source-classifier.ts` measures it directly
 | `fetch-jacrc.ts` | JaCRC students (CC-BY-4.0) — 175×30 s excerpts / 5.2k **manual syllable onsets** from 25 amateur conservatory students singing jingju. `pitchless`. ⚠️ **read `onsetRecall`, not F1**: syllable onsets are a strict subset of note onsets on melismatic singing, so precision is understated by construction. Students-only folder (documented performer consent); the collection's professional/commercial rows are deliberately untouched. See research-voice-datasets.md §5l. |
 | `fetch-whistle-real.ts` | **The only real whistling the harness has.** Stages permissively-licensed whistling audio for annotation: `whistle-real` = 112 Freesound CC0 clips (screened from 537 candidates) + 5 Wikimedia Commons clips (PD / CC BY-SA) = 18.3 min; `whistle-vintage` = 6×30 s excerpts of public-domain art-whistling 78s (Alice J. Shaw, Frank Stafford), accompanied and noisy by nature. Verifies each file's licence live against the source's API, then applies a metadata gate (must be *described* as whistling; vetoes tin/slide whistles, synths, animals, machines) and an acoustic screen (`whistleScreen`) — both needed, see the findings log. Needs a Freesound key in `FREESOUND_TOKEN` or `scripts/eval/.freesound-token` (gitignored) for the CC0 sweep; `FREESOUND_MAX` sets how many candidates to screen; `WHISTLE_LOCAL_DIR` ingests our own takes; `WHISTLE_INCLUDE_ENCUMBERED=1` adds clips whose *composition* is still in copyright. See research-whistle-corpus.md. |
 | `draft-note-labels.ts` | Draft note labels for staged audio via `lib/sineTrack.ts` (framewise FFT peak → semitone runs; deliberately NOT our model family), written as Audacity label TSVs under `annotations/` — **tracked**, because a corrected label file is the one artefact nobody can regenerate. Never overwrites an existing TSV without `--force`. |
-| `import-note-labels.ts` | Hand-corrected label TSVs → a scoreable dataset. Enforces the provenance rule: while any clip's `.meta.json` still says `verifiedBy: null`, the dataset is written `noteTruthDerived` and stays out of every pooled number. `--verified-by="<name>"` stamps a reviewed set. |
+| `import-note-labels.ts` | Hand-corrected label TSVs → a scoreable dataset. Enforces the provenance rule: while any clip's `.meta.json` still says `verifiedBy: null`, the dataset is written `noteTruthDerived` and stays out of every pooled number. `--verified-by="<name>"` stamps a reviewed set — and the dataset's TIER follows: unverified drafts land in `eval-real/context/`, a fully verified set is promoted to `eval-real/benchmark/` automatically. |
 | `fetch-tinysol.ts` | TinySOL (CC-BY-4.0) — the harness's **only real audio in the `very-high` band**. Splices Ircam single notes into 8-note clips: 64 clips / 512 notes over flute/oboe/clarinet/violin/viola/accordion × 2 bands × 3 dynamics × {legato, detached}. Truth is exact by construction and the performance is not human, so the datasets declare `constructedPerformance` and are reported but never pooled. |
 | `fetch-soundfont.sh` | FluidR3_GM soundfont for `generate.ts`. |
 | `degrade-real.ts` | Adverse-condition variants of the fetched real clips (run after the fetchers). |
@@ -907,6 +915,10 @@ Research directions (in expected-value order):
    would turn an already-paid-for corpus into the isolated onset benchmark we lack.
 
 ### Real-corpus gap register (2026-08-20)
+
+> The LIVING version of this register now lives in `CORPORA.md` (together with the
+> benchmark/context tier tables) and is the one to update; this entry stays as the
+> dated record of the 2026-08-20 state.
 
 Consolidated from the 2026-08-20 provider/per-band pass, which ran into most of these as
 confounds or unpowered strata. Items already tracked above are cross-referenced, not
