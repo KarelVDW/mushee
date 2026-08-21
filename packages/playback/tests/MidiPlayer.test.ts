@@ -36,7 +36,7 @@ class FakeAudioContext {
 // Imported after the mocks are registered.
 import { Soundfont } from 'smplr'
 
-import { MidiPlayer } from '@/lib/MidiPlayer'
+import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 
 describe('MidiPlayer', () => {
     beforeEach(() => {

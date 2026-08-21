@@ -2,12 +2,12 @@ import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 
 import { CursorManager } from './CursorManager'
-import { Metronome } from './Metronome'
-import { MidiPlayer } from './MidiPlayer'
+import { Metronome } from '@mushee/playback/Metronome'
+import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
-import { ScoreScheduler } from './ScoreScheduler'
-import type { Tickable } from './Ticker'
-import { Ticker } from './Ticker'
+import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
+import type { Tickable } from '@mushee/playback/Ticker'
+import { Ticker } from '@mushee/playback/Ticker'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
 

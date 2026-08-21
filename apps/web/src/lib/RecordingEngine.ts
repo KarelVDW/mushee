@@ -1,8 +1,8 @@
 import type { MxmlMeasure } from '@mushee/notation/components/types'
 import type { Score } from '@mushee/notation/model/Score'
 
-import { MidiPlayer } from './MidiPlayer'
-import type { Tickable } from './Ticker'
+import { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { Tickable } from '@mushee/playback/Ticker'
 
 const DEFAULT_BPM = 90
 const CHUNK_MS = 100

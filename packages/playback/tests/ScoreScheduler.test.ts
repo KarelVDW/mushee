@@ -6,8 +6,8 @@ import { Score } from '@mushee/notation/model/Score'
 import { pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
-import type { MidiPlayer, ScheduledNote } from '@/lib/MidiPlayer'
-import { ScoreScheduler } from '@/lib/ScoreScheduler'
+import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
+import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 
 /** Minimal MidiPlayer stand-in: a settable clock plus a recording `schedule`. */
 function fakePlayer() {

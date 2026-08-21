@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "@mushee/notation": "workspace:^",
+        "@mushee/playback": "workspace:^",
         "@polar-sh/sdk": "^0.47.1",
         "@tanstack/react-query": "^5.101.0",
         "better-auth": "^1.2.0",
@@ -23,8 +24,7 @@
         "posthog-js": "^1.396.6",
         "posthog-node": "^5.39.4",
         "react": "19.2.3",
-        "react-dom": "19.2.3",
-        "smplr": "^0.20.0"
+        "react-dom": "19.2.3"
     },
     "devDependencies": {
         "@playwright/test": "^1.60.0",

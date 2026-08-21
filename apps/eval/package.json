@@ -1,0 +1,29 @@
+{
+    "name": "@mushee/eval",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev --turbopack -p 3600",
+        "build": "next build",
+        "start": "next start -p 3600",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@mushee/notation": "workspace:^",
+        "@mushee/playback": "workspace:^",
+        "@tanstack/react-query": "^5.101.0",
+        "ffmpeg-static": "^5.3.0",
+        "next": "16.1.6",
+        "pg": "^8.16.0",
+        "react": "19.2.3",
+        "react-dom": "19.2.3"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4",
+        "@types/node": "^20",
+        "@types/pg": "^8.15.0",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "tailwindcss": "^4"
+    }
+}

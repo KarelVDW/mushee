@@ -114,15 +114,21 @@ function boolEnv(key: string): boolean {
 /**
  * Real corpus (EVAL_REAL): datasets are discovered from fixtures/eval-real
  * rather than the synthetic melody×register matrix. rootMidi is irrelevant for
- * recorded clips (nothing is synthesized), so it's zeroed.
+ * recorded clips (nothing is synthesized), so it's zeroed. `dir` carries the
+ * dataset's actual directory — since the benchmark/context tiering, datasets
+ * live one level below the eval-real root, so `join(root, id)` no longer
+ * resolves them.
  */
-function discoverRealScenarios(root: string): Scenario[] {
+type EvalScenario = Scenario & { dir?: string };
+
+function discoverRealScenarios(root: string): EvalScenario[] {
   return discoverRealDatasets(root).map((d) => ({
     id: d.id,
     label: d.label,
     kind: d.kind,
     instrumentId: d.instrumentId,
     rootMidi: 0,
+    dir: d.dir,
   }));
 }
 
@@ -333,7 +339,9 @@ async function main(): Promise<void> {
       !pitchlessIds.has(scenarioId) &&
       !constructedIds.has(scenarioId));
 
-  const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
+  const allScenarios: EvalScenario[] = realMode
+    ? discoverRealScenarios(evalRoot)
+    : SCENARIOS;
   const scenarios = allScenarios.filter(
     (s) => !scenarioFilter || scenarioFilter.includes(s.id),
   );
@@ -347,7 +355,7 @@ async function main(): Promise<void> {
   const results: ClipResult[] = [];
 
   for (const scenario of scenarios) {
-    const dir = join(evalRoot, scenario.id);
+    const dir = scenario.dir ?? join(evalRoot, scenario.id);
     if (!existsSync(dir)) continue;
     const truths = readdirSync(dir).filter((f) => f.endsWith('.truth.json'));
 

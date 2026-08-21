@@ -165,3 +165,14 @@ DEMAND noise beds, Arni/OK5 measured RIRs, MUSAN/FSDnoisy18k et al.
    gets two dirs so the test half never enters a sweep (the n20emv2 pattern).
 3. Record licence, provenance and every caveat in dataset.json, add the fetcher
    row to the README table, and add the dataset to the tables above.
+
+## Corpora recorded via apps/eval
+
+The eval workbench (`apps/eval`, `pnpm dev:eval`) creates corpora of generated
+melodies and records our own performances of them, materializing straight into
+this tree (`dataset.json` carries `source: "recorded in-house via apps/eval"`).
+Their truth is *prescribed* — the generated notes are the labels and the
+performer plays to a metronome — so the labels are exact but only as honest as
+the take; the app's expected-vs-derived overlay is the review step. They
+default to `context/`; move one to `benchmark/` (and add it to the table above)
+only after its takes have been reviewed clip by clip. Licence is trivially ours.
