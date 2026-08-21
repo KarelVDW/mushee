@@ -329,6 +329,43 @@ export class ScoreManipulator {
     }
 
     /**
+     * Opens the transpose popover — registered by the page, since the popover is view
+     * state the manipulator doesn't own. Lets the transpose keyboard shortcut live in the
+     * command list like any other; unset (editor not mounted), the keystroke is declined.
+     */
+    onTransposeRequest?: () => void
+
+    /**
+     * Transpose by a (chromatic, diatonic) interval — the transpose popover's Apply.
+     * `scope: 'score'` moves everything including key signatures; `'selection'` moves only
+     * the selected run. `Score.transpose` rewrites the affected notes (identities change),
+     * so the selection is re-anchored: onto the returned replacements for a selection, or
+     * re-resolved at the same (measure, index) for the whole score — like setInstrument.
+     */
+    transpose(chromatic: number, diatonic: number, scope: 'score' | 'selection'): void {
+        const score = this._score
+        if (!score) return
+        this.manipulate(() => {
+            if (scope === 'selection' && this._selectedNotes.length > 0) {
+                const result = score.transpose(chromatic, diatonic, this._selectedNotes)
+                const first = result[0]
+                const last = result[result.length - 1]
+                if (first && last) this.setRange(first, last)
+            } else {
+                const note = this._selectedNote
+                const measureIdx = note ? note.measure.index : null
+                const noteIdx = note ? note.measure.notes.indexOf(note) : null
+                score.transpose(chromatic, diatonic)
+                if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
+                    this.setSingle(score.measures[measureIdx]?.notes[noteIdx] ?? null)
+                }
+            }
+        })
+        this.save(score)
+        this.emit()
+    }
+
+    /**
      * Switch the lead instrument. `Score.setInstrument` rewrites every note (transposition),
      * invalidating the active-note ref, so we re-resolve it at the same (measure, index).
      */

@@ -14,7 +14,7 @@ const KEY_ROWS: number[][] = [
     [1, 2, 3, 4, 5, 6, 7],
 ]
 
-const KEY_NAMES: Record<number, string> = {
+export const KEY_NAMES: Record<number, string> = {
     [-7]: 'C♭',
     [-6]: 'G♭',
     [-5]: 'D♭',

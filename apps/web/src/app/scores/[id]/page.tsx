@@ -21,6 +21,7 @@ import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
+import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
@@ -29,6 +30,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import {
     CHANGE_PITCH,
     LOWER_PITCH,
+    MINIMIZE_ACCIDENTALS,
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
@@ -70,6 +72,8 @@ export default function ScoreEditorPage() {
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
+    const [transposeOpen, setTransposeOpen] = useState(false)
+    const transposeAnchorRef = useRef<HTMLDivElement>(null)
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
@@ -134,6 +138,24 @@ export default function ScoreEditorPage() {
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
     const handleUndo = useCallback(() => manipulator.undo(), [manipulator])
     const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
+    const handleMinimizeAccidentals = useCallback(() => manipulator.run(MINIMIZE_ACCIDENTALS), [manipulator])
+    const handleTransposeApply = useCallback(
+        (chromatic: number, diatonic: number, scope: 'score' | 'selection') => {
+            manipulator.transpose(chromatic, diatonic, scope)
+            setTransposeOpen(false)
+        },
+        [manipulator],
+    )
+    const closeTranspose = useCallback(() => setTransposeOpen(false), [])
+
+    // The transpose shortcut opens this popover — view state the manipulator can't own, so
+    // the command reaches back through this registration.
+    useEffect(() => {
+        manipulator.onTransposeRequest = () => setTransposeOpen(true)
+        return () => {
+            manipulator.onTransposeRequest = undefined
+        }
+    }, [manipulator])
 
     // In-score attribute glyphs (tempo / clef / key): the ScoreView only reports the
     // click; this page owns the popover it opens and applies the change through the
@@ -375,6 +397,31 @@ export default function ScoreEditorPage() {
                         selection, while history travel is a document-level (meta) operation —
                         like export, it belongs with the chrome. On phones the pair moves into
                         the dock's tool strip instead (thumb reach, and there is no ⌘Z). */}
+                    {/* Pitch operations follow the same rule: minimize-accidentals and transpose act on
+                        the whole score by default (a multi-note selection narrows them), so they live
+                        with the document-level chrome. On phones they join the dock's settings well. */}
+                    {!isMobile && (
+                        <div role="group" aria-label="Pitch" className="flex items-center gap-1">
+                            <ChipToggle onClick={handleMinimizeAccidentals} disabled={!activeNote} ariaLabel="Minimize accidentals">
+                                <Icon name="natural" size={16} />
+                            </ChipToggle>
+                            <div ref={transposeAnchorRef} className="relative">
+                                <ChipToggle active={transposeOpen} onClick={() => setTransposeOpen((o) => !o)} ariaLabel="Transpose">
+                                    <Icon name="transpose" size={16} />
+                                </ChipToggle>
+                                {transposeOpen && (
+                                    <TransposePopover
+                                        score={score}
+                                        selectedNotes={manipulator.selectedNotes}
+                                        anchorRef={transposeAnchorRef}
+                                        className="right-0 top-[calc(100%+0.5rem)]"
+                                        onApply={handleTransposeApply}
+                                        onDismiss={closeTranspose}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    )}
                     {!isMobile && (
                         <div role="group" aria-label="History" className="flex items-center gap-1">
                             <ChipToggle onClick={handleUndo} disabled={!manipulator.canUndo} ariaLabel="Undo">
@@ -492,6 +539,16 @@ export default function ScoreEditorPage() {
                     onTimeSet={handleTimeSet}
                     selectionDisabled={!activeNote}
                     compact={isMobile}
+                    pitch={
+                        isMobile
+                            ? {
+                                  onMinimize: handleMinimizeAccidentals,
+                                  score,
+                                  selectedNotes: manipulator.selectedNotes,
+                                  onTranspose: handleTransposeApply,
+                              }
+                            : undefined
+                    }
                     metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
                     history={
                         isMobile

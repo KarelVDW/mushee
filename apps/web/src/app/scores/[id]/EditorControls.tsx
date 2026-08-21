@@ -2,12 +2,14 @@
 
 import { CLEF_DEFS, type ClefType, type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
+import type { Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
+import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: string | undefined }[] = [
@@ -185,6 +187,13 @@ interface NoteToolDockProps {
     selectionDisabled: boolean
     /** Tighter group spacing so the tool rows fit a phone. */
     compact?: boolean
+    /** When set, the pitch actions (minimize accidentals / transpose) join the score-settings well (mobile: the header has no room for them). */
+    pitch?: {
+        onMinimize: () => void
+        score: Score
+        selectedNotes: Note[]
+        onTranspose: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+    }
     /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
     metronome?: { active: boolean; onToggle: () => void }
     /** When set, undo/redo join the tool strip (mobile: the header has no room for them and there is no ⌘Z). */
@@ -226,6 +235,7 @@ export function NoteToolDock({
     onTimeSet,
     selectionDisabled,
     compact = false,
+    pitch,
     metronome,
     history,
     footer,
@@ -269,6 +279,20 @@ export function NoteToolDock({
                     <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
                     <TimeSignatureControl time={time} onSet={onTimeSet} disabled={selectionDisabled} compact={compact} />
                     <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
+                    {pitch && (
+                        <>
+                            <ChipToggle plain onClick={pitch.onMinimize} disabled={selectionDisabled} ariaLabel="Minimize accidentals">
+                                <Icon name="natural" size={14} />
+                            </ChipToggle>
+                            <TransposeControl
+                                score={pitch.score}
+                                selectedNotes={pitch.selectedNotes}
+                                onApply={pitch.onTranspose}
+                                disabled={selectionDisabled}
+                                compact={compact}
+                            />
+                        </>
+                    )}
                     {metronome && (
                         <ChipToggle plain active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
                             <Icon name="audio-lines" size={14} />
@@ -416,6 +440,42 @@ function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureC
                     className={popoverPosition(compact)}
                     onSelect={(beatAmount, beatType) => {
                         onSet(beatAmount, beatType)
+                        setOpen(false)
+                    }}
+                    onDismiss={() => setOpen(false)}
+                />
+            )}
+        </div>
+    )
+}
+
+// --- Transpose control (the dock's trigger; the desktop header hosts its own) ---
+
+interface TransposeControlProps {
+    score: Score
+    selectedNotes: Note[]
+    onApply: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+    disabled: boolean
+    compact: boolean
+}
+
+function TransposeControl({ score, selectedNotes, onApply, disabled, compact }: TransposeControlProps) {
+    const anchorRef = useRef<HTMLDivElement | null>(null)
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div ref={anchorRef} className="relative">
+            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel="Transpose">
+                <Icon name="transpose" size={14} />
+            </ChipToggle>
+            {open && (
+                <TransposePopover
+                    score={score}
+                    selectedNotes={selectedNotes}
+                    anchorRef={anchorRef}
+                    className={popoverPosition(compact)}
+                    onApply={(chromatic, diatonic, scope) => {
+                        onApply(chromatic, diatonic, scope)
                         setOpen(false)
                     }}
                     onDismiss={() => setOpen(false)}

@@ -2,6 +2,7 @@ import type { BindableCommand } from '@/lib/Keybindings'
 
 import {
     LOWER_PITCH,
+    MINIMIZE_ACCIDENTALS,
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
@@ -86,6 +87,15 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),
     fromAction(TOGGLE_TUPLET, 'Edit notes', 'Digit3'),
+    fromAction(MINIMIZE_ACCIDENTALS, 'Edit notes', 'KeyM'),
+    {
+        id: 'transpose',
+        label: 'Transpose',
+        group: 'Edit notes',
+        defaultShortcut: 'Shift+KeyT',
+        // Opens the transpose popover (no direct edit); declined until the editor registers it.
+        run: (manipulator) => (manipulator.onTransposeRequest ? manipulator.onTransposeRequest() : false),
+    },
     // Clipboard shortcuts are `fixed`: ⌘C/⌘X/⌘V (and ⌘A above) are OS-wide conventions, so
     // they're listed in the shortcuts dialog but never rebindable.
     {
