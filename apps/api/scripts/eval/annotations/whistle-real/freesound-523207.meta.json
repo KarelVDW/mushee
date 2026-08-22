@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-523207",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 5,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 2,
+    "sha256": "07897d1f7c3988ba582db4b2fba50f57691d2aaf57db4c1ea4fa77dd949dde7f"
+  },
+  "provenance": {
+    "id": "freesound-523207",
+    "dataset": "whistle-real",
+    "sha256": "07897d1f7c3988ba582db4b2fba50f57691d2aaf57db4c1ea4fa77dd949dde7f",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user LilMati (CC0)",
+    "source": "https://freesound.org/people/LilMati/sounds/523207/",
+    "sourceUrl": "https://cdn.freesound.org/previews/523/523207_6142149-hq.mp3",
+    "note": "\"Whistle In The Dark\", 2.0 s, 128 kbps mp3 preview; screen tonal=0.64 median=1441Hz notes=5/3 pitches"
+  }
+}

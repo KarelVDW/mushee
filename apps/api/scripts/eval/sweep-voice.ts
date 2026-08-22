@@ -42,15 +42,23 @@
  *   e6    pitch measured over the arrived part of the note only       (null)
  *   e7    a second, cheaper price for wide intervals                  (null, informative)
  *   e8    Hann-weighted-median vs α-trimmed-mean note pitch           (null)
+ *   r15   WaoN joint duration × velocity note filters (plugin pass task 2)
+ *   r19   block-level voiced-fraction quorum on the gate (plugin pass task 3)
+ *   r21   fill 1–2-frame unvoiced dropouts on the track (plugin pass task 4)
+ *   r7    re-attack detector report delay, both consumers (plugin pass task 5)
+ *   r9    pYIN multi-candidate emission + octave tie-break (plugin pass E3)
  *   best  the candidate, with its cleanup and onset constant re-checked
  *   ship  the exact shipping configuration × cleanup variants
  *   all   every group
  */
 
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
-import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector';
+import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/pipeline/onset-detector';
+import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver';
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import {
@@ -79,7 +87,6 @@ import { type CachedClip, TrackCache } from './lib/trackCache';
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -130,7 +137,7 @@ interface Config {
    * instead of using the ones the cache stored at the shipping defaults. Only
    * meaningful together with a cleanup that runs `onsetSplit`.
    */
-  onsets?: { dipRatio?: number; riseRatio?: number; minIoiSec?: number };
+  onsets?: OnsetDetectorOptions;
   /** Notes straight from the decoder, before any `NoteExtractor` cleanup. */
   segment: (c: CachedClip) => NoteEventLike[];
   /** Cleanup to run after segmentation; omit for none. */
@@ -142,7 +149,16 @@ interface Config {
    */
   post?: (notes: NoteEventLike[], c: CachedClip) => NoteEventLike[];
   needsFlux?: boolean;
+  /**
+   * Run the per-clip production reverberance estimate (an ffmpeg decode, no
+   * model) before the config loop, into `clipReverberance` — for configs that
+   * gate a mechanism on the room the way `ProfileResolver` would.
+   */
+  needsReverberance?: boolean;
 }
+
+/** `${dataset}/${clip}` → `estimateReverberance` over the take, as production sees it. */
+const clipReverberance = new Map<string, number>();
 
 interface NoteEventLike {
   startTimeSeconds: number;
@@ -198,7 +214,7 @@ function voiceSegment(over: VoiceDecodeOptions, useRegister = false) {
       confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
       minFreqHz: c.profile.minFreqHz,
       maxFreqHz: c.profile.maxFreqHz,
-      minFrames: c.profile.minFramesPerNote ?? 4,
+      minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
       ...(useRegister && { registerCents: registerCentsOf(c) }),
       ...over,
     }).decode(c.track, c.energy);
@@ -354,11 +370,12 @@ function buildConfigs(groups: Set<string>): Config[] {
         cleanup: null,
       });
     }
-    for (const minFrames of [3, 4, 5, 6]) {
+    // 60–120 ms = 3–6 frames at the trajectory's 20 ms hop.
+    for (const minNoteSec of [0.06, 0.08, 0.1, 0.12]) {
       configs.push({
-        name: `e1c minFrames${minFrames}`,
+        name: `e1c minNote${minNoteSec * 1000}ms`,
         group: 'e1c',
-        segment: voiceSegment({ ...BEST, minFrames }),
+        segment: voiceSegment({ ...BEST, minNoteSec }),
         cleanup: null,
       });
     }
@@ -370,7 +387,8 @@ function buildConfigs(groups: Set<string>): Config[] {
         cleanup: null,
       });
     }
-    for (const attackFrameCost of [0.15, 0.35, 0.7]) {
+    // Per 10 ms (0.075/0.175/0.35 ≡ the old per-frame 0.15/0.35/0.7 at 20 ms hop).
+    for (const attackFrameCost of [0.075, 0.175, 0.35]) {
       configs.push({
         name: `e1c attackFrame${attackFrameCost}`,
         group: 'e1c',
@@ -761,6 +779,390 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R15 — WaoN's joint duration × velocity filters (plugin survey §9.3): the
+  // short-note floor spares short LOUD runs (real staccato), and a new
+  // long-AND-quiet drop targets reverb tails. On this clean corpus the question
+  // is safety plus any free win; the adverse-tier measurement these filters were
+  // built for lives in sweep-reverb.ts (the `voice *` rows).
+  if (on('r15')) {
+    configs.push({
+      name: 'r15 OFF (anchor)',
+      group: 'r15',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const keepShortLoudRatio of [1.2, 1.5, 2]) {
+      configs.push({
+        name: `r15 sl${keepShortLoudRatio}`,
+        group: 'r15',
+        segment: voiceSegment({ ...BEST, keepShortLoudRatio }),
+        cleanup: null,
+      });
+    }
+    for (const quietRatio of [0.2, 0.3, 0.45]) {
+      configs.push({
+        name: `r15 lq${quietRatio}@.35s`,
+        group: 'r15',
+        segment: voiceSegment({ ...BEST, dropLongQuiet: { minSec: 0.35, quietRatio } }),
+        cleanup: null,
+      });
+    }
+    configs.push({
+      name: 'r15 sl1.5+lq.3',
+      group: 'r15',
+      segment: voiceSegment({
+        ...BEST,
+        keepShortLoudRatio: 1.5,
+        dropLongQuiet: { minSec: 0.35, quietRatio: 0.3 },
+      }),
+      cleanup: null,
+    });
+  }
+
+  // R19 — block-level voiced-fraction quorum on the voicing gate (plugin survey
+  // §11.3/§7.2/§4.5). The adverse-tier measurement lives in sweep-reverb.ts
+  // (`voice q*` rows); this group is the clean-corpus safety check.
+  if (on('r19')) {
+    configs.push({
+      name: 'r19 OFF (anchor)',
+      group: 'r19',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const minFraction of [0.25, 0.5, 0.75]) {
+      for (const windowSec of [0.06, 0.12, 0.2]) {
+        configs.push({
+          name: `r19 q${minFraction}w${windowSec * 1000}`,
+          group: 'r19',
+          segment: voiceSegment({
+            ...BEST,
+            voicedQuorum: { minFraction, windowSec },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R21 — fill 1–2-frame unvoiced dropouts on the track before decoding (Deep
+  // Autotuner's interpolate_pyin, corrected to fill unvoiced frames only). The
+  // "done when" is a two-part claim: no regression anywhere, AND the
+  // `unvoicedPitchCost` optimum flattens — the sign that cost was doing two
+  // jobs (note survival across consonants + pitch identity), of which the fill
+  // just took the trivial half.
+  if (on('r21')) {
+    for (const fill of [undefined, 0.02, 0.04]) {
+      for (const unvoicedPitchCost of [0.8, 1.5, 3]) {
+        configs.push({
+          name: `r21 ${fill === undefined ? 'raw' : `fill${fill * 1000}`} u${unvoicedPitchCost}`,
+          group: 'r21',
+          segment: voiceSegment({
+            ...BEST,
+            unvoicedPitchCost,
+            ...(fill !== undefined && { fillUnvoicedGapSec: fill }),
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R21ad — the reverberance-ADAPTIVE dropout fill (fillSec = scale × the
+  // production `estimateReverberance`, off below 20 ms). The always-on fill
+  // wins big under reverb and costs the clean slice; this asks whether the
+  // production signal can keep the fill away from the clean corpora — esmuc/csd
+  // are real choir rooms, so "clean" is not automatically "dry" here. Needs the
+  // per-clip reverberance pre-pass (`needsReverberance`).
+  if (on('r21ad')) {
+    configs.push({
+      name: 'r21ad OFF (anchor)',
+      group: 'r21ad',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const scale of [0.1, 0.15, 0.2]) {
+      configs.push({
+        name: `r21ad x${scale}`,
+        group: 'r21ad',
+        needsReverberance: true,
+        segment: (c) => {
+          const r = clipReverberance.get(`${c.dataset}/${c.clip}`) ?? 0;
+          const fillSec = scale * r;
+          return voiceSegment({
+            ...BEST,
+            ...(fillSec >= 0.02 && { fillUnvoicedGapSec: fillSec }),
+          })(c);
+        },
+        cleanup: null,
+      });
+    }
+  }
+
+  // R7 — the re-attack detector's aubio-style report delay (plugin pass task 5).
+  // The detector reports the trough of the inter-note dip, which precedes the
+  // audible re-attack; this calibrates the constant on both consumers of its
+  // onsets. Anchors also go through re-detection (delay 0) so the comparison
+  // isolates the delay itself.
+  if (on('r7')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    const delays = [-0.03, -0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.05];
+    for (const d of delays) {
+      configs.push({
+        name: `r7 v d${d * 1000}ms`,
+        group: 'r7',
+        segment: voiceSegment(BEST),
+        cleanup: SPLIT,
+        onsets: { delaySec: d },
+      });
+    }
+    for (const d of delays) {
+      configs.push({
+        name: `r7 s d${d * 1000}ms`,
+        group: 'r7',
+        segment: shippedSegment,
+        cleanup: SHIPPED_CLEANUP,
+        onsets: { delaySec: d },
+      });
+    }
+  }
+
+  // R17 — the survey's three remaining pitch estimators (plugin pass task 7),
+  // in the order the doc ranks them: TalentedHack's slew-limit-with-momentum
+  // (arrives and holds), fat1's one-pole (creeps), MXTune's per-note linear
+  // detrend. Same SPLIT cleanup as e8, so rows compare against that log.
+  if (on('r17')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r17 trimmed (ships)',
+      group: 'r17',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+    });
+    for (const slewTimeSec of [0.03, 0.05, 0.1]) {
+      configs.push({
+        name: `r17 slew${slewTimeSec * 1000}`,
+        group: 'r17',
+        segment: voiceSegment({ ...BEST, pitchEstimator: 'slew-limit', slewTimeSec }),
+        cleanup: SPLIT,
+      });
+    }
+    for (const onePoleTauSec of [0.02, 0.04, 0.08]) {
+      configs.push({
+        name: `r17 pole${onePoleTauSec * 1000}`,
+        group: 'r17',
+        segment: voiceSegment({ ...BEST, pitchEstimator: 'one-pole', onePoleTauSec }),
+        cleanup: SPLIT,
+      });
+    }
+    configs.push({
+      name: 'r17 detrend',
+      group: 'r17',
+      segment: voiceSegment({ ...BEST, pitchEstimator: 'detrend' }),
+      cleanup: SPLIT,
+    });
+  }
+
+  // R9/R16 (E3) — the headline experiment: pYIN's multi-candidate emission.
+  // Kill criteria (from the plan, verbatim): kill if the single-candidate
+  // baseline is not beaten on the VOICE slice at k=3 AND k=5.
+  if (on('r9')) {
+    configs.push({
+      name: 'r9 OFF (anchor)',
+      group: 'r9',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const k of [3, 5]) {
+      for (const yinTrust of [0.5, 1, 2]) {
+        configs.push({
+          name: `r9 k${k} y${yinTrust}`,
+          group: 'r9',
+          segment: voiceSegment({ ...BEST, candidates: { k, yinTrust } }),
+          cleanup: null,
+        });
+      }
+    }
+    for (const octaveBias of [1, 1.5]) {
+      configs.push({
+        name: `r9 k5 y1 oct${octaveBias}`,
+        group: 'r9',
+        segment: voiceSegment({ ...BEST, candidates: { k: 5, yinTrust: 1, octaveBias } }),
+        cleanup: null,
+      });
+    }
+  }
+
+  // R10(a) (E4) — interval-proportional change cost, the survey's strongest
+  // cross-reference (§16.7). The flat BEST cost is saturated at 2.5 (direct
+  // jumps never taken); an interval shape re-opens SMALL intervals cheaply,
+  // which is exactly the transition-recall gap (0.65 vs the shipping
+  // segmenter's 0.80). Base cost × shape swept together — they trade.
+  if (on('r10')) {
+    configs.push({
+      name: 'r10 OFF (anchor)',
+      group: 'r10',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const changeCost of [0.5, 1, 1.5]) {
+      for (const sigmaSemitones of [0.7, 1.5, 3]) {
+        configs.push({
+          name: `r10 g c${changeCost} s${sigmaSemitones}`,
+          group: 'r10',
+          segment: voiceSegment({
+            ...BEST,
+            changeCost,
+            intervalChange: { form: 'gaussian', sigmaSemitones },
+          }),
+          cleanup: null,
+        });
+      }
+      for (const perOctaveNats of [2, 5, 10]) {
+        configs.push({
+          name: `r10 l c${changeCost} o${perOctaveNats}`,
+          group: 'r10',
+          segment: voiceSegment({
+            ...BEST,
+            changeCost,
+            intervalChange: { form: 'linear', perOctaveNats },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R10(b) (E4) — pitch memory across silence, Praat's path-lookback. Today a
+  // step and a minor tenth cost the same after any rest; this prices the
+  // interval from the pitch the silence run left. Amortised (Praat's form —
+  // long rests forget) and fixed variants.
+  if (on('r10b')) {
+    configs.push({
+      name: 'r10b OFF (anchor)',
+      group: 'r10b',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const perOctaveNats of [1, 3, 6, 12]) {
+      for (const amortize of [true, false]) {
+        configs.push({
+          name: `r10b ${amortize ? 'am' : 'fix'} o${perOctaveNats}`,
+          group: 'r10b',
+          segment: voiceSegment({
+            ...BEST,
+            silenceMemory: { perOctaveNats, amortize },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R6 (E7) — fat1's two-stage voicing decay: release the note-change
+  // resistance after N unvoiced frames while `unvoicedPitchCost` alone keeps
+  // deciding survival. The case it targets: a slurred pitch change THROUGH a
+  // consonant, which the saturated change cost currently forbids.
+  if (on('r6')) {
+    configs.push({
+      name: 'r6 OFF (anchor)',
+      group: 'r6',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    for (const afterSec of [0.04, 0.08]) {
+      for (const discount of [0.5, 0.2, 0]) {
+        configs.push({
+          name: `r6 a${afterSec * 1000} d${discount}`,
+          group: 'r6',
+          segment: voiceSegment({
+            ...BEST,
+            unvoicedChangeRelease: { afterSec, discount },
+          }),
+          cleanup: null,
+        });
+      }
+    }
+  }
+
+  // R24 (Batch 4) — the angle-band-gated slope rotation, the conditional twist
+  // on detrend that task 7's three unconditional variants lacked. Same SPLIT
+  // cleanup as r17 so the rows compare against that family's log.
+  if (on('r24')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r24 trimmed (ships)',
+      group: 'r24',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+    });
+    configs.push({
+      name: 'r24 slope-gated',
+      group: 'r24',
+      segment: voiceSegment({ ...BEST, pitchEstimator: 'slope-gated' }),
+      cleanup: SPLIT,
+    });
+  }
+
+  // R3 — aubio's adaptive onset threshold (plugin pass task 6), on both
+  // consumers of the detector's onsets. The bar its own doc comment sets: beat
+  // the fixed ratios on the sustained-singing corpora AND guitarset/vocadito at
+  // once, which no fixed setting managed.
+  if (on('r3')) {
+    const SPLIT: NoteExtractorOptions = {
+      maxGridDivisor: 4,
+      steps: {
+        pitchOutliers: false, merge: false, transients: false, monophonic: false,
+      },
+    };
+    configs.push({
+      name: 'r3 v fixed (anchor)',
+      group: 'r3',
+      segment: voiceSegment(BEST),
+      cleanup: SPLIT,
+      onsets: {},
+    });
+    configs.push({
+      name: 'r3 s fixed (anchor)',
+      group: 'r3',
+      segment: shippedSegment,
+      cleanup: SHIPPED_CLEANUP,
+      onsets: {},
+    });
+    for (const windowSec of [0.15, 0.3, 0.5]) {
+      for (const k of [0.5, 1, 2, 4]) {
+        configs.push({
+          name: `r3 v w${windowSec * 1000} k${k}`,
+          group: 'r3',
+          segment: voiceSegment(BEST),
+          cleanup: SPLIT,
+          onsets: { adaptiveThreshold: { windowSec, k } },
+        });
+        configs.push({
+          name: `r3 s w${windowSec * 1000} k${k}`,
+          group: 'r3',
+          segment: shippedSegment,
+          cleanup: SHIPPED_CLEANUP,
+          onsets: { adaptiveThreshold: { windowSec, k } },
+        });
+      }
+    }
+  }
+
   // FLUX — §3.2's selective in-note SuperFlux splitter, the one untried
   // model-free re-onset idea. The broadband envelope is proven unable to see a
   // re-articulation (e9 + the reonsetCost/accentBonus nulls); band-wise flux is
@@ -889,8 +1291,10 @@ async function main(): Promise<void> {
     (process.env.VOICE_EXP ?? 'base,e1').split(',').map((s) => s.trim()).filter(Boolean),
   );
 
+  // `constructedPerformance` (tinysol-*) is excluded with the same reasoning as
+  // derived truth: the guard slice must be real playing, not our own splices.
   const datasets = discoverRealDatasets(REAL_ROOT).filter(
-    (d) => !d.noteTruthDerived && d.corpusSplit !== 'test',
+    (d) => !d.noteTruthDerived && !d.constructedPerformance && d.corpusSplit !== 'test',
   );
   const voiceIds = datasets.filter((d) => d.kind === 'voice').map((d) => d.id).sort();
   const guardIds = withGuard
@@ -929,6 +1333,27 @@ async function main(): Promise<void> {
       await ensureFluxCache(c);
       built += 1;
       if (built % 100 === 0) console.log(`  flux sidecars: ${built}/${voiceClips.length}`);
+    }
+  }
+
+  // Per-clip production reverberance for room-gated configs — decoded exactly
+  // the way `ProfileResolver` sees the audio (16 kHz, high-pass 30 Hz, no
+  // loudnorm). ffmpeg only; no model inference.
+  if (configs.some((c) => c.needsReverberance)) {
+    const decoder = new AudioDecoder();
+    let built = 0;
+    for (const c of clips) {
+      const key = `${c.dataset}/${c.clip}`;
+      if (clipReverberance.has(key)) continue;
+      try {
+        const wav = readFileSync(c.wavPath);
+        const det = await decoder.decode(wav, 16000, { loudnorm: false, highpassHz: 30 });
+        clipReverberance.set(key, estimateReverberance(det.samples, 16000));
+      } catch {
+        clipReverberance.set(key, 0);
+      }
+      built += 1;
+      if (built % 100 === 0) console.log(`  reverberance: ${built}/${clips.length}`);
     }
   }
 

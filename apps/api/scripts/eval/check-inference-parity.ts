@@ -1,15 +1,14 @@
 /**
- * Parity gate for the remote inference services. Compares the in-process TF.js
+ * Parity gate for the remote inference service. Compares the in-process TF.js
  * forward pass (LocalModelBackend) against the remote gRPC service, both as a
  * tight numeric tensor diff and end-to-end through the real RecordingPipeline.
  *
  *   CREPE_INFERENCE_URL=localhost:50051 \
- *   BASIC_PITCH_INFERENCE_URL=localhost:50052 \   # optional
  *   tsx scripts/eval/check-inference-parity.ts [scenarios] [melody]
  *
- * Any service whose URL is unset stays local on both sides (so this also works
- * to gate CREPE alone). Exits non-zero if forward-pass maxAbsDiff exceeds the
- * threshold or any scenario's F1 regresses beyond tolerance.
+ * With the URL unset everything stays local on both sides. Exits non-zero if
+ * forward-pass maxAbsDiff exceeds the threshold or any scenario's F1 regresses
+ * beyond tolerance.
  */
 
 import { spawn } from 'child_process';
@@ -18,7 +17,6 @@ import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { CompositeModelBackend } from '../../src/recordings/pipeline/providers/composite-model-backend';
 import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
 import type { ModelBackend } from '../../src/recordings/pipeline/providers/model-backend';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
@@ -30,26 +28,16 @@ import type { GroundTruth } from './types';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const DIRS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
-// Forward-pass sanity bounds. CREPE loads the exact tfjs layers weights, so it
-// matches to float noise. basic-pitch runs the PyPI SavedModel (same ICASSP-2022
-// weights, different runtime/op-fusion than the tfjs graph model), so its
-// activations differ at the normal cross-runtime magnitude (~5e-4); end-to-end F1
-// parity is the accuracy-meaningful gate there.
+// Forward-pass sanity bound. CREPE loads the exact tfjs layers weights, so it
+// matches to float noise.
 const CREPE_FWD_THRESHOLD = 1e-4;
-const BP_FWD_THRESHOLD = 2e-3;
 const F1_TOLERANCE = 0.02;
 
 function remoteOrLocal(local: LocalModelBackend): ModelBackend {
   const crepeUrl = process.env.CREPE_INFERENCE_URL;
-  const bpUrl = process.env.BASIC_PITCH_INFERENCE_URL;
-  if (!crepeUrl && !bpUrl) return local;
-  return new CompositeModelBackend({
-    'crepe-tiny': crepeUrl ? new RemoteModelBackend('crepe-tiny', crepeUrl) : local,
-    'basic-pitch': bpUrl ? new RemoteModelBackend('basic-pitch', bpUrl) : local,
-  });
+  return crepeUrl ? new RemoteModelBackend('crepe-tiny', crepeUrl) : local;
 }
 
 function encodeWebmOpus(wav: Buffer): Promise<Buffer> {
@@ -93,33 +81,6 @@ async function main(): Promise<void> {
     for (let i = 0; i < a.length; i++) max = Math.max(max, Math.abs(a[i] - b[i]));
     const ok = max <= CREPE_FWD_THRESHOLD;
     console.log(`[A] CREPE forward-pass maxAbsDiff=${max.toExponential(3)} ${ok ? 'OK' : 'FAIL'}`);
-    if (!ok) failed = true;
-  }
-
-  // (A2) numeric forward-pass parity on a deterministic basic-pitch PCM window.
-  if (process.env.BASIC_PITCH_INFERENCE_URL) {
-    const L = 22050 * 4; // 4 s of synthetic mono PCM
-    const pcm = new Float32Array(L);
-    for (let i = 0; i < L; i++) {
-      pcm[i] = 0.3 * Math.sin((2 * Math.PI * 440 * i) / 22050) +
-        0.15 * Math.sin((2 * Math.PI * 880 * i) / 22050);
-    }
-    const a = await local.basicPitchForward(pcm);
-    const b = await remote.basicPitchForward(pcm);
-    let max = 0;
-    const rows = Math.min(a.frames.length, b.frames.length);
-    const rowDiff = Math.abs(a.frames.length - b.frames.length);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < a.frames[r].length; c++) {
-        max = Math.max(max, Math.abs(a.frames[r][c] - b.frames[r][c]));
-        max = Math.max(max, Math.abs(a.onsets[r][c] - b.onsets[r][c]));
-      }
-    }
-    const ok = max <= BP_FWD_THRESHOLD && rowDiff === 0;
-    console.log(
-      `[A2] basic-pitch forward-pass maxAbsDiff=${max.toExponential(3)} ` +
-        `rowDiff=${rowDiff} (T=${a.frames.length}) ${ok ? 'OK' : 'FAIL'} (cross-runtime; F1 is the gate)`,
-    );
     if (!ok) failed = true;
   }
 

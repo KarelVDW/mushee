@@ -1,0 +1,40 @@
+{
+  "clip": "commons-human",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 3,
+  "draftMedianCentsOffset": 7,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 1.474467120181406,
+    "sha256": "6218a15ee5ee21984b79fa83ac991f86b6b5d3df71e50a46bcf1ce321e30f8f7"
+  },
+  "provenance": {
+    "id": "commons-human",
+    "dataset": "whistle-real",
+    "sha256": "6218a15ee5ee21984b79fa83ac991f86b6b5d3df71e50a46bcf1ce321e30f8f7",
+    "licence": "pd",
+    "licenceVerified": true,
+    "attribution": "TwoWings — pd",
+    "source": "https://commons.wikimedia.org/wiki/File:Human_whistling.ogg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Human_whistling.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "note": "~1.5 s, median f0 ~1.55 kHz — the shortest clip in the tier"
+  }
+}

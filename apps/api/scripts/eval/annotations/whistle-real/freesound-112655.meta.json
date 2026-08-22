@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-112655",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 21,
+  "draftMedianCentsOffset": 4,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 24.95004535147392,
+    "sha256": "87b08a2100932da892f41a971f5148531c050327515b9d14b06f51c44483c66e"
+  },
+  "provenance": {
+    "id": "freesound-112655",
+    "dataset": "whistle-real",
+    "sha256": "87b08a2100932da892f41a971f5148531c050327515b9d14b06f51c44483c66e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user iut_Paris8 (CC0)",
+    "source": "https://freesound.org/people/iut_Paris8/sounds/112655/",
+    "sourceUrl": "https://cdn.freesound.org/previews/112/112655_907124-hq.mp3",
+    "note": "\"ElodieGicquel_2011_3.wav\", 24.9 s, 128 kbps mp3 preview; screen tonal=1.00 median=700Hz notes=21/16 pitches"
+  }
+}

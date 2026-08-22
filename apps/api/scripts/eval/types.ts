@@ -44,6 +44,23 @@ export interface GroundTruth {
    * `scoreNotesBest` in lib/metrics.ts; plain `scoreNotes` ignores it.
    */
   alternateNotes?: TruthNote[][];
+  /**
+   * A manually annotated beat axis for the clip: `timeSec` is when a beat is
+   * heard, `beat` is its position in quarter-note beats from the piece's beat 0
+   * (negative for an anacrusis).
+   *
+   * Why this exists separately from `bpm`: `bpm` is one scalar, which can only
+   * describe a *constant* tempo. A performance with real rubato — a choir
+   * following a conductor, ritardando into a cadence — has no such scalar, and
+   * pushing its notes through one misplaces every beat after the first tempo
+   * change. Where a corpus ships a hand-annotated grid (Dagstuhl ChoirSet:
+   * tapped in Sonic Visualiser, then reviewed by a second annotator), the grid
+   * IS the reference beat axis and `lib/notation.ts`'s `truthToBeats` uses it
+   * in preference to `bpm`. `bpm` remains set — to the clip's median local
+   * tempo — because the rest of the harness (and the pipeline's quantizer)
+   * still needs a single number.
+   */
+  beatGrid?: { timeSec: number; beat: number }[];
 }
 
 /** How a scenario's audio is produced. */
@@ -97,4 +114,28 @@ export interface Condition {
    * if any): mic EQ coloration, band-limiting. Empty = none.
    */
   postFilter?: string;
+  /**
+   * Re-encode the finished clip through a lossy CODEC and decode it back, so the
+   * eval can score the path the product actually captures on: the browser's
+   * MediaRecorder hands us webm/Opus (Chrome/Edge/Firefox) or mp4/AAC (Safari),
+   * never WAV. Applied LAST — after loudnorm, room, noise and mic EQ — because
+   * that is the physical order: the codec sees whatever reached the microphone.
+   *
+   * This is the one condition family whose ground truth needs no annotation
+   * work: a codec round trip does not move the notes, so every clip's existing
+   * truth still applies. `probe-realpath.ts` covers the same ground for the
+   * streaming path but has no truth behind it; this puts the codec on the
+   * scored corpus. Verify the round trip is sample-aligned before trusting any
+   * onset-bias number from it (measured: see the findings log).
+   */
+  codec?: { container: string; encoder: string; bitrateKbps: number };
+  /**
+   * R20 intonation tier: per-note detune of exactly this magnitude (cents,
+   * random sign per note), applied at the SYNTHESIZER — not an audio
+   * degradation — with clean acoustics and the written notes as ground truth.
+   * Rendered only for articulated voice scenarios; `generate.ts` skips every
+   * other scenario, and `degrade-real.ts` must never select these (real-audio
+   * per-note detuning is parked behind this tier's gate).
+   */
+  detuneCents?: number;
 }

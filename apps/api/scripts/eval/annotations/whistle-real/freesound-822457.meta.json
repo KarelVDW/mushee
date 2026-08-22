@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-822457",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 27,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7.4767120181405895,
+    "sha256": "20ff54ce2e2649e3e9ec640ded974d2ad9482f57c5204bef937fbd8624839fb3"
+  },
+  "provenance": {
+    "id": "freesound-822457",
+    "dataset": "whistle-real",
+    "sha256": "20ff54ce2e2649e3e9ec640ded974d2ad9482f57c5204bef937fbd8624839fb3",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user HenryHardhat (CC0)",
+    "source": "https://freesound.org/people/HenryHardhat/sounds/822457/",
+    "sourceUrl": "https://cdn.freesound.org/previews/822/822457_17740437-hq.mp3",
+    "note": "\"spooky eerie whistling 01\", 7.5 s, 128 kbps mp3 preview; screen tonal=0.65 median=769Hz notes=27/11 pitches"
+  }
+}

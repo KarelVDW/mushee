@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../note-event';
 
 /**
  * Opaque per-recording state owned by a `PitchProvider`. Exists so providers
@@ -21,7 +21,6 @@ export interface PitchSession {}
  *    high ceiling, bass voices a low floor.
  *  - `confidenceThreshold`: voicing gate for the pitch-trajectory providers
  *    (CREPE).
- *  - `onsetThreshold` / `frameThreshold`: basic-pitch note-gating thresholds.
  *  - `minFramesPerNote`: shortest run (in provider frames) a trajectory provider
  *    will commit as a note. Lower keeps brief notes (recall) at some risk of
  *    noise; trajectory providers only.
@@ -32,8 +31,6 @@ export interface PitchTranscribeOptions {
   minFreqHz?: number;
   maxFreqHz?: number;
   confidenceThreshold?: number;
-  onsetThreshold?: number;
-  frameThreshold?: number;
   minFramesPerNote?: number;
   pitchBinToleranceCents?: number;
   /**
@@ -65,7 +62,7 @@ export interface PitchProvider {
   readonly sampleRate: number;
 
   /**
-   * Whether the provider already detects note onsets itself (basic-pitch has an
+   * Whether the provider already detects note onsets itself (a note-level CNN has an
    * onset head). Trajectory providers (CREPE) segment only on pitch
    * stability and set this false, so the pipeline applies its own amplitude
    * re-attack splitting for them; providers with native onsets set it true to
@@ -90,7 +87,7 @@ export interface PitchProvider {
    *  - `true`  (e.g. CREPE): hand over the full decoded buffer every pass; the
    *    provider only recomputes new frames. Its decode/segmentation rely on a
    *    consistent absolute frame index, so it must NOT be fed a sliding window.
-   *  - `false` (e.g. basic-pitch): stateless and reprocesses everything it's
+   *  - `false`: stateless and reprocesses everything it's
    *    given, so the pipeline transcribes only a trailing window (committed audio
    *    is never re-sent) and offsets the returned note times.
    */

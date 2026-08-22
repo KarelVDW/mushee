@@ -2,7 +2,7 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
-import { clef, pitched, rest } from '@mushee/notation/testing'
+import { clef, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Replace a measure's leading rest with a pitched note and return the live note that lands at beat 0. */
@@ -83,6 +83,13 @@ describe('Note', () => {
     it('measure getter throws when measure is unset', () => {
         const n = new Note({ duration: new Duration() })
         expect(() => n.measure).toThrow('Note is not assigned to measure')
+    })
+
+    it('isAttached reflects whether the note belongs to a measure', () => {
+        const detached = new Note({ duration: new Duration() })
+        expect(detached.isAttached).toBe(false)
+        const score = makeScore(1)
+        expect((score.measures[0].firstNote as Note).isAttached).toBe(true)
     })
 
     it('clone overrides duration/pitch/tie selectively', () => {

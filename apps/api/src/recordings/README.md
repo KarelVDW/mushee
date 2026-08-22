@@ -25,7 +25,7 @@ note extraction / onset detection → MusicXML measures.
 
 - `providers/` — pitch-model backends behind the `ModelBackend` seam: local
   TF.js (WASM) inference or remote Python gRPC services, plus the
-  CREPE/basic-pitch providers and decoders.
+  CREPE providers (at-pitch and octave-down) and decoders.
 - `profiles/` — register-based pipeline configuration (provider choice,
   frequency windows, instrument ranges) resolved per recording.
 

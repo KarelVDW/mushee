@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-461841",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 11,
+  "draftMedianCentsOffset": 13,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7.75,
+    "sha256": "009d59cb2caf12343e82a5a0e6705e3dc67d76b196efda304ec688f02b022c22"
+  },
+  "provenance": {
+    "id": "freesound-461841",
+    "dataset": "whistle-real",
+    "sha256": "009d59cb2caf12343e82a5a0e6705e3dc67d76b196efda304ec688f02b022c22",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user 15GPanskaCepelak_Adam (CC0)",
+    "source": "https://freesound.org/people/15GPanskaCepelak_Adam/sounds/461841/",
+    "sourceUrl": "https://cdn.freesound.org/previews/461/461841_9681913-hq.mp3",
+    "note": "\"4-1 whistling on a dog.wav\", 7.8 s, 128 kbps mp3 preview; screen tonal=0.87 median=1413Hz notes=11/4 pitches"
+  }
+}

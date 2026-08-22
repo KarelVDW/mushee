@@ -1,0 +1,42 @@
+{
+  "clip": "shaw-3",
+  "dataset": "whistle-vintage",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 700,
+      "maxHz": 5000,
+      "minTonality": 0.55,
+      "minLevel": 0.08
+    },
+    "segment": {
+      "minNoteSec": 0.08,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 41,
+  "draftMedianCentsOffset": 30,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 30,
+    "sha256": "4c64296ca91577e7fd502d3abb65423f8ec4c7dd385344b6007e4f88f991bbf8"
+  },
+  "provenance": {
+    "id": "shaw-3",
+    "dataset": "whistle-vintage",
+    "sha256": "4c64296ca91577e7fd502d3abb65423f8ec4c7dd385344b6007e4f88f991bbf8",
+    "licence": "pd",
+    "licenceVerified": true,
+    "attribution": "Alice J. Shaw — pd",
+    "source": "https://commons.wikimedia.org/wiki/File:Alice_J._Shaw_and_her_daughters_whistling.mp3",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/9/94/Alice_J._Shaw_and_her_daughters_whistling.mp3?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "startSec": 90,
+    "durSec": 30,
+    "note": "accompanied art whistling, 134 s source, median f0 ~1.48 kHz"
+  }
+}

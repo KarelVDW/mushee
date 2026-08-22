@@ -118,3 +118,28 @@ test('editor shortcuts stay dead while a dialog is open', async ({ page }) => {
     await page.keyboard.press('r')
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
+
+test('M minimizes accidentals (respell + re-key across the whole score)', async ({ page }) => {
+    // Sharpen every note first: C♯5 D♯5 E♯5 F♯5 — a set that reads cleanest as D♭ major
+    // (5♭, spelled D♭ E♭ F G♭), one flat lighter than the F♯-major spelling.
+    await page.keyboard.press('ControlOrMeta+a')
+    const sharpen = waitForAutosave(page)
+    await page.getByRole('group', { name: 'Accidental' }).getByRole('button').nth(2).click()
+    await sharpen
+
+    // Collapse back to a single note: the shortcut then acts on the whole score.
+    await page.keyboard.press('Escape')
+    const patch = waitForAutosave(page)
+    await page.keyboard.press('m')
+    await patch
+    await expect(page.getByRole('button', { name: 'Key signature: 5♭' })).toBeVisible()
+})
+
+test('Shift+T opens the transpose popover; Escape closes it without touching the score', async ({ page, apiMock }) => {
+    const before = apiMock.patches.length
+    await page.keyboard.press('Shift+T')
+    await expect(page.getByRole('dialog', { name: 'Transpose' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Transpose' })).toHaveCount(0)
+    expect(apiMock.patches.length).toBe(before)
+})

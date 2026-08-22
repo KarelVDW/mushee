@@ -53,6 +53,37 @@ export interface OnsetDetectorOptions {
    */
   minTroughSec?: number;
   /**
+   * aubio's adaptive peak-picking (R3: `onset/peakpicker.c`), replacing the
+   * fixed `dipRatio`/`riseRatio` state machine when set: an onset is a local
+   * maximum of the energy-rise novelty that clears
+   * `movingMedian(window) + k · movingMean(window)` of its own neighbourhood —
+   * a threshold that self-calibrates to local dynamics instead of asking one
+   * global ratio to serve both sustained singing and plucked material (the
+   * split this file's own doc comment documents). `minIoiSec` and the global
+   * silence floor still apply. The window is centred; the fixed detector's
+   * trough-vs-rise timing difference is absorbed by `delaySec` if it matters.
+   */
+  adaptiveThreshold?: { windowSec?: number; k?: number };
+  /**
+   * R25 (OpenTune's `SilentGapDetector`): a two-tier ABSOLUTE silence rule on
+   * top of the relative 8 %-of-peak floor. A frame is silent when its total
+   * RMS is ≤ `totalDbfs` (−40), OR ≤ `relaxedTotalDbfs` (−30) while the
+   * 60 Hz–3 kHz voice band is < `bandFloorDbfs` (−40) — a rumble-dominated
+   * frame classifies as silence above the strict gate, which is exactly the
+   * wind/handling shape that fools a broadband floor. Needs the band envelope
+   * (`detect` computes it; `detectFromEnvelope` takes it as an argument).
+   */
+  silenceRule?: { totalDbfs?: number; relaxedTotalDbfs?: number; bandFloorDbfs?: number };
+  /**
+   * Constant added to every reported onset time, in seconds (+ = later) —
+   * aubio's `delay` parameter, the explicit admission that a detector has a
+   * systematic latency (R7). This detector reports the TROUGH of the dip,
+   * which precedes the audible re-attack (the energy rise back out of it), so
+   * a calibrated correction is expected to be positive. 0 (the default)
+   * preserves the historical output exactly.
+   */
+  delaySec?: number;
+  /**
    * Envelope frame hop, in seconds (default 0.01).
    *
    * Configurable because `detectFromEnvelope` is meant to be driven over a
@@ -72,6 +103,11 @@ export class OnsetDetector {
   private readonly dipRatio: number;
   private readonly riseRatio: number;
   private readonly minTroughSec: number;
+  private readonly delaySec: number;
+  private readonly adaptiveThreshold: { windowSec?: number; k?: number } | undefined;
+  private readonly silenceRule:
+    | { totalDbfs?: number; relaxedTotalDbfs?: number; bandFloorDbfs?: number }
+    | undefined;
 
   constructor(opts: OnsetDetectorOptions = {}) {
     this.hopSec = opts.hopSec ?? 0.01;
@@ -79,6 +115,9 @@ export class OnsetDetector {
     this.dipRatio = opts.dipRatio ?? 0.5;
     this.riseRatio = opts.riseRatio ?? 1.8;
     this.minTroughSec = opts.minTroughSec ?? 0;
+    this.delaySec = opts.delaySec ?? 0;
+    this.adaptiveThreshold = opts.adaptiveThreshold;
+    this.silenceRule = opts.silenceRule;
   }
 
   /**
@@ -110,7 +149,34 @@ export class OnsetDetector {
   /** Returns onset times in seconds (ascending), excluding the very first attack. */
   detect(samples: Float32Array, sampleRate: number): number[] {
     const hop = Math.max(1, Math.round(this.hopSec * sampleRate));
-    return this.detectFromEnvelope(this.envelope(samples, sampleRate), hop, sampleRate);
+    return this.detectFromEnvelope(
+      this.envelope(samples, sampleRate),
+      hop,
+      sampleRate,
+      this.silenceRule ? this.bandEnvelope(samples, sampleRate) : undefined,
+    );
+  }
+
+  /**
+   * Per-frame RMS of the 60 Hz–3 kHz voice band, on `envelope()`'s grid — the
+   * second tier of `silenceRule`. One-pole high- and low-pass are crude but
+   * the rule only needs "is the energy rumble or voice", not a flat passband.
+   */
+  bandEnvelope(samples: Float32Array, sampleRate: number): Float32Array {
+    const hpAlpha = Math.exp((-2 * Math.PI * 60) / sampleRate);
+    const lpAlpha = 1 - Math.exp((-2 * Math.PI * 3000) / sampleRate);
+    const banded = new Float32Array(samples.length);
+    let hpPrevIn = 0;
+    let hpPrevOut = 0;
+    let lp = 0;
+    for (let i = 0; i < samples.length; i += 1) {
+      const x = samples[i];
+      hpPrevOut = hpAlpha * (hpPrevOut + x - hpPrevIn);
+      hpPrevIn = x;
+      lp += lpAlpha * (hpPrevOut - lp);
+      banded[i] = lp;
+    }
+    return this.envelope(banded, sampleRate);
   }
 
   /**
@@ -122,14 +188,30 @@ export class OnsetDetector {
     rms: Float32Array,
     hop: number,
     sampleRate: number,
+    bandRms?: Float32Array,
   ): number[] {
     const nFrames = rms.length;
     if (nFrames === 0) return [];
+    // R25: absolute two-tier silence classification (see `silenceRule`).
+    let silent: Uint8Array | null = null;
+    if (this.silenceRule) {
+      const total = Math.pow(10, (this.silenceRule.totalDbfs ?? -40) / 20);
+      const relaxed = Math.pow(10, (this.silenceRule.relaxedTotalDbfs ?? -30) / 20);
+      const bandFloor = Math.pow(10, (this.silenceRule.bandFloorDbfs ?? -40) / 20);
+      silent = new Uint8Array(nFrames);
+      for (let f = 0; f < nFrames; f += 1) {
+        const inBand = bandRms && f < bandRms.length ? bandRms[f] : rms[f];
+        silent[f] = rms[f] <= total || (rms[f] <= relaxed && inBand < bandFloor) ? 1 : 0;
+      }
+    }
     // 3-tap smoothing.
     const env = new Float32Array(nFrames);
     for (let f = 0; f < nFrames; f += 1) {
       env[f] =
         (rms[Math.max(0, f - 1)] + rms[f] + rms[Math.min(nFrames - 1, f + 1)]) / 3;
+    }
+    if (this.adaptiveThreshold) {
+      return this.detectAdaptive(env, hop, sampleRate);
     }
 
     // Ignore frames quieter than a small fraction of the global peak (silence).
@@ -169,12 +251,13 @@ export class OnsetDetector {
       // to be a real gap, then rose back up.
       if (
         peak > floor &&
+        (!silent || !silent[f]) &&
         trough < this.dipRatio * peak &&
         gapFrames >= minTroughFrames &&
         e > this.riseRatio * trough &&
         troughFrame - lastOnsetFrame >= minGapFrames
       ) {
-        onsets.push((troughFrame * hop) / sampleRate);
+        onsets.push(Math.max(0, (troughFrame * hop) / sampleRate + this.delaySec));
         lastOnsetFrame = troughFrame;
         peak = e; // start a fresh note
         trough = e;
@@ -183,6 +266,59 @@ export class OnsetDetector {
       } else {
         downFrames = isDown ? downFrames + 1 : 0;
       }
+    }
+    return onsets;
+  }
+
+  /**
+   * The adaptive path (see `adaptiveThreshold`): novelty = half-wave-rectified
+   * envelope rise; an onset is a 3-frame local maximum of it that clears
+   * `movingMedian + k · movingMean` of its centred neighbourhood. The same
+   * global silence floor and `minIoiSec` spacing as the fixed detector.
+   */
+  private detectAdaptive(
+    env: Float32Array,
+    hop: number,
+    sampleRate: number,
+  ): number[] {
+    const nFrames = env.length;
+    const windowSec = this.adaptiveThreshold?.windowSec ?? 0.3;
+    const k = this.adaptiveThreshold?.k ?? 1;
+    const half = Math.max(1, Math.round(windowSec / this.hopSec / 2));
+
+    const novelty = new Float32Array(nFrames);
+    for (let f = 1; f < nFrames; f += 1) {
+      novelty[f] = Math.max(0, env[f] - env[f - 1]);
+    }
+
+    let globalPeak = 0;
+    for (let f = 0; f < nFrames; f += 1) globalPeak = Math.max(globalPeak, env[f]);
+    const floor = globalPeak * 0.08;
+
+    const minGapFrames = Math.max(1, Math.round(this.minIoiSec / this.hopSec));
+    const onsets: number[] = [];
+    let lastOnsetFrame = -minGapFrames;
+    const win: number[] = [];
+    for (let f = 1; f < nFrames; f += 1) {
+      if (novelty[f] <= 0 || env[f] <= floor) continue;
+      // Local maximum over the immediate 3-frame neighbourhood.
+      if (novelty[f] < novelty[f - 1]) continue;
+      if (f + 1 < nFrames && novelty[f] < novelty[f + 1]) continue;
+      if (f - lastOnsetFrame < minGapFrames) continue;
+      const lo = Math.max(0, f - half);
+      const hi = Math.min(nFrames - 1, f + half);
+      win.length = 0;
+      let sum = 0;
+      for (let j = lo; j <= hi; j += 1) {
+        win.push(novelty[j]);
+        sum += novelty[j];
+      }
+      win.sort((a, b) => a - b);
+      const median = win[win.length >> 1];
+      const mean = sum / win.length;
+      if (novelty[f] - median - k * mean <= 0) continue;
+      onsets.push(Math.max(0, (f * hop) / sampleRate + this.delaySec));
+      lastOnsetFrame = f;
     }
     return onsets;
   }

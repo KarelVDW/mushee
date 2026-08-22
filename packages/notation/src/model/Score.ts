@@ -4,10 +4,12 @@ import { SCORE_WIDTH } from '../components/constants'
 import type { ClefType, DurationType } from '../components/types'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
+import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
 import { Note } from './Note'
 import { TimeSignature } from './TimeSignature'
+import { AccidentalMinimizer } from './util/AccidentalMinimizer'
 import { Derived } from './util/Derived'
 import { MeasureRebar } from './util/MeasureRebar'
 import { MeasureSerializer } from './util/ScoreSerializer'
@@ -356,6 +358,131 @@ export class Score {
         } else measure.setKeySignature(beat, fifths, mode)
         this.propagateContext()
         this.touch()
+    }
+
+    /**
+     * Transpose by a (chromatic, diatonic) interval — the user-facing transposition (see
+     * {@link Interval}). With no `notes` the whole score moves: every key signature is
+     * re-keyed (folded back into the drawable −7..7 range, taking the enharmonic key when
+     * the raw result overflows) and every note follows; with a selection only those notes
+     * move and the keys stay. Either way the rewritten notes are then respelled to draw the
+     * fewest accidentals under the keys now in effect, so the result is always cleanly
+     * spelled — and matches what a preview built the same way shows.
+     *
+     * Rewrites go through `replace`, so note identities change; the returned notes are the
+     * final replacements, index-aligned with the transposed notes in score order.
+     */
+    transpose(chromatic: number, diatonic: number, notes?: Note[]): Note[] {
+        const targets = notes ?? this.measures.flatMap((m) => m.notes)
+        if (chromatic === 0 && diatonic === 0) return targets
+        if (!notes) {
+            for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
+            // A score that starts in inherited C major now carries a transposed leading key that
+            // is still marked inherited — promote it to an explicit boundary before propagation,
+            // or propagateContext would reset it to the default C.
+            const first = this.firstMeasure
+            if (first && !first.leadingKeyExplicit && first.keySignature.fifths !== 0) {
+                first.setKeySignature(0, first.keySignature.fifths, first.keySignature.mode)
+            }
+            // Fold overflowed keys to their enharmonic equivalent. Inherited leading keys are
+            // skipped: propagation below re-derives them from the explicit boundaries.
+            for (const measure of this.measures) {
+                for (const key of [...measure.keySignatures]) {
+                    if (key.beatPosition === 0 && !measure.leadingKeyExplicit) continue
+                    const normalized = KeySignature.normalizedFifths(key.fifths)
+                    if (normalized !== key.fifths) measure.setKeySignature(key.beatPosition, normalized, key.mode)
+                }
+            }
+            this.propagateContext()
+        }
+        if (!targets.length) return targets
+        const transposed = this.replace(
+            targets,
+            targets.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
+        )
+        return this.respell(transposed)
+    }
+
+    /**
+     * Redraw the music with the fewest possible accidentals. Applied to the whole score (no
+     * `notes`), each key-signature region is first re-keyed to whichever key draws the least
+     * ink over its notes; then every note is respelled enharmonically (A♭ ↔ G♯) to fit.
+     * Applied to a selection, the key signatures stay and only those notes are respelled.
+     *
+     * Respelled notes change identity (rewrites go through `replace`); the returned notes
+     * are the final ones, index-aligned with the input (or with all notes in score order).
+     */
+    minimizeAccidentals(notes?: Note[]): Note[] {
+        if (notes) return this.respell(notes)
+        for (const region of this.keyRegions()) {
+            if (!region.notes.length) continue
+            const targets = new Set(region.notes)
+            const current = region.key.fifths
+            let best = current
+            let bestRank = [new AccidentalMinimizer(region.notes, targets, () => current).drawnCount, 0, Math.abs(current), current > 0 ? 0 : 1]
+            for (let fifths = -7; fifths <= 7; fifths++) {
+                if (fifths === current) continue
+                const count = new AccidentalMinimizer(region.notes, targets, () => fifths).drawnCount
+                // Rank: fewest drawn accidentals; then the key already in place (a region whose
+                // notes can't tell keys apart must not drift); then the lighter signature; then
+                // the sharp side of an enharmonic pair.
+                const rank = [count, 1, Math.abs(fifths), fifths > 0 ? 0 : 1]
+                if (AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
+                    best = fifths
+                    bestRank = rank
+                }
+            }
+            if (best !== current) region.key.measure.setKeySignature(region.key.beatPosition, best)
+        }
+        this.propagateContext()
+        return this.respell(this.measures.flatMap((m) => m.notes))
+    }
+
+    /**
+     * The score's key regions: each key boundary (the score's start, an explicit leading
+     * key, or a mid-measure change) with the notes it governs, in score order.
+     */
+    private keyRegions(): { key: KeySignature; notes: Note[] }[] {
+        const regions: { key: KeySignature; notes: Note[] }[] = []
+        for (const measure of this.measures) {
+            if (regions.length === 0 || measure.leadingKeyExplicit) regions.push({ key: measure.keySignature, notes: [] })
+            const midKeys = measure.midMeasureKeySignatures
+            let nextKey = 0
+            for (const note of measure.notes) {
+                const beat = measure.beatOffsetOf(note)
+                while (nextKey < midKeys.length && midKeys[nextKey].beatPosition <= beat) {
+                    regions.push({ key: midKeys[nextKey++], notes: [] })
+                }
+                regions[regions.length - 1].notes.push(note)
+            }
+            while (nextKey < midKeys.length) regions.push({ key: midKeys[nextKey++], notes: [] })
+        }
+        return regions
+    }
+
+    /**
+     * Respell `notes` to draw the fewest accidentals under the keys currently in effect,
+     * leaving every other note (and all key signatures) alone. Whole measures are walked so
+     * carried-accidental state is faithful. Returns the notes in their final identity,
+     * index-aligned with the input.
+     */
+    private respell(notes: Note[]): Note[] {
+        if (!notes.length) return notes
+        const measures = [...new Set(notes.map((note) => note.measure))].sort(
+            (a, b) => this.getIndexForMeasure(a) - this.getIndexForMeasure(b),
+        )
+        const minimizer = new AccidentalMinimizer(
+            measures.flatMap((m) => m.notes),
+            new Set(notes),
+            (note) => note.keySignature.fifths,
+        )
+        // One single-note replace per respelled note: `replace` inserts its values at the first
+        // target's position, so scattered notes can't share one call without reordering the bar.
+        return notes.map((note) => {
+            const pitch = minimizer.respelled.get(note)
+            /* v8 ignore next -- defensive: replace of one note for one equal-duration note always returns exactly that note */
+            return pitch ? (this.replace([note], [note.clone({ pitch })])[0] ?? note) : note
+        })
     }
 
     /** The tempo (BPM) sounding at `note`: the nearest marking at or before it, else the default. */

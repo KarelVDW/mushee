@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-250718",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 72,
+  "draftMedianCentsOffset": 19,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 22.360816326530614,
+    "sha256": "4d9848794afd730ef9390bf05413fda80d2c363c19eff696fb2eba85e1d7ede4"
+  },
+  "provenance": {
+    "id": "freesound-250718",
+    "dataset": "whistle-real",
+    "sha256": "4d9848794afd730ef9390bf05413fda80d2c363c19eff696fb2eba85e1d7ede4",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user sarahbell (CC0)",
+    "source": "https://freesound.org/people/sarahbell/sounds/250718/",
+    "sourceUrl": "https://cdn.freesound.org/previews/250/250718_4588058-hq.mp3",
+    "note": "\"This Land Is Your Land Harmony Whistling\", 22.4 s, 128 kbps mp3 preview; screen tonal=0.68 median=1430Hz notes=72/11 pitches"
+  }
+}

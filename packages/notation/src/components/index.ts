@@ -1,6 +1,7 @@
 export { Duration, Measure, Note, Pitch, Score as ScoreModel } from '../model'
 export { CLEF_DEFS, GLYPH_SCALE, INTERACTION_BLUE, NOTATION_INK } from './constants'
 export { Glyph } from './Glyph'
+export type { ScoreHighlight } from './HighlightLayer'
 export { getGlyphWidth } from './glyphUtils'
 export { getLineForY, getYForLine, getYForNote } from './noteUtils'
 export type { ClefClickEvent, KeySignatureClickEvent, SelectionMenuEvent, TempoClickEvent, TimeSignatureClickEvent } from './Score'

@@ -1,5 +1,5 @@
 # CREPE forward-pass service. High-volume (most registers route here), so it
-# scales wider than basic-pitch. Image is built from apps/inference-crepe/Dockerfile.
+# Image is built from apps/inference-crepe/Dockerfile.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

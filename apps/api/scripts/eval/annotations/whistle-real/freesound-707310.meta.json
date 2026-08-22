@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-707310",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 85,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 15.926893424036281,
+    "sha256": "749c9175bef15ec66475b9c9e4a17a7d3194a6331c8e069e4ae790ec8cd78da9"
+  },
+  "provenance": {
+    "id": "freesound-707310",
+    "dataset": "whistle-real",
+    "sha256": "749c9175bef15ec66475b9c9e4a17a7d3194a6331c8e069e4ae790ec8cd78da9",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user jperezjacome (CC0)",
+    "source": "https://freesound.org/people/jperezjacome/sounds/707310/",
+    "sourceUrl": "https://cdn.freesound.org/previews/707/707310_8015768-hq.mp3",
+    "note": "\"Lambada2.wav\", 15.9 s, 128 kbps mp3 preview; screen tonal=0.86 median=1676Hz notes=85/14 pitches"
+  }
+}

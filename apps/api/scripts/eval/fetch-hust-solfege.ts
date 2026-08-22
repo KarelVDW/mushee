@@ -2,9 +2,9 @@
  * Fetch HUST_Solfege (solo solfège singing, 73 usable recordings) into the eval
  * harness's real corpus layout.
  *
- * Output: scripts/fixtures/eval-real/hust-solfege/<clip>.truth.json
- *         scripts/fixtures/eval-real/hust-solfege/<clip>__real.wav
- *         scripts/fixtures/eval-real/hust-solfege/dataset.json
+ * Output: scripts/fixtures/eval-real/benchmark/hust-solfege/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/hust-solfege/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/hust-solfege/dataset.json
  *
  * Source : https://github.com/itec-hust/HUST_Solfege
  * License: MIT (LICENSE at the repo root — the published grant governs, per the
@@ -64,7 +64,7 @@ const CACHE = resolve(__dirname, '.cache');
 const AUDIO_ZIP = join(CACHE, 'hust-solfege-audio.zip');
 const REPO_TGZ = join(CACHE, 'hust-solfege-repo.tar.gz');
 const EXTRACT = join(CACHE, 'hust-solfege');
-const OUT = resolve(__dirname, '../fixtures/eval-real/hust-solfege');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/hust-solfege');
 
 const NOMINAL_BPM = 120;
 /** Global fallback offset (semitones), measured over all 73 files / 1,230 notes. */

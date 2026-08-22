@@ -22,9 +22,6 @@ export interface PipelineProfile {
   maxFreqHz: number;
   /** Voicing gate for CREPE. */
   confidenceThreshold?: number;
-  /** basic-pitch note gates. */
-  onsetThreshold?: number;
-  frameThreshold?: number;
   /**
    * Run the decoder's spectral denoiser (afftdn) before transcription — set by
    * the resolver when the scan measures a noisy backdrop (wind, chatter, hiss).
@@ -32,6 +29,16 @@ export interface PipelineProfile {
   denoise?: boolean;
   /** Minimum voiced run length (frames) a note needs — raised under noise. */
   minFramesPerNote?: number;
+  /**
+   * Calibrated report-time correction for the amplitude re-attack detector, in
+   * seconds (+ = later) — aubio's `delay` parameter, per profile (R7). The
+   * detector reports the trough of the inter-note dip, which precedes the
+   * audible re-attack, so a positive constant is expected once calibrated.
+   * Unset = 0 = the historical behaviour. (The voice decode's own analogous
+   * constant is `onsetShiftSec` on `VoiceNoteDecoder` — a different path with
+   * its own calibration; see E5/R12 before unifying them.)
+   */
+  onsetDelaySec?: number;
   /**
    * Which note segmentation the trajectory providers run.
    *
@@ -55,7 +62,7 @@ export interface PipelineProfile {
   /**
    * What the resolver believes is at the microphone — distinct from `isVoice`,
    * which is the ROUTING outcome: on the no-reliable-pitch fallback the profile
-   * runs basic-pitch, where the voice overlay deliberately never applies, so a
+   * ran the note-level provider, where the voice overlay deliberately never applied, so a
    * voice take can be believed 'voice' while `isVoice` stays unset. The belief
    * is what the client shows the user and what gets archived for debugging.
    */
@@ -74,11 +81,14 @@ export const GLOBAL_MIN_FREQ_HZ = 55;
 export const GLOBAL_MAX_FREQ_HZ = 4500;
 
 /**
- * CREPE trajectory models top out near ~1997 Hz; only basic-pitch's CNN
- * spans the full MIDI 21–108 (~4186 Hz). Any window reaching above this must
- * therefore use basic-pitch.
+ * CREPE trajectory models top out near ~1997 Hz. Content above it is served by
+ * the octave-down wrapper (`CrepePitchdownProvider`), which hears to 2× this.
  */
 export const TRAJECTORY_MODEL_CEILING_HZ = 1900;
+
+export const PITCHDOWN_PROVIDER_NAME = 'crepe-tiny-down1';
+/** The wrapper hears everything at half frequency: 2 × the CREPE ceiling. */
+export const PITCHDOWN_MODEL_CEILING_HZ = TRAJECTORY_MODEL_CEILING_HZ * 2;
 
 /**
  * Register bands, ordered low→high. The resolver picks the band whose range
@@ -86,12 +96,12 @@ export const TRAJECTORY_MODEL_CEILING_HZ = 1900;
  * fits the actual min/max around the detected distribution.
  *
  * Provider + threshold choices come from the tuning workflow's per-band sweep
- * over the eval corpus (scripts/eval): the monophonic trajectory providers
- * (CREPE) beat the polyphonic basic-pitch by a wide margin on sustained
+ * over the eval corpus (scripts/eval): the monophonic CREPE trajectory
+ * providers beat the polyphonic basic-pitch by a wide margin on sustained
  * single-pitch input (F1 ~0.71–0.74 vs ~0.50–0.58) within their ~1997 Hz
- * ceiling. Above that ceiling only basic-pitch's CNN reaches, so the very-high
- * band (piccolo, whistling) stays on basic-pitch. The resolver also falls back
- * to basic-pitch whenever a fitted window exceeds the trajectory ceiling.
+ * ceiling. Above that ceiling the octave-down wrapper hears (to ~3.9 kHz), so
+ * the very-high band (piccolo, whistling) rides it — which is what allowed
+ * basic-pitch's removal (2026-08-22).
  */
 export const PROFILE_BANDS: PipelineProfile[] = [
   {
@@ -122,13 +132,20 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     confidenceThreshold: 0.5,
   },
   {
-    id: 'very-high', // piccolo, whistling — above the CREPE ceiling
-    providerName: 'basic-pitch',
+    id: 'very-high', // piccolo, whistling — via the octave-down CREPE wrapper
+    providerName: PITCHDOWN_PROVIDER_NAME,
     highpassHz: 300,
     minFreqHz: 500,
+    // Capped to what the wrapper hears (~3.9 kHz real) by the resolver — above
+    // the highest note either corpus contains (3 729 Hz).
     maxFreqHz: 4500,
-    onsetThreshold: 0.5,
-    frameThreshold: 0.3,
+    // A confidence gate, which also arms the reverberance relief ramp
+    // (`applyReverb`) on this band — something the old note-level provider
+    // could not have. Measured before basic-pitch's removal (eval README,
+    // 2026-08-20/22 logs): synthetic adaptive 0.589 → 0.605; real audio
+    // decisive — TinySOL very-high (exact truth) +0.150*, whistle-real
+    // (n=117) +0.275*.
+    confidenceThreshold: 0.5,
   },
 ];
 
@@ -152,15 +169,25 @@ export const VOICE_OVERLAY = {
   isVoice: true,
 } as const satisfies Partial<PipelineProfile>;
 
-/** Safe profile used before detection completes / when audio is too short. */
+/**
+ * Safe profile used before detection completes / when audio is too short.
+ *
+ * Measured before it moved off basic-pitch (`bench-default-provider.ts`, over
+ * every clip the resolver actually routes here — 188 heavy-reverb real
+ * variants + 60 synthetic): the fallback fires only on audio so degraded that
+ * NO provider transcribes it (COnP ≈ 0.001 under basic-pitch, CREPE, and the
+ * octave-down wrapper alike, paired Δ +0.000 [+0.000, +0.000]) — the provider
+ * choice on this route is immaterial. The 1900 Hz cap (the old default reached
+ * 2200) sits in a range the fallback never successfully transcribed anywhere
+ * in either corpus.
+ */
 export const DEFAULT_PROFILE: PipelineProfile = {
   id: 'default-wide',
-  providerName: 'basic-pitch',
+  providerName: 'crepe-tiny',
   highpassHz: 55,
   minFreqHz: GLOBAL_MIN_FREQ_HZ,
-  maxFreqHz: 2200,
-  onsetThreshold: 0.5,
-  frameThreshold: 0.3,
+  maxFreqHz: TRAJECTORY_MODEL_CEILING_HZ,
+  confidenceThreshold: 0.5,
 };
 
 /** Distinct provider keys any profile can select — what the registry pre-warms. */

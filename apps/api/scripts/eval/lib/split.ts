@@ -40,6 +40,15 @@ export type Split = 'dev' | 'test' | 'all';
  *   csd                 `alto1_ER_w0`              → singer  `alto1`
  *   esmuc-choir         `A1_DG_take1`              → singer  `A1`
  *   hust-solfege        `hust_1011`                → one recording per subject; no grouping
+ *   avp                 `avp_P10_HHclosed_Fixed`   → participant `P10`
+ *   dagstuhl-choir      `DCS_LI_QuartetA_Take01_A1_HSM_ex01` → singer `QuartetA_A1`
+ *   jacrc-students      `daxp-…-dx-S8_ex00`        → student `dx-S8`
+ *
+ * The last three all produce MANY clips per performer — AVP gives one participant
+ * a clip per drum class and modality, and the two excerpted corpora give one
+ * singer several 30 s windows of the same take — so leaving them on the default
+ * per-clip fallback would put the same voice in both halves, which is precisely
+ * the leak this function exists to prevent.
  *
  * For n20emv2 we group by **subject**, not by song, even though that corpus's own
  * published split is by song. The two answer different questions: theirs keeps a
@@ -51,6 +60,24 @@ export type Split = 'dev' | 'test' | 'all';
 function groupKeyFor(dataset: string, clip: string): string {
   if (dataset === 'mir-qbsh') {
     return clip.match(/person\d+/)?.[0] ?? clip;
+  }
+  if (dataset === 'avp') {
+    // `avp_P10_HHclosed_Fixed` → `P10`
+    return clip.split('_')[1] ?? clip;
+  }
+  if (dataset === 'dagstuhl-choir') {
+    // `DCS_LI_QuartetA_Take01_A1_HSM_ex01` → `QuartetA_A1`: the same four people
+    // sing every take of both pieces, so the quartet+voice pair is the person.
+    const p = clip.split('_');
+    return p.length >= 5 ? `${p[2]}_${p[4]}` : clip;
+  }
+  if (dataset === 'jacrc-students') {
+    // `daxp-Meng_ting_de-…-dx-S8_ex00` → `dx-S8`. Student ids repeat across
+    // schools (every school has an S1), so the school prefix is part of the key;
+    // `S2(1)`/`S2(2)` are two takes by one student and must group together,
+    // which stopping the match at the digits achieves.
+    const m = /-([a-z]+)-(S\d+)/.exec(clip);
+    return m ? `${m[1]}-${m[2]}` : clip;
   }
   if (
     dataset === 'annotated-vocalset' ||

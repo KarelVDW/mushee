@@ -1,6 +1,7 @@
 export { Clef } from './Clef'
 export { Duration } from './Duration'
 export { Instrument, type InstrumentCategory } from './Instrument'
+export { Interval, type IntervalQuality } from './Interval'
 export { KeySignature } from './KeySignature'
 export { Measure } from './Measure'
 export { Note } from './Note'

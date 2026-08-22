@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 
-import { BasicPitchProvider } from './basic-pitch-provider';
+import { CrepePitchdownProvider } from './crepe-pitchdown-provider';
 import { CrepeProvider } from './crepe-provider';
 import { LocalModelBackend } from './local-model-backend';
 import type { ModelBackend, ProviderModelDirs } from './model-backend';
@@ -12,8 +12,12 @@ export type { ProviderModelDirs } from './model-backend';
  * Owns one instance of each available pitch provider, loaded once. The adaptive
  * pipeline picks a provider per recording (via the resolved `PipelineProfile`),
  * so they all need to be ready — but the underlying models are heavy, hence a
- * shared registry rather than per-session construction. Providers the backend
- * can't serve are skipped; `get` falls back to basic-pitch.
+ * shared registry rather than per-session construction.
+ *
+ * Both providers ride the same crepe-tiny checkpoint: `crepe-tiny` analyses at
+ * pitch, `crepe-tiny-down1` an octave down for the `very-high` band (basic-pitch
+ * and its inference service were removed 2026-08-22 after the consolidation
+ * measurements — see the eval README's provider-consolidation logs).
  *
  * The forward pass runs through a `ModelBackend` — `LocalModelBackend` (TF.js,
  * the default, used by dev + the eval harness) or a remote inference service.
@@ -25,15 +29,11 @@ export class ProviderRegistry {
 
   constructor(dirs: ProviderModelDirs, backend?: ModelBackend) {
     const modelBackend = backend ?? new LocalModelBackend(dirs);
-    if (modelBackend.available('basic-pitch')) {
-      this.providers.set('basic-pitch', new BasicPitchProvider(modelBackend));
+    if (!modelBackend.available('crepe-tiny')) {
+      throw new Error('ProviderRegistry: crepe-tiny model unavailable from backend');
     }
-    if (modelBackend.available('crepe-tiny')) {
-      this.providers.set('crepe-tiny', new CrepeProvider(modelBackend, 'crepe-tiny'));
-    }
-    if (!this.providers.has('basic-pitch')) {
-      throw new Error('ProviderRegistry: basic-pitch model unavailable from backend');
-    }
+    this.providers.set('crepe-tiny', new CrepeProvider(modelBackend, 'crepe-tiny'));
+    this.providers.set('crepe-tiny-down1', new CrepePitchdownProvider(modelBackend));
     this.logger.log(`Registered providers: ${[...this.providers.keys()].join(', ')}`);
   }
 
@@ -60,10 +60,10 @@ export class ProviderRegistry {
     return this.providers.has(name);
   }
 
-  /** Get a provider by name, falling back to basic-pitch if absent. */
+  /** Get a provider by name, falling back to crepe-tiny if absent. */
   get(name: string): PitchProvider {
-    const provider = this.providers.get(name) ?? this.providers.get('basic-pitch');
-    if (!provider) throw new Error('ProviderRegistry has no basic-pitch fallback');
+    const provider = this.providers.get(name) ?? this.providers.get('crepe-tiny');
+    if (!provider) throw new Error('ProviderRegistry has no crepe-tiny fallback');
     return provider;
   }
 }

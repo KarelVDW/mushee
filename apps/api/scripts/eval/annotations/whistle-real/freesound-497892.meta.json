@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-497892",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 46,
+  "draftMedianCentsOffset": 30,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 24.43487528344671,
+    "sha256": "009d7317780d10b46f29da307729653b02f6bf110366855b686cca7f8bf8e55d"
+  },
+  "provenance": {
+    "id": "freesound-497892",
+    "dataset": "whistle-real",
+    "sha256": "009d7317780d10b46f29da307729653b02f6bf110366855b686cca7f8bf8e55d",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user PhonosUPF (CC0)",
+    "source": "https://freesound.org/people/PhonosUPF/sounds/497892/",
+    "sourceUrl": "https://cdn.freesound.org/previews/497/497892_10350281-hq.mp3",
+    "note": "\"whistle sequence 2\", 24.4 s, 128 kbps mp3 preview; screen tonal=0.64 median=1323Hz notes=46/5 pitches"
+  }
+}

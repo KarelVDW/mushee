@@ -8,16 +8,17 @@ Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 | `apps/admin` | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500** |
 | `apps/api` | NestJS API + WebSocket recording pipeline, dev on **:4200** |
 | `apps/inference-crepe` | Python gRPC service: CREPE forward pass (**:50051**) |
-| `apps/inference-basic-pitch` | Python gRPC service: basic-pitch forward pass (**:50052**) |
 | `packages/notation` | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
-| `packages/inference-proto` | Shared gRPC contract for the inference services |
+| `packages/inference-proto` | Shared gRPC contract for the inference service |
 | `deploy/k8s` | Kustomize manifests: `base/` (production-shaped) + `overlays/local/` |
 
 The API owns everything about transcription except the neural-net forward pass,
 which runs behind a `ModelBackend` seam: **in-process TF.js** by default (dev,
-eval harness) or **remote gRPC** when `CREPE_INFERENCE_URL` /
-`BASIC_PITCH_INFERENCE_URL` are set. That makes the API stateless and light —
-scale it and each inference service independently.
+eval harness) or **remote gRPC** when `CREPE_INFERENCE_URL` is set. That makes
+the API stateless and light — scale it and the inference service independently.
+(One model serves everything: the octave-down CREPE wrapper covers the register
+basic-pitch used to; that provider and its service were removed 2026-08-22 —
+see the eval README's provider-consolidation logs.)
 
 ## Local development
 
@@ -92,7 +93,6 @@ all three with these exact tags):
 ```sh
 docker build -f apps/api/Dockerfile                   -t mushee/api:latest .
 docker build -f apps/inference-crepe/Dockerfile       -t mushee/crepe-inference:latest .
-docker build -f apps/inference-basic-pitch/Dockerfile -t mushee/basic-pitch-inference:latest .
 ```
 
 The inference services' Python gRPC stubs are generated from
@@ -155,13 +155,13 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
 Scaling: every layer is horizontal — API replicas share state via Postgres
 (recording locks, credits, edit cache), and the inference services are
 stateless tensor→tensor functions behind ClusterIP services with HPAs
-(CREPE serves most registers and scales widest; see `deploy/k8s/base/*.yaml`).
+(see `deploy/k8s/base/*.yaml`).
 
-Before switching a model's inference to a new service build, run the parity
+Before switching the model's inference to a new service build, run the parity
 gate — numeric forward-pass diff + end-to-end F1 against the local backend:
 
 ```sh
-cd apps/api && CREPE_INFERENCE_URL=localhost:50051 BASIC_PITCH_INFERENCE_URL=localhost:50052 \
+cd apps/api && CREPE_INFERENCE_URL=localhost:50051 \
   pnpm exec tsx scripts/eval/check-inference-parity.ts
 ```
 

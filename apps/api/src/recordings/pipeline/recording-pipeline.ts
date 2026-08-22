@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from './note-event';
 
 import type { RecordingArchiver } from '../recording-archiver';
 import { AudioConverter } from './audio-converter';
@@ -19,10 +19,23 @@ const DEFAULT_BEAT_TYPE = 4;
 // Pass cadence. Overridable so eval harnesses can drive many incremental passes
 // without waiting in real time; unset in production, where it stays 1 s.
 const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000;
-const STABLE_MARGIN_SEC = 0.4;
+/**
+ * OFFSET-confirmation margin (E5/R12): a note is committed once this much
+ * audio exists past its END — the streaming analogue of Essentia Pitch2Midi's
+ * note-off confirmation (its default is 200 ms; ours has been 400 ms). The
+ * same margin bounds how far a later window may reach back, so it is the
+ * commit-latency knob. Env-overridable so `check-streaming.ts` can measure
+ * where paced-feed commits start to contradict the whole-buffer result.
+ * (R12's asymmetric ONSET confirmation has no analogue here: our commit unit
+ * is a whole note, so an onset is never committed before its offset. And its
+ * delay compensation does not apply either — we report measured note times,
+ * not confirmation times; R7 calibrated the reported-time bias at 0.)
+ */
+const STABLE_MARGIN_SEC = Number(process.env.RECORDING_STABLE_MARGIN_SEC) || 0.4;
 /**
  * Lead-in of already-seen audio prepended to each windowed transcription pass
- * (stateless providers only). basic-pitch runs 2 s analysis windows internally,
+ * (stateless providers only). basic-pitch — removed 2026-08-22 but the seam
+ * stays for any future note-level provider — ran 2 s analysis windows internally,
  * so a region's notes match a whole-buffer run only when enough real audio
  * precedes it; combined with snapping the window start to the provider's block
  * grid (`windowAlignSamples`), 3.5 s reproduces the whole-buffer result on the
@@ -61,7 +74,7 @@ function describeError(err: unknown): string {
  * Periodically it runs the configured `AudioConverter` and emits MxmlMeasure
  * deltas as notes settle.
  *
- * Per-pass transcription is bounded too: stateless providers (basic-pitch) are
+ * Per-pass transcription is bounded too: stateless providers (none currently) are
  * fed only a trailing window of PCM — committed audio is never re-sent — while
  * providers that cache across passes (CREPE) get the whole buffer and stay
  * incremental internally. Together this makes per-pass work proportional to the
@@ -411,8 +424,8 @@ export class RecordingPipeline {
     this.builder.setVoiceSpelling(profile.isVoice ?? false);
     // Tell the client what the pipeline believes it is hearing — the user is
     // the one observer who can tell us when this is wrong. `sourceBelief`, not
-    // `isVoice`: on the no-pitch fallback the profile routes to basic-pitch
-    // (where the voice overlay never applies) while the belief still stands.
+    // `isVoice`: belief is the observation, `isVoice` the routing outcome, and
+    // they can diverge (e.g. the pitch-down very-high band never routes voice).
     this.onSourceResolved({
       source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
       decidedBy: profile.sourceDecidedBy ?? 'prior',
@@ -425,8 +438,6 @@ export class RecordingPipeline {
       minFreqHz: profile.minFreqHz,
       maxFreqHz: profile.maxFreqHz,
       confidenceThreshold: profile.confidenceThreshold,
-      onsetThreshold: profile.onsetThreshold,
-      frameThreshold: profile.frameThreshold,
       minFramesPerNote: profile.minFramesPerNote,
       // Segmentation is a profile decision as of the voice flow: the resolver picks
       // WHERE to listen and now also HOW to decide where notes are.
@@ -623,8 +634,8 @@ export class RecordingPipeline {
               // the mic and on which evidence — 'explicit' (client declared),
               // 'classifier' (audio verdict), or 'prior' (score instrument;
               // also the classifier-abstain fallback). `isVoice` above is the
-              // routing outcome; belief and routing diverge on the no-pitch
-              // basic-pitch fallback.
+              // routing outcome; belief and routing can diverge (e.g. on the
+              // very-high band, which never takes the voice overlay).
               sourceBelief: this.profile.sourceBelief ?? null,
               sourceDecidedBy: this.profile.sourceDecidedBy ?? null,
             }

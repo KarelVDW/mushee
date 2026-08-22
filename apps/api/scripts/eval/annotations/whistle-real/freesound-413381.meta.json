@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-413381",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 31,
+  "draftMedianCentsOffset": 18,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7.6545351473922905,
+    "sha256": "2532f8e5fbd5e46b1fb5885cdd48868ff702e2bd2a877af23b91ae5e9e4e0f8a"
+  },
+  "provenance": {
+    "id": "freesound-413381",
+    "dataset": "whistle-real",
+    "sha256": "2532f8e5fbd5e46b1fb5885cdd48868ff702e2bd2a877af23b91ae5e9e4e0f8a",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user jperezjacome (CC0)",
+    "source": "https://freesound.org/people/jperezjacome/sounds/413381/",
+    "sourceUrl": "https://cdn.freesound.org/previews/413/413381_8015768-hq.mp3",
+    "note": "\"Fumfumfum_whistled.wav\", 7.7 s, 128 kbps mp3 preview; screen tonal=0.98 median=1091Hz notes=31/8 pitches"
+  }
+}

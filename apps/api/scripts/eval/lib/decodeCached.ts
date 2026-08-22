@@ -13,7 +13,7 @@
  * it, never re-derive it.
  */
 
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event';
 
 import {
   NoteExtractor,
@@ -44,7 +44,7 @@ export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
     return new VoiceNoteDecoder({
       ...VOICE_OPTS,
       ...gate,
-      minFrames: c.profile.minFramesPerNote ?? 4,
+      minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
     }).decode(c.track, c.energy);
   }
   return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {

@@ -165,4 +165,29 @@ describe('KeySignature', () => {
             expect(KeySignature.transposedFifths(-3, 12, 7)).toBe(-3)
         })
     })
+
+    describe('alterInKey (static alteration lookup)', () => {
+        it('matches the instance alterForNote for sharps, flats, and naturals', () => {
+            expect(KeySignature.alterInKey(2, 'F')).toBe(1) // D major sharps F
+            expect(KeySignature.alterInKey(2, 'G')).toBe(0) // …but not G
+            expect(KeySignature.alterInKey(-3, 'E')).toBe(-1) // E♭ major flats E
+            expect(KeySignature.alterInKey(-3, 'D')).toBe(0)
+            expect(KeySignature.alterInKey(0, 'B')).toBe(0)
+            expect(key(4).alterForNote('D')).toBe(1) // instance method delegates
+        })
+    })
+
+    describe('normalizedFifths (fold into the drawable range)', () => {
+        it('keeps in-range values, even where an enharmonic partner is simpler', () => {
+            expect(KeySignature.normalizedFifths(0)).toBe(0)
+            expect(KeySignature.normalizedFifths(7)).toBe(7)
+            expect(KeySignature.normalizedFifths(-7)).toBe(-7)
+        })
+
+        it('swaps an overflowed key for its enharmonic equivalent', () => {
+            expect(KeySignature.normalizedFifths(8)).toBe(-4) // G♯ major → A♭ major
+            expect(KeySignature.normalizedFifths(-9)).toBe(3) // F𝄫-side → A major
+            expect(KeySignature.normalizedFifths(20)).toBe(-4) // wraps repeatedly
+        })
+    })
 })

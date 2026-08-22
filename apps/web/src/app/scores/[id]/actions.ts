@@ -144,6 +144,25 @@ export const SET_ACCIDENTAL: ScoreAction = {
     },
 }
 
+/**
+ * Respell the music with the fewest possible accidentals. A multi-note selection is
+ * respelled in place (key signatures untouched); a single-note selection means "the whole
+ * score": every key region is re-keyed to the cheapest signature and all notes follow.
+ * `Score.minimizeAccidentals` returns replacements index-aligned with its input, so the
+ * selection is re-anchored onto the same musical positions it covered before.
+ */
+export const MINIMIZE_ACCIDENTALS: ScoreAction = {
+    id: 'minimize-accidentals',
+    label: 'Minimize accidentals',
+    executeBulk: (score, notes) => {
+        if (notes.length > 1) return score.minimizeAccidentals(notes)
+        const all = score.measures.flatMap((measure) => measure.notes)
+        const indexOf = new Map(all.map((note, i) => [note, i]))
+        const result = score.minimizeAccidentals()
+        return notes.map((note) => result[indexOf.get(note) ?? -1]).filter((note): note is Note => note !== undefined)
+    },
+}
+
 // --- Duration editing ---
 
 /** `arg`: the target {@link DurationType}. */
@@ -227,6 +246,7 @@ export const SCORE_ACTIONS: ScoreAction[] = [
     REMOVE_NOTE,
     CHANGE_PITCH,
     SET_ACCIDENTAL,
+    MINIMIZE_ACCIDENTALS,
     SET_DURATION,
     TOGGLE_DOT,
     TOGGLE_TUPLET,

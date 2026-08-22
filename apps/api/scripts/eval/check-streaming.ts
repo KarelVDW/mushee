@@ -33,7 +33,6 @@ import type { GroundTruth } from './types';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -95,7 +94,6 @@ function noteDelta(a: EstNote[], b: EstNote[]): { onlyA: number; onlyB: number }
 
 async function main(): Promise<void> {
   const registry = new ProviderRegistry({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();

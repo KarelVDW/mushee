@@ -1,4 +1,4 @@
-import { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from './note-event';
 
 /**
  * Common note lengths in beats, matching the front-end Duration table.

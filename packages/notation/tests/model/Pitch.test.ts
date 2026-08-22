@@ -184,4 +184,29 @@ describe('Pitch', () => {
             expect(p.octaveShifted(0)).toBe(p)
         })
     })
+
+    describe('spellingsOf (enharmonic candidates of a MIDI pitch)', () => {
+        const spelledAs = (midi: number) => Pitch.spellingsOf(midi).map((p) => `${p.name}${p.accidental ?? ''}${p.octave}`)
+
+        it('a black key spells as the sharp below and the flat above', () => {
+            expect(spelledAs(61)).toEqual(['C#4', 'Db4'])
+        })
+
+        it('a white key includes its single-accidental neighbours, crossing the octave where needed', () => {
+            expect(spelledAs(60)).toEqual(['C4', 'B#3']) // B♯ lives an octave label lower
+            expect(spelledAs(64)).toEqual(['E4', 'Fb4'])
+            expect(spelledAs(71)).toEqual(['Cb5', 'B4']) // C♭ lives an octave label higher
+        })
+
+        it('never offers double accidentals and every candidate sounds the requested pitch', () => {
+            for (let midi = 48; midi < 72; midi++) {
+                const spellings = Pitch.spellingsOf(midi)
+                expect(spellings.length).toBeGreaterThan(0)
+                for (const p of spellings) {
+                    expect(Math.abs(p.alter)).toBeLessThanOrEqual(1)
+                    expect(p.toMidi()).toBe(midi)
+                }
+            }
+        })
+    })
 })

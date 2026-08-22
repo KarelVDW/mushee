@@ -154,6 +154,24 @@ export class Pitch {
         })
     }
 
+    /**
+     * Every single-accidental spelling of a MIDI pitch — one candidate per letter name whose
+     * required alteration stays within ±1 (each pitch class yields one to three: e.g. MIDI 61
+     * → C♯4 and D♭4; MIDI 60 → C4 and B♯3). Double-accidental spellings are deliberately
+     * excluded: they exist only to preserve voice-leading the respeller is asked to undo.
+     */
+    static spellingsOf(midi: number): Pitch[] {
+        const result: Pitch[] = []
+        for (const name of INDEX_TO_NOTE) {
+            const octave = Math.round((midi - SEMITONES[name]) / 12) - 1
+            const alter = midi - ((octave + 1) * 12 + SEMITONES[name])
+            if (alter >= -1 && alter <= 1) {
+                result.push(new Pitch({ name, alter, accidental: Pitch.alterToAccidental(alter), octave }))
+            }
+        }
+        return result
+    }
+
     /** Accidental token for an alteration ('#', 'b', '##', 'bb', or undefined for natural). Inverse of accidentalToAlter. */
     static alterToAccidental(alter: number): string | undefined {
         switch (alter) {

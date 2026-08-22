@@ -359,6 +359,15 @@ const GLYPHS: Record<string, ReactElement> = {
             <circle cx="17" cy="16" r="2.4" fill="currentColor" stroke="none" />
         </>
     ),
+    // A natural sign (♮) in the schematic stroke style — the "minimize accidentals" action.
+    natural: (
+        <>
+            <path d="M8.5 3v13.5" />
+            <path d="M15.5 7.5V21" />
+            <path d="m8.5 10.5 7-1.7" />
+            <path d="m8.5 16.5 7-1.7" />
+        </>
+    ),
     pause: (
         <>
             <path d="M8.5 5v14" />
@@ -519,6 +528,15 @@ const GLYPHS: Record<string, ReactElement> = {
             <path d="M5.5 7l1.2 13.5h10.6L18.5 7" />
             <path d="M10 11v6" />
             <path d="M14 11v6" />
+        </>
+    ),
+    // Paired up/down pitch arrows — the transpose action.
+    transpose: (
+        <>
+            <path d="M8 20V4.5" />
+            <path d="m4 8.5 4-4 4 4" />
+            <path d="M16 4v15.5" />
+            <path d="m12 15.5 4 4 4-4" />
         </>
     ),
     undo: (

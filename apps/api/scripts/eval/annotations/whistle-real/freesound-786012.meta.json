@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-786012",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 12,
+  "draftMedianCentsOffset": 18,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 3.4029931972789114,
+    "sha256": "e8b4f1b776ee6b8c5c61ecefff83bd9b54bd53c79a3475260f49dbd3ab1777dd"
+  },
+  "provenance": {
+    "id": "freesound-786012",
+    "dataset": "whistle-real",
+    "sha256": "e8b4f1b776ee6b8c5c61ecefff83bd9b54bd53c79a3475260f49dbd3ab1777dd",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user EBasinger (CC0)",
+    "source": "https://freesound.org/people/EBasinger/sounds/786012/",
+    "sourceUrl": "https://cdn.freesound.org/previews/786/786012_16811167-hq.mp3",
+    "note": "\"Whistling Sound Effect\", 3.4 s, 128 kbps mp3 preview; screen tonal=0.92 median=1876Hz notes=12/7 pitches"
+  }
+}

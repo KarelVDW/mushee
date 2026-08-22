@@ -89,6 +89,25 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     expect(overflow).toBeLessThanOrEqual(1)
 })
 
+test('pitch actions live in the dock and the transpose sheet spans it', async ({ page }) => {
+    // Minimize-accidentals and transpose join the dock's settings well on phones.
+    const settings = page.getByRole('group', { name: 'Score settings' })
+    await expect(settings.getByRole('button', { name: 'Minimize accidentals' })).toBeVisible()
+
+    const trigger = settings.getByRole('button', { name: 'Transpose' })
+    await trigger.tap()
+    const sheet = page.getByRole('dialog', { name: 'Transpose' })
+    await expect(sheet).toBeVisible()
+
+    // The sheet spans the dock's width instead of anchoring to the chip.
+    const sheetBox = await sheet.boundingBox()
+    const viewport = page.viewportSize()
+    expect(sheetBox?.width ?? 0).toBeGreaterThan((viewport?.width ?? 0) * 0.9)
+
+    await trigger.tap() // the chip toggles its own sheet closed
+    await expect(sheet).toHaveCount(0)
+})
+
 test('the score reflows to the phone instead of scaling down', async ({ page }) => {
     const svg = page.locator('.max-w-240 svg').first()
     await expect(svg).toBeVisible()

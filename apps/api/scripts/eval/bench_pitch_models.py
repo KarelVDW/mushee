@@ -173,14 +173,26 @@ DEGRADATIONS = ("real", "distant-mic", "echoey-room", "street-noise", "wind-outd
 ADVERSE_DATASETS = ("annotated-vocalset", "vocadito", "guitarset-solo")
 
 
+def real_ds_dir(ds: str) -> str:
+    """Resolve a dataset dir across the tiered layout (benchmark/, context/ —
+    see scripts/eval/lib/realCorpus.ts) with the pre-tier flat layout as
+    fallback."""
+    for tier in ("benchmark", "context"):
+        d = os.path.join(REAL_DIR, tier, ds)
+        if os.path.isdir(d):
+            return d
+    return os.path.join(REAL_DIR, ds)
+
+
 def clips_for_adverse(limit: int) -> List[dict]:
     out: List[dict] = []
     for ds in ADVERSE_DATASETS:
-        truths = sorted(glob.glob(os.path.join(REAL_DIR, ds, "*.truth.json")))[: limit or 8]
+        ds_dir = real_ds_dir(ds)
+        truths = sorted(glob.glob(os.path.join(ds_dir, "*.truth.json")))[: limit or 8]
         for cond in DEGRADATIONS:
             for truth in truths:
                 clip = os.path.basename(truth)[: -len(".truth.json")]
-                wav = os.path.join(REAL_DIR, ds, f"{clip}__{cond}.wav")
+                wav = os.path.join(ds_dir, f"{clip}__{cond}.wav")
                 if os.path.exists(wav):
                     out.append({"dataset": cond, "clip": f"{ds}/{clip}", "wav": wav, "truth": truth})
     return out
@@ -190,8 +202,12 @@ def clips_for_tier(tier: str, datasets: Optional[List[str]], limit: int) -> List
     if tier == "adverse":
         return clips_for_adverse(limit)
     root, suffix = (REAL_DIR, "__real.wav") if tier == "real" else (PROBE_DIR, "__clean.wav")
+    patterns = [os.path.join(root, "*", "*.truth.json")]
+    if tier == "real":
+        # Tiered layout (benchmark/, context/) — see scripts/eval/lib/realCorpus.ts.
+        patterns += [os.path.join(root, t, "*", "*.truth.json") for t in ("benchmark", "context")]
     out: List[dict] = []
-    for truth in sorted(glob.glob(os.path.join(root, "*", "*.truth.json"))):
+    for truth in sorted(t for p in patterns for t in glob.glob(p)):
         ds = os.path.basename(os.path.dirname(truth))
         if datasets and ds not in datasets:
             continue

@@ -20,10 +20,10 @@
  * a *looser* onset gate than their 79.56 — do not read a gap as being smaller than
  * it is.
  *
- * Output: scripts/fixtures/eval-real/n20emv2/<clip>.truth.json      ({bpm, notes})
- *         scripts/fixtures/eval-real/n20emv2/<clip>__real.wav
- *         scripts/fixtures/eval-real/n20emv2/dataset.json           (manifest)
- *         scripts/fixtures/eval-real/n20emv2-test/…                 (same layout)
+ * Output: scripts/fixtures/eval-real/benchmark/n20emv2/<clip>.truth.json      ({bpm, notes})
+ *         scripts/fixtures/eval-real/benchmark/n20emv2/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/n20emv2/dataset.json           (manifest)
+ *         scripts/fixtures/eval-real/benchmark/n20emv2-test/…                 (same layout)
  *
  * TWO dataset directories, because the corpus ships its own train/valid/test
  * split and its published numbers are on that test split. `n20emv2` holds the
@@ -86,7 +86,7 @@ const RECORD = 'https://zenodo.org/api/records/10814703/files';
 const LOCAL_DIR = process.env.N20EMV2_LOCAL_DIR;
 
 const CACHE = resolve(__dirname, '.cache', 'n20emv2');
-const FIXTURES = resolve(__dirname, '../fixtures/eval-real');
+const FIXTURES = resolve(__dirname, '../fixtures/eval-real/benchmark');
 
 /** Their train+valid songs, and their test songs, as separate datasets. */
 const DEV_DATASET = 'n20emv2';

@@ -2,9 +2,9 @@
  * Fetch the ESMUC Choir Dataset and convert its per-singer annotated tracks into
  * the eval harness's real corpus layout.
  *
- * Output: scripts/fixtures/eval-real/esmuc-choir/<clip>.truth.json
- *         scripts/fixtures/eval-real/esmuc-choir/<clip>__real.wav
- *         scripts/fixtures/eval-real/esmuc-choir/dataset.json
+ * Output: scripts/fixtures/eval-real/benchmark/esmuc-choir/<clip>.truth.json
+ *         scripts/fixtures/eval-real/benchmark/esmuc-choir/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/esmuc-choir/dataset.json
  *
  * Source : https://zenodo.org/records/5848990  (2.34 GB zip)
  * License: CC-BY-4.0 (the record's own licence field; first-party MTG deposit).
@@ -52,7 +52,7 @@ const ZIP_URL =
 const CACHE = resolve(__dirname, '.cache');
 const ZIP = join(CACHE, 'esmuc.zip');
 const EXTRACT = join(CACHE, 'esmuc');
-const OUT = resolve(__dirname, '../fixtures/eval-real/esmuc-choir');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/esmuc-choir');
 
 const NOMINAL_BPM = 120; // metrics compare seconds; bpm only feeds the quantizer
 const MIN_NOTES_PER_CLIP = 5;

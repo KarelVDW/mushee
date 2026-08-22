@@ -49,8 +49,19 @@ import type { RealDataset } from './realCorpus';
  *    thresholds the detector finds re-onset recall 0.218 on it against 0.329 on its
  *    own 10 ms grid, because a re-articulation dip lasts 30–50 ms. A sweep over the
  *    coarse envelope measures the frame rate, not the rule.
+ * 6: the track gained per-frame pitch CANDIDATES (E3/R9 — top-5 activation
+ *    maxima with sub-bin cents), which only exist at decode time; a stale entry
+ *    would replay a candidate-less track under a decoder expecting them.
+ *
+ * NOT bumped for the 2026-08-22 basic-pitch removal, deliberately: every entry
+ * this cache can hold is a crepe-tiny low/mid/high routing (basic-pitch
+ * routings returned null and were never written), and for those the new
+ * resolver's window ceiling, gates and overlays are byte-identical to the old
+ * one's. The change only affects routes that never produced an entry (the
+ * very-high band; the default fallback, which now caches where it used to
+ * null) — additive, not stale.
  */
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
 const DETECT_SR = 16000;
 
 interface CacheMeta {
@@ -67,6 +78,8 @@ interface CacheMeta {
   /** Frames in `fineEnergy`, and its hop — `OnsetDetector`'s own 10 ms grid. */
   fineFrames: number;
   fineHopSec: number;
+  /** Pitch candidates per frame stored in the blob (0 = none). */
+  candK?: number;
 }
 
 /** One clip, with the expensive part already computed. */
@@ -195,6 +208,7 @@ export class TrackCache {
     );
 
     mkdirSync(dir, { recursive: true });
+    const candK = track.candK;
     const meta: CacheMeta = {
       version: CACHE_VERSION,
       clip,
@@ -207,14 +221,22 @@ export class TrackCache {
       hasEnergy: true,
       fineFrames: fineEnergy.length,
       fineHopSec: this.onsetDetector.hopSec,
+      candK,
     };
     writeFileSync(metaPath, JSON.stringify(meta));
-    // cents | confidence | energy (each `frames`), then fineEnergy.
-    const blob = new Float32Array(track.frames * 3 + fineEnergy.length);
+    // cents | confidence | energy (each `frames`), fineEnergy, then the pitch
+    // candidates (candCents | candStrength, each `frames × candK`).
+    const candLen = track.frames * candK;
+    const blob = new Float32Array(track.frames * 3 + fineEnergy.length + candLen * 2);
     blob.set(track.cents.subarray(0, track.frames), 0);
     blob.set(track.confidence.subarray(0, track.frames), track.frames);
     blob.set(energy, track.frames * 2);
     blob.set(fineEnergy, track.frames * 3);
+    if (candK > 0 && track.candCents && track.candStrength) {
+      const base = track.frames * 3 + fineEnergy.length;
+      blob.set(track.candCents.subarray(0, candLen), base);
+      blob.set(track.candStrength.subarray(0, candLen), base + candLen);
+    }
     writeFileSync(binPath, Buffer.from(blob.buffer, 0, blob.byteLength));
 
     return {
@@ -257,7 +279,10 @@ export class TrackCache {
     );
     const n = meta.frames;
     const fine = meta.fineFrames ?? 0;
-    if (floats.length < n * 3 + fine) return null;
+    const candK = meta.candK ?? 0;
+    const candLen = n * candK;
+    if (floats.length < n * 3 + fine + candLen * 2) return null;
+    const candBase = n * 3 + fine;
     return {
       dataset: ds.id,
       clip,
@@ -269,6 +294,9 @@ export class TrackCache {
         floats.slice(n, n * 2),
         n,
         meta.hopSec,
+        candK > 0 ? floats.slice(candBase, candBase + candLen) : undefined,
+        candK > 0 ? floats.slice(candBase + candLen, candBase + candLen * 2) : undefined,
+        candK,
       ),
       wavPath: join(ds.dir, `${clip}__real.wav`),
       fluxPath: binPath.replace(/\.bin$/, '.flux.bin'),

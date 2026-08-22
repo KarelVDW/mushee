@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-561051",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 36,
+  "draftMedianCentsOffset": 21,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 13.955192743764172,
+    "sha256": "d2c2758c6e4832c45311a8dcbb30184f0cc2a2f8b6a10f7edbce5bb35a3f35b8"
+  },
+  "provenance": {
+    "id": "freesound-561051",
+    "dataset": "whistle-real",
+    "sha256": "d2c2758c6e4832c45311a8dcbb30184f0cc2a2f8b6a10f7edbce5bb35a3f35b8",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user AWESOMETRAINMASTER1 (CC0)",
+    "source": "https://freesound.org/people/AWESOMETRAINMASTER1/sounds/561051/",
+    "sourceUrl": "https://cdn.freesound.org/previews/561/561051_9011840-hq.mp3",
+    "note": "\"whistling.wav\", 14.0 s, 128 kbps mp3 preview; screen tonal=0.98 median=1125Hz notes=36/7 pitches"
+  }
+}

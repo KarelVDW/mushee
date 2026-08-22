@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from './note-event';
 
 import type { PitchTrack } from './pitch-track';
 
@@ -68,6 +68,10 @@ export interface NoteSegmenterOptions {
   /** Register window; voiced frames outside it are treated as unvoiced. */
   minFreqHz?: number;
   maxFreqHz?: number;
+  /** Block-level voiced-fraction quorum on the gate (R19; see `PitchTrack.voicedMask`). */
+  voicedQuorum?: { minFraction?: number; windowSec?: number };
+  /** Fill unvoiced gaps up to this long (seconds) before decoding (R21; see `PitchTrack.fillDropouts`). */
+  fillUnvoicedGapSec?: number;
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
   stepsPerSemitone?: number;
   /** Emission σ for a note's attack phase, in semitones — deliberately wide. */
@@ -85,16 +89,16 @@ export interface NoteSegmenterOptions {
   /** Cost of a note's attack phase giving way to its stable phase. */
   attackCost?: number;
   /**
-   * Cost charged for each frame spent in a note's attack phase — what makes the
-   * attack **transient**.
+   * Cost charged for time spent in a note's attack phase — what makes the
+   * attack **transient**. Declared in nats **per 10 ms** of dwell and rescaled
+   * to the track's actual hop at decode time (Praat's convention), so the knob
+   * keeps its meaning if the hop ever changes.
    *
    * Without it the model collapses: the attack state's wide σ fits any pitch
    * almost free, so the cheapest path is to enter one attack state and never
    * leave, emitting a single note for the whole take (measured: 14 notes where 27
    * were sung). pYIN gets this for nothing from its attack self-transition
-   * probability of 0.9 (vs 0.99 for stable), i.e. ~0.105 nats per frame at its
-   * ~6 ms hop. Our hop is 20 ms, so an equivalent time-domain decay needs roughly
-   * 3.4× that per frame.
+   * probability of 0.9 (vs 0.99 for stable).
    */
   attackFrameCost?: number;
   /** Cost of starting a note out of silence. */
@@ -109,8 +113,21 @@ export interface NoteSegmenterOptions {
   unvoicedPitchCost?: number;
   /** Emission cost charged to silence on a VOICED frame. */
   voicedSilenceCost?: number;
-  /** Shortest note kept, in frames. Absorbed into a neighbour, not just dropped. */
-  minFrames?: number;
+  /** Shortest note kept, in seconds. Absorbed into a neighbour, not just dropped. */
+  minNoteSec?: number;
+  /**
+   * Exempt a run shorter than `minNoteSec` from absorption when its peak energy
+   * reaches this multiple of the clip's median voiced energy — WaoN's joint
+   * duration × velocity rule: short AND quiet is a glitch, short and loud is
+   * staccato. Needs `energy`; omit to absorb every short run.
+   */
+  keepShortLoudRatio?: number;
+  /**
+   * Drop a note that is long AND quiet — at least `minSec` long with mean energy
+   * below `quietRatio` × the clip's median voiced energy (WaoN's second pass:
+   * the shape of a reverb tail). Needs `energy`; omit to keep every long note.
+   */
+  dropLongQuiet?: { minSec?: number; quietRatio?: number };
   /**
    * Minimum interval, in semitones, that a note change may be. Below this a pitch
    * difference is treated as expression within one note rather than a new note —
@@ -145,15 +162,20 @@ export class NoteSegmenter {
   private readonly trust: number;
   private readonly changeCost: number;
   private readonly attackCost: number;
+  /** Nats per 10 ms of attack dwell; rescaled to the track's hop at decode. */
   private readonly attackFrameCost: number;
   private readonly onCost: number;
   private readonly offCost: number;
   private readonly unvoicedPitchCost: number;
   private readonly voicedSilenceCost: number;
-  private readonly minFrames: number;
+  private readonly minNoteSec: number;
   private readonly minChangeSemitones: number;
   private readonly dipDiscount: number | undefined;
   private readonly dipRatio: number;
+  private readonly keepShortLoudRatio: number | undefined;
+  private readonly dropLongQuiet: { minSec?: number; quietRatio?: number } | undefined;
+  private readonly voicedQuorum: { minFraction?: number; windowSec?: number } | undefined;
+  private readonly fillUnvoicedGapSec: number | undefined;
 
   constructor(opts: NoteSegmenterOptions = {}) {
     this.confidenceThreshold = opts.confidenceThreshold ?? 0.5;
@@ -165,15 +187,19 @@ export class NoteSegmenter {
     this.trust = opts.trust ?? 0.1;
     this.changeCost = opts.changeCost ?? 1.2;
     this.attackCost = opts.attackCost ?? 0.2;
-    this.attackFrameCost = opts.attackFrameCost ?? 0.35;
+    this.attackFrameCost = opts.attackFrameCost ?? 0.175;
     this.onCost = opts.onCost ?? 0.5;
     this.offCost = opts.offCost ?? 0.5;
     this.unvoicedPitchCost = opts.unvoicedPitchCost ?? 1.5;
     this.voicedSilenceCost = opts.voicedSilenceCost ?? 1.5;
-    this.minFrames = opts.minFrames ?? 5;
+    this.minNoteSec = opts.minNoteSec ?? 0.1;
     this.minChangeSemitones = opts.minChangeSemitones ?? 2 / 3;
     this.dipDiscount = opts.dipDiscount;
     this.dipRatio = opts.dipRatio ?? 0.6;
+    this.keepShortLoudRatio = opts.keepShortLoudRatio;
+    this.dropLongQuiet = opts.dropLongQuiet;
+    this.voicedQuorum = opts.voicedQuorum;
+    this.fillUnvoicedGapSec = opts.fillUnvoicedGapSec;
   }
 
   /**
@@ -184,10 +210,20 @@ export class NoteSegmenter {
     const frames = track.frames;
     if (frames === 0) return [];
 
+    if (this.fillUnvoicedGapSec !== undefined) {
+      track = track.fillDropouts({
+        confidenceThreshold: this.confidenceThreshold,
+        minFreqHz: this.minFreqHz,
+        maxFreqHz: this.maxFreqHz,
+        maxGapFrames: Math.max(1, Math.round(this.fillUnvoicedGapSec / track.hopSec)),
+      });
+    }
+
     const voiced = track.voicedMask({
       confidenceThreshold: this.confidenceThreshold,
       minFreqHz: this.minFreqHz,
       maxFreqHz: this.maxFreqHz,
+      quorum: this.voicedQuorum,
     });
 
     const grid = this.pitchGrid(track, voiced);
@@ -195,11 +231,41 @@ export class NoteSegmenter {
 
     const discount = this.changeDiscount(frames, energy);
     const path = this.decode(track, voiced, grid, frames, discount);
-    const runs = this.absorbShortRuns(this.runsOf(path, frames));
+    const minFrames = Math.max(1, Math.round(this.minNoteSec / track.hopSec));
+    // Joint duration × velocity filters (WaoN), anchored to the clip's own
+    // median voiced energy so "quiet" adapts to the take's level.
+    const energyRef =
+      this.keepShortLoudRatio !== undefined || this.dropLongQuiet
+        ? medianVoicedEnergy(voiced, frames, energy)
+        : null;
+    const keepShortLoud =
+      this.keepShortLoudRatio !== undefined && energyRef !== null && energy
+        ? (run: Run): boolean =>
+            peakOver(energy, run) >= this.keepShortLoudRatio! * energyRef
+        : undefined;
+    const longQuiet =
+      this.dropLongQuiet && energyRef !== null && energy
+        ? {
+            minFrames: Math.max(
+              1,
+              Math.round((this.dropLongQuiet.minSec ?? 0.35) / track.hopSec),
+            ),
+            floor: (this.dropLongQuiet.quietRatio ?? 0.3) * energyRef,
+          }
+        : null;
+    const runs = this.absorbShortRuns(this.runsOf(path, frames), minFrames, keepShortLoud);
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
       if (run.state < 0) continue;
+      if (
+        longQuiet &&
+        energy &&
+        run.end - run.start >= longQuiet.minFrames &&
+        meanOver(energy, run) < longQuiet.floor
+      ) {
+        continue;
+      }
       const midi = this.medianMidi(track, voiced, run);
       if (midi === null) continue;
       notes.push({
@@ -296,17 +362,19 @@ export class NoteSegmenter {
 
     const twoSigAttackSq = 2 * this.sigmaAttack * this.sigmaAttack;
     const twoSigStableSq = 2 * this.sigmaStable * this.sigmaStable;
+    // Per-10 ms dwell cost rescaled to this track's hop (Praat's convention).
+    const attackFrameCost = this.attackFrameCost * (track.hopSec / 0.01);
 
     const emit = (t: number, state: number): number => {
       if (state === 0) return voiced[t] ? this.voicedSilenceCost : 0;
       const isAttack = state < STABLE;
       if (!voiced[t]) {
-        return this.unvoicedPitchCost + (isAttack ? this.attackFrameCost : 0);
+        return this.unvoicedPitchCost + (isAttack ? attackFrameCost : 0);
       }
       const p = isAttack ? state - ATTACK : state - STABLE;
       const d = (track.cents[t] - centres[p]) / 100;
       const twoSigSq = isAttack ? twoSigAttackSq : twoSigStableSq;
-      const dwell = isAttack ? this.attackFrameCost : 0;
+      const dwell = isAttack ? attackFrameCost : 0;
       return (this.trust * (d * d)) / twoSigSq + dwell;
     };
 
@@ -454,13 +522,17 @@ export class NoteSegmenter {
   }
 
   /**
-   * Remove runs shorter than `minFrames` without punching holes: a short pitch run
-   * between two pitch runs is absorbed into whichever neighbour is closer in
-   * pitch (the longer one on a tie), while one adjacent to silence is dropped as
-   * noise. Repeats, because absorbing can leave a neighbour newly adjacent to
-   * another short run.
+   * Remove runs shorter than `minNoteSec` (given here as `minFrames` on the
+   * track's own grid) without punching holes: a short pitch run between two pitch
+   * runs is absorbed into whichever neighbour is closer in pitch (the longer one
+   * on a tie), while one adjacent to silence is dropped as noise. Repeats,
+   * because absorbing can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[]): Run[] {
+  private absorbShortRuns(
+    runs: Run[],
+    minFrames: number,
+    keepShortLoud?: (run: Run) => boolean,
+  ): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -469,7 +541,9 @@ export class NoteSegmenter {
         const r = work[i];
         if (r.state < 0) continue;
         const len = r.end - r.start;
-        if (len < this.minFrames && len < shortest) {
+        if (len < minFrames && len < shortest) {
+          // WaoN's joint rule: a short run that is LOUD is real staccato.
+          if (keepShortLoud?.(r)) continue;
           shortest = len;
           idx = i;
         }
@@ -544,4 +618,39 @@ export class NoteSegmenter {
     }
     return peak;
   }
+}
+
+/**
+ * The clip's own loudness anchor for the WaoN filters: median per-frame energy
+ * over voiced frames. Null when there is no energy or nothing voiced, which
+ * turns both filters off rather than comparing against a meaningless zero.
+ */
+function medianVoicedEnergy(
+  voiced: Uint8Array,
+  frames: number,
+  energy: Float32Array | undefined,
+): number | null {
+  if (!energy || energy.length < frames) return null;
+  const vals: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    if (voiced[i]) vals.push(energy[i]);
+  }
+  if (!vals.length) return null;
+  vals.sort((a, b) => a - b);
+  return vals[vals.length >> 1];
+}
+
+function peakOver(energy: Float32Array, run: { start: number; end: number }): number {
+  let peak = 0;
+  const to = Math.min(energy.length, run.end);
+  for (let i = run.start; i < to; i += 1) if (energy[i] > peak) peak = energy[i];
+  return peak;
+}
+
+function meanOver(energy: Float32Array, run: { start: number; end: number }): number {
+  const to = Math.min(energy.length, run.end);
+  if (to <= run.start) return 0;
+  let sum = 0;
+  for (let i = run.start; i < to; i += 1) sum += energy[i];
+  return sum / (to - run.start);
 }

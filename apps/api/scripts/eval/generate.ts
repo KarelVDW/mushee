@@ -86,11 +86,41 @@ function main(): void {
 
       for (const condition of CONDITIONS) {
         const out = join(dir, `${melody.name}__${condition.id}.wav`);
+        // Capture-path tier: OPT-IN, like the intonation tier is scenario-gated.
+        // These conditions exist to ask one question (does the browser's codec
+        // cost accuracy — answered null, see the README's findings log), and
+        // rendering them by default would quadruple the synthetic corpus and add
+        // four conditions to every sweep's enumeration for no new information.
+        if (condition.codec && process.env.EVAL_GEN_CODEC !== '1') continue;
+        if (condition.detuneCents !== undefined) {
+          // R20 intonation tier: the "degradation" is the performer's, applied
+          // at the synthesizer — articulated voice scenarios only, clean
+          // acoustics, and a sidecar recording the detune each note received.
+          if (scenario.articulation === undefined) continue;
+          const detunes: number[] = [];
+          const seed =
+            scenario.rootMidi + melody.notes.length + scenario.id.length + condition.detuneCents;
+          const samples = synthesizeArticulated(truth, {
+            sampleRate: SAMPLE_RATE,
+            kind: 'voice',
+            articulation: scenario.articulation,
+            seed,
+            detuneCents: condition.detuneCents,
+            outDetunes: detunes,
+          });
+          writeFileSync(out, floatToWav(samples, SAMPLE_RATE));
+          writeFileSync(
+            join(dir, `${melody.name}__${condition.id}.detune.json`),
+            JSON.stringify({ detuneCents: detunes }),
+          );
+          clips += 1;
+          continue;
+        }
         degrade(rawWav, out, condition, SAMPLE_RATE, clipDur);
         clips += 1;
       }
     }
-    console.log(`  ${scenario.id}: ${MELODIES.length * CONDITIONS.length} clips`);
+    console.log(`  ${scenario.id}: ${clips} clips so far`);
   }
 
   rmSync(TMP, { recursive: true, force: true });

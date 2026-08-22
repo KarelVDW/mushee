@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-167065",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 16,
+  "draftMedianCentsOffset": 0,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7,
+    "sha256": "828269b1b3814b23b74449f51940e7efb1cf882e1bdec7709bdf56d36f706e51"
+  },
+  "provenance": {
+    "id": "freesound-167065",
+    "dataset": "whistle-real",
+    "sha256": "828269b1b3814b23b74449f51940e7efb1cf882e1bdec7709bdf56d36f706e51",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user univ_lyon3 (CC0)",
+    "source": "https://freesound.org/people/univ_lyon3/sounds/167065/",
+    "sourceUrl": "https://cdn.freesound.org/previews/167/167065_2465261-hq.mp3",
+    "note": "\"GUERARD_Karl_2012_13_son3.wav\", 7.0 s, 128 kbps mp3 preview; screen tonal=1.00 median=682Hz notes=16/16 pitches"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-368468",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 22,
+  "draftMedianCentsOffset": 36,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 32.508979591836734,
+    "sha256": "90e50e38dd314e1bd3d668b259c754bc6c35c76d1e19b3c3c4ed84bc4be4e5cd"
+  },
+  "provenance": {
+    "id": "freesound-368468",
+    "dataset": "whistle-real",
+    "sha256": "90e50e38dd314e1bd3d668b259c754bc6c35c76d1e19b3c3c4ed84bc4be4e5cd",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user TrentTheBeardGuy (CC0)",
+    "source": "https://freesound.org/people/TrentTheBeardGuy/sounds/368468/",
+    "sourceUrl": "https://cdn.freesound.org/previews/368/368468_6782110-hq.mp3",
+    "note": "\"WhistleEdited_mixdown.mp3\", 32.5 s, 128 kbps mp3 preview; screen tonal=0.56 median=1035Hz notes=22/5 pitches"
+  }
+}

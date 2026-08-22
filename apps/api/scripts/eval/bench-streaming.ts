@@ -1,7 +1,7 @@
 /**
  * Performance proof for the streaming-decode + windowed-transcription change.
  *
- *  (A) Microbench: basic-pitch transcribe time vs input length. The OLD pipeline
+ *  (A) Microbench: provider transcribe time vs input length. The OLD pipeline
  *      handed the whole buffer to the model every pass, so per-pass cost grew
  *      with the recording — Σ over passes = O(n²). The new pipeline feeds a
  *      bounded trailing window, so per-pass cost is flat — Σ = O(n).
@@ -21,14 +21,13 @@ import { join, resolve } from 'path';
 
 import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { BasicPitchProvider } from '../../src/recordings/pipeline/providers/basic-pitch-provider';
+import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider';
 import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
 import { runThroughPipelineStreaming } from './lib/pipelineRun';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -62,7 +61,6 @@ const now = (): number => Number(process.hrtime.bigint() / 1000000n);
 
 async function main(): Promise<void> {
   const registry = new ProviderRegistry({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();
@@ -70,14 +68,16 @@ async function main(): Promise<void> {
   const wav = readFileSync(join(EVAL_ROOT, 'whistle-high', 'tune__clean.wav'));
   const longWebm = await loopToWebm(wav, 6); // ~60 s
 
-  // (A) basic-pitch transcribe time vs input length.
-  console.log('=== (A) basic-pitch transcribe time vs input length ===');
-  const decoded = await new AudioDecoder().decode(longWebm, 22050, {
-    loudnorm: true, highpassHz: 80,
+  // (A) provider transcribe time vs input length (crepe-tiny since the
+  // 2026-08-22 basic-pitch removal; the O(n²)→O(n) claim is provider-agnostic).
+  console.log('=== (A) crepe-tiny transcribe time vs input length ===');
+  const sr = 16000;
+  const decoded = await new AudioDecoder().decode(longWebm, sr, {
+    loudnorm: false, highpassHz: 80,
   });
-  const sr = 22050;
-  const bp = new BasicPitchProvider(
-    new LocalModelBackend({ basicPitch: MODELS.basicPitch, crepeTiny: MODELS.crepeTiny }),
+  const bp = new CrepeProvider(
+    new LocalModelBackend({ crepeTiny: MODELS.crepeTiny }),
+    'crepe-tiny',
   );
   await bp.init();
   console.log(`${'inputSec'.padEnd(10)}${'transcribeMs'.padEnd(14)}ms/sec`);
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     const n = Math.min(decoded.samples.length, sec * sr);
     const slice = decoded.samples.subarray(0, n);
     const t0 = now();
-    await bp.transcribe(slice, { minFreqHz: 559, maxFreqHz: 3316 });
+    await bp.transcribe(slice, { minFreqHz: 559, maxFreqHz: 1900 });
     const ms = now() - t0;
     console.log(
       `${String(sec).padEnd(10)}${String(ms).padEnd(14)}${(ms / sec).toFixed(1)}`,

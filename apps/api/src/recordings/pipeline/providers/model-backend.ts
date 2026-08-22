@@ -1,18 +1,10 @@
 /** Model directories for the local (in-process) backend. */
 export interface ProviderModelDirs {
-  basicPitch: string;
   crepeTiny: string;
 }
 
 /** Canonical model keys understood by a `ModelBackend`. */
-export type ModelKey = 'crepe-tiny' | 'basic-pitch';
-
-/** Raw basic-pitch forward-pass output: the per-frame note + onset activation
- *  matrices ([T][88]), i.e. the full `evaluateModel` result before note decoding. */
-export interface BasicPitchForwardResult {
-  frames: number[][];
-  onsets: number[][];
-}
+export type ModelKey = 'crepe-tiny';
 
 /**
  * The neural-net forward pass, abstracted so it can run either in-process
@@ -35,10 +27,4 @@ export interface ModelBackend {
    * sigmoid activations. Confidence (row max) is derived by the caller.
    */
   crepePredict(frames: Float32Array, batchCount: number): Promise<Float32Array>;
-
-  /**
-   * basic-pitch forward pass over mono 22050 Hz PCM. Returns the note (`frames`)
-   * and `onsets` activation matrices; `outputToNotesPoly` is the caller's job.
-   */
-  basicPitchForward(samples: Float32Array): Promise<BasicPitchForwardResult>;
 }

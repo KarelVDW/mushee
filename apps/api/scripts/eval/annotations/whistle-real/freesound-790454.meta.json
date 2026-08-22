@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-790454",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 37,
+  "draftMedianCentsOffset": 17,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.497233560090702,
+    "sha256": "7c4c43d77bbaf19384d400e7224dc1cf0c89dc4b6795295333f47d12d672937c"
+  },
+  "provenance": {
+    "id": "freesound-790454",
+    "dataset": "whistle-real",
+    "sha256": "7c4c43d77bbaf19384d400e7224dc1cf0c89dc4b6795295333f47d12d672937c",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user oscarboyle (CC0)",
+    "source": "https://freesound.org/people/oscarboyle/sounds/790454/",
+    "sourceUrl": "https://cdn.freesound.org/previews/790/790454_16570795-hq.mp3",
+    "note": "\"Whistling irish melody\", 8.5 s, 128 kbps mp3 preview; screen tonal=0.94 median=1491Hz notes=37/14 pitches"
+  }
+}
