@@ -105,13 +105,14 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
         [score, previewVersion, selectedNotes, interval, effectiveScope],
     )
     // A lone measure fills only a slice of the layout width, so the view is zoomed until the
-    // measure's actually-used width fills the preview box (the box crops the empty remainder).
+    // measure's actually-used width fills the preview box (the box crops the empty remainder
+    // and centers the visible slice).
     const previewZoom = useMemo(() => {
         preview.setLayoutWidth(PREVIEW_LAYOUT_WIDTH)
         const first = preview.measures[0]?.layout
         const used = first ? first.measureX + first.measureWidth : PREVIEW_LAYOUT_WIDTH
         const scale = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
-        return { scale, height: preview.layout.totalHeight * scale }
+        return { scale, width: used * scale, height: preview.layout.totalHeight * scale }
     }, [preview])
 
     // Aim the canvas pulse at the current scope while open; clear it on close.
@@ -258,26 +259,32 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
             )}
 
             {hasSelection && (
-                <Segmented
-                    ariaLabel="Apply to"
-                    value={scope}
-                    onChange={(v) => v && setScope(v)}
-                    options={[
-                        { value: 'score' as const, label: 'Whole score' },
-                        { value: 'selection' as const, label: 'Selection' },
-                    ]}
-                />
+                <div className="flex items-center justify-between gap-3">
+                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Apply to</span>
+                    {/* Both choices render as visible option cells (not a bare track), so the pair reads as a toggle. */}
+                    <div role="group" aria-label="Apply to" className="flex gap-1">
+                        <PopoverOption
+                            active={scope === 'score'}
+                            ariaLabel="Whole score"
+                            onClick={() => setScope('score')}
+                            className="justify-center px-3 h-8 text-[12px] font-medium">
+                            Whole score
+                        </PopoverOption>
+                        <PopoverOption
+                            active={scope === 'selection'}
+                            ariaLabel="Selection"
+                            onClick={() => setScope('selection')}
+                            className="justify-center px-3 h-8 text-[12px] font-medium">
+                            Selection
+                        </PopoverOption>
+                    </div>
+                </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
-                <span className="font-label font-semibold text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                    Preview
-                </span>
-                <div aria-hidden className="bg-white rounded-md manuscript-canvas px-3 py-1 overflow-hidden pointer-events-none select-none">
-                    <div style={{ height: previewZoom.height }}>
-                        <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
-                            <ScoreView score={preview} layoutId={preview.layout.id} />
-                        </div>
+            <div aria-hidden className="bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
+                <div className="overflow-hidden" style={{ width: previewZoom.width, height: previewZoom.height }}>
+                    <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
+                        <ScoreView score={preview} layoutId={preview.layout.id} />
                     </div>
                 </div>
             </div>
