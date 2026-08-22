@@ -497,6 +497,59 @@ async function main(): Promise<void> {
     });
   }
 
+  // --- whistle group (2026-08-22) -------------------------------------------
+  // Whistling's dominant error is SPLITTING, not pitch: on the dogfood clips the
+  // pipeline emits 87 notes for 57 real ones (37 splits per 100 shipping, 102
+  // under RECORDING_VERY_HIGH_CREPE), while octErr is 0.00 and 79 % of matched
+  // pairs are exactly right. The mechanism is specific: a whistle has no
+  // consonant, so the only thing crossing a semitone boundary inside a sustain
+  // is its own vibrato — and every knob below was tuned where consonants exist.
+  // `SWEEP_ONLY=whistle` runs just this group.
+  for (const changeCost of [1.2, 2, 3]) {
+    configs.push({
+      name: `whistle c${changeCost}`,
+      seg: { changeCost },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
+  // pYIN's rule is "the same, or at least 2/3 of a semitone different" (the
+  // default). A whistled vibrato can be wider than that, so this asks whether a
+  // whole semitone — or more — is the right floor for this source.
+  for (const minChangeSemitones of [1, 1.5]) {
+    configs.push({
+      name: `whistle minChange${minChangeSemitones}`,
+      seg: { minChangeSemitones },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
+  // A wider stable-phase σ says "a held whistled note legitimately wanders",
+  // which is the same claim from the emission side rather than the transition
+  // side; if both help, they are measuring one thing and only one should ship.
+  for (const sigmaStableSemitones of [0.3, 0.5]) {
+    configs.push({
+      name: `whistle sigmaStable${sigmaStableSemitones}`,
+      seg: { sigmaStableSemitones },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
+  for (const minNoteSec of [0.15, 0.2]) {
+    configs.push({
+      name: `whistle minNote${minNoteSec}`,
+      seg: { minNoteSec },
+      ext: { maxGridDivisor: 4 },
+      noClean: true,
+    });
+  }
+  configs.push({
+    name: 'whistle c2+minChange1',
+    seg: { changeCost: 2, minChangeSemitones: 1 },
+    ext: { maxGridDivisor: 4 },
+    noClean: true,
+  });
+
   const selected = configs.filter(
     (c) => c.name === baselineName || !only || c.name.includes(only),
   );

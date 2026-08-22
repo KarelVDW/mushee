@@ -1797,3 +1797,144 @@ that honours them the codec IS the capture-path transform. Where a platform igno
 - **Harmonica** has no real permissive counterpart anywhere (§6k), so the synthetic
   `harmonica-mid` scenario stays the only evidence — now a documented state rather than an
   unexplored one.
+
+---
+
+## Findings log (2026-08-22 dogfood whistling)
+
+The first whistling recorded through our own capture path: `context/whistled-high-register`,
+6 clips × 11.5 s, high register (measured f0 958–1838 Hz), a generated melody performed to a
+metronome. Two results — one about the corpus, one about the pipeline.
+
+### The truth had to be repaired before it measured anything (`align-prescribed-truth.ts`)
+
+Scored as recorded: **COnP 0.00**. The truth is the *prescribed melody*, and the performance is
+not the score:
+
+- **Wrong key, and not by a constant.** Median measured − written pitch +12.50 st, **0 %** of
+  notes within ±0.5 st of what is written. Best-fit transposition per clip: 12.27, 12.89, 12.27,
+  12.69, 12.66, 12.39 — **three of six clips were whistled thirteen semitones up, not twelve**.
+  Nothing in the capture recorded which key was used.
+- **Metronome onsets, not performed onsets.** The grid misses the actual attacks by a median
+  90 ms, p90 190 ms; **40 % of notes are outside the ±100 ms tolerance before the pipeline
+  runs**. A per-clip line fits an intercept of +19…+116 ms — not one latency to subtract —
+  leaving 21–134 ms RMS of real timing variance.
+
+This is the trap `research-whistle-corpus.md` §6 names explicitly ("do NOT whistle along to a
+click"): it produces score-derived truth, which measures the performer. **What survived is the
+performance quality** — after one transposition per clip the residual is a median 15 ¢, p90
+82 ¢, so the intervals are intact and only the key is unknown.
+
+`align-prescribed-truth.ts` therefore takes note IDENTITY from the prescribed melody, the KEY
+from a per-clip fit, and TIMING from the audio, DTW-aligning the two sequences. The source
+dataset is never modified; output is the sibling `whistled-high-register-aligned`, flagged
+`noteTruthDerived` until verified, with label TSVs in the usual Audacity loop.
+
+| truth | COnP | pWrong /100 | exact pitch on matched pairs |
+|---|---|---|---|
+| as recorded (prescribed) | 0.00 | 42 | 40 % |
+| aligned, key rounded to an OCTAVE | 0.19 | 35 | 40 % |
+| aligned, key rounded to a SEMITONE | **0.41** | **9** | **79 %** |
+
+Two mistakes worth not repeating, both made here first: rounding the fitted key to a whole
+octave (wrong for half the clips), and measuring the key inside the *metronome's* note windows
+rather than the aligned ones (the windows are 100–200 ms off, which mis-keyed three of six clips
+and inflated clip-05's per-note residual to 255 ¢ against 62 ¢ two-pass). The estimator now runs
+twice: rough key → align → re-measure the key in the aligned windows → re-align.
+
+⚠️ The source dataset was also **pooling into the headline** — `context/` placement is
+documentation, only the flags are mechanism — so it now carries `noteTruthDerived: true` with
+the measurement above in its `note`.
+
+### First real-audio evidence on the `very-high` provider question
+
+The 2026-08-20 pass could only test `RECORDING_VERY_HIGH_CREPE` synthetically, because no real
+clip reached the band. Five of these six do. Same clips, same aligned truth, adaptive routing:
+
+| | shipping (basic-pitch) | `RECORDING_VERY_HIGH_CREPE=1` |
+|---|---|---|
+| COnP@±100 ms | 0.41 | **0.43** |
+| COn (onset only) | 0.50 | **0.57** |
+| COn recall | 0.56 | **0.84** |
+| onset bias / median | 49 / 43 ms | **22 / 2 ms** |
+| missed /100 | 14 | **2** |
+| split /100 | 37 | 102 |
+| spurious /100 | 4 | 14 |
+| **repair seconds /100 notes** | 2175 | **639** |
+| silence-onset recall | 0.600 | **0.840** |
+
+CREPE-pitchdown finds almost everything (2 missed per 100 against 14) and places onsets
+essentially unbiased (median **2 ms** against 43 ms), at the cost of splitting nearly every note
+in two. By the harness's own user-effort metric that trade is strongly favourable —
+**repair effort drops 3.4×** — because merging a split note is cheap and re-entering a missed one
+is not. It also points the same way as the synthetic adaptive +0.016 from the 2026-08-20 pass,
+which is worth something: two independent corpora, same direction.
+
+**Not a gate.** Six clips of derived truth cannot decide a shipping flag; `sweep-segmenter` /
+`sweep-voice` on the guard corpus is what can.
+
+### Where whistling accuracy actually goes, and the next lever
+
+With pitch repaired, the residual error is **segmentation, not pitch tracking**: `octErr 0.00`,
+79 % exact pitch on matched pairs, but 87 estimated notes against 57 real ones and 37 splits per
+100 on the shipping path (102 under CREPE-pitchdown). Whistled sustains get broken apart.
+
+The knobs are `note-segmenter.ts`'s `changeCost` / `minNoteSec` / `attackFrameCost`, and the
+right tool is `sweep-segmenter.ts` over the whole corpus with these datasets reported — not
+tuned on. Note the mechanism while sweeping: whistling has no consonant, so a sustain's own
+vibrato is the only thing crossing a semitone boundary, and the HMM was tuned where consonants
+exist.
+
+Also measured and rejected on the way: **per-take tuning normalisation does not help here.**
+`voice-notation.ts`'s circular-mean offset (built for singing, gated on `profile.isVoice`, and
+whistle takes resolve as `instrument` so they never get it) was simulated on these takes and
+names the intended note 22/57 before and 22/57 after — a wash overall, negative on three of six
+clips. The deviations from the nearest key are near-uniform, not clustered, so there is no
+take-global offset to remove. Do not extend the voice spelling flag to whistling on the strength
+of the singing result.
+
+### Open on this dataset
+
+- **clip-03 needs an ear.** Per-note residual after the key fit is 184 ¢ (p90) against 24–64 ¢
+  on the others, so either the performance wandered or the DTW mismatched notes there.
+- **Nothing is verified.** The aligned truth is drafted from `lib/sineTrack.ts`;
+  `import-note-labels.ts --verified-by=<name>` is what clears the flag.
+- **The recording protocol should change.** For the next batch, whistle *freely* rather than to
+  a click and annotate what came out (`research-whistle-corpus.md` §6). A prescribed melody is
+  still useful — it makes annotation far cheaper by fixing the note sequence — but it cannot be
+  the truth on its own, and the key the performer chooses has to be recorded or recovered.
+
+### The provider question, re-asked on ALL the new real audio (2026-08-22, follow-up)
+
+The dogfood A/B above covered 6 clips; the 2026-08-20 corpora it left unmeasured are now
+measured. `RECORDING_VERY_HIGH_CREPE=1` vs shipping, adaptive, `real` condition, paired
+bootstrap per corpus:
+
+| corpus | truth | n | shipping → flag-on | Δ paired |
+|---|---|---|---|---|
+| tinysol `very-high` stratum (real Ircam timbre) | **exact** (constructed phrasing) | 28 | 0.654 → **0.805** | **+0.150 [+0.114, +0.185]*** |
+| tinysol `high` stratum (control — never routes basic-pitch) | exact | 36 | 0.924 → 0.924 | **+0.000 exactly, bit-identical** |
+| whistle-real (117 real whistling clips) | derived draft | 117 | 0.359 → **0.634** | **+0.275 [+0.231, +0.323]*** |
+| whistled-high-register-aligned (dogfood) | derived, aligned | 6 | 0.409 → 0.433 | +0.024 [−0.052, +0.093] |
+| whistle-vintage (accompanied 78s) | derived | 6 | 0.02 → 0.02 | unchanged — routes mid/high; the accompaniment problem, not the band |
+
+The whistle-real decomposition is the dogfood story without the split explosion: missed
+55 → 22 per 100, precision 0.63 → 0.74, recall 0.31 → 0.60, splits only 7 → 10, octErr 0.00
+both arms. On TinySOL the gain is register-wide and largest exactly where the band's weakness
+was measured (pp 0.451 → 0.608, mf 0.752 → 0.906, ff 0.780 → 0.921), and dynamics no longer
+gate detection.
+
+Caveats, stated rather than waved at: whistle-real's draft labels come from `lib/sineTrack.ts`,
+a trajectory tracker, so some affinity with a trajectory *provider* is plausible — which is why
+the exact-truth TinySOL +0.150 and the dogfood recall jump matter as corroboration from
+independent truth chains; TinySOL's phrasing is spliced (`constructedPerformance`); nothing is
+human-verified yet. Every corpus points the same way; the only counter-signal anywhere remains
+synthetic heavy reverb (−0.03…−0.04, 2026-08-20 log).
+
+**Deletion path this supports, in order of reversibility:** (1) flip the flag in production —
+env-revertible routing change; (2) remove the `basic-pitch-inference` deployment and unset
+`BASIC_PITCH_INFERENCE_URL` — `createModelBackend` then serves basic-pitch from the local
+TF.js path, so even the registry's never-taken fallback stays functional with the sidecar
+gone; (3) delete the code (`apps/inference-basic-pitch`, `BasicPitchProvider`, the registry
+requirement, the parity gate, flatten the flag) — the irreversible step, gated on a
+label-verification pass of the whistle corpora and a soak of (1)+(2).

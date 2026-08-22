@@ -1,0 +1,17 @@
+{
+  "clip": "clip-02",
+  "dataset": "whistled-high-register-aligned",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "align-prescribed-truth.ts (score identity + audio timing, DTW-aligned)",
+  "transpositionSemitones": 13,
+  "fitResidualCents": -10,
+  "perNoteResidualP90Cents": 24,
+  "notesAligned": 8,
+  "notesPrescribed": 8,
+  "audio": {
+    "sampleRate": 48000,
+    "durationSec": 11.493
+  },
+  "source": "context/whistled-high-register/clip-02"
+}

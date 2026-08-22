@@ -480,6 +480,18 @@ spread across:
 *score-derived* truth — the mirror of gate 3 — and it measures the written music instead of the
 performance. It is the mistake §4.4a records. Whistle freely; annotate what came out.
 
+> **This happened, 2026-08-22.** The first dogfood batch (`context/whistled-high-register`, 6
+> clips) was recorded exactly this way — generated melody, performed to a metronome, melody kept
+> as truth — and scored **COnP 0.00**. Two independent reasons, both inherent to the method:
+> the performer whistled it **12–13 semitones up** (and not by a constant: three clips at +12,
+> three at +13, so even "assume an octave" fails), and the metronome grid misses the actual
+> attacks by a median 90 ms, putting **40 % of notes outside the ±100 ms tolerance** before the
+> pipeline does anything. The recording is still valuable — `align-prescribed-truth.ts` repairs
+> it to COnP 0.41 by keeping the note identities, fitting the key per clip and taking timing from
+> the audio — but the repair needs a second estimator pass and leaves derived truth. Two changes
+> for the next batch: **whistle freely**, and if a prescribed melody is used to make annotation
+> cheap, **record the key the performer actually chose**.
+
 **Annotate.** `WHISTLE_LOCAL_DIR=<folder>` on the fetcher stages the takes as
 `whistle-dogfood`; the drafter then produces labels to correct. Budget 2–4 minutes per 10 s
 clip in Audacity's spectrogram view (whistling is one bright line — onsets and offsets are
