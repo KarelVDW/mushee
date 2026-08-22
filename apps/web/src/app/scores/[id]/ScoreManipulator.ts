@@ -4,7 +4,7 @@ import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
 
-import { REMOVE_NOTE, type ScoreAction } from './actions'
+import { MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type SelectionAddress } from './ManipulationHistoryManager'
 
@@ -336,6 +336,25 @@ export class ScoreManipulator {
     onTransposeRequest?: () => void
 
     /**
+     * Page-registered feedback hook: a pitch operation (transpose / minimize accidentals)
+     * just rewrote this range — flash it. Called after the mutation, so a notes array holds
+     * the replacement identities.
+     */
+    onPitchHighlight?: (notes: Note[] | 'all') => void
+
+    /**
+     * Run minimize-accidentals with its scope rule (a multi-note selection respells in
+     * place; otherwise the whole score is re-keyed), then flash the affected range. The
+     * single entry point shared by the header/dock buttons and the keyboard shortcut.
+     */
+    minimizeAccidentals(): void {
+        if (!this._score || !this._selectedNote) return
+        const wholeScore = this._selectedNotes.length <= 1
+        this.run(MINIMIZE_ACCIDENTALS)
+        this.onPitchHighlight?.(wholeScore ? 'all' : [...this._selectedNotes])
+    }
+
+    /**
      * Transpose by a (chromatic, diatonic) interval — the transpose popover's Apply.
      * `scope: 'score'` moves everything including key signatures; `'selection'` moves only
      * the selected run. `Score.transpose` rewrites the affected notes (identities change),
@@ -345,8 +364,9 @@ export class ScoreManipulator {
     transpose(chromatic: number, diatonic: number, scope: 'score' | 'selection'): void {
         const score = this._score
         if (!score) return
+        const selectionScope = scope === 'selection' && this._selectedNotes.length > 0
         this.manipulate(() => {
-            if (scope === 'selection' && this._selectedNotes.length > 0) {
+            if (selectionScope) {
                 const result = score.transpose(chromatic, diatonic, this._selectedNotes)
                 const first = result[0]
                 const last = result[result.length - 1]
@@ -363,6 +383,7 @@ export class ScoreManipulator {
         })
         this.save(score)
         this.emit()
+        this.onPitchHighlight?.(selectionScope ? [...this._selectedNotes] : 'all')
     }
 
     /**

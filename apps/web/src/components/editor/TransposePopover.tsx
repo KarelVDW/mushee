@@ -54,6 +54,12 @@ interface TransposePopoverProps {
     selectedNotes: Note[]
     onApply: (chromatic: number, diatonic: number, scope: TransposeScope) => void
     onDismiss: () => void
+    /**
+     * Reports the range the popover is currently aimed at — on open, whenever the scope
+     * toggle flips, and `null` on close. The editor pulses that range on the canvas so the
+     * target of the pending transposition is always visible. Keep referentially stable.
+     */
+    onScopeChange?: (scope: TransposeScope | null) => void
     /** Extra positioning/layout classes (e.g. `right-0 top-[calc(100%+0.5rem)]`). */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
@@ -67,7 +73,7 @@ interface TransposePopoverProps {
  * (chromatic, diatonic) interval and always respells the result minimally, so the preview
  * below is exactly what Apply produces.
  */
-export function TransposePopover({ score, selectedNotes, onApply, onDismiss, className, anchorRef }: TransposePopoverProps) {
+export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onScopeChange, className, anchorRef }: TransposePopoverProps) {
     const [advanced, setAdvanced] = useState(false)
     const [tab, setTab] = useState<TransposeTab>('interval')
     const [scope, setScope] = useState<TransposeScope>('score')
@@ -107,6 +113,12 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, cla
         const scale = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
         return { scale, height: preview.layout.totalHeight * scale }
     }, [preview])
+
+    // Aim the canvas pulse at the current scope while open; clear it on close.
+    useEffect(() => {
+        onScopeChange?.(effectiveScope)
+    }, [onScopeChange, effectiveScope])
+    useEffect(() => () => onScopeChange?.(null), [onScopeChange])
 
     const selectDegree = (next: number) => {
         setDegree(next)

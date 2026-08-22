@@ -87,7 +87,14 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),
     fromAction(TOGGLE_TUPLET, 'Edit notes', 'Digit3'),
-    fromAction(MINIMIZE_ACCIDENTALS, 'Edit notes', 'KeyM'),
+    {
+        id: MINIMIZE_ACCIDENTALS.id,
+        label: MINIMIZE_ACCIDENTALS.label,
+        group: 'Edit notes',
+        defaultShortcut: 'KeyM',
+        // Through the manipulator method (not fromAction) so the highlight flash fires too.
+        run: (manipulator) => manipulator.minimizeAccidentals(),
+    },
     {
         id: 'transpose',
         label: 'Transpose',

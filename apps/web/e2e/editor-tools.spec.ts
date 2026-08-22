@@ -134,6 +134,9 @@ test('the transpose popover moves the whole score up two semitones', async ({ pa
     const popover = page.getByRole('dialog', { name: 'Transpose' })
     await expect(popover).toBeVisible()
 
+    // While the popover is open, its target range pulses magenta on the canvas.
+    await expect(page.locator('[data-score-highlight="pulse"]')).toBeVisible()
+
     // Apply stays disabled until an actual interval is dialed in.
     const apply = popover.getByRole('button', { name: 'Apply' })
     await expect(apply).toBeDisabled()
@@ -144,10 +147,14 @@ test('the transpose popover moves the whole score up two semitones', async ({ pa
 
     const patch = waitForAutosave(page)
     await apply.click()
+    // The pulse hands over to a brief flash over the transposed range.
+    await expect(page.locator('[data-score-highlight="flash"]')).toBeVisible()
     await patch
     await expect(popover).toHaveCount(0)
     // C major up a major second lands in D major: the dock's key control follows.
     await expect(page.getByRole('button', { name: 'Key signature: 2♯' })).toBeVisible()
+    // The flash is transient: it clears on its own.
+    await expect(page.locator('[data-score-highlight]')).toHaveCount(0)
 })
 
 test('the transpose popover expands to advanced options and transposes to a target key', async ({ page }) => {

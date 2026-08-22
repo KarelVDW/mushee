@@ -16,6 +16,13 @@ export const NOTATION_INK = '#2d2f2f'
 export const INTERACTION_BLUE = '#1e90ff'
 export const INTERACTION_BLUE_BAND = 'rgba(30, 144, 255, 0.14)'
 
+/**
+ * The pitch-operation highlight (transpose aim / minimize flash) — the brand magenta, the
+ * second sanctioned transient exception to the canvas color ban (after the recording
+ * waveform): only ever at low opacity, animated away, and `data-export-exclude`d.
+ */
+export const HIGHLIGHT_MAGENTA = '#FF2079'
+
 /** Pixels between adjacent staff lines */
 export const STAVE_LINE_DISTANCE = 10
 

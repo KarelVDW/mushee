@@ -6,6 +6,7 @@ import {
     type DurationType,
     type KeySignatureClickEvent,
     Score as ScoreView,
+    type ScoreHighlight,
     type SelectionMenuEvent,
     type TempoClickEvent,
     type TimeSignatureClickEvent,
@@ -30,7 +31,6 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import {
     CHANGE_PITCH,
     LOWER_PITCH,
-    MINIMIZE_ACCIDENTALS,
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
@@ -74,6 +74,11 @@ export default function ScoreEditorPage() {
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [transposeOpen, setTransposeOpen] = useState(false)
     const transposeAnchorRef = useRef<HTMLDivElement>(null)
+    // Transient magenta emphasis on the canvas: a pulse over the open transpose popover's
+    // target range, replaced by a fading flash the moment a pitch operation lands.
+    const [pitchHighlight, setPitchHighlight] = useState<ScoreHighlight | null>(null)
+    const highlightSeq = useRef(0)
+    const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
@@ -138,7 +143,7 @@ export default function ScoreEditorPage() {
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
     const handleUndo = useCallback(() => manipulator.undo(), [manipulator])
     const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
-    const handleMinimizeAccidentals = useCallback(() => manipulator.run(MINIMIZE_ACCIDENTALS), [manipulator])
+    const handleMinimizeAccidentals = useCallback(() => manipulator.minimizeAccidentals(), [manipulator])
     const handleTransposeApply = useCallback(
         (chromatic: number, diatonic: number, scope: 'score' | 'selection') => {
             manipulator.transpose(chromatic, diatonic, scope)
@@ -148,12 +153,32 @@ export default function ScoreEditorPage() {
     )
     const closeTranspose = useCallback(() => setTransposeOpen(false), [])
 
+    // The open transpose popover aims a gentle pulse at its target range; closing clears it
+    // — but never a flash that an Apply just set (the popover closes right after applying).
+    const handleTransposeAim = useCallback(
+        (scope: 'score' | 'selection' | null) => {
+            setPitchHighlight((current) => {
+                if (scope === null) return current?.kind === 'pulse' ? null : current
+                return { kind: 'pulse', notes: scope === 'selection' ? manipulator.selectedNotes : 'all', id: ++highlightSeq.current }
+            })
+        },
+        [manipulator],
+    )
+
     // The transpose shortcut opens this popover — view state the manipulator can't own, so
-    // the command reaches back through this registration.
+    // the command reaches back through this registration. The highlight hook flashes the
+    // range a pitch operation (transpose apply / minimize accidentals) just rewrote.
     useEffect(() => {
         manipulator.onTransposeRequest = () => setTransposeOpen(true)
+        manipulator.onPitchHighlight = (notes) => {
+            if (highlightTimer.current) clearTimeout(highlightTimer.current)
+            setPitchHighlight({ kind: 'flash', notes, id: ++highlightSeq.current })
+            highlightTimer.current = setTimeout(() => setPitchHighlight(null), 900)
+        }
         return () => {
             manipulator.onTransposeRequest = undefined
+            manipulator.onPitchHighlight = undefined
+            if (highlightTimer.current) clearTimeout(highlightTimer.current)
         }
     }, [manipulator])
 
@@ -417,6 +442,7 @@ export default function ScoreEditorPage() {
                                         className="right-0 top-[calc(100%+0.5rem)]"
                                         onApply={handleTransposeApply}
                                         onDismiss={closeTranspose}
+                                        onScopeChange={handleTransposeAim}
                                     />
                                 )}
                             </div>
@@ -460,6 +486,7 @@ export default function ScoreEditorPage() {
                             layoutId={score.layout.id}
                             selectedNote={activeNote}
                             selectedNotes={manipulator.selectedNotes}
+                            highlight={pitchHighlight}
                             playbackCursorRef={playbackCursorRef}
                             waveformStore={waveformStore}
                             onSelectionStart={handleSelectionStart}
@@ -546,6 +573,7 @@ export default function ScoreEditorPage() {
                                   score,
                                   selectedNotes: manipulator.selectedNotes,
                                   onTranspose: handleTransposeApply,
+                                  onTransposeAim: handleTransposeAim,
                               }
                             : undefined
                     }

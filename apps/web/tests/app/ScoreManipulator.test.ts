@@ -453,6 +453,38 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))
     })
 
+    it('flashes the whole score after a whole-score operation, the selection after a selection-scoped one', () => {
+        const { manipulator } = setupPitched()
+        const flashes: Array<Note[] | 'all'> = []
+        manipulator.onPitchHighlight = (notes) => flashes.push(notes)
+
+        manipulator.minimizeAccidentals() // single-note selection → whole score
+        expect(flashes).toEqual(['all'])
+
+        manipulator.transpose(2, 1, 'score')
+        expect(flashes).toEqual(['all', 'all'])
+
+        const notes = allNotes(manipulator)
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1])
+        manipulator.transpose(2, 1, 'selection')
+        expect(flashes).toHaveLength(3)
+        // The flash carries the replacement identities — the notes now living in the score.
+        expect(flashes[2]).toEqual(allNotes(manipulator).slice(0, 2))
+
+        manipulator.minimizeAccidentals() // multi-note selection → that selection
+        expect(flashes).toHaveLength(4)
+        expect(flashes[3]).toEqual(manipulator.selectedNotes)
+    })
+
+    it('minimize-accidentals via the manipulator method needs a selection to act on', () => {
+        const manipulator = new ScoreManipulator()
+        let fired = 0
+        manipulator.onPitchHighlight = () => fired++
+        manipulator.minimizeAccidentals() // no score attached
+        expect(fired).toBe(0)
+    })
+
     it('the transpose command defers to the registered popover opener and declines without one', () => {
         const { manipulator } = setupPitched()
         const command = EDITOR_COMMANDS.find((c) => c.id === 'transpose')

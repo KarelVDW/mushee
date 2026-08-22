@@ -193,6 +193,8 @@ interface NoteToolDockProps {
         score: Score
         selectedNotes: Note[]
         onTranspose: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+        /** Forwarded to the popover's onScopeChange (the canvas pulse over its target). */
+        onTransposeAim?: (scope: 'score' | 'selection' | null) => void
     }
     /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
     metronome?: { active: boolean; onToggle: () => void }
@@ -288,6 +290,7 @@ export function NoteToolDock({
                                 score={pitch.score}
                                 selectedNotes={pitch.selectedNotes}
                                 onApply={pitch.onTranspose}
+                                onScopeChange={pitch.onTransposeAim}
                                 disabled={selectionDisabled}
                                 compact={compact}
                             />
@@ -455,11 +458,12 @@ interface TransposeControlProps {
     score: Score
     selectedNotes: Note[]
     onApply: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+    onScopeChange?: (scope: 'score' | 'selection' | null) => void
     disabled: boolean
     compact: boolean
 }
 
-function TransposeControl({ score, selectedNotes, onApply, disabled, compact }: TransposeControlProps) {
+function TransposeControl({ score, selectedNotes, onApply, onScopeChange, disabled, compact }: TransposeControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
 
@@ -479,6 +483,7 @@ function TransposeControl({ score, selectedNotes, onApply, disabled, compact }: 
                         setOpen(false)
                     }}
                     onDismiss={() => setOpen(false)}
+                    onScopeChange={onScopeChange}
                 />
             )}
         </div>
