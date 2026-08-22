@@ -76,6 +76,11 @@ export class CrepePitchdownProvider implements PitchProvider {
       // The profile declares its note floor in provider frames; one inner frame
       // covers 1/k of the real time, so the count must scale to keep the floor.
       minFramesPerNote: (options?.minFramesPerNote ?? 4) * k,
+      // Same for the semitone smoother: unscaled, the median window covers only
+      // 1/k of the real time it covers on the at-pitch provider — the R11 class
+      // of bug (a time-denominated knob silently re-tuned by a grid change),
+      // and the measured mechanism behind this band's split excess.
+      smoothFrames: (options?.smoothFrames ?? 4) * k,
       // The voice decode is calibrated on real-time singing and the very-high
       // band is whistling territory where it deliberately never applied; do not
       // let it run on slowed audio it was never measured on.
