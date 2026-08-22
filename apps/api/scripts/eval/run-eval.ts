@@ -8,14 +8,13 @@
  * baseline). Examples:
  *
  *   tsx scripts/eval/run-eval.ts                       # baseline, all clips
- *   EVAL_PROVIDER=basic-pitch EVAL_MAX_FREQ=4000 \
+ *   EVAL_PROVIDER=crepe-tiny-down1 EVAL_MAX_FREQ=4000 \
  *   EVAL_SCENARIOS=whistle-high,whistle-mid \
  *   tsx scripts/eval/run-eval.ts
  *
  * Env:
- *   EVAL_PROVIDER     basic-pitch | crepe-tiny  (default basic-pitch)
+ *   EVAL_PROVIDER     crepe-tiny | crepe-tiny-down1  (default crepe-tiny)
  *   EVAL_MIN_FREQ, EVAL_MAX_FREQ, EVAL_CONFIDENCE, EVAL_HIGHPASS
- *   EVAL_ONSET, EVAL_FRAME           (basic-pitch note gates)
  *   EVAL_SCENARIOS, EVAL_CONDITIONS  comma-separated id filters
  *   EVAL_OUT          report path (default fixtures/eval/report.json)
  *   EVAL_LABEL        label stored in the report (e.g. the config name)
@@ -39,7 +38,7 @@ import { join,resolve } from 'path';
 import { AudioConverter } from '../../src/recordings/pipeline/audio-converter';
 import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { BasicPitchProvider } from '../../src/recordings/pipeline/providers/basic-pitch-provider';
+import { CrepePitchdownProvider } from '../../src/recordings/pipeline/providers/crepe-pitchdown-provider';
 import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider';
 import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
 import type {
@@ -79,21 +78,19 @@ const DETECT_SR = 16000;
 const SYNTH_ROOT = resolve(__dirname, '../fixtures/eval');
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
 function buildProvider(name: string): PitchProvider {
   const backend = new LocalModelBackend({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   switch (name) {
+    case 'crepe-tiny-down1':
+      return new CrepePitchdownProvider(backend);
     case 'crepe-tiny':
-      return new CrepeProvider(backend, 'crepe-tiny');
-    case 'basic-pitch':
     default:
-      return new BasicPitchProvider(backend);
+      return new CrepeProvider(backend, 'crepe-tiny');
   }
 }
 
@@ -190,20 +187,12 @@ function mean(xs: number[]): number {
 }
 
 async function main(): Promise<void> {
-  const providerName = process.env.EVAL_PROVIDER ?? 'basic-pitch';
+  const providerName = process.env.EVAL_PROVIDER ?? 'crepe-tiny';
   const pitchOptions: PitchTranscribeOptions = {
     minFreqHz: numEnv('EVAL_MIN_FREQ'),
     maxFreqHz: numEnv('EVAL_MAX_FREQ'),
     confidenceThreshold: numEnv('EVAL_CONFIDENCE'),
-    onsetThreshold: numEnv('EVAL_ONSET'),
-    frameThreshold: numEnv('EVAL_FRAME'),
     minFramesPerNote: numEnv('EVAL_MIN_FRAMES'),
-    // WaoN's joint duration × velocity filters (basic-pitch only; R15).
-    keepShortLoudRatio: numEnv('EVAL_KEEP_SHORT_LOUD'),
-    dropLongQuiet:
-      numEnv('EVAL_LQ_QUIET') !== undefined || numEnv('EVAL_LQ_MINSEC') !== undefined
-        ? { quietRatio: numEnv('EVAL_LQ_QUIET'), minSec: numEnv('EVAL_LQ_MINSEC') }
-        : undefined,
   };
   const highpassHz = numEnv('EVAL_HIGHPASS') ?? 80;
   const fixedDenoise = boolEnv('EVAL_DENOISE');
@@ -233,7 +222,6 @@ async function main(): Promise<void> {
 
   if (adaptive) {
     const registry = new ProviderRegistry({
-      basicPitch: MODELS.basicPitch,
       crepeTiny: MODELS.crepeTiny,
     });
     await registry.initAll();
@@ -266,8 +254,6 @@ async function main(): Promise<void> {
         minFreqHz: profile.minFreqHz,
         maxFreqHz: profile.maxFreqHz,
         confidenceThreshold: profile.confidenceThreshold,
-        onsetThreshold: profile.onsetThreshold,
-        frameThreshold: profile.frameThreshold,
         minFramesPerNote: profile.minFramesPerNote,
         segmentMode: profile.segmentMode,
         smoothFrames: profile.smoothFrames,

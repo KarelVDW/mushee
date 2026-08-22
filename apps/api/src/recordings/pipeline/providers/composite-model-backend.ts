@@ -1,18 +1,15 @@
-import type {
-  BasicPitchForwardResult,
-  ModelBackend,
-  ModelKey,
-} from './model-backend';
+import type { ModelBackend, ModelKey } from './model-backend';
 
 /**
- * Routes each model's forward pass to its own backend, so one model can run
- * remotely while the other stays in-process (e.g. CREPE on the inference service
- * while basic-pitch is still local). Built by `createModelBackend` from env.
+ * Routes each model's forward pass to its own backend. With one model left in
+ * the fleet (crepe-tiny — basic-pitch was removed 2026-08-22, see the eval
+ * README's provider-consolidation logs) this is a thin indirection, kept
+ * because it is the seam a second model would come back through — a learned
+ * voice note model is an open research direction. Built by `createModelBackend`
+ * from env.
  */
 export class CompositeModelBackend implements ModelBackend {
-  constructor(
-    private readonly byModel: Record<ModelKey, ModelBackend>,
-  ) {}
+  constructor(private readonly byModel: Record<ModelKey, ModelBackend>) {}
 
   available(model: ModelKey): boolean {
     return this.byModel[model].available(model);
@@ -24,9 +21,5 @@ export class CompositeModelBackend implements ModelBackend {
 
   crepePredict(frames: Float32Array, batchCount: number): Promise<Float32Array> {
     return this.byModel['crepe-tiny'].crepePredict(frames, batchCount);
-  }
-
-  basicPitchForward(samples: Float32Array): Promise<BasicPitchForwardResult> {
-    return this.byModel['basic-pitch'].basicPitchForward(samples);
   }
 }

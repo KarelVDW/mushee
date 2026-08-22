@@ -323,7 +323,7 @@ export class MxmlBuilder {
   }
 
   private midiToPitch(midi: number): MxmlPitch {
-    // basic-pitch reports the sounding MIDI captured by the mic; the score
+    // The pipeline reports the sounding MIDI captured by the mic; the score
     // stores written pitch (MusicXML semantics), so subtract the part's
     // chromatic transpose before mapping to step/alter/octave.
     const written = midi - (this.options.chromaticTranspose ?? 0);

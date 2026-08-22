@@ -25,7 +25,6 @@ import type { GroundTruth, TruthNote } from './types';
 const DETECT_SR = 16000;
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -95,7 +94,7 @@ function bpmFromOnsets(onsets: number[]): number {
 }
 
 async function main(): Promise<void> {
-  const registry = new ProviderRegistry({ basicPitch: MODELS.basicPitch, crepeTiny: MODELS.crepeTiny });
+  const registry = new ProviderRegistry({ crepeTiny: MODELS.crepeTiny });
   await registry.initAll();
   const resolver = new ProfileResolver();
   const decoder = new AudioDecoder();

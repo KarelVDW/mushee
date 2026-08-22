@@ -52,7 +52,6 @@ import type { GroundTruth } from './types';
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -500,7 +499,7 @@ async function main(): Promise<void> {
   // --- whistle group (2026-08-22) -------------------------------------------
   // Whistling's dominant error is SPLITTING, not pitch: on the dogfood clips the
   // pipeline emits 87 notes for 57 real ones (37 splits per 100 shipping, 102
-  // under RECORDING_VERY_HIGH_CREPE), while octErr is 0.00 and 79 % of matched
+  // under the now-default octave-down provider), while octErr is 0.00 and 79 % of matched
   // pairs are exactly right. The mechanism is specific: a whistle has no
   // consonant, so the only thing crossing a semitone boundary inside a sustain
   // is its own vibrato — and every knob below was tuned where consonants exist.

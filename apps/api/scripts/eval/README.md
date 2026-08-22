@@ -196,12 +196,17 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | `bench-yong-runner.py` | The runner half for Yong-2023 (ICASSP 2023, MIT checkpoint): batch inference into the JSON format above. Setup + measured verdict in its header. |
 | `probe-source-classifier.ts` | Measures the stock-YAMNet voice/instrument classifier over every labeled real clip: forced-choice accuracy and the abstain-band trade table. |
 | `probe-provider-routing.ts` | Census of where the resolver sends traffic — provider × band × condition over every wav of both corpora — plus a JSON list of every basic-pitch routing. The evidence base for the provider-consolidation question (see the 2026-08-20 findings log). |
-| `bench-crepe-pitchdown.ts` | Can CREPE cover the `very-high` band if the audio is analysed an octave down (decode at 32 kHz, read as 16 kHz, rescale the notes back)? Fixed-config comparison against basic-pitch on the very-high scenarios. |
-| `bench-default-provider.ts` | Scores every clip the resolver actually routes to `DEFAULT_PROFILE` under basic-pitch vs CREPE-default candidates. Requires `probe-provider-routing.ts`'s JSON. |
 | `sweep-bands.ts` | Does any gated feature want a PER-BAND (`PROFILE_BANDS`) setting? Paired Δ vs the production config within band × path strata over the cached corpus; `BAND_STRATA=band-rev\|ds-band` swaps in the confound strata (reverb flag / dataset) that decide whether an apparent band effect is real. |
 
 ## Pruning log
 
+- 2026-08-22: deleted `bench-crepe-pitchdown.ts`, `bench-default-provider.ts` and
+  `bench-contour-pitch.ts` with the basic-pitch provider they measured against — their
+  questions are answered and acted on (the octave-down CREPE wrapper ships for the `very-high`
+  band and the trajectory default replaced the fallback; see the 2026-08-20/22
+  provider-consolidation entries below, which remain the durable record of every number). The
+  E2 contour-head verdict ("not worth the wire", plus the one-bin `pitchBends` offset any
+  consumer of the TS port must know about) is preserved in its findings entry.
 - 2026-07-08: deleted `tempo-experiment.ts` — both of its questions are answered
   and acted on (tempo adoption shipped in `7a4ab0f`; the round-trip-loss
   measurement lives on in `diagnose-real.ts`).
@@ -1893,6 +1898,47 @@ clips. The deviations from the nearest key are near-uniform, not clustered, so t
 take-global offset to remove. Do not extend the voice spelling flag to whistling on the strength
 of the singing result.
 
+### The anti-splitting sweep: rejected globally, and the two whistle corpora disagree
+
+`sweep-segmenter.ts` gained a `whistle` config group (`SWEEP_ONLY=whistle`) probing the four
+knobs that could cause the splitting: `changeCost` (1.2/2/3), `minChangeSemitones` (1/1.5),
+`sigmaStableSemitones` (0.3/0.5) and `minNoteSec` (0.15/0.2). Run over the whole corpus,
+`EVAL_SPLIT=all`, paired bootstrap, n=1763 clips.
+
+**Every config is worse corpus-wide** — Δ COnP −0.033 to −0.062, every CI excluding zero. None
+of these can ship globally, and that is a firm answer rather than a weak one.
+
+They do exactly what they were meant to do, though: splits fall from **28 per 100 reference
+notes to 9–10**, and estimated repair effort improves 23 % (2689 → 2060 s/100). The COnP loss
+comes from the other side of the same trade — merges rise 4 → 16–18. Anti-splitting works; it
+just costs more than it buys on material that is not whistling.
+
+**The interesting part is that the two whistle datasets point opposite ways:**
+
+| config | `whistled-high-register-aligned` (dogfood) | `whistle-real` (Freesound) |
+|---|---|---|
+| LEGACY (shipping) | 0.48 | **0.50** |
+| whistle c1.2 / minChange1 | **0.72** | 0.38 |
+| whistle sigmaStable0.5 | **0.72** | 0.42 |
+| whistle minNote0.15 | **0.75** | 0.34 |
+
+That is not noise, and the explanation is provenance. **`whistle-real`'s truth is the
+`lib/sineTrack.ts` draft, which over-segments** (2.5 notes/s) — so a config that merges more
+disagrees with it *by construction*, and the dataset cannot detect over-splitting because it
+over-splits itself. This is gate 3 arriving exactly where the flag warned it would.
+`whistled-high-register-aligned` has no such bias: its note COUNT comes from the prescribed
+melody (57 notes, fixed), independent of any segmenter.
+
+So for a question about splitting, the six-clip dogfood set is the *better* instrument despite
+being 20× smaller, and the 117-clip set is close to useless until it is verified. **Neither is
+sufficient to ship a whistle-scoped segmenter setting**: 57 notes cannot carry it, and the
+mechanism (profile-scoped `NoteSegmenterOptions`, which `PROFILE_BANDS` already supports) is
+only worth building once there is verified truth to justify it.
+
+The order of work is therefore fixed, and it is not more sweeping: **verify a subset by hand
+first**, then re-ask this exact question. Until then the standing answer is that shipping's
+segmentation is correct everywhere it has been measured on trustworthy truth.
+
 ### Open on this dataset
 
 - **clip-03 needs an ear.** Per-note residual after the key fit is 184 ¢ (p90) against 24–64 ¢
@@ -1938,3 +1984,39 @@ TF.js path, so even the registry's never-taken fallback stays functional with th
 gone; (3) delete the code (`apps/inference-basic-pitch`, `BasicPitchProvider`, the registry
 requirement, the parity gate, flatten the flag) — the irreversible step, gated on a
 label-verification pass of the whistle corpora and a soak of (1)+(2).
+
+---
+
+## Findings log (2026-08-22, afternoon: basic-pitch removed)
+
+The consolidation decision was taken: with the very-high band's replacement measured
+parity-or-better on synthetic audio and decisively better on all the new real audio (the two
+entries above), **basic-pitch is deleted from the repo** — provider, TF.js model, Python gRPC
+service (`apps/inference-basic-pitch`), its k8s deployment/policies/CI image, the
+`BASIC_PITCH_INFERENCE_URL` seam, the `@spotify/basic-pitch` dependency (its `NoteEventTime`
+shape lives on as `pipeline/note-event.ts`), and the `RECORDING_VERY_HIGH_CREPE` flag, now
+flattened to the only behaviour:
+
+- the `very-high` band rides `crepe-tiny-down1` (octave-down CREPE, same checkpoint);
+- `DEFAULT_PROFILE` is crepe-tiny at the trajectory ceiling (measured provider-immaterial:
+  COnP ≈ 0.001 under every provider on the only clips that route there);
+- the registry requires and falls back to crepe-tiny; `onsetThreshold`/`frameThreshold` and
+  the R15 basic-pitch note-filter plumbing left `PipelineProfile`/`PitchTranscribeOptions`
+  (the voice-decoder and note-segmenter option variants are untouched).
+
+Consequences inside the harness: fixed-mode `EVAL_PROVIDER` now defaults to `crepe-tiny`
+(with `crepe-tiny-down1` selectable); `check-inference-parity.ts` gates CREPE alone;
+`bench-streaming.ts`'s microbench runs on crepe-tiny (the O(n²)→O(n) claim it documents is
+provider-agnostic); `TrackCache` deliberately did NOT bump `CACHE_VERSION` — every existing
+entry is a crepe low/mid/high routing for which the new resolver is byte-identical, and the
+changed routes never produced entries (reasoning recorded at the constant).
+
+One behavioural note beyond routing: the no-pitch fallback can now take the voice overlay
+(it is a trajectory profile), where basic-pitch structurally could not. On the fallback's
+measured traffic this is a no-op (nothing transcribes either way — the 0.001 row above); the
+`sourceBelief`-vs-`isVoice` distinction it motivated stays, since the pitch-down band still
+never routes voice.
+
+What deployed infrastructure still needs (ops, outside the repo): delete the
+`basic-pitch-inference` deployment/HPA from the live cluster and its images from the Artifact
+Registry. The manifests, CI matrix and runbooks in-repo no longer reference them.

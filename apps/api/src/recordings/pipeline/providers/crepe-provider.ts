@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../note-event';
 
 import { PitchTrack } from '../pitch-track';
 import {

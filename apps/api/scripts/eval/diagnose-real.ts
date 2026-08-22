@@ -28,7 +28,6 @@ import type { GroundTruth, TruthNote } from './types';
 const DETECT_SR = 16000;
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 const TOLS = [0.05, 0.1, 0.2, 0.3];
@@ -112,7 +111,6 @@ function dumpNotes(label: string, notes: { onsetSec: number; durSec: number; mid
 
 async function main(): Promise<void> {
   const registry = new ProviderRegistry({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();
@@ -138,8 +136,6 @@ async function main(): Promise<void> {
       minFreqHz: profile.minFreqHz,
       maxFreqHz: profile.maxFreqHz,
       confidenceThreshold: profile.confidenceThreshold,
-      onsetThreshold: profile.onsetThreshold,
-      frameThreshold: profile.frameThreshold,
     });
     return extracted.deduced.map((n) => ({
       onsetSec: n.startTimeSeconds,

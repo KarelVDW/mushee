@@ -52,6 +52,14 @@ import type { RealDataset } from './realCorpus';
  * 6: the track gained per-frame pitch CANDIDATES (E3/R9 — top-5 activation
  *    maxima with sub-bin cents), which only exist at decode time; a stale entry
  *    would replay a candidate-less track under a decoder expecting them.
+ *
+ * NOT bumped for the 2026-08-22 basic-pitch removal, deliberately: every entry
+ * this cache can hold is a crepe-tiny low/mid/high routing (basic-pitch
+ * routings returned null and were never written), and for those the new
+ * resolver's window ceiling, gates and overlays are byte-identical to the old
+ * one's. The change only affects routes that never produced an entry (the
+ * very-high band; the default fallback, which now caches where it used to
+ * null) — additive, not stale.
  */
 const CACHE_VERSION = 6;
 const DETECT_SR = 16000;

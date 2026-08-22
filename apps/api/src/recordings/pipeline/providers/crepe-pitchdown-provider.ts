@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../note-event';
 
 import { CrepeProvider } from './crepe-provider';
 import type { ModelBackend } from './model-backend';
@@ -9,9 +9,9 @@ import type {
 } from './pitch-provider';
 
 /**
- * CREPE analysing the audio ONE OCTAVE DOWN — a trajectory provider for the
- * register above CREPE's own ~1997 Hz ceiling (piccolo, whistling), i.e. a
- * candidate replacement for basic-pitch's one remaining register.
+ * CREPE analysing the audio ONE OCTAVE DOWN — the trajectory provider for the
+ * register above CREPE's own ~1997 Hz ceiling (piccolo, whistling). It is what
+ * let basic-pitch (and its inference service) be removed on 2026-08-22.
  *
  * The shift is exact and artifact-free: this provider declares
  * `sampleRate = 32 kHz`, so the decoder hands it 32 kHz samples, and the inner
@@ -26,19 +26,14 @@ import type {
  * short of basic-pitch's nominal 4.5 kHz top; see
  * `PITCHDOWN_MODEL_CEILING_HZ`.
  *
- * Measured (scripts/eval/bench-crepe-pitchdown.ts, whistle-mid/high + piccolo
- * × 7 conditions, COnP@±100 ms, paired over 84 clips, 2026-08-19): pooled
- * 0.578 vs basic-pitch's 0.556 (+0.022 [−0.010, +0.054]); with the resolver's
- * reverberance ramp on the gate (which a basic-pitch band can never have)
- * 0.583 (+0.028 [−0.003, +0.059]). Clean condition 0.966 vs 0.881; the one
- * remaining deficit is heavy reverb (echoey-room 0.27 vs 0.34, distant-mic
- * 0.18 vs 0.23). A 2-octave variant measured worse (0.548) — the deeper shift
- * buys no extra coverage the corpus uses and costs 4× inference. Synthetic
- * corpus only: no real note-annotated whistling/piccolo recordings exist
- * (README open items), which is equally true of the shipping basic-pitch path.
- *
- * OFF by default: nothing routes here unless `RECORDING_VERY_HIGH_CREPE=1`
- * swaps the `very-high` band onto this provider (pipeline-profile.ts).
+ * Measured against basic-pitch before its removal (eval README, 2026-08-20/22
+ * provider-consolidation logs): synthetic adaptive 0.589 → 0.605
+ * (+0.016 [−0.010, +0.042]); on real audio decisive — TinySOL `very-high`
+ * (exact truth, real Ircam timbre) 0.654 → 0.805 (+0.150 [+0.114, +0.185]),
+ * whistle-real (117 real whistling clips, draft truth) 0.359 → 0.634
+ * (+0.275 [+0.231, +0.323]), dogfood whistling repair effort 3.4× lower.
+ * Heavy reverb was the one deficit (−0.03…−0.07). A 2-octave variant measured
+ * worse (no content needs the depth, 4× inference cost).
  */
 export class CrepePitchdownProvider implements PitchProvider {
   readonly name: string;

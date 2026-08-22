@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from './note-event';
 
 import {
   ExtractedNotes,
@@ -45,7 +45,7 @@ export class AudioConverter {
       extractor ?? new NoteExtractor(AudioConverter.cleanupFor(provider, profile));
     this.session = provider.createSession();
     // Only providers without native onset detection (CREPE) need the
-    // amplitude re-attack splitter; basic-pitch already emits onsets, so adding
+    // amplitude re-attack splitter; a note-level provider emits its own onsets, so adding
     // it there would double-split and hurt precision.
     this.onsetDetector =
       enableOnsetSplit && !provider.hasNativeOnsets

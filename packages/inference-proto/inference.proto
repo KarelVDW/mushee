@@ -2,11 +2,13 @@ syntax = "proto3";
 
 package mushee.inference.v1;
 
-// Pitch-model forward passes, factored out of the API so they can run in
-// separate, independently-scaled services. The API keeps all framing, caching,
-// segmentation, note extraction and MusicXML building — these RPCs do ONLY the
+// Pitch-model forward pass, factored out of the API so it can run in a
+// separate, independently-scaled service. The API keeps all framing, caching,
+// segmentation, note extraction and MusicXML building — this RPC does ONLY the
 // neural-net forward pass. Tensors are flat little-endian float32 bytes plus an
 // explicit shape, so no language-specific tensor encoding leaks across the wire.
+// (A BasicPitchInference service lived here until 2026-08-22, when the
+// basic-pitch provider was removed — see apps/api/scripts/eval/README.md.)
 
 // ── CREPE ────────────────────────────────────────────────────────────────────
 // Forward pass only: framing (normalizeFrame), the activation cache, Viterbi and
@@ -30,29 +32,6 @@ message CrepePredictResponse {
   bytes activations = 1;
   int32 batch_count = 2;
   int32 num_bins = 3;
-}
-
-// ── basic-pitch ────────────────────────────────────────────────────────────--
-// Replicates evaluateModel (2 s-window framing, per-window predict, overlap-trim
-// stitch) and returns the note + onset activation matrices. outputToNotesPoly
-// and note→time mapping stay in the API.
-service BasicPitchInference {
-  // Input: mono 22050 Hz PCM. Output: frames + onsets activation matrices [T,88].
-  rpc Forward(BasicPitchForwardRequest) returns (BasicPitchForwardResponse);
-  rpc Health(HealthRequest) returns (HealthResponse);
-}
-
-message BasicPitchForwardRequest {
-  // Mono 22050 Hz PCM as flat float32 little-endian bytes.
-  bytes samples = 1;
-}
-
-message BasicPitchForwardResponse {
-  // frames and onsets are flat row-major [num_frames, num_pitches] float32.
-  bytes frames = 1;
-  bytes onsets = 2;
-  int32 num_frames = 3;
-  int32 num_pitches = 4; // 88
 }
 
 // ── shared ─────────────────────────────────────────────────────────────────--

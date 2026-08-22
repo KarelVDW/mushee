@@ -92,7 +92,6 @@ import type { TruthNote } from './types';
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache-variant');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 

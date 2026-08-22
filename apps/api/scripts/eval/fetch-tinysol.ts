@@ -6,7 +6,7 @@
  * real pitched clips in the corpus reach the `very-high` band** — URMP's 13
  * instruments and GuitarSet stay under ~700 Hz in practice — so the band's
  * shipping path (basic-pitch @ 500–4300 Hz) and its candidate replacement
- * (`crepe-pitchdown-provider.ts`, gated `RECORDING_VERY_HIGH_CREPE`) are both
+ * (`crepe-pitchdown-provider.ts`, the default since basic-pitch’s removal) are both
  * validated on synthesis alone. TinySOL is 2,913 isolated notes recorded at
  * Ircam (Studio On Line, 1996–99), and **742 of them sit at or above F5 (698 Hz),
  * 353 at or above D6 (1175 Hz)** — flute to D7 (2349 Hz), violin to E7 (2637 Hz),

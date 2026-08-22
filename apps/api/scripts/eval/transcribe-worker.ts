@@ -73,7 +73,6 @@ async function transcribe(
 
 async function main(): Promise<void> {
   const registry = new ProviderRegistry({
-    basicPitch: resolve(process.cwd(), 'model'),
     crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
   });
   await registry.initAll();

@@ -13,7 +13,7 @@
  * it, never re-derive it.
  */
 
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event';
 
 import {
   NoteExtractor,

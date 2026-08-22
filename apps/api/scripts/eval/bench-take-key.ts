@@ -38,7 +38,6 @@ import type { GroundTruth } from './types';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 const CONDITIONS = [

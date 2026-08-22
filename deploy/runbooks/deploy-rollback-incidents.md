@@ -43,7 +43,7 @@ Three independent levers. Know which layer is actually broken first (§3).
 git log --oneline -5           # find the last good commit sha (full 40 chars for the tag)
 GOOD=<full-sha>
 cd deploy/k8s/overlays/production
-for img in api crepe-inference basic-pitch-inference; do
+for img in api crepe-inference; do
   kustomize edit set image \
     "mushee/$img=europe-west1-docker.pkg.dev/sheemu-prod/mushee/$img:$GOOD"
 done

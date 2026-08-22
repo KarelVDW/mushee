@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from '../note-event';
 
 /**
  * Shared decoding utilities used by every per-frame-activation provider

@@ -30,7 +30,7 @@
  *     lines on purpose).
  *
  * Both act on the FRACTIONAL pitch (`pitchMidiFloat`) the voice decoder
- * attaches to its notes; notes without it (instruments, basic-pitch) pass
+ * attaches to its notes; notes without it pass
  * through untouched, so nothing here can move an instrument take.
  */
 
