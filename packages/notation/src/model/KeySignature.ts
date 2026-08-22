@@ -101,8 +101,13 @@ export class KeySignature {
 
     /** Semitone alteration this key signature applies to the given note name (+1 sharp, −1 flat, 0 natural). */
     alterForNote(noteName: string): number {
-        if (this.sharps.includes(noteName)) return 1
-        if (this.flats.includes(noteName)) return -1
+        return KeySignature.alterInKey(this.fifths, noteName)
+    }
+
+    /** Semitone alteration a key of `fifths` applies to a note name — {@link alterForNote} without an instance. */
+    static alterInKey(fifths: number, noteName: string): number {
+        if (fifths > 0 && SHARP_ORDER.indexOf(noteName as (typeof SHARP_ORDER)[number]) < fifths) return 1
+        if (fifths < 0 && FLAT_ORDER.indexOf(noteName as (typeof FLAT_ORDER)[number]) < -fifths) return -1
         return 0
     }
 
@@ -122,5 +127,18 @@ export class KeySignature {
      */
     static transposedFifths(fifths: number, chromatic: number, diatonic: number): number {
         return fifths + (7 * chromatic - 12 * diatonic)
+    }
+
+    /**
+     * Fold a fifths count into the drawable −7..7 range by swapping to the enharmonic key
+     * (twelve fifths away, e.g. G♯ major +8 → A♭ major −4). Values already in range are
+     * kept — even where an enharmonic partner would be simpler; picking the *nicest* key is
+     * the accidental minimizer's job, this only repairs overflow from a transposition.
+     */
+    static normalizedFifths(fifths: number): number {
+        let result = fifths
+        while (result > 7) result -= 12
+        while (result < -7) result += 12
+        return result
     }
 }

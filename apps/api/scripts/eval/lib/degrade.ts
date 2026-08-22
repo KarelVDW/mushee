@@ -8,9 +8,9 @@
 
 import { execFileSync } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { basename, join } from 'path';
 
 import type { Condition } from '../types';
 import { synthesizeRoomImpulse, synthesizeSpeechNoise, synthesizeWind } from './acoustics';
@@ -20,6 +20,9 @@ const LOUDNORM = 'loudnorm=I=-16:TP=-3';
 
 /** Longest noise bed we ever need; beds are trimmed to the clip by `-t`. */
 const BED_DURATION_SEC = 90;
+
+/** Silence appended before a codec encode so its trimmed frame padding costs no signal. */
+const CODEC_TAIL_PAD_SEC = 0.25;
 
 // Synthetic acoustic assets are deterministic per (kind, params, sampleRate),
 // so they are rendered once per process and reused across the whole corpus.
@@ -67,6 +70,35 @@ export function degrade(
   maxDurationSec?: number,
 ): void {
   if (!ffmpegPath) throw new Error('ffmpeg-static did not resolve a binary path');
+
+  // A codec condition renders the acoustic chain to a temporary WAV first, then
+  // round-trips it through the encoder — one ffmpeg graph cannot both convolve
+  // an IR and emit a container we then have to decode again.
+  if (condition.codec) {
+    const stem = join(assetDir(), `codec-${process.pid}-${basename(outPath)}`);
+    const tmpWav = `${stem}.wav`;
+    const tmpEnc = `${stem}.${condition.codec.container}`;
+    degrade(inPath, tmpWav, { ...condition, codec: undefined }, sampleRate, maxDurationSec);
+    // `apad` before the encoder, `-t` after it. Measured: an Opus round trip is
+    // sample-aligned at the HEAD (best-correlation lag 0.00 ms at 96/32/16 kbps,
+    // AAC likewise) but returns ~72 ms SHORT (AAC ~58 ms) — the encoder's frame
+    // padding is trimmed off the tail. On a clip that ends mid-note (every
+    // spliced TinySOL clip does) that would silently eat the last note's tail,
+    // so the encode input is padded and the decode is trimmed back.
+    execFileSync(
+      ffmpegPath,
+      ['-hide_banner', '-loglevel', 'error', '-y', '-i', tmpWav,
+       '-af', `apad=pad_dur=${CODEC_TAIL_PAD_SEC}`, '-c:a', condition.codec.encoder,
+       '-b:a', `${condition.codec.bitrateKbps}k`, '-ac', '1', tmpEnc],
+      { stdio: ['ignore', 'ignore', 'inherit'] },
+    );
+    const decodeArgs = ['-hide_banner', '-loglevel', 'error', '-y', '-i', tmpEnc];
+    if (maxDurationSec) decodeArgs.push('-t', maxDurationSec.toFixed(3));
+    decodeArgs.push('-ar', String(sampleRate), '-ac', '1', '-c:a', 'pcm_s16le', outPath);
+    execFileSync(ffmpegPath, decodeArgs, { stdio: ['ignore', 'ignore', 'inherit'] });
+    for (const f of [tmpWav, tmpEnc]) rmSync(f, { force: true });
+    return;
+  }
 
   const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', inPath];
   const noiseDur = (maxDurationSec ?? 10).toFixed(3);

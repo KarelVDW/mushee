@@ -19,4 +19,4 @@ patches:
         value: IfNotPresent
     target:
       kind: Deployment
-      name: api|crepe-inference|basic-pitch-inference
+      name: api|crepe-inference

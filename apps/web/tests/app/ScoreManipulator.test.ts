@@ -1,8 +1,8 @@
-import type { Note } from '@mushee/notation/model'
+import { Duration, Note, Pitch } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { MINIMIZE_ACCIDENTALS, RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
@@ -382,5 +382,119 @@ describe('ScoreManipulator in-score attribute setters', () => {
         manipulator.setKeyAt(9, 3)
         manipulator.setTempoAt(9, 0, 132)
         expect(allNotes(manipulator)[0].clef.type).toBe('treble')
+    })
+})
+
+describe('ScoreManipulator pitch operations (transpose / minimize accidentals)', () => {
+    const spellings = (manipulator: ScoreManipulator): string[] =>
+        allNotes(manipulator).map((n) =>
+            n.pitch ? `${n.pitch.name}${n.pitch.alter > 0 ? '#'.repeat(n.pitch.alter) : 'b'.repeat(-n.pitch.alter)}${n.pitch.octave}` : 'rest',
+        )
+
+    it('transposes the whole score (keys included) and re-anchors the active note by position', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[1]) // D5
+        manipulator.transpose(2, 1, 'score')
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(2) // C → D major
+        expect(spellings(manipulator)).toEqual(['D5', 'E5', 'F#5', 'G5'])
+        expect(manipulator.selectedNote).toBe(allNotes(manipulator)[1]) // same position, new identity
+    })
+
+    it('transposes only the selection, leaving the key in place, and keeps it selected', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1])
+        manipulator.transpose(2, 1, 'selection')
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(0)
+        expect(spellings(manipulator)).toEqual(['D5', 'E5', 'E5', 'F5'])
+        expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))
+    })
+
+    it('a transpose is one undoable step', () => {
+        const { manipulator } = setupPitched()
+        manipulator.transpose(2, 1, 'score')
+        expect(manipulator.canUndo).toBe(true)
+        manipulator.undo()
+        expect(spellings(manipulator)).toEqual(['C5', 'D5', 'E5', 'F5'])
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(0)
+    })
+
+    it('minimize-accidentals on a single-note selection re-keys the whole score and keeps the selection put', () => {
+        const { manipulator } = setupPitched()
+        const score = manipulator.score
+        if (!score?.firstMeasure) throw new Error('expected a score')
+        // Rewrite to an unambiguous E-major melody spelled with accidentals in C major.
+        score.replace(score.firstMeasure.notes, [
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'G', octave: 4, alter: 1 }) }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5, alter: 1 }) }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'D', octave: 5, alter: 1 }) }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 4, alter: 1 }) }),
+        ])
+        manipulator.select(allNotes(manipulator)[2])
+        manipulator.run(MINIMIZE_ACCIDENTALS)
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(4)
+        expect(manipulator.selectedNote).toBe(allNotes(manipulator)[2])
+    })
+
+    it('minimize-accidentals on a multi-note selection respells in place without re-keying', () => {
+        const { manipulator } = setupPitched()
+        const score = manipulator.score
+        if (!score?.firstMeasure) throw new Error('expected a score')
+        score.setKeySignature(score.firstMeasure.firstNote, -1) // F major
+        score.replace([score.firstMeasure.notes[0]], [
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'A', octave: 4, alter: 1 }) }),
+        ])
+        const notes = allNotes(manipulator)
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1])
+        manipulator.run(MINIMIZE_ACCIDENTALS)
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(-1)
+        expect(spellings(manipulator)[0]).toBe('Bb4') // A♯ → B♭ (in key)
+        expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))
+    })
+
+    it('flashes the whole score after a whole-score operation, the selection after a selection-scoped one', () => {
+        const { manipulator } = setupPitched()
+        const flashes: Array<Note[] | 'all'> = []
+        manipulator.onPitchHighlight = (notes) => flashes.push(notes)
+
+        manipulator.minimizeAccidentals() // single-note selection → whole score
+        expect(flashes).toEqual(['all'])
+
+        manipulator.transpose(2, 1, 'score')
+        expect(flashes).toEqual(['all', 'all'])
+
+        const notes = allNotes(manipulator)
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1])
+        manipulator.transpose(2, 1, 'selection')
+        expect(flashes).toHaveLength(3)
+        // The flash carries the replacement identities — the notes now living in the score.
+        expect(flashes[2]).toEqual(allNotes(manipulator).slice(0, 2))
+
+        manipulator.minimizeAccidentals() // multi-note selection → that selection
+        expect(flashes).toHaveLength(4)
+        expect(flashes[3]).toEqual(manipulator.selectedNotes)
+    })
+
+    it('minimize-accidentals via the manipulator method needs a selection to act on', () => {
+        const manipulator = new ScoreManipulator()
+        let fired = 0
+        manipulator.onPitchHighlight = () => fired++
+        manipulator.minimizeAccidentals() // no score attached
+        expect(fired).toBe(0)
+    })
+
+    it('the transpose command defers to the registered popover opener and declines without one', () => {
+        const { manipulator } = setupPitched()
+        const command = EDITOR_COMMANDS.find((c) => c.id === 'transpose')
+        if (!command) throw new Error('expected the transpose command')
+        expect(command.run(manipulator)).toBe(false) // nothing registered: leave the key to the browser
+        let opened = 0
+        manipulator.onTransposeRequest = () => {
+            opened++
+        }
+        command.run(manipulator)
+        expect(opened).toBe(1)
     })
 })

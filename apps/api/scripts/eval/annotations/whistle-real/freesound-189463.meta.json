@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-189463",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 31,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 9.665056689342403,
+    "sha256": "83c6a1e22a9cd067052b6afeeeb71a7bfe0b104e73f9bd6c1c9713fa5407e38e"
+  },
+  "provenance": {
+    "id": "freesound-189463",
+    "dataset": "whistle-real",
+    "sha256": "83c6a1e22a9cd067052b6afeeeb71a7bfe0b104e73f9bd6c1c9713fa5407e38e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user sangtao (CC0)",
+    "source": "https://freesound.org/people/sangtao/sounds/189463/",
+    "sourceUrl": "https://cdn.freesound.org/previews/189/189463_3491884-hq.mp3",
+    "note": "\"Whistle.wav\", 9.7 s, 128 kbps mp3 preview; screen tonal=0.88 median=1299Hz notes=31/12 pitches"
+  }
+}

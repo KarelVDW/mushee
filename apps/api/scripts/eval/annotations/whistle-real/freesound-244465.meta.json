@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-244465",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 88,
+  "draftMedianCentsOffset": 20,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 26.97249433106576,
+    "sha256": "b8a123821b4562a8d6fc5c6d3983571a0a9c3cab83d2523b1a1373941e4d2f16"
+  },
+  "provenance": {
+    "id": "freesound-244465",
+    "dataset": "whistle-real",
+    "sha256": "b8a123821b4562a8d6fc5c6d3983571a0a9c3cab83d2523b1a1373941e4d2f16",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user milton. (CC0)",
+    "source": "https://freesound.org/people/milton./sounds/244465/",
+    "sourceUrl": "https://cdn.freesound.org/previews/244/244465_988961-hq.mp3",
+    "note": "\"the shadow of my zoom.mp3\", 27.0 s, 128 kbps mp3 preview; screen tonal=0.64 median=1783Hz notes=88/22 pitches"
+  }
+}

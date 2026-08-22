@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-88221",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 24,
+  "draftMedianCentsOffset": 33,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 5.439455782312925,
+    "sha256": "ab1d6d74b2fcb34e3a0a19b6c99473a1fc8e01d11ed1396198b5ac162848aa2a"
+  },
+  "provenance": {
+    "id": "freesound-88221",
+    "dataset": "whistle-real",
+    "sha256": "ab1d6d74b2fcb34e3a0a19b6c99473a1fc8e01d11ed1396198b5ac162848aa2a",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user iut_Paris8 (CC0)",
+    "source": "https://freesound.org/people/iut_Paris8/sounds/88221/",
+    "sourceUrl": "https://cdn.freesound.org/previews/88/88221_907124-hq.mp3",
+    "note": "\"tbalde_03.wav\", 5.4 s, 128 kbps mp3 preview; screen tonal=0.87 median=2566Hz notes=24/4 pitches"
+  }
+}

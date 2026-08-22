@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-705043",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 17,
+  "draftMedianCentsOffset": 12,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 5.489954648526077,
+    "sha256": "07f74bd9bdb94d0ccb2db483e23b55fcb954772285b8cf1c0bbe90eaff4f8bea"
+  },
+  "provenance": {
+    "id": "freesound-705043",
+    "dataset": "whistle-real",
+    "sha256": "07f74bd9bdb94d0ccb2db483e23b55fcb954772285b8cf1c0bbe90eaff4f8bea",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user musselmox (CC0)",
+    "source": "https://freesound.org/people/musselmox/sounds/705043/",
+    "sourceUrl": "https://cdn.freesound.org/previews/705/705043_14858742-hq.mp3",
+    "note": "\"bad whistle attempt\", 5.5 s, 128 kbps mp3 preview; screen tonal=0.98 median=1116Hz notes=17/5 pitches"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-540538",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 11,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 14.5,
+    "sha256": "0a2b9b99f2eb030b6c1c00be6a87973a56e8ed3ab22cff3b1d917a96a8311bb5"
+  },
+  "provenance": {
+    "id": "freesound-540538",
+    "dataset": "whistle-real",
+    "sha256": "0a2b9b99f2eb030b6c1c00be6a87973a56e8ed3ab22cff3b1d917a96a8311bb5",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user eldiariosonoro_ (CC0)",
+    "source": "https://freesound.org/people/eldiariosonoro_/sounds/540538/",
+    "sourceUrl": "https://cdn.freesound.org/previews/540/540538_11961848-hq.mp3",
+    "note": "\"Silbar/Whistle_Int2_v2.0_(G2).wav\", 14.5 s, 128 kbps mp3 preview; screen tonal=0.57 median=1240Hz notes=11/6 pitches"
+  }
+}

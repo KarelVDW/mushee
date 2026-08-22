@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
     distDir: process.env.NEXT_DIST_DIR ?? '.next',
     // The score model + notation renderer ship as TypeScript source; this app
     // compiles them along with its own code.
-    transpilePackages: ['@mushee/notation'],
+    transpilePackages: ['@mushee/notation', '@mushee/playback'],
     rewrites() {
         return Promise.resolve([
             { source: '/ingest/static/:path*', destination: `${POSTHOG_ASSETS_HOST}/static/:path*` },

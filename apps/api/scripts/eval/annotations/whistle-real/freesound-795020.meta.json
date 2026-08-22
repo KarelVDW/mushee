@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-795020",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 6,
+  "draftMedianCentsOffset": 18,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.033718820861678,
+    "sha256": "fec4d0ea1d5689b42bd87ca4bf447edc79de076b94478c4d145fa56950019cd3"
+  },
+  "provenance": {
+    "id": "freesound-795020",
+    "dataset": "whistle-real",
+    "sha256": "fec4d0ea1d5689b42bd87ca4bf447edc79de076b94478c4d145fa56950019cd3",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user TheCurtainedAccompanist (CC0)",
+    "source": "https://freesound.org/people/TheCurtainedAccompanist/sounds/795020/",
+    "sourceUrl": "https://cdn.freesound.org/previews/795/795020_17088995-hq.mp3",
+    "note": "\"just a whistle sound, nothing to see here\", 8.0 s, 128 kbps mp3 preview; screen tonal=0.92 median=1184Hz notes=6/2 pitches"
+  }
+}

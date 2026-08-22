@@ -4,9 +4,9 @@
  * into the eval harness's *real* corpus layout, so run-eval can score the
  * pipeline against studio-quality human singing of known melodic exercises.
  *
- * Output: scripts/fixtures/eval-real/annotated-vocalset/<clip>.truth.json ({bpm, notes})
- *         scripts/fixtures/eval-real/annotated-vocalset/<clip>__real.wav
- *         scripts/fixtures/eval-real/annotated-vocalset/dataset.json        (manifest)
+ * Output: scripts/fixtures/eval-real/benchmark/annotated-vocalset/<clip>.truth.json ({bpm, notes})
+ *         scripts/fixtures/eval-real/benchmark/annotated-vocalset/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/annotated-vocalset/dataset.json        (manifest)
  *
  * TWO sources are needed — the Zenodo record ships only annotations, not audio:
  *   1. Annotations: https://zenodo.org/records/7061507
@@ -82,7 +82,7 @@ const NOTES_ZIP = join(CACHE, 'annotated-vocalset.zip');
 const AUDIO_ZIP = join(CACHE, 'vocalset-audio.zip');
 const NOTES_EXTRACT = join(CACHE, 'annotations'); // -> Annotated VocalSet/…
 const AUDIO_EXTRACT = join(CACHE, 'audio'); // -> FULL/<singer>/…
-const OUT = resolve(__dirname, '../fixtures/eval-real/annotated-vocalset');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/annotated-vocalset');
 
 // Which of the four smoothing variants to read. Pitch GT is identical across
 // them; "extended 1" keeps the finest onset/offset segmentation.

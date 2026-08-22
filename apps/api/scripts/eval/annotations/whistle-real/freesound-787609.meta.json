@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-787609",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 8,
+  "draftMedianCentsOffset": 11,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 7.95734693877551,
+    "sha256": "f252b9cb33bf90b5eb218de2da854edd101adc4b849156b4d4cdca6aea5010a7"
+  },
+  "provenance": {
+    "id": "freesound-787609",
+    "dataset": "whistle-real",
+    "sha256": "f252b9cb33bf90b5eb218de2da854edd101adc4b849156b4d4cdca6aea5010a7",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Sadiquecat (CC0)",
+    "source": "https://freesound.org/people/Sadiquecat/sounds/787609/",
+    "sourceUrl": "https://cdn.freesound.org/previews/787/787609_5287430-hq.mp3",
+    "note": "\"Whistling (looking at phone)\", 8.0 s, 128 kbps mp3 preview; screen tonal=0.62 median=1370Hz notes=8/4 pitches"
+  }
+}

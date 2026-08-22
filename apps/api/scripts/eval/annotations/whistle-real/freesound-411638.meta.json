@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-411638",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 28,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 12,
+    "sha256": "3413e1f6d41bc049a99e928768a9db1ab5144b9a3c5fa4a6a24428c631567fef"
+  },
+  "provenance": {
+    "id": "freesound-411638",
+    "dataset": "whistle-real",
+    "sha256": "3413e1f6d41bc049a99e928768a9db1ab5144b9a3c5fa4a6a24428c631567fef",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user taure (CC0)",
+    "source": "https://freesound.org/people/taure/sounds/411638/",
+    "sourceUrl": "https://cdn.freesound.org/previews/411/411638_2940947-hq.mp3",
+    "note": "\"Attention Whistle.wav\", 12.0 s, 128 kbps mp3 preview; screen tonal=0.81 median=1979Hz notes=28/9 pitches"
+  }
+}

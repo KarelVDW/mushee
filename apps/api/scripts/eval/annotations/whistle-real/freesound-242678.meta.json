@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-242678",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 19,
+  "draftMedianCentsOffset": 13,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 3.356371882086168,
+    "sha256": "ae9162de9a5219a4b758f75b6b85edce9ea2447b561fafd45f4a63c49ef7346b"
+  },
+  "provenance": {
+    "id": "freesound-242678",
+    "dataset": "whistle-real",
+    "sha256": "ae9162de9a5219a4b758f75b6b85edce9ea2447b561fafd45f4a63c49ef7346b",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Reitanna (CC0)",
+    "source": "https://freesound.org/people/Reitanna/sounds/242678/",
+    "sourceUrl": "https://cdn.freesound.org/previews/242/242678_950925-hq.mp3",
+    "note": "\"whistling.wav\", 3.4 s, 128 kbps mp3 preview; screen tonal=0.98 median=1721Hz notes=19/9 pitches"
+  }
+}

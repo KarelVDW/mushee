@@ -4,9 +4,9 @@
  * corpus layout, so run-eval can score the pipeline against actual sung/hummed
  * human voices (low-fi, 8 kHz) alongside the studio-quality vocadito set.
  *
- * Output: scripts/fixtures/eval-real/mir-qbsh/<clip>.truth.json  ({bpm, notes})
- *         scripts/fixtures/eval-real/mir-qbsh/<clip>__real.wav
- *         scripts/fixtures/eval-real/mir-qbsh/dataset.json        (manifest)
+ * Output: scripts/fixtures/eval-real/context/mir-qbsh/<clip>.truth.json  ({bpm, notes})
+ *         scripts/fixtures/eval-real/context/mir-qbsh/<clip>__real.wav
+ *         scripts/fixtures/eval-real/context/mir-qbsh/dataset.json        (manifest)
  *
  * Source : http://mirlab.org/dataSet/public/MIR-QBSH.zip
  *          (the directory listing at http://mirlab.org/dataSet/public/ ships the
@@ -71,7 +71,7 @@ const ZIP = join(CACHE, 'MIR-QBSH.zip');
 // The zip unpacks to a top-level "MIR-QBSH" directory.
 const ROOT = join(CACHE, 'MIR-QBSH');
 const WAVE_ROOT = join(ROOT, 'waveFile');
-const OUT = resolve(__dirname, '../fixtures/eval-real/mir-qbsh');
+const OUT = resolve(__dirname, '../fixtures/eval-real/context/mir-qbsh');
 
 // 256-sample frames at the corpus's fixed 8 kHz sampling rate, overlap 0.
 const FRAME_SEC = 256 / 8000; // 0.032 s

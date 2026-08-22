@@ -31,8 +31,6 @@ async function startServer(): Promise<() => Promise<void>> {
   // Drive the pipeline directly — this script exercises transcription, not
   // the gateway's auth/credit/score checks.
   const registry = new ProviderRegistry({
-    basicPitch:
-      process.env.BASIC_PITCH_MODEL_DIR ?? resolve(__dirname, '../model'),
     crepeTiny:
       process.env.CREPE_TINY_MODEL_DIR ??
       resolve(__dirname, '../model-crepe-tiny'),

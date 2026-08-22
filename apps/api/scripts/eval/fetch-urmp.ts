@@ -6,9 +6,9 @@
  * side of the product was until now tested exclusively against fluidsynth
  * renders, which say nothing about real attacks, bow noise, or breath.
  *
- * Output: scripts/fixtures/eval-real/urmp-<instrument>/<clip>.truth.json ({bpm, notes})
- *         scripts/fixtures/eval-real/urmp-<instrument>/<clip>__real.wav
- *         scripts/fixtures/eval-real/urmp-<instrument>/dataset.json        (manifest)
+ * Output: scripts/fixtures/eval-real/benchmark/urmp-<instrument>/<clip>.truth.json ({bpm, notes})
+ *         scripts/fixtures/eval-real/benchmark/urmp-<instrument>/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/urmp-<instrument>/dataset.json        (manifest)
  *
  * One dataset directory PER INSTRUMENT (urmp-violin, urmp-flute, …) because the
  * adaptive instrument hint lives in `dataset.json` and is therefore per-dataset
@@ -63,7 +63,7 @@ const BASE_URL =
 const LOCAL_DIR = process.env.URMP_LOCAL_DIR;
 
 const CACHE = resolve(__dirname, '.cache', 'urmp');
-const FIXTURES = resolve(__dirname, '../fixtures/eval-real');
+const FIXTURES = resolve(__dirname, '../fixtures/eval-real/benchmark');
 
 // Excerpt length per clip, and the silence kept before the first note so the
 // pipeline's pitch scan has a moment of noise floor to adapt to (the live app

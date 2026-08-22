@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-457967",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 49,
+  "draftMedianCentsOffset": 14,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 20.046394557823128,
+    "sha256": "5284341f763a9c83c7a808835d182f8c8956468f1b4364729a584f119001b10c"
+  },
+  "provenance": {
+    "id": "freesound-457967",
+    "dataset": "whistle-real",
+    "sha256": "5284341f763a9c83c7a808835d182f8c8956468f1b4364729a584f119001b10c",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Fabrizio84 (CC0)",
+    "source": "https://freesound.org/people/Fabrizio84/sounds/457967/",
+    "sourceUrl": "https://cdn.freesound.org/previews/457/457967_2841496-hq.mp3",
+    "note": "\"Me Whistling\", 20.0 s, 128 kbps mp3 preview; screen tonal=0.92 median=1161Hz notes=49/16 pitches"
+  }
+}

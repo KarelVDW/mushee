@@ -8,14 +8,13 @@
  * baseline). Examples:
  *
  *   tsx scripts/eval/run-eval.ts                       # baseline, all clips
- *   EVAL_PROVIDER=basic-pitch EVAL_MAX_FREQ=4000 \
+ *   EVAL_PROVIDER=crepe-tiny-down1 EVAL_MAX_FREQ=4000 \
  *   EVAL_SCENARIOS=whistle-high,whistle-mid \
  *   tsx scripts/eval/run-eval.ts
  *
  * Env:
- *   EVAL_PROVIDER     basic-pitch | crepe-tiny  (default basic-pitch)
+ *   EVAL_PROVIDER     crepe-tiny | crepe-tiny-down1  (default crepe-tiny)
  *   EVAL_MIN_FREQ, EVAL_MAX_FREQ, EVAL_CONFIDENCE, EVAL_HIGHPASS
- *   EVAL_ONSET, EVAL_FRAME           (basic-pitch note gates)
  *   EVAL_SCENARIOS, EVAL_CONDITIONS  comma-separated id filters
  *   EVAL_OUT          report path (default fixtures/eval/report.json)
  *   EVAL_LABEL        label stored in the report (e.g. the config name)
@@ -39,7 +38,7 @@ import { join,resolve } from 'path';
 import { AudioConverter } from '../../src/recordings/pipeline/audio-converter';
 import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { BasicPitchProvider } from '../../src/recordings/pipeline/providers/basic-pitch-provider';
+import { CrepePitchdownProvider } from '../../src/recordings/pipeline/providers/crepe-pitchdown-provider';
 import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider';
 import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
 import type {
@@ -52,6 +51,7 @@ import {
   type MatchOptions,
   type Metrics,
   scoreNotesBest,
+  scoreOnsets,
   timingStats,
 } from './lib/metrics';
 import {
@@ -78,21 +78,19 @@ const DETECT_SR = 16000;
 const SYNTH_ROOT = resolve(__dirname, '../fixtures/eval');
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
 function buildProvider(name: string): PitchProvider {
   const backend = new LocalModelBackend({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   switch (name) {
+    case 'crepe-tiny-down1':
+      return new CrepePitchdownProvider(backend);
     case 'crepe-tiny':
-      return new CrepeProvider(backend, 'crepe-tiny');
-    case 'basic-pitch':
     default:
-      return new BasicPitchProvider(backend);
+      return new CrepeProvider(backend, 'crepe-tiny');
   }
 }
 
@@ -113,15 +111,21 @@ function boolEnv(key: string): boolean {
 /**
  * Real corpus (EVAL_REAL): datasets are discovered from fixtures/eval-real
  * rather than the synthetic melody×register matrix. rootMidi is irrelevant for
- * recorded clips (nothing is synthesized), so it's zeroed.
+ * recorded clips (nothing is synthesized), so it's zeroed. `dir` carries the
+ * dataset's actual directory — since the benchmark/context tiering, datasets
+ * live one level below the eval-real root, so `join(root, id)` no longer
+ * resolves them.
  */
-function discoverRealScenarios(root: string): Scenario[] {
+type EvalScenario = Scenario & { dir?: string };
+
+function discoverRealScenarios(root: string): EvalScenario[] {
   return discoverRealDatasets(root).map((d) => ({
     id: d.id,
     label: d.label,
     kind: d.kind,
     instrumentId: d.instrumentId,
     rootMidi: 0,
+    dir: d.dir,
   }));
 }
 
@@ -146,6 +150,13 @@ interface ClipResult {
    */
   seg: SegErrorCounts;
   onsets: OnsetClassStats;
+  /**
+   * MIREX COn (onset-only, pitch ignored) — computed for every clip, cheap,
+   * and the only meaningful score for `pitchless` datasets (lib/realCorpus.ts),
+   * whose truth carries no real MIDI. Reported alongside the pitch-aware
+   * metrics for every other dataset too, as a secondary number.
+   */
+  onsetOnly: { precision: number; recall: number; f1: number };
 }
 
 function emptySegErrors(): SegErrorCounts {
@@ -176,13 +187,11 @@ function mean(xs: number[]): number {
 }
 
 async function main(): Promise<void> {
-  const providerName = process.env.EVAL_PROVIDER ?? 'basic-pitch';
+  const providerName = process.env.EVAL_PROVIDER ?? 'crepe-tiny';
   const pitchOptions: PitchTranscribeOptions = {
     minFreqHz: numEnv('EVAL_MIN_FREQ'),
     maxFreqHz: numEnv('EVAL_MAX_FREQ'),
     confidenceThreshold: numEnv('EVAL_CONFIDENCE'),
-    onsetThreshold: numEnv('EVAL_ONSET'),
-    frameThreshold: numEnv('EVAL_FRAME'),
     minFramesPerNote: numEnv('EVAL_MIN_FRAMES'),
   };
   const highpassHz = numEnv('EVAL_HIGHPASS') ?? 80;
@@ -213,7 +222,6 @@ async function main(): Promise<void> {
 
   if (adaptive) {
     const registry = new ProviderRegistry({
-      basicPitch: MODELS.basicPitch,
       crepeTiny: MODELS.crepeTiny,
     });
     await registry.initAll();
@@ -246,8 +254,6 @@ async function main(): Promise<void> {
         minFreqHz: profile.minFreqHz,
         maxFreqHz: profile.maxFreqHz,
         confidenceThreshold: profile.confidenceThreshold,
-        onsetThreshold: profile.onsetThreshold,
-        frameThreshold: profile.frameThreshold,
         minFramesPerNote: profile.minFramesPerNote,
         segmentMode: profile.segmentMode,
         smoothFrames: profile.smoothFrames,
@@ -289,11 +295,39 @@ async function main(): Promise<void> {
           .map((d) => d.id)
       : [],
   );
+  // `pitchless` datasets (lib/realCorpus.ts) ship no real MIDI at all (e.g.
+  // AVP's vocal-percussion onsets): note-F1/chroma/octave-error and the
+  // onset-class taxonomy are meaningless for them, on top of (not instead of)
+  // the noteTruthDerived exclusion above.
+  const pitchlessIds = new Set(
+    realMode
+      ? discoverRealDatasets(evalRoot)
+          .filter((d) => d.pitchless)
+          .map((d) => d.id)
+      : [],
+  );
+  // `constructedPerformance` datasets (lib/realCorpus.ts) have exact truth over
+  // real timbre, but the phrasing is ours — spliced isolated notes. Excluded for
+  // the opposite reason to the two above: not because the labels are weak, but
+  // because a constructed performance in the pooled mean would make the headline
+  // easier without the pipeline changing.
+  const constructedIds = new Set(
+    realMode
+      ? discoverRealDatasets(evalRoot)
+          .filter((d) => d.constructedPerformance)
+          .map((d) => d.id)
+      : [],
+  );
   const includeUntrusted = boolEnv('EVAL_INCLUDE_UNTRUSTED');
   const pooled = (scenarioId: string): boolean =>
-    includeUntrusted || !derivedNoteTruth.has(scenarioId);
+    includeUntrusted ||
+    (!derivedNoteTruth.has(scenarioId) &&
+      !pitchlessIds.has(scenarioId) &&
+      !constructedIds.has(scenarioId));
 
-  const allScenarios = realMode ? discoverRealScenarios(evalRoot) : SCENARIOS;
+  const allScenarios: EvalScenario[] = realMode
+    ? discoverRealScenarios(evalRoot)
+    : SCENARIOS;
   const scenarios = allScenarios.filter(
     (s) => !scenarioFilter || scenarioFilter.includes(s.id),
   );
@@ -307,7 +341,7 @@ async function main(): Promise<void> {
   const results: ClipResult[] = [];
 
   for (const scenario of scenarios) {
-    const dir = join(evalRoot, scenario.id);
+    const dir = scenario.dir ?? join(evalRoot, scenario.id);
     if (!existsSync(dir)) continue;
     const truths = readdirSync(dir).filter((f) => f.endsWith('.truth.json'));
 
@@ -337,6 +371,7 @@ async function main(): Promise<void> {
           metrics: scoreNotesBest(truth, est, matchOpts),
           seg: segErrors(truth.notes, est),
           onsets: onsetRecallByClass(truth.notes, est, matchOpts.onsetTolSec),
+          onsetOnly: scoreOnsets(truth.notes, est, matchOpts.onsetTolSec),
         });
       }
     }
@@ -361,6 +396,18 @@ async function main(): Promise<void> {
       /** False = reported for information only, kept out of the aggregates. */
       pooled: pooled(s.id),
       noteTruthDerived: derivedNoteTruth.has(s.id),
+      pitchless: pitchlessIds.has(s.id),
+      constructedPerformance: constructedIds.has(s.id),
+      // MIREX COn — onset-only, pitch ignored. The headline number for
+      // `pitchless` datasets; a secondary number for everyone else. Precision
+      // and recall are reported separately because for some onset corpora only
+      // one of them is meaningful: where the truth marks SYLLABLE onsets on
+      // melismatic singing (jacrc), a note onset inside a melisma is a correct
+      // detection that the truth does not list, so precision is understated by
+      // construction and recall is the number to read.
+      onsetF1: mean(rs.map((r) => r.onsetOnly.f1)),
+      onsetPrecision: mean(rs.map((r) => r.onsetOnly.precision)),
+      onsetRecall: mean(rs.map((r) => r.onsetOnly.recall)),
       f1: mean(rs.map((r) => r.metrics.f1)),
       chromaF1: mean(rs.map((r) => r.metrics.chromaF1)),
       precision: mean(rs.map((r) => r.metrics.precision)),
@@ -418,6 +465,8 @@ async function main(): Promise<void> {
     notePooling: {
       includeUntrusted,
       derivedNoteTruth: [...derivedNoteTruth],
+      pitchless: [...pitchlessIds],
+      constructedPerformance: [...constructedIds],
       excludedFromOverall: excludedScenarios,
     },
     overallTiming,
@@ -432,13 +481,19 @@ async function main(): Promise<void> {
       condition: r.condition,
       ...r.metrics,
       seg: r.seg,
+      onsetOnly: r.onsetOnly,
     })),
   };
   writeFileSync(outPath, JSON.stringify(report, null, 2));
 
   console.log(`\n=== ${label} (${report.mode}) ===`);
   console.log(
-    'scenario'.padEnd(20) + 'COnP'.padEnd(7) + 'chromaF1'.padEnd(10) + 'octErr',
+    'scenario'.padEnd(20) +
+      'COnP'.padEnd(7) +
+      'chromaF1'.padEnd(10) +
+      'octErr'.padEnd(8) +
+      'COn'.padEnd(6) +
+      'COnRec'.padEnd(9),
   );
   for (const s of perScenario) {
     console.log(
@@ -446,7 +501,15 @@ async function main(): Promise<void> {
         s.f1.toFixed(2).padEnd(7) +
         s.chromaF1.toFixed(2).padEnd(10) +
         s.octaveErrorRate.toFixed(2).padEnd(8) +
-        (s.pooled ? '' : '† not pooled (note truth derived)'),
+        s.onsetF1.toFixed(2).padEnd(6) +
+        s.onsetRecall.toFixed(2).padEnd(9) +
+        (s.pooled
+          ? ''
+          : s.pitchless
+            ? '† not pooled (pitchless — read COn(onset) instead)'
+            : s.constructedPerformance
+              ? '† not pooled (constructed performance — real timbre, spliced notes)'
+              : '† not pooled (note truth derived)'),
     );
   }
   console.log('\n' + 'condition'.padEnd(20) + 'COnP'.padEnd(7) + 'prec'.padEnd(7) + 'recall'.padEnd(8) + 'octErr');
@@ -466,9 +529,33 @@ async function main(): Promise<void> {
   );
   if (excludedScenarios.length) {
     console.log(
-      `† excluded from the aggregates: ${excludedScenarios.join(', ')} — no note ` +
-        'annotations in the dataset, only our own derivation of its frame pitch. ' +
-        'EVAL_INCLUDE_UNTRUSTED=1 pools them anyway.',
+      `† excluded from the aggregates: ${excludedScenarios.join(', ')}. ` +
+        // Two different reasons, and conflating them misreads the numbers: a
+        // derived-truth dataset HAS pitch we should not trust, a pitchless one
+        // has no pitch at all, so its COnP is meaningless rather than merely
+        // unreliable and only the COn/COnRec columns say anything.
+        [
+          excludedScenarios.filter((s) => derivedNoteTruth.has(s)).length
+            ? `Note truth derived, not annotated (${excludedScenarios
+                .filter((s) => derivedNoteTruth.has(s))
+                .join(', ')}) — our own derivation of the corpus's frame pitch.`
+            : '',
+          excludedScenarios.filter((s) => constructedIds.has(s)).length
+            ? `Constructed performance (${excludedScenarios
+                .filter((s) => constructedIds.has(s))
+                .join(', ')}) — real recorded timbre, but the notes were spliced ` +
+              'by us, so the truth is exact and the phrasing is not human.'
+            : '',
+          excludedScenarios.filter((s) => pitchlessIds.has(s)).length
+            ? `Pitchless (${excludedScenarios
+                .filter((s) => pitchlessIds.has(s))
+                .join(', ')}) — onset-only truth, so COnP/chromaF1/octErr are ` +
+              'meaningless for them; read the COn and COnRec columns.'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ') +
+        ' EVAL_INCLUDE_UNTRUSTED=1 pools them anyway.',
     );
   }
 

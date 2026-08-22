@@ -2,6 +2,7 @@ import type { BindableCommand } from '@/lib/Keybindings'
 
 import {
     LOWER_PITCH,
+    MINIMIZE_ACCIDENTALS,
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
@@ -15,7 +16,7 @@ import {
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Display groups for the shortcuts dialog, in presentation order. */
-export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Clipboard'] as const
+export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Clipboard', 'History'] as const
 export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 
 /**
@@ -86,6 +87,22 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),
     fromAction(TOGGLE_TUPLET, 'Edit notes', 'Digit3'),
+    {
+        id: MINIMIZE_ACCIDENTALS.id,
+        label: MINIMIZE_ACCIDENTALS.label,
+        group: 'Edit notes',
+        defaultShortcut: 'KeyM',
+        // Through the manipulator method (not fromAction) so the highlight flash fires too.
+        run: (manipulator) => manipulator.minimizeAccidentals(),
+    },
+    {
+        id: 'transpose',
+        label: 'Transpose',
+        group: 'Edit notes',
+        defaultShortcut: 'Shift+KeyT',
+        // Opens the transpose popover (no direct edit); declined until the editor registers it.
+        run: (manipulator) => (manipulator.onTransposeRequest ? manipulator.onTransposeRequest() : false),
+    },
     // Clipboard shortcuts are `fixed`: ⌘C/⌘X/⌘V (and ⌘A above) are OS-wide conventions, so
     // they're listed in the shortcuts dialog but never rebindable.
     {
@@ -111,5 +128,23 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         defaultShortcut: 'Mod+KeyV',
         fixed: true,
         run: (manipulator) => manipulator.paste(),
+    },
+    // History shortcuts are fixed for the same reason: ⌘Z / ⇧⌘Z are OS-wide conventions.
+    // With nothing to travel to, the keystroke is left to the browser (undo/redo return false).
+    {
+        id: 'undo',
+        label: 'Undo',
+        group: 'History',
+        defaultShortcut: 'Mod+KeyZ',
+        fixed: true,
+        run: (manipulator) => manipulator.undo(),
+    },
+    {
+        id: 'redo',
+        label: 'Redo',
+        group: 'History',
+        defaultShortcut: 'Mod+Shift+KeyZ',
+        fixed: true,
+        run: (manipulator) => manipulator.redo(),
     },
 ]

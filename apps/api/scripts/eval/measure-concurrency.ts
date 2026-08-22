@@ -25,7 +25,6 @@ import type { GroundTruth } from './types';
 
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -54,7 +53,6 @@ async function main(): Promise<void> {
   const id = process.argv[2] ?? 'voice-tenor';
   const targetSec = Number(process.argv[3] ?? 30);
   const registry = new ProviderRegistry({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();

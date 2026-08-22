@@ -33,7 +33,6 @@ import type { GroundTruth } from './types';
 const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
 const MODELS = {
-  basicPitch: resolve(process.cwd(), 'model'),
   crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 };
 
@@ -158,7 +157,6 @@ async function runRealCorpus(
 
 async function main(): Promise<void> {
   const registry = new ProviderRegistry({
-    basicPitch: MODELS.basicPitch,
     crepeTiny: MODELS.crepeTiny,
   });
   await registry.initAll();

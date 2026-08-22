@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-411508",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 56,
+  "draftMedianCentsOffset": 31,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 16.35845804988662,
+    "sha256": "983db68e7b0fb0704a379da665fe77c4e3951c4db4435d79f954bf562eeee86c"
+  },
+  "provenance": {
+    "id": "freesound-411508",
+    "dataset": "whistle-real",
+    "sha256": "983db68e7b0fb0704a379da665fe77c4e3951c4db4435d79f954bf562eeee86c",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user jperezjacome (CC0)",
+    "source": "https://freesound.org/people/jperezjacome/sounds/411508/",
+    "sourceUrl": "https://cdn.freesound.org/previews/411/411508_8015768-hq.mp3",
+    "note": "\"whistlingLikePanflute2.wav\", 16.4 s, 128 kbps mp3 preview; screen tonal=0.95 median=1389Hz notes=56/16 pitches"
+  }
+}

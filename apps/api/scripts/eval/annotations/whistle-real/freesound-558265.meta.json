@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-558265",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 4,
+  "draftMedianCentsOffset": 10,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 13.905124716553289,
+    "sha256": "5de873220797b924bc5732b85dc54ae436a4e6c88af42d9e1ad63d6d306db9f2"
+  },
+  "provenance": {
+    "id": "freesound-558265",
+    "dataset": "whistle-real",
+    "sha256": "5de873220797b924bc5732b85dc54ae436a4e6c88af42d9e1ad63d6d306db9f2",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user sandib (CC0)",
+    "source": "https://freesound.org/people/sandib/sounds/558265/",
+    "sourceUrl": "https://cdn.freesound.org/previews/558/558265_4116813-hq.mp3",
+    "note": "\"fijuuu.wav\", 13.9 s, 128 kbps mp3 preview; screen tonal=0.96 median=1065Hz notes=4/4 pitches"
+  }
+}

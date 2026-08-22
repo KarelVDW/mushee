@@ -3,7 +3,7 @@ import type { Score } from '@mushee/notation/model/Score'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { MidiPlayer, ScheduledNote } from '@/lib/MidiPlayer'
+import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
 import { Transport } from '@/lib/Transport'
 
 // --- Browser stubs so the recording engine can start inside record() -------

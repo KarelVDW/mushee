@@ -119,6 +119,12 @@ export class MxmlBuilder {
     // estimated over ALL notes (one constant per take, never per note), which
     // is why this happens here — the one place that always sees the whole
     // performance so far — and not per emitted measure fragment.
+    //
+    // The key mask is the SCORE's signature only. The take-key fallback for
+    // keyless takes (`estimateTakeKeyClasses`, E8) was built, measured on the
+    // intonation tier, and does NOT ship: it recovers the actual key barely
+    // half the time on short diatonic takes and nudges spelling the wrong way
+    // when it misses — see the findings log and scripts/eval/design-take-key.md.
     const keyClasses =
       this.voiceSpelling && this.options.keyFifths != null
         ? keyPitchClasses(this.options.keyFifths)
@@ -317,7 +323,7 @@ export class MxmlBuilder {
   }
 
   private midiToPitch(midi: number): MxmlPitch {
-    // basic-pitch reports the sounding MIDI captured by the mic; the score
+    // The pipeline reports the sounding MIDI captured by the mic; the score
     // stores written pitch (MusicXML semantics), so subtract the part's
     // chromatic transpose before mapping to step/alter/octave.
     const written = midi - (this.options.chromaticTranspose ?? 0);

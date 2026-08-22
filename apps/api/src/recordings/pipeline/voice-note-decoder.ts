@@ -1,4 +1,4 @@
-import type { NoteEventTime } from '@spotify/basic-pitch';
+import type { NoteEventTime } from './note-event';
 
 import type { PitchTrack } from './pitch-track';
 
@@ -74,6 +74,86 @@ export interface VoiceDecodeOptions {
   confidenceThreshold?: number;
   minFreqHz?: number;
   maxFreqHz?: number;
+  /**
+   * Block-level voiced-fraction quorum on the gate (R19; see
+   * `PitchTrack.voicedMask`): a frame only stays voiced when at least
+   * `minFraction` of its `windowSec` neighbourhood passes the raw gate, so a
+   * few stray voiced frames — a reverb-tail flicker — cannot become a note.
+   */
+  voicedQuorum?: { minFraction?: number; windowSec?: number };
+  /**
+   * Fill unvoiced gaps up to this long (seconds) on the track before decoding
+   * (R21; see `PitchTrack.fillDropouts`): a consonant or breath punching a
+   * 1–2 frame hole mid-note gets interpolated pitch instead of relying on
+   * `unvoicedPitchCost` to ride across it. Omit for the raw track.
+   */
+  fillUnvoicedGapSec?: number;
+  /**
+   * pYIN's multi-candidate emission (E3/R9/R16 — §5.6 of the plugin survey):
+   * score each pitch state against the NEAREST of the frame's top-k activation
+   * maxima (`PitchTrack.candCents`), adding `yinTrust · −ln(strength/maxStrength)`
+   * nats for how much weaker that candidate is than the frame's best. The decode
+   * can then keep a note on a non-argmax hypothesis — the recoverability that
+   * makes pYIN's note model work, which a single collapsed trajectory
+   * structurally cannot offer.
+   *
+   *  - `k`: candidates considered per frame (≤ the track's `candK`).
+   *  - `yinTrust`: nats per e-fold of relative candidate weakness.
+   *  - `octaveBias`: the survey's four-way convergent tie-break (§16.11 —
+   *    "prefer the higher fundamental unless the lower is clearly better"):
+   *    when two candidates sit within ±50 ¢ of an octave apart and the lower's
+   *    strength is below `octaveBias` × the higher's, the lower is dropped.
+   *    Omit to keep every candidate.
+   *
+   * Requires a track that carries candidates; omit for the single-trajectory
+   * emission (the historical decode, bit-for-bit).
+   */
+  candidates?: { k?: number; yinTrust?: number; octaveBias?: number };
+  /**
+   * E4/R10(a): price a note change in PROPORTION to its interval — the single
+   * strongest cross-reference agreement in the plugin survey (§16.7: pYIN's
+   * Gaussian over semitone distance, Praat's cost per octave of leap), where we
+   * charge a flat `changeCost`. The flat cost conflates the two events it must
+   * separate: vibrato flutter is a ±1-step excursion, a melodic move is larger.
+   *
+   * cost(Δ) = changeCost · evidence + shape(Δ):
+   *  - `'gaussian'` — Δ²/(2σ²) nats (pYIN §5.3; its σ is 0.7 semitones)
+   *  - `'linear'`   — perOctaveNats · Δ/12 (Praat §6.2)
+   * Jumps beyond `capSemitones` (pYIN's maxJump 13) are forbidden. Replaces the
+   * O(1) prefix/suffix relaxation with a capped scan — the cap is what keeps
+   * the frame cost bounded, the concern that shelved `wideChangeCost`'s smooth
+   * form. Direct mode only; omit for the flat cost.
+   */
+  intervalChange?: {
+    form: 'gaussian' | 'linear';
+    sigmaSemitones?: number;
+    perOctaveNats?: number;
+    capSemitones?: number;
+  };
+  /**
+   * E4/R10(b): pitch memory ACROSS SILENCE — Praat's path-lookback (§6.4),
+   * the cheaper of the survey's two designs (pYIN's is per-pitch silence
+   * states). Today a step and a minor tenth cost exactly the same after any
+   * rest; with this, entering a note from silence adds
+   * `perOctaveNats · |Δ|` nats, where Δ is the interval (in octaves) from the
+   * pitch the current silence run left — read greedily off the running Viterbi
+   * path, exactly as Praat does. `amortize` divides by the gap's length in
+   * frames (Praat's form: a long rest forgets); without it the memory is a
+   * fixed prior across any rest. Omit for the historical free jump.
+   */
+  silenceMemory?: { perOctaveNats?: number; amortize?: boolean };
+  /**
+   * E7/R6: fat1's two-stage voicing decay — split `unvoicedPitchCost`'s two
+   * jobs. Today one scalar decides both whether a note SURVIVES a dropout and
+   * whether its PITCH IDENTITY does. This releases the second first: once
+   * `afterSec` of consecutive unvoiced frames have passed, the note-change
+   * cost is multiplied by `discount` until voicing returns — a breath costs a
+   * note its resistance to changing pitch before it costs the note its life
+   * (which stays `unvoicedPitchCost`'s job alone). Under the shipping
+   * saturated change cost this is what could let a slur through a consonant
+   * be written without re-admitting vibrato splits on voiced frames.
+   */
+  unvoicedChangeRelease?: { afterSec?: number; discount?: number };
 
   // --- state space ---
   /** Pitch states per semitone. 3 (pYIN's value) resolves ~33-cent detuning. */
@@ -91,7 +171,11 @@ export interface VoiceDecodeOptions {
   changeCost?: number;
   /** Cost of a note's attack phase giving way to its stable phase. */
   attackCost?: number;
-  /** Per-frame cost of dwelling in attack — what makes the attack transient. */
+  /**
+   * Cost of dwelling in attack — what makes the attack transient. Declared in
+   * nats **per 10 ms** and rescaled to the track's hop at decode time (Praat's
+   * convention), so a hop change cannot silently re-tune the model.
+   */
   attackFrameCost?: number;
   /** Cost of starting a note out of silence. */
   onCost?: number;
@@ -153,8 +237,29 @@ export interface VoiceDecodeOptions {
    * transition entirely.
    */
   reonsetCost?: number;
-  /** Shortest note kept, in frames. Absorbed into a neighbour, not dropped. */
-  minFrames?: number;
+  /** Shortest note kept, in seconds. Absorbed into a neighbour, not dropped. */
+  minNoteSec?: number;
+
+  // --- joint duration × velocity filters (WaoN §9.3 of the plugin survey) ---
+  /**
+   * Exempt a run shorter than `minNoteSec` from absorption when it is LOUD: its
+   * peak energy reaches this multiple of the clip's median voiced energy.
+   *
+   * WaoN's reading of the short-note filter (`notes.c:232`): a short note that is
+   * also loud is a real staccato note; only short AND quiet is a glitch. Our
+   * duration-only floor cannot make that distinction. Needs `energy`; omit to
+   * absorb every short run (the historical rule).
+   */
+  keepShortLoudRatio?: number;
+  /**
+   * Drop an emitted note that is long AND quiet — at least `minSec` long with
+   * mean energy below `quietRatio` × the clip's median voiced energy.
+   *
+   * WaoN's second pass (`notes.c:319`), the filter we never had: a long, quiet
+   * note is the shape of a reverb tail or bleed-through, which no duration-only
+   * filter can express. Needs `energy`; omit to keep every long note.
+   */
+  dropLongQuiet?: { minSec?: number; quietRatio?: number };
 
   /**
    * Where in the decoded run a note's onset is reported.
@@ -303,8 +408,40 @@ export interface VoiceDecodeOptions {
    *
    * Ships as `'trimmed-mean'`, i.e. the published α rather than the marginally
    * higher number, since choosing between them on 0.003 would be fitting noise.
+   *
+   * Three further variants from the plugin survey (task 7 of the plugin pass),
+   * each a different answer to "the boundaries are the expressive part":
+   *
+   *  - `'slew-limit'`  — TalentedHack's rate limiter with momentum (§12.2):
+   *    smooth the contour causally with a slew limit (small differences bypass
+   *    it entirely; momentum accelerates, then snaps to the target when the
+   *    remaining distance is smaller than the step), then take the median of
+   *    the smoothed contour. Unlike a one-pole this *arrives and holds*.
+   *  - `'one-pole'`    — fat1/zita-at1's within-note smoother (§3.2): causal
+   *    one-pole (time constant `onePoleTauSec`), hard-reset at the note start
+   *    since it runs per note; median of the smoothed contour.
+   *  - `'detrend'`     — MXTune's per-note linear detrend (§1.3): least-squares
+   *    line over the contour; the note's pitch is the line at the note's
+   *    temporal centre plus the median residual — pulled less by a monotonic
+   *    scoop or portamento tail than a median of the raw contour is.
+   *  - `'slope-gated'` — R24 (OpenTune §20.5): the CONDITIONAL twist on
+   *    detrend the unconditional variants lacked. Slope from medians of the
+   *    first/last max(3, n/5) frames, converted to an angle normalised at
+   *    7 st/s; only when 10° ≤ |angle| ≤ 30° is the contour rotated flat
+   *    around its centre before the trimmed mean — scoops get straightened,
+   *    flat notes and deliberate glides are left alone.
    */
-  pitchEstimator?: 'trimmed-mean' | 'hann-median';
+  pitchEstimator?:
+    | 'trimmed-mean'
+    | 'hann-median'
+    | 'slew-limit'
+    | 'one-pole'
+    | 'detrend'
+    | 'slope-gated';
+  /** `'slew-limit'`: seconds the limiter takes to close a full step. */
+  slewTimeSec?: number;
+  /** `'one-pole'`: the smoother's time constant, in seconds. */
+  onePoleTauSec?: number;
   /**
    * Which frames of the run the note's pitch is measured over.
    *
@@ -354,7 +491,7 @@ const DEFAULTS = {
   transitionMode: 'direct' as VoiceTransitionMode,
   changeCost: 1.2,
   attackCost: 0.2,
-  attackFrameCost: 0.35,
+  attackFrameCost: 0.175,
   onCost: 0.5,
   offCost: 0.5,
   unvoicedPitchCost: 1.5,
@@ -362,8 +499,10 @@ const DEFAULTS = {
   minChangeSemitones: 2 / 3,
   wideIntervalSemitones: 3,
   reonsetCost: Infinity,
-  minFrames: 4,
-  pitchEstimator: 'trimmed-mean' as 'trimmed-mean' | 'hann-median',
+  minNoteSec: 0.08,
+  pitchEstimator: 'trimmed-mean' as NonNullable<VoiceDecodeOptions['pitchEstimator']>,
+  slewTimeSec: 0.05,
+  onePoleTauSec: 0.04,
   pitchWindow: 'run' as 'run' | 'onset',
   onsetAt: 'attack' as 'attack' | 'arrival' | 'stable' | 'mid',
   arrivalCents: 50,
@@ -380,11 +519,37 @@ const DEFAULTS = {
 };
 
 export class VoiceNoteDecoder {
-  /** Every knob resolved, except the three that are meaningfully absent. */
+  /** Every knob resolved, except the eleven that are meaningfully absent. */
   private readonly o: Required<
-    Omit<VoiceDecodeOptions, 'registerCents' | 'mergeGuard' | 'wideChangeCost'>
+    Omit<
+      VoiceDecodeOptions,
+      | 'registerCents'
+      | 'mergeGuard'
+      | 'wideChangeCost'
+      | 'keepShortLoudRatio'
+      | 'dropLongQuiet'
+      | 'voicedQuorum'
+      | 'fillUnvoicedGapSec'
+      | 'candidates'
+      | 'intervalChange'
+      | 'silenceMemory'
+      | 'unvoicedChangeRelease'
+    >
   > &
-    Pick<VoiceDecodeOptions, 'registerCents' | 'mergeGuard' | 'wideChangeCost'>;
+    Pick<
+      VoiceDecodeOptions,
+      | 'registerCents'
+      | 'mergeGuard'
+      | 'wideChangeCost'
+      | 'keepShortLoudRatio'
+      | 'dropLongQuiet'
+      | 'voicedQuorum'
+      | 'fillUnvoicedGapSec'
+      | 'candidates'
+      | 'intervalChange'
+      | 'silenceMemory'
+      | 'unvoicedChangeRelease'
+    >;
 
   constructor(opts: VoiceDecodeOptions = {}) {
     this.o = { ...DEFAULTS, ...stripUndefined(opts) };
@@ -399,10 +564,23 @@ export class VoiceNoteDecoder {
     const frames = track.frames;
     if (frames === 0) return [];
 
+    if (this.o.fillUnvoicedGapSec !== undefined) {
+      track = track.fillDropouts({
+        confidenceThreshold: this.o.confidenceThreshold,
+        minFreqHz: this.o.minFreqHz,
+        maxFreqHz: this.o.maxFreqHz,
+        maxGapFrames: Math.max(
+          1,
+          Math.round(this.o.fillUnvoicedGapSec / track.hopSec),
+        ),
+      });
+    }
+
     const voiced = track.voicedMask({
       confidenceThreshold: this.o.confidenceThreshold,
       minFreqHz: this.o.minFreqHz,
       maxFreqHz: this.o.maxFreqHz,
+      quorum: this.o.voicedQuorum,
     });
 
     const grid = this.pitchGrid(track, voiced);
@@ -413,11 +591,45 @@ export class VoiceNoteDecoder {
     const { pitches, attack, reonset } = this.viterbi(
       track, voiced, grid, frames, evidence, accent,
     );
-    const runs = this.absorbShortRuns(this.runsOf(pitches, frames, reonset));
+    const minFrames = Math.max(1, Math.round(this.o.minNoteSec / track.hopSec));
+    // Joint duration × velocity filters (WaoN): both are anchored to the clip's
+    // own median voiced energy, so "quiet" adapts to the take's level.
+    const energyRef =
+      this.o.keepShortLoudRatio !== undefined || this.o.dropLongQuiet
+        ? medianVoicedEnergy(voiced, frames, energy)
+        : null;
+    const keepShortLoud =
+      this.o.keepShortLoudRatio !== undefined && energyRef !== null && energy
+        ? (run: Run): boolean =>
+            peakOver(energy, run) >= this.o.keepShortLoudRatio! * energyRef
+        : undefined;
+    const longQuiet =
+      this.o.dropLongQuiet && energyRef !== null && energy
+        ? {
+            minFrames: Math.max(
+              1,
+              Math.round((this.o.dropLongQuiet.minSec ?? 0.35) / track.hopSec),
+            ),
+            floor: (this.o.dropLongQuiet.quietRatio ?? 0.3) * energyRef,
+          }
+        : null;
+    const runs = this.absorbShortRuns(
+      this.runsOf(pitches, frames, reonset),
+      minFrames,
+      keepShortLoud,
+    );
 
     const notes: NoteEventTime[] = [];
     for (const run of runs) {
       if (run.state < 0) continue;
+      if (
+        longQuiet &&
+        energy &&
+        run.end - run.start >= longQuiet.minFrames &&
+        meanOver(energy, run) < longQuiet.floor
+      ) {
+        continue;
+      }
       let cents = this.noteCents(track, voiced, run);
       if (cents === null) continue;
       const startFrame = this.onsetFrameOf(run, attack, track, cents);
@@ -466,6 +678,7 @@ export class VoiceNoteDecoder {
         confidenceThreshold: this.o.confidenceThreshold,
         minFreqHz: this.o.minFreqHz,
         maxFreqHz: this.o.maxFreqHz,
+        quorum: this.o.voicedQuorum,
       }),
     );
   }
@@ -618,6 +831,28 @@ export class VoiceNoteDecoder {
     );
     const wideChange = this.o.wideChangeCost;
     const viaSilence = this.o.transitionMode === 'via-silence';
+    // E4/R10(a): interval-proportional change pricing (see `intervalChange`).
+    const ic = this.o.intervalChange;
+    const icCapSteps = ic
+      ? Math.max(1, Math.round(((ic.capSemitones ?? 13) * 100) / step))
+      : 0;
+    const icTwoSigSq = ic ? 2 * (ic.sigmaSemitones ?? 0.7) ** 2 : 1;
+    const icPerOct = ic ? ic.perOctaveNats ?? 5 : 0;
+    // E4/R10(b): the pitch the current best path into silence left, and how
+    // long ago — Praat's greedy path-lookback (see `silenceMemory`). Read when
+    // an attack is entered from silence; updated at the end of each frame.
+    const sm = this.o.silenceMemory;
+    const smPerOct = sm ? sm.perOctaveNats ?? 3 : 0;
+    let silenceFromPitch = -1;
+    let silenceGapFrames = 0;
+    // E7/R6: consecutive unvoiced frames ending just before t — once past the
+    // release point, the note-change cost is discounted until voicing returns.
+    const ucr = this.o.unvoicedChangeRelease;
+    const ucrAfterFrames = ucr
+      ? Math.max(1, Math.round((ucr.afterSec ?? 0.06) / track.hopSec))
+      : 0;
+    const ucrDiscount = ucr ? ucr.discount ?? 0.2 : 1;
+    let unvoicedRun = 0;
 
     const cost = new Float32Array(numStates);
     const next = new Float32Array(numStates);
@@ -629,6 +864,8 @@ export class VoiceNoteDecoder {
 
     const twoSigAttackSq = 2 * this.o.sigmaAttackSemitones ** 2;
     const twoSigStableSq = 2 * this.o.sigmaStableSemitones ** 2;
+    // Per-10 ms dwell cost rescaled to this track's hop (Praat's convention).
+    const attackFrameCost = this.o.attackFrameCost * (track.hopSec / 0.01);
 
     // Octave prior: nats charged for entering a note this far from the session's
     // register centre. Zero when no register is known, which is the old behaviour.
@@ -640,17 +877,41 @@ export class VoiceNoteDecoder {
       }
     }
 
+    // Multi-candidate emission (E3): per frame, the kept candidates with their
+    // relative-weakness cost in nats, octave tie-break already applied.
+    const cand = this.candidateTable(track);
+
     const emit = (t: number, state: number): number => {
       if (state === 0) return voiced[t] ? this.o.voicedSilenceCost : 0;
       const isAttack = state < STABLE;
       if (!voiced[t]) {
-        return this.o.unvoicedPitchCost + (isAttack ? this.o.attackFrameCost : 0);
+        return this.o.unvoicedPitchCost + (isAttack ? attackFrameCost : 0);
       }
       const p = isAttack ? state - ATTACK : state - STABLE;
-      const d = (track.cents[t] - centres[p]) / 100;
+      let d = (track.cents[t] - centres[p]) / 100;
+      let weak = 0;
+      if (cand) {
+        // pYIN §5.6: a state is scored against its NEAREST candidate, plus that
+        // candidate's weakness relative to the frame's strongest.
+        const base = t * cand.k;
+        let bestAbs = Infinity;
+        let bj = -1;
+        for (let j = 0; j < cand.k; j += 1) {
+          if (cand.strength[base + j] <= 0) break;
+          const dd = Math.abs(cand.cents[base + j] - centres[p]);
+          if (dd < bestAbs) {
+            bestAbs = dd;
+            bj = j;
+          }
+        }
+        if (bj >= 0) {
+          d = bestAbs / 100;
+          weak = cand.weakness[base + bj];
+        }
+      }
       const twoSigSq = isAttack ? twoSigAttackSq : twoSigStableSq;
-      const dwell = isAttack ? this.o.attackFrameCost : 0;
-      return (this.o.trust * (d * d)) / twoSigSq + dwell;
+      const dwell = isAttack ? attackFrameCost : 0;
+      return (this.o.trust * (d * d)) / twoSigSq + weak + dwell;
     };
 
     for (let s = 0; s < numStates; s += 1) cost[s] = emit(0, s);
@@ -683,7 +944,8 @@ export class VoiceNoteDecoder {
       // note change (direct mode) and a note start out of silence (both modes) —
       // the latter is what carries the mechanism in via-silence mode.
       const ev = evidence ? evidence[t] : 1;
-      const change = this.o.changeCost * ev;
+      const released = ucr !== undefined && unvoicedRun >= ucrAfterFrames;
+      const change = this.o.changeCost * ev * (released ? ucrDiscount : 1);
       const on = this.o.onCost * ev;
       const silencePrev = cost[0];
       let bestStable = Infinity;
@@ -712,7 +974,16 @@ export class VoiceNoteDecoder {
         {
           let best = cost[ATTACK + p];
           let from = ATTACK + p;
-          const fromSilence = silencePrev + on + octaveCost[p];
+          let fromSilence = silencePrev + on + octaveCost[p];
+          if (sm && silenceFromPitch >= 0) {
+            // A jump across a rest is not free (Praat §6.4): charge for the
+            // interval from the pitch the silence run left, amortised by the
+            // gap's length when configured.
+            const octaves = (Math.abs(p - silenceFromPitch) * step) / 1200;
+            fromSilence +=
+              (smPerOct * octaves) /
+              (sm.amortize ? Math.max(1, silenceGapFrames) : 1);
+          }
           if (fromSilence < best) {
             best = fromSilence;
             from = 0;
@@ -756,12 +1027,33 @@ export class VoiceNoteDecoder {
                 from = STABLE + at;
               }
             };
-            tryFrom(p - guard + 1, 'left', change);
-            tryFrom(p + guard - 1, 'right', change);
-            if (wideChange !== undefined) {
-              const wide = wideChange * ev;
-              tryFrom(p - wideGuard + 1, 'left', wide);
-              tryFrom(p + wideGuard - 1, 'right', wide);
+            if (ic) {
+              // E4/R10(a): interval-proportional pricing — a capped scan over
+              // the reachable stable states (pYIN's maxJump is what bounds it).
+              const lo = Math.max(0, p - icCapSteps);
+              const hi = Math.min(n - 1, p + icCapSteps);
+              for (let q = lo; q <= hi; q += 1) {
+                const dq = Math.abs(q - p);
+                if (dq < guard) continue;
+                const dSemis = (dq * step) / 100;
+                const shape =
+                  ic.form === 'linear'
+                    ? icPerOct * (dSemis / 12)
+                    : (dSemis * dSemis) / icTwoSigSq;
+                const c = cost[STABLE + q] + change + shape;
+                if (c < best) {
+                  best = c;
+                  from = STABLE + q;
+                }
+              }
+            } else {
+              tryFrom(p - guard + 1, 'left', change);
+              tryFrom(p + guard - 1, 'right', change);
+              if (wideChange !== undefined) {
+                const wide = wideChange * ev;
+                tryFrom(p - wideGuard + 1, 'left', wide);
+                tryFrom(p + wideGuard - 1, 'right', wide);
+              }
             }
           }
           next[ATTACK + p] = best + emit(t, ATTACK + p);
@@ -778,6 +1070,18 @@ export class VoiceNoteDecoder {
           }
           next[STABLE + p] = best + emit(t, STABLE + p);
           back[t * numStates + STABLE + p] = from;
+        }
+      }
+      if (ucr) unvoicedRun = voiced[t] ? 0 : unvoicedRun + 1;
+      // Advance the silence path memory AFTER every use at this frame: the
+      // from-silence jumps above priced against the path as of t−1.
+      if (sm) {
+        const from0 = back[t * numStates];
+        if (from0 === 0) {
+          silenceGapFrames += 1;
+        } else {
+          silenceFromPitch = from0 - STABLE;
+          silenceGapFrames = 1;
         }
       }
       cost.set(next);
@@ -814,6 +1118,62 @@ export class VoiceNoteDecoder {
       }
     }
     return { pitches, attack, reonset };
+  }
+
+  /**
+   * The per-frame candidate table the multi-candidate emission reads (E3; see
+   * `candidates`). Slots are strongest-first; `strength` 0 ends a frame's list.
+   * `weakness` is `yinTrust · −ln(strength / frame's strongest)` — 0 for the
+   * strongest candidate, growing for weaker ones. The octave tie-break drops
+   * the LOWER of two candidates within ±50 ¢ of an octave apart unless it is
+   * clearly stronger (strength ≥ `octaveBias` × the higher's).
+   */
+  private candidateTable(
+    track: PitchTrack,
+  ): { k: number; cents: Float32Array; strength: Float32Array; weakness: Float32Array } | null {
+    const o = this.o.candidates;
+    if (!o || !track.candCents || !track.candStrength || track.candK <= 0) return null;
+    const k = Math.max(1, Math.min(o.k ?? 3, track.candK));
+    const yinTrust = o.yinTrust ?? 1;
+    const frames = track.frames;
+    const cents = new Float32Array(frames * k);
+    const strength = new Float32Array(frames * k);
+    const weakness = new Float32Array(frames * k);
+    for (let t = 0; t < frames; t += 1) {
+      const srcBase = t * track.candK;
+      const list: { c: number; s: number }[] = [];
+      for (let j = 0; j < track.candK; j += 1) {
+        const s = track.candStrength[srcBase + j];
+        if (s <= 0) break;
+        list.push({ c: track.candCents[srcBase + j], s });
+      }
+      let kept = list;
+      if (o.octaveBias !== undefined && list.length > 1) {
+        const drop = new Set<number>();
+        for (let a = 0; a < list.length; a += 1) {
+          for (let b = 0; b < list.length; b += 1) {
+            if (a === b || drop.has(a)) continue;
+            // `a` sits ~an octave ABOVE `b`: keep `b` only if clearly stronger.
+            if (
+              Math.abs(list[a].c - list[b].c - 1200) <= 50 &&
+              list[b].s < (o.octaveBias ?? 1) * list[a].s
+            ) {
+              drop.add(b);
+            }
+          }
+        }
+        kept = list.filter((_, i) => !drop.has(i));
+      }
+      kept = kept.slice(0, k);
+      const maxS = kept.length ? kept[0].s : 0;
+      for (let j = 0; j < kept.length; j += 1) {
+        cents[t * k + j] = kept[j].c;
+        strength[t * k + j] = kept[j].s;
+        weakness[t * k + j] =
+          yinTrust * -Math.log(Math.max(1e-6, kept[j].s / maxS));
+      }
+    }
+    return { k, cents, strength, weakness };
   }
 
   /**
@@ -859,12 +1219,17 @@ export class VoiceNoteDecoder {
   }
 
   /**
-   * Remove runs shorter than `minFrames` without punching holes: a short pitch run
-   * between two pitch runs is absorbed into whichever neighbour is closer in pitch
-   * (the longer on a tie); one adjacent to silence is dropped as noise. Repeats,
-   * because absorbing can leave a neighbour newly adjacent to another short run.
+   * Remove runs shorter than `minNoteSec` (given here as `minFrames` on the
+   * track's own grid) without punching holes: a short pitch run between two pitch
+   * runs is absorbed into whichever neighbour is closer in pitch (the longer on a
+   * tie); one adjacent to silence is dropped as noise. Repeats, because absorbing
+   * can leave a neighbour newly adjacent to another short run.
    */
-  private absorbShortRuns(runs: Run[]): Run[] {
+  private absorbShortRuns(
+    runs: Run[],
+    minFrames: number,
+    keepShortLoud?: (run: Run) => boolean,
+  ): Run[] {
     let work = runs;
     for (let guard = 0; guard < 256; guard += 1) {
       let idx = -1;
@@ -873,7 +1238,10 @@ export class VoiceNoteDecoder {
         const r = work[i];
         if (r.state < 0) continue;
         const len = r.end - r.start;
-        if (len < this.o.minFrames && len < shortest) {
+        if (len < minFrames && len < shortest) {
+          // WaoN's joint rule: a short run that is LOUD is a real staccato
+          // note, not a glitch — exempt it from absorption.
+          if (keepShortLoud?.(r)) continue;
           shortest = len;
           idx = i;
         }
@@ -946,10 +1314,17 @@ export class VoiceNoteDecoder {
     }
     if (!vals.length) return null;
     if (this.o.pitchEstimator === 'hann-median') return hannWeightedMedian(vals);
-    vals.sort((a, b) => a - b);
-    const cut = Math.floor(vals.length * this.o.pitchTrim);
-    const kept = vals.length - 2 * cut >= 1 ? vals.slice(cut, vals.length - cut) : vals;
-    return kept.reduce((a, b) => a + b, 0) / kept.length;
+    if (this.o.pitchEstimator === 'slew-limit') {
+      return medianOf(slewSmooth(vals, track.hopSec, this.o.slewTimeSec));
+    }
+    if (this.o.pitchEstimator === 'one-pole') {
+      return medianOf(onePoleSmooth(vals, track.hopSec, this.o.onePoleTauSec));
+    }
+    if (this.o.pitchEstimator === 'detrend') return detrendCentre(vals);
+    if (this.o.pitchEstimator === 'slope-gated') {
+      return slopeGatedEstimate(vals, track.hopSec, this.o.pitchTrim);
+    }
+    return trimmedMean(vals, this.o.pitchTrim);
   }
 
   /**
@@ -1088,6 +1463,151 @@ function hannWeightedMedian(vals: number[]): number {
     if (acc >= total / 2) return x.v;
   }
   return weighted[weighted.length - 1].v;
+}
+
+function medianOf(vals: number[]): number {
+  const s = [...vals].sort((a, b) => a - b);
+  return s[s.length >> 1];
+}
+
+/** α-trimmed mean (Molina et al.) — sorts a copy; `vals` keeps its time order. */
+function trimmedMean(vals: number[], trim: number): number {
+  const s = [...vals].sort((a, b) => a - b);
+  const cut = Math.floor(s.length * trim);
+  const kept = s.length - 2 * cut >= 1 ? s.slice(cut, s.length - cut) : s;
+  return kept.reduce((a, b) => a + b, 0) / kept.length;
+}
+
+/**
+ * R24: OpenTune's angle-band-gated slope rotation (§20.5). Slope from the
+ * medians of the first/last max(3, n/5) frames; angle normalised at 7 st/s.
+ * Inside 10°–30° the contour is rotated flat around its centre before the
+ * trimmed mean; outside the band (flat notes below, deliberate glides above)
+ * the plain trimmed mean stands.
+ */
+function slopeGatedEstimate(vals: number[], hopSec: number, trim: number): number {
+  const n = vals.length;
+  if (n < 6) return trimmedMean(vals, trim);
+  const k = Math.max(3, Math.floor(n / 5));
+  const medFirst = medianOf(vals.slice(0, k));
+  const medLast = medianOf(vals.slice(n - k));
+  const sepFrames = Math.max(1, n - k);
+  const slopeStPerSec = (medLast - medFirst) / 100 / (sepFrames * hopSec);
+  const angleDeg = Math.abs((Math.atan(slopeStPerSec / 7) * 180) / Math.PI);
+  if (angleDeg < 10 || angleDeg > 30) return trimmedMean(vals, trim);
+  const slopeCentsPerFrame = (medLast - medFirst) / sepFrames;
+  const centre = (n - 1) / 2;
+  return trimmedMean(
+    vals.map((v, i) => v - slopeCentsPerFrame * (i - centre)),
+    trim,
+  );
+}
+
+/**
+ * TalentedHack's slew-rate limiter with momentum (`SmoothPitch`,
+ * pitch_smoother.c), run causally over a note's contour. Differences ≤ 4 cents
+ * bypass smoothing entirely; otherwise the step closes the remaining distance
+ * over `slewTimeSec`, with a three-way momentum rule — accelerate while the
+ * fresh step is larger, SNAP to the target when the momentum already exceeds
+ * the remaining distance (this is what makes it arrive instead of creeping),
+ * otherwise coast.
+ */
+function slewSmooth(vals: number[], hopSec: number, slewTimeSec: number): number[] {
+  const out = new Array<number>(vals.length);
+  let s = vals[0];
+  let momentum = 0;
+  out[0] = s;
+  const stepsToClose = Math.max(1, slewTimeSec / hopSec);
+  for (let i = 1; i < vals.length; i += 1) {
+    const diff = vals[i] - s;
+    if (Math.abs(diff) <= 4) {
+      s = vals[i];
+      momentum = 0;
+    } else {
+      const toadd = diff / stepsToClose;
+      if (Math.abs(momentum) < Math.abs(toadd)) momentum = toadd;
+      if (Math.abs(momentum) > Math.abs(diff)) {
+        s = vals[i];
+        momentum = 0;
+      } else {
+        s += momentum;
+      }
+    }
+    out[i] = s;
+  }
+  return out;
+}
+
+/** fat1's within-note one-pole, hard-reset at the note start. */
+function onePoleSmooth(vals: number[], hopSec: number, tauSec: number): number[] {
+  const alpha = 1 - Math.exp(-hopSec / Math.max(1e-6, tauSec));
+  const out = new Array<number>(vals.length);
+  let s = vals[0];
+  out[0] = s;
+  for (let i = 1; i < vals.length; i += 1) {
+    s += alpha * (vals[i] - s);
+    out[i] = s;
+  }
+  return out;
+}
+
+/**
+ * MXTune's per-note linear detrend (§1.3): least-squares line over the contour;
+ * the note's pitch is the line's value at the temporal centre plus the median
+ * residual, so a monotonic scoop or portamento tail pulls the estimate less
+ * than it pulls a median of the raw contour.
+ */
+function detrendCentre(vals: number[]): number {
+  const n = vals.length;
+  if (n < 3) return medianOf(vals);
+  const xMean = (n - 1) / 2;
+  let yMean = 0;
+  for (const v of vals) yMean += v;
+  yMean /= n;
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxy += (i - xMean) * (vals[i] - yMean);
+    sxx += (i - xMean) * (i - xMean);
+  }
+  const slope = sxx > 0 ? sxy / sxx : 0;
+  const residuals = vals.map((v, i) => v - (yMean + slope * (i - xMean)));
+  return yMean + medianOf(residuals);
+}
+
+/**
+ * The clip's own loudness anchor for the WaoN filters: median per-frame energy
+ * over voiced frames. Null when there is no energy or nothing voiced, which
+ * turns both filters off rather than comparing against a meaningless zero.
+ */
+function medianVoicedEnergy(
+  voiced: Uint8Array,
+  frames: number,
+  energy: Float32Array | undefined,
+): number | null {
+  if (!energy || energy.length < frames) return null;
+  const vals: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    if (voiced[i]) vals.push(energy[i]);
+  }
+  if (!vals.length) return null;
+  vals.sort((a, b) => a - b);
+  return vals[vals.length >> 1];
+}
+
+function peakOver(energy: Float32Array, run: { start: number; end: number }): number {
+  let peak = 0;
+  const to = Math.min(energy.length, run.end);
+  for (let i = run.start; i < to; i += 1) if (energy[i] > peak) peak = energy[i];
+  return peak;
+}
+
+function meanOver(energy: Float32Array, run: { start: number; end: number }): number {
+  const to = Math.min(energy.length, run.end);
+  if (to <= run.start) return 0;
+  let sum = 0;
+  for (let i = run.start; i < to; i += 1) sum += energy[i];
+  return sum / (to - run.start);
 }
 
 function stripUndefined<T extends object>(o: T): Partial<T> {

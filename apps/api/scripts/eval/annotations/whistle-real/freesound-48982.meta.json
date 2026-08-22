@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-48982",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 3,
+  "draftMedianCentsOffset": 25,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 1.4565532879818595,
+    "sha256": "ba59efc311d25e71ed1086b72fa53f32239ae87bc3a6beeb194304672d1958ef"
+  },
+  "provenance": {
+    "id": "freesound-48982",
+    "dataset": "whistle-real",
+    "sha256": "ba59efc311d25e71ed1086b72fa53f32239ae87bc3a6beeb194304672d1958ef",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user Lunardrive (CC0)",
+    "source": "https://freesound.org/people/Lunardrive/sounds/48982/",
+    "sourceUrl": "https://cdn.freesound.org/previews/48/48982_120830-hq.mp3",
+    "note": "\"Whistle_SoundSmith.wav\", 1.5 s, 128 kbps mp3 preview; screen tonal=0.85 median=1456Hz notes=3/3 pitches"
+  }
+}

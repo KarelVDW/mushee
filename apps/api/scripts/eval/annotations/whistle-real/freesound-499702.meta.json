@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-499702",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 29,
+  "draftMedianCentsOffset": 18,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 14.956190476190477,
+    "sha256": "7340b1984efa01af63929e92ea82d1a27171ba09271729200f43aeb6e4534bd3"
+  },
+  "provenance": {
+    "id": "freesound-499702",
+    "dataset": "whistle-real",
+    "sha256": "7340b1984efa01af63929e92ea82d1a27171ba09271729200f43aeb6e4534bd3",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user PhonosUPF (CC0)",
+    "source": "https://freesound.org/people/PhonosUPF/sounds/499702/",
+    "sourceUrl": "https://cdn.freesound.org/previews/499/499702_10350281-hq.mp3",
+    "note": "\"howl whistle\", 15.0 s, 128 kbps mp3 preview; screen tonal=0.72 median=1108Hz notes=29/6 pitches"
+  }
+}

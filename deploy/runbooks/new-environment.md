@@ -120,7 +120,6 @@ cd deploy/k8s/overlays/uat
 kustomize edit set image \
   "mushee/api=europe-west1-docker.pkg.dev/sheemu-prod/mushee/api:<tested-sha>" \
   "mushee/crepe-inference=europe-west1-docker.pkg.dev/sheemu-prod/mushee/crepe-inference:<tested-sha>" \
-  "mushee/basic-pitch-inference=europe-west1-docker.pkg.dev/sheemu-prod/mushee/basic-pitch-inference:<tested-sha>"
 kubectl apply -k .
 ```
 

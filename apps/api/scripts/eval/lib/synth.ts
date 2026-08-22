@@ -65,6 +65,15 @@ export interface ArticulatedSynthOptions extends SynthOptions {
   driftCents?: number;
   /** Semitones below the target each note is approached from, over ~70 ms. */
   scoopSemitones?: number;
+  /**
+   * R20 intonation tier: detune every note by exactly this magnitude (cents),
+   * random sign, REPLACING the Gaussian scatter — a controlled dose where
+   * `pitchScatterCents` is a realistic error model. Undefined keeps the
+   * historical scatter path byte-for-byte.
+   */
+  detuneCents?: number;
+  /** Filled with the applied per-note detunes (cents), in onset order. */
+  outDetunes?: number[];
 }
 
 const ARTICULATION_SHAPE: Record<
@@ -176,11 +185,19 @@ export function synthesizeArticulated(
 
   // Per-note target cents: the written pitch plus this singer's own error.
   // Box–Muller off the deterministic RNG so the scatter is Gaussian and the
-  // corpus is still byte-reproducible.
+  // corpus is still byte-reproducible. Under the intonation tier the error is
+  // a fixed magnitude with a random sign instead — a controlled dose.
   const targets = notes.map((note) => {
+    if (opts.detuneCents !== undefined) {
+      const d = (rng() < 0.5 ? -1 : 1) * opts.detuneCents;
+      opts.outDetunes?.push(d);
+      return note.midi * 100 + d;
+    }
     const u = Math.max(1e-9, rng());
     const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
-    return note.midi * 100 + g * scatter;
+    const d = g * scatter;
+    opts.outDetunes?.push(d);
+    return note.midi * 100 + d;
   });
 
   // Per-sample f0 (cents) and amplitude. Built as tracks rather than per-note

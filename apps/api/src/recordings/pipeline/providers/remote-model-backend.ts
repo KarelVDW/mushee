@@ -3,11 +3,7 @@ import { loadSync } from '@grpc/proto-loader';
 import { PROTO_PATH } from '@mushee/inference-proto';
 import { Logger } from '@nestjs/common';
 
-import type {
-  BasicPitchForwardResult,
-  ModelBackend,
-  ModelKey,
-} from './model-backend';
+import type { ModelBackend, ModelKey } from './model-backend';
 
 /** Per-call deadline; the forward pass is bounded so this is generous. */
 const CALL_TIMEOUT_MS = Number(process.env.INFERENCE_TIMEOUT_MS) || 15000;
@@ -61,9 +57,7 @@ export class RemoteModelBackend implements ModelBackend {
       (obj, key) => obj[key] as Record<string, unknown>,
       loadProto() as unknown as Record<string, unknown>,
     );
-    const ServiceCtor = pkg[
-      model === 'crepe-tiny' ? 'CrepeInference' : 'BasicPitchInference'
-    ] as new (
+    const ServiceCtor = pkg['CrepeInference'] as new (
       address: string,
       creds: grpc.ChannelCredentials,
       options?: object,
@@ -108,20 +102,6 @@ export class RemoteModelBackend implements ModelBackend {
     return bytesToF32(res.activations, res.batchCount * res.numBins);
   }
 
-  async basicPitchForward(
-    samples: Float32Array,
-  ): Promise<BasicPitchForwardResult> {
-    const res = await this.unary<{
-      frames: Buffer;
-      onsets: Buffer;
-      numFrames: number;
-      numPitches: number;
-    }>('Forward', { samples: f32ToBytes(samples) });
-    return {
-      frames: unflatten(res.frames, res.numFrames, res.numPitches),
-      onsets: unflatten(res.onsets, res.numFrames, res.numPitches),
-    };
-  }
 
   private unary<R>(method: string, req: object): Promise<R> {
     const fn = this.client[method] as (
@@ -139,16 +119,6 @@ export class RemoteModelBackend implements ModelBackend {
   }
 }
 
-function unflatten(bytes: Buffer, rows: number, cols: number): number[][] {
-  const out: number[][] = new Array<number[]>(rows);
-  for (let r = 0; r < rows; r++) {
-    const row = new Array<number>(cols);
-    const base = r * cols * 4;
-    for (let c = 0; c < cols; c++) row[c] = bytes.readFloatLE(base + c * 4);
-    out[r] = row;
-  }
-  return out;
-}
 
 function describe(err: unknown): string {
   return err instanceof Error ? err.message : String(err);

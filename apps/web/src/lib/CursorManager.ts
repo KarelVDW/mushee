@@ -1,6 +1,6 @@
-import { MidiPlayer } from './MidiPlayer'
-import type { ScoreScheduler, TimelineEntry } from './ScoreScheduler'
-import type { Tickable } from './Ticker'
+import { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
+import type { Tickable } from '@mushee/playback/Ticker'
 
 interface PlaybackPosition {
     measureIndex: number

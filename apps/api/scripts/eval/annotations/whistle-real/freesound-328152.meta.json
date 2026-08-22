@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-328152",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 19,
+  "draftMedianCentsOffset": 19,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 4.249251700680272,
+    "sha256": "1c9ff2dfd4d627fff54f16023889636cea36b7cba416ecc9f472fe1fa16d098b"
+  },
+  "provenance": {
+    "id": "freesound-328152",
+    "dataset": "whistle-real",
+    "sha256": "1c9ff2dfd4d627fff54f16023889636cea36b7cba416ecc9f472fe1fa16d098b",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user javiersonidos (CC0)",
+    "source": "https://freesound.org/people/javiersonidos/sounds/328152/",
+    "sourceUrl": "https://cdn.freesound.org/previews/328/328152_5482007-hq.mp3",
+    "note": "\"espatadantza.wav\", 4.2 s, 128 kbps mp3 preview; screen tonal=0.89 median=1418Hz notes=19/6 pitches"
+  }
+}

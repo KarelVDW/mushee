@@ -86,9 +86,9 @@ describe('ProfileResolver source attribution', () => {
     const resolver = new ProfileResolver();
     const silence = new Float32Array(YAMNET_SAMPLE_RATE * 1.5);
 
-    // Silence resolves to the no-pitch basic-pitch fallback, where the voice
-    // ROUTING overlay never applies — the BELIEF must still be recorded, which
-    // is exactly the distinction sourceBelief exists for.
+    // Silence resolves to the no-pitch default fallback. The BELIEF must be
+    // recorded independently of routing — that is the distinction sourceBelief
+    // exists for.
     const explicit = resolver.resolve(silence, YAMNET_SAMPLE_RATE, {
       instrumentId: 'piano',
       sourceKind: 'voice',

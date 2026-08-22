@@ -18,7 +18,6 @@ import {
   RecordingSessionEvents,
 } from './recording-session';
 
-const DEFAULT_MODEL_DIR = resolve(process.cwd(), 'model');
 const DEFAULT_CREPE_TINY_DIR = resolve(process.cwd(), 'model-crepe-tiny');
 
 @Injectable()
@@ -39,11 +38,10 @@ export class RecordingsService implements OnModuleInit {
     private readonly storage: StorageService,
   ) {
     const dirs = {
-      basicPitch: process.env.BASIC_PITCH_MODEL_DIR ?? DEFAULT_MODEL_DIR,
       crepeTiny: process.env.CREPE_TINY_MODEL_DIR ?? DEFAULT_CREPE_TINY_DIR,
     };
-    // Forward pass runs locally (TF.js) or against per-model remote inference
-    // services, selected by env (CREPE_INFERENCE_URL / BASIC_PITCH_INFERENCE_URL).
+    // Forward pass runs locally (TF.js) or against the remote inference
+    // service, selected by env (CREPE_INFERENCE_URL).
     this.registry = new ProviderRegistry(dirs, createModelBackend(dirs));
   }
 

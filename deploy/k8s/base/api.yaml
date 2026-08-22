@@ -36,7 +36,6 @@ spec:
           env:
             - { name: PORT, value: '3000' }
             - { name: CREPE_INFERENCE_URL, value: 'crepe-inference:50051' }
-            - { name: BASIC_PITCH_INFERENCE_URL, value: 'basic-pitch-inference:50052' }
             # Exactly one proxy hop (the ingress/LB) sits in front of the API;
             # adjust if your topology differs so per-IP rate limiting keys on
             # real client addresses.

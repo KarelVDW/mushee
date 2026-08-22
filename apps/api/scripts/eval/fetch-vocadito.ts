@@ -3,10 +3,10 @@
  * harness's *real* corpus layout, so run-eval can score the pipeline against
  * actual human voices instead of the synthetic voice proxy.
  *
- * Output: scripts/fixtures/eval-real/vocadito/<clip>.truth.json
+ * Output: scripts/fixtures/eval-real/benchmark/vocadito/<clip>.truth.json
  *           ({bpm, notes, alternateNotes} — see ANNOTATORS below)
- *         scripts/fixtures/eval-real/vocadito/<clip>__real.wav
- *         scripts/fixtures/eval-real/vocadito/dataset.json         (manifest)
+ *         scripts/fixtures/eval-real/benchmark/vocadito/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/vocadito/dataset.json         (manifest)
  *
  * Source : https://zenodo.org/records/5578807  (vocadito, ISMIR 2021)
  * License: CC-BY-4.0 (attribution; commercial use OK).
@@ -38,7 +38,7 @@ const ZIP_URL = 'https://zenodo.org/records/5578807/files/vocadito.zip?download=
 const CACHE = resolve(__dirname, '.cache');
 const ZIP = join(CACHE, 'vocadito.zip');
 const EXTRACT = join(CACHE, 'vocadito');
-const OUT = resolve(__dirname, '../fixtures/eval-real/vocadito');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/vocadito');
 
 // vocadito clips are free, often-rubato singing with no annotated tempo. bpm is
 // only handed to the converter's quantizer; the metrics compare onsets in

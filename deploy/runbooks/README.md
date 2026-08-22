@@ -12,7 +12,7 @@ every command reflects the real topology:
 | Blob storage | `gs://sheemu-prod-storage` (versioned) |
 | API entry | `api.solkey.io` → static IP `mushee-api-ip` (34.117.52.77), ManagedCertificate `api-cert` |
 | Web | Vercel, apex `solkey.io` primary (www 308→apex — must stay that way or CORS breaks) |
-| Images | `europe-west1-docker.pkg.dev/sheemu-prod/mushee/{api,crepe-inference,basic-pitch-inference}:<git-sha>` |
+| Images | `europe-west1-docker.pkg.dev/sheemu-prod/mushee/{api,crepe-inference}:<git-sha>` |
 | CD | `.github/workflows/deploy.yml` (manual dispatch, GitHub OIDC as `github-deployer`) |
 | Secrets | `Secret/api-secrets` in ns `mushee` — the only secret store |
 

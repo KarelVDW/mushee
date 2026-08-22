@@ -4,9 +4,9 @@
  * ground truth, which no other dataset in the harness provides (URMP covers
  * bowed strings/winds/brass, everything else is singing).
  *
- * Output: scripts/fixtures/eval-real/guitarset-solo/<clip>.truth.json  ({bpm, notes})
- *         scripts/fixtures/eval-real/guitarset-solo/<clip>__real.wav
- *         scripts/fixtures/eval-real/guitarset-solo/dataset.json        (manifest)
+ * Output: scripts/fixtures/eval-real/benchmark/guitarset-solo/<clip>.truth.json  ({bpm, notes})
+ *         scripts/fixtures/eval-real/benchmark/guitarset-solo/<clip>__real.wav
+ *         scripts/fixtures/eval-real/benchmark/guitarset-solo/dataset.json        (manifest)
  *
  * Source : https://zenodo.org/records/3371780  (GuitarSet, ISMIR 2018)
  * License: CC-BY-4.0 (attribution; commercial use OK).
@@ -65,7 +65,7 @@ const ANNOT_ZIP = join(CACHE, 'annotation.zip');
 const ANNOT_DIR = join(CACHE, 'annotation');
 const AUDIO_ZIP = join(CACHE, AUDIO.zip);
 const AUDIO_DIR = join(CACHE, AUDIO.dir);
-const OUT = resolve(__dirname, '../fixtures/eval-real/guitarset-solo');
+const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/guitarset-solo');
 
 // Excerpt length per clip, and the audio kept before the first note so the
 // pipeline's pitch scan has a moment of noise floor to adapt to.

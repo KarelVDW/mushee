@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-132295",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 10,
+  "draftMedianCentsOffset": 9,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 3.57,
+    "sha256": "c40d5712085dbe621abc99434e408d383d8366d5d0f6317ac78207160419e1a0"
+  },
+  "provenance": {
+    "id": "freesound-132295",
+    "dataset": "whistle-real",
+    "sha256": "c40d5712085dbe621abc99434e408d383d8366d5d0f6317ac78207160419e1a0",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user J_Bond (CC0)",
+    "source": "https://freesound.org/people/J_Bond/sounds/132295/",
+    "sourceUrl": "https://cdn.freesound.org/previews/132/132295_2367413-hq.mp3",
+    "note": "\"Long Whistle #1\", 3.6 s, 128 kbps mp3 preview; screen tonal=0.78 median=3179Hz notes=10/4 pitches"
+  }
+}

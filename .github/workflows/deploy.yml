@@ -57,8 +57,6 @@ jobs:
             dockerfile: apps/api/Dockerfile
           - image: crepe-inference
             dockerfile: apps/inference-crepe/Dockerfile
-          - image: basic-pitch-inference
-            dockerfile: apps/inference-basic-pitch/Dockerfile
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
@@ -96,7 +94,7 @@ jobs:
       - name: Stamp immutable image tags and apply
         working-directory: deploy/k8s/overlays/${{ env.DEPLOY_ENV }}
         run: |
-          for img in api crepe-inference basic-pitch-inference; do
+          for img in api crepe-inference; do
             kustomize edit set image \
               "mushee/$img=$REGISTRY/$PROJECT_ID/mushee/$img:$GITHUB_SHA"
           done
@@ -104,6 +102,6 @@ jobs:
       - name: Wait for rollouts
         run: |
           ns=$([ "$DEPLOY_ENV" = production ] && echo mushee || echo mushee-staging)
-          for d in api crepe-inference basic-pitch-inference; do
+          for d in api crepe-inference; do
             kubectl rollout status "deploy/$d" -n "$ns" --timeout=10m
           done

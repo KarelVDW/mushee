@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-494517",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 8,
+  "draftMedianCentsOffset": 28,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 1.0467573696145125,
+    "sha256": "dadcfcaf083f49944501dc87efcf1a5f3e232ec9ce00288895c7d3906a222a5d"
+  },
+  "provenance": {
+    "id": "freesound-494517",
+    "dataset": "whistle-real",
+    "sha256": "dadcfcaf083f49944501dc87efcf1a5f3e232ec9ce00288895c7d3906a222a5d",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user PhonosUPF (CC0)",
+    "source": "https://freesound.org/people/PhonosUPF/sounds/494517/",
+    "sourceUrl": "https://cdn.freesound.org/previews/494/494517_10350281-hq.mp3",
+    "note": "\"whistling melody\", 1.0 s, 128 kbps mp3 preview; screen tonal=0.78 median=1541Hz notes=8/7 pitches"
+  }
+}

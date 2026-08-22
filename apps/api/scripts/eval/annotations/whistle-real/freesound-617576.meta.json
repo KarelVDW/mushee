@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-617576",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 69,
+  "draftMedianCentsOffset": 20,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 22,
+    "sha256": "02c565f7503c7c0a9fe06f41c5b7e439984b4d66ffa5a8a84f7b20a10b7c1a0e"
+  },
+  "provenance": {
+    "id": "freesound-617576",
+    "dataset": "whistle-real",
+    "sha256": "02c565f7503c7c0a9fe06f41c5b7e439984b4d66ffa5a8a84f7b20a10b7c1a0e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user gaiterjay (CC0)",
+    "source": "https://freesound.org/people/gaiterjay/sounds/617576/",
+    "sourceUrl": "https://cdn.freesound.org/previews/617/617576_2539290-hq.mp3",
+    "note": "\"Happy Birthday Whistled\", 22.0 s, 128 kbps mp3 preview; screen tonal=0.87 median=1546Hz notes=69/17 pitches"
+  }
+}

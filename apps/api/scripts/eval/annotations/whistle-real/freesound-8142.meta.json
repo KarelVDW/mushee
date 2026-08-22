@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-8142",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 26,
+  "draftMedianCentsOffset": 16,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 11.366145124716553,
+    "sha256": "c321c170cfc8fe6d28300d35e46b5de81a06ab2c286c0504f2cab5785f0a653e"
+  },
+  "provenance": {
+    "id": "freesound-8142",
+    "dataset": "whistle-real",
+    "sha256": "c321c170cfc8fe6d28300d35e46b5de81a06ab2c286c0504f2cab5785f0a653e",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user petrasound (CC0)",
+    "source": "https://freesound.org/people/petrasound/sounds/8142/",
+    "sourceUrl": "https://cdn.freesound.org/previews/8/8142_19179-hq.mp3",
+    "note": "\"jinglebells_2.aif\", 11.4 s, 128 kbps mp3 preview; screen tonal=0.84 median=1264Hz notes=26/8 pitches"
+  }
+}

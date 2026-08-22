@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-419788",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 22,
+  "draftMedianCentsOffset": 26,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 8.975283446712018,
+    "sha256": "127068aea8dc9820fc3482de3b60210c8ddb51d297aab76074e9851f4454a473"
+  },
+  "provenance": {
+    "id": "freesound-419788",
+    "dataset": "whistle-real",
+    "sha256": "127068aea8dc9820fc3482de3b60210c8ddb51d297aab76074e9851f4454a473",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user 14GPanskaMuzatko_Matej (CC0)",
+    "source": "https://freesound.org/people/14GPanskaMuzatko_Matej/sounds/419788/",
+    "sourceUrl": "https://cdn.freesound.org/previews/419/419788_8371140-hq.mp3",
+    "note": "\"12 - Mouth whistle male.wav\", 9.0 s, 128 kbps mp3 preview; screen tonal=0.90 median=1105Hz notes=22/9 pitches"
+  }
+}

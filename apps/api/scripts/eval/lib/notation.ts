@@ -107,7 +107,66 @@ export function toBeats(
   }));
 }
 
-export function truthToBeats(notes: TruthNote[], bpm: number): BeatNote[] {
+/**
+ * Seconds → beats through an annotated beat grid, by piecewise-linear
+ * interpolation between adjacent beat marks (and linear extrapolation off
+ * either end, using the first/last interval's local tempo).
+ *
+ * This is what makes a rubato performance scoreable in beats at all: between
+ * two tapped beats the tempo is taken as locally constant, which is the most a
+ * beat-level annotation can claim, and across the take it tracks the real
+ * accelerando/ritardando that a single `bpm` cannot represent.
+ *
+ * `durBeat` is the note's END in beats minus its START in beats — mapped
+ * through the same grid rather than scaled by one tempo, so a note held across
+ * a ritardando keeps its notated value instead of inflating.
+ */
+export function beatsFromGrid(
+  notes: { onsetSec: number; durSec: number; midi: number }[],
+  grid: { timeSec: number; beat: number }[],
+): BeatNote[] {
+  const g = [...grid].sort((a, b) => a.timeSec - b.timeSec);
+  if (g.length < 2) throw new Error('beat grid needs at least two marks');
+
+  const at = (t: number): number => {
+    // Binary search for the last mark at or before t.
+    let lo = 0;
+    let hi = g.length - 1;
+    if (t <= g[0].timeSec) {
+      lo = 0;
+      hi = 1;
+    } else if (t >= g[g.length - 1].timeSec) {
+      lo = g.length - 2;
+      hi = g.length - 1;
+    } else {
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (g[mid].timeSec <= t) lo = mid;
+        else hi = mid;
+      }
+    }
+    const dt = g[hi].timeSec - g[lo].timeSec;
+    const db = g[hi].beat - g[lo].beat;
+    if (dt <= 0) return g[lo].beat;
+    return g[lo].beat + ((t - g[lo].timeSec) / dt) * db;
+  };
+
+  return notes.map((n) => {
+    const onsetBeat = at(n.onsetSec);
+    return {
+      onsetBeat,
+      durBeat: at(n.onsetSec + n.durSec) - onsetBeat,
+      midi: n.midi,
+    };
+  });
+}
+
+export function truthToBeats(
+  notes: TruthNote[],
+  bpm: number,
+  beatGrid?: { timeSec: number; beat: number }[],
+): BeatNote[] {
+  if (beatGrid && beatGrid.length >= 2) return beatsFromGrid(notes, beatGrid);
   return toBeats(notes, bpm);
 }
 

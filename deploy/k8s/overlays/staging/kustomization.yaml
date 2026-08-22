@@ -44,15 +44,10 @@ replicas:
     count: 1
   - name: crepe-inference
     count: 1
-  - name: basic-pitch-inference
-    count: 1
 images:
   - name: mushee/api
     newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/api
     newTag: set-by-ci
   - name: mushee/crepe-inference
     newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/crepe-inference
-    newTag: set-by-ci
-  - name: mushee/basic-pitch-inference
-    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/basic-pitch-inference
     newTag: set-by-ci

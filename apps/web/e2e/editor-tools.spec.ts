@@ -129,6 +129,51 @@ test('the tempo popover sets a bpm through the input and Enter commits it', asyn
     await expect(page.getByRole('button', { name: 'Tempo: 90 bpm' })).toBeVisible()
 })
 
+test('the transpose popover moves the whole score up two semitones', async ({ page }) => {
+    await page.getByRole('button', { name: 'Transpose' }).click()
+    const popover = page.getByRole('dialog', { name: 'Transpose' })
+    await expect(popover).toBeVisible()
+
+    // While the popover is open, its target range pulses magenta on the canvas.
+    await expect(page.locator('[data-score-highlight="pulse"]')).toBeVisible()
+
+    // Apply stays disabled until an actual interval is dialed in.
+    const apply = popover.getByRole('button', { name: 'Apply' })
+    await expect(apply).toBeDisabled()
+
+    await popover.getByRole('button', { name: 'Increase semitones' }).click()
+    await popover.getByRole('button', { name: 'Increase semitones' }).click()
+    await expect(apply).toBeEnabled()
+
+    const patch = waitForAutosave(page)
+    await apply.click()
+    // The pulse hands over to a brief flash over the transposed range.
+    await expect(page.locator('[data-score-highlight="flash"]')).toBeVisible()
+    await patch
+    await expect(popover).toHaveCount(0)
+    // C major up a major second lands in D major: the dock's key control follows.
+    await expect(page.getByRole('button', { name: 'Key signature: 2♯' })).toBeVisible()
+    // The flash is transient: it clears on its own.
+    await expect(page.locator('[data-score-highlight]')).toHaveCount(0)
+})
+
+test('the transpose popover expands to advanced options and transposes to a target key', async ({ page }) => {
+    await page.getByRole('button', { name: 'Transpose' }).click()
+    const popover = page.getByRole('dialog', { name: 'Transpose' })
+    await popover.getByRole('button', { name: 'Advanced options' }).click()
+
+    const tabs = popover.getByRole('group', { name: 'Transpose by' })
+    await expect(tabs).toBeVisible()
+    await tabs.getByRole('button', { name: 'Key' }).click()
+    await popover.getByRole('button', { name: 'E♭ major' }).click()
+
+    const patch = waitForAutosave(page)
+    await popover.getByRole('button', { name: 'Apply' }).click()
+    await patch
+    await expect(popover).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Key signature: 3♭' })).toBeVisible()
+})
+
 test('popovers and the export menu dismiss with Escape without touching the score', async ({ page, apiMock }) => {
     const before = apiMock.patches.length
 

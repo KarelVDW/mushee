@@ -10,6 +10,7 @@ import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayo
 import { Barline } from './Barline'
 import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE, NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
+import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
@@ -52,6 +53,8 @@ interface ScoreProps {
     selectedNote?: Note | null
     /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
     selectedNotes?: Note[]
+    /** Transient magenta emphasis over part of the score (see {@link ScoreHighlight}); null/omitted renders nothing. */
+    highlight?: ScoreHighlight | null
     playbackCursorRef?: React.RefObject<SVGRectElement | null>
     /** Live recording waveform bars; the layer subscribes to it directly. */
     waveformStore?: RecordingWaveformStore
@@ -123,6 +126,7 @@ export const Score = memo(function Score({
     score,
     selectedNote,
     selectedNotes,
+    highlight,
     playbackCursorRef,
     waveformStore,
     onSelectionStart,
@@ -414,6 +418,9 @@ export const Score = memo(function Score({
                     onPointerLeave={handlePointerLeave}
                     onContextMenu={gestures.contextMenu}
                     onClick={handleClick}>
+                    {/* Pitch-operation emphasis — the lowest layer, a wash behind all ink */}
+                    {highlight && <HighlightLayer key={highlight.id} score={score} highlight={highlight} />}
+
                     {/* Live recording waveform — its own store-subscribed layer, so
                         sample-rate updates never re-render the score itself */}
                     {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}

@@ -1,0 +1,40 @@
+{
+  "clip": "freesound-255582",
+  "dataset": "whistle-real",
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "draftedBy": "lib/sineTrack.ts (framewise FFT peak + semitone runs)",
+  "draftParams": {
+    "track": {
+      "fftSize": 2048,
+      "hopSec": 0.01,
+      "minHz": 400,
+      "maxHz": 5000,
+      "minTonality": 0.35,
+      "minLevel": 0.06
+    },
+    "segment": {
+      "minNoteSec": 0.06,
+      "maxDropoutSec": 0.05,
+      "medianFrames": 5
+    }
+  },
+  "draftNotes": 7,
+  "draftMedianCentsOffset": 29,
+  "audio": {
+    "sampleRate": 44100,
+    "durationSec": 2.9605442176870747,
+    "sha256": "396b2ba36afe443a0fa131ca61cb038d0b6f478dc6b296e7375a425ee292598d"
+  },
+  "provenance": {
+    "id": "freesound-255582",
+    "dataset": "whistle-real",
+    "sha256": "396b2ba36afe443a0fa131ca61cb038d0b6f478dc6b296e7375a425ee292598d",
+    "licence": "cc0",
+    "licenceVerified": true,
+    "attribution": "Freesound user ramins (CC0)",
+    "source": "https://freesound.org/people/ramins/sounds/255582/",
+    "sourceUrl": "https://cdn.freesound.org/previews/255/255582_4746752-hq.mp3",
+    "note": "\"woyaya_whistle2.wav\", 3.0 s, 128 kbps mp3 preview; screen tonal=0.90 median=1346Hz notes=7/6 pitches"
+  }
+}

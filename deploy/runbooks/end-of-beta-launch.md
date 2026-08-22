@@ -102,7 +102,7 @@ the web client too, so the gate drops even before the web rebuild.
 
 - **Scaling headroom is config, not code**: API HPA 2→6 (raise `maxReplicas`
   in `base/api.yaml` if the load test says so — but check the DB connection
-  arithmetic in Runbook 4 §7 first), crepe-inference 2→10, basic-pitch 1→4.
+  arithmetic in Runbook 4 §7 first), crepe-inference 2→10.
   Autopilot adds nodes by itself; nothing else to pre-warm.
 - Cloud SQL `db-custom-1-3840` is the most likely first bottleneck under
   real load; the resize is a 2-minute restart (Runbook 4 §7) — decide the

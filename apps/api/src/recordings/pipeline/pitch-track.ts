@@ -27,6 +27,17 @@ export class PitchTrack {
     readonly frames: number,
     /** Seconds between consecutive frame starts. */
     readonly hopSec: number,
+    /**
+     * Optional per-frame pitch CANDIDATES (E3/R9 — pYIN §5.6): the `candK`
+     * strongest local maxima of the raw activation row, strongest first,
+     * flattened `[frames × candK]`. `candStrength` 0 marks an empty slot.
+     * The main `cents` trajectory stays the collapsed best path; candidates
+     * exist so a note-level decoder can pick a non-argmax hypothesis when
+     * note context favours it.
+     */
+    readonly candCents?: Float32Array,
+    readonly candStrength?: Float32Array,
+    readonly candK: number = 0,
   ) {}
 
   /** Pitch in Hz. */
@@ -35,15 +46,74 @@ export class PitchTrack {
   }
 
   /**
+   * A copy of this track with short unvoiced gaps filled (R21, Deep Autotuner's
+   * `interpolate_pyin.py` — corrected): an unvoiced run of at most
+   * `maxGapFrames` whose BOTH flanks pass the gate gets linearly interpolated
+   * pitch and the quieter flank's confidence, so a consonant or breath punching
+   * a 1–2 frame hole mid-note no longer needs the decoder's `unvoicedPitchCost`
+   * to ride across it. Voiced frames are never touched — the reference smooths
+   * them too, which is a bug for us (its §14.2 validation note).
+   */
+  fillDropouts(opts: {
+    confidenceThreshold: number;
+    minFreqHz: number;
+    maxFreqHz: number;
+    maxGapFrames: number;
+  }): PitchTrack {
+    const voiced = this.voicedMask(opts);
+    const cents = this.cents.slice();
+    const confidence = this.confidence.slice();
+    let i = 0;
+    while (i < this.frames) {
+      if (voiced[i]) {
+        i += 1;
+        continue;
+      }
+      let end = i;
+      while (end < this.frames && !voiced[end]) end += 1;
+      const len = end - i;
+      if (i > 0 && end < this.frames && len <= opts.maxGapFrames) {
+        const c0 = this.cents[i - 1];
+        const c1 = this.cents[end];
+        const conf = Math.min(this.confidence[i - 1], this.confidence[end]);
+        for (let j = i; j < end; j += 1) {
+          const t = (j - (i - 1)) / (len + 1);
+          cents[j] = c0 + (c1 - c0) * t;
+          confidence[j] = conf;
+        }
+      }
+      i = end;
+    }
+    return new PitchTrack(
+      cents,
+      confidence,
+      this.frames,
+      this.hopSec,
+      this.candCents,
+      this.candStrength,
+      this.candK,
+    );
+  }
+
+  /**
    * Per-frame voicing mask: confident enough AND inside the register window.
    * Broken out because every segmenter needs exactly this gate, and because the
    * frequency window is the pipeline's single most important adaptive knob — a
    * frame whose f0 falls outside the resolved band is not evidence of a note.
+   *
+   * `quorum` adds the survey's fourth-time-independent block-level rule
+   * (outotune: >¼ of the block voiced, Essentia Pitch2Midi: ≥50 % over 15 ms,
+   * aubio: median-of-6): a frame only *stays* voiced when at least
+   * `minFraction` of the raw mask within a centred `windowSec` window is
+   * voiced — a few stray voiced frames cannot manufacture a pitch. It only
+   * ever demotes frames; nothing unvoiced is promoted (gap-filling is a
+   * different mechanism). Omit for the historical per-frame gate.
    */
   voicedMask(opts: {
     confidenceThreshold: number;
     minFreqHz: number;
     maxFreqHz: number;
+    quorum?: { minFraction?: number; windowSec?: number };
   }): Uint8Array {
     const mask = new Uint8Array(this.frames);
     for (let i = 0; i < this.frames; i += 1) {
@@ -55,6 +125,26 @@ export class PitchTrack {
           ? 1
           : 0;
     }
-    return mask;
+    if (!opts.quorum) return mask;
+
+    const minFraction = opts.quorum.minFraction ?? 0.5;
+    const half = Math.max(
+      1,
+      Math.round((opts.quorum.windowSec ?? 0.12) / this.hopSec / 2),
+    );
+    const out = new Uint8Array(this.frames);
+    // Prefix sums so the window vote is O(1) per frame; edges use the frames
+    // that actually exist rather than padding, so a note against the clip edge
+    // is not penalised for the silence beyond it.
+    const prefix = new Int32Array(this.frames + 1);
+    for (let i = 0; i < this.frames; i += 1) prefix[i + 1] = prefix[i] + mask[i];
+    for (let i = 0; i < this.frames; i += 1) {
+      if (!mask[i]) continue;
+      const lo = Math.max(0, i - half);
+      const hi = Math.min(this.frames - 1, i + half);
+      const voted = prefix[hi + 1] - prefix[lo];
+      if (voted >= minFraction * (hi - lo + 1)) out[i] = 1;
+    }
+    return out;
   }
 }
