@@ -22,7 +22,19 @@ import {
 import { VOICE_OPTS } from '../../../src/recordings/pipeline/providers/crepe-provider';
 import { segmentNotes } from '../../../src/recordings/pipeline/providers/pitch-decoder';
 import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder';
+import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile';
 import type { CachedClip } from './trackCache';
+
+/**
+ * Frame-count knob as production's provider would see it. The octave-down
+ * wrapper multiplies BOTH the declared value and its default by its slow-down
+ * factor (its frames span half the real time), so replaying its cached
+ * 10 ms-hop track needs the same counts — 8 frames = 80 ms real, matching the
+ * at-pitch bands' 4 frames at 20 ms.
+ */
+export function frameCount(c: CachedClip, declared: number | undefined): number {
+  return (declared ?? 4) * (c.providerName === PITCHDOWN_PROVIDER_NAME ? 2 : 1);
+}
 
 /**
  * Honours the same `RECORDING_VOICE_DECODE=0` kill-switch as the resolver, so an
@@ -44,17 +56,17 @@ export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
     return new VoiceNoteDecoder({
       ...VOICE_OPTS,
       ...gate,
-      minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
+      minNoteSec: frameCount(c, c.profile.minFramesPerNote) * c.track.hopSec,
     }).decode(c.track, c.energy);
   }
   return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
     hopSize: 1,
     sampleRate: 1 / c.track.hopSec,
     ...gate,
-    minFramesPerNote: c.profile.minFramesPerNote ?? 4,
+    minFramesPerNote: frameCount(c, c.profile.minFramesPerNote),
     pitchBinToleranceCents: 50,
     mode: c.profile.segmentMode === 'median' ? 'median' : 'semitone',
-    smoothFrames: c.profile.smoothFrames ?? 4,
+    smoothFrames: frameCount(c, c.profile.smoothFrames),
   });
 }
 
