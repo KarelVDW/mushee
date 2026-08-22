@@ -48,6 +48,7 @@ import { type EstNote, scoreNotesBest } from './lib/metrics';
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
 import { inSplit, splitFromEnv } from './lib/split';
 import { formatComparison, pairedDiffCI } from './lib/stats';
+import { frameCount } from './lib/decodeCached';
 import { type CachedClip, TrackCache } from './lib/trackCache';
 
 const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
@@ -67,7 +68,11 @@ interface Config {
   /** Voice-decoder overrides (voice-routed clips only). */
   voice?: Partial<VoiceDecodeOptions>;
   /** Instrument-path overrides (segmentNotes; ignored by voice clips). */
-  seg?: { smoothFrames?: number; minFramesPerNote?: number };
+  seg?: {
+    smoothFrames?: number;
+    minFramesPerNote?: number;
+    pitchBinToleranceCents?: number;
+  };
   /** Voice-path note floor in seconds (profile default is 4 frames = 80 ms). */
   voiceMinNoteSec?: number;
   /** Cleanup overrides merged onto the production cleanup set. */
@@ -106,6 +111,21 @@ CONFIGS.push({ name: 'v.lq.3@.35s', voice: { dropLongQuiet: { minSec: 0.35, quie
 CONFIGS.push({ name: 'adaptFloor0', cleanup: { adaptiveFloorFraction: 0 } });
 CONFIGS.push({ name: 'adaptFloor.5', cleanup: { adaptiveFloorFraction: 0.5 } });
 CONFIGS.push({ name: 'no-onsetSplit', noOnsetSplit: true });
+// The very-high band's split question (2026-08-22): whistled/piccolo sustains
+// fragment (dogfood 89–102 splits/100). On this band's 10 ms-hop cached track a
+// raw count of 8 = 80 ms real = today's production; sweep both directions plus
+// the two other semitone-path knobs. Read the very-high strata; the at-pitch
+// strata replicate known rows.
+for (const smoothFrames of [12, 16]) {
+  CONFIGS.push({ name: `w.smooth${smoothFrames}`, seg: { smoothFrames } });
+}
+for (const minFramesPerNote of [12, 16]) {
+  CONFIGS.push({ name: `w.floor${minFramesPerNote}f`, seg: { minFramesPerNote } });
+}
+for (const pitchBinToleranceCents of [80, 120]) {
+  CONFIGS.push({ name: `w.binTol${pitchBinToleranceCents}`, seg: { pitchBinToleranceCents } });
+}
+CONFIGS.push({ name: 'w.vibrato.25', cleanup: { vibratoMaxSec: 0.25 } });
 
 /** Band anchor = profile id with adaptation suffixes stripped. */
 function baseBand(profileId: string): string {
@@ -205,7 +225,8 @@ function run(c: CachedClip, cfg: Config): EstNote[] {
       ...VOICE_OPTS,
       ...gate,
       minNoteSec:
-        cfg.voiceMinNoteSec ?? (c.profile.minFramesPerNote ?? 4) * track.hopSec,
+        cfg.voiceMinNoteSec ??
+        frameCount(c, c.profile.minFramesPerNote) * track.hopSec,
       ...(cfg.quorum ? { voicedQuorum: cfg.quorum } : {}),
       ...cfg.voice,
     }).decode(track, c.energy);
@@ -214,10 +235,11 @@ function run(c: CachedClip, cfg: Config): EstNote[] {
       hopSize: 1,
       sampleRate: 1 / track.hopSec,
       ...gate,
-      minFramesPerNote: cfg.seg?.minFramesPerNote ?? c.profile.minFramesPerNote ?? 4,
-      pitchBinToleranceCents: 50,
+      minFramesPerNote:
+        cfg.seg?.minFramesPerNote ?? frameCount(c, c.profile.minFramesPerNote),
+      pitchBinToleranceCents: cfg.seg?.pitchBinToleranceCents ?? 50,
       mode: c.profile.segmentMode === 'median' ? 'median' : 'semitone',
-      smoothFrames: cfg.seg?.smoothFrames ?? c.profile.smoothFrames ?? 4,
+      smoothFrames: cfg.seg?.smoothFrames ?? frameCount(c, c.profile.smoothFrames),
     });
   }
 
@@ -256,6 +278,16 @@ async function main(): Promise<void> {
   const split = splitFromEnv();
   const only = process.env.SWEEP_ONLY;
 
+  // SWEEP_INCLUDE opts normally-excluded datasets back in BY NAME — for
+  // diagnosis passes on derived-truth or constructed corpora (e.g. the whistle
+  // datasets, whose draft labels are fine for reading split/merge mechanics
+  // and useless as a tuning gate). Nothing it names enters a pooled headline.
+  const included = new Set(
+    (process.env.SWEEP_INCLUDE ?? '')
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean),
+  );
   const excludedDatasets = new Set(
     discoverRealDatasets(REAL_ROOT)
       .filter(
@@ -267,6 +299,7 @@ async function main(): Promise<void> {
           d.constructedPerformance ||
           d.corpusSplit === 'test',
       )
+      .filter((d) => !included.has(d.id))
       .map((d) => d.id),
   );
 
