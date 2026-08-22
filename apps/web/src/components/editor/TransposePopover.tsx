@@ -40,6 +40,12 @@ const PREVIEW_LAYOUT_WIDTH = 340
 /** Inner width of the preview box: the popover's w-90 minus its and the box's padding. */
 const PREVIEW_BOX_WIDTH = 304
 const PREVIEW_MAX_ZOOM = 1.2
+/**
+ * Vertical crop of the preview (layout units): the 160-unit row reserves generous room
+ * under the staff (bottom line at 80); cutting at 128 keeps down-stems and a couple of
+ * ledger lines while dropping the mostly-empty tail.
+ */
+const PREVIEW_CROP_HEIGHT = 128
 
 // Key options mirror the key-signature picker: flats → C → sharps.
 const KEY_ROWS: number[][] = [
@@ -112,7 +118,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
         const first = preview.measures[0]?.layout
         const used = first ? first.measureX + first.measureWidth : PREVIEW_LAYOUT_WIDTH
         const scale = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
-        return { scale, width: used * scale, height: preview.layout.totalHeight * scale }
+        return { scale, width: used * scale, height: Math.min(preview.layout.totalHeight, PREVIEW_CROP_HEIGHT) * scale }
     }, [preview])
 
     // Aim the canvas pulse at the current scope while open; clear it on close.
@@ -261,23 +267,16 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
             {hasSelection && (
                 <div className="flex items-center justify-between gap-3">
                     <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Apply to</span>
-                    {/* Both choices render as visible option cells (not a bare track), so the pair reads as a toggle. */}
-                    <div role="group" aria-label="Apply to" className="flex gap-1">
-                        <PopoverOption
-                            active={scope === 'score'}
-                            ariaLabel="Whole score"
-                            onClick={() => setScope('score')}
-                            className="justify-center px-3 h-8 text-[12px] font-medium">
-                            Whole score
-                        </PopoverOption>
-                        <PopoverOption
-                            active={scope === 'selection'}
-                            ariaLabel="Selection"
-                            onClick={() => setScope('selection')}
-                            className="justify-center px-3 h-8 text-[12px] font-medium">
-                            Selection
-                        </PopoverOption>
-                    </div>
+                    {/* Same segmented pill as the Up/Down direction toggle. */}
+                    <Segmented
+                        ariaLabel="Apply to"
+                        value={scope}
+                        onChange={(v) => v && setScope(v)}
+                        options={[
+                            { value: 'score' as const, label: 'Whole score' },
+                            { value: 'selection' as const, label: 'Selection' },
+                        ]}
+                    />
                 </div>
             )}
 
