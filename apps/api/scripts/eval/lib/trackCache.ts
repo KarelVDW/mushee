@@ -26,7 +26,10 @@ import { OnsetDetector } from '../../../src/recordings/pipeline/onset-detector';
 import { PitchTrack } from '../../../src/recordings/pipeline/pitch-track';
 import type { PipelineProfile } from '../../../src/recordings/pipeline/profiles/pipeline-profile';
 import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver';
-import { CrepeProvider } from '../../../src/recordings/pipeline/providers/crepe-provider';
+import type {
+  PitchProvider,
+  PitchSession,
+} from '../../../src/recordings/pipeline/providers/pitch-provider';
 import { frameEnergy } from '../../../src/recordings/pipeline/providers/pitch-decoder';
 import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry';
 import type { GroundTruth } from '../types';
@@ -171,7 +174,13 @@ export class TrackCache {
       sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
     });
     const provider = this.registry.get(profile.providerName);
-    if (!(provider instanceof CrepeProvider)) return null;
+    // Any provider exposing a frame-level trajectory is cacheable — that is
+    // both CREPE variants since the octave-down wrapper gained `track()`
+    // (real-domain cents + real hop), which is what finally lets the cached
+    // sweeps reach the very-high band. (Historically this was an
+    // `instanceof CrepeProvider` check, which is why basic-pitch routings and
+    // very-high clips never had cache entries.)
+    if (!hasTrack(provider)) return null;
 
     const decoded = await this.decoder.decode(wav, provider.sampleRate, {
       loudnorm: provider.normalizeLoudness,
@@ -308,4 +317,16 @@ export class TrackCache {
     };
   }
 
+}
+
+/** A provider whose frame-level trajectory can be cached. */
+interface TrajectoryProvider extends PitchProvider {
+  track(
+    samples: Float32Array,
+    session?: PitchSession,
+  ): Promise<PitchTrack | null>;
+}
+
+function hasTrack(p: PitchProvider): p is TrajectoryProvider {
+  return typeof (p as Partial<TrajectoryProvider>).track === 'function';
 }

@@ -1,4 +1,5 @@
 import type { NoteEventTime } from '../note-event';
+import { PitchTrack } from '../pitch-track';
 
 import { CrepeProvider } from './crepe-provider';
 import type { ModelBackend } from './model-backend';
@@ -76,6 +77,16 @@ export class CrepePitchdownProvider implements PitchProvider {
       // The profile declares its note floor in provider frames; one inner frame
       // covers 1/k of the real time, so the count must scale to keep the floor.
       minFramesPerNote: (options?.minFramesPerNote ?? 4) * k,
+      // Same for the semitone smoother: unscaled, the median window covers only
+      // 1/k of the real time it covers on the at-pitch provider — the R11 class
+      // of inconsistency. Measured as a wash on accuracy (dogfood whistling
+      // +0.017*, whistle-real −0.007 n.s., TinySOL exactly 0.000; the cached
+      // sweep puts 60–80 ms real on a flat plateau with ≥120 ms worse), kept
+      // for the consistency: frame-count knobs mean the same real time on
+      // every provider. It is NOT the mechanism of this band's split excess —
+      // that question is gated on human-verified whistle labels (see the
+      // 2026-08-22 findings log).
+      smoothFrames: (options?.smoothFrames ?? 4) * k,
       // The voice decode is calibrated on real-time singing and the very-high
       // band is whistling territory where it deliberately never applied; do not
       // let it run on slowed audio it was never measured on.
@@ -89,6 +100,39 @@ export class CrepePitchdownProvider implements PitchProvider {
       session,
     );
     return this.unscale(raw);
+  }
+
+  /**
+   * Frame-level trajectory in the REAL domain: cents shifted back up an octave
+   * and the hop expressed in real seconds (10 ms — half the at-pitch
+   * provider's 20 ms, since the model walks its usual hop over half-speed
+   * audio). The frames are the same frames `transcribe` segments, so
+   * frame-count-denominated knobs replayed on this track mean exactly what
+   * they meant in production — which is what lets `TrackCache` (and every
+   * cached sweep) finally reach the very-high band.
+   */
+  async track(
+    samples: Float32Array,
+    session?: PitchSession,
+  ): Promise<PitchTrack | null> {
+    const inner = await this.inner.track(samples, session);
+    if (!inner) return null;
+    const cents = inner.cents.slice();
+    for (let i = 0; i < inner.frames; i += 1) cents[i] += this.semitones * 100;
+    let candCents = inner.candCents;
+    if (candCents) {
+      candCents = candCents.slice();
+      for (let i = 0; i < candCents.length; i += 1) candCents[i] += this.semitones * 100;
+    }
+    return new PitchTrack(
+      cents,
+      inner.confidence,
+      inner.frames,
+      inner.hopSec / this.factor,
+      candCents,
+      inner.candStrength,
+      inner.candK,
+    );
   }
 
   /** Model-domain notes (half speed, an octave low) → real-domain notes. */

@@ -2020,3 +2020,58 @@ never routes voice.
 What deployed infrastructure still needs (ops, outside the repo): delete the
 `basic-pitch-inference` deployment/HPA from the live cluster and its images from the Artifact
 Registry. The manifests, CI matrix and runbooks in-repo no longer reference them.
+
+---
+
+## Findings log (2026-08-22, evening: the very-high band becomes sweepable; the split lever measured)
+
+Follow-through on the morning's two open leads (the dogfood split excess; nothing verified).
+
+### Harness: `CrepePitchdownProvider.track()` + the cache opens to it
+
+The very-high band was the one register no cached sweep could reach — `TrackCache` gated on
+`instanceof CrepeProvider`, and the wrapper isn't one. It now exposes `track()` in the REAL
+domain (cents +12 st, hop = 10 ms real; the same frames `transcribe` segments), the cache
+duck-types on `track` instead, and `decodeCached.frameCount()` mirrors the wrapper's ×k
+frame-count scaling so cached replays reproduce production exactly — verified: the `smooth8`
+row equals SHIPPED to the last digit on all 103 very-high clips. `sweep-bands` gained
+`SWEEP_INCLUDE` (opt a derived/constructed dataset back in BY NAME, for diagnosis — nothing it
+names enters a pooled headline) and a `w.*` config family for this band's knobs. No
+`CACHE_VERSION` bump: very-high entries are new, never stale.
+
+### The smoother scaling (7e8de32): a wash, kept for consistency
+
+Measured three ways (run-eval A/B against the pre-scaling build, then the cached sweep):
+dogfood whistling +0.017* with splits 102 → 89/100; whistle-real −0.007 [−0.017, +0.001];
+TinySOL both strata exactly 0.000; synthetic +0.002. The cached sweep brackets the optimum:
+20 ms −0.005, 60 ms +0.007, **80 ms (ships) 0**, 120 ms −0.012*, 160 ms −0.023*. A flat
+60–80 ms plateau — the scaling stays because frame-count knobs should mean the same real time
+on every provider, not because it buys accuracy. **It is not the split mechanism.**
+
+### Every other semitone-path knob, on the very-high stratum (n = 103, cached)
+
+- `pitchBinToleranceCents` 80/120: Δ exactly 0.000 — the tolerance never decides anything here.
+- `vibratoMaxSec` 0.25 cleanup: −0.012* — the A-B-A folder eats real whistled ornaments.
+- `no-onsetSplit`: +0.006 n.s. — the splitter is roughly free on this band; keep it global.
+- note floor: the one apparent winner, and it is a TRAP —
+
+### The floor "+0.031*" is draft-truth circularity, caught by the exact-truth control
+
+Lowering the floor from 80 ms real gains +0.031* [+0.017, +0.049] on `whistle-real`'s
+very-high clips — whose draft labels come from `lib/sineTrack.ts` with `minNoteSec: 0.06`:
+the drafter's own floor convention. On the exact-truth TinySOL very-high stratum the same
+change is **−0.002 [−0.005, +0.000]**, and raising it is null too (120 ms −0.009 n.s. there,
+vs −0.082* pooled where whistle dominates). Read: the "gain" is our floor converging on the
+draft's floor — the precise failure mode `noteTruthDerived` exists to keep out of tuning.
+Do not touch the floor on this evidence.
+
+### Where the split question lands
+
+No semitone-path knob explains the dogfood 89–102 splits/100. And on THAT corpus the number
+is only an upper bound: its truth is the prescribed melody DTW-aligned to the audio, so any
+real re-articulation the performer added (and whistlers re-attack freely) is scored as a
+split. Distinguishing "pipeline fragments sustains" from "the truth merges re-attacks" needs
+human-verified labels — which is what
+`annotations/whistle-real/VERIFY-WORKLIST.md` (30 stratified clips: the 4 mid/low routings,
+6 possibly-processed titles, 20 random; ~40–60 min) now stages. The split investigation is
+parked behind that pass, deliberately.
