@@ -7,7 +7,7 @@
  * A zip's central directory lives at the END of the file, so one ranged GET of
  * the tail lists every member and its byte offset, after which each wanted
  * member is a second ranged GET. This is the technique
- * `research-voice-datasets.md` §0 calls "read the archive without downloading
+ * `research/research-voice-datasets.md` §0 calls "read the archive without downloading
  * it", generalised so fetchers do not each re-implement it.
  *
  * ZIP64 is handled: archives >4 GB (or >65535 members) store 0xFFFFFFFF

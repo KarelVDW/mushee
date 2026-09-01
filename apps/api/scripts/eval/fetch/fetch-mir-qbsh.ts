@@ -46,7 +46,7 @@
  * The 145 MB zip and its extracted tree are cached (gitignored) under
  * scripts/eval/.cache and re-converted on each run; only this script is tracked.
  *
- * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch-mir-qbsh.ts
+ * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-mir-qbsh.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -62,16 +62,16 @@ import {
 } from 'fs';
 import { join,resolve } from 'path';
 
-import type { GroundTruth, TruthNote } from './types';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ZIP_URL = 'http://mirlab.org/dataSet/public/MIR-QBSH.zip';
 
-const CACHE = resolve(__dirname, '.cache', 'mir-qbsh');
+const CACHE = resolve(__dirname, '../.cache', 'mir-qbsh');
 const ZIP = join(CACHE, 'MIR-QBSH.zip');
 // The zip unpacks to a top-level "MIR-QBSH" directory.
 const ROOT = join(CACHE, 'MIR-QBSH');
 const WAVE_ROOT = join(ROOT, 'waveFile');
-const OUT = resolve(__dirname, '../fixtures/eval-real/context/mir-qbsh');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/context/mir-qbsh');
 
 // 256-sample frames at the corpus's fixed 8 kHz sampling rate, overlap 0.
 const FRAME_SEC = 256 / 8000; // 0.032 s

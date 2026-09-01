@@ -4,14 +4,14 @@
  * anything.
  *
  * 🔴 Why this exists, and the trap it must not fall into. Whistling has no
- * note-annotated corpus anywhere (research-whistle-corpus.md), so the only route
+ * note-annotated corpus anywhere (research/research-whistle-corpus.md), so the only route
  * to whistle truth is to annotate audio ourselves. Annotating from scratch is
  * hours per minute of audio; annotating a *draft* is minutes. This produces that
  * draft — and it is written to be from a different algorithm family than
  * anything the product ships (CREPE / basic-pitch are CNNs; the note layer is a
  * Viterbi HMM), because ground truth derived from a sibling of the estimator
  * makes a better estimator measure worse. That is gate 3 in
- * research-voice-datasets.md §0, and it has already bitten us once (mir-qbsh).
+ * research/research-voice-datasets.md §0, and it has already bitten us once (mir-qbsh).
  *
  * The trap: if the harness ever ships the whistle-specific FFT peak tracker
  * that the README's open directions list, this drafter becomes its sibling and
@@ -285,7 +285,7 @@ export interface WhistleScreen {
  * whistling: essentially all of its energy is in one moving partial.
  *
  * Calibrated on 45 staged clips whose identity was known from title and from the
- * five hand-verified Commons files (research-whistle-corpus.md §3a). The
+ * five hand-verified Commons files (research/research-whistle-corpus.md §3a). The
  * separation is not marginal:
  *
  *   real human whistling  tonalFraction 0.61 – 1.00  (Commons five: 0.61–0.86)

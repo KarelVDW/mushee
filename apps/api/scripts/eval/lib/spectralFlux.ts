@@ -1,6 +1,6 @@
 /**
  * SuperFlux-style spectral onset strength, for the voice flow's re-onset
- * problem (research-voice-transcription.md §3.2 — "the one untried idea").
+ * problem (research/research-voice-transcription.md §3.2 — "the one untried idea").
  *
  * Why this exists: a same-pitch re-articulation ("la-la-la" on one note) is
  * invisible to a pitch decode by construction, and the findings log proves the

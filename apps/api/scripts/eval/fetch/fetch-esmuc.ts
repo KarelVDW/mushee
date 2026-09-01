@@ -8,7 +8,7 @@
  *
  * Source : https://zenodo.org/records/5848990  (2.34 GB zip)
  * License: CC-BY-4.0 (the record's own licence field; first-party MTG deposit).
- *          Adopted per the acquisition policy in research-voice-datasets.md.
+ *          Adopted per the acquisition policy in research/research-voice-datasets.md.
  *
  * ## What this corpus is
  *
@@ -28,7 +28,7 @@
  * - Warm-up tracks (WU) have no note annotation and are skipped; the stereo room
  *   mics (ORTF/AB) have no annotation of their own and are skipped too.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-esmuc.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-esmuc.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -43,16 +43,16 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 
-import { hzToMidi } from './lib/groundTruth';
-import type { GroundTruth, TruthNote } from './types';
+import { hzToMidi } from '../lib/groundTruth';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ZIP_URL =
   'https://zenodo.org/api/records/5848990/files/EsmucChoirDataset_v1.0.0.zip/content';
 
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const ZIP = join(CACHE, 'esmuc.zip');
 const EXTRACT = join(CACHE, 'esmuc');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/esmuc-choir');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/esmuc-choir');
 
 const NOMINAL_BPM = 120; // metrics compare seconds; bpm only feeds the quantizer
 const MIN_NOTES_PER_CLIP = 5;

@@ -4,7 +4,7 @@
 # melodies to audio via fluidsynth. ~140 MB; gitignored.
 set -euo pipefail
 
-DEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assets"
+DEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/assets"
 DEST="$DEST_DIR/FluidR3_GM.sf2"
 mkdir -p "$DEST_DIR"
 

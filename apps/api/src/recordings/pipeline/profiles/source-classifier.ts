@@ -22,7 +22,7 @@ import { ensureWasmBackend } from '../providers/tf-backend';
  * ## Why it does not violate the no-training policy
  *
  * The project never trains model weights — not even a logistic head (see
- * research-voice-transcription.md, policy note + D5). YAMNet is used strictly
+ * research/research-voice-transcription.md, policy note + D5). YAMNet is used strictly
  * as published (Apache-2.0 checkpoint, stock AudioSet classes); the "rule" is a
  * fixed comparison of two published class groups chosen a priori, with an
  * abstain band. Nothing here is fitted.

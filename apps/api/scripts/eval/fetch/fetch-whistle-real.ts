@@ -2,22 +2,22 @@
  * Stage REAL human whistling audio for annotation.
  *
  * Why this script is shaped differently from every other fetch-*.ts: there is no
- * whistling corpus to fetch. `research-whistle-corpus.md` records the sweep in
+ * whistling corpus to fetch. `research/research-whistle-corpus.md` records the sweep in
  * full — no note-annotated whistling dataset exists anywhere, and even
  * *unannotated* whistling audio under a licence we may use is scarce enough to
  * enumerate by hand (Wikimedia Commons: seven files; one MIT-licensed teaching
  * repo; Freesound's CC0 slice, behind a token). So this script does the half a
  * fetcher can do — acquire the audio, verify each file's licence against the
  * source's own API, normalise it, record provenance — and stops there. The truth
- * comes from `draft-note-labels.ts` (an auto-draft, deliberately from a
+ * comes from `fetch/draft-note-labels.ts` (an auto-draft, deliberately from a
  * different algorithm family than anything we ship) and then from a human
- * correcting it; `import-note-labels.ts` turns the corrected labels into a
+ * correcting it; `fetch/import-note-labels.ts` turns the corrected labels into a
  * scoreable dataset.
  *
- *   1. fetch-whistle-real.ts    → .cache/whistle-staging/<dataset>/<clip>.wav
- *   2. draft-note-labels.ts     → annotations/<dataset>/<clip>.labels.tsv   (TRACKED)
+ *   1. fetch/fetch-whistle-real.ts    → .cache/whistle-staging/<dataset>/<clip>.wav
+ *   2. fetch/draft-note-labels.ts     → annotations/<dataset>/<clip>.labels.tsv   (TRACKED)
  *   3. (human corrects the TSVs in Audacity / Sonic Visualiser)
- *   4. import-note-labels.ts    → fixtures/eval-real/<tier>/<dataset>/            (scoreable)
+ *   4. fetch/import-note-labels.ts    → fixtures/eval-real/<tier>/<dataset>/            (scoreable)
  *
  * Audio is cached, never committed (it is re-fetchable from the URLs below).
  * The label TSVs ARE committed — they are the only part nobody can regenerate.
@@ -35,7 +35,7 @@
  *                                 COMPOSITION is still in copyright (the
  *                                 melody-detection repo's Pink Panther
  *                                 phrases). Off by default — see §1e of
- *                                 research-voice-datasets.md for why the
+ *                                 research/research-voice-datasets.md for why the
  *                                 recording's licence does not settle this.
  *   FREESOUND_TOKEN=<key>         additionally search Freesound for CC0
  *                                 whistling and stage the previews. Get a key at
@@ -52,9 +52,9 @@
  *   WHISTLE_LOCAL_DIR=<dir>       stage every *.wav in <dir> as dogfood takes
  *                                 (our own recordings — the only route to
  *                                 whistling at volume; protocol in
- *                                 research-whistle-corpus.md §6).
+ *                                 research/research-whistle-corpus.md §6).
  *
- * Run: pnpm --filter api exec tsx scripts/eval/fetch-whistle-real.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-whistle-real.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -63,10 +63,10 @@ import ffmpegPath from 'ffmpeg-static';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import { whistleScreen } from './lib/sineTrack';
-import { wavToFloat } from './lib/wav';
+import { whistleScreen } from '../lib/sineTrack';
+import { wavToFloat } from '../lib/wav';
 
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const STAGE_ROOT = join(CACHE, 'whistle-staging');
 const DOWNLOAD_DIR = join(CACHE, 'whistle-downloads');
 
@@ -79,7 +79,7 @@ const UA = 'solkey-eval-harness/1.0 (research; karel@advantitge.com)';
  * Licences we may use, as the SOURCE's own machine-readable licence id. Checked
  * against the live API response per file, never assumed from this table — a
  * Commons file can be re-licensed, and the whole point of the check is to notice.
- * NC and ND are absent on purpose (research-voice-datasets.md §4.0).
+ * NC and ND are absent on purpose (research/research-voice-datasets.md §4.0).
  */
 const LICENCE_ALLOW = [/^pd$/, /^cc0$/, /^cc-zero$/, /^cc-by-\d/, /^cc-by-sa-\d/];
 
@@ -230,7 +230,7 @@ interface StagedClip {
   /**
    * SHA-256 of the staged wav. The tracked label files are timestamps into THIS
    * audio, so if the source is ever re-uploaded or re-encoded the labels silently
-   * stop describing it. `import-note-labels.ts` compares this hash against the
+   * stop describing it. `fetch/import-note-labels.ts` compares this hash against the
    * one recorded in the clip's tracked `.meta.json` and refuses the clip on a
    * mismatch — the alternative is scoring against shifted truth and never knowing.
    */
@@ -357,7 +357,7 @@ function stage(clip: ClipSpec): StagedClip | undefined {
 function freesoundToken(): string | undefined {
   const fromEnv = process.env.FREESOUND_TOKEN?.trim();
   if (fromEnv) return fromEnv;
-  const file = resolve(__dirname, '.freesound-token');
+  const file = resolve(__dirname, '../.freesound-token');
   if (!existsSync(file)) return undefined;
   const fromFile = readFileSync(file, 'utf8').trim();
   return fromFile || undefined;
@@ -624,7 +624,7 @@ function stageLocal(dir: string): StagedClip[] {
       attribution: 'Solkey in-house recording',
       source: join(dir, f),
       sourceUrl: join(dir, f),
-      note: 'dogfood take — see research-whistle-corpus.md §6 for the capture protocol',
+      note: 'dogfood take — see research/research-whistle-corpus.md §6 for the capture protocol',
     });
   }
   return staged;
@@ -658,7 +658,7 @@ function main(): void {
   if (localDir && existsSync(localDir)) staged.push(...stageLocal(localDir));
 
   // One manifest per staged dataset, written next to the audio. draft- and
-  // import-note-labels.ts read it; it is the provenance record that makes the
+  // fetch/import-note-labels.ts read it; it is the provenance record that makes the
   // corpus reproducible from tracked files alone.
   const byDataset = new Map<string, StagedClip[]>();
   for (const s of staged) {
@@ -678,7 +678,7 @@ function main(): void {
 
   const totalSec = [...byDataset.values()].flat().length;
   console.log(`\nStaged ${totalSec} clips under ${STAGE_ROOT}`);
-  console.log('Next: pnpm --filter api exec tsx scripts/eval/draft-note-labels.ts');
+  console.log('Next: pnpm --filter api exec tsx scripts/eval/fetch/draft-note-labels.ts');
 }
 
 main();

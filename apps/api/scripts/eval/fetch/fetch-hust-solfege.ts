@@ -8,7 +8,7 @@
  *
  * Source : https://github.com/itec-hust/HUST_Solfege
  * License: MIT (LICENSE at the repo root — the published grant governs, per the
- *          acquisition policy in research-voice-datasets.md §policy).
+ *          acquisition policy in research/research-voice-datasets.md §policy).
  *
  * ## What is used and what is not
  *
@@ -34,12 +34,12 @@
  * ## Offsets are synthetic in the source
  *
  * Every offset in the source annotation is exactly onset + 0.03 s (documented in
- * research-voice-datasets.md §1d). Durations here are therefore DERIVED as the
+ * research/research-voice-datasets.md §1d). Durations here are therefore DERIVED as the
  * gap to the next onset (clamped); onset+pitch metrics (the headline) are
  * unaffected, but overlap-based counters (split/merged) read the derived
  * durations — treat those as approximate for this dataset.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-hust-solfege.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-hust-solfege.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -54,17 +54,17 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 
-import type { GroundTruth, TruthNote } from './types';
+import type { GroundTruth, TruthNote } from '../types';
 
 const AUDIO_URL =
   'https://media.githubusercontent.com/media/itec-hust/HUST_Solfege/master/wav/HUST_Solfege.zip';
 const REPO_TARBALL = 'https://codeload.github.com/itec-hust/HUST_Solfege/tar.gz/master';
 
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const AUDIO_ZIP = join(CACHE, 'hust-solfege-audio.zip');
 const REPO_TGZ = join(CACHE, 'hust-solfege-repo.tar.gz');
 const EXTRACT = join(CACHE, 'hust-solfege');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/hust-solfege');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/hust-solfege');
 
 const NOMINAL_BPM = 120;
 /** Global fallback offset (semitones), measured over all 73 files / 1,230 notes. */

@@ -1240,7 +1240,7 @@ treated as ground truth to preserve rather than a gate to pass. We already estim
 its voiced frames (`noteCents`), so this is confirmation rather than a finding. `src/alignment.py` is
 MFCC + `librosa.sequence.dtw` followed by magnitude-only spectrogram warping and Griffin-Lim —
 *(validation)* the Dagstuhl corpus already ships per-take score alignments (DCS's own DTW of a CPDL
-MIDI against the room mic, 70 ms onset MAE; `fetch-dagstuhl.ts` ingests them, quarantined as
+MIDI against the room mic, 70 ms onset MAE; `fetch/fetch-dagstuhl.ts` ingests them, quarantined as
 `noteTruthDerived`), so there is no alignment gap for us to fill — and the Griffin-Lim resynthesis is
 a quality regression we would not copy.
 

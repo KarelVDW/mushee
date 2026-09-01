@@ -9,7 +9,7 @@
  * takes (the choice is worth ~0.10 COnP on real singing).
  *
  * Policy note: the project never trains model weights (including tiny heads —
- * see research-voice-transcription.md D5). This probe uses YAMNet's published
+ * see research/research-voice-transcription.md D5). This probe uses YAMNet's published
  * classifier output as-is: the "rule" is a fixed comparison of two published
  * class groups, chosen a priori (singing/speech classes vs instrument classes).
  *

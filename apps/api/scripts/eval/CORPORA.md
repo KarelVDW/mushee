@@ -3,11 +3,17 @@
 The single answer to "which corpora can actually carry a decision, and which are
 merely here". Layout, trust, licence and gaps for every real dataset the harness
 knows, plus the register of everything researched and *not* adopted. The deep
-provenance arguments live in `research-voice-datasets.md` (voice),
-`research-benchmarks.md` (datasets & metrics) and `research-whistle-corpus.md`
+provenance arguments live in `research/research-voice-datasets.md` (voice),
+`research/research-benchmarks.md` (datasets & metrics) and `research/research-whistle-corpus.md`
 (whistling); this file is the index you read first.
 
 ## The two tiers
+
+Every dataset also declares its **`material`** in `dataset.json` — `singing`,
+`humming`, `whistling`, `instrument` or `vocal-percussion` — the axis
+`benchmark.ts` groups by (`lib/realCorpus.ts` falls back to `kind` for manifests
+that predate the field). It is descriptive only; pooling is still decided by the
+flags below.
 
 `scripts/fixtures/eval-real/` is split at the directory level
 (`lib/realCorpus.ts` discovers both):
@@ -16,7 +22,7 @@ provenance arguments live in `research-voice-datasets.md` (voice),
   criteria, all three: (1) human or expert ground truth on at least one axis,
   (2) a real human performance, (3) a licence that permits our commercial use
   at face value (CC-BY / CC-BY-SA / CC0 / MIT — see the licence-verdict rule in
-  research-voice-datasets.md §0).
+  research/research-voice-datasets.md §0).
 - **`context/`** — audio we keep because it covers material, registers or
   conditions nothing else does, but whose *numbers must never gate anything*:
   derived or unverified truth, constructed performances, or a research-only
@@ -28,7 +34,7 @@ a dataset out of pooled numbers are the per-dataset flags (`noteTruthDerived`,
 sweeps always honoured — so moving a dataset between tiers never changes a
 measured number. A dataset can sit in `benchmark/` while one of its axes is
 flagged untrusted (dagstuhl-choir below). Fetchers write straight into their
-tier; `import-note-labels.ts` promotes a hand-annotated dataset from `context/`
+tier; `fetch/import-note-labels.ts` promotes a hand-annotated dataset from `context/`
 to `benchmark/` automatically once every clip is stamped `--verified-by`.
 
 ## Benchmark corpora (`eval-real/benchmark/`)
@@ -66,7 +72,7 @@ Special-axis benchmarks (trusted truth on an axis other than note-F1):
 |---|---|---|
 | `mir-qbsh` (50 / 1,082) | Note events are OUR derivation of self-labelled frame pitch ("no guarantee for their correctness"); licence is academic/research-only, which also bars product-relevant claims | Low-fi (8 kHz/8-bit) realism checks; f0/melody metrics only |
 | `tinysol-*` (6 instruments, 64 / 512) | `constructedPerformance`: real Ircam tone, but WE spliced the melodies — no human phrasing, truth exact by construction | The only real audio in the `very-high` band (measured 0.654 vs 0.924 high); register questions |
-| `whistle-real` (117 / 2,777) | Draft labels from `lib/sineTrack.ts`, zero clips human-verified → `noteTruthDerived` | The only real whistling we may use; **promotes to benchmark/ via `import-note-labels.ts --verified-by` once reviewed** |
+| `whistle-real` (117 / 2,777) | Draft labels from `lib/sineTrack.ts`, zero clips human-verified → `noteTruthDerived` | The only real whistling we may use; **promotes to benchmark/ via `fetch/import-note-labels.ts --verified-by` once reviewed** |
 | `whistle-vintage` (6 / 249) | Same unverified drafts; accompanied 78-rpm sides, adverse by nature | Real whistling + real accompaniment + real surface noise; never pool with whistle-real |
 
 The **synthetic corpus** (`fixtures/eval/`, generate.ts) is a third thing:
@@ -76,21 +82,30 @@ tiers (adverse, intonation, capture-codec) — see the README's corpus layout.
 ## Gaps in the benchmark tier
 
 The living version of the findings log's 2026-08-20 gap register. Corpus
-*acquisition is exhausted* (research-voice-datasets.md §5, research-whistle-corpus.md §8):
+*acquisition is exhausted* (research/research-voice-datasets.md §5, research/research-whistle-corpus.md §8):
 each gap below means "record and annotate our own" or "build a harness
 capability", not "find another dataset".
 
 **Material with no benchmark-tier data at all:**
+- **Humming** — a primary product input with **no real hummed corpus anywhere that
+  carries usable truth**: HumTrans (NC, mis-aligned labels), CHAD (NC, retrieval-only),
+  MLEnd Hums & Whistles (unlicensed), MTG-QBH (Zenodo says CC-BY-4.0, UPF's own page
+  says non-commercial — unresolved), mir-qbsh (derived truth, research licence →
+  context). The benchmark's humming row therefore reads "no benchmark-grade data"
+  rather than borrowing a singing number; the synthetic `voice-hum` scenario is the
+  only in-harness humming signal. Closing this = record beta users humming *freely*
+  (not to a click) and annotate (`apps/eval` materialises in-house corpora; consent
+  language is already in the terms).
 - **Whistling** — the flagship gap. All real whistling sits in `context/` on
   unverified draft labels. Two exits, both ours: (1) verify the drafted labels
-  (`annotations/whistle-*`, then `import-note-labels.ts --verified-by=<name>`
+  (`annotations/whistle-*`, then `fetch/import-note-labels.ts --verified-by=<name>`
   promotes automatically); (2) volume — record our own per the capture protocol
-  in research-whistle-corpus.md §6. Nothing else exists to acquire.
+  in research/research-whistle-corpus.md §6. Nothing else exists to acquire.
 - **The `very-high` band / piccolo** — only TinySOL splices (context). A real
   *performance* above ~700 Hz is unrepresented; piccolo has no permissive
   corpus at all.
 - **Harmonica** — in the synthetic matrix, no real counterpart anywhere
-  (research-voice-datasets.md §6k).
+  (research/research-voice-datasets.md §6k).
 
 **Benchmark strata too thin to power conclusions:**
 - Low/high-band instruments: 6 / 5 real clips (URMP is 2–4 × 15 s per
@@ -104,9 +119,9 @@ capability", not "find another dataset".
 - No genuinely RECORDED adverse takes — the adverse tier is synthetic
   degradation of real performances (whistle-vintage is the one real-adverse
   specimen). Measured RIR/noise corpora to replace the modelled room/babble are
-  cleared with DOIs (DEMAND, Arni, OK5 — research-voice-datasets.md §6b–6d) but
+  cleared with DOIs (DEMAND, Arni, OK5 — research/research-voice-datasets.md §6b–6d) but
   not wired; new condition ids required so historical numbers keep meaning.
-- N20EMv2 has no degraded variants (degrade-real.ts never run on it) — adverse
+- N20EMv2 has no degraded variants (fetch/degrade-real.ts never run on it) — adverse
   voice evidence rests on annotated-vocalset + vocadito.
 - Real out-of-tune singing with intended-note truth: the R20 intonation tier is
   synthetic by design; one real specimen (the Frère Jacques dogfood take).
@@ -122,8 +137,8 @@ convention; dagstuhl's note events (flagged, excluded).
 
 ## Researched and not adopted
 
-research-voice-datasets.md is the authoritative licence-and-provenance
-register; research-whistle-corpus.md closes whistling; research-benchmarks.md
+research/research-voice-datasets.md is the authoritative licence-and-provenance
+register; research/research-whistle-corpus.md closes whistling; research/research-benchmarks.md
 covers the instrument/benchmark side. The short version: **~90 candidates were
 run through the three gates (licence → real audio → trustworthy note truth) and
 every one failed at least one.** By failure mode:
@@ -134,7 +149,7 @@ every one failed at least one.** By failure mode:
   (NC-SA), SSVD v2.0 (best annotation protocol found, no licence — worth one
   email), MIR-ST500 (unlicensed + YouTube audio), SingStyle111 (performer
   releases scoped to research), DAMP (withdrawn + research-only), Molina/ISMIR2014
-  (NC and link-rotted). Full list: research-voice-datasets.md §2.
+  (NC and link-rotted). Full list: research/research-voice-datasets.md §2.
 - **No usable note truth (≈30)** — built for classification/retrieval/phonetics,
   so no onsets: Cantoría (f0 only), Belyk sung+whistled imitation (mean F0 per
   note, no timing — the "only clean whistling pitch data in existence" and still
@@ -153,11 +168,11 @@ SSVD/AID/CSD-re-annotation licence answers · Cadenza CLIP1 mapping ·
 paid routes if ever wanted (Meertens, Deeply, Opencpop).
 **Cleared but unwired** (adverse-tier upgrades, decisions already made):
 DEMAND noise beds, Arni/OK5 measured RIRs, MUSAN/FSDnoisy18k et al.
-(research-voice-datasets.md §6b–d, research-benchmarks.md §5).
+(research/research-voice-datasets.md §6b–d, research/research-benchmarks.md §5).
 
 ## Adding a corpus
 
-1. Run the three gates (research-voice-datasets.md §0): permissive licence at
+1. Run the three gates (research/research-voice-datasets.md §0): permissive licence at
    face value → real recorded human audio → human/expert truth on the axis you
    will score. All three pass → fetcher writes to `benchmark/`; audio-only or
    derived-truth value → `context/`, with the honest flag set in dataset.json.

@@ -1,8 +1,8 @@
 # whistle-real verification worklist (stratified subset)
 
-Protocol: research-whistle-corpus.md §6 — Audacity spectrogram view, correct the TSV in
+Protocol: research/research-whistle-corpus.md §6 — Audacity spectrogram view, correct the TSV in
 `scripts/eval/annotations/whistle-real/<clip>.labels.tsv`, then
-`pnpm --filter @mushee/api exec tsx scripts/eval/import-note-labels.ts --verified-by=karel`.
+`pnpm --filter @mushee/api exec tsx scripts/eval/fetch/import-note-labels.ts --verified-by=karel`.
 Budget ~2–4 min per 10 s clip; this subset ≈ 40–60 min.
 
 ## 1. Mid/low routings (4) — is the whistle even the loudest thing here?

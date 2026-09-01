@@ -59,10 +59,47 @@ export class PitchTrack {
     minFreqHz: number;
     maxFreqHz: number;
     maxGapFrames: number;
+    /** Per-frame RMS on this track's grid — enables the energy gate below. */
+    energy?: Float32Array;
+    /**
+     * Energy gate: a gap is only filled when the per-frame energy inside it
+     * never falls below this fraction of the quieter flank (0.7 ≈ −3 dB). The
+     * two things that punch 1–2-frame holes in a voiced run look identical on
+     * the confidence channel but not on the envelope — a consonant or breath is
+     * an energy DIP (the legato boundary evidence the decoder needs), while a
+     * reverb puncture is a confidence collapse over a SUSTAINED envelope (the
+     * room keeps the level up). The unconditional fill erased both, which is why
+     * R21 failed its clean-voice gate. Omit for the unconditional fill.
+     */
+    energyFloorRatio?: number;
+    /**
+     * Frames of context on either side of the gap whose PEAK energy is the
+     * reference the floor ratio applies to. 0 (default) references the gap's
+     * immediate flanks — which sit on the shoulders of any dip and so read a
+     * consonant as "sustained"; the decoder's own volume-decay channel uses a
+     * ±145 ms local peak for exactly that reason.
+     */
+    energyContextFrames?: number;
   }): PitchTrack {
     const voiced = this.voicedMask(opts);
     const cents = this.cents.slice();
     const confidence = this.confidence.slice();
+    const energy =
+      opts.energy && opts.energyFloorRatio !== undefined && opts.energy.length >= this.frames
+        ? opts.energy
+        : undefined;
+    const ctx = Math.max(0, opts.energyContextFrames ?? 0);
+    const sustained = (from: number, to: number): boolean => {
+      if (!energy) return true;
+      let ref = 0;
+      for (let j = Math.max(0, from - 1 - ctx); j <= Math.min(this.frames - 1, to + ctx); j += 1) {
+        if (j >= from && j < to) continue;
+        if (energy[j] > ref) ref = energy[j];
+      }
+      const floor = opts.energyFloorRatio! * ref;
+      for (let j = from; j < to; j += 1) if (energy[j] < floor) return false;
+      return true;
+    };
     let i = 0;
     while (i < this.frames) {
       if (voiced[i]) {
@@ -72,7 +109,7 @@ export class PitchTrack {
       let end = i;
       while (end < this.frames && !voiced[end]) end += 1;
       const len = end - i;
-      if (i > 0 && end < this.frames && len <= opts.maxGapFrames) {
+      if (i > 0 && end < this.frames && len <= opts.maxGapFrames && sustained(i, end)) {
         const c0 = this.cents[i - 1];
         const c1 = this.cents[end];
         const conf = Math.min(this.confidence[i - 1], this.confidence[end]);

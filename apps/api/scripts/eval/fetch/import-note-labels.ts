@@ -1,7 +1,7 @@
 /**
  * Turn hand-corrected label files into a scoreable real-corpus dataset.
  *
- * Step 4 of the whistle-corpus chain (see fetch-whistle-real.ts's header), and
+ * Step 4 of the whistle-corpus chain (see fetch/fetch-whistle-real.ts's header), and
  * the general route for ANY audio we annotate ourselves — our own dogfood takes
  * included. Reads
  *
@@ -20,7 +20,7 @@
  *
  * 🔴 The provenance rule this script enforces. A clip whose `.meta.json` still
  * has `verifiedBy: null` carries labels that came out of an algorithm, and
- * research-voice-datasets.md §0's gate 3 says such truth must not enter a
+ * research/research-voice-datasets.md §0's gate 3 says such truth must not enter a
  * note-F1 aggregate: it would measure agreement with lib/sineTrack.ts, not with
  * a musician. So the dataset manifest is written with `noteTruthDerived: true`
  * for as long as ANY clip in it is unverified, which is the flag run-eval.ts
@@ -38,7 +38,7 @@
  *   --verified-by="<name>" stamp every clip processed as verified by <name>.
  *                          Use this ONLY after actually checking them.
  *
- * Run: pnpm --filter api exec tsx scripts/eval/import-note-labels.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/import-note-labels.ts
  */
 
 import { createHash } from 'crypto';
@@ -54,11 +54,11 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 
-import type { GroundTruth, SourceKind, TruthNote } from './types';
+import type { GroundTruth, SourceKind, TruthNote } from '../types';
 
-const ANNOTATIONS = resolve(__dirname, 'annotations');
-const STAGE_ROOT = resolve(__dirname, '.cache/whistle-staging');
-const OUT_ROOT = resolve(__dirname, '../fixtures/eval-real');
+const ANNOTATIONS = resolve(__dirname, '../annotations');
+const STAGE_ROOT = resolve(__dirname, '../.cache/whistle-staging');
+const OUT_ROOT = resolve(__dirname, '../../fixtures/eval-real');
 
 /**
  * Per-dataset presentation. `kind` drives the profile hint run-eval.ts passes
@@ -73,7 +73,7 @@ const DATASETS: Record<
     label: 'Whistling — real, permissively licensed (hand-annotated)',
     kind: 'whistle',
     instrumentId: 'whistle',
-    note: 'Modern unaccompanied whistling: 5 Wikimedia Commons clips (PD / CC BY-SA), plus Freesound CC0 previews when FREESOUND_TOKEN was set and the MIT repo\u2019s Pink Panther phrases under WHISTLE_INCLUDE_ENCUMBERED. See research-whistle-corpus.md.',
+    note: 'Modern unaccompanied whistling: 5 Wikimedia Commons clips (PD / CC BY-SA), plus Freesound CC0 previews when FREESOUND_TOKEN was set and the MIT repo\u2019s Pink Panther phrases under WHISTLE_INCLUDE_ENCUMBERED. See research/research-whistle-corpus.md.',
   },
   'whistle-vintage': {
     label: 'Whistling — public-domain art whistling (accompanied, 78 rpm)',
@@ -85,7 +85,7 @@ const DATASETS: Record<
     label: 'Whistling — in-house dogfood takes (hand-annotated)',
     kind: 'whistle',
     instrumentId: 'whistle',
-    note: 'Our own recordings, captured per research-whistle-corpus.md §6. The only route to whistling at volume.',
+    note: 'Our own recordings, captured per research/research-whistle-corpus.md §6. The only route to whistling at volume.',
   },
 };
 
@@ -170,7 +170,7 @@ function main(): void {
   const allowDrift = argv.includes('--allow-audio-drift');
 
   if (!existsSync(ANNOTATIONS)) {
-    console.error(`No annotations at ${ANNOTATIONS} — run draft-note-labels.ts first.`);
+    console.error(`No annotations at ${ANNOTATIONS} — run fetch/draft-note-labels.ts first.`);
     process.exit(1);
   }
 
@@ -182,7 +182,7 @@ function main(): void {
     const presentation = DATASETS[ds.name] ?? {
       label: ds.name,
       kind: 'voice' as SourceKind,
-      note: 'hand-annotated dataset with no entry in import-note-labels.ts',
+      note: 'hand-annotated dataset with no entry in fetch/import-note-labels.ts',
     };
 
     const labelFiles = readdirSync(annDir).filter((f) => f.endsWith('.labels.tsv')).sort();
@@ -207,7 +207,7 @@ function main(): void {
       const clip = file.replace(/\.labels\.tsv$/, '');
       const wav = join(stageDir, `${clip}.wav`);
       if (!existsSync(wav)) {
-        console.warn(`  ! ${ds.name}/${clip}: staged audio missing — run fetch-whistle-real.ts`);
+        console.warn(`  ! ${ds.name}/${clip}: staged audio missing — run fetch/fetch-whistle-real.ts`);
         continue;
       }
       const { notes, ignored, overlaps } = parseLabels(readFileSync(join(annDir, file), 'utf8'), clip);

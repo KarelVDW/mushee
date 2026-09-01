@@ -61,7 +61,7 @@ out?) to a human.
 The trap: the README's open direction 4 is **"whistle-specific FFT peak tracker"**. If we ship
 that, this drafter becomes its sibling, and any label that was never human-corrected turns into
 self-measurement — the exact mechanism that made mir-qbsh drop 0.64 → 0.55 under a *better*
-decoder (§0's gate 3). Hence the mechanism in `import-note-labels.ts`: a clip whose
+decoder (§0's gate 3). Hence the mechanism in `fetch/import-note-labels.ts`: a clip whose
 `.meta.json` still says `verifiedBy: null` keeps the dataset flagged `noteTruthDerived`, which
 run-eval already honours by scoring and reporting it while keeping it out of the pooled
 headline. **Verify the clips and the flag flips off by itself; ship an FFT tracker before
@@ -245,7 +245,7 @@ Freesound is where modern whistling actually lives. Its API is usable for this:
 - The licence filter is exact: `filter=license:"Creative Commons 0"`, so nothing NC or
   attribution-encumbered enters.
 
-`fetch-whistle-real.ts` implements this path and skips it with a notice when no key is present.
+`fetch/fetch-whistle-real.ts` implements this path and skips it with a notice when no key is present.
 **Getting a key is free and instant at `https://freesound.org/apiv2/apply/`** (log in, describe
 the application, then copy the **Client secret/Api key** column — the long alphanumeric string;
 the `client_id` beside it is for OAuth2 and is not what token auth wants). Supply it either as
@@ -348,10 +348,10 @@ carries its Freesound title so that call is cheap to make.
 Four scripts, one chain, one new lib module:
 
 ```
-fetch-whistle-real.ts   acquire + licence-verify + normalise  → .cache/whistle-staging/
-draft-note-labels.ts    FFT-peak draft annotation             → annotations/<ds>/*.labels.tsv  (TRACKED)
+fetch/fetch-whistle-real.ts   acquire + licence-verify + normalise  → .cache/whistle-staging/
+fetch/draft-note-labels.ts    FFT-peak draft annotation             → annotations/<ds>/*.labels.tsv  (TRACKED)
   (human corrects the TSVs in Audacity / Sonic Visualiser)
-import-note-labels.ts   labels → scoreable dataset            → fixtures/eval-real/<ds>/
+fetch/import-note-labels.ts   labels → scoreable dataset            → fixtures/eval-real/<ds>/
 lib/sineTrack.ts        the deliberately-dumb tracker + run segmenter
 ```
 
@@ -486,7 +486,7 @@ performance. It is the mistake §4.4a records. Whistle freely; annotate what cam
 > the performer whistled it **12–13 semitones up** (and not by a constant: three clips at +12,
 > three at +13, so even "assume an octave" fails), and the metronome grid misses the actual
 > attacks by a median 90 ms, putting **40 % of notes outside the ±100 ms tolerance** before the
-> pipeline does anything. The recording is still valuable — `align-prescribed-truth.ts` repairs
+> pipeline does anything. The recording is still valuable — `fetch/align-prescribed-truth.ts` repairs
 > it to COnP 0.41 by keeping the note identities, fitting the key per clip and taking timing from
 > the audio — but the repair needs a second estimator pass and leaves derived truth. Two changes
 > for the next batch: **whistle freely**, and if a prescribed melody is used to make annotation
@@ -496,7 +496,7 @@ performance. It is the mistake §4.4a records. Whistle freely; annotate what cam
 `whistle-dogfood`; the drafter then produces labels to correct. Budget 2–4 minutes per 10 s
 clip in Audacity's spectrogram view (whistling is one bright line — onsets and offsets are
 *visible*, which is why this is fast). Then
-`import-note-labels.ts --verified-by="<name>"` stamps them and the dataset stops being flagged
+`fetch/import-note-labels.ts --verified-by="<name>"` stamps them and the dataset stops being flagged
 as derived.
 
 **Durability.** Dogfood wavs are the one input that is not re-fetchable from a URL. They must
@@ -525,7 +525,7 @@ set exists, not before.
    against them**, or the result is circular by construction.
 5. ~~A whistling-specific octave prior.~~ **Measured and not needed on this evidence** —
    `octErr` is 0.00 over the clean tier's 107 notes (§4a), and 0.00 in every one of
-   `fetch-tinysol.ts`'s six instrument datasets across both bands. The very-high band does not
+   `fetch/fetch-tinysol.ts`'s six instrument datasets across both bands. The very-high band does not
    lose notes to octave confusion; it loses them outright, and most of all when they are
    *quiet* (TinySOL `very-high` pp 0.451 vs ff 0.780). If anything is worth building for this
    register it is sensitivity at low level, not an octave prior.

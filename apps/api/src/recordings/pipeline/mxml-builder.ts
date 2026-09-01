@@ -124,7 +124,7 @@ export class MxmlBuilder {
     // keyless takes (`estimateTakeKeyClasses`, E8) was built, measured on the
     // intonation tier, and does NOT ship: it recovers the actual key barely
     // half the time on short diatonic takes and nudges spelling the wrong way
-    // when it misses — see the findings log and scripts/eval/design-take-key.md.
+    // when it misses — see the findings log and scripts/eval/research/design-take-key.md.
     const keyClasses =
       this.voiceSpelling && this.options.keyFifths != null
         ? keyPitchClasses(this.options.keyFifths)

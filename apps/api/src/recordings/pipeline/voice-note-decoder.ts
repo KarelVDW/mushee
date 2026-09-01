@@ -35,7 +35,7 @@ import type { PitchTrack } from './pitch-track';
  *    cost, everything at ≥ 2.5 nats scores identically — the direct jump is never
  *    taken, so the model lands on Dynamic HumTrans's mandatory-silence structure
  *    (arXiv:2410.05455) by pricing rather than by construction, which is what §4 of
- *    `scripts/eval/research-voice-transcription.md` predicted.
+ *    `scripts/eval/research/research-voice-transcription.md` predicted.
  * 3. **Two boundary-evidence channels, fused** (Kroher & Gómez, TASLP 2016 — two
  *    deliberately separate detectors, "because at a given onset either one or both
  *    can be present"): a local volume decay against a ±145 ms context, and a pitch-
@@ -88,6 +88,17 @@ export interface VoiceDecodeOptions {
    * `unvoicedPitchCost` to ride across it. Omit for the raw track.
    */
   fillUnvoicedGapSec?: number;
+  /**
+   * Energy gate on the fill above: only gaps whose per-frame energy stays at or
+   * above this fraction of the quieter flank are filled (see
+   * `PitchTrack.fillDropouts`). Separates a reverb puncture (confidence gone,
+   * envelope sustained) from a consonant (envelope dips — real boundary
+   * evidence, left alone). Needs `energy` in `decode`; omit for the
+   * unconditional R21 fill.
+   */
+  fillEnergyFloor?: number;
+  /** Context (seconds) for the fill's energy reference — see `PitchTrack.fillDropouts`. */
+  fillEnergyContextSec?: number;
   /**
    * pYIN's multi-candidate emission (E3/R9/R16 — §5.6 of the plugin survey):
    * score each pitch state against the NEAREST of the frame's top-k activation
@@ -530,6 +541,8 @@ export class VoiceNoteDecoder {
       | 'dropLongQuiet'
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
+      | 'fillEnergyFloor'
+      | 'fillEnergyContextSec'
       | 'candidates'
       | 'intervalChange'
       | 'silenceMemory'
@@ -545,6 +558,8 @@ export class VoiceNoteDecoder {
       | 'dropLongQuiet'
       | 'voicedQuorum'
       | 'fillUnvoicedGapSec'
+      | 'fillEnergyFloor'
+      | 'fillEnergyContextSec'
       | 'candidates'
       | 'intervalChange'
       | 'silenceMemory'
@@ -573,6 +588,12 @@ export class VoiceNoteDecoder {
           1,
           Math.round(this.o.fillUnvoicedGapSec / track.hopSec),
         ),
+        energy,
+        energyFloorRatio: this.o.fillEnergyFloor,
+        energyContextFrames:
+          this.o.fillEnergyContextSec === undefined
+            ? 0
+            : Math.round(this.o.fillEnergyContextSec / track.hopSec),
       });
     }
 

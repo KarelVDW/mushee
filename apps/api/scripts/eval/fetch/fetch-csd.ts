@@ -8,7 +8,7 @@
  *
  * Source : https://zenodo.org/records/2649950  (1.07 GB zip)
  * License: CC-BY-4.0 (the record's own licence field; first-party MTG deposit).
- *          Adopted per the acquisition policy in research-voice-datasets.md.
+ *          Adopted per the acquisition policy in research/research-voice-datasets.md.
  *
  * ## What this corpus is
  *
@@ -37,7 +37,7 @@
  * bootstrap resamples clips, so each stem is cut into up to two 30 s excerpts
  * chosen (deterministically) where the section's note density is highest.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-csd.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-csd.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -52,16 +52,16 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 
-import { hzToMidi } from './lib/groundTruth';
-import type { GroundTruth, TruthNote } from './types';
+import { hzToMidi } from '../lib/groundTruth';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ZIP_URL =
   'https://zenodo.org/api/records/2649950/files/ChoralSingingDataset.zip/content';
 
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const ZIP = join(CACHE, 'csd.zip');
 const EXTRACT = join(CACHE, 'csd');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/csd');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/csd');
 
 const NOMINAL_BPM = 120; // metrics compare seconds; bpm only feeds the quantizer
 const WINDOW_SEC = 30;

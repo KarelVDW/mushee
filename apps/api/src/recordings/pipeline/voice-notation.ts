@@ -14,7 +14,7 @@
  * (`MxmlBuilder`), deliberately NOT in the decoder or extractor: the eval
  * harness scores decoder output against absolute measured-pitch truth, where
  * "correcting" toward the singer's own grid is measurably wrong
- * (research-voice-transcription.md §5 — per-note scatter, not drift, dominates,
+ * (research/research-voice-transcription.md §5 — per-note scatter, not drift, dominates,
  * and tuning correction hurts against A440 truth). Writing the melody the
  * singer meant is a product question the eval structurally cannot reward; §5
  * routes exactly these two levers to the product track:
@@ -116,7 +116,7 @@ const KEY_PROFILES: Record<KeyProfileName, { major: number[]; minor: number[] }>
 };
 
 /**
- * Estimate the TAKE's key from its own notes (E8/R2, design-take-key.md in
+ * Estimate the TAKE's key from its own notes (E8/R2, research/design-take-key.md in
  * scripts/eval): duration-weighted pitch-class histogram over the
  * offset-normalised fractional pitch, Pearson-correlated against 24
  * major/minor rotations of the chosen profile — with the ALL-ZEROS profile

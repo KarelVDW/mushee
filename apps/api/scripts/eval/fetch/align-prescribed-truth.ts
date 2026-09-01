@@ -6,7 +6,7 @@
  * dogfood whistling: a generated melody, performed to a metronome, with the
  * generated melody kept as the ground truth. That truth is *score-derived*, and
  * measuring against it measures the performer, not the pipeline —
- * research-whistle-corpus.md §6 warns against exactly this ("do NOT whistle
+ * research/research-whistle-corpus.md §6 warns against exactly this ("do NOT whistle
  * along to a click"). Measured on the six clips:
  *
  *   - **The whistling is in a different key from the score.** Median measured −
@@ -33,15 +33,15 @@
  * 🔴 The result is still derived truth. Onsets come from `lib/sineTrack.ts`, so
  * the output dataset is written `noteTruthDerived: true` and stays out of every
  * pooled number until a human verifies it — same rule as `whistle-real`, same
- * reason (research-voice-datasets.md §0 gate 3). Label TSVs are written to
+ * reason (research/research-voice-datasets.md §0 gate 3). Label TSVs are written to
  * `annotations/<dataset>/` so verification uses the existing Audacity loop, and
- * `import-note-labels.ts --verified-by=<name>` is what finally clears the flag.
+ * `fetch/import-note-labels.ts --verified-by=<name>` is what finally clears the flag.
  *
  * The source dataset is never modified: output goes to a sibling dataset dir
  * with the audio copied across, so the original recording and its prescribed
  * melody stay exactly as recorded.
  *
- * Run: pnpm --filter api exec tsx scripts/eval/align-prescribed-truth.ts \
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/align-prescribed-truth.ts \
  *        --dataset=context/whistled-high-register
  */
 
@@ -56,12 +56,12 @@ import {
 } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import { type DraftNote,draftNotes, trackSinusoid } from './lib/sineTrack';
-import { wavToFloat } from './lib/wav';
-import type { GroundTruth, TruthNote } from './types';
+import { type DraftNote,draftNotes, trackSinusoid } from '../lib/sineTrack';
+import { wavToFloat } from '../lib/wav';
+import type { GroundTruth, TruthNote } from '../types';
 
-const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
-const ANNOTATIONS = resolve(__dirname, 'annotations');
+const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real');
+const ANNOTATIONS = resolve(__dirname, '../annotations');
 
 /** Whistling lives here; the tracker is given room either side of the profile band. */
 const TRACK = { fftSize: 2048, hopSec: 0.01, minHz: 300, maxHz: 5000, minTonality: 0.3, minLevel: 0.05 };
@@ -295,7 +295,7 @@ function processDataset(datasetPath: string, outId: string): void {
           dataset: outId,
           verifiedBy: null,
           verifiedAt: null,
-          draftedBy: 'align-prescribed-truth.ts (score identity + audio timing, DTW-aligned)',
+          draftedBy: 'fetch/align-prescribed-truth.ts (score identity + audio timing, DTW-aligned)',
           transpositionSemitones: octave.semitones,
           fitResidualCents: octave.residualCents,
           perNoteResidualP90Cents: octave.residualP90Cents,
@@ -337,12 +337,12 @@ function processDataset(datasetPath: string, outId: string): void {
         label: `${typeof srcManifest.label === 'string' ? srcManifest.label : outId} — performance-aligned`,
         // Onsets come from our own tracker: derived until a human signs off.
         noteTruthDerived: true,
-        annotator: 'align-prescribed-truth.ts — pitch identity from the prescribed melody (octave detected per clip), timing from the audio',
+        annotator: 'fetch/align-prescribed-truth.ts — pitch identity from the prescribed melody (octave detected per clip), timing from the audio',
         derivedFrom: datasetPath,
         clips: reports.length,
         totalNotes,
         transpositions: reports.map((r) => ({ clip: r.clip, semitones: r.octaveShift, residualCents: r.residualCents })),
-        note: 'The source dataset scores the performer against a metronome, not the pipeline (see align-prescribed-truth.ts). This copy keeps the prescribed note identities and takes every onset from the audio. Still derived — verify with import-note-labels.ts --verified-by before letting it gate anything.',
+        note: 'The source dataset scores the performer against a metronome, not the pipeline (see fetch/align-prescribed-truth.ts). This copy keeps the prescribed note identities and takes every onset from the audio. Still derived — verify with fetch/import-note-labels.ts --verified-by before letting it gate anything.',
       },
       null,
       2,

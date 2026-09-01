@@ -34,7 +34,7 @@
  * `tempo` annotation gives the real bpm — GuitarSet was played to a click, so
  * unlike the singing corpora this is a genuine tempo, not a placeholder.
  *
- * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch-guitarset.ts
+ * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-guitarset.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -42,7 +42,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import type { GroundTruth, TruthNote } from './types';
+import type { GroundTruth, TruthNote } from '../types';
 
 const RECORD = 'https://zenodo.org/api/records/3371780/files';
 const ANNOT_URL = `${RECORD}/annotation.zip/content`;
@@ -60,12 +60,12 @@ const AUDIO_SETS = {
 } as const;
 const AUDIO = AUDIO_SETS[(process.env.GUITARSET_AUDIO as keyof typeof AUDIO_SETS) ?? 'mic'];
 
-const CACHE = resolve(__dirname, '.cache', 'guitarset');
+const CACHE = resolve(__dirname, '../.cache', 'guitarset');
 const ANNOT_ZIP = join(CACHE, 'annotation.zip');
 const ANNOT_DIR = join(CACHE, 'annotation');
 const AUDIO_ZIP = join(CACHE, AUDIO.zip);
 const AUDIO_DIR = join(CACHE, AUDIO.dir);
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/guitarset-solo');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/guitarset-solo');
 
 // Excerpt length per clip, and the audio kept before the first note so the
 // pipeline's pitch scan has a moment of noise floor to adapt to.

@@ -1,7 +1,7 @@
 /**
  * Draft note labels for staged audio, for a human to correct.
  *
- * Step 2 of the whistle-corpus chain (see fetch-whistle-real.ts's header). Reads
+ * Step 2 of the whistle-corpus chain (see fetch/fetch-whistle-real.ts's header). Reads
  * every clip staged under `.cache/whistle-staging/<dataset>/`, tracks the
  * strongest sinusoid (lib/sineTrack.ts — deliberately not our production model
  * family, and deliberately dumb), groups it into semitone runs, and writes:
@@ -27,20 +27,20 @@
  *   3. fix boundaries, split runs the drafter merged, delete artefacts, correct
  *      note names (a whistle an octave off is the drafter's most likely error)
  *   4. Export Labels over the same file, then set `verifiedBy` in the .meta.json
- *   5. import-note-labels.ts turns the result into a scoreable dataset
+ *   5. fetch/import-note-labels.ts turns the result into a scoreable dataset
  *
- * Run: pnpm --filter api exec tsx scripts/eval/draft-note-labels.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/draft-note-labels.ts
  */
 
 import { createHash } from 'crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { draftNotes, trackSinusoid } from './lib/sineTrack';
-import { wavToFloat } from './lib/wav';
+import { draftNotes, trackSinusoid } from '../lib/sineTrack';
+import { wavToFloat } from '../lib/wav';
 
-const STAGE_ROOT = resolve(__dirname, '.cache/whistle-staging');
-const ANNOTATIONS = resolve(__dirname, 'annotations');
+const STAGE_ROOT = resolve(__dirname, '../.cache/whistle-staging');
+const ANNOTATIONS = resolve(__dirname, '../annotations');
 
 /**
  * Tracker settings, recorded into every .meta.json so a re-draft is comparable.
@@ -91,7 +91,7 @@ interface ClipMeta {
   draftParams: { track: typeof TRACK; segment: typeof SEGMENT };
   draftNotes: number;
   draftMedianCentsOffset: number;
-  /** `sha256` pins the exact bytes these labels describe — see import-note-labels.ts. */
+  /** `sha256` pins the exact bytes these labels describe — see fetch/import-note-labels.ts. */
   audio: { sampleRate: number; durationSec: number; sha256: string };
   /** Copied from staging.json so the licence travels with the annotation. */
   provenance?: unknown;
@@ -103,7 +103,7 @@ function main(): void {
   const only = argv.find((a) => a.startsWith('--only='))?.slice('--only='.length);
 
   if (!existsSync(STAGE_ROOT)) {
-    console.error(`No staged audio at ${STAGE_ROOT} — run fetch-whistle-real.ts first.`);
+    console.error(`No staged audio at ${STAGE_ROOT} — run fetch/fetch-whistle-real.ts first.`);
     process.exit(1);
   }
 
@@ -185,7 +185,7 @@ function main(): void {
   }
 
   console.log(`\nDrafted ${drafted} label files (${kept} left alone — pass --force to redraft).`);
-  console.log(`Correct them in Audacity, then: pnpm --filter api exec tsx scripts/eval/import-note-labels.ts`);
+  console.log(`Correct them in Audacity, then: pnpm --filter api exec tsx scripts/eval/fetch/import-note-labels.ts`);
 }
 
 main();

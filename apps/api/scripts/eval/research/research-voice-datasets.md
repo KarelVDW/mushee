@@ -86,7 +86,7 @@ and a gate-2 failure cannot.
 > their published CC-BY-4.0 grants — exactly the depth of diligence the acquisition
 > policy at the top of this file rules out. Both records are first-party deposits by
 > the corpus authors' own group with an unambiguous licence field; that is the record,
-> and **ESMUC and CSD are adopted** (fetchers: `fetch-esmuc.ts`, `fetch-csd.ts`).
+> and **ESMUC and CSD are adopted** (fetchers: `fetch/fetch-esmuc.ts`, `fetch/fetch-csd.ts`).
 > Cantoría stays out on **content** (no note annotations at all, §1c) and Dagstuhl on
 > **quality** (score-aligned truth measured at 70 ms MAE, §2). The text below is kept
 > as a record of what was found, not as an operative verdict.
@@ -325,7 +325,7 @@ notes) and gate 3 (tracker-derived), i.e. the Dagstuhl trap exactly.
 ### 1d. ✅ HUST_Solfege — ADOPTED at **73 files** (MIT). Remaining conditions are data-quality, not licence.
 
 > **Policy update 2026-08-08:** the repo carries an MIT LICENSE at its root; that is the
-> published grant and we use it (`fetch-hust-solfege.ts`). The "MIT-covers-data needs a
+> published grant and we use it (`fetch/fetch-hust-solfege.ts`). The "MIT-covers-data needs a
 > lawyer" and juvenile-consent threads below are the over-diligence the acquisition
 > policy removes. What *stays* is everything data-quality: MARG files excluded (their
 > pitch column is unusable per the README), offsets synthetic (onset-only corpus), and
@@ -974,7 +974,7 @@ A later agent re-surfaced **ESMUC Choir Dataset** (Zenodo 5848990) as `cc-by-4.0
 USABLE-ANNOTATED, and **CSD** likewise, and an earlier revision of this section re-blocked
 them by §1. **Under the acquisition policy the re-listing was right**: both are first-party
 deposits with CC-BY-4.0 on their own records and manually corrected note truth, and both are
-now fetched into the harness (`fetch-esmuc.ts`, `fetch-csd.ts`). §1 is retained as history
+now fetched into the harness (`fetch/fetch-esmuc.ts`, `fetch/fetch-csd.ts`). §1 is retained as history
 only.
 
 ### ✅ Saarbrücken Voice Database (Zenodo mirror) — big, and an EGG ground truth
@@ -1096,9 +1096,9 @@ rested on the consent-archaeology bar the acquisition policy removed.
 
 | Candidate | Status | Basis |
 |---|---|---|
-| **ESMUC Choir Dataset** — 271 annotated singer-tracks, ~17k notes | ✅ **ADOPTED** (`fetch-esmuc.ts`) | CC-BY-4.0 on its own record; manually corrected per-singer note truth. Caveats: mic bleed, trained singers |
-| **CSD** — 96 excerpts, ~3.6k notes | ✅ **ADOPTED** (`fetch-csd.ts`) | CC-BY-4.0 on its own record; Tony-extracted + hand-corrected notes. Caveats: per-SECTION truth, mic bleed |
-| **HUST_Solfege** — 73 files, ~3.7k notes | ✅ **ADOPTED** (`fetch-hust-solfege.ts`) | MIT LICENSE at repo root. Data conditions stand: MARG excluded, offsets synthetic (durations derived), pitch convention calibrated per file against the audio |
+| **ESMUC Choir Dataset** — 271 annotated singer-tracks, ~17k notes | ✅ **ADOPTED** (`fetch/fetch-esmuc.ts`) | CC-BY-4.0 on its own record; manually corrected per-singer note truth. Caveats: mic bleed, trained singers |
+| **CSD** — 96 excerpts, ~3.6k notes | ✅ **ADOPTED** (`fetch/fetch-csd.ts`) | CC-BY-4.0 on its own record; Tony-extracted + hand-corrected notes. Caveats: per-SECTION truth, mic bleed |
+| **HUST_Solfege** — 73 files, ~3.7k notes | ✅ **ADOPTED** (`fetch/fetch-hust-solfege.ts`) | MIT LICENSE at repo root. Data conditions stand: MARG excluded, offsets synthetic (durations derived), pitch convention calibrated per file against the audio |
 | **SingStyle111** (12.8 h, hand-entered performance MIDI) | ⛔ **CLOSED** | The dataset's own terms are research-scoped — its authors say so |
 | **Dagstuhl ChoirSet** | ⛔ (as note truth) | Quality, not licence: score-aligned onsets measure 70 ms MAE. Beat grids remain interesting |
 | **Dai / Mauch / Dixon 2015** | ⛔ **KILLED** | *The Sound of Music*, in copyright to 2049/2054 |
@@ -1355,7 +1355,7 @@ table dismissed for failing gate 1 (real *pitched* singing) — they still exerc
 | Content | `AVP_Dataset/{Personal,Fixed}/Participant_N/`, 280 paired `.wav`/`.csv` (kick/snare/closed-hihat/open-hihat vocal-percussion imitations, plus one improvisation per participant/modality) |
 | Annotation | CSV, no header, real row: `0.085623582582766,kd,p,ə` — `onset_seconds, class_label, onset_phoneme, coda_phoneme`. No pitch tracker anywhere; onsets are a direct human label. |
 
-Fetcher: `fetch-avp.ts`. `durSec` is a derived, clamped gap-to-next-onset (onset-only scoring
+Fetcher: `fetch/fetch-avp.ts`. `durSec` is a derived, clamped gap-to-next-onset (onset-only scoring
 ignores it); `midi` is a constant placeholder (60) since there is no pitch to report — both
 are cosmetic to satisfy `TruthNote`'s shape, not claims of real value. **This is real amateur
 audio with real, independent onset ground truth — exactly what §2's rejected-on-content table
@@ -1489,7 +1489,7 @@ session did not.
 
 ### 5j. Standing count after this pass — superseded by §5l, kept for the sequence
 
-**One new corpus shipped: AVP** (`fetch-avp.ts`, pitchless/onset-only). **Belyk is now
+**One new corpus shipped: AVP** (`fetch/fetch-avp.ts`, pitchless/onset-only). **Belyk is now
 CLOSED** (§5c) — downloadable, but definitively contains no recoverable timing, so it is not a
 future lead, not a blocker to revisit. Three more are research-complete and blocked on
 infrastructure or a self-contradictory licence field, not on searching: **SVD** (Zenodo IP
@@ -1513,7 +1513,7 @@ human to grab PJS's Drive link directly from a real browser.
 The §5i Zenodo block cleared on its own (as predicted). Everything below was done
 against live records.
 
-**✅ ADOPTED — `dagstuhl-choir` (`fetch-dagstuhl.ts`), and it changes what the harness can
+**✅ ADOPTED — `dagstuhl-choir` (`fetch/fetch-dagstuhl.ts`), and it changes what the harness can
 measure.** §2's DCS entry called the 20 hand-tapped, second-annotator-reviewed beat grids
 "the part we missed" and "our only real-tempo reference on singing". They are now in:
 102 excerpts from 24 quartet singer-stems, 2,143 notes, **real tempo 63–91 BPM**. This
@@ -1543,7 +1543,7 @@ the exact leak that file exists to prevent, and a live risk here because all thr
 many clips per performer (AVP: one per drum class × modality; the other two: several 30 s
 excerpts of one take). Verified: **0 leaked performer groups** across all three.
 
-**✅ ADOPTED — `jacrc-students` (`fetch-jacrc.ts`).** JaCRC's `JaCRC-annotations.zip` turns
+**✅ ADOPTED — `jacrc-students` (`fetch/fetch-jacrc.ts`).** JaCRC's `JaCRC-annotations.zip` turns
 out to hold manual **syllable-level time boundaries** (tab-separated `start end label`, `sil`
 for gaps) including a `3-students/` folder — the conservatory-student recordings the §2b
 table flagged as carrying explicit written performer consent. 175 excerpts, **5,175 syllable
@@ -1669,7 +1669,7 @@ or above MIDI 77 (698 Hz)** and **353 at or above MIDI 86 (1175 Hz)** — chroma
 D7 on flute (2349 Hz), E7 on violin (2637 Hz), C♯8 on accordion (4435 Hz), each at pp / mf / ff.
 
 ⚠️ **The catch, and the new manifest flag it needed.** TinySOL is one note per file, so a
-melody has to be assembled. `fetch-tinysol.ts` trims each note at −34 dBFS of its own peak,
+melody has to be assembled. `fetch/fetch-tinysol.ts` trims each note at −34 dBFS of its own peak,
 cuts it to 350 ms with a 6 ms fade at the splice, and lays eight of them out in two layouts
 (`legato`, 0 ms gap → real pitch transitions; `detached`, 80 ms gap → the silence-onset
 control). Truth is therefore **exact** — we placed every onset — but the *performance* is ours:

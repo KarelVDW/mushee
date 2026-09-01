@@ -15,7 +15,7 @@
  *
  * The collection mixes provenances: `JaCRC-recordings/` at the top level holds
  * professional and commercially-released material, some of it sourced from SVAD
- * (Isophonics, CC-BY-NC-SA) — research-voice-datasets.md flags those rows as
+ * (Isophonics, CC-BY-NC-SA) — research/research-voice-datasets.md flags those rows as
  * must-exclude. `JaCRC-recordings/JaCRC-students-recordings/` is the subset the
  * project recorded itself, from conservatory students (adults and children),
  * with the documented consent. Only that folder is converted, which sidesteps
@@ -30,7 +30,7 @@
  * separated `start_sec, end_sec, label`, with `sil` for the gaps). Every
  * non-`sil` segment start is a real, human-placed onset with no pitch tracker
  * anywhere in the chain — which is exactly the independent onset evidence
- * research-voice-transcription.md wants for the re-onset problem.
+ * research/research-voice-transcription.md wants for the re-onset problem.
  *
  * ⚠️ **Read RECALL here, not F1.** Jingju is heavily melismatic: one syllable is
  * routinely sung across many notes over several seconds. So the syllable onsets
@@ -48,7 +48,7 @@
  * Only the bytes needed are transferred — the 7.1 GB recordings archive is read
  * member-by-member through `lib/remoteZip.ts` ranged GETs.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-jacrc.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-jacrc.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -62,18 +62,18 @@ import {
 } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import { readCentralDirectory, readZipEntry } from './lib/remoteZip';
-import type { GroundTruth, TruthNote } from './types';
+import { readCentralDirectory, readZipEntry } from '../lib/remoteZip';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ANNOT_URL =
   'https://zenodo.org/api/records/6536490/files/JaCRC-annotations.zip/content';
 const AUDIO_ZIP_URL =
   'https://zenodo.org/api/records/6536490/files/JaCRC-recordings.zip/content';
 
-const CACHE = resolve(__dirname, '.cache', 'jacrc');
+const CACHE = resolve(__dirname, '../.cache', 'jacrc');
 const ANNOT_ZIP = join(CACHE, 'JaCRC-annotations.zip');
 const ANNOT_DIR = join(CACHE, 'annotations');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/jacrc-students');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/jacrc-students');
 
 const NOMINAL_BPM = 120;
 const EXCERPT_SEC = Number(process.env.JACRC_EXCERPT_SEC) || 30;

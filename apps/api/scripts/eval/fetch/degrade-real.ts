@@ -6,7 +6,7 @@
  * corpus's thin voice proxy entirely.
  *
  * Run after the fetch-*.ts scripts:
- *   pnpm --filter @mushee/api exec tsx scripts/eval/degrade-real.ts
+ *   pnpm --filter @mushee/api exec tsx scripts/eval/fetch/degrade-real.ts
  *
  * Idempotent; ~4 files per source clip. EVAL_REAL=1 run-eval.ts picks the
  * variants up automatically (missing variants are skipped).
@@ -15,11 +15,11 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { degrade } from './lib/degrade';
-import { discoverRealDatasets } from './lib/realCorpus';
-import { CONDITIONS } from './scenarios';
+import { degrade } from '../lib/degrade';
+import { discoverRealDatasets } from '../lib/realCorpus';
+import { CONDITIONS } from '../scenarios';
 
-const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
+const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real');
 const SAMPLE_RATE = 44100;
 
 /**

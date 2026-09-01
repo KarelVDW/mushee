@@ -43,7 +43,7 @@
  * Idempotent; the fetched annotations and audio slices are cached (gitignored)
  * under scripts/eval/.cache/urmp.
  *
- * Run: pnpm --filter api exec tsx scripts/eval/fetch-urmp.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-urmp.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -52,8 +52,8 @@ import ffmpegPath from 'ffmpeg-static';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { hzToMidi } from './lib/groundTruth';
-import type { GroundTruth, TruthNote } from './types';
+import { hzToMidi } from '../lib/groundTruth';
+import type { GroundTruth, TruthNote } from '../types';
 
 // File-per-file mirror of the Dryad tarball (same 149 tracks, unmodified), which
 // is what makes the range-fetch strategy above possible.
@@ -62,8 +62,8 @@ const BASE_URL =
 // Set to an extracted Dryad `Dataset/` directory to bypass the network entirely.
 const LOCAL_DIR = process.env.URMP_LOCAL_DIR;
 
-const CACHE = resolve(__dirname, '.cache', 'urmp');
-const FIXTURES = resolve(__dirname, '../fixtures/eval-real/benchmark');
+const CACHE = resolve(__dirname, '../.cache', 'urmp');
+const FIXTURES = resolve(__dirname, '../../fixtures/eval-real/benchmark');
 
 // Excerpt length per clip, and the silence kept before the first note so the
 // pipeline's pitch scan has a moment of noise floor to adapt to (the live app

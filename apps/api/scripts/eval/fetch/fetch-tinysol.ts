@@ -33,28 +33,28 @@
  *                kept as the paired control.
  *
  * Output: fixtures/eval-real/context/tinysol-<instrument>/…  (one dataset per instrument,
- * mirroring fetch-urmp.ts's convention so a per-instrument question stays askable)
+ * mirroring fetch/fetch-urmp.ts's convention so a per-instrument question stays askable)
  *
  * Source : https://zenodo.org/records/3685367   (TinySOL v6, 1.0 GB tar.gz)
  * License: CC-BY-4.0 — Cella, Ghisi, Lostanlen, Lévy, Fineberg, Maresz.
  *
  * Idempotent; the archive is cached (gitignored) under scripts/eval/.cache.
- * Run: pnpm --filter api exec tsx scripts/eval/fetch-tinysol.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-tinysol.ts
  */
 
 import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { floatToWav, wavToFloat } from './lib/wav';
-import type { GroundTruth, TruthNote } from './types';
+import { floatToWav, wavToFloat } from '../lib/wav';
+import type { GroundTruth, TruthNote } from '../types';
 
 const RECORD = 'https://zenodo.org/records/3685367/files';
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const TARBALL = join(CACHE, 'TinySOL.tar.gz');
 const META = join(CACHE, 'TinySOL_metadata.csv');
 const EXTRACT = join(CACHE, 'tinysol');
-const OUT_ROOT = resolve(__dirname, '../fixtures/eval-real/context');
+const OUT_ROOT = resolve(__dirname, '../../fixtures/eval-real/context');
 
 const SAMPLE_RATE = 44100;
 

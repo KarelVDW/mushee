@@ -38,11 +38,26 @@ import type { SourceKind } from '../types';
 
 export type CorpusTier = 'benchmark' | 'context';
 
+/**
+ * What a human would say is being recorded — the axis the product's benchmark
+ * (benchmark.ts) groups by. Coarser than `instrumentId`, finer than `kind`:
+ * `kind: 'voice'` covers singing, humming AND vocal percussion, which are three
+ * different products for the user. Declared as `material` in dataset.json;
+ * falls back to a derivation from `kind` for manifests that predate it.
+ */
+export type Material =
+  | 'singing'
+  | 'humming'
+  | 'whistling'
+  | 'instrument'
+  | 'vocal-percussion';
+
 export interface RealDataset {
   id: string;
   dir: string;
   label: string;
   kind: SourceKind;
+  material: Material;
   instrumentId?: string;
   /** Which tier directory the dataset lives in — see the module doc above. */
   tier: CorpusTier;
@@ -96,6 +111,13 @@ export interface RealDataset {
 
 const TIER_DIRS: CorpusTier[] = ['benchmark', 'context'];
 
+/** Fallback for manifests without `material`: the honest coarse reading of `kind`. */
+function materialFromKind(kind: SourceKind): Material {
+  if (kind === 'whistle') return 'whistling';
+  if (kind === 'instrument') return 'instrument';
+  return 'singing';
+}
+
 /** A dataset dir is one that actually holds scoreable clips. */
 function isDatasetDir(dir: string): boolean {
   return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith('.truth.json'));
@@ -108,11 +130,13 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
     : {};
   const noteTruthDerived = m.noteTruthDerived ?? false;
   const constructedPerformance = m.constructedPerformance ?? false;
+  const kind = m.kind ?? 'voice';
   return {
     id,
     dir,
     label: m.label ?? id,
-    kind: m.kind ?? 'voice',
+    kind,
+    material: m.material ?? materialFromKind(kind),
     instrumentId: m.instrumentId,
     // Legacy flat layout: infer the tier from the flags that were always the
     // pooling mechanism, so an un-migrated checkout behaves identically.

@@ -76,6 +76,18 @@ export interface Metrics {
   medianPitchErr: number;
   /** Signed onset/offset timing error over exact-pitch matches. */
   timing: TimingStats;
+  /**
+   * MIREX/mir_eval **COnPOff** at the SAME onset window: exact pitch, onset
+   * within `onsetTolSec`, AND offset within max(`offsetTolSec`, `offsetRatio` ×
+   * the reference duration) — mir_eval's defaults are 50 ms / 20 %. Secondary
+   * number: it is what published note-transcription papers report (N20EMv2's
+   * 73.06 is COnPOff at 50 ms / 50 ¢), so it is the only column that can be set
+   * beside an external figure — at a matching onset window, which the headline
+   * ±100 ms is not. The offset gate also rewards getting DURATIONS right, which
+   * COnP ignores by design.
+   */
+  f1Off: number;
+  matchedOff: number;
 }
 
 export interface MatchOptions {
@@ -87,6 +99,10 @@ export interface MatchOptions {
    * as unmatched. Notes off by more than this are treated as wrong, not late.
    */
   timingTolSec: number;
+  /** COnPOff offset gate: absolute floor (default 0.05 s)… */
+  offsetTolSec?: number;
+  /** …or this fraction of the reference duration, whichever is larger (default 0.2). */
+  offsetRatio?: number;
 }
 
 interface MatchResult {
@@ -109,6 +125,8 @@ function countMatches(
   est: EstNote[],
   onsetTol: number,
   pitchOk: (r: number, e: number) => boolean,
+  /** Optional offset gate (COnPOff): the estimate's end must land within this window of the reference's end. */
+  offsetOk?: (r: TruthNote, e: EstNote) => boolean,
 ): MatchResult {
   const used = new Array(est.length).fill(false);
   const sortedRef = [...ref].sort((a, b) => a.onsetSec - b.onsetSec);
@@ -125,6 +143,7 @@ function countMatches(
       const dt = Math.abs(est[j].onsetSec - r.onsetSec);
       if (dt > onsetTol) continue;
       if (!pitchOk(r.midi, est[j].midi)) continue;
+      if (offsetOk && !offsetOk(r, est[j])) continue;
       if (dt < bestDist) {
         bestDist = dt;
         best = j;
@@ -240,6 +259,18 @@ export function scoreNotes(
   const precision = est.length ? exact.matched / est.length : 0;
   const recall = ref.length ? exact.matched / ref.length : 0;
 
+  const offsetTol = opts.offsetTolSec ?? 0.05;
+  const offsetRatio = opts.offsetRatio ?? 0.2;
+  const withOffset = countMatches(
+    ref,
+    est,
+    opts.onsetTolSec,
+    (r, e) => r === e,
+    (r, e) =>
+      Math.abs(e.onsetSec + e.durSec - (r.onsetSec + r.durSec)) <=
+      Math.max(offsetTol, offsetRatio * r.durSec),
+  );
+
   return {
     refCount: ref.length,
     estCount: est.length,
@@ -247,6 +278,8 @@ export function scoreNotes(
     precision,
     recall,
     f1: f1(exact.matched, ref.length, est.length),
+    f1Off: f1(withOffset.matched, ref.length, est.length),
+    matchedOff: withOffset.matched,
     chromaMatched: chroma.matched,
     chromaF1: f1(chroma.matched, ref.length, est.length),
     octaveErrorRate: ref.length

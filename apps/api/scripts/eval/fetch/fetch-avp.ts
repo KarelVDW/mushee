@@ -15,7 +15,7 @@
  * and open-hihat imitations) with human-labelled onset timestamps — no pitch
  * tracker anywhere in the annotation chain, so its onsets are genuine,
  * independent ground truth. It is NOT pitched singing (fails gate 1 in
- * research-voice-datasets.md for note-transcription purposes), but the
+ * research/research-voice-datasets.md for note-transcription purposes), but the
  * register flags it as "a clean way to test OnsetDetector in isolation" —
  * our weakest component per the onset-taxonomy findings — precisely because
  * it separates onset detection from pitch estimation.
@@ -31,7 +31,7 @@
  * aggregate and reports it via `onsetF1` (MIREX COn) instead — the only
  * number that means something for this corpus.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-avp.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-avp.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -46,14 +46,14 @@ import {
 } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import type { GroundTruth, TruthNote } from './types';
+import type { GroundTruth, TruthNote } from '../types';
 
 const AUDIO_URL = 'https://zenodo.org/api/records/5036529/files/AVP_Dataset.zip/content';
 
-const CACHE = resolve(__dirname, '.cache', 'avp');
+const CACHE = resolve(__dirname, '../.cache', 'avp');
 const ZIP = join(CACHE, 'AVP_Dataset.zip');
 const EXTRACT = join(CACHE, 'extracted');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/avp');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/avp');
 
 const NOMINAL_BPM = 120;
 // Onset-only scoring ignores duration; this just keeps notes non-degenerate.
@@ -179,7 +179,7 @@ function main(): void {
       'Human-labelled onset timestamps on real amateur beatboxing (kd=kick, ' +
       'sd=snare, hhc=closed hihat, hho=open hihat). No pitch anywhere in the ' +
       'chain, so onsets are genuine independent ground truth for the ' +
-      'OnsetDetector in isolation — see research-voice-datasets.md. midi is a ' +
+      'OnsetDetector in isolation — see research/research-voice-datasets.md. midi is a ' +
       `constant placeholder (${PLACEHOLDER_MIDI}); durSec is a derived, ` +
       'clamped gap-to-next-onset. Score via onsetF1 (MIREX COn), not note-F1.',
     classCounts: Object.fromEntries(classCounts),

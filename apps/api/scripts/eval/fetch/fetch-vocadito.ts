@@ -15,7 +15,7 @@
  * scripts/eval/.cache and re-converted on each run; only this script is tracked,
  * exactly like generate.ts is the tracked source of the synthetic corpus.
  *
- * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch-vocadito.ts
+ * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-vocadito.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -30,15 +30,15 @@ import {
 } from 'fs';
 import { join,resolve } from 'path';
 
-import { hzToMidi } from './lib/groundTruth';
-import type { GroundTruth, TruthNote } from './types';
+import { hzToMidi } from '../lib/groundTruth';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ZIP_URL = 'https://zenodo.org/records/5578807/files/vocadito.zip?download=1';
 
-const CACHE = resolve(__dirname, '.cache');
+const CACHE = resolve(__dirname, '../.cache');
 const ZIP = join(CACHE, 'vocadito.zip');
 const EXTRACT = join(CACHE, 'vocadito');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/vocadito');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/vocadito');
 
 // vocadito clips are free, often-rubato singing with no annotated tempo. bpm is
 // only handed to the converter's quantizer; the metrics compare onsets in

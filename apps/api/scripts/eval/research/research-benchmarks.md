@@ -203,7 +203,7 @@ MIR-QBSH's `index.htm` (the authoritative doc, bundled in the zip) states verbat
 > frame size = 256 and overlap = 0 … **since the pitch was labelled by the students who did the
 > recording, there is no guarantee for their correctness.**
 
-So there are no note events — our `fetch-mir-qbsh.ts` synthesizes them by rounding each voiced
+So there are no note events — our `fetch/fetch-mir-qbsh.ts` synthesizes them by rounding each voiced
 frame to the nearest semitone, grouping equal runs, and dropping runs < 3 frames (96 ms).
 
 vocadito is the ideal probe for how much that derivation costs, because it ships **both** frame

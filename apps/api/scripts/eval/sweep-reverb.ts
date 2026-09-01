@@ -986,6 +986,33 @@ const CONFIGS: SweepConfig[] = [
   { name: 'voice fillAd x.15 lock1.5', segment: adaptiveFill(0.15, 1.5), vsName: 'voice OFF' },
   { name: 'voice fillAd x.15 lock3', segment: adaptiveFill(0.15, 3), vsName: 'voice OFF' },
 
+  // …and the ENERGY-GATED version (`fillEnergyFloor`, 2026-09). The clean-slice
+  // cost of the unconditional fill came from erasing consonant dips, which are
+  // energy dips; a reverb puncture is a confidence collapse over a sustained
+  // envelope. Gating the fill on the gap's energy staying within a fraction of
+  // the flanks should keep the reverb repair and leave the boundary evidence
+  // alone — no room estimate needed, so no false-firing gate either.
+  { name: 'voice fillE40 r.5', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.5 }), vsName: 'voice OFF' },
+  { name: 'voice fillE40 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.7 }), vsName: 'voice OFF' },
+  { name: 'voice fillE40 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.85 }), vsName: 'voice OFF' },
+  { name: 'voice fillE80 r.5', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.5 }), vsName: 'voice OFF' },
+  { name: 'voice fillE80 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.7 }), vsName: 'voice OFF' },
+  { name: 'voice fillE80 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.85 }), vsName: 'voice OFF' },
+  { name: 'voice fillE120 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.12, fillEnergyFloor: 0.7 }), vsName: 'voice OFF' },
+  { name: 'voice fillE120 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.12, fillEnergyFloor: 0.85 }), vsName: 'voice OFF' },
+  // Flank-referenced rows above measured inert (the flanks sit on the dip's
+  // shoulders). Context-referenced (peak within ±140 ms, the decoder's own
+  // evidence window) is the version that removed the clean-slice cost in
+  // sweep-voice; these rows ask whether it keeps the reverb repair.
+  { name: 'voice fillEc40 r.5', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.5, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc40 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.7, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc40 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.04, fillEnergyFloor: 0.85, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc80 r.5', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.5, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc80 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.7, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc80 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.08, fillEnergyFloor: 0.85, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc120 r.7', segment: voiceDecode({ fillUnvoicedGapSec: 0.12, fillEnergyFloor: 0.7, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+  { name: 'voice fillEc120 r.85', segment: voiceDecode({ fillUnvoicedGapSec: 0.12, fillEnergyFloor: 0.85, fillEnergyContextSec: 0.14 }), vsName: 'voice OFF' },
+
   // R25: OpenTune's two-tier absolute silence rule in the onset detector —
   // rumble-dominated frames classify as silence above the strict gate. Needs
   // the band envelope, so these rows decode audio (slow): run them on small

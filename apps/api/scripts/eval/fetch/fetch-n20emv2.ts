@@ -69,7 +69,7 @@
  * Idempotent; central directories and the fetched DEFLATE prefixes are cached
  * (gitignored) under scripts/eval/.cache/n20emv2.
  *
- * Run: pnpm --filter api exec tsx scripts/eval/fetch-n20emv2.ts
+ * Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-n20emv2.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -78,15 +78,15 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writ
 import { join, resolve } from 'path';
 import { constants as zlibConstants, inflateRawSync } from 'zlib';
 
-import type { GroundTruth, TruthNote } from './types';
+import type { GroundTruth, TruthNote } from '../types';
 
 const RECORD = 'https://zenodo.org/api/records/10814703/files';
 // Set to a tree holding `annotations.json` + `data/<entry>/vocals.wav` to bypass
 // the network (and the zip plumbing) entirely.
 const LOCAL_DIR = process.env.N20EMV2_LOCAL_DIR;
 
-const CACHE = resolve(__dirname, '.cache', 'n20emv2');
-const FIXTURES = resolve(__dirname, '../fixtures/eval-real/benchmark');
+const CACHE = resolve(__dirname, '../.cache', 'n20emv2');
+const FIXTURES = resolve(__dirname, '../../fixtures/eval-real/benchmark');
 
 /** Their train+valid songs, and their test songs, as separate datasets. */
 const DEV_DATASET = 'n20emv2';

@@ -53,7 +53,7 @@
  * scripts/eval/.cache and re-converted on each run; only this script is tracked,
  * exactly like generate.ts is the tracked source of the synthetic corpus.
  *
- * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch-annotated-vocalset.ts
+ * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-annotated-vocalset.ts
  */
 
 import { execFileSync } from 'child_process';
@@ -69,20 +69,20 @@ import {
 } from 'fs';
 import { basename,join, resolve } from 'path';
 
-import { hzToMidi } from './lib/groundTruth';
-import type { GroundTruth, TruthNote } from './types';
+import { hzToMidi } from '../lib/groundTruth';
+import type { GroundTruth, TruthNote } from '../types';
 
 const NOTES_URL =
   'https://zenodo.org/api/records/7061507/files/Annotated%20VocalSet.zip/content';
 const AUDIO_URL =
   'https://zenodo.org/api/records/1193957/files/VocalSet.zip/content';
 
-const CACHE = resolve(__dirname, '.cache', 'annotated-vocalset');
+const CACHE = resolve(__dirname, '../.cache', 'annotated-vocalset');
 const NOTES_ZIP = join(CACHE, 'annotated-vocalset.zip');
 const AUDIO_ZIP = join(CACHE, 'vocalset-audio.zip');
 const NOTES_EXTRACT = join(CACHE, 'annotations'); // -> Annotated VocalSet/…
 const AUDIO_EXTRACT = join(CACHE, 'audio'); // -> FULL/<singer>/…
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/annotated-vocalset');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/annotated-vocalset');
 
 // Which of the four smoothing variants to read. Pitch GT is identical across
 // them; "extended 1" keeps the finest onset/offset segmentation.

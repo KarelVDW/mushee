@@ -867,6 +867,42 @@ function buildConfigs(groups: Set<string>): Config[] {
     }
   }
 
+  // R21e — the ENERGY-GATED dropout fill (2026-09): fill an unvoiced gap only
+  // when the envelope inside it never drops below `fillEnergyFloor` × the
+  // quieter flank. The unconditional fill lost ~1 pt on this slice because the
+  // 1–2-frame dips it erased ARE the consonant/legato boundary evidence — and
+  // those are energy dips. A reverb puncture is not (the room sustains the
+  // level), so the gate should keep the reverb repair (sweep-reverb.ts rows
+  // `voice fillE*`) while this slice, the clean gate, stays at zero.
+  if (on('r21e')) {
+    configs.push({
+      name: 'r21e OFF (anchor)',
+      group: 'r21e',
+      segment: voiceSegment(BEST),
+      cleanup: null,
+    });
+    // Flank-referenced (ctx 0) measured inert at every ratio — the flanks sit on
+    // the dip's shoulders. The context-referenced rows (ctx 140 ms, the
+    // decoder's own evidence window) are the real test.
+    for (const ctx of [0, 0.14]) {
+      for (const fill of [0.04, 0.08]) {
+        for (const floor of ctx === 0 ? [0.7] : [0.35, 0.5, 0.7, 0.85]) {
+          configs.push({
+            name: `r21e fill${fill * 1000} r${floor} ctx${ctx * 1000}`,
+            group: 'r21e',
+            segment: voiceSegment({
+              ...BEST,
+              fillUnvoicedGapSec: fill,
+              fillEnergyFloor: floor,
+              fillEnergyContextSec: ctx,
+            }),
+            cleanup: null,
+          });
+        }
+      }
+    }
+  }
+
   // R21ad — the reverberance-ADAPTIVE dropout fill (fillSec = scale × the
   // production `estimateReverberance`, off below 20 ms). The always-on fill
   // wins big under reverb and costs the clean slice; this asks whether the
@@ -1294,7 +1330,14 @@ async function main(): Promise<void> {
   // `constructedPerformance` (tinysol-*) is excluded with the same reasoning as
   // derived truth: the guard slice must be real playing, not our own splices.
   const datasets = discoverRealDatasets(REAL_ROOT).filter(
-    (d) => !d.noteTruthDerived && !d.constructedPerformance && d.corpusSplit !== 'test',
+    // …and `pitchless` (avp, jacrc-students): onset-only truth with placeholder
+    // MIDI, so COnP against it is meaningless — it was silently dragging the VOICE
+    // mean down and adding noise to every paired Δ since those corpora arrived.
+    (d) =>
+      !d.noteTruthDerived &&
+      !d.constructedPerformance &&
+      !d.pitchless &&
+      d.corpusSplit !== 'test',
   );
   const voiceIds = datasets.filter((d) => d.kind === 'voice').map((d) => d.id).sort();
   const guardIds = withGuard

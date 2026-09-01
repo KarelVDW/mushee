@@ -297,7 +297,12 @@ async function main(): Promise<void> {
       ? process.env.SWEEP_EXCLUDE.split(',').map((x) => x.trim()).filter(Boolean)
       : discoverRealDatasets(REAL_ROOT)
           .filter(
-            (d) => d.noteTruthDerived || d.constructedPerformance || d.corpusSplit === 'test',
+            (d) =>
+              d.noteTruthDerived ||
+              d.constructedPerformance ||
+              // onset-only truth (placeholder MIDI) — COnP is meaningless there
+              d.pitchless ||
+              d.corpusSplit === 'test',
           )
           .map((d) => d.id),
   );

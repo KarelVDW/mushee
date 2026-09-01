@@ -12,7 +12,7 @@
  * ## Why this corpus is here, and what it is NOT for
  *
  * Two separate annotations ship with DCS and they are of very different quality
- * (research-voice-datasets.md §2 "Dagstuhl ChoirSet"):
+ * (research/research-voice-datasets.md §2 "Dagstuhl ChoirSet"):
  *
  *   - `annotations_csv_beat` — 20 beat/measure grids, **manually tapped in Sonic
  *     Visualiser and then reviewed by a second, experienced annotator** (paper
@@ -64,20 +64,20 @@
  * required member is fetched by its own ranged GET. Nothing close to the
  * 5.1 GB is transferred.
  *
- * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch-dagstuhl.ts
+ * Idempotent. Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/fetch-dagstuhl.ts
  */
 
 import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { readCentralDirectory, readZipEntry } from './lib/remoteZip';
-import type { GroundTruth, TruthNote } from './types';
+import { readCentralDirectory, readZipEntry } from '../lib/remoteZip';
+import type { GroundTruth, TruthNote } from '../types';
 
 const ZIP_URL =
   'https://zenodo.org/api/records/4618287/files/DagstuhlChoirSet_V1.2.3.zip/content';
 
-const CACHE = resolve(__dirname, '.cache', 'dagstuhl');
-const OUT = resolve(__dirname, '../fixtures/eval-real/benchmark/dagstuhl-choir');
+const CACHE = resolve(__dirname, '../.cache', 'dagstuhl');
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/dagstuhl-choir');
 
 /** Excerpt length; a whole take is ~5 min, far longer than any real recording. */
 const EXCERPT_SEC = Number(process.env.DCS_EXCERPT_SEC) || 30;
