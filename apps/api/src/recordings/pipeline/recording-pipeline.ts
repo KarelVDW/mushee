@@ -7,7 +7,7 @@ import { AudioDecoder, StreamingDecoder } from './audio-decoder';
 import type { MxmlMeasure } from './mxml.types';
 import { MxmlBuilder, PendingNote } from './mxml-builder';
 import { ExtractedNotes } from './note-extractor';
-import type { PipelineProfile } from './profiles/pipeline-profile';
+import { DEFAULT_PROFILE, type PipelineProfile } from './profiles/pipeline-profile';
 import { ProfileResolver } from './profiles/profile-resolver';
 import type { PitchTranscribeOptions } from './providers/pitch-provider';
 import { ProviderRegistry } from './providers/provider-registry';
@@ -47,6 +47,25 @@ const DETECT_SAMPLE_RATE = 16000;
 const DETECT_HIGHPASS_HZ = 30;
 /** Minimum audio before we trust the pitch scan enough to lock a profile. */
 const DETECT_MIN_SEC = 1.2;
+/**
+ * How long to keep waiting for PITCHED audio before accepting the unvoiced
+ * fallback profile. The scan of a prefix that holds no reliable pitch — the
+ * performer breathing, a late start after the count-in, a spoken word — used to
+ * lock `default-wide` for the whole take: a 55–1900 Hz window with no register
+ * band, no reverb relief, and (for whistling) a ceiling under the material. The
+ * eval census found this fallback on 188 real adverse clips plus every take with
+ * an unscannable lead-in, and measured that NO provider transcribes anything
+ * through it (COnP ≈ 0.001). Waiting for the first pitched second costs the user
+ * nothing visible — no notes exist to emit before then — so the lock now waits
+ * up to this long; past it (or on the final pass) the fallback is accepted, and
+ * the final pass re-resolves it over the whole take (see `process`).
+ */
+const DETECT_MAX_WAIT_SEC = Number(process.env.RECORDING_DETECT_MAX_WAIT_SEC) || 8;
+
+/** The resolver's "no reliable pitch in this audio" outcome, with or without a hint. */
+function isFallbackProfile(profile: PipelineProfile): boolean {
+  return profile.id === DEFAULT_PROFILE.id || profile.id.startsWith(`${DEFAULT_PROFILE.id}+`);
+}
 
 export interface ScoreUpdate {
   measures: Record<number, MxmlMeasure>;
@@ -105,6 +124,10 @@ export class RecordingPipeline {
   // to fill in bars the performer rested through (see affectedMeasures).
   private lastEmittedMeasure = -1;
   private firstUnemittedMeasure = 0;
+  // Set when the final pass re-routed the take (see `rerouteFinal`): everything
+  // emitted so far came from the wrong profile, so the final emission must
+  // rebuild every measure — including ones that end up empty.
+  private reemitAll = false;
   // Earliest onset (absolute seconds) of a note seen last pass that wasn't yet
   // committed (still within the stable margin or extending past it). The next
   // window backs up to include it so a long sustained note's onset is never cut.
@@ -212,9 +235,11 @@ export class RecordingPipeline {
     // Stream the encoded audio to storage as it arrives — never buffered
     // toward a whole-take upload, so memory stays flat for any take length.
     this.archiver?.appendAudio(buffer);
-    // Encoded chunks are retained only while the decoder still needs them for
-    // its container-header seed.
-    if (!this.streamDecoder) this.chunks.push(buffer);
+    // The encoded stream is kept for the whole session: it seeds the decoder
+    // (container header first) and it is what the final pass re-decodes when it
+    // has to re-route a take whose prefix held no pitch (`rerouteFinal`). Cheap —
+    // a few MB per hour at browser Opus bitrates.
+    this.chunks.push(buffer);
     // Once the decoder is live, forward each chunk straight into it so the byte
     // is decoded once. Chunks buffered before the decoder spawned are fed in one
     // shot at spawn time (see `process`), so this only ever runs for new audio.
@@ -289,6 +314,11 @@ export class RecordingPipeline {
     // the user.
     if (!this.converter || !this.profile) {
       await this.resolveProfile(Buffer.concat(this.chunks), isFinal);
+    } else if (isFinal && isFallbackProfile(this.profile) && this.streamDecoder) {
+      // The take was locked on the unvoiced fallback (a lead-in longer than
+      // DETECT_MAX_WAIT_SEC). Now that the whole take exists, ask the resolver
+      // again — a real register band beats a blind window every time.
+      await this.rerouteFinal();
     }
     const converter = this.converter;
     const profile = this.profile;
@@ -300,17 +330,7 @@ export class RecordingPipeline {
     // From here `appendChunk` forwards new chunks straight in — each byte is
     // decoded exactly once instead of re-decoding the whole stream every pass.
     if (!this.streamDecoder) {
-      const decoder = new StreamingDecoder(provider.sampleRate, {
-        highpassHz: profile.highpassHz,
-        loudnorm: provider.normalizeLoudness,
-        denoise: profile.denoise,
-        inputFormat: this.inputFormat,
-      });
-      decoder.write(Buffer.concat(this.chunks));
-      this.streamDecoder = decoder;
-      // The decoder owns the bytes now (and the archiver already streamed
-      // them out), so stop holding on to the encoded stream.
-      this.chunks.length = 0;
+      this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness);
     }
 
     // On the final pass, flush ffmpeg (incl. any filter look-ahead tail) and take
@@ -373,6 +393,10 @@ export class RecordingPipeline {
       );
     }
 
+    // A re-routed final pass that found no notes at all still owes the client a
+    // rebuild: the measures it emitted under the wrong profile must be cleared.
+    if (isFinal && this.reemitAll) this.emitAllMeasures();
+
     this.logger.debug(
       `Pass timings: decode-wait=${tDecode - tStart}ms, ` +
         `convert=${tEnd - tDecode - emitMs}ms, ` +
@@ -407,6 +431,21 @@ export class RecordingPipeline {
       instrumentId: this.instrumentHint,
       sourceKind: this.sourceKind,
     });
+    // No reliable pitch yet (breath, a late start, speech): keep listening
+    // rather than lock the blind fallback for the whole take. Nothing is lost by
+    // waiting — there are no notes to emit before the first pitched audio.
+    if (!isFinal && isFallbackProfile(profile) && detect.duration < DETECT_MAX_WAIT_SEC) {
+      this.logger.debug(
+        `No pitched audio in the first ${detect.duration.toFixed(1)} s — profile lock deferred`,
+      );
+      return false;
+    }
+    this.lockProfile(profile);
+    return true;
+  }
+
+  /** Install `profile` (and a converter for its provider) as the session's routing. */
+  private lockProfile(profile: PipelineProfile): void {
     this.profile = profile;
     this.converter = new AudioConverter(this.registry.get(profile.providerName), {
       profile,
@@ -430,7 +469,80 @@ export class RecordingPipeline {
       source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
       decidedBy: profile.sourceDecidedBy ?? 'prior',
     });
-    return true;
+  }
+
+  private spawnDecoder(
+    profile: PipelineProfile,
+    sampleRate: number,
+    loudnorm: boolean,
+  ): StreamingDecoder {
+    const decoder = new StreamingDecoder(sampleRate, {
+      highpassHz: profile.highpassHz,
+      loudnorm,
+      denoise: profile.denoise,
+      inputFormat: this.inputFormat,
+    });
+    decoder.write(Buffer.concat(this.chunks));
+    return decoder;
+  }
+
+  /**
+   * Final-pass escape from the unvoiced fallback: re-resolve over the WHOLE take
+   * and, if a real register band comes back, transcribe the take again under it.
+   *
+   * Everything emitted so far came from a profile chosen without hearing a single
+   * pitched frame, so it is discarded: the emitted-note set and the commit
+   * watermark reset, a fresh decoder is seeded from the retained encoded stream
+   * (the new profile may change the sample rate, high-pass or denoise chain), and
+   * `reemitAll` makes the final emission rebuild every measure — including bars
+   * that are now empty. The cost is one extra full-take inference at stop, paid
+   * only on takes whose first `DETECT_MAX_WAIT_SEC` held no pitch, where the
+   * alternative was a score the fallback measured as empty anyway.
+   */
+  private async rerouteFinal(): Promise<void> {
+    if (!this.streamDecoder) return;
+    let detect;
+    try {
+      detect = await this.decoder.decode(Buffer.concat(this.chunks), DETECT_SAMPLE_RATE, {
+        loudnorm: false,
+        highpassHz: DETECT_HIGHPASS_HZ,
+        inputFormat: this.inputFormat,
+      });
+    } catch (err) {
+      this.logger.debug(`Final re-resolve decode failed (${describeError(err)})`);
+      return;
+    }
+    const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
+      instrumentId: this.instrumentHint,
+      sourceKind: this.sourceKind,
+    });
+    if (isFallbackProfile(profile)) return; // still nothing pitched — keep what we have
+
+    this.logger.log(
+      `Final pass re-routes the take: ${this.profile?.id ?? 'none'} → ${profile.id} ` +
+        `(no pitched audio in the first ${DETECT_MAX_WAIT_SEC} s)`,
+    );
+    // Let the old ffmpeg drain and exit; its PCM is not needed any more.
+    void this.streamDecoder.finalize().catch(() => undefined);
+    this.lockProfile(profile);
+    const provider = this.converter!.provider;
+    this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness);
+    this.emittedNotes.length = 0;
+    this.emittedKeys.clear();
+    this.committedSec = 0;
+    this.uncommittedFromSec = Infinity;
+    this.reemitAll = true;
+  }
+
+  /** Rebuild and send every measure emitted so far from the current note set. */
+  private emitAllMeasures(): void {
+    this.reemitAll = false;
+    if (this.lastEmittedMeasure < 0) return;
+    const measures: Record<number, MxmlMeasure> = {};
+    for (let m = 0; m <= this.lastEmittedMeasure; m += 1) {
+      measures[m] = this.builder.buildMeasure(m, this.emittedNotes);
+    }
+    this.onUpdate({ measures });
   }
 
   private pitchOptions(profile: PipelineProfile): PitchTranscribeOptions {
@@ -502,8 +614,11 @@ export class RecordingPipeline {
     // measures were spelled from a half-built estimate. The final pass knows
     // the whole take — re-emit everything so the score the user keeps is
     // spelled from one consistent grid.
-    if (isFinal && this.profile?.isVoice) {
+    // Likewise after a final-pass re-route: every earlier measure was built
+    // from notes the wrong profile produced.
+    if (isFinal && (this.profile?.isVoice || this.reemitAll)) {
       for (let m = 0; m <= this.lastEmittedMeasure; m += 1) affected.add(m);
+      this.reemitAll = false;
     }
     const measures: Record<number, MxmlMeasure> = {};
     for (const idx of [...affected].sort((a, b) => a - b)) {
