@@ -1,5 +1,7 @@
 # Open-source plugin sources, mined for transferable ideas
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Research notes, 2026-08-19. **Fourteen** open-source projects whose source was read directly, looking
 for pre/post-processing that could improve our pipeline. Read in three rounds: §1–§4 audio plugins,
 §5–§9 the reference implementations behind algorithms we already claim to follow, §10–§14 autotune

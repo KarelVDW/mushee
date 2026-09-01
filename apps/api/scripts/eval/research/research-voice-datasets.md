@@ -1,5 +1,7 @@
 # Voice datasets for the transcription benchmark — a licence-and-provenance register
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Working notes, 2026-08-08. **Scope: corpora of real human singing that we could add to
 the evaluation harness.** This file exists because the same three questions were being
 re-asked and re-answered inconsistently across `research-benchmarks.md`,

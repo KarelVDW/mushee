@@ -60,7 +60,22 @@ const DETECT_MIN_SEC = 1.2;
  * up to this long; past it (or on the final pass) the fallback is accepted, and
  * the final pass re-resolves it over the whole take (see `process`).
  */
-const DETECT_MAX_WAIT_SEC = Number(process.env.RECORDING_DETECT_MAX_WAIT_SEC) || 8;
+const DETECT_MAX_WAIT_SEC = envNumber('RECORDING_DETECT_MAX_WAIT_SEC', 8);
+/**
+ * Kill-switch for the final-pass re-route of a fallback-locked take
+ * (`RECORDING_FINAL_REROUTE=0`). Together with `RECORDING_DETECT_MAX_WAIT_SEC=0`
+ * this reproduces the pre-2026-09 lock behaviour exactly — the A/B the
+ * `probe-leadin.ts` harness measures, and production's rollback.
+ */
+const FINAL_REROUTE = process.env.RECORDING_FINAL_REROUTE !== '0';
+
+/** Numeric env override; `0` is a legitimate value (unlike `Number(x) || d`). */
+function envNumber(key: string, fallback: number): number {
+  const raw = process.env[key];
+  if (raw === undefined || raw === '') return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : fallback;
+}
 
 /** The resolver's "no reliable pitch in this audio" outcome, with or without a hint. */
 function isFallbackProfile(profile: PipelineProfile): boolean {
@@ -314,7 +329,12 @@ export class RecordingPipeline {
     // the user.
     if (!this.converter || !this.profile) {
       await this.resolveProfile(Buffer.concat(this.chunks), isFinal);
-    } else if (isFinal && isFallbackProfile(this.profile) && this.streamDecoder) {
+    } else if (
+      isFinal &&
+      FINAL_REROUTE &&
+      isFallbackProfile(this.profile) &&
+      this.streamDecoder
+    ) {
       // The take was locked on the unvoiced fallback (a lead-in longer than
       // DETECT_MAX_WAIT_SEC). Now that the whole take exists, ask the resolver
       // again — a real register band beats a blind window every time.

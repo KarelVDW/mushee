@@ -29,5 +29,11 @@ note extraction / onset detection → MusicXML measures.
 - `profiles/` — register-based pipeline configuration (provider choice,
   frequency windows, instrument ranges) resolved per recording.
 
+The adaptive profile (band, provider, gates, voice routing) is locked from the
+first ≥1.2 s of *pitched* audio — a silent or spoken lead-in defers the lock (up
+to `RECORDING_DETECT_MAX_WAIT_SEC`, 8 s) and a take that still locked the blind
+fallback is re-resolved over the whole take on the final pass.
+
 The pipeline is tuned and regression-gated by the eval harness in
-`scripts/eval` (see `scripts/eval/README.md`), which imports it directly.
+`scripts/eval` (see `scripts/eval/README.md`; the product benchmark and its
+committed results live in `scripts/eval/benchmarks/`), which imports it directly.

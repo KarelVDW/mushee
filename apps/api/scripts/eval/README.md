@@ -189,6 +189,7 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | `note-errors.ts` | Classify note disagreement: ±1-semitone pitch errors vs missed vs spurious. |
 | `sweep-real.ts` | Sweep post-processing params (segmentation/extractor/tempo) on the real corpus; model runs once per clip. |
 | `probe-realpath.ts` | System-bias probe through the production `RecordingPipeline` + webm/opus codec path, hunting constant timing offsets the WAV eval can't see. |
+| `probe-leadin.ts` | Prepends a silent lead-in to real clips and drives them through the paced production `RecordingPipeline`, `PROBE_MODE=legacy\|new` — the A/B for the 2026-09 profile-lock change (a silent prefix used to lock the blind fallback for the whole take). |
 | `annotator-agreement.ts` | Inter-annotator F1 ceiling on vocadito — the honest upper bound for targets (measured: 0.760 at ±100 ms). |
 | `notation-eval.ts` | **Score the NOTATION, in beats.** Quantises the cached notes at the annotated tempo (or a hand-tapped beat grid where a corpus has one) and scores onset-in-beats F1 (phase-locked and scale-searched), note-value accuracy and readability counters on every corpus — a metric that cannot be gamed by refusing to quantise. Also carries the `lag=50/100/200 ms` capture-latency probe rows. Use this for anything rhythm-related. |
 | `ablate.ts` | Stage-by-stage loss decomposition from the raw trajectory to the notated score, **with oracle upper bounds**, so effort goes where headroom actually exists. |

@@ -1,5 +1,7 @@
 # Monophonic melody / singing / humming / whistling transcription — state of the art, July 2026
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Research brief for Mushee/Solkey. Current stack for reference: ffmpeg decode → basic-pitch (22.05 kHz, 2 s hop-aligned windows) **or** CREPE-tiny (16 kHz frame-wise) → Viterbi over the salience map (`providers/pitch-decoder.ts`, Gaussian+uniform mixture transition with `jumpLogFloor`) → run segmentation → RMS-dip re-attack detector (`onset-detector.ts`) → beat-grid quantization. Two Python gRPC TF sidecars behind `ModelBackend`.
 
 Everything below is sourced. Where a number could not be found in a primary source it says **no evidence found** rather than guessing.

@@ -1,5 +1,7 @@
 # Whistling: the corpus question, answered — 2026-08-20
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 **The one-line answer: there is no whistling corpus, and there will not be one. Build it.**
 
 This file exists because "whistling has zero real test data" has been an open item in the

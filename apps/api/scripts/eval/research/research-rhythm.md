@@ -1,5 +1,7 @@
 # Rhythm: tempo estimation, beat tracking, and score-level rhythm quantization
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Research notes for Solkey (sung/hummed/whistled/played → readable sheet music).
 Date: 2026-07-24. Author: research agent.
 

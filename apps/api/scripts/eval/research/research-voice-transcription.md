@@ -1,5 +1,7 @@
 # A voice-specific transcription flow (singing / scatting / humming) — research notes
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 > ## ✅ IMPLEMENTATION STATUS (2026-08-08) — read this before acting on §10
 >
 > **V0 and V1 are built and shipped behind the voice profile.** The durable record of what

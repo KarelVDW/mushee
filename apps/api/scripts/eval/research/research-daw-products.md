@@ -1,5 +1,7 @@
 # Commercial audio→MIDI/notation transcription: how the products actually do it
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Research notes, 2026-07-24. Focus: pre/post-processing and UX affordances (the models are commodity;
 the pre/post-processing and the correction surface are not).
 

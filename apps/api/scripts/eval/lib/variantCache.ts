@@ -36,6 +36,7 @@ import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/pro
 import type { GroundTruth } from '../types';
 import type { AudioFrontEnd } from './dereverb';
 import type { RealDataset } from './realCorpus';
+import { resolverEnvMatches, resolverEnvSignature } from './trackCache';
 
 /** 2: the track gained per-frame pitch candidates (E3/R9) — see trackCache v6. */
 const CACHE_VERSION = 2;
@@ -56,6 +57,8 @@ export interface ScanTelemetry {
 
 interface CacheMeta {
   version: number;
+  /** `resolverEnvSignature()` at write time — see lib/trackCache.ts. */
+  resolverEnv?: string;
   clip: string;
   variant: string;
   frames: number;
@@ -228,6 +231,7 @@ export class VariantTrackCache {
     mkdirSync(dir, { recursive: true });
     const meta: CacheMeta = {
       version: CACHE_VERSION,
+      resolverEnv: resolverEnvSignature(),
       clip,
       variant,
       frames: track.frames,
@@ -292,6 +296,7 @@ export class VariantTrackCache {
       return null;
     }
     if (meta.version !== CACHE_VERSION) return null;
+    if (!resolverEnvMatches(meta.resolverEnv)) return null;
     const raw = readFileSync(binPath);
     const floats = new Float32Array(
       raw.buffer,

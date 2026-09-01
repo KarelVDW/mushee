@@ -67,8 +67,49 @@ import type { RealDataset } from './realCorpus';
 const CACHE_VERSION = 6;
 const DETECT_SR = 16000;
 
+/**
+ * Every env knob the resolver reads that changes the PROFILE it returns. A cache
+ * entry stores the resolved profile, so an entry built under an experiment flag
+ * (the 2026-07 relief study built the whole variant cache with
+ * `RECORDING_REVERB_CONF_RELIEF=0`, and every later reverb sweep inherited a
+ * pre-relief baseline without knowing — see FINDINGS.md, 2026-09-01) must not
+ * masquerade as production. The signature is stored with each entry and a
+ * mismatch is treated as stale. Entries written before the field existed carry
+ * no signature and are accepted only when no knob is set — i.e. as production.
+ */
+const RESOLVER_ENV_KEYS = [
+  'RECORDING_NOISE_ADAPT',
+  'RECORDING_HARMONICITY_GATE',
+  'RECORDING_NOISY_MAX_SNR_DB',
+  'RECORDING_NOISY_MIN_NOISINESS',
+  'RECORDING_NOISY_CONF_BUMP',
+  'RECORDING_NOISY_MIN_FRAMES',
+  'RECORDING_NOISY_DENOISE',
+  'RECORDING_REVERB_CONF_RELIEF',
+  'RECORDING_REVERB_CONF_FLOOR',
+  'RECORDING_REVERB_DIP_DRY',
+  'RECORDING_REVERB_DIP_WET',
+  'RECORDING_REVERB_MIN_MODULATION',
+  'RECORDING_VOICE_DECODE',
+];
+export const DEFAULT_RESOLVER_ENV = 'default';
+
+export function resolverEnvSignature(): string {
+  const set = RESOLVER_ENV_KEYS.filter((k) => (process.env[k] ?? '') !== '').map(
+    (k) => `${k}=${process.env[k]}`,
+  );
+  return set.length ? set.join(';') : DEFAULT_RESOLVER_ENV;
+}
+
+/** True when a cached entry's recorded resolver env matches the current process. */
+export function resolverEnvMatches(recorded: string | undefined): boolean {
+  return (recorded ?? DEFAULT_RESOLVER_ENV) === resolverEnvSignature();
+}
+
 interface CacheMeta {
   version: number;
+  /** `resolverEnvSignature()` at write time; absent = written before the field existed. */
+  resolverEnv?: string;
   clip: string;
   frames: number;
   hopSec: number;
@@ -220,6 +261,7 @@ export class TrackCache {
     const candK = track.candK;
     const meta: CacheMeta = {
       version: CACHE_VERSION,
+      resolverEnv: resolverEnvSignature(),
       clip,
       frames: track.frames,
       hopSec: track.hopSec,
@@ -280,6 +322,7 @@ export class TrackCache {
       return null;
     }
     if (meta.version !== CACHE_VERSION) return null;
+    if (!resolverEnvMatches(meta.resolverEnv)) return null;
     const raw = readFileSync(binPath);
     const floats = new Float32Array(
       raw.buffer,

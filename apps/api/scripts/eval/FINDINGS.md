@@ -1908,10 +1908,13 @@ separate audits; it was a ghost. The reverb oracle gap (+0.14/+0.23) remains rea
 front-end problem (learned enhancement is the untested candidate; WPE and spectral subtraction are
 measured dead).
 
-Lesson for the caches, recorded where it will be read: a `CACHE_VERSION` bump invalidates entries
-*lazily* — anything a sweep never touches stays at the old version, and the next sweep that does
-touch it silently scores a mix. `sweep-reverb.ts` should refuse a run whose pairs mix cache
-versions; until it does, check `meta.version` before quoting an adverse-tier number.
+Lesson for the caches, recorded where it will be read: a cache stores the RESOLVED PROFILE, so it
+also stores whatever env the resolver was run under. The v1 variant cache was deliberately built
+with `RECORDING_REVERB_CONF_RELIEF=0` for the 2026-07 relief study (its header asks for exactly
+that) and never rebuilt; every later reverb sweep silently inherited a pre-relief pipeline as its
+baseline. Both caches now record a signature of the resolver's env knobs in their metadata and
+treat a mismatch as stale (`resolverEnvSignature`, `lib/trackCache.ts`), so an entry built under
+an experiment flag can no longer masquerade as production.
 
 ### Energy-gated dropout fill — built, null, kept off
 
@@ -2007,3 +2010,32 @@ provider ceiling). Over every whistle label the harness holds (129 clips, 3 083 
 3 sit above 4 300 Hz. The p50 / p90 top pitch per clip is 1 865 / 2 637 Hz. `commons-glide`'s
 ~4.4 kHz is a glide peak, not a labelled note. The retraction stands under the new ceiling; no
 `-2 oct` path is warranted (measured 2026-08-20: −0.008 vs −1 oct, no content needing the depth).
+
+### The profile lock, measured through the live pipeline with a silent lead-in (`probe-leadin.ts`)
+
+The change above is invisible to `run-eval` (which resolves over whole clips), so a new probe
+drives the paced production `RecordingPipeline` with 3 s of mic-floor silence prepended to each
+clip, `PROBE_MODE=legacy` (`RECORDING_DETECT_MAX_WAIT_SEC=0 RECORDING_FINAL_REROUTE=0`, the exact
+pre-2026-09 behaviour) vs `new`. Truth is shifted by the lead-in. Two batches:
+
+| corpus (clips) | legacy, no lead-in → with lead-in | new, no lead-in → with lead-in |
+|---|---|---|
+| vocadito (6) | 0.584 → 0.582 | 0.584 → 0.583 |
+| hust-solfege (6) | 0.616 → 0.623 | 0.600 → 0.591 |
+| urmp-flute (4) | 0.763 → 0.773 | 0.763 → 0.787 |
+| whistle-real (6, all ≤ 1.9 kHz) | 0.471 → 0.468 | 0.471 → 0.445 |
+| tinysol-flute (12) | 0.877 → 0.910 | 0.877 → 0.914 |
+| tinysol-oboe (10) | 0.881 → 0.971 | 0.881 → 0.947 |
+| **tinysol-violin (12, notes to E7)** | 0.812 → **0.784** | 0.812 → **0.883** |
+| TinySOL pooled (34) | 0.855 → 0.883 | 0.855 → **0.913** |
+
+Read: (1) on mid-register singing the blind fallback was nearly harmless — `default-wide` plus the
+voice-lead hint is close to the `mid` band, which is why the census never saw it as a loss there;
+(2) where the fallback's 1 900 Hz ceiling bites — violin to E7, and any whistling above G6 — the
+old lock lost the high notes (−0.028) and the new one gains them (+0.072, i.e. +0.099 paired
+against legacy); (3) the deferral fired on every lead-in take (170 deferred passes) and the
+final re-route never had to (0 — pitched audio always arrived inside the 8 s budget), and (4) the
+no-lead-in rows are identical between modes, so the change is inert when a take starts on a
+note. Small n, one lead-in length; the two whistle rows (−0.026 on 6 clips within the ceiling)
+are inside this probe's noise, not a signal. The env kill-switches reproduce the old behaviour
+without a deploy.

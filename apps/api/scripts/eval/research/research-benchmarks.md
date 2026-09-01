@@ -1,5 +1,7 @@
 # Evaluation datasets & benchmark methodology for monophonic → note transcription
 
+> **Status of every proposal in this document — shipped, built-off, discarded, not pursued — is tracked in [`../RESEARCH-STATUS.md`](../RESEARCH-STATUS.md), which also lists where this text is now stale.** This file is kept as the record of the reasoning, not edited to match the code.
+
 Research notes, 2026-07-24. Commercial-SaaS context (EU-based). Primary sources cited inline.
 
 Confidence markers: **[verified]** = read from a primary source this session.
