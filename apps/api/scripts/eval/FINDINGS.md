@@ -1977,8 +1977,16 @@ scorer `run-eval.ts` and the benchmark now share; datasets declare a `material`
 (`lib/realCorpus.ts`; mir-qbsh = humming, avp = vocal-percussion), so the benchmark reports
 singing / humming / whistling / instrument separately and says plainly where no benchmark-grade
 data exists (humming). `Metrics.f1Off` adds mir_eval's COnPOff (offset within max(50 ms, 20 %))
-as the secondary, duration-aware, publication-comparable column. The first recorded runs are in
-`benchmarks/RESULTS.md`.
+as the secondary, duration-aware, publication-comparable column.
+
+**First recorded run** (`benchmarks/results/2026-09-01T23-32-44_2b83e00_baseline-2026-09-01.json`,
+every real corpus, `real` + all adverse variants, 3,258 clip×conditions): overall COnP **0.739** /
+COnPOff 0.464 over 21 benchmark-grade datasets — singing **0.586** (7 datasets, real + reverb tiers
+pooled), instrument **0.815** (14); humming, whistling and vocal percussion have **no benchmark-grade
+data** and are reported as such (context rows: mir-qbsh 0.39, whistle-real 0.63 on draft truth,
+tinysol 0.81–0.93). Per condition: real 0.63, wind 0.65, street 0.64, echoey-room 0.30,
+distant-mic 0.24. Not comparable to the log's earlier clean-only headlines (0.760/0.782 pooled
+`real` over 18 datasets) — compare benchmark runs only with each other.
 
 ### The onset detector measured in isolation, on real human onsets (`bench-onset-detector.ts`)
 

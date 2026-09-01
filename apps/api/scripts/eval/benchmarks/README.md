@@ -99,7 +99,10 @@ Adverse conditions (`echoey-room`, `distant-mic`, `wind-outdoor`,
 `degrade-real.ts` — honest robustness measures, but modelled rooms, not recorded
 ones (measured RIR / noise corpora are cleared but unwired; see CORPORA.md).
 They pool into the headline together with `real`; the per-condition table
-separates them.
+separates them. This is why the benchmark headline (0.739 on the first
+recorded run) sits below the findings log's historical clean-only figures
+(0.760–0.782): those pooled the `real` condition alone over fewer datasets.
+Compare benchmark runs only with each other, through `compare`.
 
 ## Statistics
 
@@ -116,7 +119,7 @@ on both sides.
 - `results/<UTC timestamp>_<sha>_<label>.json` — one per run, committed. Compact:
   provenance, per-material / per-dataset / per-condition aggregates, and one line
   per clip × condition (F1, COnPOff, P, R, COn) — enough to pair against any later
-  run. ~200 KB.
+  run. ~0.5 MB.
 - `RESULTS.md` — generated: the latest run in full, then every run as one history
   row. Never edit by hand.
 - The everyday tuning tools live one level up (`../README.md`); the findings
