@@ -172,6 +172,7 @@ function main(): void {
     id: 'avp',
     label: 'AVP (real amateur vocal percussion, onset-only)',
     kind: 'voice',
+    material: 'vocal-percussion',
     source: 'https://zenodo.org/records/5036529',
     license: 'CC-BY-4.0',
     pitchless: true,

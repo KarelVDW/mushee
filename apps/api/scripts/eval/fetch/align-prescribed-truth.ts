@@ -56,21 +56,54 @@ import {
 } from 'fs';
 import { basename, join, resolve } from 'path';
 
-import { type DraftNote,draftNotes, trackSinusoid } from '../lib/sineTrack';
+import { type DraftNote, draftNotes, trackSinusoid, trackYin } from '../lib/sineTrack';
 import { wavToFloat } from '../lib/wav';
 import type { GroundTruth, TruthNote } from '../types';
 
 const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real');
 const ANNOTATIONS = resolve(__dirname, '../annotations');
 
-/** Whistling lives here; the tracker is given room either side of the profile band. */
-const TRACK = { fftSize: 2048, hopSec: 0.01, minHz: 300, maxHz: 5000, minTonality: 0.3, minLevel: 0.05 };
+function envNum(key: string, fallback: number): number {
+  const v = Number(process.env[key]);
+  return Number.isFinite(v) && process.env[key] !== '' && process.env[key] !== undefined ? v : fallback;
+}
+
+/**
+ * Whistling lives here by default; the tracker is given room either side of the
+ * profile band. `ALIGN_MIN_HZ` / `ALIGN_MAX_HZ` move it — a hummed corpus
+ * (HumTrans) sits at 80–1000 Hz, where the strongest peak is often a HARMONIC
+ * rather than the fundamental, which is what `ALIGN_OCTAVE_INVARIANT` is for.
+ */
+const TRACK = {
+  fftSize: 2048,
+  hopSec: 0.01,
+  minHz: envNum('ALIGN_MIN_HZ', 300),
+  maxHz: envNum('ALIGN_MAX_HZ', 5000),
+  minTonality: envNum('ALIGN_MIN_TONALITY', 0.3),
+  minLevel: 0.05,
+};
 /**
  * Note floor for the drafted sequence. Higher than the whistle-real default
  * (60 ms) because a metronome performance has no notes that short, and the
  * looser floor only invites the aligner to match vibrato wobble as a note.
  */
-const SEGMENT = { minNoteSec: 0.1, maxDropoutSec: 0.06, medianFrames: 5 };
+const SEGMENT = { minNoteSec: envNum('ALIGN_MIN_NOTE_SEC', 0.1), maxDropoutSec: 0.06, medianFrames: 5 };
+/**
+ * DTW pitch cost modulo the octave: a harmonic-rich source (humming) makes the
+ * FFT-peak drafter jump between f0 and 2·f0 mid-note, and a plain semitone
+ * distance would then refuse to match a correctly hummed note. Timing is what
+ * the alignment transfers; pitch identity always comes from the score.
+ */
+const OCTAVE_INVARIANT = process.env.ALIGN_OCTAVE_INVARIANT === '1';
+/**
+ * Which drafter reads the audio: the FFT-peak tracker (whistling — one partial)
+ * or the YIN autocorrelation tracker (`ALIGN_TRACKER=yin`; humming — harmonic-rich,
+ * where the strongest peak is often a harmonic). Both are independent of the
+ * pipeline's CREPE decode, which is the point of drafting truth this way.
+ */
+const TRACKER: 'sine' | 'yin' = process.env.ALIGN_TRACKER === 'yin' ? 'yin' : 'sine';
+const track = (samples: Float32Array, sampleRate: number): ReturnType<typeof trackSinusoid> =>
+  TRACKER === 'yin' ? trackYin(samples, sampleRate, TRACK) : trackSinusoid(samples, sampleRate, TRACK);
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const noteName = (midi: number): string =>
@@ -109,7 +142,10 @@ function detectTransposition(
       .map((f) => midiOf(f.hz as number));
     if (w.length < 3) continue;
     w.sort((x, y) => x - y);
-    diffs.push(w[Math.floor(w.length / 2)] - n.midi);
+    let d = w[Math.floor(w.length / 2)] - n.midi;
+    // Octave-invariant mode: the drafter's harmonic hops are not a key change.
+    if (OCTAVE_INVARIANT) d = ((d % 12) + 18) % 12 - 6;
+    diffs.push(d);
   }
   if (!diffs.length) {
     return { semitones: 0, residualCents: 0, residualP90Cents: 0, samples: 0 };
@@ -143,7 +179,10 @@ function alignSequences(drafted: DraftNote[], prescribed: TruthNote[]): (DraftNo
   const m = prescribed.length;
   if (!n || !m) return prescribed.map(() => null);
 
-  const cost = (i: number, j: number): number => Math.min(6, Math.abs(drafted[i].midi - prescribed[j].midi));
+  const cost = (i: number, j: number): number => {
+    const d = Math.abs(drafted[i].midi - prescribed[j].midi);
+    return Math.min(6, OCTAVE_INVARIANT ? Math.min(d, Math.abs(d - 12), Math.abs(d - 24)) : d);
+  };
   const INF = Number.POSITIVE_INFINITY;
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(INF));
   const from: string[][] = Array.from({ length: n + 1 }, () => new Array<string>(m + 1).fill(''));
@@ -221,7 +260,7 @@ function processDataset(datasetPath: string, outId: string): void {
       readFileSync(join(srcDir, `${clip}.truth.json`), 'utf8'),
     ) as GroundTruth;
     const { samples, sampleRate } = wavToFloat(readFileSync(wav));
-    const frames = trackSinusoid(samples, sampleRate, TRACK);
+    const frames = track(samples, sampleRate);
     const drafted = draftNotes(frames, TRACK.hopSec, SEGMENT);
 
     // Two passes, because the two unknowns are entangled: the transposition is
@@ -295,7 +334,7 @@ function processDataset(datasetPath: string, outId: string): void {
           dataset: outId,
           verifiedBy: null,
           verifiedAt: null,
-          draftedBy: 'fetch/align-prescribed-truth.ts (score identity + audio timing, DTW-aligned)',
+          draftedBy: `fetch/align-prescribed-truth.ts (score identity + audio timing via ${TRACKER === 'yin' ? 'YIN' : 'FFT-peak'} drafter, DTW-aligned)`,
           transpositionSemitones: octave.semitones,
           fitResidualCents: octave.residualCents,
           perNoteResidualP90Cents: octave.residualP90Cents,
@@ -356,7 +395,8 @@ function processDataset(datasetPath: string, outId: string): void {
 function main(): void {
   const arg = process.argv.slice(2).find((a) => a.startsWith('--dataset='));
   const datasetPath = arg ? arg.slice('--dataset='.length) : 'context/whistled-high-register';
-  const outId = `${basename(datasetPath)}-aligned`;
+  const outArg = process.argv.slice(2).find((a) => a.startsWith('--out='));
+  const outId = outArg ? outArg.slice('--out='.length) : `${basename(datasetPath)}-aligned`;
   processDataset(datasetPath, outId);
 }
 

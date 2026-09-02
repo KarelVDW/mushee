@@ -86,7 +86,7 @@ interface BenchResult {
   perScenario: Array<
     Pick<
       EvalReport['perScenario'][number],
-      | 'scenario' | 'material' | 'tier' | 'clips' | 'pooled' | 'noteTruthDerived' | 'pitchless'
+      | 'scenario' | 'material' | 'tier' | 'license' | 'licenceRestricted' | 'clips' | 'pooled' | 'noteTruthDerived' | 'pitchless'
       | 'constructedPerformance' | 'f1' | 'f1Off' | 'chromaF1' | 'precision' | 'recall'
       | 'octaveErrorRate' | 'onsetF1' | 'onsetRecall' | 'repairSecondsPer100'
     > & { seg: { split: number; merged: number; missed: number; spurious: number; refTotal: number } }
@@ -147,6 +147,8 @@ function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
         scenario: s.scenario,
         material: s.material,
         tier: s.tier,
+        license: s.license,
+        licenceRestricted: s.licenceRestricted,
         clips: s.clips,
         pooled: s.pooled,
         noteTruthDerived: s.noteTruthDerived,
@@ -284,23 +286,32 @@ function renderResult(r: BenchResult): string {
   );
 
   lines.push('### By material', '');
+  lines.push(
+    '_Italic_ rows are **provisional**: no benchmark-grade corpus exists for that material, so the row is computed from the context-tier datasets named in it (derived or prescribed truth, or a restricted licence). They track the material over time and never enter the overall headline.',
+    '',
+  );
   lines.push('| material | COnP | COnPOff | precision | recall | repair s/100 | benchmark datasets | context-only (reported, never pooled) |');
   lines.push('|---|---|---|---|---|---|---|---|');
   for (const m of MATERIAL_ORDER) {
     const x = materialOf(r, m);
     if (!x) continue;
-    const gate = x.datasets.length ? `${x.datasets.length} (${x.clips} clip×cond)` : '**none — no benchmark-grade data**';
+    const has = x.datasets.length > 0;
+    const gate = !has
+      ? '**none**'
+      : x.provisional
+        ? `**none — PROVISIONAL row** from ${x.datasets.length} context dataset(s): ${x.datasets.join(', ')} (${x.clips} clip×cond)`
+        : `${x.datasets.length} (${x.clips} clip×cond)`;
+    const f = (v: number, d = 3): string => (!has ? '—' : x.provisional ? `_${fmt(v, d)}_` : d === 3 ? `**${fmt(v)}**` : fmt(v, d));
     lines.push(
-      `| ${m} | ${x.datasets.length ? `**${fmt(x.f1)}**` : '—'} | ${x.datasets.length ? fmt(x.f1Off) : '—'} | ` +
-        `${x.datasets.length ? fmt(x.precision, 2) : '—'} | ${x.datasets.length ? fmt(x.recall, 2) : '—'} | ` +
-        `${x.datasets.length ? x.repairSecondsPer100 : '—'} | ${gate} | ${x.contextDatasets.join(', ') || '—'} |`,
+      `| ${m} | ${f(x.f1)} | ${!has ? '—' : x.provisional ? `_${fmt(x.f1Off)}_` : fmt(x.f1Off)} | ` +
+        `${f(x.precision, 2)} | ${f(x.recall, 2)} | ${has ? x.repairSecondsPer100 : '—'} | ${gate} | ${x.contextDatasets.join(', ') || '—'} |`,
     );
   }
   lines.push('');
 
   lines.push('### By dataset', '');
-  lines.push('| dataset | material | tier | clip×cond | COnP | COnPOff | COn | COn recall | octErr | split / merged / missed / spurious per 100 | repair s/100 | pooled |');
-  lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+  lines.push('| dataset | material | tier | licence | clip×cond | COnP | COnPOff | COn | COn recall | octErr | split / merged / missed / spurious per 100 | repair s/100 | pooled |');
+  lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   const rows = [...r.perScenario].sort(
     (a, b) =>
       MATERIAL_ORDER.indexOf(a.material) - MATERIAL_ORDER.indexOf(b.material) ||
@@ -316,7 +327,7 @@ function renderResult(r: BenchResult): string {
           ? 'no (derived truth)'
           : 'yes';
     lines.push(
-      `| ${s.scenario} | ${s.material} | ${s.tier} | ${s.clips} | ${s.pitchless ? '—' : fmt(s.f1, 2)} | ${s.pitchless ? '—' : fmt(s.f1Off, 2)} | ` +
+      `| ${s.scenario} | ${s.material} | ${s.tier} | ${s.license ?? '—'}${s.licenceRestricted ? ' ⚠ internal eval only' : ''} | ${s.clips} | ${s.pitchless ? '—' : fmt(s.f1, 2)} | ${s.pitchless ? '—' : fmt(s.f1Off, 2)} | ` +
         `${fmt(s.onsetF1, 2)} | ${fmt(s.onsetRecall, 2)} | ${s.pitchless ? '—' : fmt(s.octaveErrorRate, 2)} | ` +
         `${per100(s.seg.split, s.seg.refTotal)} / ${per100(s.seg.merged, s.seg.refTotal)} / ${per100(s.seg.missed, s.seg.refTotal)} / ${per100(s.seg.spurious, s.seg.refTotal)} | ` +
         `${s.repairSecondsPer100} | ${why} |`,
@@ -351,7 +362,8 @@ function renderHistory(results: BenchResult[]): string {
   for (const r of results) {
     const m = (mat: Material): string => {
       const x = materialOf(r, mat);
-      return x && x.datasets.length ? fmt(x.f1) : '—';
+      if (!x || !x.datasets.length) return '—';
+      return x.provisional ? `_${fmt(x.f1)}_` : fmt(x.f1);
     };
     // Vocal percussion has no pitch — its onset-only number lives on the dataset rows.
     const vp = r.perScenario.filter((s) => s.material === 'vocal-percussion');
@@ -362,7 +374,7 @@ function renderHistory(results: BenchResult[]): string {
         `${m('whistling')} | ${m('instrument')} | ${vpOn} | \`results/${r.meta.id}.json\` |`,
     );
   }
-  lines.push('', '`*` = working tree was dirty when the run was recorded.', '');
+  lines.push('', '`*` = working tree was dirty when the run was recorded. _Italic_ = provisional (context-tier truth only).', '');
   return lines.join('\n');
 }
 

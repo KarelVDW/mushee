@@ -334,3 +334,106 @@ export function whistleScreen(samples: Float32Array, sampleRate: number): Whistl
   }
   return { keep: true, reason: 'whistled phrase', ...stats };
 }
+
+/**
+ * YIN-style autocorrelation f0 tracker — the drafter for HARMONIC-RICH sources.
+ *
+ * `trackSinusoid` reads the strongest spectral peak, which is the right
+ * instrument for a whistle (one partial) and the wrong one for a hum, where the
+ * strongest peak is often the 2nd or 3rd harmonic and the three-bin `tonality`
+ * gate rejects most frames. YIN (de Cheveigné & Kawahara 2002: cumulative-mean
+ * normalised difference function, absolute threshold, parabolic refinement)
+ * finds the period of the whole waveform instead. It shares nothing with the
+ * pipeline's CREPE decode, so a truth drafted from it stays independent of the
+ * estimator under test — the same reason `trackSinusoid` exists. Output is in
+ * `SineFrame` shape (`tonality` carries YIN's periodicity, 1 − d′) so
+ * `draftNotes` and the aligner consume either tracker unchanged.
+ */
+export function trackYin(
+  samples: Float32Array,
+  sampleRate: number,
+  opts: SineTrackOptions & { threshold?: number } = {},
+): SineFrame[] {
+  const minHz = opts.minHz ?? 70;
+  const maxHz = opts.maxHz ?? 1000;
+  const hopSec = opts.hopSec ?? 0.01;
+  const threshold = opts.threshold ?? 0.15;
+  const minTonality = opts.minTonality ?? 0.5;
+  const minLevel = opts.minLevel ?? 0.05;
+  const maxLag = Math.ceil(sampleRate / minHz);
+  const minLag = Math.max(2, Math.floor(sampleRate / maxHz));
+  const win = maxLag * 2;
+  const hop = Math.max(1, Math.round(hopSec * sampleRate));
+
+  const frames: SineFrame[] = [];
+  const d = new Float64Array(maxLag + 1);
+  let peakLevel = 0;
+  for (let start = 0; start + win <= samples.length; start += hop) {
+    let energy = 0;
+    for (let i = 0; i < win; i += 1) energy += samples[start + i] * samples[start + i];
+    const level = Math.sqrt(energy / win);
+    if (level > peakLevel) peakLevel = level;
+
+    // Difference function over the first half of the window, for every lag.
+    const half = maxLag;
+    d[0] = 0;
+    let running = 0;
+    let best = -1;
+    let bestVal = Infinity;
+    for (let tau = 1; tau <= maxLag; tau += 1) {
+      let acc = 0;
+      for (let i = 0; i < half; i += 1) {
+        const diff = samples[start + i] - samples[start + i + tau];
+        acc += diff * diff;
+      }
+      d[tau] = acc;
+      running += acc;
+      const cmnd = running > 0 ? (acc * tau) / running : 1;
+      d[tau] = cmnd;
+      if (tau >= minLag) {
+        // First dip under the threshold wins (the fundamental, not a sub-multiple);
+        // otherwise keep the global minimum as a fallback candidate.
+        if (cmnd < threshold) {
+          // walk down to the local minimum
+          let t = tau;
+          while (t + 1 <= maxLag) {
+            let acc2 = 0;
+            for (let i = 0; i < half; i += 1) {
+              const diff = samples[start + i] - samples[start + i + t + 1];
+              acc2 += diff * diff;
+            }
+            const next = ((running + acc2) > 0 ? (acc2 * (t + 1)) / (running + acc2) : 1);
+            if (next >= d[t]) break;
+            running += acc2;
+            d[t + 1] = next;
+            t += 1;
+          }
+          best = t;
+          bestVal = d[t];
+          break;
+        }
+        if (cmnd < bestVal) {
+          bestVal = cmnd;
+          best = tau;
+        }
+      }
+    }
+    let hz: number | undefined;
+    if (best > minLag && best < maxLag) {
+      // Parabolic interpolation around the minimum.
+      const a = d[best - 1];
+      const b = d[best];
+      const c = d[best + 1] || b;
+      const denom = a - 2 * b + c;
+      const shift = denom !== 0 ? (0.5 * (a - c)) / denom : 0;
+      hz = sampleRate / (best + shift);
+    }
+    const periodicity = 1 - Math.min(1, bestVal);
+    frames.push({ timeSec: start / sampleRate, hz, tonality: periodicity, level });
+  }
+  for (const f of frames) {
+    f.level = peakLevel > 0 ? f.level / peakLevel : 0;
+    if (f.tonality < minTonality || f.level < minLevel) f.hz = undefined;
+  }
+  return frames;
+}

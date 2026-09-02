@@ -134,6 +134,8 @@ export interface ScenarioAggregate {
   kind: string;
   material: Material;
   tier: 'benchmark' | 'context' | 'synthetic';
+  license?: string;
+  licenceRestricted: boolean;
   clips: number;
   /** False = reported for information only, kept out of the aggregates. */
   pooled: boolean;
@@ -175,7 +177,15 @@ export interface ConditionAggregate {
  */
 export interface MaterialAggregate {
   material: Material;
-  /** Pooled (benchmark-grade) datasets behind the number. */
+  /**
+   * True when no benchmark-grade dataset exists for this material and the
+   * numbers below come from the context-tier datasets instead (derived or
+   * prescribed truth, restricted licences). A PROVISIONAL row: it lets a
+   * material be tracked over time, and it must never gate a decision or enter
+   * the overall headline. Which datasets it rests on is listed in `datasets`.
+   */
+  provisional: boolean;
+  /** Datasets behind the number (benchmark-grade, or the provisional set). */
   datasets: string[];
   clips: number;
   f1: number;
@@ -221,6 +231,8 @@ type EvalScenario = Scenario & {
   dir?: string;
   material: Material;
   tier: ScenarioAggregate['tier'];
+  license?: string;
+  licenceRestricted: boolean;
 };
 
 function buildProvider(name: string): PitchProvider {
@@ -251,6 +263,8 @@ function realScenarios(datasets: RealDataset[]): EvalScenario[] {
     dir: d.dir,
     material: d.material,
     tier: d.tier,
+    license: d.license,
+    licenceRestricted: d.licenceRestricted ?? false,
   }));
 }
 
@@ -260,6 +274,7 @@ function syntheticScenarios(): EvalScenario[] {
     material:
       s.kind === 'whistle' ? 'whistling' : s.kind === 'instrument' ? 'instrument' : 'singing',
     tier: 'synthetic',
+    licenceRestricted: false,
   }));
 }
 
@@ -433,6 +448,8 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
       kind: s.kind,
       material: s.material,
       tier: s.tier,
+      license: s.license,
+      licenceRestricted: s.licenceRestricted,
       clips: rs.length,
       pooled: pooled(s.id),
       noteTruthDerived: derivedNoteTruth.has(s.id),
@@ -483,10 +500,15 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
   const materials = [...new Set(perScenario.map((s) => s.material))].sort();
   const perMaterial: MaterialAggregate[] = materials.map((material) => {
     const ds = perScenario.filter((s) => s.material === material && s.clips > 0);
-    const gated = ds.filter((s) => s.pooled);
+    let gated = ds.filter((s) => s.pooled);
+    // No benchmark-grade dataset at all (humming, whistling today): fall back to
+    // the context datasets that DO carry pitched truth, and say so.
+    const provisional = gated.length === 0;
+    if (provisional) gated = ds.filter((s) => !s.pitchless);
     const gatedClips = results.filter((r) => gated.some((s) => s.scenario === r.scenario));
     return {
       material,
+      provisional,
       datasets: gated.map((s) => s.scenario),
       clips: gatedClips.length,
       f1: mean(gated.map((s) => s.f1)),
@@ -494,7 +516,7 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
       precision: mean(gated.map((s) => s.precision)),
       recall: mean(gated.map((s) => s.recall)),
       repairSecondsPer100: repairSecondsPer100(sumSegErrors(gatedClips)),
-      contextDatasets: ds.filter((s) => !s.pooled).map((s) => s.scenario),
+      contextDatasets: ds.filter((s) => !s.pooled && !gated.includes(s)).map((s) => s.scenario),
     };
   });
 

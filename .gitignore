@@ -50,3 +50,8 @@ apps/api/scripts/fixtures/eval-cache-variant/
 apps/inference-*/inference_pb2.py
 apps/inference-*/inference_pb2_grpc.py
 apps/api/scripts/eval/.tmp-contour/
+# Machine-drafted label files for corpora whose truth is regenerated deterministically
+# by fetcher + aligner (fetch/fetch-humtrans.ts → fetch/align-prescribed-truth.ts).
+# Hand-corrected labels are the only artefact worth committing; commit a clip's TSV
+# once a human has verified it (fetch/import-note-labels.ts --verified-by).
+apps/api/scripts/eval/annotations/humtrans-aligned/

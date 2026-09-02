@@ -177,10 +177,14 @@ provenance check. The single largest accuracy lever left; a team decision.
 and promotes 117 clips to benchmark grade. Nothing else in whistling can move
 until this happens.
 
-**C. A real humming corpus.** Record beta users humming freely (not to a click)
-and annotate; the consent language is already in the terms and `apps/eval`
-materialises in-house corpora. The only way the humming benchmark row ever
-holds a number.
+**C. A real humming corpus.** Partly addressed 2026-09-01: under the
+defensible-use licence standard, HumTrans (CC BY-NC, the only hummed audio with
+note truth anywhere) is fetched into the context tier and its reference-MIDI
+labels are aligned to the audio with a YIN drafter, giving the benchmark a
+*provisional* humming row. A benchmark-grade row still needs permissively
+licensed, human-verified humming: record beta users humming freely (not to a
+click) and annotate; the consent language is already in the terms and
+`apps/eval` materialises in-house corpora.
 
 **D. Annotate SingBAP's phone channel** (CC-BY-4.0, no onsets; interval
 patterns published so only onsets need marking). The only route to amateur

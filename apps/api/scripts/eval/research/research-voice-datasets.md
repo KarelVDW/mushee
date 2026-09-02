@@ -962,6 +962,10 @@ queries**. We closed ISMIR2014 as NC-barred. The *audio* under two thirds of it 
 in an open repository the whole time. Molina's annotations remain barred — but the recordings do
 not have to be.
 
+> **Re-read 2026-09-01:** the face-value rule says the dataset's own record governs, and
+> Zenodo 1290712 IS the dataset's own record (UPF's deposit, `cc-by-4.0`). Adoptable. What it
+> lacks is note truth — it is an annotatable-audio lead for the humming gap, not a fetch.
+
 **⚠️ Licence conflict, unresolved, do not use until settled.** Zenodo record 1290712 reports
 `"license": {"id": "cc-by-4.0"}`, `access_right: open`. But an earlier pass found UPF's own
 project page stating the set is for *"internal non-commercial use only"* and *"may not
@@ -1242,6 +1246,13 @@ On this reading it is the correct reading of the licence. **Stop looking for a w
 NC.** The productive question is only ever whether a *published commercial route* exists.
 
 ### 4.1 HumTrans — BARRED twice over; delete the Tencent ask from §11
+
+> **Superseded 2026-09-01.** Under the product owner's defensible-use standard (internal
+> evaluation, nothing redistributed) HumTrans is fetched into the CONTEXT tier as
+> `licenceRestricted` (`fetch/fetch-humtrans.ts`, test split only), and its "not aligned"
+> labels are repaired the way our own dogfood truth was — identity from the reference MIDI,
+> onsets from the audio (`fetch/align-prescribed-truth.ts`). It drives the benchmark's
+> provisional humming row and never pools. The analysis below stands as the record.
 
 - Licence today, verbatim from the card front-matter at
   [`dadinghh2/HumTrans`](https://huggingface.co/datasets/dadinghh2/HumTrans/raw/main/README.md):

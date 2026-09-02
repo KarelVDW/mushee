@@ -66,11 +66,24 @@ Special-axis benchmarks (trusted truth on an axis other than note-F1):
 | `jacrc-students` | 175 / 5,175 syllable onsets | Onset recall on melismatic amateur voices | CC-BY-4.0 | `pitchless`; read RECALL, not F1 (syllable onsets ⊂ note onsets) |
 | `dagstuhl-choir` | 102 / 20 beat grids | **The harness's only real tempo on singing** — hand-tapped, second-annotator-reviewed beat grids for notation-eval.ts | CC-BY-4.0 | Its NOTE truth is DTW score alignment → `noteTruthDerived`, never pooled; mic bleed |
 
+## Licence standard (2026-09-01)
+
+The product owner reset the bar: **a dataset is usable when our use of it is
+defensible — internal evaluation, nothing redistributed, nothing of it entering
+the product.** The dataset's own published record still governs at face value
+(no upstream archaeology), and a permissive licence (CC-BY / CC-BY-SA / CC0 /
+MIT / Apache) is still what the **benchmark tier** requires. What changed is
+the context tier: NC and research-only corpora may now be fetched and reported
+there, flagged `licenceRestricted: true` in `dataset.json`, shown with their
+licence wherever their numbers appear, never pooled, never gating, and never
+part of anything we ship. Delete the directory if the decision changes.
+
 ## Context corpora (`eval-real/context/`)
 
 | Dataset | Why it cannot gate | What it is for |
 |---|---|---|
-| `mir-qbsh` (50 / 1,082) | Note events are OUR derivation of self-labelled frame pitch ("no guarantee for their correctness"); licence is academic/research-only, which also bars product-relevant claims | Low-fi (8 kHz/8-bit) realism checks; f0/melody metrics only |
+| `humtrans` (769 / ~13k, the corpus's own test split) + `humtrans-aligned` | **CC BY-NC 4.0 → `licenceRestricted`**; truth is the reference MIDI the hummer followed (exact identity, nominal timing) — the aligned sibling takes onsets from the audio via `fetch/align-prescribed-truth.ts`, so both stay `noteTruthDerived` | **The only real humming with note truth anywhere.** 10 hummers, 44.1 kHz. Drives the benchmark's *provisional* humming row |
+| `mir-qbsh` (50 / 1,082) | Note events are OUR derivation of self-labelled frame pitch ("no guarantee for their correctness"); licence is academic/research-only → `licenceRestricted` | Low-fi (8 kHz/8-bit) hummed/sung realism checks; f0/melody metrics only |
 | `tinysol-*` (6 instruments, 64 / 512) | `constructedPerformance`: real Ircam tone, but WE spliced the melodies — no human phrasing, truth exact by construction | The only real audio in the `very-high` band (measured 0.654 vs 0.924 high); register questions |
 | `whistle-real` (117 / 2,777) | Draft labels from `lib/sineTrack.ts`, zero clips human-verified → `noteTruthDerived` | The only real whistling we may use; **promotes to benchmark/ via `fetch/import-note-labels.ts --verified-by` once reviewed** |
 | `whistle-vintage` (6 / 249) | Same unverified drafts; accompanied 78-rpm sides, adverse by nature | Real whistling + real accompaniment + real surface noise; never pool with whistle-real |
@@ -87,20 +100,27 @@ each gap below means "record and annotate our own" or "build a harness
 capability", not "find another dataset".
 
 **Material with no benchmark-tier data at all:**
-- **Humming** — a primary product input with **no real hummed corpus anywhere that
-  carries usable truth**: HumTrans (NC, mis-aligned labels), CHAD (NC, retrieval-only),
-  MLEnd Hums & Whistles (unlicensed), MTG-QBH (Zenodo says CC-BY-4.0, UPF's own page
-  says non-commercial — unresolved), mir-qbsh (derived truth, research licence →
-  context). The benchmark's humming row therefore reads "no benchmark-grade data"
-  rather than borrowing a singing number; the synthetic `voice-hum` scenario is the
-  only in-harness humming signal. Closing this = record beta users humming *freely*
-  (not to a click) and annotate (`apps/eval` materialises in-house corpora; consent
-  language is already in the terms).
+- **Humming** — a primary product input with **no benchmark-grade corpus**: no hummed
+  corpus anywhere carries human note truth under a permissive licence. Since 2026-09-01
+  the benchmark shows a *provisional* humming row from the context tier — `humtrans`
+  (CC BY-NC, reference-MIDI truth repaired by audio alignment; the only hummed audio
+  with note truth in existence) and `mir-qbsh`. Still barred: CHAD (NC, retrieval-only,
+  no truth), MLEnd Hums & Whistles (no licence stated, Kaggle login required, and no
+  reference melodies — the eight songs are in-copyright). **MTG-QBH** (118 hummed/sung
+  queries, 17 amateurs, laptop mic) is CC-BY-4.0 on its own Zenodo record and is now
+  ADOPTABLE under the face-value rule — but it has no note truth, so it is an
+  annotatable-audio lead, not a fetch. Closing the gap for real = record beta users
+  humming *freely* (not to a click) and annotate (`apps/eval` materialises in-house
+  corpora; consent language is already in the terms).
 - **Whistling** — the flagship gap. All real whistling sits in `context/` on
-  unverified draft labels. Two exits, both ours: (1) verify the drafted labels
-  (`annotations/whistle-*`, then `fetch/import-note-labels.ts --verified-by=<name>`
-  promotes automatically); (2) volume — record our own per the capture protocol
-  in research/research-whistle-corpus.md §6. Nothing else exists to acquire.
+  unverified draft labels; the benchmark shows a *provisional* whistling row from
+  them. Re-searched 2026-09-01 under the looser licence bar (research-whistle-corpus.md
+  §8): **no whistling corpus with verified note labels exists anywhere**, so there is
+  nothing to acquire. Two exits, both ours: (1) verify the drafted labels —
+  `annotations/whistle-real/VERIFY-WORKLIST.md` stages 30 stratified clips plus a
+  pipeline-disagreement triage section (`fetch/triage-verify-worklist.ts`), then
+  `fetch/import-note-labels.ts --verified-by=<name>` promotes automatically; (2) volume —
+  record our own per the capture protocol in research/research-whistle-corpus.md §6.
 - **The `very-high` band / piccolo** — only TinySOL splices (context). A real
   *performance* above ~700 Hz is unrepresented; piccolo has no permissive
   corpus at all.

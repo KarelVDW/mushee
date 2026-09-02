@@ -301,6 +301,10 @@ function main(): void {
     instrumentId: 'voice-lead',
     source: 'http://mirlab.org/dataSet/public/MIR-QBSH.zip',
     license: 'academic/research',
+    // Research-only terms: usable for internal evaluation under the 2026-09-01
+    // defensible-use standard, never pooled, never redistributed.
+    licenceRestricted: true,
+    material: 'humming',
     // The corpus has no note events; ours come out of the .pv frame pitch by
     // the derivation described above — which is the same algorithm family as
     // the shipping segmenter, so agreeing with these labels partly means

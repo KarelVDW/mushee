@@ -59,6 +59,16 @@ export interface RealDataset {
   kind: SourceKind;
   material: Material;
   instrumentId?: string;
+  /** Licence as recorded by the fetcher (e.g. `CC-BY-4.0`, `CC-BY-NC-4.0`). */
+  license?: string;
+  /**
+   * The licence permits our internal evaluation but not redistribution or
+   * product incorporation (NC / research-only terms). Adopted under the
+   * product owner's 2026-09-01 standard — "defensible use, we redistribute
+   * nothing" — and shown as such wherever the dataset's numbers appear. Never a
+   * benchmark-tier dataset: numbers from it stay context-only.
+   */
+  licenceRestricted?: boolean;
   /** Which tier directory the dataset lives in — see the module doc above. */
   tier: CorpusTier;
   /**
@@ -138,6 +148,8 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
     kind,
     material: m.material ?? materialFromKind(kind),
     instrumentId: m.instrumentId,
+    license: m.license,
+    licenceRestricted: m.licenceRestricted ?? false,
     // Legacy flat layout: infer the tier from the flags that were always the
     // pooling mechanism, so an un-migrated checkout behaves identically.
     tier: tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),

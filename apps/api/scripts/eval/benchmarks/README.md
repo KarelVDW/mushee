@@ -78,10 +78,15 @@ own precision/recall on those 9.8k human onsets (≈0.65 F1 at ±50 ms) is a
 component benchmark, measured by `../bench-onset-detector.ts`.
 
 Materials come from each corpus's `dataset.json` (`material`), falling back to
-its `kind`. **Humming** currently has no benchmark-grade corpus: the only hummed
-audio (`mir-qbsh`) is context-only (derived truth, research licence), so the
-humming row reads "no benchmark-grade data" honestly rather than borrowing a
-singing number. The gap register in `../CORPORA.md` tracks what would close it.
+its `kind`. A material with **no benchmark-grade corpus** (humming and whistling
+today) gets a **provisional row**, in italics: computed from the context-tier
+datasets that carry pitched truth (derived, prescribed, or under a restricted
+licence), listed in the row. It tracks the material across runs and never
+enters the overall headline or gates a decision. Datasets whose licence permits
+only our internal evaluation (`licenceRestricted`, e.g. HumTrans CC BY-NC) are
+marked "⚠ internal eval only" in the dataset table — see `../CORPORA.md`,
+"Licence standard". The gap register there tracks what would turn each
+provisional row into a real one.
 
 ## Which corpora count
 

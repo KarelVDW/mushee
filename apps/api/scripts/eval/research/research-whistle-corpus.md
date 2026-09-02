@@ -534,6 +534,17 @@ set exists, not before.
 
 ## 8. Search log — queries already run (do not repeat)
 
+**2026-09-01 re-sweep (looser licence bar — "defensible use", NC allowed in the context tier):**
+web search for human-whistling melody datasets with pitch/onset annotation 2025–2026; HuggingFace
+`api/datasets?search=whistl` (12 hits: dolphins, referees, tin-whistle samples, a whistleblower
+corpus — nothing human-melodic); Zenodo `q=whistling` (API rate-limited, retried — no new human
+whistling record since the August sweep); MLEnd Hums and Whistles re-checked (still no licence
+statement anywhere, Kaggle login required to download, and no reference melodies for its eight
+in-copyright songs — so even under the looser bar there is no truth to align to). **Verdict
+unchanged: no whistling corpus with verified note labels exists.** The only route to a
+benchmark-grade whistling row is verifying our own drafts (`annotations/whistle-real/VERIFY-WORKLIST.md`,
+now with a pipeline-disagreement triage section from `fetch/triage-verify-worklist.ts`).
+
 Zenodo API (`type=dataset`): *whistled melody dataset*, *whistling recordings dataset audio*,
 *query by whistling*, *vocal imitation set*, *VocalSketch*, *dEchorate*, *Arni*, *BUT
 ReverbDB*. Wikimedia Commons API: File-namespace audio search for *whistling* (20,369 keyword

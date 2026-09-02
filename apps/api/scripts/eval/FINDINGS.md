@@ -2047,3 +2047,65 @@ no-lead-in rows are identical between modes, so the change is inert when a take 
 note. Small n, one lead-in length; the two whistle rows (−0.026 on 6 clips within the ceiling)
 are inside this probe's noise, not a signal. The env kill-switches reproduce the old behaviour
 without a deploy.
+
+---
+
+## Findings log (2026-09-02: completing the benchmark material groups — humming, whistling)
+
+Asked for: verified whistling data and any humming data, under a looser licence bar
+("defensible use — we redistribute nothing"). The standard is written up in `CORPORA.md`
+("Licence standard"); the harness expresses it as `licenceRestricted` on `dataset.json`, a
+flag the benchmark shows beside every number and that keeps such corpora out of the
+benchmark tier for good.
+
+### Whistling: still nothing verified exists — the human step is now targeted
+
+Re-swept HuggingFace, Zenodo and the web, and re-checked MLEnd Hums and Whistles (6,000
+hums and whistles, 235 people): still no licence stated anywhere, download behind a Kaggle
+login we do not hold, and no reference melodies for its eight in-copyright songs — so even
+with NC now acceptable there is no truth to align to. **No whistling corpus with verified
+note labels exists**; the only route stays verifying our own 117 clips.
+`fetch/triage-verify-worklist.ts` now adds a fourth section to
+`annotations/whistle-real/VERIFY-WORKLIST.md`: the ten clips where the shipping pipeline and
+the draft disagree most (COnP 0.00–0.38 in the baseline run) — a corrected label there moves a
+number whichever side was wrong. The benchmark shows whistling as a *provisional* row from
+the draft-truth corpora until that pass happens.
+
+### Humming: HumTrans adopted as restricted context, and its labels repaired
+
+HumTrans (Liu et al., ICASSP 2024; `dadinghh2/HumTrans`, CC BY-NC 4.0) is the only hummed
+audio in existence with note truth — 10 hummers, 500 melodies, 56 h, each segment paired with
+the reference MIDI the hummer followed. Two things had kept it out: NC, and labels that are
+the *reference's* timing, not the performance's (Dynamic HumTrans, arXiv 2410.05455 §1.2;
+four SOTA transcribers score F1 2.7–6.7 against them). The first is now a context-tier
+`licenceRestricted` matter; the second is exactly the shape `fetch/align-prescribed-truth.ts`
+was built to repair for our own dogfood whistling — identity from the score, onsets from the
+audio.
+
+`fetch/fetch-humtrans.ts` pulls the corpus's own **test split (769 segments)** out of the
+14.7 GB archive by byte range (`lib/remoteZip.ts` against the signed CDN URL; ~0.9 GB
+fetched), writes the reference-MIDI truth as `context/humtrans`, and the aligner produces
+`context/humtrans-aligned`.
+
+**The FFT-peak drafter is the wrong tool for a hum.** With `lib/sineTrack.ts` (built for
+one-partial whistling) the alignment on the first 154 clips read transposition −1…−3 st on
+half the clips and per-note residual p90 ≈ 300 ¢: the strongest spectral peak in a hum is
+usually a harmonic, and the three-bin tonality gate throws most frames away. An independent
+CREPE read of three clips showed the hummers at the reference key (per-note Δ median 0.0 st,
+spread ±0.3–0.45 st), so the drafter, not the singers, was off. `lib/sineTrack.ts` gained
+`trackYin` — a YIN cumulative-mean-normalised-difference tracker with parabolic refinement,
+still nothing in common with the pipeline's CREPE decode — and the aligner a
+`ALIGN_TRACKER=yin` switch plus an octave-invariant DTW cost (`ALIGN_OCTAVE_INVARIANT`).
+Over the full 769 clips: transposition **0 st on 663**, ±1 on 93, ±2 on 6; key-fit
+residual median −7 ¢ (p90 25 ¢); per-note residual p90 median 71 ¢ — amateur intonation,
+consistent with the CREPE read; **18,903 of 19,955 notes aligned (94.7 %)**; runtime 1 s per
+clip. The unaligned 5 % are notes the hummer skipped or the drafter missed; they are dropped
+from the aligned truth rather than kept at reference timing.
+
+Both datasets stay `noteTruthDerived` (prescribed identity, drafted timing) and in `context/`;
+the aligned one drives the benchmark's **provisional humming row**. `mir-qbsh` is now flagged
+`licenceRestricted` too (research-only terms). MTG-QBH's Zenodo record is CC-BY-4.0 and the
+face-value rule makes it adoptable — but it carries no note truth, so it is recorded as an
+annotatable-audio lead, not fetched.
+
+Benchmark numbers for the new rows: see the next entry / `benchmarks/RESULTS.md`.

@@ -84,3 +84,110 @@ export function melodyToMidi(
   ];
   return Buffer.from([...header, ...trackHeader, ...events]);
 }
+
+/** One note read back out of a Standard MIDI File, in seconds. */
+export interface MidiNote {
+  onsetSec: number;
+  durSec: number;
+  midi: number;
+}
+
+/**
+ * Minimal SMF reader (formats 0/1): note-on/off pairs from every track, tempo
+ * map honoured, in seconds. Used to turn a corpus's reference MIDI (HumTrans)
+ * into a prescribed melody; nothing more than that is parsed.
+ */
+export function parseMidiNotes(buf: Buffer): { notes: MidiNote[]; bpm: number } {
+  if (buf.toString('latin1', 0, 4) !== 'MThd') throw new Error('not a MIDI file');
+  const division = buf.readUInt16BE(12);
+  if (division & 0x8000) throw new Error('SMPTE time division not supported');
+  const nTracks = buf.readUInt16BE(10);
+  let pos = 8 + buf.readUInt32BE(4);
+
+  const readVlq = (): number => {
+    let v = 0;
+    for (;;) {
+      const c = buf[pos];
+      pos += 1;
+      v = (v << 7) | (c & 0x7f);
+      if (!(c & 0x80)) return v;
+    }
+  };
+
+  // Absolute-tick events from every track, merged, then converted with the tempo map.
+  const tempoChanges: { tick: number; usPerQuarter: number }[] = [];
+  const events: { tick: number; on: boolean; midi: number }[] = [];
+  for (let t = 0; t < nTracks && pos + 8 <= buf.length; t += 1) {
+    if (buf.toString('latin1', pos, pos + 4) !== 'MTrk') throw new Error('bad track header');
+    const len = buf.readUInt32BE(pos + 4);
+    pos += 8;
+    const end = pos + len;
+    let tick = 0;
+    let running = 0;
+    while (pos < end) {
+      tick += readVlq();
+      let status = buf[pos];
+      if (status & 0x80) {
+        pos += 1;
+        running = status;
+      } else {
+        status = running;
+      }
+      const type = status & 0xf0;
+      if (status === 0xff) {
+        const metaType = buf[pos];
+        pos += 1;
+        const l = readVlq();
+        if (metaType === 0x51 && l === 3) {
+          tempoChanges.push({ tick, usPerQuarter: buf.readUIntBE(pos, 3) });
+        }
+        pos += l;
+      } else if (status === 0xf0 || status === 0xf7) {
+        pos += readVlq();
+      } else if (type === 0x90 || type === 0x80) {
+        const midi = buf[pos];
+        const vel = buf[pos + 1];
+        pos += 2;
+        events.push({ tick, on: type === 0x90 && vel > 0, midi });
+      } else if (type === 0xa0 || type === 0xb0 || type === 0xe0) {
+        pos += 2;
+      } else if (type === 0xc0 || type === 0xd0) {
+        pos += 1;
+      } else {
+        throw new Error(`unexpected MIDI status 0x${status.toString(16)}`);
+      }
+    }
+    pos = end;
+  }
+
+  tempoChanges.sort((a, b) => a.tick - b.tick);
+  if (!tempoChanges.length || tempoChanges[0].tick > 0) {
+    tempoChanges.unshift({ tick: 0, usPerQuarter: 500000 });
+  }
+  const secondsAt = (tick: number): number => {
+    let sec = 0;
+    for (let i = 0; i < tempoChanges.length; i += 1) {
+      const from = tempoChanges[i].tick;
+      const to = i + 1 < tempoChanges.length ? Math.min(tick, tempoChanges[i + 1].tick) : tick;
+      if (tick <= from) break;
+      sec += ((to - from) / division) * (tempoChanges[i].usPerQuarter / 1e6);
+    }
+    return sec;
+  };
+
+  events.sort((a, b) => a.tick - b.tick || Number(a.on) - Number(b.on));
+  const open = new Map<number, number>();
+  const notes: MidiNote[] = [];
+  for (const e of events) {
+    if (e.on) {
+      open.set(e.midi, e.tick);
+    } else if (open.has(e.midi)) {
+      const start = open.get(e.midi)!;
+      open.delete(e.midi);
+      const onsetSec = secondsAt(start);
+      notes.push({ onsetSec, durSec: Math.max(0.01, secondsAt(e.tick) - onsetSec), midi: e.midi });
+    }
+  }
+  notes.sort((a, b) => a.onsetSec - b.onsetSec);
+  return { notes, bpm: Math.round(60e6 / tempoChanges[0].usPerQuarter) };
+}

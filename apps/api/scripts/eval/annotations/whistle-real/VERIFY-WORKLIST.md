@@ -43,3 +43,20 @@ Budget ~2–4 min per 10 s clip; this subset ≈ 40–60 min.
 - [ ] `freesound-533057` (high, 19 draft notes) — random. "Whistling.wav" — https://freesound.org/people/santiagogra/sounds/533057/
 - [ ] `freesound-799580` (default-wide, 7 draft notes) — random. "Whistle 2" — https://freesound.org/people/randbsoundbites/sounds/799580/
 - [ ] `freesound-624876` (very-high, 9 draft notes) — random. "Whistle.wav" — https://freesound.org/people/freeloader117/sounds/624876/
+
+<!-- triage:begin -->
+## 4. Lowest pipeline agreement (10) — where a verified label changes the most
+
+Ranked by per-clip COnP in benchmark run `2026-09-01T23-32-44_2b83e00_baseline-2026-09-01` (regenerate with `fetch/triage-verify-worklist.ts`). A low score here is EITHER a wrong draft or a real pipeline failure; verifying these clips settles which, and either outcome moves a number.
+
+- [ ] `commons-human` — COnP 0.00 (P 0.00 / R 0.00), 3 draft notes
+- [ ] `freesound-494517` — COnP 0.22 (P 1.00 / R 0.13), 8 draft notes
+- [ ] `freesound-497892` — COnP 0.22 (P 0.19 / R 0.28), 46 draft notes
+- [ ] `freesound-523207` — COnP 0.25 (P 0.33 / R 0.20), 5 draft notes
+- [ ] `freesound-233569` — COnP 0.32 (P 0.19 / R 1.00), 4 draft notes
+- [ ] `freesound-499702` — COnP 0.33 (P 0.26 / R 0.45), 29 draft notes
+- [ ] `freesound-558265` — COnP 0.33 (P 0.20 / R 1.00), 4 draft notes
+- [ ] `freesound-754956` — COnP 0.35 (P 0.29 / R 0.44), 9 draft notes
+- [ ] `freesound-795020` — COnP 0.36 (P 0.40 / R 0.33), 6 draft notes
+- [ ] `freesound-74388` — COnP 0.38 (P 0.75 / R 0.25), 12 draft notes
+<!-- triage:end -->
