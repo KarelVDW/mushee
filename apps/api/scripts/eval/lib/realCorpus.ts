@@ -69,6 +69,14 @@ export interface RealDataset {
    * benchmark-tier dataset: numbers from it stay context-only.
    */
   licenceRestricted?: boolean;
+  /**
+   * `<tier>/<id>` of the dataset this one was derived from by
+   * `fetch/align-prescribed-truth.ts`. The source keeps the score's timing as
+   * its truth (known-wrong on purpose — it exists to be repaired), so wherever a
+   * derived sibling is present the source must not stand in for the material's
+   * number (the benchmark's provisional rows skip it).
+   */
+  derivedFrom?: string;
   /** Which tier directory the dataset lives in — see the module doc above. */
   tier: CorpusTier;
   /**
@@ -150,6 +158,7 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
     instrumentId: m.instrumentId,
     license: m.license,
     licenceRestricted: m.licenceRestricted ?? false,
+    derivedFrom: m.derivedFrom,
     // Legacy flat layout: infer the tier from the flags that were always the
     // pooling mechanism, so an un-migrated checkout behaves identically.
     tier: tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),

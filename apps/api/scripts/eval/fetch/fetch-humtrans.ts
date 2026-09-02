@@ -22,8 +22,12 @@
  * the prescribed truth as `humtrans` (context, `noteTruthDerived`) and the
  * aligned sibling is produced by
  *
- *   ALIGN_MIN_HZ=70 ALIGN_MAX_HZ=1200 ALIGN_OCTAVE_INVARIANT=1 \
+ *   ALIGN_TRACKER=yin ALIGN_MIN_HZ=70 ALIGN_MAX_HZ=1000 ALIGN_MIN_TONALITY=0.5 \
  *     tsx scripts/eval/fetch/align-prescribed-truth.ts --dataset=context/humtrans --out=humtrans-aligned
+ *
+ * (YIN, not the FFT-peak drafter: a hum's strongest partial is usually a harmonic.
+ * Octave detection stays ON — four of the five male hummers hum the reference an
+ * octave down, and the aligned truth must carry the octave they actually sang.)
  *
  * Subset: the corpus's own TEST split (769 segments) by default — nobody's
  * tuning set, and the half its own baselines are reported on. The 14.7 GB

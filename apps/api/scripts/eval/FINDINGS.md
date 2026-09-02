@@ -2109,3 +2109,48 @@ face-value rule makes it adoptable — but it carries no note truth, so it is re
 annotatable-audio lead, not fetched.
 
 Benchmark numbers for the new rows: see the next entry / `benchmarks/RESULTS.md`.
+
+**Octave, not folded.** The first aligned pass folded octaves in the key fit as well as the DTW
+cost (`ALIGN_OCTAVE_INVARIANT=1`, needed for the FFT drafter's harmonic hops). Scored, the
+pipeline then read a **0.21 octave-error rate** on `humtrans-aligned` — which was the truth's
+error, not the pipeline's: re-aligned with octave detection on, the per-hummer transpositions
+are **0 st for every female hummer (F01–F05) and −12/−13 st for four of the five men** (M01,
+M02, M04, M05; M03 hums at pitch). The reference melodies sit in a register the men take down
+an octave, and the aligned truth now carries the octave they sang. With YIN reading the
+fundamental, folding is unnecessary and wrong for humming; it stays available for the FFT
+drafter. Aligned notes: 18,853 / 19,955.
+
+### The provisional rows, measured (`benchmarks/results/2026-09-02T07-08-45_875820d_humming-whistling-provisional.json`)
+
+Quick benchmark (`real` condition only, every corpus):
+
+| material | row | COnP | COnPOff | P / R | repair s/100 | rests on |
+|---|---|---|---|---|---|---|
+| humming | **provisional** | **0.517** | 0.172 | 0.59 / 0.48 | 286 | `humtrans-aligned` 0.49 (769 clips, 13.3k matched notes), `mir-qbsh` 0.55 |
+| whistling | **provisional** | **0.365** | 0.159 | 0.37 / 0.41 | 3572 | `whistle-real` 0.63, `whistle-vintage` 0.02, `whistled-high-register-aligned` 0.45 |
+| singing | benchmark | 0.639 | 0.311 | 0.63 / 0.66 | 686 | 7 datasets |
+| instrument | benchmark | 0.829 | 0.572 | 0.80 / 0.87 | 484 | 14 datasets |
+
+Three readings from the humming row, which did not exist yesterday:
+
+- **The alignment is what makes the corpus usable at all.** Against the reference-MIDI timing
+  (`humtrans`) the pipeline scores 0.07 — onset bias +152 ms mean / +174 ms median, i.e. the
+  labels are simply in the wrong place, exactly as Dynamic HumTrans reported. Against the aligned
+  truth: 0.49, octErr 0.00, onset bias +26 ms / +32 ms median, `missed` 1 per 100.
+- **What is wrong on real amateur humming is pitch naming, not boundaries**: `pWrong` 13 per 100,
+  `clean` 53 %, splits 6, merges 4, spurious 8; onset-class recall re-onset 0.42 / transition
+  0.56 / silence-onset 0.74 (n = 16k). The pattern matches the singing corpora (pWrong is the
+  largest bucket there too) with more of it — consistent with the per-note residual the aligner
+  measured (p90 median 71 ¢: amateur hummers sit between semitones far more often than trained
+  singers). A tuning-aware spelling layer already exists for voice takes at the notation stage;
+  COnP against absolute truth cannot see it, by design.
+- **This row is provisional and will stay so until a human-verified, permissively licensed hummed
+  corpus exists.** HumTrans is CC BY-NC (internal evaluation only) and its onsets are drafted;
+  mir-qbsh's notes are our own derivation. Treat the 0.52 as a tracking number for regressions on
+  humming, not as a claim.
+
+The whistling row (0.365) is dragged by `whistle-vintage` (accompanied 78s, 0.02 — the
+accompaniment-locking failure) and would read ~0.54 on the two solo corpora alone; it stays
+provisional on draft truth until the verification pass (`annotations/whistle-real/VERIFY-WORKLIST.md`).
+Vocal percussion has no pitched truth and its row reads "no data" — its number is the isolated
+onset-detector bench (F1 0.651).

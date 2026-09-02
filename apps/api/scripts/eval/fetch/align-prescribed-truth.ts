@@ -89,10 +89,13 @@ const TRACK = {
  */
 const SEGMENT = { minNoteSec: envNum('ALIGN_MIN_NOTE_SEC', 0.1), maxDropoutSec: 0.06, medianFrames: 5 };
 /**
- * DTW pitch cost modulo the octave: a harmonic-rich source (humming) makes the
- * FFT-peak drafter jump between f0 and 2·f0 mid-note, and a plain semitone
- * distance would then refuse to match a correctly hummed note. Timing is what
- * the alignment transfers; pitch identity always comes from the score.
+ * DTW pitch cost (and key fit) modulo the octave — for the FFT-peak drafter on a
+ * harmonic-rich source, where the strongest peak hops between f0 and 2·f0
+ * mid-note. ⚠ Do NOT combine with `ALIGN_TRACKER=yin` on humming: YIN reads the
+ * fundamental, and the performed OCTAVE is real information the truth must keep
+ * — on HumTrans four of the five male hummers sing the reference an octave down,
+ * which folding erased (measured as a spurious 0.21 octave-error rate on the
+ * pipeline until the octave was detected instead).
  */
 const OCTAVE_INVARIANT = process.env.ALIGN_OCTAVE_INVARIANT === '1';
 /**

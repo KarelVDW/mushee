@@ -497,14 +497,22 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
 
   // Per material — what the product benchmark reads first. Dataset-mean over the
   // pooled datasets of that material, matching the headline's convention.
+  const supersededIds = new Set(
+    datasets
+      .map((d) => d.derivedFrom?.split('/').pop())
+      .filter((id): id is string => !!id && datasets.some((d) => d.id === id)),
+  );
   const materials = [...new Set(perScenario.map((s) => s.material))].sort();
   const perMaterial: MaterialAggregate[] = materials.map((material) => {
     const ds = perScenario.filter((s) => s.material === material && s.clips > 0);
     let gated = ds.filter((s) => s.pooled);
     // No benchmark-grade dataset at all (humming, whistling today): fall back to
-    // the context datasets that DO carry pitched truth, and say so.
+    // the context datasets that DO carry pitched truth, and say so. A dataset
+    // whose truth was repaired into an `-aligned` sibling is skipped — its own
+    // score-timed truth is known-wrong by construction and would only drag the
+    // provisional number down.
     const provisional = gated.length === 0;
-    if (provisional) gated = ds.filter((s) => !s.pitchless);
+    if (provisional) gated = ds.filter((s) => !s.pitchless && !supersededIds.has(s.scenario));
     const gatedClips = results.filter((r) => gated.some((s) => s.scenario === r.scenario));
     return {
       material,

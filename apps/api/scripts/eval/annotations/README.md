@@ -14,6 +14,6 @@ verification pass (`whistle-real/VERIFY-WORKLIST.md`).
 
 Not committed (gitignored): `humtrans-aligned/` — 769 clips regenerated
 deterministically by `fetch/fetch-humtrans.ts` followed by
-`ALIGN_TRACKER=yin ALIGN_MIN_HZ=70 ALIGN_MAX_HZ=1000 ALIGN_OCTAVE_INVARIANT=1
+`ALIGN_TRACKER=yin ALIGN_MIN_HZ=70 ALIGN_MAX_HZ=1000 ALIGN_MIN_TONALITY=0.5
 fetch/align-prescribed-truth.ts --dataset=context/humtrans --out=humtrans-aligned`.
 Commit individual TSVs from it only once a human has corrected them.

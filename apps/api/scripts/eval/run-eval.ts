@@ -82,7 +82,9 @@ export function printReport(report: EvalReport): void {
       m.material.padEnd(20) + m.f1.toFixed(3).padEnd(7) + m.f1Off.toFixed(3).padEnd(9) +
         m.precision.toFixed(2).padEnd(7) + m.recall.toFixed(2).padEnd(8) +
         (m.provisional
-          ? `PROVISIONAL — no benchmark-grade data; ${m.datasets.length} context dataset(s): ${m.datasets.join(', ')}`
+          ? m.datasets.length
+            ? `PROVISIONAL — no benchmark-grade data; ${m.datasets.length} context dataset(s): ${m.datasets.join(', ')}`
+            : 'NO DATA with pitched truth'
           : `${m.datasets.length} pooled`) +
         (m.contextDatasets.length ? ` (+${m.contextDatasets.length} context-only)` : ''),
     );
