@@ -232,3 +232,47 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await page.getByRole('button', { name: 'Account settings' }).click()
     await expect(page).toHaveURL(/\/settings$/)
 })
+
+test('imports a MusicXML file: confirms title and instrument, reports simplifications, then creates the score', async ({
+    page,
+    apiMock,
+}) => {
+    await page.goto('/scores')
+    await page.getByLabel('Import a score file').setInputFiles('e2e/fixtures/import.musicxml')
+
+    const dialog = page.getByRole('dialog', { name: 'Import score' })
+    await expect(dialog).toBeVisible()
+    // The title comes from the file, the instrument from its part, and the reductions are listed.
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Imported Air')
+    await expect(dialog.getByText('2 bars · 3/4')).toBeVisible()
+    await expect(dialog.getByText('Lead instrument · Violin')).toBeVisible()
+    const adjusted = dialog.getByRole('status', { name: 'Adjusted on import' })
+    await expect(adjusted).toContainText('Only the first part (“Violin”) was imported; 1 other part was left out.')
+    await expect(adjusted).toContainText('Some note values were rewritten with the nearest supported ones.')
+
+    await page.getByLabel('Title', { exact: true }).fill('Imported Air (edit)')
+    await page.getByRole('button', { name: 'Create score' }).click()
+
+    await expect.poll(() => apiMock.creates.length).toBeGreaterThan(0)
+    const body = apiMock.creates[0] as {
+        title: string
+        score: { parts: Array<{ measures: unknown[] }>; partList: { scoreParts: Array<{ partName: string }> } }
+    }
+    expect(body.title).toBe('Imported Air (edit)')
+    expect(body.score.parts[0].measures).toHaveLength(2)
+    expect(body.score.partList.scoreParts[0].partName).toBe('Violin')
+
+    await expect(page).toHaveURL(/\/scores\/e2e-created-1$/)
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+})
+
+test('a file that is not a score is refused with a toast and no dialog', async ({ page, apiMock }) => {
+    await page.goto('/scores')
+    await page
+        .getByLabel('Import a score file')
+        .setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('just some text') })
+
+    await expect(page.getByText('This is not a score file.', { exact: false })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Import score' })).toHaveCount(0)
+    expect(apiMock.creates).toHaveLength(0)
+})
