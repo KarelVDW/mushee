@@ -89,9 +89,10 @@ deploy.yml) once the GCP project exists.
 13. **N-session recording load test** _(notes.md §4 has the follow-up backlog)_: extend
     `scripts/test-recording-ws.ts` to ramp N sessions, watch p95 pass latency + RSS,
     and baseline the per-pod ceiling before beta invites scale up.
-14. **GDPR data export endpoint** — the privacy policy grants portability; per-score
-    MusicXML export exists in the editor, but there is no account-level "download my data".
-    Minimum: zip of scores (MusicXML) + profile JSON; recordings audio optional.
+14. ~~**GDPR data export endpoint**~~ — **done 2026-09-05** (client-side, no API change):
+    Settings → Account → "Download my data" zips profile.json, settings.json and every
+    score as MusicXML + JSON in the browser (`lib/AccountExport.ts`); the privacy page
+    points at it. Recordings audio deliberately excluded (deleted with the account).
 15. **Signup CAPTCHA (hCaptcha/Turnstile)** — deferred while beta approval gates abuse;
     becomes real the day the doors open wider.
 
@@ -101,8 +102,9 @@ deploy.yml) once the GCP project exists.
     300 credits/day or drop to `free`? (Now a one-row DB tweak in `subscription_tiers`.)
 17. **Tax/VAT sanity check with Polar** (merchant of record covers it, but verify EU VAT
     display + invoices once real charges exist).
-18. **Dedicated `/pricing` route** (pricing lives only on the landing page today) + per-route
-    `metadata`, canonical URLs, JSON-LD, Lighthouse pass.
+18. **Dedicated `/pricing` route** ~~(pricing lives only on the landing page today)~~ +
+    per-route `metadata`, canonical URLs, JSON-LD — **done 2026-09-05** (`/pricing` with
+    FAQ + FAQPage/offers JSON-LD, sitemap, footer link). Remaining: Lighthouse pass.
 19. **PDF/MusicXML export polish**: the real MusicXML↔JSON converter is still the one code
     TODO (`scores.service.ts:137`) — round-trip is lossless today, but genuine MusicXML
     _import_ and richer export need the converter.
