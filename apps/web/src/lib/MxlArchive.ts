@@ -28,6 +28,17 @@ export class MxlArchive {
         return this.extract(root)
     }
 
+    /** Every file path in the archive, in central-directory order. */
+    names(): string[] {
+        return this.entries().map((entry) => entry.name)
+    }
+
+    /** The text of one file by its exact path, or undefined when the archive has no such entry. */
+    async file(name: string): Promise<string | undefined> {
+        const entry = this.entries().find((candidate) => candidate.name === name)
+        return entry && this.extract(entry)
+    }
+
     private entries(): ZipEntry[] {
         // The end-of-central-directory record sits in the last 64KB + 22 bytes (it may trail a comment).
         let eocd = -1

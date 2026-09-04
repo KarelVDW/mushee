@@ -21,6 +21,14 @@ test('profile: saving a display name posts the update and confirms with a toast'
     await expect(page.getByRole('status').first()).toContainText(/saved|updated/i)
 })
 
+test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {
+    await page.getByRole('button', { name: 'Account', exact: true }).click()
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download my data' }).click()
+    expect((await download).suggestedFilename()).toMatch(/^solkey-export-\d{4}-\d{2}-\d{2}\.zip$/)
+    await expect(page.getByRole('status').first()).toContainText(/downloading/i)
+})
+
 test('account tab: password dialog validates before allowing an update', async ({ page }) => {
     await page.getByRole('button', { name: 'Account', exact: true }).click()
     await page.getByRole('button', { name: 'Change password' }).click()

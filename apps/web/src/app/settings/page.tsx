@@ -16,6 +16,7 @@ import {
     TextField,
     TopNav,
 } from '@/components/ui'
+import { AccountExport } from '@/lib/AccountExport'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
 import { billingKeys, useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
@@ -81,6 +82,32 @@ export default function SettingsPage() {
         router.push('/login')
     }
 
+    const [exporting, setExporting] = useState(false)
+    /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
+    async function handleExport() {
+        const user = session?.user
+        if (!user) return
+        setExporting(true)
+        try {
+            const archive = await AccountExport.collect({
+                name: user.name,
+                email: user.email,
+                createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
+            })
+            const url = URL.createObjectURL(archive.toBlob())
+            const anchor = document.createElement('a')
+            anchor.href = url
+            anchor.download = archive.filename
+            anchor.click()
+            URL.revokeObjectURL(url)
+            showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
+        } catch {
+            showToast("Your data couldn't be exported. Please try again.")
+        } finally {
+            setExporting(false)
+        }
+    }
+
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
@@ -140,6 +167,15 @@ export default function SettingsPage() {
                                 <Section title="Sign out" subtitle="Log out of this browser.">
                                     <div>
                                         <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
+                                    </div>
+                                </Section>
+                                <Section
+                                    title="Your data"
+                                    subtitle="Download everything Solkey holds for you: your profile, settings, and every score as MusicXML and JSON.">
+                                    <div>
+                                        <SecondaryButton onClick={() => void handleExport()} disabled={exporting}>
+                                            {exporting ? 'Preparing your download…' : 'Download my data'}
+                                        </SecondaryButton>
                                     </div>
                                 </Section>
                                 <Section
