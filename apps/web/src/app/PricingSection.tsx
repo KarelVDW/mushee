@@ -13,21 +13,24 @@ import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
  * Renders straight from the static plan catalogue so both pages work without
  * the API; in-app surfaces use the DB-driven `usePlans()` instead.
  */
-export function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
+/** `intro` — the section's own eyebrow + headline; off when a page already frames it (the /pricing hero). */
+export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => void; intro?: boolean }) {
     const currency = useDisplayCurrency()
     return (
-        <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
+        <section id="pricing" className={intro ? 'py-14 sm:py-22 px-5 sm:px-8' : 'pt-10 pb-14 sm:pt-12 sm:pb-22 px-5 sm:px-8'}>
             <div className="max-w-320 mx-auto">
-                <div className="mb-12 text-center">
-                    <Eyebrow className="text-primary">Pricing</Eyebrow>
-                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
-                        Pay for recording time, nothing else.
-                    </h2>
-                    <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                        Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can record
-                        per day — and Sketch holds up to five scores.
-                    </p>
-                </div>
+                {intro && (
+                    <div className="mb-12 text-center">
+                        <Eyebrow className="text-primary">Pricing</Eyebrow>
+                        <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
+                            Pay for recording time, nothing else.
+                        </h2>
+                        <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
+                            Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
+                            record per day — and Sketch holds up to five scores.
+                        </p>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
                     {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (

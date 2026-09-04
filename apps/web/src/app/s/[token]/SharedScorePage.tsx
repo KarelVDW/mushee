@@ -106,7 +106,7 @@ export function SharedScorePage({ token }: { token: string }) {
                     <>
                         <div
                             ref={scoreAreaRef}
-                            className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden"
+                            className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden w-full max-w-240 mx-auto"
                             data-testid="shared-score">
                             <ScoreView score={score} layoutId={score.layout.id} />
                         </div>

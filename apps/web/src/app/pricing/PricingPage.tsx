@@ -58,7 +58,7 @@ export function PricingPage() {
             </header>
 
             <main className="flex-1">
-                {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing-page')} />}
+                {BETA_MODE ? <BetaPricing /> : <Pricing intro={false} onGetStarted={() => onGetStarted('pricing-page')} />}
                 <PricingFaq />
                 <section className="py-16 sm:py-20 px-5 sm:px-8">
                     <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
