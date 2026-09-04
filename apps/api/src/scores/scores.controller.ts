@@ -54,6 +54,14 @@ export class ScoresController {
     return this.scoresService.load(user.id, id);
   }
 
+  @Post(':id/duplicate')
+  duplicate(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+  ) {
+    return this.scoresService.duplicate(user.id, id);
+  }
+
   @Patch(':id')
   update(
     @CurrentUser() user: { id: string },

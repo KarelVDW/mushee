@@ -25,29 +25,58 @@ export class ScoresService {
   ) {}
 
   async create(userId: string, dto: CreateScoreDto): Promise<Score> {
-    const tier = await this.subscriptions.tierFor(userId);
-    if (tier.maxScores !== null) {
-      // Count-then-insert is racy, but the cap is a plan entitlement, not a
-      // security boundary — a photo-finish double click slipping one score
-      // past it is harmless.
-      const count = await this.scoreRepo.countBy({ userId });
-      if (count >= tier.maxScores) {
-        throw new ForbiddenException({
-          code: 'score-limit',
-          message: `Your ${tier.name} plan holds up to ${tier.maxScores} scores. Upgrade to add more.`,
-        });
-      }
-    }
+    await this.assertBelowScoreCap(userId);
+    return this.insert(userId, dto.title, instanceToPlain(dto.score));
+  }
 
+  /**
+   * Copy a score into a new one owned by the same user. The copy takes the
+   * live document — the edit cache when present (unsaved edits included),
+   * otherwise the stored file — so it always matches what the editor shows.
+   */
+  async duplicate(userId: string, id: string): Promise<Score> {
+    const source = await this.findOne(userId, id);
+    await this.assertBelowScoreCap(userId);
+    const document = await this.load(userId, source.id);
+    return this.insert(userId, this.copyTitle(source.title), document);
+  }
+
+  /** "Étude" → "Étude (copy)"; the title column allows 200 characters, so trim to fit the suffix. */
+  private copyTitle(title: string): string {
+    const suffix = ' (copy)';
+    return title.slice(0, 200 - suffix.length).trimEnd() + suffix;
+  }
+
+  private async assertBelowScoreCap(userId: string): Promise<void> {
+    const tier = await this.subscriptions.tierFor(userId);
+    if (tier.maxScores === null) return;
+    // Count-then-insert is racy, but the cap is a plan entitlement, not a
+    // security boundary — a photo-finish double click slipping one score
+    // past it is harmless.
+    const count = await this.scoreRepo.countBy({ userId });
+    if (count >= tier.maxScores) {
+      throw new ForbiddenException({
+        code: 'score-limit',
+        message: `Your ${tier.name} plan holds up to ${tier.maxScores} scores. Upgrade to add more.`,
+      });
+    }
+  }
+
+  private async insert(
+    userId: string,
+    title: string,
+    document: Record<string, unknown>,
+  ): Promise<Score> {
     const score = this.scoreRepo.create({
       userId,
-      title: dto.title,
+      title,
       storageKey: `scores/${userId}/${Date.now()}.musicxml`,
     });
     const saved = await this.scoreRepo.save(score);
 
-    // Put initial score data in the edit cache for immediate editing
-    await this.cacheService.upsert(saved.id, instanceToPlain(dto.score));
+    // Put the document in the edit cache for immediate editing; the flush
+    // cron writes it to storage later.
+    await this.cacheService.upsert(saved.id, document);
 
     return saved;
   }

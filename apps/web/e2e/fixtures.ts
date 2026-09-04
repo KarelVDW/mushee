@@ -57,6 +57,8 @@ export interface ApiMock {
     readonly creates: Array<Record<string, unknown>>
     /** IDs the app requested via DELETE /scores/:id. */
     readonly deletes: string[]
+    /** IDs the app requested via POST /scores/:id/duplicate. */
+    readonly duplicates: string[]
 }
 
 function corsHeaders(route: Route): Record<string, string> {
@@ -81,6 +83,8 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
     // Deleted scores must stay gone: the app refetches the list after a delete,
     // and a stateless mock would resurrect the row.
     const deletedIds = new Set<string>()
+    // Likewise, duplicated scores must show up in the refetched list.
+    const copies: Array<typeof SCORE_META> = []
 
     // http(s) only: intercepting `**/*` would also catch blob: URLs, which
     // WebKit cannot route — it blocks them outright, breaking e.g. the PDF
@@ -137,6 +141,14 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
 
+        const duplicateMatch = path.match(/\/scores\/([^/]+)\/duplicate$/)
+        if (duplicateMatch && method === 'POST') {
+            mock.duplicates.push(duplicateMatch[1])
+            const copy = { ...SCORE_META, id: `e2e-copy-${mock.duplicates.length}`, title: `${MOCK_TITLE} (copy)` }
+            copies.push(copy)
+            return json(copy)
+        }
+
         const idMatch = path.match(/\/scores\/([^/]+)$/)
         if (idMatch) {
             if (method === 'PATCH') {
@@ -158,7 +170,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 const { title } = body as { title?: string }
                 return json({ ...SCORE_META, id: 'e2e-created-1', title: title ?? MOCK_TITLE })
             }
-            return json([SCORE_META].filter((s) => !deletedIds.has(s.id))) // list
+            return json([SCORE_META, ...copies].filter((s) => !deletedIds.has(s.id))) // list
         }
 
         return json({})
@@ -167,7 +179,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 
 export const test = base.extend<{ apiMock: ApiMock }>({
     apiMock: async ({ page, context }, use) => {
-        const mock: ApiMock = { patches: [], creates: [], deletes: [] }
+        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [] }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.

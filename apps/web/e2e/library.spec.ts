@@ -57,6 +57,38 @@ test('deletes a score after confirmation, then shows the first-score empty state
     await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
 })
 
+test('duplicates a score from its row and lists the copy', async ({ page, apiMock }) => {
+    await page.goto('/scores')
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+
+    await page.getByRole('button', { name: `Duplicate ${MOCK_TITLE}` }).click()
+    await expect.poll(() => apiMock.duplicates).toEqual([MOCK_SCORE_ID])
+
+    // The copy appears as its own row; the original stays and the user stays in the library.
+    await expect(page.getByRole('button', { name: `${MOCK_TITLE} (copy)`, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+    await expect(page).toHaveURL(/\/scores$/)
+    expect(apiMock.creates).toHaveLength(0)
+})
+
+test('a failed duplicate surfaces an error toast', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/scores')
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+
+    // Registered after the fixture mock, so it wins: the server refuses the copy.
+    await page.route(
+        (url) => url.pathname.endsWith('/duplicate'),
+        (route) =>
+            route.request().method() === 'POST'
+                ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' })
+                : route.fallback(),
+    )
+
+    await page.getByRole('button', { name: `Duplicate ${MOCK_TITLE}` }).click()
+    await expect(page.getByText('Could not duplicate the score. Please try again.')).toBeVisible()
+})
+
 test('the delete dialog can be declined, dismissed with Escape, and closed — nothing is deleted', async ({ page, apiMock }) => {
     await page.goto('/scores')
 

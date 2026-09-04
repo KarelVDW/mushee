@@ -106,6 +106,11 @@ export function updateScore(
     })
 }
 
+/** Copy a score into a new one ("Title (copy)"); counts against the plan's score cap like a create. */
+export function duplicateScore(id: string): Promise<ScoreMeta> {
+    return api(`/scores/${id}/duplicate`, { method: 'POST' })
+}
+
 export function deleteScore(id: string): Promise<void> {
     return api(`/scores/${id}`, { method: 'DELETE' })
 }

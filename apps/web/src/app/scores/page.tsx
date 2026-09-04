@@ -24,7 +24,7 @@ import {
 } from '@/components/ui'
 import { ApiError, NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
+import { useCreateScore, useDeleteScore, useDuplicateScore, useScores } from '@/lib/queries'
 import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
@@ -64,6 +64,7 @@ export default function ScoresPage() {
     const { data: scores, isPending, error, refetch } = useScores(debouncedSearch || undefined)
     const createMutation = useCreateScore()
     const deleteMutation = useDeleteScore()
+    const duplicateMutation = useDuplicateScore()
 
     function handleCreate(title: string, instrument: Instrument) {
         // Build the starting score through the model so a new score opens with the
@@ -106,6 +107,17 @@ export default function ScoresPage() {
                 },
             },
         )
+    }
+
+    function handleDuplicate(score: ScoreMeta) {
+        duplicateMutation.mutate(score.id, {
+            onSuccess: (copy) => showToast(`Created “${copy.title}”.`, 'info', 'check'),
+            onError: (err) => {
+                // A copy is a new score, so it hits the same plan cap as a create.
+                if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                else showToast('Could not duplicate the score. Please try again.')
+            },
+        })
     }
 
     function handleDeleteConfirmed(score: ScoreMeta) {
@@ -198,6 +210,7 @@ export default function ScoresPage() {
                                     key={score.id}
                                     score={score}
                                     onOpen={() => router.push(`/scores/${score.id}`)}
+                                    onDuplicate={() => handleDuplicate(score)}
                                     onDelete={() => setDeleteTarget(score)}
                                 />
                             ))}
@@ -286,7 +299,17 @@ function FirstScoreEmpty({ onCreate, onImport }: { onCreate: () => void; onImpor
     )
 }
 
-function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () => void; onDelete: () => void }) {
+function ScoreRow({
+    score,
+    onOpen,
+    onDuplicate,
+    onDelete,
+}: {
+    score: ScoreMeta
+    onOpen: () => void
+    onDuplicate: () => void
+    onDelete: () => void
+}) {
     return (
         <div
             role="row"
@@ -328,6 +351,13 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                     size={32}
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
                     onClick={onOpen}
+                />
+                <IconButton
+                    icon="copy"
+                    ariaLabel={`Duplicate ${score.title}`}
+                    size={32}
+                    idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
+                    onClick={onDuplicate}
                 />
                 <IconButton
                     icon="trash-2"

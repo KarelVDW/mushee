@@ -10,6 +10,7 @@ import {
     createPackCheckout,
     createScore,
     deleteScore,
+    duplicateScore,
     getBetaStatus,
     getBillingState,
     getScore,
@@ -71,6 +72,17 @@ export function useCreateScore() {
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
         // The library page renders errors itself: a score-limit refusal opens
         // the upgrade dialog; anything else gets its own toast.
+        meta: { silentError: true },
+    })
+}
+
+export function useDuplicateScore() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (id: string) => duplicateScore(id),
+        onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
+        // Like create: a score-limit refusal opens the upgrade dialog on the
+        // library page; anything else gets its own toast there.
         meta: { silentError: true },
     })
 }
