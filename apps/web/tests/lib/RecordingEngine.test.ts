@@ -1,8 +1,9 @@
-import type { Score } from '@mushee/notation/model/Score'
+import { Score } from '@mushee/notation/model/Score'
+import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { makeScore } from '@mushee/notation/testing'
+import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
 
 // Shape of the JSON `meta` frame the engine sends when streaming opens.
@@ -136,9 +137,10 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
     const onScoreUpdate = vi.fn()
     const onLimitReached = vi.fn()
     const onRecordingError = vi.fn()
-    const resolvePosition = vi.fn(
-        (measureIndex: number, beat: number): { x: number; rowY: number } | null => ({ x: measureIndex * 100 + beat * 10, rowY: 0 }),
-    )
+    const resolvePosition = vi.fn((measureIndex: number, beat: number): { x: number; rowY: number } | null => ({
+        x: measureIndex * 100 + beat * 10,
+        rowY: 0,
+    }))
     const options: RecordingOptions = {
         score,
         startMeasureIndex: over.startMeasureIndex ?? 0,
@@ -541,6 +543,30 @@ describe('RecordingEngine', () => {
         raw.currentTime = 3.1
         engine.tick()
         expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
+    it('pulses the count-off cursor once per felt beat — a dotted quarter in 6/8, not every quarter', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const score = new Score()
+        for (let i = 0; i < 3; i++) {
+            const measure = score.addMeasure()
+            if (i === 0) score.setTimeSignature(measure, new TimeSignature(6, 8))
+            measure.complete()
+        }
+        const { options, cursorEl } = makeOptions({ score })
+        await engine.start(options)
+
+        // 90 quarter-bpm => a dotted-quarter beat lasts 1s. Half a quarter in (1/3s) the
+        // pulse is only a third of the way through its decay, not halfway as it would be per quarter.
+        raw.currentTime = 1 / 3
+        engine.tick()
+        const thirdIn = Number(cursorEl.getAttribute('fill-opacity'))
+        expect(thirdIn).toBeGreaterThan(0.431)
+        // On the second beat (1s) the cursor snaps back to full opacity.
+        raw.currentTime = 1
+        engine.tick()
+        expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(1, 3)
     })
 
     it('clears the cursor pulse when a take is stopped during countoff', async () => {

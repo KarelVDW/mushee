@@ -76,7 +76,15 @@ export class MeasureSerializer {
             while (nextKey < midKeys.length && midKeys[nextKey].beatPosition <= beat) emitKey(midKeys[nextKey++])
             const tempoAtBeat = this.measure.tempoAtBeat(beat)
             if (tempoAtBeat) {
-                entries.push({ _type: 'direction' as const, sound: { tempo: tempoAtBeat.bpm } })
+                entries.push({
+                    _type: 'direction' as const,
+                    metronome: {
+                        beatUnit: MeasureSerializer.durationTypeToMxmlNoteType(tempoAtBeat.pulse.type),
+                        beatUnitDots: tempoAtBeat.pulse.dots,
+                        perMinute: tempoAtBeat.pulseBpm,
+                    },
+                    sound: { tempo: tempoAtBeat.bpm },
+                })
             }
             entries.push({
                 _type: 'note' as const,

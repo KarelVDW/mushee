@@ -65,6 +65,15 @@ describe('Duration', () => {
         expect(new Duration({ type: '16' }).restLine).toBe(3)
     })
 
+    it('name reads the value aloud, with a "dotted" prefix', () => {
+        expect(new Duration({ type: 'w' }).name).toBe('whole')
+        expect(new Duration({ type: 'h' }).name).toBe('half')
+        expect(new Duration({ type: 'q' }).name).toBe('quarter')
+        expect(new Duration({ type: '8' }).name).toBe('eighth')
+        expect(new Duration({ type: '16' }).name).toBe('16th')
+        expect(new Duration({ type: 'q', dots: 1 }).name).toBe('dotted quarter')
+    })
+
     it('flagGlyph returns flag only for 8th/16th, undefined otherwise', () => {
         expect(new Duration({ type: 'q' }).flagGlyph('up')).toBeUndefined()
         expect(new Duration({ type: '8' }).flagGlyph('up')).toBe('flag8thUp')

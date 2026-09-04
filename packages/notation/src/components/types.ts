@@ -120,6 +120,8 @@ export interface MxmlBarline {
 
 export interface MxmlDirection {
     _type: 'direction'
+    /** The written metronome mark (`♩. = 60`); `sound.tempo` carries the same tempo in quarter-note bpm. */
+    metronome?: { beatUnit: MxmlNoteType; beatUnitDots: number; perMinute: number }
     sound?: { tempo?: number }
 }
 

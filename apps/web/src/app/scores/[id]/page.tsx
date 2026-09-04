@@ -12,7 +12,7 @@ import {
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/components/types'
-import { Instrument, type Note, type Pitch } from '@mushee/notation/model'
+import { Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -211,6 +211,7 @@ export default function ScoreEditorPage() {
                     <TempoPopover
                         className={className}
                         initialBpm={attributePopover.bpm}
+                        timeSignature={score?.measures[attributePopover.measureIndex]?.timeSignature ?? DEFAULT_TIME_SIGNATURE}
                         onSubmit={(bpm) => {
                             manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
                             closeAttributePopover()
@@ -629,6 +630,9 @@ export default function ScoreEditorPage() {
 }
 
 /** Space kept between an anchored attribute popover and the score wrapper's side edges. */
+/** Meter assumed for the in-score tempo popover when its measure is gone (the score reloaded underneath it). */
+const DEFAULT_TIME_SIGNATURE = new TimeSignature(4, 4)
+
 const POPOVER_EDGE_MARGIN = 8
 
 /**

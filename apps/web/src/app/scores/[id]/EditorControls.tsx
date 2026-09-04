@@ -2,12 +2,12 @@
 
 import { CLEF_DEFS, type ClefType, type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
-import type { Note, Score } from '@mushee/notation/model'
-import { type ReactNode, useRef, useState } from 'react'
+import { type Note, type Score, TimeSignature } from '@mushee/notation/model'
+import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
-import { TempoPopover } from '@/components/editor/TempoPopover'
+import { BeatUnitIcon, TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
@@ -280,7 +280,7 @@ export function NoteToolDock({
                     <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} compact={compact} />
                     <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
                     <TimeSignatureControl time={time} onSet={onTimeSet} disabled={selectionDisabled} compact={compact} />
-                    <TempoControl bpm={bpm} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
+                    <TempoControl bpm={bpm} time={time} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
                     {pitch && (
                         <>
                             <ChipToggle plain onClick={pitch.onMinimize} disabled={selectionDisabled} ariaLabel="Minimize accidentals">
@@ -493,24 +493,39 @@ function TransposeControl({ score, selectedNotes, onApply, onScopeChange, disabl
 // --- Tempo control ---
 
 interface TempoControlProps {
+    /** Quarter-note bpm in effect at the selection. */
     bpm: number
+    /** The meter at the selection: the chip and popover write the tempo in its felt beat (♩. = 60 in 6/8). */
+    time: { beatAmount: number; beatType: number }
     onSet: (bpm: number) => void
     disabled: boolean
     compact: boolean
 }
 
-function TempoControl({ bpm, onSet, disabled, compact }: TempoControlProps) {
+function TempoControl({ bpm, time, onSet, disabled, compact }: TempoControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
+    const timeSignature = useMemo(() => new TimeSignature(time.beatAmount, time.beatType), [time.beatAmount, time.beatType])
+    const beat = timeSignature.pulse
+    const pulseBpm = Math.round(timeSignature.pulseBpmOf(bpm))
+    const unit = beat.beats === 1 ? '' : `${beat.name.replace(' ', '-')} `
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel={`Tempo: ${bpm} bpm`}>
-                {bpm} bpm
+            <ChipToggle
+                plain
+                active={open}
+                disabled={disabled}
+                onClick={() => setOpen((o) => !o)}
+                ariaLabel={`Tempo: ${pulseBpm} ${unit}bpm`}>
+                <span className="inline-flex items-center gap-1">
+                    <BeatUnitIcon duration={beat} size={16} />= {pulseBpm}
+                </span>
             </ChipToggle>
             {open && (
                 <TempoPopover
                     initialBpm={bpm}
+                    timeSignature={timeSignature}
                     anchorRef={anchorRef}
                     className={popoverPosition(compact)}
                     onSubmit={(value) => {

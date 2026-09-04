@@ -150,6 +150,22 @@ export class MxmlSoundDto {
   tempo?: number;
 }
 
+/** The written metronome mark (`♩. = 60`) — its unit follows the meter, while sound.tempo stays quarter-note bpm. */
+export class MxmlMetronomeDto {
+  @IsIn(MXML_NOTE_TYPES)
+  beatUnit: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(2)
+  beatUnitDots: number;
+
+  @IsNumber()
+  @Min(1)
+  @Max(1000)
+  perMinute: number;
+}
+
 export class MxmlMeasureEntryDto {
   @IsIn(MXML_ENTRY_TYPES)
   _type: string;
@@ -247,6 +263,11 @@ export class MxmlAttributesDto extends MxmlMeasureEntryDto {
 }
 
 export class MxmlDirectionDto extends MxmlMeasureEntryDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MxmlMetronomeDto)
+  metronome?: MxmlMetronomeDto;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => MxmlSoundDto)

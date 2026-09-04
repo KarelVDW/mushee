@@ -59,6 +59,50 @@ describe('TimeSignature', () => {
         expect(new TimeSignature(6, 8).beatUnit.beats).toBe(0.5)
     })
 
+    describe('pulse (the felt beat a metronome clicks and a listener taps)', () => {
+        it('flags compound meters: eighth/sixteenth denominators grouped in threes, but not 3/8', () => {
+            expect(new TimeSignature(6, 8).isCompound).toBe(true)
+            expect(new TimeSignature(9, 8).isCompound).toBe(true)
+            expect(new TimeSignature(12, 8).isCompound).toBe(true)
+            expect(new TimeSignature(6, 16).isCompound).toBe(true)
+            expect(new TimeSignature(3, 8).isCompound).toBe(false)
+            expect(new TimeSignature(7, 8).isCompound).toBe(false)
+            expect(new TimeSignature(3, 4).isCompound).toBe(false)
+            expect(new TimeSignature(6, 4).isCompound).toBe(false)
+        })
+
+        it('is the denominator note in simple meters', () => {
+            expect(new TimeSignature(4, 4).pulse).toMatchObject({ type: 'q', dots: 0 })
+            expect(new TimeSignature(2, 2).pulse).toMatchObject({ type: 'h', dots: 0 })
+            expect(new TimeSignature(3, 8).pulse).toMatchObject({ type: '8', dots: 0 })
+            expect(new TimeSignature(7, 8).pulse).toMatchObject({ type: '8', dots: 0 })
+        })
+
+        it('is the dotted denominator in compound meters', () => {
+            expect(new TimeSignature(6, 8).pulse).toMatchObject({ type: 'q', dots: 1 })
+            expect(new TimeSignature(12, 8).pulse).toMatchObject({ type: 'q', dots: 1 })
+            expect(new TimeSignature(6, 16).pulse).toMatchObject({ type: '8', dots: 1 })
+        })
+
+        it('pulsesPerMeasure counts felt beats: 4 in 4/4, 2 in 6/8, 4 in 12/8, 7 in 7/8, 2 in 2/2', () => {
+            expect(new TimeSignature(4, 4).pulsesPerMeasure).toBe(4)
+            expect(new TimeSignature(6, 8).pulsesPerMeasure).toBe(2)
+            expect(new TimeSignature(12, 8).pulsesPerMeasure).toBe(4)
+            expect(new TimeSignature(7, 8).pulsesPerMeasure).toBe(7)
+            expect(new TimeSignature(2, 2).pulsesPerMeasure).toBe(2)
+        })
+
+        it("converts between the model's quarter-note bpm and the written pulse bpm", () => {
+            expect(new TimeSignature(4, 4).pulseBpmOf(90)).toBe(90)
+            expect(new TimeSignature(6, 8).pulseBpmOf(90)).toBe(60)
+            expect(new TimeSignature(2, 2).pulseBpmOf(90)).toBe(45)
+            expect(new TimeSignature(3, 8).pulseBpmOf(90)).toBe(180)
+            expect(new TimeSignature(6, 8).quarterBpmOf(60)).toBe(90)
+            expect(new TimeSignature(2, 2).quarterBpmOf(45)).toBe(90)
+            expect(new TimeSignature(4, 4).quarterBpmOf(120)).toBe(120)
+        })
+    })
+
     describe('fillRests', () => {
         it('returns nothing when the measure is already full', () => {
             expect(new TimeSignature(4, 4).fillRests(4)).toEqual([])

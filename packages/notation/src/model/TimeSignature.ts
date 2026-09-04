@@ -37,8 +37,44 @@ export class TimeSignature {
         return this.beatAmount * (4 / this.beatType)
     }
 
+    /** The denominator's note value (quarter in 4/4, eighth in 6/8) — the unit rests are filled in. */
     get beatUnit(): Duration {
         return Duration.fromBeats(4 / this.beatType)[0]
+    }
+
+    /**
+     * Compound meters group the denominator in threes (6/8, 9/8, 12/8, 6/16 …):
+     * the felt beat is the dotted note spanning one group, not the denominator.
+     * 3/8 is simple triple (three eighth beats), so a numerator of 3 doesn't count.
+     */
+    get isCompound(): boolean {
+        return this.beatType >= 8 && this.beatAmount > 3 && this.beatAmount % 3 === 0
+    }
+
+    /**
+     * The beat a listener taps and a metronome clicks: the denominator note in
+     * simple meters (quarter in 4/4, half in 2/2, eighth in 3/8 and 7/8), the
+     * dotted denominator in compound ones (dotted quarter in 6/8). This is what
+     * tempo markings are written in — `♩. = 60` for 6/8 — while `bpm` values
+     * inside the model stay in quarter-note units (see `pulseBpmOf`).
+     */
+    get pulse(): Duration {
+        return this.isCompound ? Duration.fromBeats(3 * (4 / this.beatType))[0] : this.beatUnit
+    }
+
+    /** Felt beats per measure: 4 in 4/4, 2 in 6/8, 4 in 12/8, 7 in 7/8. */
+    get pulsesPerMeasure(): number {
+        return Math.round(this.maxBeats / this.pulse.beats)
+    }
+
+    /** A quarter-note bpm expressed in this meter's pulse (90 quarter-bpm in 6/8 → ♩. = 60). */
+    pulseBpmOf(quarterBpm: number): number {
+        return quarterBpm / this.pulse.beats
+    }
+
+    /** A tempo counted in this meter's pulse converted to the model's quarter-note bpm (♩. = 60 in 6/8 → 90). */
+    quarterBpmOf(pulseBpm: number): number {
+        return pulseBpm * this.pulse.beats
     }
 
     fillRests(filledBeats: number): Duration[] {
