@@ -164,12 +164,20 @@ export class ScoresService {
         await this.scoreRepo.remove(score)
     }
 
-    // TODO: implement actual MusicXML <-> JSON conversion.
-    // Until that exists, the storage round trip must be lossless: score JSON is
-    // persisted verbatim (serialized), and genuine MusicXML read from storage is
-    // wrapped as { raw } untouched. Never synthesize placeholder content here —
-    // the flush cron deletes the cached copy after writing, so a lossy
-    // conversion permanently destroys the score.
+    // Storage format: the score's MusicXML-JSON is persisted verbatim under a
+    // `.musicxml` key (a historical name — the bytes are JSON), and genuine
+    // MusicXML found in storage is wrapped as { raw } untouched. The round trip
+    // must stay lossless: the flush cron deletes the cached copy after writing,
+    // so a lossy conversion would permanently destroy the score.
+    //
+    // Real MusicXML <-> JSON conversion exists since 2026-09 in
+    // @mushee/notation (MusicXmlExporter / MusicXmlImporter, round-trip-tested
+    // for every construct the model has) but that package ships TypeScript
+    // source for bundler consumers; the API's tsc build can't consume it and
+    // the importer needs a DOM parser Node lacks. Wiring it here means giving
+    // the package a Node build (or bundling the API) and picking an XML parser
+    // — a deliberate follow-up, not a quick change. The client already exports
+    // real MusicXML (editor export menu, account data export).
     musicxmlToJson(content: string): Record<string, unknown> {
         if (content.trimStart().startsWith('{')) {
             try {
