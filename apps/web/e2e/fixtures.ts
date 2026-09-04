@@ -50,6 +50,27 @@ const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtu
     unknown
 >
 
+/** Two archived takes on the mock score, plus one legacy row without audio. */
+const TAKES = [
+    {
+        id: 'take-2',
+        scoreId: MOCK_SCORE_ID,
+        startedAt: '2026-09-04T14:02:00.000Z',
+        endedAt: '2026-09-04T14:02:42.000Z',
+        seconds: 42,
+        hasAudio: true,
+    },
+    {
+        id: 'take-1',
+        scoreId: MOCK_SCORE_ID,
+        startedAt: '2026-09-03T09:10:00.000Z',
+        endedAt: '2026-09-03T09:12:05.000Z',
+        seconds: 125,
+        hasAudio: true,
+    },
+    { id: 'take-0', scoreId: MOCK_SCORE_ID, startedAt: '2026-08-01T09:10:00.000Z', endedAt: null, seconds: 7, hasAudio: false },
+]
+
 /** Records the requests the app makes to the mocked API, for assertions. */
 export interface ApiMock {
     /** Bodies of every PATCH /scores/:id (autosave) the app sent. */
@@ -60,6 +81,8 @@ export interface ApiMock {
     readonly deletes: string[]
     /** IDs the app requested via POST /scores/:id/duplicate. */
     readonly duplicates: string[]
+    /** IDs the app requested via DELETE /recordings/:id. */
+    readonly recordingDeletes: string[]
 }
 
 function corsHeaders(route: Route): Record<string, string> {
@@ -142,6 +165,21 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
 
+        // Takes recorded into the mock score (newest first), replay and deletion.
+        if (/\/recordings\/[^/]+\/audio$/.test(path)) return route.fulfill({ status: 404, headers: corsHeaders(route), body: '' })
+        const takeMatch = path.match(/\/recordings\/([^/]+)$/)
+        if (takeMatch && method === 'DELETE') {
+            mock.recordingDeletes.push(takeMatch[1])
+            return json({})
+        }
+        if (path.endsWith('/recordings')) {
+            return json(
+                TAKES.filter((take) => !mock.recordingDeletes.includes(take.id)).filter(
+                    (take) => !url.searchParams.get('scoreId') || take.scoreId === url.searchParams.get('scoreId'),
+                ),
+            )
+        }
+
         const duplicateMatch = path.match(/\/scores\/([^/]+)\/duplicate$/)
         if (duplicateMatch && method === 'POST') {
             mock.duplicates.push(duplicateMatch[1])
@@ -203,7 +241,7 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         await use(page)
     },
     apiMock: async ({ page, context }, use) => {
-        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [] }
+        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [] }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.

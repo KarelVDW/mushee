@@ -9,6 +9,7 @@ import {
     createCheckout,
     createPackCheckout,
     createScore,
+    deleteRecording,
     deleteScore,
     duplicateScore,
     getBetaStatus,
@@ -16,6 +17,7 @@ import {
     getScore,
     getSettings,
     listPlans,
+    listRecordings,
     listScores,
     loadScore,
     type OnboardingPatch,
@@ -23,6 +25,7 @@ import {
     patchOnboarding,
     putKeyboardShortcuts,
     reactivateAccount,
+    type RecordingSummary,
     requestAccountDeletion,
     resumeSubscription,
     type ScoreMeta,
@@ -100,6 +103,34 @@ export function useDeleteScore() {
             void queryClient.invalidateQueries({ queryKey: scoreKeys.all })
         },
         meta: { errorMessage: 'Could not delete the score. Please try again.' },
+    })
+}
+
+export const recordingKeys = {
+    all: ['recordings'] as const,
+    list: (scoreId?: string) => ['recordings', 'list', scoreId ?? ''] as const,
+}
+
+/** The takes recorded into one score, newest first. */
+export function useRecordings(scoreId: string, options?: { enabled?: boolean }) {
+    return useQuery({
+        queryKey: recordingKeys.list(scoreId),
+        queryFn: () => listRecordings(scoreId),
+        enabled: options?.enabled ?? true,
+    })
+}
+
+export function useDeleteRecording() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (id: string) => deleteRecording(id),
+        onSuccess: (_data, id) => {
+            queryClient.setQueriesData<RecordingSummary[]>({ queryKey: [...recordingKeys.all, 'list'] }, (rows) =>
+                rows?.filter((row) => row.id !== id),
+            )
+            void queryClient.invalidateQueries({ queryKey: recordingKeys.all })
+        },
+        meta: { errorMessage: 'Could not delete the take. Please try again.' },
     })
 }
 

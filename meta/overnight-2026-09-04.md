@@ -176,3 +176,22 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   p95 365 ms, peak RSS 359 MB, loop lag 478 ms (WASM inference blocks the
   loop — production is remote; size pods from a remote-mode run against the
   inference service).
+
+## 11. Takes: replay and delete your recordings (master-todo #22)
+
+- **What:** API `RecordingsController` — `GET /recordings?scoreId=` (owner's
+  takes, newest first, `hasAudio` flag), `GET /recordings/:id/audio` (302 to a
+  signed bucket URL when the backend signs, else streamed with the right
+  content type), `DELETE /recordings/:id` (audio folder first, then the row —
+  a failed storage delete keeps the row so nothing is orphaned). Web: a
+  "Takes" chip in the editor header (next to Export) opens a glass panel with
+  date, duration, play/pause (single `Audio` element, cookie rides same-site)
+  and an inline two-step delete; the mobile header gets the icon-only chip.
+- **Why:** audio has been archived since July with no user-facing way to hear
+  or remove it — the privacy policy's "yours, delete any time" had only the
+  nuclear option (delete the account). Also simply useful: hear the take you
+  just sang against the notation it produced.
+- **Verification:** 7 API unit tests (scoping, audio resolution incl. signing
+  fallback, delete ordering/failure), editor e2e test (list, disabled play on
+  audio-less take, keep/delete flow, toast, Escape) — see the commit for the
+  run; api 243 / web 266 unit tests green.

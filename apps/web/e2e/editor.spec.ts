@@ -279,3 +279,30 @@ test('navigates back to the library', async ({ page }) => {
     await expect(page).toHaveURL(/\/scores$/)
     await expect(page.getByRole('heading', { name: 'Your scores' })).toBeVisible()
 })
+
+test('takes menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Takes' }).click()
+    const panel = page.getByRole('dialog', { name: 'Takes' })
+    await expect(panel).toBeVisible()
+    const rows = panel.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    await expect(rows).toHaveCount(3)
+    await expect(rows.nth(0)).toContainText('0:42')
+    await expect(rows.nth(1)).toContainText('2:05')
+    // A take from before audio archiving cannot be played.
+    await expect(rows.nth(2).getByRole('button', { name: 'Play take' })).toBeDisabled()
+
+    // Delete asks first; "Keep" backs out without a request.
+    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    await rows.nth(0).getByRole('button', { name: 'Keep' }).click()
+    expect(apiMock.recordingDeletes).toEqual([])
+
+    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(rows).toHaveCount(2)
+    expect(apiMock.recordingDeletes).toEqual(['take-2'])
+    await expect(page.getByRole('status').first()).toContainText('Take deleted')
+
+    // Escape closes the panel.
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+})

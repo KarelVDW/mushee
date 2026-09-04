@@ -96,6 +96,20 @@ export class RecordingArchiver {
 }
 
 /** Container sniffing from the stream's first bytes (magic numbers). */
+/** Content type of an archived audio object by its extension (the inverse of what `sniffContainer` wrote). */
+const AUDIO_CONTENT_TYPES: Record<string, string> = {
+    '.webm': 'audio/webm',
+    '.mp3': 'audio/mpeg',
+    '.ogg': 'audio/ogg',
+    '.wav': 'audio/wav',
+    '.flac': 'audio/flac',
+    '.mp4': 'audio/mp4',
+}
+
+export function audioContentTypeFor(key: string): string {
+    return AUDIO_CONTENT_TYPES[key.slice(key.lastIndexOf('.'))] ?? 'application/octet-stream'
+}
+
 export function sniffContainer(buffer: Buffer): {
     extension: string
     contentType: string

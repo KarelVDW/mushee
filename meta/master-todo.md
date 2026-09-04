@@ -114,8 +114,11 @@ deploy.yml) once the GCP project exists.
     re-run `check-inference-parity` + eval gate.
 21. **API image slimming** _(PR M19)_ and rate-limit Redis store if OTP brute-force pressure
     appears (currently per-replica in-memory, `allowedAttempts: 5` is the real guard).
-22. **Recordings product surface** (new possibility now audio is stored): a "my recordings"
-    list with playback/delete would both add user value and strengthen the GDPR story.
+22. ~~**Recordings product surface**~~ — **done 2026-09-05**: the editor header's "Takes"
+    menu lists every recording made into the score (newest first) with replay of the
+    archived audio and confirmed deletion (`GET/DELETE /recordings`, `GET /recordings/:id/audio`
+    — signed URL or stream, owner-scoped). A cross-score "all my recordings" page can build on
+    the same endpoint (`GET /recordings` without `scoreId`).
 
 ## Structure / refactor backlog (no launch impact)
 

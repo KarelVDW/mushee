@@ -115,6 +115,32 @@ export function deleteScore(id: string): Promise<void> {
     return api(`/scores/${id}`, { method: 'DELETE' })
 }
 
+// ── Recordings (takes) ──────────────────────────────────────────────────────
+
+export interface RecordingSummary {
+    id: string
+    scoreId: string
+    startedAt: string
+    endedAt: string | null
+    /** Seconds recorded. */
+    seconds: number
+    /** Whether audio was archived (takes from before archiving have none). */
+    hasAudio: boolean
+}
+
+export function listRecordings(scoreId?: string): Promise<RecordingSummary[]> {
+    return api(`/recordings${scoreId ? `?scoreId=${encodeURIComponent(scoreId)}` : ''}`)
+}
+
+export function deleteRecording(id: string): Promise<void> {
+    return api(`/recordings/${id}`, { method: 'DELETE' })
+}
+
+/** Where a media element fetches a take's audio; the session cookie rides along (same-site). */
+export function recordingAudioUrl(id: string): string {
+    return `${API_URL}/recordings/${id}/audio`
+}
+
 export interface AccountDeletionStatus {
     pending: boolean
     requestedAt?: string
