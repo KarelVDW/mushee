@@ -246,3 +246,23 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
 - **Not done (deliberate):** playback on the shared page (the Transport
   stack is bound to the editor's manipulator; the recipient can export
   MIDI/PDF) — a good follow-up; expiring links / passwords — YAGNI until asked.
+
+## 13. Security pass over the new surfaces (manual; the `/security-review` skill needs a remote)
+
+- `GET /shared/:token`: unauthenticated by design; token shape validated
+  before any query (`^[A-Za-z0-9_-]{16,64}$`), 96-bit random tokens, 404 parity
+  for unknown/revoked/malformed, global per-IP rate limit (120/min) applies,
+  payload = title/updatedAt/document only (no owner). Web page is `noindex`,
+  robots-disallowed.
+- `GET /recordings/:id/audio`, `DELETE /recordings/:id`, `POST/DELETE
+  /scores/:id/share`: `AuthGuard` + `BetaApprovalGuard`, ownership checked in
+  the service (403 for another user's row, 404 for unknown), UUID pipe on ids;
+  signed audio URLs expire after 15 min.
+- CAPTCHA: verification server-side (better-auth plugin, Cloudflare
+  siteverify); `x-captcha-response` passes CORS (Nest reflects requested
+  headers). Unset secret → warning, never a silent bypass in production logs.
+- Error tracking sends method/path/status/user id/request id — no bodies,
+  headers or cookies. Exception messages may contain SQL text (standard).
+- Image: `.env*` and dev storage no longer ship (see §8).
+- Screens checked at 1280 and 390 px: editor header with the three chips,
+  Takes and Share panels, shared page, pricing page.
