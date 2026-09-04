@@ -223,6 +223,11 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 Technical detail behind master-todo item 13 (the N-session load test — measure
 first, everything below except §1 came from code-reading, not measurement).
+The harness exists since 2026-09-05: `pnpm --filter @mushee/api load:recording`
+(`apps/api/scripts/load-test-recording.ts`; `SESSIONS`, `RAMP_MS`,
+`CREPE_INFERENCE_URL` for remote mode). First local in-process reading, 2
+sessions: pass p50 ~315 ms / p95 365 ms, first notes ~3.4 s, peak RSS 359 MB.
+Run it in remote mode against the inference service to size pods.
 The inference split already moved the TF forward pass off the API event loop;
 API replicas share state via Postgres and scale horizontally. What remains sets
 the practical per-pod ceiling, in priority order:
