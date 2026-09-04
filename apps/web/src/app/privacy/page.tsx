@@ -203,8 +203,8 @@ export default function PrivacyPolicyPage() {
                     <strong>Erase</strong> your data (the in-app account deletion does this end-to-end);
                 </li>
                 <li>
-                    <strong>Export</strong> your data in a portable format — Settings → Account → “Download my data” gives you your
-                    profile, settings and every score as MusicXML and JSON; your scores belong to you;
+                    <strong>Export</strong> your data in a portable format — Settings → Account → “Download my data” gives you your profile,
+                    settings and every score as MusicXML and JSON; your scores belong to you;
                 </li>
                 <li>
                     <strong>Restrict or object</strong> to processing based on legitimate interest;

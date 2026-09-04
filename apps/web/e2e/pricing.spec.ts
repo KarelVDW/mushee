@@ -25,7 +25,10 @@ test('pricing page: heading, FAQ and structured data are present; CTA routes to 
     expect(jsonLd).toContain('"FAQPage"')
     expect(jsonLd).toContain('"SoftwareApplication"')
 
-    await page.getByRole('button', { name: /Start free|Request beta access/ }).first().click()
+    await page
+        .getByRole('button', { name: /Start free|Request beta access/ })
+        .first()
+        .click()
     await expect(page).toHaveURL(/\/signup$/)
 })
 

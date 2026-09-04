@@ -127,7 +127,10 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   vars, Polar vars (`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`,
   `POLAR_SERVER`, `POLAR_PRODUCT_*`), beta switches (`BETA_MODE`,
   `ADMIN_EMAILS`), admin console vars (`ADMIN_SECRET`, `ADMIN_APP_URL` —
-  without the secret the `/admin` endpoints answer 503),
+  without the secret the `/admin` endpoints answer 503), the signup CAPTCHA
+  secret (`TURNSTILE_SECRET_KEY`; unset = no CAPTCHA, production warns),
+  error tracking (`POSTHOG_API_KEY`, optional `POSTHOG_HOST`; unset = errors
+  only logged),
   and blob storage vars: `STORAGE_DRIVER=gcs` + `GCS_BUCKET`
   (auth via workload identity / `GOOGLE_APPLICATION_CREDENTIALS`; optional
   `GCS_PROJECT_ID`) for score MusicXML and recording archives —
@@ -199,6 +202,10 @@ default EU cloud) on the web build to enable product analytics, session
 replay, and error tracking. Everything is gated behind the GDPR cookie
 banner: nothing is captured until the visitor opts in, and events are proxied
 through `/ingest` to dodge ad blockers. Unset = analytics fully off.
+
+The API reports its own unexpected errors (5xx, crashes) into the same
+project when `POSTHOG_API_KEY` is set (`apps/api/src/telemetry/`), so one
+Error-tracking view shows both halves of an incident.
 
 ## Closed beta
 

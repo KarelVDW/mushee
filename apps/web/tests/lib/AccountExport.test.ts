@@ -46,7 +46,12 @@ describe('AccountExport', () => {
     })
 
     it('packs profile, settings and every score as MusicXML + JSON, with an index and a README', async () => {
-        const meta = (id: string, title: string) => ({ id, title, createdAt: '2026-02-01T00:00:00.000Z', updatedAt: '2026-03-01T00:00:00.000Z' })
+        const meta = (id: string, title: string) => ({
+            id,
+            title,
+            createdAt: '2026-02-01T00:00:00.000Z',
+            updatedAt: '2026-03-01T00:00:00.000Z',
+        })
         const exported = new AccountExport(
             profile,
             { keyboardShortcuts: { 'note.up': ['ArrowUp'] } as never },

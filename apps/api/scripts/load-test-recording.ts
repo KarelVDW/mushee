@@ -118,7 +118,14 @@ async function runClient(index: number, audio: Buffer, chunkIntervalMs: number):
         ws.once('open', () => res())
         ws.once('error', rej)
     })
-    const result: ClientResult = { index, openedAt: Date.now(), firstUpdateMs: null, updates: 0, endToCompleteMs: null, closedCleanly: false }
+    const result: ClientResult = {
+        index,
+        openedAt: Date.now(),
+        firstUpdateMs: null,
+        updates: 0,
+        endToCompleteMs: null,
+        closedCleanly: false,
+    }
     let endSentAt = 0
     ws.on('message', (data: Buffer) => {
         const payload = JSON.parse(data.toString()) as { type: string }
@@ -217,7 +224,10 @@ async function main(): Promise<void> {
             passP50Ms: percentile(allPasses, 50),
             passP95Ms: percentile(allPasses, 95),
             passMaxMs: Math.max(0, ...allPasses),
-            firstNotesP95Ms: percentile(rows.flatMap((r) => (r.firstNotesMs === null ? [] : [r.firstNotesMs])), 95),
+            firstNotesP95Ms: percentile(
+                rows.flatMap((r) => (r.firstNotesMs === null ? [] : [r.firstNotesMs])),
+                95,
+            ),
             peakRssMb: Math.round(peakRssMb),
             peakLoopLagMs: peakLagMs,
             sessionsWithoutNotes: rows.filter((r) => r.updates === 0).length,

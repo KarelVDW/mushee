@@ -27,28 +27,30 @@ export default function SignupPage() {
         setError(null)
         setLoading(true)
 
-        void signUp.email({
-            name,
-            email,
-            password,
-            fetchOptions: { headers: captchaToken ? { 'x-captcha-response': captchaToken } : {} },
-        }).then(({ error }) => {
-            if (error) {
-                setError(error.message ?? 'Signup failed')
-                setLoading(false)
-                if (TURNSTILE_SITE_KEY) {
-                    setCaptchaToken(null)
-                    setCaptchaAttempt((n) => n + 1)
+        void signUp
+            .email({
+                name,
+                email,
+                password,
+                fetchOptions: { headers: captchaToken ? { 'x-captcha-response': captchaToken } : {} },
+            })
+            .then(({ error }) => {
+                if (error) {
+                    setError(error.message ?? 'Signup failed')
+                    setLoading(false)
+                    if (TURNSTILE_SITE_KEY) {
+                        setCaptchaToken(null)
+                        setCaptchaAttempt((n) => n + 1)
+                    }
+                } else {
+                    track('signup_completed', { beta: BETA_MODE })
+                    // The account exists at this point — never strand the user on a
+                    // frozen form. Onboarding's verify-email step can re-send the
+                    // code, so a failed initial send proceeds all the same.
+                    const goToOnboarding = () => router.push('/onboarding')
+                    void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
                 }
-            } else {
-                track('signup_completed', { beta: BETA_MODE })
-                // The account exists at this point — never strand the user on a
-                // frozen form. Onboarding's verify-email step can re-send the
-                // code, so a failed initial send proceeds all the same.
-                const goToOnboarding = () => router.push('/onboarding')
-                void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
-            }
-        })
+            })
     }
 
     return (
@@ -70,7 +72,9 @@ export default function SignupPage() {
                 error={error}
                 loading={loading}
                 submitDisabled={!!TURNSTILE_SITE_KEY && !captchaToken}
-                beforeSubmit={TURNSTILE_SITE_KEY && <Turnstile key={captchaAttempt} siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />}
+                beforeSubmit={
+                    TURNSTILE_SITE_KEY && <Turnstile key={captchaAttempt} siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />
+                }
                 onNameChange={setName}
                 onEmailChange={setEmail}
                 onPasswordChange={setPassword}

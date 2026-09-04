@@ -96,7 +96,9 @@ export class RecordingSession {
             this.waived.wallMs += Date.now() - this.degradedSince.wallMs
             this.waived.audioSec += Math.max(0, this.pipeline.audioDurationSec - this.degradedSince.audioSec)
             this.degradedSince = null
-            this.logger.log(`Transcription back for user ${this.userId} — metering resumed (${Math.round(this.waived.wallMs / 1000)}s waived so far)`)
+            this.logger.log(
+                `Transcription back for user ${this.userId} — metering resumed (${Math.round(this.waived.wallMs / 1000)}s waived so far)`,
+            )
             this.events.onHealth?.(health)
         }
     }

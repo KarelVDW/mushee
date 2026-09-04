@@ -167,7 +167,13 @@ export class AccountExport {
             const xml = this.toMusicXml(meta.title, document)
             if (xml) zip.add(`${base}.musicxml`, xml)
             else failures.push(meta.title)
-            index.push({ id: meta.id, title: meta.title, createdAt: meta.createdAt, updatedAt: meta.updatedAt, files: [`${base}.json`, ...(xml ? [`${base}.musicxml`] : [])] })
+            index.push({
+                id: meta.id,
+                title: meta.title,
+                createdAt: meta.createdAt,
+                updatedAt: meta.updatedAt,
+                files: [`${base}.json`, ...(xml ? [`${base}.musicxml`] : [])],
+            })
         })
 
         zip.add('README.txt', this.readme(failures))

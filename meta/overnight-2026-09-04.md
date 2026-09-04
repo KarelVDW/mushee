@@ -17,17 +17,17 @@ Each entry: **what** → **why it matters** → **verification**.
   MusicXML export→import (exact, and the importer must not warn about our own
   files), MIDI export→import (sounding events, meters, tempo marks).
 - **Bugs it found (fixed in the same commit):**
-  1. *Instrument swapped on reload.* `ScoreDeserializer` resolved the instrument
-     by General MIDI program before its name; 17 of the 51 selectable
-     instruments share a program with an earlier-registered one (bass
-     clarinet→clarinet, French horn→horn in C, alto flute→dizi flute,
-     violoncello→cello, euphonium→baritone horn, contrabassoon→bassoon, …).
-     Since transposition is per instrument, a French-horn score sounded a fifth
-     off after every save. Name now decides; program only for foreign files.
-  2. *Key mode lost.* A mode-only key change (C major → A minor, same fifths)
-     carried into later bars via `lastKey` but was "redundant" for drawing and
-     serialization, so the inherited mode vanished on reload. Redundancy checks
-     and the serializer's change detection now include the mode.
+    1. _Instrument swapped on reload._ `ScoreDeserializer` resolved the instrument
+       by General MIDI program before its name; 17 of the 51 selectable
+       instruments share a program with an earlier-registered one (bass
+       clarinet→clarinet, French horn→horn in C, alto flute→dizi flute,
+       violoncello→cello, euphonium→baritone horn, contrabassoon→bassoon, …).
+       Since transposition is per instrument, a French-horn score sounded a fifth
+       off after every save. Name now decides; program only for foreign files.
+    2. _Key mode lost._ A mode-only key change (C major → A minor, same fifths)
+       carried into later bars via `lastKey` but was "redundant" for drawing and
+       serialization, so the inherited mode vanished on reload. Redundancy checks
+       and the serializer's change detection now include the mode.
 - **Verification:** notation suite 1338/1338 green, model coverage gate (100%)
   holds, eslint clean. Commit `f44e912`.
 - **Known, documented non-losses:** MIDI import keeps at most one tempo mark
@@ -138,7 +138,7 @@ Each entry: **what** → **why it matters** → **verification**.
   them. It also carried the whole workspace's dependency store: Next.js +
   two SWC binaries (~370 MB), vitest, happy-dom, mongodb, TypeScript, the
   Nest CLI. Root cause for the web packages: better-auth declares `next`,
-  `vitest`, `react`, `mongodb` as *optional* peers and pnpm's
+  `vitest`, `react`, `mongodb` as _optional_ peers and pnpm's
   auto-install-peers resolved them from the workspace into the API's
   production graph (`pnpm why --prod next` showed it).
 - **Fixed:** `.dockerignore` excludes `**/.env*` (keeps `.env.example`),
@@ -167,7 +167,7 @@ Each entry: **what** → **why it matters** → **verification**.
 ## 10. N-session recording load test (master-todo #13)
 
 - `apps/api/scripts/load-test-recording.ts` (`pnpm --filter @mushee/api
-  load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
+load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   `CREPE_INFERENCE_URL`). Real-time-paced fixture streaming, per-session
   first-notes latency, pass p50/p95/max, finalize time; process peak RSS and
   event-loop lag; JSON summary + verdict against the 1 s pass cadence.

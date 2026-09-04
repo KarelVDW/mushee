@@ -86,7 +86,11 @@ describe('monitorProcessErrors', () => {
 
         const error = new Error('crash')
         emitter.emit('uncaughtExceptionMonitor', error, 'unhandledRejection')
-        expect(client.captureException).toHaveBeenCalledWith(error, 'api:test-host', expect.objectContaining({ origin: 'process', event: 'unhandledRejection' }))
+        expect(client.captureException).toHaveBeenCalledWith(
+            error,
+            'api:test-host',
+            expect.objectContaining({ origin: 'process', event: 'unhandledRejection' }),
+        )
 
         off()
         expect(proc.listenerCount('uncaughtExceptionMonitor')).toBe(0)

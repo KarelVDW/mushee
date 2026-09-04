@@ -58,7 +58,11 @@ export function Turnstile({ siteKey, onToken }: TurnstileProps) {
 
     return (
         <>
-            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={render} />
+            <Script
+                src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+                strategy="afterInteractive"
+                onLoad={render}
+            />
             <div ref={container} data-testid="turnstile" className="min-h-16 flex justify-center" />
         </>
     )

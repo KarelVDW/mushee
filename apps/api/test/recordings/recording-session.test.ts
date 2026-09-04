@@ -51,7 +51,11 @@ describe('RecordingSession metering during a transcription outage', () => {
         spend = vi.fn(() => Promise.resolve(balance()))
         onHealth = vi.fn<(health: PipelineHealth) => void>()
         events = { onUpdate: vi.fn(), onLimitReached: vi.fn(), onHealth }
-        const repo = { save: vi.fn((row: object) => Promise.resolve({ id: 'rec-1', ...row })), create: (row: object) => row, update: vi.fn(() => Promise.resolve()) }
+        const repo = {
+            save: vi.fn((row: object) => Promise.resolve({ id: 'rec-1', ...row })),
+            create: (row: object) => row,
+            update: vi.fn(() => Promise.resolve()),
+        }
         session = new RecordingSession(
             'user-1',
             'score-1',
