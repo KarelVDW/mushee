@@ -33,7 +33,13 @@ async function doubleTap(page: Page, x: number, y: number): Promise<void> {
     await cdp.detach()
 }
 
-/** A horizontal finger drag (touch-action pan-y leaves it to the app: it range-selects). */
+/**
+ * A horizontal finger drag (touch-action pan-y leaves it to the app: it range-selects).
+ * The finger comes to rest on the target before lifting, as a real one does. Lifting
+ * mid-motion makes Chromium read the gesture as a fling, and it then swallows the click of
+ * a tap that follows within a few dozen ms — which is exactly when the test taps the
+ * selection bar. That dropped "Select all" on CI's fast Linux runner while passing locally.
+ */
 async function touchDrag(page: Page, fromX: number, fromY: number, toX: number, toY: number): Promise<void> {
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: fromX, y: fromY }] })
@@ -44,6 +50,7 @@ async function touchDrag(page: Page, fromX: number, fromY: number, toX: number, 
             touchPoints: [{ x: fromX + ((toX - fromX) * i) / steps, y: fromY + ((toY - fromY) * i) / steps }],
         })
     }
+    await page.waitForTimeout(150)
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     await cdp.detach()
 }
