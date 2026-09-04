@@ -37,6 +37,18 @@ export class ScoresController {
         return this.scoresService.duplicate(user.id, id)
     }
 
+    /** Turn the read-only share link on (idempotent) — answers the token to build `/s/<token>` from. */
+    @Post(':id/share')
+    share(@CurrentUser() user: { id: string }, @Param('id') id: string) {
+        return this.scoresService.share(user.id, id)
+    }
+
+    /** Turn the share link off; it stops resolving at once. */
+    @Delete(':id/share')
+    unshare(@CurrentUser() user: { id: string }, @Param('id') id: string) {
+        return this.scoresService.unshare(user.id, id)
+    }
+
     @Patch(':id')
     update(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() dto: UpdateScoreDto) {
         return this.scoresService.update(user.id, id, dto)

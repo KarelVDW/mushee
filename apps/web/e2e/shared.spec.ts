@@ -1,0 +1,30 @@
+import { expect, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
+
+/**
+ * The public read-only score page behind a share link. Uses the apiMock routes
+ * (the public endpoint needs no session, but the mock installs them all).
+ */
+
+test('a valid share link renders the score read-only with its title, export and a sign-up path', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(MOCK_TITLE)
+    const score = page.getByTestId('shared-score')
+    await expect(score.locator('svg').first()).toBeVisible()
+    expect(await score.locator('svg line').count()).toBeGreaterThanOrEqual(5)
+
+    // No editing chrome on a shared view.
+    await expect(page.getByRole('button', { name: 'Record' })).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Note duration' })).toHaveCount(0)
+
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open library|Start free/ })).toBeVisible()
+})
+
+test('an unknown or revoked token explains itself instead of erroring', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/s/nosuchtoken00000000')
+    await expect(page.getByRole('heading', { name: /doesn’t open anything/ })).toBeVisible()
+    await expect(page.getByTestId('shared-score')).toHaveCount(0)
+})

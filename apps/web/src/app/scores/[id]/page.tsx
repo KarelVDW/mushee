@@ -47,10 +47,11 @@ import {
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
 import { ExportMenu } from './ExportMenu'
-import { RecordingsMenu } from './RecordingsMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { RecordingsMenu } from './RecordingsMenu'
 import { ScoreManipulator } from './ScoreManipulator'
+import { ShareMenu } from './ShareMenu'
 import { TitleInput } from './TitleInput'
 import { usePlayback } from './usePlayback'
 import { useRecording } from './useRecording'
@@ -464,6 +465,7 @@ export default function ScoreEditorPage() {
                             <Icon name="keyboard" size={16} />
                         </ChipToggle>
                     )}
+                    <ShareMenu scoreId={id} shareToken={scoreDocument?.meta.shareToken ?? null} compact={isMobile} />
                     <RecordingsMenu scoreId={id} compact={isMobile} />
                     <ExportMenu
                         score={score}

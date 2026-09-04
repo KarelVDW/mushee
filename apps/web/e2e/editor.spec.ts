@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
 
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
@@ -305,4 +305,19 @@ test('takes menu lists the score’s recordings and deletes one after confirmati
     // Escape closes the panel.
     await page.keyboard.press('Escape')
     await expect(panel).toHaveCount(0)
+})
+
+test('share menu turns the read-only link on, shows it, and turns it off again', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Share score' }).click()
+    const panel = page.getByRole('dialog', { name: 'Share score' })
+    await expect(panel).toBeVisible()
+    await panel.getByRole('button', { name: 'Turn on link' }).click()
+
+    const link = panel.getByRole('textbox', { name: 'Share link' })
+    await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+    expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
+
+    await panel.getByRole('button', { name: 'Turn off link' }).click()
+    await expect(panel.getByRole('button', { name: 'Turn on link' })).toBeVisible()
+    expect(apiMock.shareToken).toBeNull()
 })

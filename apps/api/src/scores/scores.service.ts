@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain } from 'class-transformer'
@@ -97,8 +99,10 @@ export class ScoresService {
      * otherwise reads MusicXML from storage, converts to JSON, and caches it.
      */
     async load(userId: string, id: string): Promise<Record<string, unknown>> {
-        const score = await this.findOne(userId, id)
+        return this.loadDocument(await this.findOne(userId, id))
+    }
 
+    private async loadDocument(score: Score): Promise<Record<string, unknown>> {
         const cached = await this.cacheService.findByScoreId(score.id)
         if (cached) {
             return cached.data
@@ -111,6 +115,48 @@ export class ScoresService {
         await this.cacheService.upsert(score.id, scoreData)
 
         return scoreData
+    }
+
+    // --- Read-only share links ---
+
+    /**
+     * Turn sharing on: mint the score's share token (idempotent — an already
+     * shared score keeps its link, so a re-click never invalidates a link that
+     * was already sent around). 16 url-safe chars ≈ 96 bits of entropy.
+     */
+    async share(userId: string, id: string): Promise<{ token: string }> {
+        const score = await this.findOne(userId, id)
+        if (!score.shareToken) {
+            score.shareToken = randomBytes(12).toString('base64url')
+            await this.scoreRepo.save(score)
+        }
+        return { token: score.shareToken }
+    }
+
+    /** Turn sharing off: the link stops resolving immediately. A later share() mints a new token. */
+    async unshare(userId: string, id: string): Promise<void> {
+        const score = await this.findOne(userId, id)
+        if (score.shareToken === null) return
+        score.shareToken = null
+        await this.scoreRepo.save(score)
+    }
+
+    /**
+     * What a share link shows: the live document (edit cache first, like the
+     * owner sees it) plus the title. No owner identity leaves the server. An
+     * unknown or revoked token is simply not found — same answer either way, so
+     * a link cannot be probed for whether it used to exist.
+     */
+    async loadShared(token: string): Promise<{ id: string; title: string; updatedAt: Date; document: Record<string, unknown> }> {
+        if (!ScoresService.isShareToken(token)) throw new NotFoundException('Score not found')
+        const score = await this.scoreRepo.findOneBy({ shareToken: token })
+        if (!score) throw new NotFoundException('Score not found')
+        return { id: score.id, title: score.title, updatedAt: score.updatedAt, document: await this.loadDocument(score) }
+    }
+
+    /** The shape share() mints — anything else is rejected before touching the database. */
+    static isShareToken(token: string): boolean {
+        return /^[A-Za-z0-9_-]{16,64}$/.test(token)
     }
 
     async update(userId: string, id: string, dto: UpdateScoreDto): Promise<Score> {

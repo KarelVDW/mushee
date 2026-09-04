@@ -120,6 +120,11 @@ deploy.yml) once the GCP project exists.
     — signed URL or stream, owner-scoped). A cross-score "all my recordings" page can build on
     the same endpoint (`GET /recordings` without `scoreId`).
 
+22b. **Read-only share links** — **shipped 2026-09-05** (new, not previously listed):
+`/s/<token>` public page (view, export), Share chip in the editor, `POST/DELETE /scores/:id/share`,
+`GET /shared/:token`, migration `ScoreShareToken`. Follow-ups if wanted: playback on the shared
+page, link expiry/passwords, an "open in Solkey → copy to my library" action.
+
 ## Structure / refactor backlog (no launch impact)
 
 **Cleared 2026-07-08** — the full backlog was executed in one restructuring pass (every

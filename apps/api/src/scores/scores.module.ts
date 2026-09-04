@@ -8,10 +8,11 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module'
 import { Score } from './entities/score.entity'
 import { ScoresController } from './scores.controller'
 import { ScoresService } from './scores.service'
+import { SharedScoresController } from './shared-scores.controller'
 
 @Module({
     imports: [TypeOrmModule.forFeature([Score]), BetaModule, CacheModule, StorageModule, SubscriptionsModule],
-    controllers: [ScoresController],
+    controllers: [ScoresController, SharedScoresController],
     providers: [ScoresService],
     exports: [ScoresService],
 })

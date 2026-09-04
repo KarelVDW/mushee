@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 
 @Entity('scores')
 @Index('IDX_scores_userId_updatedAt', ['userId', 'updatedAt'])
+@Index('IDX_scores_shareToken', ['shareToken'], { unique: true })
 export class Score {
     @PrimaryGeneratedColumn('uuid')
     id: string
@@ -15,6 +16,10 @@ export class Score {
 
     @Column({ nullable: true })
     storageKey: string
+
+    /** Secret of the read-only share link (`/s/<token>`); null when the score is not shared. */
+    @Column({ type: 'text', nullable: true })
+    shareToken: string | null
 
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date

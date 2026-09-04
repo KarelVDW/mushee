@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+    ApiError,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
@@ -16,6 +17,7 @@ import {
     getBillingState,
     getScore,
     getSettings,
+    getSharedScore,
     listPlans,
     listRecordings,
     listScores,
@@ -29,6 +31,8 @@ import {
     requestAccountDeletion,
     resumeSubscription,
     type ScoreMeta,
+    shareScore,
+    unshareScore,
     updateScore,
 } from './api'
 import type { StoredShortcuts } from './Keybindings'
@@ -103,6 +107,47 @@ export function useDeleteScore() {
             void queryClient.invalidateQueries({ queryKey: scoreKeys.all })
         },
         meta: { errorMessage: 'Could not delete the score. Please try again.' },
+    })
+}
+
+/** A score behind its share token — public, cached for the visit. */
+export function useSharedScore(token: string) {
+    return useQuery({
+        queryKey: ['shared', token] as const,
+        queryFn: () => getSharedScore(token),
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        // 404 means unknown/revoked; retrying will not change that.
+        retry: (count, error) => !(error instanceof ApiError && error.isClientError) && count < 2,
+    })
+}
+
+type ScoreDocumentData = { meta: ScoreMeta; document: Record<string, unknown> }
+
+/** Mint/keep the score's share link and reflect it on the cached score meta. */
+export function useShareScore(id: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => shareScore(id),
+        onSuccess: ({ token }) => {
+            queryClient.setQueryData<ScoreDocumentData>(scoreKeys.detail(id), (data) =>
+                data ? { ...data, meta: { ...data.meta, shareToken: token } } : data,
+            )
+        },
+        meta: { errorMessage: 'Could not create the share link. Please try again.' },
+    })
+}
+
+export function useUnshareScore(id: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => unshareScore(id),
+        onSuccess: () => {
+            queryClient.setQueryData<ScoreDocumentData>(scoreKeys.detail(id), (data) =>
+                data ? { ...data, meta: { ...data.meta, shareToken: null } } : data,
+            )
+        },
+        meta: { errorMessage: 'Could not turn the share link off. Please try again.' },
     })
 }
 

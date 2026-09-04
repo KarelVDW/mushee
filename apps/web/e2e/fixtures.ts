@@ -83,7 +83,12 @@ export interface ApiMock {
     readonly duplicates: string[]
     /** IDs the app requested via DELETE /recordings/:id. */
     readonly recordingDeletes: string[]
+    /** Share-link state of the mock score: token while on, null while off. */
+    shareToken: string | null
 }
+
+/** The token the mock mints for the score's share link. */
+export const MOCK_SHARE_TOKEN = 'e2eShareToken0001'
 
 function corsHeaders(route: Route): Record<string, string> {
     const origin = route.request().headers()['origin'] ?? '*'
@@ -180,6 +185,22 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
             )
         }
 
+        // Read-only share link: mint/revoke on the score, resolve publicly.
+        const shareMatch = path.match(/\/scores\/([^/]+)\/share$/)
+        if (shareMatch) {
+            if (method === 'POST') {
+                mock.shareToken = MOCK_SHARE_TOKEN
+                return json({ token: MOCK_SHARE_TOKEN })
+            }
+            mock.shareToken = null
+            return json({})
+        }
+        const sharedMatch = path.match(/\/shared\/([^/]+)$/)
+        if (sharedMatch) {
+            if (sharedMatch[1] !== MOCK_SHARE_TOKEN) return json({ message: 'Score not found' }, 404)
+            return json({ id: MOCK_SCORE_ID, title: MOCK_TITLE, updatedAt: NOW, document: SCORE_PARTWISE })
+        }
+
         const duplicateMatch = path.match(/\/scores\/([^/]+)\/duplicate$/)
         if (duplicateMatch && method === 'POST') {
             mock.duplicates.push(duplicateMatch[1])
@@ -199,7 +220,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 deletedIds.add(idMatch[1])
                 return json({})
             }
-            return json(SCORE_META) // GET meta
+            return json({ ...SCORE_META, shareToken: mock.shareToken }) // GET meta
         }
 
         if (path.endsWith('/scores')) {
@@ -241,7 +262,7 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         await use(page)
     },
     apiMock: async ({ page, context }, use) => {
-        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [] }
+        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [], shareToken: null }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.

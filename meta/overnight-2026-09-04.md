@@ -195,3 +195,26 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   fallback, delete ordering/failure), editor e2e test (list, disabled play on
   audio-less take, keep/delete flow, toast, Escape) — see the commit for the
   run; api 243 / web 266 unit tests green.
+
+## 12. Read-only share links (`/s/<token>`) — new product feature
+
+- **What:** migration adds a unique nullable `shareToken` to scores. Owner
+  endpoints `POST/DELETE /scores/:id/share` (mint once, stable until turned
+  off; 96-bit url-safe token); public `GET /shared/:token` (no auth; unknown,
+  revoked and malformed tokens all answer 404 alike, malformed ones never hit
+  the DB). Editor header gets a "Share" chip: turn link on, copy, turn off.
+  New public page `/s/[token]`: title, the engraved score read-only (reflows
+  on phones like the editor), the Export menu (PDF/MusicXML/MIDI for the
+  recipient), a "Start free / Open library" path; `noindex`, robots
+  disallow `/s/`, middleware allowlist.
+- **Why:** the ICP doc's trigger moment is literally "can you send me the
+  chart?"; until now the only way was exporting a file. A link the recipient
+  can open on a phone, hear back (export → their player) and download is the
+  natural growth loop for a notation tool, and costs no account.
+- **Verification:** 5 API unit tests (mint/idempotence, ownership,
+  revoke+re-mint, public payload without owner, 404 parity + DB shielding),
+  editor e2e (turn on → link → turn off), shared e2e (renders read-only with
+  export + CTA; unknown token explains itself). Web 266 / API suites green.
+- **Not done (deliberate):** playback on the shared page (the Transport
+  stack is editor-bound; the recipient can export MIDI/PDF) — a good
+  follow-up; expiring links / passwords — YAGNI until asked.
