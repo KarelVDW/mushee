@@ -78,7 +78,11 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
   --from-literal=ADMIN_EMAILS='info@solkey.io' \
-  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)"
+  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)" \
+  --from-literal=TURNSTILE_SECRET_KEY='<cloudflare turnstile secret>'
+# TURNSTILE_SECRET_KEY gates signup with a CAPTCHA (required before the beta
+# gate comes off); its site key goes to the web project's Vercel env as
+# NEXT_PUBLIC_TURNSTILE_SITE_KEY. Omitting it disables the CAPTCHA (boot warns).
 # ADMIN_SECRET is shared with the admin console's Vercel project (see
 # "Admin console" below) — set both to the same value.
 # Polar (add before enabling checkout; webhook path works without checkout):

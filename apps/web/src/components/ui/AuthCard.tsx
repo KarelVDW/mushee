@@ -20,6 +20,10 @@ interface AuthCardProps {
     password: string
     showPassword: boolean
     loading?: boolean
+    /** Blocks submission for a reason other than loading (e.g. a CAPTCHA still to be solved). */
+    submitDisabled?: boolean
+    /** Rendered between the fields and the submit button (the signup CAPTCHA). */
+    beforeSubmit?: ReactNode
     error?: string | null
     onNameChange?: (v: string) => void
     onEmailChange: (v: string) => void
@@ -79,6 +83,8 @@ function FormPanel({
     password,
     showPassword,
     loading,
+    submitDisabled,
+    beforeSubmit,
     error,
     onNameChange,
     onEmailChange,
@@ -128,7 +134,8 @@ function FormPanel({
                     </div>
 
                     <div className="flex flex-col gap-3.5 pt-2">
-                        <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading}>
+                        {beforeSubmit}
+                        <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
                             {loading ? (isSignup ? 'Creating account…' : 'Signing in…') : isSignup ? 'Create account' : 'Sign in'}
                         </PrimaryButton>
                         <SwitchModeRow mode={mode} />

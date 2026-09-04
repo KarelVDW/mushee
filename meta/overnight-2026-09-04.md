@@ -63,3 +63,35 @@ Each entry: **what** → **why it matters** → **verification**.
 - **Verification:** 6 unit tests (zip verified through the independent
   `MxlArchive` reader + CRC reference vector), settings e2e asserts a real
   download; 12/12 affected e2e green.
+
+## 4. Signup CAPTCHA — Cloudflare Turnstile (master-todo #15, launch blocker)
+
+- **What:** API installs better-auth's official `captcha` plugin
+  (`auth/captcha-config.ts`) on `/sign-up/email` when `TURNSTILE_SECRET_KEY`
+  is set; production boot warns when it isn't. Web renders a `Turnstile`
+  widget on the signup form when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set,
+  disables submit until solved, sends the token as `x-captcha-response`,
+  remounts the widget after a rejected attempt (tokens are single-use).
+  Privacy policy lists Cloudflare as a processor; env examples + production
+  secret runbook updated.
+- **Why:** the end-of-beta runbook calls this a blocker for the BETA_MODE
+  flip: without approval, signup is an open faucet with e-mail sending.
+  Scope kept to signup only (sign-in and reset are rate-limited and would
+  need the widget on their forms too) — extend `CAPTCHA_ENDPOINTS` with the
+  pages if that changes.
+- **Remaining for Karel (config only):** create the Turnstile widget
+  (managed mode, domain solkey.io), set the two keys, sign up once for real.
+- **Verification:** api + web type-check/lint clean; 4 new API unit tests
+  (plugin installed/omitted, production warning), 2 web component tests
+  (widget lifecycle), auth e2e green with no site key (widget absent).
+
+## 5. Runbook hygiene (end-of-beta launch)
+
+- The runbook still described the pre-relaunch catalogue (Composer $8 /
+  Studio $18, four products, beta tier "300 credits = 5 min"). Corrected to
+  the 2026-07 relaunch: Songwriter/Studio/Arranger monthly+yearly, three
+  minute packs, `order.paid`/`order.refunded` webhooks, pack env vars, beta
+  tier 1800 credits (30 min — which, as now noted there, out-gives
+  Songwriter, so grandfathering beta users means they never need to pay).
+  Checklist rows updated for the CAPTCHA, data export and the error-tracking
+  state (web half exists, API half doesn't).

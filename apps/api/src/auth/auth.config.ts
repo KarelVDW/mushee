@@ -5,6 +5,7 @@ import { Pool } from 'pg'
 import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
 import { postgresSsl } from '../database/postgres-ssl'
 import { mailService } from '../mail/mail.service'
+import { signupCaptchaPlugins } from './captcha-config'
 
 // better-auth reads BETTER_AUTH_SECRET from the environment itself; its
 // built-in fallback is a publicly known constant, so booting production
@@ -127,5 +128,6 @@ export const auth = betterAuth({
                 await mailService.sendVerificationCode(email, otp)
             },
         }),
+        ...signupCaptchaPlugins(),
     ],
 })

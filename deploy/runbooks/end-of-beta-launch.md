@@ -9,18 +9,24 @@ audience is still small and forgiving.
 
 - [ ] Lawyer has reviewed `/terms` + `/privacy` (master-todo item 1's open
       half; include the stored-recording-audio section).
-- [ ] **Signup CAPTCHA** (hCaptcha/Turnstile — master-todo item 15). The
-      waitlist currently absorbs abuse; the moment approval is gone, signup
-      is an open faucet with mail-sending attached. Treat as a blocker for
-      the BETA_MODE flip, not a nice-to-have.
-- [ ] Error tracking wired (`main.ts` + `instrumentation.ts` hook points) —
+- [ ] **Signup CAPTCHA** — code shipped 2026-09-05 (Cloudflare Turnstile via
+      better-auth's captcha plugin, signup endpoint only). Still to do: create
+      the Turnstile widget in the Cloudflare dashboard (managed mode, domain
+      solkey.io), put `TURNSTILE_SECRET_KEY` in `Secret/api-secrets` and
+      `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the web project's Vercel env, then
+      sign up once for real. Without the secret the API boots with a warning
+      and signup is unprotected — treat the keys as a blocker for the
+      BETA_MODE flip, not a nice-to-have.
+- [ ] Error tracking wired — the web half exists (PostHog `capture_exceptions`
+      in `lib/analytics.ts`; enable Error tracking in the PostHog project).
+      The API still has no exception reporter (`main.ts` hook point) —
       public users report bugs as vibes; you need stack traces.
 - [ ] N-session recording load test ran (master-todo item 13,
       `scripts/test-recording-ws.ts`) so the per-pod ceiling and HPA maxima
       are numbers, not guesses.
 - [ ] Restore rehearsal green within the last quarter (Runbook 4 §2).
-- [ ] GDPR data-export endpoint exists (master-todo item 14) — the privacy
-      policy promises portability and a public launch widens exposure.
+- [x] GDPR data export exists (master-todo item 14, done 2026-09-05:
+      Settings → Account → "Download my data", built client-side).
 
 ## 2. Polar production go-live
 
@@ -32,25 +38,29 @@ the existing subscription with proration, never create a second one).
 
 Production sequence:
 
-1. Polar dashboard (production org): create **4 products** — Composer $8/mo,
-   Composer $80/yr, Studio $18/mo, Studio $180/yr. Prices/names must stay in
+1. Polar dashboard (production org): create **6 subscription products** —
+   Songwriter $9/mo + $90/yr, Studio $19/mo + $190/yr, Arranger $49/mo +
+   $490/yr — and **3 one-time minute packs** — Single $6 (15 min), EP $15
+   (45 min), Album $39 (150 min) (the 2026-07 pricing relaunch; EUR at
+   numeral parity, tax behavior `location-based`). Prices/names must stay in
    sync with the DB seed (`subscription_tiers`) and the display decoration in
    `apps/web/src/lib/plans.ts` — change all three together or the landing
-   page lies.
+   and /pricing pages lie.
 2. Create an access token; add a webhook endpoint pointing at
    `https://api.solkey.io/billing/webhooks/polar`, subscribed to
-   `subscription.*` + `customer.state_changed`; note the webhook secret.
+   `subscription.*` + `customer.state_changed` + `order.paid` +
+   `order.refunded` (packs land via `order.paid`); note the webhook secret.
 3. Add to `Secret/api-secrets` (carry existing keys — recreate-and-apply as
    in Runbook 1 §4b) and restart the API:
    `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_SERVER=production`,
-   `POLAR_PRODUCT_PRO_MONTHLY`, `POLAR_PRODUCT_PRO_YEARLY`,
-   `POLAR_PRODUCT_STUDIO_MONTHLY`, `POLAR_PRODUCT_STUDIO_YEARLY`.
+   `POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY}`,
+   `POLAR_PRODUCT_PACK_{SINGLE,EP,ALBUM}`.
 4. Verify while checkout is still beta-locked (the webhook path is live even
    though purchase is blocked): Polar's dashboard can send a test event —
    expect 202 and a row in `processed_webhook_events`. A forged call must 403:
    `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://api.solkey.io/billing/webhooks/polar -d '{}'`.
 5. Real-money test once BETA_MODE is off (or with an admin account if
-   checkout opens earlier): buy Composer monthly with a real card, watch the
+   checkout opens earlier): buy Songwriter monthly with a real card, watch the
    tier flip in Settings within seconds (webhook), then cancel and confirm
    the paid period plays out. Refund yourself in Polar afterwards.
 6. First weeks of real charges: spot-check Polar's VAT handling on an EU
@@ -63,13 +73,15 @@ its 503/hidden state without touching anything else.
 
 ## 3. Decide the beta users' fate _before_ the flip
 
-They're on tier `beta` (300 credits = 5 min/day, not sellable). Options:
+They're on tier `beta` (1800 credits = 30 min/day since the pricing relaunch
+migration, not sellable). Options:
 
 - **Grandfather them** (generous, zero effort): leave rows alone; the tier
-  stays functional, they keep 5 min/day forever, can upgrade any time.
-- **Migrate to free** (30 credits/day):
+  stays functional, they keep 30 min/day forever — more than Songwriter's
+  20 min, so nobody on it ever has a reason to pay — can upgrade any time.
+- **Migrate to free** (Sketch: 180 credits = 3 min/day, 5 scores):
   `UPDATE user_subscriptions SET "tierId"='free' WHERE "tierId"='beta';`
-- Middle path: re-tune the beta tier itself
+- Middle path: re-tune the beta tier itself (e.g. down to Songwriter's 1200)
   (`UPDATE subscription_tiers SET "dailyRecordingCredits"=… WHERE id='beta'`;
   live within 60 s, no deploy).
 
@@ -90,7 +102,8 @@ the web client too, so the gate drops even before the web rebuild.
    is `ADMIN_SECRET`.)
 2. Vercel env: `NEXT_PUBLIC_BETA_MODE=false` (Production) → redeploy web.
    This is the flip that changes the _copy_ — landing CTA, pricing buttons,
-   signup messaging (build-time baked, needs the rebuild).
+   the /pricing tier ladder, signup messaging (build-time baked, needs the
+   rebuild).
 3. Smoke: new signup goes straight to onboarding (no waiting room), pricing
    buttons lead to Polar checkout, `/beta` for an approved user shows
    "you're in", the admin console (admin.solkey.io) still signs in.

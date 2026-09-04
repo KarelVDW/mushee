@@ -154,6 +154,10 @@ export default function PrivacyPolicyPage() {
                     notifications), configured for EU data residency.
                 </li>
                 <li>
+                    <strong>Cloudflare, Inc.</strong> — bot protection on the signup form (Turnstile). To tell people from scripts it
+                    processes the request&apos;s IP address and browser signals during signup only; it sets no tracking cookies.
+                </li>
+                <li>
                     <strong>Our hosting provider</strong> — runs the Solkey servers and database where your account and scores live.
                 </li>
             </ul>

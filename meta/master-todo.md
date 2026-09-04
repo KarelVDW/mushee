@@ -93,8 +93,10 @@ deploy.yml) once the GCP project exists.
     Settings → Account → "Download my data" zips profile.json, settings.json and every
     score as MusicXML + JSON in the browser (`lib/AccountExport.ts`); the privacy page
     points at it. Recordings audio deliberately excluded (deleted with the account).
-15. **Signup CAPTCHA (hCaptcha/Turnstile)** — deferred while beta approval gates abuse;
-    becomes real the day the doors open wider.
+15. **Signup CAPTCHA (Turnstile)** — **code done 2026-09-05**: better-auth captcha plugin on
+    `/sign-up/email` (`auth/captcha-config.ts`), Turnstile widget on the signup form. Remaining
+    (config): create the widget in Cloudflare, set `TURNSTILE_SECRET_KEY` (API secret) +
+    `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Vercel). Unset = unprotected, production warns at boot.
 
 ## Phase 3 — before ending the beta / public launch
 
