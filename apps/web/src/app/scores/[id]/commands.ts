@@ -82,7 +82,14 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     },
     fromAction(RAISE_PITCH, 'Edit notes', 'ArrowUp'),
     fromAction(LOWER_PITCH, 'Edit notes', 'ArrowDown'),
-    fromAction(REMOVE_NOTE, 'Edit notes', 'Backspace'),
+    {
+        id: REMOVE_NOTE.id,
+        label: REMOVE_NOTE.label,
+        group: 'Edit notes',
+        defaultShortcut: 'Backspace',
+        // Through the manipulator method (not fromAction): an all-rest selection deletes measures.
+        run: (manipulator) => manipulator.deleteSelection(),
+    },
     fromAction(TOGGLE_REST, 'Edit notes', 'KeyR'),
     fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
     fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),

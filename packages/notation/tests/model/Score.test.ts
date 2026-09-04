@@ -216,6 +216,96 @@ describe('Score', () => {
         })
     })
 
+    describe('removeMeasures', () => {
+        it('removes measures from the middle, closing the gap', () => {
+            const score = makeScore(4)
+            const [m0, m1, m2, m3] = score.measures
+            const before = score.version
+            score.removeMeasures([m2, m1])
+            expect(score.measures).toEqual([m0, m3])
+            expect(m3.index).toBe(1)
+            expect(m3.endBarline).toBe('end')
+            expect(score.version).toBeGreaterThan(before)
+            expect(score.flushDirty()?.allMeasures).toHaveLength(2)
+        })
+
+        it('ignores measures that are not part of the score', () => {
+            const score = makeScore(2)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            const before = score.version
+            score.removeMeasures([stray])
+            expect(score.measures).toHaveLength(2)
+            expect(score.version).toBe(before)
+        })
+
+        it("re-marks a removed measure's clef and key changes on the measure that follows it", () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setClef(0, 'bass')
+            m1.setKeySignature(0, 1)
+            score.setClef(m1.firstNote, 'bass') // propagate: m2 inherits bass / G major
+            expect(m2.clef.type).toBe('bass')
+            expect(m2.leadingClefExplicit).toBe(false)
+            score.removeMeasures([m1])
+            expect(m2.clef.type).toBe('bass')
+            expect(m2.leadingClefExplicit).toBe(true)
+            expect(m2.keySignature.fifths).toBe(1)
+            expect(m2.leadingKeyExplicit).toBe(true)
+        })
+
+        it('carries a mode-only key change (relative minor) across the removal', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            score.setKeySignature(m1.firstNote, 0, 'minor')
+            expect(m2.keySignature.mode).toBe('minor')
+            score.removeMeasures([m1])
+            expect(m2.keySignature.fifths).toBe(0)
+            expect(m2.keySignature.mode).toBe('minor')
+            expect(m2.leadingKeyExplicit).toBe(true)
+        })
+
+        it('carries the tempo a removed measure set onto the measure that follows it', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setTempo(0, 120)
+            score.removeMeasures([m1])
+            expect(m2.tempoAtBeat(0)?.bpm).toBe(120)
+            expect(score.bpmAt(m2.notes[0])).toBe(120)
+        })
+
+        it('leaves a successor alone when it carries its own explicit clef, key and tempo', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setClef(0, 'bass')
+            m1.setKeySignature(0, 1)
+            m1.setTempo(0, 120)
+            score.setClef(m2.firstNote, 'alto')
+            score.setKeySignature(m2.firstNote, -2)
+            m2.setTempo(0, 60)
+            score.removeMeasures([m1])
+            expect(m2.clef.type).toBe('alto')
+            expect(m2.keySignature.fifths).toBe(-2)
+            expect(m2.tempoAtBeat(0)?.bpm).toBe(60)
+        })
+
+        it('leaves a successor alone when the removed measure changed nothing', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            score.removeMeasures([m1])
+            expect(m2.leadingClefExplicit).toBe(false)
+            expect(m2.leadingKeyExplicit).toBe(false)
+            expect(m2.tempoAtBeat(0)).toBeUndefined()
+        })
+
+        it('removes the first measure, letting the next one open the piece', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            score.removeMeasures([m0])
+            expect(score.measures).toEqual([m1])
+            expect(m1.index).toBe(0)
+        })
+    })
+
     describe('navigation', () => {
         it('getNextMeasure / getPreviousMeasure', () => {
             const score = makeScore(3)

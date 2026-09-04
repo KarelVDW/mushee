@@ -268,15 +268,60 @@ export class Score {
     }
 
     removeLastMeasure() {
-        this.measures.pop()
+        const measure = this.lastMeasure
+        if (measure) this.removeMeasures([measure])
+    }
+
+    /**
+     * Remove `measures` (in any order, anywhere in the score; ones not in the score are
+     * ignored). The music that followed keeps sounding as it did: a clef, key or tempo change
+     * carried by a removed measure is re-marked on the first surviving measure after it when
+     * that measure only inherited it, and the piece's final barline moves onto the new last
+     * measure (an explicit double/none style it already carries is preserved).
+     */
+    removeMeasures(measures: Measure[]) {
+        const removed = new Set(measures.filter((m) => this.measures.includes(m)))
+        if (removed.size === 0) return
+        // The context each surviving successor of a removed run enters with — captured before the
+        // run disappears, so the run's own changes can be carried onto it afterwards.
+        const successors = this.measures
+            .filter((m, i) => !removed.has(m) && i > 0 && removed.has(this.measures[i - 1]))
+            .map((m) => ({
+                measure: m,
+                clefType: m.clef.type,
+                key: m.keySignature,
+                bpm: this.tempoEntering(m),
+            }))
+        const survivors = this.measures.filter((m) => !removed.has(m))
+        this.measures.splice(0, this.measures.length, ...survivors)
+        this.propagateContext()
+        for (const { measure, clefType, key, bpm } of successors) {
+            if (measure.clef.type !== clefType) measure.setClef(0, clefType)
+            if (measure.keySignature.fifths !== key.fifths || measure.keySignature.mode !== key.mode) {
+                measure.setKeySignature(0, key.fifths, key.mode)
+            }
+            if (!measure.tempoAtBeat(0) && this.tempoEntering(measure) !== bpm) measure.setTempo(0, bpm)
+        }
+        this.propagateContext()
         const newLast = last(this.measures)
-        // The piece's final barline moves to the new last measure, but an explicit
-        // style (double/none/end) it already carries is preserved.
         if (newLast && (newLast.endBarline === undefined || newLast.endBarline === 'single')) {
             newLast.setEndBarline('end')
         }
         this._structureChanged = true
         this.touch()
+    }
+
+    /**
+     * The bpm in effect when `measure` begins, before any marking of its own. Walks the live
+     * measure list (not the version-keyed tempo map) because it runs mid-mutation.
+     */
+    private tempoEntering(measure: Measure): number {
+        let bpm = Score.DEFAULT_BPM
+        for (const previous of this.measures.slice(0, this.measures.indexOf(measure))) {
+            const latest = previous.lastTempo
+            if (latest) bpm = latest.bpm
+        }
+        return bpm
     }
 
     /**

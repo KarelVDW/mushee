@@ -34,7 +34,6 @@ import {
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
-    REMOVE_NOTE,
     SET_ACCIDENTAL,
     SET_CLEF,
     SET_DURATION,
@@ -516,7 +515,7 @@ export default function ScoreEditorPage() {
                                     closeSelectionMenu()
                                 }}
                                 onDelete={() => {
-                                    manipulator.run(REMOVE_NOTE)
+                                    manipulator.deleteSelection()
                                     closeSelectionMenu()
                                 }}
                                 // Stays open, like the OS menu: growing the selection is a step

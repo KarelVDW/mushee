@@ -1,5 +1,5 @@
 import type { ClefType } from '@mushee/notation/components'
-import type { Instrument, Note, Score } from '@mushee/notation/model'
+import type { Instrument, Measure, Note, Score } from '@mushee/notation/model'
 import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
@@ -185,16 +185,55 @@ export class ScoreManipulator {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected) return
+        this.manipulate(() => this.execute(action, this._selectedNotes, selected, arg))
+        this.save(score)
+        this.emit()
+    }
+
+    /** Apply an action to `notes` (bulk) or to `active` alone, then re-anchor the selection on its results. */
+    private execute(action: ScoreAction, notes: Note[], active: Note, arg?: unknown): void {
+        const score = this._score
+        if (!score) return
+        const results = action.executeBulk ? action.executeBulk(score, notes, arg) : [action.execute(score, active, arg)]
+        const first = results[0]
+        const last = results[results.length - 1]
+        if (first && last) this.setRange(first, last)
+    }
+
+    /**
+     * Delete the selection (Backspace, the selection popover's Delete). Normally that clears the
+     * selected pitches to rests ({@link REMOVE_NOTE}). A selection holding nothing but rests has
+     * no pitch left to clear, so there the measures it covers whole are removed from the score —
+     * the way to take measures out of the middle (or the end) of a piece. Rests in a partially
+     * covered measure are handled as before, and the score always keeps at least one measure
+     * (a whole-score selection removes all but the first). The selection lands on whatever now
+     * starts at the first removed position (or on the piece's final note when the tail was removed).
+     */
+    deleteSelection(): void {
+        const score = this._score
+        if (!score || !this._selectedNote) return
+        const covered = this._selectedNotes.some((note) => !note.isRest) ? [] : this.measuresCoveredWhole()
+        const removable = covered.length === score.measures.length ? covered.slice(1) : covered
+        if (removable.length === 0) {
+            this.run(REMOVE_NOTE)
+            return
+        }
         this.manipulate(() => {
-            const results = action.executeBulk
-                ? action.executeBulk(score, this._selectedNotes, arg)
-                : [action.execute(score, selected, arg)]
-            const first = results[0]
-            const last = results[results.length - 1]
-            if (first && last) this.setRange(first, last)
+            const landingIndex = removable[0].index
+            const kept = this._selectedNotes.filter((note) => !removable.includes(note.measure))
+            score.removeMeasures(removable)
+            if (kept.length > 0) this.execute(REMOVE_NOTE, kept, kept[kept.length - 1])
+            else this.setSingle(score.measures[landingIndex]?.firstNote ?? score.lastMeasure?.lastNote ?? null)
         })
         this.save(score)
         this.emit()
+    }
+
+    /** The measures every note of which is selected, in score order (the selection is contiguous). */
+    private measuresCoveredWhole(): Measure[] {
+        const selected = new Set(this._selectedNotes)
+        const measures = [...new Set(this._selectedNotes.map((note) => note.measure))]
+        return measures.filter((measure) => measure.notes.every((note) => selected.has(note)))
     }
 
     /** Run one mutation as an undoable step (no-ops — navigation actions — register nothing). */
