@@ -103,15 +103,15 @@ involvement):
 - Recording replay signs 15-minute GCS URLs (V4 via IAM signBlob), which
   needs the API's service account to be able to sign as itself:
 
-  ```sh
-  gcloud iam service-accounts add-iam-policy-binding \
-    mushee-api@sheemu-prod.iam.gserviceaccount.com \
-    --role=roles/iam.serviceAccountTokenCreator \
-    --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com"
-  ```
+    ```sh
+    gcloud iam service-accounts add-iam-policy-binding \
+      mushee-api@sheemu-prod.iam.gserviceaccount.com \
+      --role=roles/iam.serviceAccountTokenCreator \
+      --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com"
+    ```
 
-  Without it the console still plays recordings — the API just streams the
-  audio itself instead of redirecting to the bucket (see AdminService).
+    Without it the console still plays recordings — the API just streams the
+    audio itself instead of redirecting to the bucket (see AdminService).
 
 ## Deploying
 

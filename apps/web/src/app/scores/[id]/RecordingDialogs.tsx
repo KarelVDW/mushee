@@ -115,7 +115,10 @@ function WideSpectrumWalkthrough() {
             scene: (
                 <div className="relative w-20 h-24 rounded-[10px] bg-surface-container-lowest tonal-layer-glow">
                     <div className="absolute top-1.5 right-3 h-13 w-0.5 rounded-full bg-primary/30" />
-                    <div className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary" style={{ '--phase-delay': '0s' } as CSSProperties} />
+                    <div
+                        className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary"
+                        style={{ '--phase-delay': '0s' } as CSSProperties}
+                    />
                 </div>
             ),
         },
@@ -123,7 +126,9 @@ function WideSpectrumWalkthrough() {
             delay: '3s',
             caption: 'Tap Mic Mode',
             scene: (
-                <div className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3" style={{ '--phase-delay': '3s' } as CSSProperties}>
+                <div
+                    className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3"
+                    style={{ '--phase-delay': '3s' } as CSSProperties}>
                     <span className="w-8 h-8 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
                         <Icon name="mic" size={16} />
                     </span>
@@ -202,8 +207,8 @@ export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogPro
                     <WideSpectrumWalkthrough />
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                         Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes
-                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it
-                        now, come back, and your iPhone remembers the choice for this browser.
+                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it now,
+                        come back, and your iPhone remembers the choice for this browser.
                     </span>
                 </div>
             </DialogPanel>

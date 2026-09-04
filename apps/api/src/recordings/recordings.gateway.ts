@@ -1,426 +1,395 @@
-import { Logger, OnApplicationShutdown } from '@nestjs/common';
-import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketGateway,
-} from '@nestjs/websockets';
-import { fromNodeHeaders } from 'better-auth/node';
-import type { IncomingMessage } from 'http';
-import type { RawData, WebSocket } from 'ws';
+import { Logger, OnApplicationShutdown } from '@nestjs/common'
+import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets'
+import { fromNodeHeaders } from 'better-auth/node'
+import type { IncomingMessage } from 'http'
+import type { RawData, WebSocket } from 'ws'
 
-import { auth } from '../auth/auth.config';
-import { BetaService } from '../beta/beta.service';
-import { ScoresService } from '../scores/scores.service';
-import type { RecordingCreditBalance } from './recording-credits.service';
-import { RecordingCreditsService } from './recording-credits.service';
-import type { RecordingSession } from './recording-session';
-import { RecordingsService } from './recordings.service';
+import { auth } from '../auth/auth.config'
+import { BetaService } from '../beta/beta.service'
+import { ScoresService } from '../scores/scores.service'
+import type { RecordingCreditBalance } from './recording-credits.service'
+import { RecordingCreditsService } from './recording-credits.service'
+import type { RecordingSession } from './recording-session'
+import { RecordingsService } from './recordings.service'
 
 interface RecordingMetaMessage {
-  type: 'meta';
-  bpm: number;
-  timeSignature: { beats: number; beatType: number } | null;
-  /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
-  chromaticTranspose?: number;
-  /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
-   *  adaptive profile's frequency window; auto-detection stays authoritative. */
-  instrumentId?: string;
-  /**
-   * Explicit declaration of what is being recorded. Unlike `instrumentId` this
-   * is NOT just a window hint: singing and playing want different note
-   * segmentation (see `VoiceNoteDecoder`), and the choice is worth ~0.10 COnP
-   * on real singing.
-   *
-   * Since the audio source classifier (`SourceClassifier`, 2026-08) the web
-   * client no longer sends this — absent means "classify from the audio, fall
-   * back to the score's instrument family on abstain". Kept as an accepted
-   * field because an explicit declaration still wins outright when a caller
-   * (the eval harness, a future API client) genuinely knows the source.
-   */
-  sourceKind?: 'voice' | 'instrument' | null;
-  /**
-   * The score's key signature at the recording start, in fifths (positive =
-   * sharps). Sung takes are spelled on the singer's own tuning grid, and for
-   * the notes still ambiguous after that normalization the key gets a vote —
-   * a user recording into a D-major score almost certainly means F♯, not the
-   * F they sang 40 cents flat. Optional: without it, spelling still
-   * normalizes, it just cannot key-snap.
-   */
-  keyFifths?: number | null;
-  /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
-   *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
-   *  the browser default was used and ffmpeg probes the container. */
-  mimeType?: string | null;
+    type: 'meta'
+    bpm: number
+    timeSignature: { beats: number; beatType: number } | null
+    /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
+    chromaticTranspose?: number
+    /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
+     *  adaptive profile's frequency window; auto-detection stays authoritative. */
+    instrumentId?: string
+    /**
+     * Explicit declaration of what is being recorded. Unlike `instrumentId` this
+     * is NOT just a window hint: singing and playing want different note
+     * segmentation (see `VoiceNoteDecoder`), and the choice is worth ~0.10 COnP
+     * on real singing.
+     *
+     * Since the audio source classifier (`SourceClassifier`, 2026-08) the web
+     * client no longer sends this — absent means "classify from the audio, fall
+     * back to the score's instrument family on abstain". Kept as an accepted
+     * field because an explicit declaration still wins outright when a caller
+     * (the eval harness, a future API client) genuinely knows the source.
+     */
+    sourceKind?: 'voice' | 'instrument' | null
+    /**
+     * The score's key signature at the recording start, in fifths (positive =
+     * sharps). Sung takes are spelled on the singer's own tuning grid, and for
+     * the notes still ambiguous after that normalization the key gets a vote —
+     * a user recording into a D-major score almost certainly means F♯, not the
+     * F they sang 40 cents flat. Optional: without it, spelling still
+     * normalizes, it just cannot key-snap.
+     */
+    keyFifths?: number | null
+    /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
+     *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
+     *  the browser default was used and ffmpeg probes the container. */
+    mimeType?: string | null
 }
 
 /** The client stopped capturing and has flushed its last audio chunk. The
  *  socket stays open: the server finalizes the pipeline, streams the trailing
  *  notes as `score-update`s, then answers `recording-complete` and closes. */
 interface RecordingEndMessage {
-  type: 'end';
+    type: 'end'
 }
 
-type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage;
+type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage
 
 /** Reasons a recording connection is refused; the client maps these to dialogs. */
-type RecordingErrorCode =
-  | 'score-required'
-  | 'score-not-found'
-  | 'concurrent-recording'
-  | 'beta-pending';
+type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
 
 /** Largest single WebSocket frame we accept (defense against memory abuse via
  *  oversized audio chunks). One ~1s PCM/Opus chunk is well under this. */
-const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024
 
 /** Policy-violation close code (RFC 6455) — used to reject unauthorized clients. */
-const WS_POLICY_VIOLATION = 1008;
+const WS_POLICY_VIOLATION = 1008
 
 /** Internal-error close code (RFC 6455) — setup failed through no fault of the client. */
-const WS_INTERNAL_ERROR = 1011;
+const WS_INTERNAL_ERROR = 1011
 
 /** Most bytes a client may buffer while session setup (auth, score, credits)
  *  is still resolving. Normal clients send ~1 chunk/second, so anything near
  *  this during the sub-second setup window is abuse, not audio. */
-const MAX_PENDING_BYTES = 8 * 1024 * 1024;
+const MAX_PENDING_BYTES = 8 * 1024 * 1024
 
 /** Keepalive cadence. A peer that misses a whole interval's pong is dead —
  *  without this, a silently-dropped TCP connection keeps its session (and
  *  credit meter) alive until kernel timeouts fire, many minutes later. */
-const KEEPALIVE_INTERVAL_MS = 30_000;
+const KEEPALIVE_INTERVAL_MS = 30_000
 
 /** Going-away close code (RFC 6455) — sent when the server shuts down. */
-const WS_GOING_AWAY = 1001;
+const WS_GOING_AWAY = 1001
 
 /** Normal-closure close code (RFC 6455) — a recording completed gracefully. */
-const WS_NORMAL_CLOSURE = 1000;
+const WS_NORMAL_CLOSURE = 1000
 
 @WebSocketGateway({ path: '/recording', maxPayload: MAX_PAYLOAD_BYTES })
-export class RecordingsGateway
-  implements
-    OnGatewayConnection<WebSocket>,
-    OnGatewayDisconnect<WebSocket>,
-    OnApplicationShutdown
-{
-  private readonly logger = new Logger(RecordingsGateway.name);
-  private readonly sessions = new WeakMap<WebSocket, RecordingSession>();
-  /** Live sockets, tracked so shutdown can drain them (WeakMap can't iterate). */
-  private readonly clients = new Set<WebSocket>();
+export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGatewayDisconnect<WebSocket>, OnApplicationShutdown {
+    private readonly logger = new Logger(RecordingsGateway.name)
+    private readonly sessions = new WeakMap<WebSocket, RecordingSession>()
+    /** Live sockets, tracked so shutdown can drain them (WeakMap can't iterate). */
+    private readonly clients = new Set<WebSocket>()
 
-  constructor(
-    private readonly recordingsService: RecordingsService,
-    private readonly creditsService: RecordingCreditsService,
-    private readonly scoresService: ScoresService,
-    private readonly betaService: BetaService,
-  ) {}
+    constructor(
+        private readonly recordingsService: RecordingsService,
+        private readonly creditsService: RecordingCreditsService,
+        private readonly scoresService: ScoresService,
+        private readonly betaService: BetaService,
+    ) {}
 
-  handleConnection(client: WebSocket, request: IncomingMessage): void {
-    // Session setup is async (auth, score ownership, credit balance); buffer
-    // any frames that arrive before it resolves so the first audio chunks
-    // aren't dropped, then either flush them into the session or discard them
-    // if the connection was rejected.
-    const pending: Array<{ data: RawData; isBinary: boolean }> = [];
-    let pendingBytes = 0;
-    let session: RecordingSession | null = null;
-    let closed = false;
+    handleConnection(client: WebSocket, request: IncomingMessage): void {
+        // Session setup is async (auth, score ownership, credit balance); buffer
+        // any frames that arrive before it resolves so the first audio chunks
+        // aren't dropped, then either flush them into the session or discard them
+        // if the connection was rejected.
+        const pending: Array<{ data: RawData; isBinary: boolean }> = []
+        let pendingBytes = 0
+        let session: RecordingSession | null = null
+        let closed = false
 
-    this.clients.add(client);
+        this.clients.add(client)
 
-    // Keepalive: terminate peers that stop answering pings so their sessions
-    // (and credit meters) don't outlive a silently-dead connection.
-    let alive = true;
-    const keepalive = setInterval(() => {
-      if (!alive) {
-        this.logger.warn('Recording client missed keepalive; terminating');
-        client.terminate();
-        return;
-      }
-      alive = false;
-      client.ping();
-    }, KEEPALIVE_INTERVAL_MS);
-    client.on('pong', () => {
-      alive = true;
-    });
-
-    client.on('message', (data: RawData, isBinary: boolean) => {
-      if (session) {
-        this.handleMessage(client, session, data, isBinary);
-      } else {
-        pendingBytes += this.byteLength(data);
-        if (pendingBytes > MAX_PENDING_BYTES) {
-          this.logger.warn('Closing recording socket: pre-session buffer exceeded');
-          pending.length = 0;
-          closed = true;
-          client.close(WS_POLICY_VIOLATION, 'Too much data before session open');
-          return;
-        }
-        pending.push({ data, isBinary });
-      }
-    });
-    client.on('close', () => {
-      closed = true;
-      clearInterval(keepalive);
-    });
-
-    void this.openSession(client, request)
-      .then((created) => {
-        if (!created) return;
-        if (closed || client.readyState !== client.OPEN) {
-          void created.close();
-          return;
-        }
-        this.sessions.set(client, created);
-        session = created;
-
-        for (const msg of pending) {
-          this.handleMessage(client, created, msg.data, msg.isBinary);
-        }
-        pending.length = 0;
-      })
-      .catch((err: unknown) => {
-        // Session setup failed unexpectedly (e.g. transient DB error). Contain
-        // it here — an unhandled rejection would take down the whole process.
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Recording connection setup failed: ${message}`);
-        pending.length = 0;
-        client.close(WS_INTERNAL_ERROR, 'Recording session failed');
-      });
-  }
-
-  handleDisconnect(client: WebSocket): void {
-    this.clients.delete(client);
-    const session = this.sessions.get(client);
-    this.sessions.delete(client);
-    if (session) {
-      void session.close().catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.warn(`Session close on disconnect failed: ${message}`);
-      });
-    }
-    this.logger.log('Recording client disconnected');
-  }
-
-  /**
-   * Drain on SIGTERM (k8s pod rotation): close every live session so pipeline
-   * finalize runs, outcomes are persisted, and per-user locks release — instead
-   * of ffmpeg children dying with the cgroup mid-take.
-   */
-  async onApplicationShutdown(): Promise<void> {
-    if (!this.clients.size) return;
-    this.logger.log(`Draining ${this.clients.size} recording connection(s)...`);
-    const closures: Promise<void>[] = [];
-    for (const client of this.clients) {
-      const session = this.sessions.get(client);
-      this.sessions.delete(client);
-      if (session) {
-        closures.push(
-          session.close().catch((err: unknown) => {
-            this.logger.warn(
-              `Session close on shutdown failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
-          }),
-        );
-      }
-      client.close(WS_GOING_AWAY, 'Server shutting down');
-    }
-    this.clients.clear();
-    await Promise.all(closures);
-  }
-
-  /**
-   * Authenticate the connection and validate every recording precondition:
-   * a score the user owns, no recording already in flight, and daily credits
-   * left. Rejections notify the client with a typed message before closing.
-   */
-  private async openSession(
-    client: WebSocket,
-    request: IncomingMessage,
-  ): Promise<RecordingSession | null> {
-    const user = await this.authenticate(request);
-    if (!user) {
-      this.logger.warn('Rejected unauthenticated recording connection');
-      client.close(WS_POLICY_VIOLATION, 'Unauthorized');
-      return null;
-    }
-
-    if (await this.betaService.isAwaitingApproval(user.id)) {
-      this.logger.warn(`Rejected recording from unapproved beta user ${user.id}`);
-      this.reject(client, 'beta-pending');
-      return null;
-    }
-
-    const scoreId = this.scoreIdFrom(request);
-    if (!scoreId) {
-      this.logger.warn(`Rejected recording without scoreId (user ${user.id})`);
-      this.reject(client, 'score-required');
-      return null;
-    }
-
-    // Every recording belongs to a score; verify it exists and is the user's.
-    try {
-      await this.scoresService.findOne(user.id, scoreId);
-    } catch {
-      this.logger.warn(
-        `Rejected recording for inaccessible score ${scoreId} (user ${user.id})`,
-      );
-      this.reject(client, 'score-not-found');
-      return null;
-    }
-
-    const session = await this.recordingsService.createSession(user.id, scoreId, {
-      onUpdate: (update) => {
-        if (client.readyState !== client.OPEN) return;
-        client.send(JSON.stringify({ type: 'score-update', ...update }));
-      },
-      onLimitReached: (balance) => this.sendLimit(client, balance),
-      onSessionCap: (reason) => {
-        if (client.readyState !== client.OPEN) return;
-        client.send(JSON.stringify({ type: 'recording-capped', reason }));
-      },
-      onSourceResolved: (resolution) => {
-        if (client.readyState !== client.OPEN) return;
-        // What the pipeline decided is at the mic, and on what evidence — the
-        // client shows it so a wrong classification is user-visible feedback
-        // rather than a silently mangled transcription.
-        client.send(JSON.stringify({ type: 'recording-source', ...resolution }));
-      },
-    });
-    if (!session) {
-      this.reject(client, 'concurrent-recording');
-      return null;
-    }
-
-    // From here on the session (and its one-per-user lock) is live — every
-    // failure path must close it, or the user is locked out of recording
-    // until the heartbeat goes stale.
-    try {
-      // No credits left today — tell the client why before it streams anything.
-      const balance = await this.creditsService.balance(user.id);
-      if (balance.exhausted) {
-        this.logger.log(`Rejected recording with exhausted budget (user ${user.id})`);
-        await session.close();
-        this.sendLimit(client, balance);
-        client.close(WS_POLICY_VIOLATION, 'Daily recording limit reached');
-        return null;
-      }
-
-      await session.open();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Failed to open recording session: ${message}`);
-      await session.close().catch(() => undefined);
-      client.close(WS_INTERNAL_ERROR, 'Recording session failed');
-      return null;
-    }
-
-    this.logger.log(
-      `Recording client connected (user ${user.id}, score ${scoreId})`,
-    );
-    return session;
-  }
-
-  private scoreIdFrom(request: IncomingMessage): string | null {
-    const url = new URL(request.url ?? '', 'http://placeholder');
-    return url.searchParams.get('scoreId');
-  }
-
-  private reject(client: WebSocket, code: RecordingErrorCode): void {
-    if (client.readyState === client.OPEN) {
-      client.send(JSON.stringify({ type: 'recording-error', code }));
-    }
-    client.close(WS_POLICY_VIOLATION, code);
-  }
-
-  private sendLimit(client: WebSocket, balance: RecordingCreditBalance): void {
-    if (client.readyState !== client.OPEN) return;
-    client.send(
-      JSON.stringify({
-        type: 'recording-limit',
-        planId: balance.tier.id,
-        planName: balance.tier.name,
-        limitSeconds: balance.tier.dailyRecordingCredits,
-        usedSeconds: balance.used,
-      }),
-    );
-  }
-
-  private async authenticate(
-    request: IncomingMessage,
-  ): Promise<{ id: string } | null> {
-    try {
-      const session = await auth.api.getSession({
-        headers: fromNodeHeaders(request.headers),
-      });
-      return session?.user ?? null;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Recording session lookup failed: ${message}`);
-      return null;
-    }
-  }
-
-  private handleMessage(
-    client: WebSocket,
-    session: RecordingSession,
-    data: RawData,
-    isBinary: boolean,
-  ): void {
-    if (isBinary) {
-      session.appendChunk(this.toBuffer(data));
-      return;
-    }
-
-    let parsed: RecordingControlMessage;
-    try {
-      parsed = JSON.parse(
-        this.toBuffer(data).toString('utf8'),
-      ) as RecordingControlMessage;
-    } catch {
-      this.logger.warn('Received non-JSON text frame on recording socket');
-      return;
-    }
-
-    if (parsed.type === 'meta') {
-      session.setMeta({
-        bpm: parsed.bpm,
-        timeSignature: parsed.timeSignature,
-        chromaticTranspose: parsed.chromaticTranspose,
-        instrumentId: parsed.instrumentId,
-        sourceKind: parsed.sourceKind,
-        keyFifths: parsed.keyFifths,
-        mimeType: parsed.mimeType,
-      });
-    } else if (parsed.type === 'end') {
-      // The client stopped capturing and is waiting for the take's tail.
-      // Close the session (releases the per-user slot right away, then runs
-      // the final pipeline pass, which streams the remaining notes out as
-      // `score-update`s), acknowledge with `recording-complete`, and only
-      // then close the socket — the client keeps it open until that ack so
-      // the last moments of the take aren't lost.
-      void session
-        .close()
-        .catch((err: unknown) => {
-          const message = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Session close on end failed: ${message}`);
+        // Keepalive: terminate peers that stop answering pings so their sessions
+        // (and credit meters) don't outlive a silently-dead connection.
+        let alive = true
+        const keepalive = setInterval(() => {
+            if (!alive) {
+                this.logger.warn('Recording client missed keepalive; terminating')
+                client.terminate()
+                return
+            }
+            alive = false
+            client.ping()
+        }, KEEPALIVE_INTERVAL_MS)
+        client.on('pong', () => {
+            alive = true
         })
-        .then(() => {
-          if (client.readyState === client.OPEN) {
-            client.send(JSON.stringify({ type: 'recording-complete' }));
-          }
-          client.close(WS_NORMAL_CLOSURE, 'Recording complete');
-        });
+
+        client.on('message', (data: RawData, isBinary: boolean) => {
+            if (session) {
+                this.handleMessage(client, session, data, isBinary)
+            } else {
+                pendingBytes += this.byteLength(data)
+                if (pendingBytes > MAX_PENDING_BYTES) {
+                    this.logger.warn('Closing recording socket: pre-session buffer exceeded')
+                    pending.length = 0
+                    closed = true
+                    client.close(WS_POLICY_VIOLATION, 'Too much data before session open')
+                    return
+                }
+                pending.push({ data, isBinary })
+            }
+        })
+        client.on('close', () => {
+            closed = true
+            clearInterval(keepalive)
+        })
+
+        void this.openSession(client, request)
+            .then((created) => {
+                if (!created) return
+                if (closed || client.readyState !== client.OPEN) {
+                    void created.close()
+                    return
+                }
+                this.sessions.set(client, created)
+                session = created
+
+                for (const msg of pending) {
+                    this.handleMessage(client, created, msg.data, msg.isBinary)
+                }
+                pending.length = 0
+            })
+            .catch((err: unknown) => {
+                // Session setup failed unexpectedly (e.g. transient DB error). Contain
+                // it here — an unhandled rejection would take down the whole process.
+                const message = err instanceof Error ? err.message : String(err)
+                this.logger.error(`Recording connection setup failed: ${message}`)
+                pending.length = 0
+                client.close(WS_INTERNAL_ERROR, 'Recording session failed')
+            })
     }
-  }
 
-  private toBuffer(data: RawData): Buffer {
-    if (Buffer.isBuffer(data)) return data;
-    if (Array.isArray(data)) return Buffer.concat(data);
-    return Buffer.from(data);
-  }
+    handleDisconnect(client: WebSocket): void {
+        this.clients.delete(client)
+        const session = this.sessions.get(client)
+        this.sessions.delete(client)
+        if (session) {
+            void session.close().catch((err: unknown) => {
+                const message = err instanceof Error ? err.message : String(err)
+                this.logger.warn(`Session close on disconnect failed: ${message}`)
+            })
+        }
+        this.logger.log('Recording client disconnected')
+    }
 
-  private byteLength(data: RawData): number {
-    if (Buffer.isBuffer(data)) return data.length;
-    if (Array.isArray(data)) return data.reduce((sum, buf) => sum + buf.length, 0);
-    return data.byteLength;
-  }
+    /**
+     * Drain on SIGTERM (k8s pod rotation): close every live session so pipeline
+     * finalize runs, outcomes are persisted, and per-user locks release — instead
+     * of ffmpeg children dying with the cgroup mid-take.
+     */
+    async onApplicationShutdown(): Promise<void> {
+        if (!this.clients.size) return
+        this.logger.log(`Draining ${this.clients.size} recording connection(s)...`)
+        const closures: Promise<void>[] = []
+        for (const client of this.clients) {
+            const session = this.sessions.get(client)
+            this.sessions.delete(client)
+            if (session) {
+                closures.push(
+                    session.close().catch((err: unknown) => {
+                        this.logger.warn(`Session close on shutdown failed: ${err instanceof Error ? err.message : String(err)}`)
+                    }),
+                )
+            }
+            client.close(WS_GOING_AWAY, 'Server shutting down')
+        }
+        this.clients.clear()
+        await Promise.all(closures)
+    }
+
+    /**
+     * Authenticate the connection and validate every recording precondition:
+     * a score the user owns, no recording already in flight, and daily credits
+     * left. Rejections notify the client with a typed message before closing.
+     */
+    private async openSession(client: WebSocket, request: IncomingMessage): Promise<RecordingSession | null> {
+        const user = await this.authenticate(request)
+        if (!user) {
+            this.logger.warn('Rejected unauthenticated recording connection')
+            client.close(WS_POLICY_VIOLATION, 'Unauthorized')
+            return null
+        }
+
+        if (await this.betaService.isAwaitingApproval(user.id)) {
+            this.logger.warn(`Rejected recording from unapproved beta user ${user.id}`)
+            this.reject(client, 'beta-pending')
+            return null
+        }
+
+        const scoreId = this.scoreIdFrom(request)
+        if (!scoreId) {
+            this.logger.warn(`Rejected recording without scoreId (user ${user.id})`)
+            this.reject(client, 'score-required')
+            return null
+        }
+
+        // Every recording belongs to a score; verify it exists and is the user's.
+        try {
+            await this.scoresService.findOne(user.id, scoreId)
+        } catch {
+            this.logger.warn(`Rejected recording for inaccessible score ${scoreId} (user ${user.id})`)
+            this.reject(client, 'score-not-found')
+            return null
+        }
+
+        const session = await this.recordingsService.createSession(user.id, scoreId, {
+            onUpdate: (update) => {
+                if (client.readyState !== client.OPEN) return
+                client.send(JSON.stringify({ type: 'score-update', ...update }))
+            },
+            onLimitReached: (balance) => this.sendLimit(client, balance),
+            onSessionCap: (reason) => {
+                if (client.readyState !== client.OPEN) return
+                client.send(JSON.stringify({ type: 'recording-capped', reason }))
+            },
+            onSourceResolved: (resolution) => {
+                if (client.readyState !== client.OPEN) return
+                // What the pipeline decided is at the mic, and on what evidence — the
+                // client shows it so a wrong classification is user-visible feedback
+                // rather than a silently mangled transcription.
+                client.send(JSON.stringify({ type: 'recording-source', ...resolution }))
+            },
+        })
+        if (!session) {
+            this.reject(client, 'concurrent-recording')
+            return null
+        }
+
+        // From here on the session (and its one-per-user lock) is live — every
+        // failure path must close it, or the user is locked out of recording
+        // until the heartbeat goes stale.
+        try {
+            // No credits left today — tell the client why before it streams anything.
+            const balance = await this.creditsService.balance(user.id)
+            if (balance.exhausted) {
+                this.logger.log(`Rejected recording with exhausted budget (user ${user.id})`)
+                await session.close()
+                this.sendLimit(client, balance)
+                client.close(WS_POLICY_VIOLATION, 'Daily recording limit reached')
+                return null
+            }
+
+            await session.open()
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            this.logger.warn(`Failed to open recording session: ${message}`)
+            await session.close().catch(() => undefined)
+            client.close(WS_INTERNAL_ERROR, 'Recording session failed')
+            return null
+        }
+
+        this.logger.log(`Recording client connected (user ${user.id}, score ${scoreId})`)
+        return session
+    }
+
+    private scoreIdFrom(request: IncomingMessage): string | null {
+        const url = new URL(request.url ?? '', 'http://placeholder')
+        return url.searchParams.get('scoreId')
+    }
+
+    private reject(client: WebSocket, code: RecordingErrorCode): void {
+        if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify({ type: 'recording-error', code }))
+        }
+        client.close(WS_POLICY_VIOLATION, code)
+    }
+
+    private sendLimit(client: WebSocket, balance: RecordingCreditBalance): void {
+        if (client.readyState !== client.OPEN) return
+        client.send(
+            JSON.stringify({
+                type: 'recording-limit',
+                planId: balance.tier.id,
+                planName: balance.tier.name,
+                limitSeconds: balance.tier.dailyRecordingCredits,
+                usedSeconds: balance.used,
+            }),
+        )
+    }
+
+    private async authenticate(request: IncomingMessage): Promise<{ id: string } | null> {
+        try {
+            const session = await auth.api.getSession({
+                headers: fromNodeHeaders(request.headers),
+            })
+            return session?.user ?? null
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            this.logger.warn(`Recording session lookup failed: ${message}`)
+            return null
+        }
+    }
+
+    private handleMessage(client: WebSocket, session: RecordingSession, data: RawData, isBinary: boolean): void {
+        if (isBinary) {
+            session.appendChunk(this.toBuffer(data))
+            return
+        }
+
+        let parsed: RecordingControlMessage
+        try {
+            parsed = JSON.parse(this.toBuffer(data).toString('utf8')) as RecordingControlMessage
+        } catch {
+            this.logger.warn('Received non-JSON text frame on recording socket')
+            return
+        }
+
+        if (parsed.type === 'meta') {
+            session.setMeta({
+                bpm: parsed.bpm,
+                timeSignature: parsed.timeSignature,
+                chromaticTranspose: parsed.chromaticTranspose,
+                instrumentId: parsed.instrumentId,
+                sourceKind: parsed.sourceKind,
+                keyFifths: parsed.keyFifths,
+                mimeType: parsed.mimeType,
+            })
+        } else if (parsed.type === 'end') {
+            // The client stopped capturing and is waiting for the take's tail.
+            // Close the session (releases the per-user slot right away, then runs
+            // the final pipeline pass, which streams the remaining notes out as
+            // `score-update`s), acknowledge with `recording-complete`, and only
+            // then close the socket — the client keeps it open until that ack so
+            // the last moments of the take aren't lost.
+            void session
+                .close()
+                .catch((err: unknown) => {
+                    const message = err instanceof Error ? err.message : String(err)
+                    this.logger.warn(`Session close on end failed: ${message}`)
+                })
+                .then(() => {
+                    if (client.readyState === client.OPEN) {
+                        client.send(JSON.stringify({ type: 'recording-complete' }))
+                    }
+                    client.close(WS_NORMAL_CLOSURE, 'Recording complete')
+                })
+        }
+    }
+
+    private toBuffer(data: RawData): Buffer {
+        if (Buffer.isBuffer(data)) return data
+        if (Array.isArray(data)) return Buffer.concat(data)
+        return Buffer.from(data)
+    }
+
+    private byteLength(data: RawData): number {
+        if (Buffer.isBuffer(data)) return data.length
+        if (Array.isArray(data)) return data.reduce((sum, buf) => sum + buf.length, 0)
+        return data.byteLength
+    }
 }

@@ -21,10 +21,7 @@ export class NoteLayout {
     readonly accidental: { x: number; y: number; glyphName: string } | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
-    constructor(
-        note: Note,
-        context: { accidentalGlyph: string | undefined; width: NoteWidth },
-    ) {
+    constructor(note: Note, context: { accidentalGlyph: string | undefined; width: NoteWidth }) {
         const width = context.width
         this.width = width
         this.noteY = getYForNote(note.line)
@@ -90,9 +87,7 @@ export class NoteLayout {
 
     getStem(stemDir: 'up' | 'down') {
         const stemX =
-            stemDir === 'up'
-                ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2
-                : this.noteX + this.width.stemWidth / 2
+            stemDir === 'up' ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2 : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'
             ? { x: stemX, y1: this.noteY, y2: this.noteY - this.width.stemHeight }
             : { x: stemX, y1: this.noteY, y2: this.noteY + this.width.stemHeight }

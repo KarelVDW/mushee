@@ -8,9 +8,9 @@
  * current producer emits it.
  */
 export interface NoteEventTime {
-  startTimeSeconds: number;
-  durationSeconds: number;
-  pitchMidi: number;
-  amplitude: number;
-  pitchBends?: number[];
+    startTimeSeconds: number
+    durationSeconds: number
+    pitchMidi: number
+    amplitude: number
+    pitchBends?: number[]
 }

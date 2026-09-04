@@ -37,8 +37,8 @@
 /** Carried alongside `pitchMidi` by the voice decoder; survives the extractor
  *  because every note-rewriting step spread-copies (`{ ...note }`). */
 export interface FractionalPitch {
-  /** Unrounded MIDI (α-trimmed contour mean / 100 cents). */
-  pitchMidiFloat?: number;
+    /** Unrounded MIDI (α-trimmed contour mean / 100 cents). */
+    pitchMidiFloat?: number
 }
 
 /**
@@ -47,13 +47,13 @@ export interface FractionalPitch {
  * after tuning normalization a deliberately-sung accidental sits near the
  * grid (|dev| ≈ 0), far outside the band.
  */
-const KEY_SNAP_MIN_DEV = 0.35;
+const KEY_SNAP_MIN_DEV = 0.35
 
 /** Minimum resultant length of the circular mean before the offset is trusted.
  *  A take whose deviations point every which way (|z̄| below this) gets offset
  *  0 — i.e. plain absolute spelling, today's behaviour. */
-const MIN_OFFSET_CONFIDENCE = 0.5;
-const MIN_NOTES_FOR_OFFSET = 4;
+const MIN_OFFSET_CONFIDENCE = 0.5
+const MIN_NOTES_FOR_OFFSET = 4
 
 /**
  * The take's tuning offset from the keyboard grid, in cents (−50 … +50).
@@ -64,56 +64,54 @@ const MIN_NOTES_FOR_OFFSET = 4;
  * fragments are not), and the mean angle is the offset. Circular because a
  * take straddling the ±50-cent seam must not average to nonsense.
  */
-export function estimateTuningOffsetCents(
-  notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
-): number {
-  let re = 0;
-  let im = 0;
-  let weight = 0;
-  let counted = 0;
-  for (const n of notes) {
-    if (n.pitchMidiFloat === undefined) continue;
-    const angle = 2 * Math.PI * (n.pitchMidiFloat - Math.round(n.pitchMidiFloat));
-    const w = Math.max(0.05, n.durationSeconds);
-    re += w * Math.cos(angle);
-    im += w * Math.sin(angle);
-    weight += w;
-    counted += 1;
-  }
-  if (counted < MIN_NOTES_FOR_OFFSET || weight <= 0) return 0;
-  const resultant = Math.hypot(re, im) / weight;
-  if (resultant < MIN_OFFSET_CONFIDENCE) return 0;
-  return (Math.atan2(im, re) / (2 * Math.PI)) * 100;
+export function estimateTuningOffsetCents(notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>): number {
+    let re = 0
+    let im = 0
+    let weight = 0
+    let counted = 0
+    for (const n of notes) {
+        if (n.pitchMidiFloat === undefined) continue
+        const angle = 2 * Math.PI * (n.pitchMidiFloat - Math.round(n.pitchMidiFloat))
+        const w = Math.max(0.05, n.durationSeconds)
+        re += w * Math.cos(angle)
+        im += w * Math.sin(angle)
+        weight += w
+        counted += 1
+    }
+    if (counted < MIN_NOTES_FOR_OFFSET || weight <= 0) return 0
+    const resultant = Math.hypot(re, im) / weight
+    if (resultant < MIN_OFFSET_CONFIDENCE) return 0
+    return (Math.atan2(im, re) / (2 * Math.PI)) * 100
 }
 
 /** Pitch classes of the major key with `fifths` sharps (negative = flats) —
  *  the pitch-class set is what a key signature denotes, so minors share it. */
 export function keyPitchClasses(fifths: number): Set<number> {
-  const tonic = (((fifths * 7) % 12) + 12) % 12;
-  return new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12));
+    const tonic = (((fifths * 7) % 12) + 12) % 12
+    return new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12))
 }
 
 /** Key-profile templates (E8/R2). The profile is a parameter, not a constant
  *  (Essentia ships fourteen and defaults away from Krumhansl — §7.3). */
-export type KeyProfileName = 'krumhansl' | 'temperley' | 'diatonic';
+export type KeyProfileName = 'krumhansl' | 'temperley' | 'diatonic'
 
 const KEY_PROFILES: Record<KeyProfileName, { major: number[]; minor: number[] }> = {
-  // Krumhansl–Kessler probe-tone ratings (1982).
-  krumhansl: {
-    major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
-    minor: [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17],
-  },
-  // Temperley's modified profiles (2001).
-  temperley: {
-    major: [5.0, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 4.5, 2.0, 3.5, 1.5, 4.0],
-    minor: [5.0, 2.0, 3.5, 4.5, 2.0, 4.0, 2.0, 4.5, 3.5, 2.0, 1.5, 4.0],
-  },
-  // Binary diatonic membership — the crudest sensible template.
-  diatonic: {
-    major: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
-    minor: [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0],
-  },
-};
+    // Krumhansl–Kessler probe-tone ratings (1982).
+    krumhansl: {
+        major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
+        minor: [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17],
+    },
+    // Temperley's modified profiles (2001).
+    temperley: {
+        major: [5.0, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 4.5, 2.0, 3.5, 1.5, 4.0],
+        minor: [5.0, 2.0, 3.5, 4.5, 2.0, 4.0, 2.0, 4.5, 3.5, 2.0, 1.5, 4.0],
+    },
+    // Binary diatonic membership — the crudest sensible template.
+    diatonic: {
+        major: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
+        minor: [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0],
+    },
+}
 
 /**
  * Estimate the TAKE's key from its own notes (E8/R2, research/design-take-key.md in
@@ -130,71 +128,70 @@ const KEY_PROFILES: Record<KeyProfileName, { major: number[]; minor: number[] }>
  * relative major's pitch-class set — the set is all `spellMidi` consumes.
  */
 export function estimateTakeKeyClasses(
-  notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
-  offsetCents: number,
-  profile: KeyProfileName = 'krumhansl',
+    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
+    offsetCents: number,
+    profile: KeyProfileName = 'krumhansl',
 ): { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null {
-  const hist = new Array<number>(12).fill(0);
-  let counted = 0;
-  for (const n of notes) {
-    if (n.pitchMidiFloat === undefined) continue;
-    const midi = Math.round(n.pitchMidiFloat - offsetCents / 100);
-    hist[((midi % 12) + 12) % 12] += Math.max(0.05, n.durationSeconds);
-    counted += 1;
-  }
-  if (counted < MIN_NOTES_FOR_OFFSET) return null;
+    const hist = new Array<number>(12).fill(0)
+    let counted = 0
+    for (const n of notes) {
+        if (n.pitchMidiFloat === undefined) continue
+        const midi = Math.round(n.pitchMidiFloat - offsetCents / 100)
+        hist[((midi % 12) + 12) % 12] += Math.max(0.05, n.durationSeconds)
+        counted += 1
+    }
+    if (counted < MIN_NOTES_FOR_OFFSET) return null
 
-  const pearson = (template: number[], rot: number): number => {
-    let ma = 0;
-    let mb = 0;
-    for (let i = 0; i < 12; i += 1) {
-      ma += hist[i];
-      mb += template[i];
+    const pearson = (template: number[], rot: number): number => {
+        let ma = 0
+        let mb = 0
+        for (let i = 0; i < 12; i += 1) {
+            ma += hist[i]
+            mb += template[i]
+        }
+        ma /= 12
+        mb /= 12
+        let num = 0
+        let da = 0
+        let db = 0
+        for (let i = 0; i < 12; i += 1) {
+            const a = hist[i] - ma
+            const b = template[(i - rot + 12) % 12] - mb
+            num += a * b
+            da += a * a
+            db += b * b
+        }
+        return da > 0 && db > 0 ? num / Math.sqrt(da * db) : 0
     }
-    ma /= 12;
-    mb /= 12;
-    let num = 0;
-    let da = 0;
-    let db = 0;
-    for (let i = 0; i < 12; i += 1) {
-      const a = hist[i] - ma;
-      const b = template[(i - rot + 12) % 12] - mb;
-      num += a * b;
-      da += a * a;
-      db += b * b;
-    }
-    return da > 0 && db > 0 ? num / Math.sqrt(da * db) : 0;
-  };
 
-  const { major, minor } = KEY_PROFILES[profile];
-  // The abstain profile is the incumbent: score 0 is the bar to beat.
-  let best: { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null =
-    null;
-  let bestScore = 0;
-  for (let tonic = 0; tonic < 12; tonic += 1) {
-    const sMaj = pearson(major, tonic);
-    if (sMaj > bestScore) {
-      bestScore = sMaj;
-      best = {
-        classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12)),
-        tonic,
-        mode: 'major',
-        score: sMaj,
-      };
+    const { major, minor } = KEY_PROFILES[profile]
+    // The abstain profile is the incumbent: score 0 is the bar to beat.
+    let best: { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null = null
+    let bestScore = 0
+    for (let tonic = 0; tonic < 12; tonic += 1) {
+        const sMaj = pearson(major, tonic)
+        if (sMaj > bestScore) {
+            bestScore = sMaj
+            best = {
+                classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12)),
+                tonic,
+                mode: 'major',
+                score: sMaj,
+            }
+        }
+        const sMin = pearson(minor, tonic)
+        if (sMin > bestScore) {
+            bestScore = sMin
+            // Relative major's set (tonic + 3 semitones) — the signature's set.
+            best = {
+                classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + 3 + d) % 12)),
+                tonic,
+                mode: 'minor',
+                score: sMin,
+            }
+        }
     }
-    const sMin = pearson(minor, tonic);
-    if (sMin > bestScore) {
-      bestScore = sMin;
-      // Relative major's set (tonic + 3 semitones) — the signature's set.
-      best = {
-        classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + 3 + d) % 12)),
-        tonic,
-        mode: 'minor',
-        score: sMin,
-      };
-    }
-  }
-  return best;
+    return best
 }
 
 /**
@@ -209,22 +206,22 @@ export function estimateTakeKeyClasses(
  * weighted) is diatonic wins. Ties keep the minimal shift.
  */
 export function chooseNamingOffset(
-  notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
-  offsetCents: number,
-  keyClasses: Set<number> | null,
+    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
+    offsetCents: number,
+    keyClasses: Set<number> | null,
 ): number {
-  if (!keyClasses || Math.abs(offsetCents) <= 30) return offsetCents;
-  const other = offsetCents - 100 * Math.sign(offsetCents);
-  const inKeyWeight = (off: number): number => {
-    let w = 0;
-    for (const n of notes) {
-      if (n.pitchMidiFloat === undefined) continue;
-      const midi = Math.round(n.pitchMidiFloat - off / 100);
-      if (keyClasses.has(((midi % 12) + 12) % 12)) w += Math.max(0.05, n.durationSeconds);
+    if (!keyClasses || Math.abs(offsetCents) <= 30) return offsetCents
+    const other = offsetCents - 100 * Math.sign(offsetCents)
+    const inKeyWeight = (off: number): number => {
+        let w = 0
+        for (const n of notes) {
+            if (n.pitchMidiFloat === undefined) continue
+            const midi = Math.round(n.pitchMidiFloat - off / 100)
+            if (keyClasses.has(((midi % 12) + 12) % 12)) w += Math.max(0.05, n.durationSeconds)
+        }
+        return w
     }
-    return w;
-  };
-  return inKeyWeight(other) > inKeyWeight(offsetCents) ? other : offsetCents;
+    return inKeyWeight(other) > inKeyWeight(offsetCents) ? other : offsetCents
 }
 
 /**
@@ -248,52 +245,44 @@ export function chooseNamingOffset(
  * and failed on the real take: singers re-synchronize at phrase starts, so a
  * handful of on-beat phrase heads dilute any per-class majority.)
  */
-export function estimateGridPhaseBeats(
-  notes: ReadonlyArray<{ startTimeSeconds: number; durationSeconds: number }>,
-  bpm: number,
-): number {
-  if (notes.length < 4) return 0;
-  // Syncopation cost by phase class (16ths within one beat): 0, ¼, ½, ¾.
-  const COST = [0, 2, 1, 2];
-  const weight = [0, 0, 0, 0];
-  for (const n of notes) {
-    const beat = (n.startTimeSeconds * bpm) / 60;
-    const phase = Math.round(((beat % 1) + 1) * 4) % 4;
-    weight[phase] += Math.max(0.05, n.durationSeconds);
-  }
-  const costAt = (shift: number): number =>
-    weight.reduce((sum, w, phase) => sum + w * COST[(phase - shift + 4) % 4], 0);
-  const asSung = costAt(0);
-  let best = 0;
-  let bestCost = asSung;
-  for (const shift of [1, 2, 3]) {
-    const c = costAt(shift);
-    if (c < bestCost) {
-      bestCost = c;
-      best = shift;
+export function estimateGridPhaseBeats(notes: ReadonlyArray<{ startTimeSeconds: number; durationSeconds: number }>, bpm: number): number {
+    if (notes.length < 4) return 0
+    // Syncopation cost by phase class (16ths within one beat): 0, ¼, ½, ¾.
+    const COST = [0, 2, 1, 2]
+    const weight = [0, 0, 0, 0]
+    for (const n of notes) {
+        const beat = (n.startTimeSeconds * bpm) / 60
+        const phase = Math.round(((beat % 1) + 1) * 4) % 4
+        weight[phase] += Math.max(0.05, n.durationSeconds)
     }
-  }
-  return best !== 0 && bestCost <= 0.5 * asSung ? best / 4 : 0;
+    const costAt = (shift: number): number => weight.reduce((sum, w, phase) => sum + w * COST[(phase - shift + 4) % 4], 0)
+    const asSung = costAt(0)
+    let best = 0
+    let bestCost = asSung
+    for (const shift of [1, 2, 3]) {
+        const c = costAt(shift)
+        if (c < bestCost) {
+            bestCost = c
+            best = shift
+        }
+    }
+    return best !== 0 && bestCost <= 0.5 * asSung ? best / 4 : 0
 }
 
 /**
  * The written MIDI for one note: normalize by the take offset, round, and let
  * the key vote only inside the ambiguity band.
  */
-export function spellMidi(
-  note: FractionalPitch & { pitchMidi: number },
-  offsetCents: number,
-  keyClasses: Set<number> | null,
-): number {
-  if (note.pitchMidiFloat === undefined) return note.pitchMidi;
-  const x = note.pitchMidiFloat - offsetCents / 100;
-  let midi = Math.round(x);
-  const dev = x - midi;
-  if (keyClasses && Math.abs(dev) >= KEY_SNAP_MIN_DEV) {
-    const alt = midi + Math.sign(dev);
-    const midiInKey = keyClasses.has(((midi % 12) + 12) % 12);
-    const altInKey = keyClasses.has(((alt % 12) + 12) % 12);
-    if (!midiInKey && altInKey) midi = alt;
-  }
-  return midi;
+export function spellMidi(note: FractionalPitch & { pitchMidi: number }, offsetCents: number, keyClasses: Set<number> | null): number {
+    if (note.pitchMidiFloat === undefined) return note.pitchMidi
+    const x = note.pitchMidiFloat - offsetCents / 100
+    let midi = Math.round(x)
+    const dev = x - midi
+    if (keyClasses && Math.abs(dev) >= KEY_SNAP_MIN_DEV) {
+        const alt = midi + Math.sign(dev)
+        const midiInKey = keyClasses.has(((midi % 12) + 12) % 12)
+        const altInKey = keyClasses.has(((alt % 12) + 12) % 12)
+        if (!midiInKey && altInKey) midi = alt
+    }
+    return midi
 }

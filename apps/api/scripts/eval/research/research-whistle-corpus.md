@@ -6,7 +6,7 @@
 
 This file exists because "whistling has zero real test data" has been an open item in the
 README's findings log since 2026-07 and was re-listed in the 2026-08-20 gap register with the
-instruction *"→ team-decision bullet"*. This is the sweep that closes the acquisition question
+instruction _"→ team-decision bullet"_. This is the sweep that closes the acquisition question
 so nobody re-opens it: every route to whistling audio was checked, with the evidence attached,
 and the conclusion is that **acquisition is exhausted at ~34 seconds of clean modern whistling
 and ~3 minutes of accompanied public-domain art whistling** — all of which is now fetched,
@@ -37,7 +37,7 @@ we know about it**:
   above CREPE's 1975.5 Hz ceiling, portamento between notes, and an amplitude envelope with
   no consonant to mark a re-onset.
 
-So the value of even a *small* real whistle corpus is not statistical power — it is finding out
+So the value of even a _small_ real whistle corpus is not statistical power — it is finding out
 whether the synthetic tuning transfers at all.
 
 ## 1. The gates, restated for whistling — and the one that is different
@@ -47,22 +47,22 @@ note-level onset+offset+pitch; annotation provenance independent of our estimato
 licence). Two whistling-specific notes:
 
 **Gate 2 is where every candidate dies.** Not one whistling dataset in existence carries note
-events. The datasets that exist were built for *classification* (is this whistling?),
-*retrieval* (which song is this?) or *phonetics* (whistled speech) — none of which needs an
+events. The datasets that exist were built for _classification_ (is this whistling?),
+_retrieval_ (which song is this?) or _phonetics_ (whistled speech) — none of which needs an
 onset.
 
 **Gate 3 is easier here than anywhere else, and that is a trap.** A whistle is a single
 near-sinusoidal partial 15–30 dB above the rest of the spectrum. Measured on the audio adopted
 below (`lib/sineTrack.ts`, 2048-point FFT, 10 ms hop): **0.95 of a voiced frame's spectral
 energy sits in the peak's three bins** on clean modern whistling (`commons-donna`). So
-"strongest peak in 0.4–5 kHz" is closer to a *reading* than an estimate, and a draft
+"strongest peak in 0.4–5 kHz" is closer to a _reading_ than an estimate, and a draft
 annotation from it is genuinely useful — it saves an annotator most of the work while leaving
 every decision that matters (is this one note or two? where does it start? is it an octave
 out?) to a human.
 
 The trap: the README's open direction 4 is **"whistle-specific FFT peak tracker"**. If we ship
 that, this drafter becomes its sibling, and any label that was never human-corrected turns into
-self-measurement — the exact mechanism that made mir-qbsh drop 0.64 → 0.55 under a *better*
+self-measurement — the exact mechanism that made mir-qbsh drop 0.64 → 0.55 under a _better_
 decoder (§0's gate 3). Hence the mechanism in `fetch/import-note-labels.ts`: a clip whose
 `.meta.json` still says `verifiedBy: null` keeps the dataset flagged `noteTruthDerived`, which
 run-eval already honours by scoring and reporting it while keeping it out of the pooled
@@ -75,10 +75,10 @@ verifying and the numbers become circular.**
 
 Searched: the ISMIR dataset index (`ismir/mir-datasets`), `mirdata` and `soundata` registries
 (the mirdata enumeration was already a definitive negative in §2 of the register), Zenodo
-(dataset-type queries for *whistled melody*, *whistling recordings*, *query by whistling*),
+(dataset-type queries for _whistled melody_, _whistling recordings_, _query by whistling_),
 Dryad, OSF, OpenSLR, HuggingFace datasets, Kaggle, arXiv 2024–2026. Every hit is one of:
-whistled *speech*, animal whistles (dolphins, birds, marmots), referee/kettle whistles, or
-whistling as a *class label* with no timing. The two academic works on whistling transcription
+whistled _speech_, animal whistles (dolphins, birds, marmots), referee/kettle whistles, or
+whistling as a _class label_ with no timing. The two academic works on whistling transcription
 (a Técnico Lisboa thesis on "Automatic Transcription of Musical Whistling"; Ghosh et al. on
 embedded whistle pitch detection) evaluate on private audio and publish none.
 
@@ -88,12 +88,12 @@ Worth recording because it looks like the obvious answer (200 human-labelled Fre
 CC-BY, per-clip licences). Downloaded `FSD50K.ground_truth.zip` (334 kB) and read
 `vocabulary.csv`: **zero of the 200 classes match `/whistl/i`.** The human-sound classes it does
 carry are `Human_voice`, `Male_singing`, `Female_singing`, `Singing`, `Whispering`,
-`Human_group_actions`. AudioSet's ontology *does* have `Whistling` (`/m/01w250`) — FSD50K
+`Human_group_actions`. AudioSet's ontology _does_ have `Whistling` (`/m/01w250`) — FSD50K
 simply did not include it. Do not re-check this.
 
 ### 2c. ⛔ AudioSet / VGGSound — the class exists, the audio is not licensable
 
-AudioSet's labels are CC-BY, its *audio* is YouTube video IDs. There is no grant over the
+AudioSet's labels are CC-BY, its _audio_ is YouTube video IDs. There is no grant over the
 recordings, the set decays as videos are deleted, and downloading is against YouTube's terms.
 Same for VGGSound and AudioCaps. This is a licence dead end, not a data dead end — nothing to
 chase.
@@ -116,7 +116,7 @@ licence, which would still leave the composition question; do not chase it.
 
 ### 2e. ⛔ Silbo Gomero Speech Corpus (OpenSLR 137) — CC BY-NC-SA
 
-49 minutes, 4 fluent whistlers, read whistled Spanish with transcripts. Whistled *speech* is
+49 minutes, 4 fluent whistlers, read whistled Spanish with transcripts. Whistled _speech_ is
 not melody, but acoustically it is the same production mechanism in the same band, so it would
 have been a real pitch-tracker stress test. Licence: **Attribution-NonCommercial-ShareAlike
 4.0** → barred by §4.0 (NC restricts use, not only redistribution). Closed.
@@ -128,12 +128,12 @@ recorded **anechoically** with three microphones, and `whistle` is one of them. 
 inspected (283 MB):
 
 - Content: `AID/wavs/whistle_{01..04}_{RHODE_NT1,RHODE_NT5,SH_MKH800}.wav` — **4 recordings ×
-  3 mics**, 48 kHz PCM16, durations 1.5 / 5 / 5 / 7 s ⇒ **18.5 s per mic**. As an *interferer*
+  3 mics**, 48 kHz PCM16, durations 1.5 / 5 / 5 / 7 s ⇒ **18.5 s per mic**. As an _interferer_
   corpus this is incidental whistling, not performed melody.
 - Licence: the Zenodo record's licence field says `cc-by-4.0`; the **`AID/LICENSE` file inside
   the archive is `Attribution-NonCommercial-ShareAlike 4.0 International`** (verbatim first
   line). A record that contradicts itself is the §5e situation (Jingju part 2), and the
-  precedent there is explicit: *treat as NC*. **Verdict: barred**, with a cheap escalation
+  precedent there is explicit: _treat as NC_. **Verdict: barred**, with a cheap escalation
   available if it ever matters (ask the depositors which is operative — it is a first-party
   deposit and the mismatch is probably an upload-form slip).
 
@@ -149,8 +149,8 @@ discards the cursor position. Nothing has changed. Do not re-derive this.
 
 ### 2h. ⛔ Belyk et al., real-time-MRI whistling — CC0, and no timing either
 
-New this pass: `doi:10.5061/dryad.kb56cd1`, *"Whistling shares a common tongue with speech:
-bioacoustics from real-time MRI of the human vocal tract"*, 210 MB, licensed for reuse. Ships
+New this pass: `doi:10.5061/dryad.kb56cd1`, _"Whistling shares a common tongue with speech:
+bioacoustics from real-time MRI of the human vocal tract"_, 210 MB, licensed for reuse. Ships
 `filtered_audio.zip` (67 MB of WAV cut to each MRI scanning run, **with the scanner's noise
 artefacts filtered out**), `extracted_data.zip` (tongue coordinates + F0), `video.zip`.
 
@@ -166,7 +166,7 @@ and is free.
 `10.5281/zenodo.1340763` (Vocal Imitation Set v1.1.3), `10.5281/zenodo.3538534` (Fine-grained),
 `10.5281/zenodo.13862` (VocalSketch v1.0.4) — all CC-BY-4.0, thousands of vocal imitations of
 hundreds of sound effects, some of them whistled. No melody, no note truth, and the material is
-*imitation of noise*, which exercises nothing we ship. Not adopted; listed so the CC-BY licence
+_imitation of noise_, which exercises nothing we ship. Not adopted; listed so the CC-BY licence
 does not tempt a future pass.
 
 ### 2j. ⛔ Jamendo / archive.org CC-licensed music tagged "whistling"
@@ -182,18 +182,18 @@ the great majority are NC or ND anyway. Nothing to salvage.
 
 Commons is the only place with modern, unaccompanied, permissively-licensed whistling. The
 whole of it, enumerated by `Category:Whistling` plus a File-namespace audio search (everything
-else in that category is birds, marmots, police whistles, wolf-whistles, whistled *languages*,
+else in that category is birds, marmots, police whistles, wolf-whistles, whistled _languages_,
 or sheet-music scans):
 
-| clip | Commons file | licence (verified live via the imageinfo API) | dur | median f0 |
-|---|---|---|---|---|
-| `commons-donna` | `Whistling la donna a mobile.ogg` | CC BY-SA 4.0 (Stanislav Kozlovskiy) | 8.9 s | 1089 Hz |
-| `commons-glide` | `Whistle.ogg` | CC BY-SA 3.0 (Ruan123) | 11.8 s | 2250 Hz |
-| `commons-untune` | `Unidentified Tune.ogg` | public domain | 6.5 s | 1225 Hz |
-| `commons-soft` | `Soft whistle.ogg` | public domain | 5.4 s | 1450 Hz |
-| `commons-human` | `Human whistling.ogg` | public domain | 1.5 s | 1550 Hz |
+| clip             | Commons file                      | licence (verified live via the imageinfo API) | dur    | median f0 |
+| ---------------- | --------------------------------- | --------------------------------------------- | ------ | --------- |
+| `commons-donna`  | `Whistling la donna a mobile.ogg` | CC BY-SA 4.0 (Stanislav Kozlovskiy)           | 8.9 s  | 1089 Hz   |
+| `commons-glide`  | `Whistle.ogg`                     | CC BY-SA 3.0 (Ruan123)                        | 11.8 s | 2250 Hz   |
+| `commons-untune` | `Unidentified Tune.ogg`           | public domain                                 | 6.5 s  | 1225 Hz   |
+| `commons-soft`   | `Soft whistle.ogg`                | public domain                                 | 5.4 s  | 1450 Hz   |
+| `commons-human`  | `Human whistling.ogg`             | public domain                                 | 1.5 s  | 1550 Hz   |
 
-`commons-donna` is whistled *La donna è mobile* — Verdi died 1901, so unlike every other
+`commons-donna` is whistled _La donna è mobile_ — Verdi died 1901, so unlike every other
 recognisable tune on offer the composition is public domain too. `commons-glide` reaches
 **~4.4 kHz**, which makes it the highest-pitched real audio in the entire harness.
 
@@ -207,12 +207,12 @@ published before 1923 entered the public domain on 2022-01-01 under the Music Mo
 Act; both of these are also flagged PD on Commons):
 
 - **Alice J. Shaw and her daughters** ("The Whistling Prima Donna"), 134 s, median f0 1475 Hz.
-- **Frank Stafford**, *Der Spottvogel* (Septimus Winner, 1827–1902 — PD composition), 160 s,
+- **Frank Stafford**, _Der Spottvogel_ (Septimus Winner, 1827–1902 — PD composition), 160 s,
   median f0 1325 Hz.
 
 These are real whistling from real users-of-the-1900s, but with piano/orchestra behind them and
 78-rpm surface noise, so they are a **separate dataset** (`whistle-vintage`) that must never be
-pooled with the clean tier. Read them as what they are: an *adverse* whistle tier that nobody
+pooled with the clean tier. Read them as what they are: an _adverse_ whistle tier that nobody
 synthesised — the accompaniment is a masker in the same band, which is precisely the condition
 the synthetic tier cannot manufacture honestly.
 
@@ -237,12 +237,12 @@ with 13 wavs. Measured with `lib/sineTrack`, they are two different things:
   tones named after their note (real whistling reads ~0.95 in the same tracker). Deliberately
   not staged: they would put synthetic tones into a corpus whose whole purpose is being real.
 
-### 3d. 🔑 Freesound CC0 — the only route to real whistling *at volume*, and it needs 2 minutes of a human's time
+### 3d. 🔑 Freesound CC0 — the only route to real whistling _at volume_, and it needs 2 minutes of a human's time
 
 Freesound is where modern whistling actually lives. Its API is usable for this:
 
 - Token auth (not OAuth2) is enough to reach **previews** — 128 kbps mp3, which is lossy but
-  harmless at 1–3 kHz and recorded in the manifest. Only *original* downloads need OAuth2,
+  harmless at 1–3 kHz and recorded in the manifest. Only _original_ downloads need OAuth2,
   which no unattended script can do.
 - The licence filter is exact: `filter=license:"Creative Commons 0"`, so nothing NC or
   attribution-encumbered enters.
@@ -265,16 +265,16 @@ reports a stable `count`.
 
 **What the CC0 slice actually contains** (measured counts, `duration:[1.0 TO 40.0]`):
 
-| query | hits | first page is… |
-|---|---|---|
-| `whistling` | **936** | steam locomotives — "Train Passing By 114 with Bells, Horn, Pitch Change, Whistling" — plus stadium crowds, kettles, wind, a shower head |
-| `whistling` + exclusions (`-train -crowd -applause -kettle -wind -bird -steam -shower -bottle -referee -horn -cheer`) | **537** | real whistling |
-| `tag:whistling` | 205 | more precise, but the tag is on the trains too |
-| `tag:whistling tag:melody` | 2 | unusable |
-| licence comparison: `Attribution` | 663 | — |
-| licence comparison: `Attribution NonCommercial` | 229 | barred anyway |
+| query                                                                                                                 | hits    | first page is…                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `whistling`                                                                                                           | **936** | steam locomotives — "Train Passing By 114 with Bells, Horn, Pitch Change, Whistling" — plus stadium crowds, kettles, wind, a shower head |
+| `whistling` + exclusions (`-train -crowd -applause -kettle -wind -bird -steam -shower -bottle -referee -horn -cheer`) | **537** | real whistling                                                                                                                           |
+| `tag:whistling`                                                                                                       | 205     | more precise, but the tag is on the trains too                                                                                           |
+| `tag:whistling tag:melody`                                                                                            | 2       | unusable                                                                                                                                 |
+| licence comparison: `Attribution`                                                                                     | 663     | —                                                                                                                                        |
+| licence comparison: `Attribution NonCommercial`                                                                       | 229     | barred anyway                                                                                                                            |
 
-Two things follow. **CC0 is not a compromise**: at 936 vs 663 it is the *bigger* slice than
+Two things follow. **CC0 is not a compromise**: at 936 vs 663 it is the _bigger_ slice than
 CC-BY, so we take the permissive licence and no attribution obligations. And **the query cannot
 be the filter** — breadth plus screening beats a tight query, because the tight queries collapse
 to single digits.
@@ -286,20 +286,20 @@ melody, on the property that defines whistling: essentially all the energy sits 
 partial. Calibrated over 45 staged clips whose identity was known from title and from the five
 hand-checked Commons files — the separation is not marginal:
 
-| material | tonal fraction (energy in the peak's 3 bins, audible frames) |
-|---|---|
-| real human whistling | **0.61 – 1.00** (the Commons five: 0.61–0.86) |
-| wolf-whistle glide | 0.43 |
-| trains / crowds / wind / shower head | **≤ 0.08** |
+| material                             | tonal fraction (energy in the peak's 3 bins, audible frames) |
+| ------------------------------------ | ------------------------------------------------------------ |
+| real human whistling                 | **0.61 – 1.00** (the Commons five: 0.61–0.86)                |
+| wolf-whistle glide                   | 0.43                                                         |
+| trains / crowds / wind / shower head | **≤ 0.08**                                                   |
 
 So the gate sits at 0.5 with ~0.1 of headroom either side, plus a 450–4200 Hz median and a
 requirement of ≥3 notes at ≥2 distinct pitches — which is what excludes the two cases tonality
 alone cannot: a single sustained synth "whistle" one-shot scored **1.00**, and a wolf whistle is
 a glide rather than a melody.
 
-Two accepted false negatives, both correct for a *clean* tier: whistling buried under street
+Two accepted false negatives, both correct for a _clean_ tier: whistling buried under street
 traffic (measured 0.08 — "Man whistling and kicking bottle on Sandringham Road", which would be
-a fine *adverse* clip if the drafter could handle it) and very quiet breathy whistling.
+a fine _adverse_ clip if the drafter could handle it) and very quiet breathy whistling.
 
 ### 3d-ii. 🔴 The acoustic screen is necessary and NOT sufficient — a metadata veto is required
 
@@ -332,12 +332,12 @@ under the name "whistling".
 
 Over the whole CC0 pool the funnel is (SCREEN_VERSION 3, 537 candidates from four queries):
 
-| stage | dropped | left |
-|---|---|---|
-| candidates found (`page=1..4`, four queries, deduped) | — | 537 |
-| **not described as whistling** in name or tags | 165 | 372 |
-| **vetoed** as an instrument / synth / animal / machine / non-melodic | ~90 | ~282 |
-| **acoustic screen** (tonality, band, ≥3 notes at ≥2 pitches) | ~170 | **112** |
+| stage                                                                | dropped | left    |
+| -------------------------------------------------------------------- | ------- | ------- |
+| candidates found (`page=1..4`, four queries, deduped)                | —       | 537     |
+| **not described as whistling** in name or tags                       | 165     | 372     |
+| **vetoed** as an instrument / synth / animal / machine / non-melodic | ~90     | ~282    |
+| **acoustic screen** (tonality, band, ≥3 notes at ≥2 pitches)         | ~170    | **112** |
 
 **112 CC0 clips kept**, and reading all 112 titles finds no obvious survivor of the earlier
 problem — the residual uncertainty is now limited to plausibly-processed human whistling
@@ -377,10 +377,10 @@ Design decisions worth not re-litigating:
 State of the corpus (draft labels, nothing human-verified yet). The Freesound sweep is what
 took this from a smoke test to something with an n:
 
-| dataset | clips | notes | audio | source |
-|---|---|---|---|---|
-| `whistle-real` | **117** | **2,777** | **18.3 min** (median clip 7.8 s) | 112 Freesound CC0 + 5 Commons PD/CC-BY-SA |
-| `whistle-vintage` | 6 | 249 | 3 min | public-domain art-whistling 78s |
+| dataset           | clips   | notes     | audio                            | source                                    |
+| ----------------- | ------- | --------- | -------------------------------- | ----------------------------------------- |
+| `whistle-real`    | **117** | **2,777** | **18.3 min** (median clip 7.8 s) | 112 Freesound CC0 + 5 Commons PD/CC-BY-SA |
+| `whistle-vintage` | 6       | 249       | 3 min                            | public-domain art-whistling 78s           |
 
 (Before the token: 5 clips / 34 s. The 32× is entirely §3d.)
 
@@ -396,20 +396,20 @@ pulls the peak around.
 draft truth, **n = 117 clips / ~2,800 notes**. Read as diagnosis, not accuracy: the truth is a
 draft.
 
-| dataset | COnP@100 ms | octErr | missed | spur/100 | onset bias | trans recall |
-|---|---|---|---|---|---|---|
-| `whistle-real` | 0.36 | **0.00** | 55 % | **3** | +31 ms (med +20) | 0.258 (n=1270) |
-| `whistle-vintage` | 0.02 | 0.16 | 58 % | **102** | +62 ms | 0.293 (n=41) |
+| dataset           | COnP@100 ms | octErr   | missed | spur/100 | onset bias       | trans recall   |
+| ----------------- | ----------- | -------- | ------ | -------- | ---------------- | -------------- |
+| `whistle-real`    | 0.36        | **0.00** | 55 %   | **3**    | +31 ms (med +20) | 0.258 (n=1270) |
+| `whistle-vintage` | 0.02        | 0.16     | 58 %   | **102**  | +62 ms           | 0.293 (n=41)   |
 
 1. **No octave errors on clean real whistling — confirmed at scale.** 0.00 over ~2,800 notes.
-   This *contradicts* the obvious prediction (a near-sinusoidal source has almost no harmonics
+   This _contradicts_ the obvious prediction (a near-sinusoidal source has almost no harmonics
    with which to disambiguate an octave), and it settles the question before anyone builds a
    whistle octave prior: on this evidence there is nothing for one to fix. The vintage tier
    shows 0.16, which is the accompaniment, not the whistle.
 2. **The failure mode is conservative, not noisy.** 55 % of drafted notes missed against only
    **3 spurious per 100** — the pipeline drops whistled notes rather than inventing them. Part
    of the missed rate is the draft's own over-segmentation (2.5 notes/s; the drafter splits a
-   vibrato-wide sustain into neighbours), so the missed:spurious *ratio* is the robust part and
+   vibrato-wide sustain into neighbours), so the missed:spurious _ratio_ is the robust part and
    the absolute is an upper bound that verification will lower.
 3. **Transitions are where it goes, and now with weight**: transition recall 0.258 over
    **1,270** real transitions, against 0.344 on silence onsets. Whistling has no consonant to
@@ -417,7 +417,7 @@ draft.
    and it is the single largest identified loss on the input mode.
 4. **On accompanied material the resolver locks onto the accompaniment.** Every vintage clip
    resolved `mid+noise` / `high+noise` with a 1900 Hz ceiling from a scan reporting
-   p10/med/p90 ≈ 215–530 Hz — that is the *piano*, while the whistled line sits at 1.3–2.2 kHz.
+   p10/med/p90 ≈ 215–530 Hz — that is the _piano_, while the whistled line sits at 1.3–2.2 kHz.
    102 spurious notes per 100 reference notes is the same fact seen from the metric's side.
    Nobody synthesised this condition, which is why it was invisible until now; it generalises
    well beyond whistling (any user recording over a backing track).
@@ -428,11 +428,11 @@ looked as though the resolver's 1900 Hz `high` ceiling routinely sat under real 
 problem. Over 117 clips it is **3 of 120 analyses (2 %)** and the overflow is trivial (median
 26 Hz, worst 53 Hz). The routing is in fact mostly right:
 
-| resolved band | clips | ceiling | median scan f0 |
-|---|---|---|---|
-| `very-high` → basic-pitch | 71 (61 %) | 4300 Hz | 1570 Hz |
-| `high` → crepe-tiny | 40 (34 %) | 1900 Hz | 1106 Hz |
-| `mid` / `low` → crepe-tiny | 9 (8 %) | 1600–1900 Hz | 377 / 121 Hz |
+| resolved band              | clips     | ceiling      | median scan f0 |
+| -------------------------- | --------- | ------------ | -------------- |
+| `very-high` → basic-pitch  | 71 (61 %) | 4300 Hz      | 1570 Hz        |
+| `high` → crepe-tiny        | 40 (34 %) | 1900 Hz      | 1106 Hz        |
+| `mid` / `low` → crepe-tiny | 9 (8 %)   | 1600–1900 Hz | 377 / 121 Hz   |
 
 The 40 `high` routings are legitimate — 1106 Hz is comfortably inside CREPE's range. The nine
 `mid`/`low` routings are the interesting residue: a scan median of 377 or 121 Hz on a clip
@@ -442,7 +442,7 @@ those nine are the first clips the verification pass should look at.
 ## 5. The honest limits of what section 4 bought
 
 - **No performer metadata, so no honest split.** 117 clips carry a mean, but `lib/split.ts`
-  groups by performer and Freesound gives us an *uploader*, not a whistler — so the split is
+  groups by performer and Freesound gives us an _uploader_, not a whistler — so the split is
   per-clip there and one uploader's several takes can land on both sides. Read the number as a
   corpus mean, never as a tuning target, and do not gate a config on it.
 - **Draft labels are algorithmic** until someone verifies them; §1's trap explains exactly how
@@ -452,7 +452,7 @@ those nine are the first clips the verification pass should look at.
   echoey room. That is what §6 exists for, and Freesound cannot supply it.
 - **Uneven material.** The pool is what people upload to a sound-effects site: plenty of short
   one- or two-second whistles alongside real phrases (median clip 7.8 s). It is not a corpus of
-  *melodies* the way a dogfood set would be.
+  _melodies_ the way a dogfood set would be.
 
 ## 6. The capture protocol — how to get from 34 s to a real corpus
 
@@ -471,7 +471,7 @@ spread across:
    problem is at its worst here, and the synthetic tier cannot produce a genuine one at all
    (see `scenarios.ts`'s note on `gapSec`).
 3. **Competence** — deliberately include unsteady, flat/sharp and wobbling takes. The corpus's
-   value is being *bad* in the ways users are bad; a set of clean takes measures nothing the
+   value is being _bad_ in the ways users are bad; a set of clean takes measures nothing the
    synthetic tier does not already.
 4. **Capture path** — record ~10 of the 40 **through the product** (browser mic → webm/opus)
    rather than into a DAW, and ~6 in a genuinely echoey room / near a window with traffic. Both
@@ -479,7 +479,7 @@ spread across:
    the same time.
 
 **What NOT to do: whistle along to a click or a rendered melody.** That produces
-*score-derived* truth — the mirror of gate 3 — and it measures the written music instead of the
+_score-derived_ truth — the mirror of gate 3 — and it measures the written music instead of the
 performance. It is the mistake §4.4a records. Whistle freely; annotate what came out.
 
 > **This happened, 2026-08-22.** The first dogfood batch (`context/whistled-high-register`, 6
@@ -497,7 +497,7 @@ performance. It is the mistake §4.4a records. Whistle freely; annotate what cam
 **Annotate.** `WHISTLE_LOCAL_DIR=<folder>` on the fetcher stages the takes as
 `whistle-dogfood`; the drafter then produces labels to correct. Budget 2–4 minutes per 10 s
 clip in Audacity's spectrogram view (whistling is one bright line — onsets and offsets are
-*visible*, which is why this is fast). Then
+_visible_, which is why this is fast). Then
 `fetch/import-note-labels.ts --verified-by="<name>"` stamps them and the dataset stops being flagged
 as derived.
 
@@ -515,7 +515,7 @@ set exists, not before.
 1. ~~Freesound token~~ — **done 2026-08-20**, and it was the difference between a smoke test
    and a corpus: 34 s → 18.3 min (§3d-iii).
 2. **Verify the drafted clips** (§4) — 123 of them now, so this is no longer a 40-minute job.
-   Verify a *stratified subset* first: the nine `mid`/`low`-routed clips (§4a's residue), the
+   Verify a _stratified subset_ first: the nine `mid`/`low`-routed clips (§4a's residue), the
    handful whose titles suggest processing (`Ghostly Whistling`, `spooky eerie whistling 01–03`,
    `Whistle - Sustain tonal`), and ~20 drawn at random. That is enough to measure how far the
    draft is off, which decides whether verifying the rest is worth it.
@@ -529,7 +529,7 @@ set exists, not before.
    `octErr` is 0.00 over the clean tier's 107 notes (§4a), and 0.00 in every one of
    `fetch/fetch-tinysol.ts`'s six instrument datasets across both bands. The very-high band does not
    lose notes to octave confusion; it loses them outright, and most of all when they are
-   *quiet* (TinySOL `very-high` pp 0.451 vs ff 0.780). If anything is worth building for this
+   _quiet_ (TinySOL `very-high` pp 0.451 vs ff 0.780). If anything is worth building for this
    register it is sensitivity at low level, not an octave prior.
 
 ## 8. Search log — queries already run (do not repeat)
@@ -545,9 +545,9 @@ unchanged: no whistling corpus with verified note labels exists.** The only rout
 benchmark-grade whistling row is verifying our own drafts (`annotations/whistle-real/VERIFY-WORKLIST.md`,
 now with a pipeline-disagreement triage section from `fetch/triage-verify-worklist.ts`).
 
-Zenodo API (`type=dataset`): *whistled melody dataset*, *whistling recordings dataset audio*,
-*query by whistling*, *vocal imitation set*, *VocalSketch*, *dEchorate*, *Arni*, *BUT
-ReverbDB*. Wikimedia Commons API: File-namespace audio search for *whistling* (20,369 keyword
+Zenodo API (`type=dataset`): _whistled melody dataset_, _whistling recordings dataset audio_,
+_query by whistling_, _vocal imitation set_, _VocalSketch_, _dEchorate_, _Arni_, _BUT
+ReverbDB_. Wikimedia Commons API: File-namespace audio search for _whistling_ (20,369 keyword
 hits, all non-human bar the five above), `Category:Whistling`, `Category:Human_whistling`
 (empty), `Category:Whistled_languages`. Internet Archive advancedsearch: `collection:georgeblood`
 whistling (166), CC-licensed audio whistling (466). Kaggle metadata API: MLEnd Hums and

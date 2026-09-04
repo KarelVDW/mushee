@@ -15,39 +15,39 @@
  * into their dependency graphs.
  */
 
-export type BetaStatus = 'pending' | 'approved';
+export type BetaStatus = 'pending' | 'approved'
 
 export function isBetaMode(): boolean {
-  return process.env.BETA_MODE === 'true';
+    return process.env.BETA_MODE === 'true'
 }
 
 export function adminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+    return (process.env.ADMIN_EMAILS ?? '')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
 }
 
 export function isAdminEmail(email: string): boolean {
-  return adminEmails().includes(email.toLowerCase());
+    return adminEmails().includes(email.toLowerCase())
 }
 
 /** Fields stamped onto a new user row at signup. */
 export function signupUserFields(email: string): {
-  role: 'user' | 'admin';
-  betaStatus: BetaStatus | null;
+    role: 'user' | 'admin'
+    betaStatus: BetaStatus | null
 } {
-  const admin = isAdminEmail(email);
-  if (!isBetaMode()) {
-    return { role: admin ? 'admin' : 'user', betaStatus: null };
-  }
-  return {
-    role: admin ? 'admin' : 'user',
-    betaStatus: admin ? 'approved' : 'pending',
-  };
+    const admin = isAdminEmail(email)
+    if (!isBetaMode()) {
+        return { role: admin ? 'admin' : 'user', betaStatus: null }
+    }
+    return {
+        role: admin ? 'admin' : 'user',
+        betaStatus: admin ? 'approved' : 'pending',
+    }
 }
 
 /** Tier a fresh signup lands on. */
 export function signupTierId(): 'beta' | 'free' {
-  return isBetaMode() ? 'beta' : 'free';
+    return isBetaMode() ? 'beta' : 'free'
 }

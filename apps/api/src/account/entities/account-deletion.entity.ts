@@ -1,10 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm'
 
 /**
  * A pending account deletion. The row marks the user as soft-deleted;
@@ -14,14 +8,14 @@ import {
 @Entity('account_deletions')
 @Index('IDX_account_deletions_purgeAfter', ['purgeAfter'])
 export class AccountDeletion {
-  /** References user.id (ON DELETE CASCADE). */
-  @PrimaryColumn({ type: 'text' })
-  userId: string;
+    /** References user.id (ON DELETE CASCADE). */
+    @PrimaryColumn({ type: 'text' })
+    userId: string
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  requestedAt: Date;
+    @CreateDateColumn({ type: 'timestamptz' })
+    requestedAt: Date
 
-  /** End of the grace period; the purge cron deletes everything after this. */
-  @Column({ type: 'timestamptz' })
-  purgeAfter: Date;
+    /** End of the grace period; the purge cron deletes everything after this. */
+    @Column({ type: 'timestamptz' })
+    purgeAfter: Date
 }

@@ -9,34 +9,34 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 
 ## Phase 1 — must happen before the beta opens (blockers)
 
-1. **Real legal/business values** *(owner input — PR B6)* — **values done 2026-07-10**:
+1. **Real legal/business values** _(owner input — PR B6)_ — **values done 2026-07-10**:
    pages now name Karel Van De Winkel, trading as Solkey (sole proprietorship, enterprise
    no. 1039.906.118), Capucienenlaan 23, 9300 Aalst; Belgium confirmed as governing law.
-   *Update 2026-07-18: rebranded Sheemu → Solkey. The commercial name in the
+   _Update 2026-07-18: rebranded Sheemu → Solkey. The commercial name in the
    KBO/CBE register still says Sheemu — update it (or confirm with the
-   accountant that the pages may already carry the new name).*
+   accountant that the pages may already carry the new name)._
    Remaining: add `support@`/`privacy@`/`legal@`/`hello@` as Workspace aliases of
    `info@solkey.io` (once solkey.io is added to the Workspace), and have a lawyer
    review both documents (include the stored-recording-audio section rewritten
    2026-07-08).
-2. **Production storage bucket (GCS)** *(new since the rclone removal)*
+2. **Production storage bucket (GCS)** _(new since the rclone removal)_
    Create the GCS bucket, enable object versioning, wire workload identity (or a service
    account) for the API, set `STORAGE_DRIVER=gcs` + `GCS_BUCKET` in `Secret/api-secrets`.
    Decide data residency (EU bucket region to match the EU-hosted PostHog/DB posture).
-3. **Managed Postgres + backups** *(PR B5 — ops)*
+3. **Managed Postgres + backups** _(PR B5 — ops)_
    Provision with TLS (`POSTGRES_SSL=require|verify`), enable PITR/backups, and **rehearse
    one restore** before launch.
-4. **Domain topology + one real HTTPS login** *(PR B2 follow-through)*
+4. **Domain topology + one real HTTPS login** _(PR B2 follow-through)_
    `solkey.io` + `api.solkey.io`, set `COOKIE_DOMAIN=.solkey.io`, `WEB_APP_URL`,
    `CORS_ORIGIN`/`TRUSTED_ORIGINS`, `NEXT_PUBLIC_SITE_URL`, `TRUST_PROXY=1`. Smoke-test
    signup → login → editor on the real domains before anything else.
-   *Update 2026-07-09: domain decided (sheemu.com; repo-wide sweep off the old
+   _Update 2026-07-09: domain decided (sheemu.com; repo-wide sweep off the old
    sheemu.app placeholder done). Superseded 2026-07-18: rebranded to solkey.io,
    repo swept again. Deploy targets decided: web on Vercel, API +
    inference on GKE. The API-side topology values are now committed in
    `deploy/k8s/overlays/production/api-patch.yaml`; the web vars go into the
-   Vercel build env (all `NEXT_PUBLIC_*` are build-time baked). Remaining: DNS,
-   the Vercel project, and the smoke test itself.*
+   Vercel build env (all `NEXT*PUBLIC*_` are build-time baked). Remaining: DNS,
+   the Vercel project, and the smoke test itself.\*
 5. **Email deliverability**: SendGrid production key, sender domain auth (SPF/DKIM/DMARC),
    real mailboxes receiving. Signup dead-ends at OTP without this.
 6. **Polar production setup**: create products, set `POLAR_PRODUCT_<TIER>_<INTERVAL>` ids,
@@ -52,24 +52,24 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    `MAX_BODY_BYTES`, `LOG_FORMAT`, `RECORDING_*` caps) with code-verified defaults.
    The web `.env.example` was already in sync.
 
-8b. ~~**Production deploy layer** *(found missing in the 2026-07-09 pre-deploy audit)*~~ —
-   **done 2026-07-09** (numbered 8b so the item numbers notes.md references keep pointing
-   at the same entries): `deploy/k8s/overlays/production` (namespace, Artifact Registry
-   retags, GKE Ingress + ManagedCertificate + BackendConfig with the /health check and a
-   2 h WebSocket timeout, workload-identity ServiceAccount, non-secret prod env in
-   `api-patch.yaml`) with a provisioning runbook in its README;
-   `.github/workflows/deploy.yml` builds/pushes SHA-tagged images and applies the
-   overlay (manual dispatch). Also from that audit: `BETTER_AUTH_SECRET` documented +
-   prod boot guard, prod guard against default Postgres creds, inference containers
-   non-root (Dockerfiles + securityContexts — re-run `check-inference-parity` on the
-   rebuilt images before first prod rollout), baseline web security headers (CSP is a
-   deliberate follow-up: needs nonce plumbing for Next hydration + PostHog replay).
-   Replace `PROJECT_ID` placeholders (overlay kustomization, service-account.yaml,
-   deploy.yml) once the GCP project exists.
+8b. ~~**Production deploy layer** _(found missing in the 2026-07-09 pre-deploy audit)_~~ —
+**done 2026-07-09** (numbered 8b so the item numbers notes.md references keep pointing
+at the same entries): `deploy/k8s/overlays/production` (namespace, Artifact Registry
+retags, GKE Ingress + ManagedCertificate + BackendConfig with the /health check and a
+2 h WebSocket timeout, workload-identity ServiceAccount, non-secret prod env in
+`api-patch.yaml`) with a provisioning runbook in its README;
+`.github/workflows/deploy.yml` builds/pushes SHA-tagged images and applies the
+overlay (manual dispatch). Also from that audit: `BETTER_AUTH_SECRET` documented +
+prod boot guard, prod guard against default Postgres creds, inference containers
+non-root (Dockerfiles + securityContexts — re-run `check-inference-parity` on the
+rebuilt images before first prod rollout), baseline web security headers (CSP is a
+deliberate follow-up: needs nonce plumbing for Next hydration + PostHog replay).
+Replace `PROJECT_ID` placeholders (overlay kustomization, service-account.yaml,
+deploy.yml) once the GCP project exists.
 
 ## Phase 2 — should land in the first beta weeks (safety & confidence)
 
-9. **Error tracking vendor** *(PR H18 open half)*: pick Sentry (or PostHog error tracking),
+9. **Error tracking vendor** _(PR H18 open half)_: pick Sentry (or PostHog error tracking),
    add the DSN hook in `main.ts` + web `instrumentation.ts`. Without it, beta bug reports
    are anecdotes.
 10. **Visual QA + full-stack verification of the 2026-07-08 UI changes** — the mocked
@@ -82,11 +82,11 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 11. **Recording-archive spot check in prod**: confirm `recordings/<user>/<score>/<id>/`
     objects appear, are playable, and that account deletion removes the prefix (GDPR
     promise in the updated policy).
-12. ~~**PNG/maskable icons + favicon.ico** *(PR M17)*~~ — **done 2026-07-08**: rasterized
+12. ~~**PNG/maskable icons + favicon.ico** _(PR M17)_~~ — **done 2026-07-08**: rasterized
     from the brand `icon.svg` (sharp): `public/icon-{192,512}.png`, maskable variants on
     the surface color, `app/apple-icon.png`, PNG-encoded `app/favicon.ico` (16/32/48);
     manifest lists all of them. Worth one designer glance at the maskable crop.
-13. **N-session recording load test** *(notes.md §4 has the follow-up backlog)*: extend
+13. **N-session recording load test** _(notes.md §4 has the follow-up backlog)_: extend
     `scripts/test-recording-ws.ts` to ramp N sessions, watch p95 pass latency + RSS,
     and baseline the per-pod ceiling before beta invites scale up.
 14. **GDPR data export endpoint** — the privacy policy grants portability; per-score
@@ -105,10 +105,10 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
     `metadata`, canonical URLs, JSON-LD, Lighthouse pass.
 19. **PDF/MusicXML export polish**: the real MusicXML↔JSON converter is still the one code
     TODO (`scores.service.ts:137`) — round-trip is lossless today, but genuine MusicXML
-    *import* and richer export need the converter.
-20. **Inference containers non-root** *(PR H9 leftover)* — add users to both Python images,
+    _import_ and richer export need the converter.
+20. **Inference containers non-root** _(PR H9 leftover)_ — add users to both Python images,
     re-run `check-inference-parity` + eval gate.
-21. **API image slimming** *(PR M19)* and rate-limit Redis store if OTP brute-force pressure
+21. **API image slimming** _(PR M19)_ and rate-limit Redis store if OTP brute-force pressure
     appears (currently per-replica in-memory, `allowedAttempts: 5` is the real guard).
 22. **Recordings product surface** (new possibility now audio is stored): a "my recordings"
     list with playback/delete would both add user value and strengthen the GDPR story.

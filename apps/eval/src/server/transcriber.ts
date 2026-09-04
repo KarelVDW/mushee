@@ -58,7 +58,7 @@ function startWorker(): WorkerState {
 
     const state: WorkerState = { child, ready, nextId: 1, pending: new Map() }
 
-    const rl = createInterface({ input: child.stdout! })
+    const rl = createInterface({ input: child.stdout })
     rl.on('line', (line) => {
         if (line === '@@READY') {
             markReady()

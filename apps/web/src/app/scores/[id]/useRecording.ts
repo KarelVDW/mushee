@@ -29,7 +29,6 @@ function micErrorToast(err: unknown): string {
     return "Recording couldn't start. Check your microphone permission and connection, then try again."
 }
 
-
 /**
  * The recording flow: owns the live waveform store, the recording state, the
  * halt-dialog state, and the record toggle that drives a take end-to-end

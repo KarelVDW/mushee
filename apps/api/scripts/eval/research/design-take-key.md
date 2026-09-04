@@ -7,12 +7,12 @@ parameter, abstain as a class), §8.2 (libKeyFinder: abstain competes as a candi
 
 ## The two masks (§12.3) — and which one this feature is
 
-TalentedHack's correction to the original R2 spec: *interpretation* (which note did the singer
-intend? governed by the key they are singing in) and *spelling* (how is it written? governed by
+TalentedHack's correction to the original R2 spec: _interpretation_ (which note did the singer
+intend? governed by the key they are singing in) and _spelling_ (how is it written? governed by
 the score's key signature) are different jobs with different masks, and they may legitimately
 disagree — D-dorian improvisation over a C-major score is not an error to reconcile.
 
-- The **interpretation mask** (take-key steering the *decode*) is the score-as-pitch-prior family,
+- The **interpretation mask** (take-key steering the _decode_) is the score-as-pitch-prior family,
   **parked deliberately** (§17c). Nothing here touches the decoder. Zero pitch changes in the diff.
 - The **spelling mask** is what this feature supplies — and only as a **fallback**: when the score
   carries a key signature, `keyFifths` stays absolutely authoritative, exactly as today. The

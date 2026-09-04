@@ -38,8 +38,8 @@ export default function ReportsPage() {
             <div className="flex flex-col gap-1">
                 <h1 className="font-headline font-bold text-[1.6rem] leading-tight text-on-surface m-0">Reports</h1>
                 <p className="font-body text-[13px] text-on-surface-variant m-0">
-                    Every report JSON in the fixtures trees (harness runs and app-triggered runs alike). Pick two to compare:
-                    first pick = baseline, second = candidate.
+                    Every report JSON in the fixtures trees (harness runs and app-triggered runs alike). Pick two to compare: first pick =
+                    baseline, second = candidate.
                 </p>
             </div>
 
@@ -56,7 +56,9 @@ export default function ReportsPage() {
                         <thead>
                             <tr className="text-left">
                                 {['Compare', 'Report', 'Mode', 'Overall F1', 'Datasets', 'Written'].map((h) => (
-                                    <th key={h} className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
+                                    <th
+                                        key={h}
+                                        className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
                                         {h}
                                     </th>
                                 ))}
@@ -67,7 +69,9 @@ export default function ReportsPage() {
                                 const ref = { root: report.root, file: report.file }
                                 const role = sameRef(baseRef, ref) ? 'baseline' : sameRef(candidateRef, ref) ? 'candidate' : null
                                 return (
-                                    <tr key={`${report.root}/${report.file}`} className="border-t border-outline-variant/40 hover:bg-surface-container-low">
+                                    <tr
+                                        key={`${report.root}/${report.file}`}
+                                        className="border-t border-outline-variant/40 hover:bg-surface-container-low">
                                         <td className="px-5 py-2.5">
                                             <Chip active={role !== null} onClick={() => toggle(ref)}>
                                                 {role ?? 'pick'}
@@ -124,7 +128,12 @@ function Comparison({
         return [...scenarios].sort().map((scenario) => {
             const baseRow = byScenario.get(scenario)
             const candidateRow = candidate.perScenario.find((s) => s.scenario === scenario)
-            return { scenario, base: baseRow?.f1 ?? null, candidate: candidateRow?.f1 ?? null, pooled: candidateRow?.pooled ?? baseRow?.pooled ?? true }
+            return {
+                scenario,
+                base: baseRow?.f1 ?? null,
+                candidate: candidateRow?.f1 ?? null,
+                pooled: candidateRow?.pooled ?? baseRow?.pooled ?? true,
+            }
         })
     }, [base, candidate])
 
@@ -135,8 +144,7 @@ function Comparison({
             <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
                 <Eyebrow>Run vs run — note F1 per dataset (0–1 scale)</Eyebrow>
                 <span className="font-mono text-[13px] text-on-surface">
-                    overall {base.overallF1.toFixed(3)} → {candidate.overallF1.toFixed(3)}{' '}
-                    <DeltaLabel delta={overallDelta} digits={3} />
+                    overall {base.overallF1.toFixed(3)} → {candidate.overallF1.toFixed(3)} <DeltaLabel delta={overallDelta} digits={3} />
                 </span>
             </div>
             <div className="flex items-center gap-4 mb-4">
@@ -161,8 +169,8 @@ function Comparison({
                 ))}
             </div>
             <p className="font-body text-[11px] text-on-surface-variant mt-4 mb-0">
-                † not pooled into the overall number (derived truth, pitchless, or constructed performance). A dataset missing one
-                bar exists in only one report.
+                † not pooled into the overall number (derived truth, pitchless, or constructed performance). A dataset missing one bar
+                exists in only one report.
             </p>
         </Card>
     )
@@ -171,7 +179,11 @@ function Comparison({
 /** One thin bar on the full 0–1 F1 scale with its value label at the end. */
 function PairBar({ value, color }: { value: number | null; color: string }) {
     if (value === null)
-        return <div className="h-3 flex items-center"><span className="font-mono text-[10px] text-outline">absent</span></div>
+        return (
+            <div className="h-3 flex items-center">
+                <span className="font-mono text-[10px] text-outline">absent</span>
+            </div>
+        )
     return (
         <div className="h-3 flex items-center gap-1.5">
             <div className="h-3 rounded-r-sm min-w-0.5" style={{ width: `${Math.max(0.5, value * 100)}%`, background: color }} />

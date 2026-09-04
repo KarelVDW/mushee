@@ -118,9 +118,7 @@ export function mxmlMeasuresToScore(
     for (let i = 0; i <= lastIndex; i++) {
         allNotes.push(measures[i] ? ScoreDeserializer.mxmlMeasureToNotes(measures[i]) : [])
     }
-    const clef = clefFor(
-        allNotes.flat().flatMap((n) => (n.pitch ? [n.pitch.toMidi()] : [])),
-    )
+    const clef = clefFor(allNotes.flat().flatMap((n) => (n.pitch ? [n.pitch.toMidi()] : [])))
     if (clef !== 'treble') score.firstMeasure!.setClef(0, clef)
 
     for (let i = 0; i <= lastIndex; i++) {

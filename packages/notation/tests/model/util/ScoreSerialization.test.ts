@@ -84,7 +84,10 @@ describe('note content round-trip', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            score.replace([m.notes[0]], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, accidental, octave: 4 }) })])
+            score.replace(
+                [m.notes[0]],
+                [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, accidental, octave: 4 }) })],
+            )
             const restored = roundTrip(score).firstMeasure
             if (!restored) throw new Error('expected restored firstMeasure')
             expect(restored.notes[0].pitch?.alter).toBe(alter)
@@ -104,7 +107,10 @@ describe('note content round-trip', () => {
         const score = makeScore(1)
         const m = score.firstMeasure
         if (!m) throw new Error('expected firstMeasure')
-        score.replace([m.notes[0]], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 }) })])
+        score.replace(
+            [m.notes[0]],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 }) })],
+        )
         const entry = noteEntries(toInput(score))[0]
         expect(entry.pitch?.alter).toBe(1)
     })
@@ -387,7 +393,14 @@ describe('edge cases', () => {
                         {
                             number: '1',
                             // Attributes only, no notes — the measure is created but addNotes is skipped.
-                            entries: [{ _type: 'attributes', divisions: 12, clef: [{ sign: 'F', line: 4 }], time: [{ beats: '4', beatType: '4' }] }],
+                            entries: [
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'F', line: 4 }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
+                            ],
                         },
                     ],
                 },
@@ -498,7 +511,12 @@ describe('edge cases', () => {
                             number: '1',
                             entries: [
                                 // 'percussion' has no entry in CLEF_DEFS, so resolution falls through to treble.
-                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'percussion', line: 3 }], time: [{ beats: '4', beatType: '4' }] },
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'percussion', line: 3 }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
                                 { _type: 'note', rest: {}, duration: 48, voice: '1', type: 'whole' },
                             ],
                         },
@@ -550,7 +568,12 @@ describe('edge cases', () => {
                             entries: [
                                 // 'percussion' is not in DEFAULT_CLEF_LINE and no line is given, so the
                                 // resolved line falls through to the absolute default (2), then to treble.
-                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'percussion' }], time: [{ beats: '4', beatType: '4' }] },
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'percussion' }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
                                 { _type: 'note', rest: {}, duration: 48, voice: '1', type: 'whole' },
                             ],
                         },
@@ -658,7 +681,11 @@ describe('ScoreDeserializer.mxmlMeasureToNotes', () => {
 describe('full feature round-trip', () => {
     it('round-trips a score combining clef, key, time, tempo, tie, tuplet and barline changes', () => {
         const score = new Score()
-        const m0 = new Measure(score, 'bass', new TimeSignature(4, 4), { keyFifths: 2, leadingClefExplicit: true, leadingKeyExplicit: true })
+        const m0 = new Measure(score, 'bass', new TimeSignature(4, 4), {
+            keyFifths: 2,
+            leadingClefExplicit: true,
+            leadingKeyExplicit: true,
+        })
         m0.complete()
         score.addMeasure(undefined, m0)
         const m1 = new Measure(score, 'bass', new TimeSignature(3, 4), { keyFifths: 2 })

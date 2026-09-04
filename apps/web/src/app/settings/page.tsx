@@ -124,9 +124,7 @@ export default function SettingsPage() {
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
                                     </div>
                                 </Section>
-                                <Section
-                                    title="Support"
-                                    subtitle="Stuck, found a bug, or want to say hi? We read everything.">
+                                <Section title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
                                     <div className="flex items-center gap-4">
                                         <a
                                             href="mailto:support@solkey.io"
@@ -134,9 +132,7 @@ export default function SettingsPage() {
                                             <Icon name="mail" size={16} />
                                             support@solkey.io
                                         </a>
-                                        <a
-                                            href="/contact"
-                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        <a href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
                                             All contact options
                                         </a>
                                     </div>
@@ -301,8 +297,8 @@ function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; 
         <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-none text-on-surface-variant">
             <Icon name="gift" size={14} />
             <span>
-                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run
-                out, never expires.
+                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run out, never
+                expires.
             </span>
         </div>
     )
@@ -327,10 +323,7 @@ function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; 
                 </span>
             </div>
             <div className="h-1.5 rounded-full bg-surface-container overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)}>
-                <div
-                    className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'}
-                    style={{ width: `${pct}%` }}
-                />
+                <div className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'} style={{ width: `${pct}%` }} />
             </div>
             {packLine}
         </div>
@@ -357,7 +350,9 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'font-body font-medium text-[14px] leading-none',
                             'transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                            active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface',
+                            active
+                                ? 'bg-surface-container text-on-surface'
+                                : 'bg-transparent text-on-surface-variant hover:text-on-surface',
                         ].join(' ')}>
                         <Icon name={icon} size={16} />
                         {label}

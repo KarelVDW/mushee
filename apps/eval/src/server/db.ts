@@ -80,9 +80,7 @@ async function migrate(pool: Pool): Promise<void> {
         await client.query(
             'CREATE TABLE IF NOT EXISTS eval.migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())',
         )
-        const done = new Set(
-            (await client.query<{ name: string }>('SELECT name FROM eval.migrations')).rows.map((r) => r.name),
-        )
+        const done = new Set((await client.query<{ name: string }>('SELECT name FROM eval.migrations')).rows.map((r) => r.name))
         for (const migration of MIGRATIONS) {
             if (done.has(migration.name)) continue
             await client.query('BEGIN')

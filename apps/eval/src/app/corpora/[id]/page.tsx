@@ -79,7 +79,9 @@ export default function CorpusDetailPage() {
                     <thead>
                         <tr className="text-left">
                             {['Clip', 'Key', 'Notes', 'Length', 'Status', 'Latest F1', ''].map((h, i) => (
-                                <th key={i} className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
+                                <th
+                                    key={i}
+                                    className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
                                     {h}
                                 </th>
                             ))}
@@ -99,7 +101,9 @@ export default function CorpusDetailPage() {
                                     </td>
                                     <td className="px-5 py-3 font-body text-[13px] text-on-surface-variant">{clip.melody.keyLabel}</td>
                                     <td className="px-5 py-3 font-mono text-[13px] text-on-surface">{melodyNoteCount(clip.melody)}</td>
-                                    <td className="px-5 py-3 font-mono text-[13px] text-on-surface">{melodyDurationSec(clip.melody).toFixed(0)}s</td>
+                                    <td className="px-5 py-3 font-mono text-[13px] text-on-surface">
+                                        {melodyDurationSec(clip.melody).toFixed(0)}s
+                                    </td>
                                     <td className="px-5 py-3">
                                         <Chip active={clip.status === 'recorded'}>{clip.status}</Chip>
                                     </td>

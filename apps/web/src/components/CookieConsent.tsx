@@ -78,15 +78,15 @@ export function CookieConsent() {
                                 </span>
                             </div>
                             <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                                Counts pages and feature use without cookies or anything stored on your device — never linked to who
-                                you are (PostHog, hosted in the EU).
+                                Counts pages and feature use without cookies or anything stored on your device — never linked to who you are
+                                (PostHog, hosted in the EU).
                             </p>
                         </div>
                         <div className="bg-surface-container-low rounded-md px-4 py-3.5 flex flex-col gap-2">
                             <Switch checked={analyticsChoice} onChange={setAnalyticsChoice} label="Session replay & linked analytics" />
                             <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                                Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug
-                                your issues. Uses one PostHog cookie. Off by default.
+                                Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your
+                                issues. Uses one PostHog cookie. Off by default.
                             </p>
                         </div>
                         <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">

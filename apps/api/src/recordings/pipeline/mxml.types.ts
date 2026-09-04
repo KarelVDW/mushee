@@ -1,83 +1,79 @@
-export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
-export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th';
-export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none';
-export type MxmlStartStop = 'start' | 'stop';
-export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none';
+export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
+export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th'
+export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none'
+export type MxmlStartStop = 'start' | 'stop'
+export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none'
 
 export interface MxmlPitch {
-  step: MxmlStep;
-  alter?: number;
-  octave: number;
+    step: MxmlStep
+    alter?: number
+    octave: number
 }
 
 export interface MxmlRest {
-  measure?: boolean;
+    measure?: boolean
 }
 
 export interface MxmlTie {
-  type: MxmlStartStop;
+    type: MxmlStartStop
 }
 
 export interface MxmlNote {
-  _type: 'note';
-  pitch?: MxmlPitch;
-  rest?: MxmlRest;
-  duration: number;
-  tie?: MxmlTie[];
-  voice?: string;
-  type?: MxmlNoteType;
-  dot?: number;
+    _type: 'note'
+    pitch?: MxmlPitch
+    rest?: MxmlRest
+    duration: number
+    tie?: MxmlTie[]
+    voice?: string
+    type?: MxmlNoteType
+    dot?: number
 }
 
 export interface MxmlKey {
-  fifths: number;
-  mode?: string;
+    fifths: number
+    mode?: string
 }
 
 export interface MxmlTime {
-  beats: string;
-  beatType: string;
+    beats: string
+    beatType: string
 }
 
 export interface MxmlClef {
-  sign: MxmlClefSign;
-  line?: number;
-  number?: number;
+    sign: MxmlClefSign
+    line?: number
+    number?: number
 }
 
 export interface MxmlAttributes {
-  _type: 'attributes';
-  divisions?: number;
-  key?: MxmlKey[];
-  time?: MxmlTime[];
-  staves?: number;
-  clef?: MxmlClef[];
+    _type: 'attributes'
+    divisions?: number
+    key?: MxmlKey[]
+    time?: MxmlTime[]
+    staves?: number
+    clef?: MxmlClef[]
 }
 
 export interface MxmlBarline {
-  _type: 'barline';
-  location?: 'left' | 'right' | 'middle';
-  barStyle?: MxmlBarStyle;
+    _type: 'barline'
+    location?: 'left' | 'right' | 'middle'
+    barStyle?: MxmlBarStyle
 }
 
 export interface MxmlDirection {
-  _type: 'direction';
-  /** The written metronome mark (`♩. = 60`); `sound.tempo` carries the same tempo in quarter-note bpm. */
-  metronome?: {
-    beatUnit: MxmlNoteType;
-    beatUnitDots: number;
-    perMinute: number;
-  };
-  sound?: { tempo?: number };
+    _type: 'direction'
+    /** The written metronome mark (`♩. = 60`); `sound.tempo` carries the same tempo in quarter-note bpm. */
+    metronome?: {
+        beatUnit: MxmlNoteType
+        beatUnitDots: number
+        perMinute: number
+    }
+    sound?: { tempo?: number }
 }
 
-export type MxmlMeasureEntry =
-  | MxmlNote
-  | MxmlAttributes
-  | MxmlBarline
-  | MxmlDirection;
+export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection
 
 export interface MxmlMeasure {
-  number: string;
-  entries: MxmlMeasureEntry[];
+    number: string
+    entries: MxmlMeasureEntry[]
 }

@@ -22,8 +22,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     // flag lets the two drift (e.g. API in beta mode, web image built without).
     const betaStatus = useBetaStatus({ enabled: !!session?.user })
 
-    const isPublic =
-        PUBLIC_EXACT_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some((p) => pathname.startsWith(p))
+    const isPublic = PUBLIC_EXACT_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some((p) => pathname.startsWith(p))
 
     useEffect(() => {
         if (isPending) return

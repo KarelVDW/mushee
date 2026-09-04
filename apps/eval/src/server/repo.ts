@@ -91,10 +91,13 @@ export async function createCorpus(
     )
     for (let i = 0; i < clips.length; i++) {
         const clip = clips[i]
-        await query(
-            `INSERT INTO eval.clip (corpus_id, name, seed, sort_order, melody) VALUES ($1, $2, $3, $4, $5)`,
-            [corpus.id, clip.name, clip.seed, i, JSON.stringify(clip.melody)],
-        )
+        await query(`INSERT INTO eval.clip (corpus_id, name, seed, sort_order, melody) VALUES ($1, $2, $3, $4, $5)`, [
+            corpus.id,
+            clip.name,
+            clip.seed,
+            i,
+            JSON.stringify(clip.melody),
+        ])
     }
 }
 
@@ -118,10 +121,7 @@ export async function getClip(id: string): Promise<Clip | null> {
 }
 
 export async function markClipRecorded(id: string, durationSec: number): Promise<void> {
-    await query(`UPDATE eval.clip SET status = 'recorded', duration_sec = $2, recorded_at = now() WHERE id = $1`, [
-        id,
-        durationSec,
-    ])
+    await query(`UPDATE eval.clip SET status = 'recorded', duration_sec = $2, recorded_at = now() WHERE id = $1`, [id, durationSec])
 }
 
 export async function insertTranscription(

@@ -419,7 +419,12 @@ export class Score {
             const targets = new Set(region.notes)
             const current = region.key.fifths
             let best = current
-            let bestRank = [new AccidentalMinimizer(region.notes, targets, () => current).drawnCount, 0, Math.abs(current), current > 0 ? 0 : 1]
+            let bestRank = [
+                new AccidentalMinimizer(region.notes, targets, () => current).drawnCount,
+                0,
+                Math.abs(current),
+                current > 0 ? 0 : 1,
+            ]
             for (let fifths = -7; fifths <= 7; fifths++) {
                 if (fifths === current) continue
                 const count = new AccidentalMinimizer(region.notes, targets, () => fifths).drawnCount
@@ -519,7 +524,9 @@ export class Score {
         /* v8 ignore next -- defensive: durations starts with one element and is only re-decomposed from a positive remainder, so it is never empty */
         if (!durations.length) return null
         /* v8 ignore next -- the tie-spread branch never fires: a tuplet clip always reduces to a single written duration (durations.length === 1) */
-        const values = durations.map((d, i) => note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }))
+        const values = durations.map((d, i) =>
+            note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
+        )
         /* v8 ignore next -- defensive: replace always returns at least one note for a non-empty target */
         return this.replace([note], values)[0] ?? null
     }
@@ -542,7 +549,8 @@ export class Score {
             if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
             /* v8 ignore next 3 -- the tie-spread branch never fires: the collapsed group total is a single written duration (durations.length === 1) */
             const values = durations.map(
-                (d, i) => new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
+                (d, i) =>
+                    new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
             )
             /* v8 ignore next -- defensive: replace always returns at least one note */
             return this.replace(tuplet.notes, values)[0] ?? null

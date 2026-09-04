@@ -33,11 +33,7 @@ export function InstrumentPicker({ value, onChange }: InstrumentPickerProps) {
                         <Eyebrow>{category}</Eyebrow>
                         <div className="flex flex-wrap gap-2">
                             {instruments.map((i) => (
-                                <Chip
-                                    key={i.id}
-                                    active={i.id === value.id}
-                                    onClick={() => onChange(i)}
-                                    ariaLabel={`Pick ${i.displayName}`}>
+                                <Chip key={i.id} active={i.id === value.id} onClick={() => onChange(i)} ariaLabel={`Pick ${i.displayName}`}>
                                     {i.displayName}
                                 </Chip>
                             ))}

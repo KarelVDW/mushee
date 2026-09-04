@@ -67,14 +67,118 @@ interface KeyDef {
 }
 
 const KEYS: readonly KeyDef[] = [
-    { label: 'C major', mode: 'major', fifths: 0, steps: [{ step: 'C', alter: 0 }, { step: 'D', alter: 0 }, { step: 'E', alter: 0 }, { step: 'F', alter: 0 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: 0 }] },
-    { label: 'G major', mode: 'major', fifths: 1, steps: [{ step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: 0 }, { step: 'C', alter: 0 }, { step: 'D', alter: 0 }, { step: 'E', alter: 0 }, { step: 'F', alter: 1 }] },
-    { label: 'D major', mode: 'major', fifths: 2, steps: [{ step: 'D', alter: 0 }, { step: 'E', alter: 0 }, { step: 'F', alter: 1 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: 0 }, { step: 'C', alter: 1 }] },
-    { label: 'F major', mode: 'major', fifths: -1, steps: [{ step: 'F', alter: 0 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: -1 }, { step: 'C', alter: 0 }, { step: 'D', alter: 0 }, { step: 'E', alter: 0 }] },
-    { label: 'B♭ major', mode: 'major', fifths: -2, steps: [{ step: 'B', alter: -1 }, { step: 'C', alter: 0 }, { step: 'D', alter: 0 }, { step: 'E', alter: -1 }, { step: 'F', alter: 0 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }] },
-    { label: 'A minor', mode: 'minor', fifths: 0, steps: [{ step: 'A', alter: 0 }, { step: 'B', alter: 0 }, { step: 'C', alter: 0 }, { step: 'D', alter: 0 }, { step: 'E', alter: 0 }, { step: 'F', alter: 0 }, { step: 'G', alter: 0 }] },
-    { label: 'E minor', mode: 'minor', fifths: 1, steps: [{ step: 'E', alter: 0 }, { step: 'F', alter: 1 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: 0 }, { step: 'C', alter: 0 }, { step: 'D', alter: 0 }] },
-    { label: 'D minor', mode: 'minor', fifths: -1, steps: [{ step: 'D', alter: 0 }, { step: 'E', alter: 0 }, { step: 'F', alter: 0 }, { step: 'G', alter: 0 }, { step: 'A', alter: 0 }, { step: 'B', alter: -1 }, { step: 'C', alter: 0 }] },
+    {
+        label: 'C major',
+        mode: 'major',
+        fifths: 0,
+        steps: [
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 0 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: 0 },
+        ],
+    },
+    {
+        label: 'G major',
+        mode: 'major',
+        fifths: 1,
+        steps: [
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: 0 },
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 1 },
+        ],
+    },
+    {
+        label: 'D major',
+        mode: 'major',
+        fifths: 2,
+        steps: [
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 1 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: 0 },
+            { step: 'C', alter: 1 },
+        ],
+    },
+    {
+        label: 'F major',
+        mode: 'major',
+        fifths: -1,
+        steps: [
+            { step: 'F', alter: 0 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: -1 },
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+        ],
+    },
+    {
+        label: 'B♭ major',
+        mode: 'major',
+        fifths: -2,
+        steps: [
+            { step: 'B', alter: -1 },
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: -1 },
+            { step: 'F', alter: 0 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+        ],
+    },
+    {
+        label: 'A minor',
+        mode: 'minor',
+        fifths: 0,
+        steps: [
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: 0 },
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 0 },
+            { step: 'G', alter: 0 },
+        ],
+    },
+    {
+        label: 'E minor',
+        mode: 'minor',
+        fifths: 1,
+        steps: [
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 1 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: 0 },
+            { step: 'C', alter: 0 },
+            { step: 'D', alter: 0 },
+        ],
+    },
+    {
+        label: 'D minor',
+        mode: 'minor',
+        fifths: -1,
+        steps: [
+            { step: 'D', alter: 0 },
+            { step: 'E', alter: 0 },
+            { step: 'F', alter: 0 },
+            { step: 'G', alter: 0 },
+            { step: 'A', alter: 0 },
+            { step: 'B', alter: -1 },
+            { step: 'C', alter: 0 },
+        ],
+    },
 ]
 
 const STEP_SEMITONE: Record<MelodyPitch['step'], number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
@@ -110,7 +214,8 @@ function generateClip(params: GeneratorParams, clipSeed: number): ClipMelody {
     const keys = KEYS.filter((k) => params.mode === 'mixed' || k.mode === params.mode)
     const key = pick(rng, keys)
     const scale = scaleNotesInRange(key, params.register)
-    if (scale.length < 5) throw new Error(`register ${params.register.lowMidi}–${params.register.highMidi} holds too few ${key.label} notes`)
+    if (scale.length < 5)
+        throw new Error(`register ${params.register.lowMidi}–${params.register.highMidi} holds too few ${key.label} notes`)
 
     const templates = rhythmTemplates(params.beatsPerMeasure, params.rhythm)
     // Start near the middle of the range so both directions stay open.

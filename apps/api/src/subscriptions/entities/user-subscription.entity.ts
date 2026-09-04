@@ -1,10 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 
 /**
  * A user's subscription tier plus the Polar state backing it. Rows are
@@ -13,41 +7,41 @@ import {
  */
 @Entity('user_subscriptions')
 export class UserSubscription {
-  /** References user.id (ON DELETE CASCADE). */
-  @PrimaryColumn({ type: 'text' })
-  userId: string;
+    /** References user.id (ON DELETE CASCADE). */
+    @PrimaryColumn({ type: 'text' })
+    userId: string
 
-  @Column({ type: 'varchar', default: 'free' })
-  tierId: string;
+    @Column({ type: 'varchar', default: 'free' })
+    tierId: string
 
-  /** Polar customer id (Polar also knows us by externalId = userId). */
-  @Column({ type: 'varchar', nullable: true })
-  polarCustomerId: string | null;
+    /** Polar customer id (Polar also knows us by externalId = userId). */
+    @Column({ type: 'varchar', nullable: true })
+    polarCustomerId: string | null
 
-  @Column({ type: 'varchar', nullable: true })
-  polarSubscriptionId: string | null;
+    @Column({ type: 'varchar', nullable: true })
+    polarSubscriptionId: string | null
 
-  @Column({ type: 'varchar', nullable: true })
-  polarProductId: string | null;
+    @Column({ type: 'varchar', nullable: true })
+    polarProductId: string | null
 
-  /** Polar subscription status ('active', 'canceled', …); null when unpaid tier. */
-  @Column({ type: 'varchar', nullable: true })
-  status: string | null;
+    /** Polar subscription status ('active', 'canceled', …); null when unpaid tier. */
+    @Column({ type: 'varchar', nullable: true })
+    status: string | null
 
-  @Column({ type: 'timestamptz', nullable: true })
-  currentPeriodEnd: Date | null;
+    @Column({ type: 'timestamptz', nullable: true })
+    currentPeriodEnd: Date | null
 
-  @Column({ type: 'boolean', default: false })
-  cancelAtPeriodEnd: boolean;
+    @Column({ type: 'boolean', default: false })
+    cancelAtPeriodEnd: boolean
 
-  /** `modified_at` of the newest Polar event applied — guards against Polar
-   *  retries landing out of order and resurrecting stale subscription state. */
-  @Column({ type: 'timestamptz', nullable: true })
-  lastPolarEventAt: Date | null;
+    /** `modified_at` of the newest Polar event applied — guards against Polar
+     *  retries landing out of order and resurrecting stale subscription state. */
+    @Column({ type: 'timestamptz', nullable: true })
+    lastPolarEventAt: Date | null
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
+    @CreateDateColumn({ type: 'timestamptz' })
+    createdAt: Date
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
+    @UpdateDateColumn({ type: 'timestamptz' })
+    updatedAt: Date
 }

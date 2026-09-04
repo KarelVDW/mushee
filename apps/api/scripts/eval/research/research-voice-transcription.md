@@ -5,7 +5,7 @@
 > ## ✅ IMPLEMENTATION STATUS (2026-08-08) — read this before acting on §10
 >
 > **V0 and V1 are built and shipped behind the voice profile.** The durable record of what
-> was measured is the *2026-08 voice flow* section of [`README.md`](README.md); wherever this
+> was measured is the _2026-08 voice flow_ section of [`README.md`](README.md); wherever this
 > doc and that log disagree, **the log wins** (it is measurement, this is prediction).
 >
 > - **§10b (V0) — done.** Segmentation/decode options are on `PipelineProfile` and forwarded by
@@ -25,7 +25,7 @@
 >   and ships as part of E1's config), and so are two ideas this doc did not propose: an
 >   in-decode re-onset transition with Ryynänen's accent, and a second cheaper price for wide
 >   intervals. Each null is recorded in the log **with its reason**, and the reasons matter more
->   than the verdicts — two are nulls *because E1 removed the failure they targeted* (octave
+>   than the verdicts — two are nulls _because E1 removed the failure they targeted_ (octave
 >   errors are now 0.001; a mandatory-silence decode emits no contiguous ±1-semitone pairs for
 >   the guard to act on), and one shows the split/merge trade sits on a **flat repair-time
 >   frontier**, i.e. the remaining transition misses are the limit of pitch + energy rather than
@@ -56,10 +56,9 @@
 >   decisions D1/D2/D3, and the §8 UX backlog.
 >   The **re-onset channel remains the weakest part of the voice flow** — recall 0.389 against
 >   the old segmenter's 0.461 — and §3.2's selective in-note SuperFlux splitter is the one
->   untried idea there. The in-decode Ryynänen accent was tried and is a null *because a
->   broadband envelope cannot discriminate*, which is an argument FOR the band-wise version, so
+>   untried idea there. The in-decode Ryynänen accent was tried and is a null _because a
+>   broadband envelope cannot discriminate_, which is an argument FOR the band-wise version, so
 >   §3.2 is the right next move rather than a repeat.
-
 
 Research notes, 2026-08-02. Scope: how to build a **dedicated flow for human-voice input** — the
 syllable problem ("puh-duh" / "ta-da" / lyrics / humming), note-boundary evidence for voice, the
@@ -79,7 +78,7 @@ Evidence tiers: **[P]** primary source read (paper PDF / source code / license f
 > Not from scratch, not a retrain of a published recipe, not a fine-tune — nothing that involves us
 > training model weights. **This is a permanent no-go; do not revisit or re-propose it.** Passages
 > below that describe training recipes or training-data assembly are retained only as context for
-> judging *other people's* models. A learned note model can enter the product exclusively by
+> judging _other people's_ models. A learned note model can enter the product exclusively by
 > acquisition: an existing pretrained checkpoint used as-is (license permitting), a directly
 > licensed checkpoint (§11), or a third-party API.
 
@@ -95,22 +94,21 @@ today → §10c the eval-gated experiment queue → §10d the one measurement th
 1. **The syllable problem is quantified, and it inverts the "make users sing vowels" idea.**
    Li et al. (NLP4MusA 2021) measured note-transcription F by lyric content on the same system:
    Spanish lyrics **0.709**, English **0.523**, /Na/+/La/ **0.520** — and on a corpus sung entirely
-   on **/Ta/**, *plain voicing-based segmentation alone scored 0.645 and beat their full pipeline*,
+   on **/Ta/**, _plain voicing-based segmentation alone scored 0.645 and beat their full pipeline_,
    because a voiceless plosive delimits every note for free. **[P]** Consonants are boundary
-   *evidence*, not noise; vowel-only singing is the **hardest** input. If we ever nudge users, the
-   evidence-backed tip is the opposite of the vowels idea: *"if notes run together, try ta-ta-ta"*.
+   _evidence_, not noise; vowel-only singing is the **hardest** input. If we ever nudge users, the
+   evidence-backed tip is the opposite of the vowels idea: _"if notes run together, try ta-ta-ta"_.
    No surveyed product hard-constrains articulation; all soft-guide (§8).
-2. **Note onsets in voice come in two kinds and need different evidence.** Yong/Su/Nam (ICASSP
-   2023) split onsets into **transitions** (pitch changes) and **re-onsets** (same pitch, new
+2. **Note onsets in voice come in two kinds and need different evidence.** Yong/Su/Nam (ICASSP 2023) split onsets into **transitions** (pitch changes) and **re-onsets** (same pitch, new
    syllable/energy, ≤20 ms gap). Spectral/pitch features catch transitions; phonetic features catch
    re-onsets (re-onset recall 0.811 → 0.902 when swapping mel for a phonetic posteriorgram at
    matched architecture **[T — digitised from their Fig. 3]**). For wordless humming/scatting there
    is no phonetic channel — energy is the only re-onset evidence, which is what our
-   `OnsetDetector` already implements (research-pitch-models §4g stands). The *new* cheap channels
+   `OnsetDetector` already implements (research-pitch-models §4g stands). The _new_ cheap channels
    worth trialing are a **pitch-dip detector** and a **selective in-note flux splitter** (§3).
 3. **The learned voice note model (Findings-log research direction #1) — acquisition only; we
    never build one (see policy note).** The acquirable candidates:
-   (a) **Yong et al. 2023 is MIT-licensed *with* a downloadable checkpoint** — the July survey
+   (a) **Yong et al. 2023 is MIT-licensed _with_ a downloadable checkpoint** — the July survey
    missed this. Best published numbers on the one benchmark that matches our users (ISMIR2014
    untrained singers: COnPOff **0.773** vs Tony 0.46) and directly models re-onsets. Benchmark it
    as an external reference immediately (like P3.8/omnizart); shippable only if its training-data
@@ -126,12 +124,12 @@ today → §10c the eval-gated experiment queue → §10d the one measurement th
    gated on D5; the binding constraint is the **1.2 s profile lock** (§7). **[S/P]**
 5. **The single best contained code change remains the silence-state decode** (research-pitch-models
    P3.5), now with more support: Dynamic HumTrans's mechanism + Li's /Ta/ result both say that for
-   articulated input, *silence between notes is the boundary signal*. Make the transition structure
+   articulated input, _silence between notes is the boundary signal_. Make the transition structure
    **profile-dependent** (mandatory-silence for hum/syllable input, jump-permitted for legato) (§4).
 6. **Do not redo what we already measured.** The literature (and our agents) re-suggest several
    things the Findings log has already killed: the pYIN amplitude-ratio splitter (+0.001 here — our
    dip-then-rise already covers it) **[M]**, raising the min-note floor to 100–130 ms (−0.013 to
-   −0.039 here) **[M]**, a *globally configured* note HMM (−0.06…−0.16) **[M]**, tuning-offset
+   −0.039 here) **[M]**, a _globally configured_ note HMM (−0.06…−0.16) **[M]**, tuning-offset
    correction (hurts; truth is A440) **[M]**, and afftdn-style denoising **[M]**. Where this doc
    proposes HMM-family or tuning ideas, it is only in the **profile-gated** form that the measured
    diagnosis ("one global config cannot serve sustained vibrato and fast humming") actually calls for.
@@ -144,12 +142,12 @@ The user-visible failures map exactly onto Molina et al.'s error taxonomy (ISMIR
 [PDF](https://archives.ismir.net/ismir2014/paper/000298.pdf); adopted for our harness per
 research-benchmarks §7):
 
-| Our symptom | Taxonomy | What the literature says |
-|---|---|---|
-| Long notes split into ±1-semitone fragments | **Split** + OBP | Universal on amateur voice: "all methods have problems with pitch bendings at the beginning of the notes, since they tend to split them" **[P]**. Our measured instance: annotated-vocalset ~0.45 COnP, **1.7× over-segmented** **[M]**. |
-| Dropped notes | **ND** (+ PU for spurious) | Voicing errors dominate; our measured chain is reverb → CREPE *confidence* collapse → gate → fragmentation/drops **[M]**. Tune voicing for **low false-alarm**, not recall (P3.2) — but on the voice tier specifically. |
-| Syllable-dependent artifacts | **re-onset / transition** miss + onset bias | Onset ground truth sits at the *vowel*, and voiceless consonants delay the pitch onset by tens of ms (Molina annotation rules; ROSVOT §3.4) **[P]** — so different syllables shift onsets relative to truth even when detection is "right". |
-| Wrong-octave phrases | octave error at voicing onsets | Already diagnosed: our Viterbi band makes mid-phrase flips impossible; errors are born at voicing onsets under a uniform prior (research-pitch-models §3b-bis, P3.3 item 5) **[M/P]**. |
+| Our symptom                                 | Taxonomy                                    | What the literature says                                                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Long notes split into ±1-semitone fragments | **Split** + OBP                             | Universal on amateur voice: "all methods have problems with pitch bendings at the beginning of the notes, since they tend to split them" **[P]**. Our measured instance: annotated-vocalset ~0.45 COnP, **1.7× over-segmented** **[M]**.    |
+| Dropped notes                               | **ND** (+ PU for spurious)                  | Voicing errors dominate; our measured chain is reverb → CREPE _confidence_ collapse → gate → fragmentation/drops **[M]**. Tune voicing for **low false-alarm**, not recall (P3.2) — but on the voice tier specifically.                     |
+| Syllable-dependent artifacts                | **re-onset / transition** miss + onset bias | Onset ground truth sits at the _vowel_, and voiceless consonants delay the pitch onset by tens of ms (Molina annotation rules; ROSVOT §3.4) **[P]** — so different syllables shift onsets relative to truth even when detection is "right". |
+| Wrong-octave phrases                        | octave error at voicing onsets              | Already diagnosed: our Viterbi band makes mid-phrase flips impossible; errors are born at voicing onsets under a uniform prior (research-pitch-models §3b-bis, P3.3 item 5) **[M/P]**.                                                      |
 
 Two expert annotators agree at only COnPOff **0.64** on solo vocals and the automatic ceiling across
 products/papers is ~**0.6–0.75** on amateur voice (research-pitch-models §2a; Klangio SingReal 0.742;
@@ -165,20 +163,20 @@ promise magic.
 [Paper](https://aclanthology.org/2021.nlp4musa-1.4.pdf). Rule-based 3-step cascade, no training:
 (1) voiced segments from pYIN; (2) split at phonetic changes — take the ASR phoneme alignment,
 reduce to **vowel/consonant**, expand each inter-vowel region **±50 ms**, place the boundary at the
-**argmax of spectral flux inside that window**; (3) Tony's note HMM *within* vowel regions only
+**argmax of spectral flux inside that window**; (3) Tony's note HMM _within_ vowel regions only
 (pitch-change threshold ⅔ semitone).
 
 - Whole-pipeline ablation (Molina set): Steps 1+3 (no phonemes) COnPOff 0.520 → Steps 1+2+3
   **0.610**; **Merged errors 0.233 → 0.078 (~3× reduction)** — the phoneme step is what stops
   same-pitch syllables collapsing into one note.
 - **Lyric-content spread** (COnPOff F, full system): Spanish **0.709**, English 0.523, /Na/+/La/
-  0.520, mixed 0.596. The system's accuracy depends heavily on *what* the user sings.
+  0.520, mixed 0.596. The system's accuracy depends heavily on _what_ the user sings.
 - **The /Ta/ counter-result**: on the Dai et al. corpus (three tunes sung entirely on /Ta/),
   **Step 1 alone (voicing) scored 0.645**, beating the full pipeline (0.614) — each note is a voiced
   segment delimited by a voiceless consonant, so extra machinery only adds Split errors.
 
 **Read for our users:** "puh-duh / teh-reh / ta-da" articulation — the thing the user flagged as an
-unknown — is actually the *favourable* case, if our decode exploits inter-note energy dips/gaps
+unknown — is actually the _favourable_ case, if our decode exploits inter-note energy dips/gaps
 instead of fighting them. The hard cases are legato vowels, voiced continuants (/la/, /na/, /ma/),
 and closed-mouth humming.
 
@@ -206,8 +204,8 @@ reduce the influence of the F0 near the boundaries, which are the most expressiv
 ### 2c. ROSVOT's word-boundary channel — lyrics not required at inference [P]
 
 [Paper](https://arxiv.org/abs/2405.09940) · [code MIT](https://github.com/RickyL-2000/ROSVOT).
-Constraint: *"the presence of a word boundary at timestep t implies the existence of a note
-boundary at t, but the reverse may not hold true"* (melisma). Implementation: word-boundary
+Constraint: _"the presence of a word boundary at timestep t implies the existence of a note
+boundary at t, but the reverse may not hold true"_ (melisma). Implementation: word-boundary
 sequence as a conditioning input + post-hoc regulation (predicted note boundaries within **40 ms**
 of a word boundary snap to it). Ablation: word boundaries are worth **+7.2 pp COnPOff** (70.2 →
 77.4) — and a **learned word-boundary extractor recovers almost all of it (77.1)**, so the channel
@@ -255,12 +253,12 @@ be gated on the voice eval tier per research-benchmarks §7 discipline.
    only accept a pitch-motivated split when the deviation from the note's running mean exceeds
    **δ_th = 0.5 semitones** with accumulated area ≥ **Γ_th = 0.1 semitone·seconds** (≈ a full
    semitone held ~200 ms). Vibrato integrates toward zero area and never fires. **[P]** As a
-   *post-decode merge guard* on adjacent ±1-semitone fragments (merge unless the boundary is
+   _post-decode merge guard_ on adjacent ±1-semitone fragments (merge unless the boundary is
    justified by sustained area OR an energy/pitch-dip onset), this attacks our fragmentation mode
    from a direction we have **not** measured (distinct from the A-B-A folder, min-duration, and
    `mergeAdjacent`). Note pitch via **α-trimmed mean, α=0.3** (excludes scoops/tails) is their
    companion trick.
-4. **Vibrato-robust contour handling** — Kroher explicitly *rejects* low-pass filtering the contour
+4. **Vibrato-robust contour handling** — Kroher explicitly _rejects_ low-pass filtering the contour
    ("also affects the steep slopes which indicate a note change") in favour of (a) tracking the
    **upper envelope** of the contour (local maxima stay in a tight range under vibrato even when
    the contour swings a semitone; 80-cent threshold between adjacent envelope maxima), and (b) a
@@ -270,7 +268,7 @@ be gated on the voice eval tier per research-benchmarks §7 discipline.
 5. **What NOT to re-add** **[M]**: pYIN's amplitude-ratio splitter (measured +0.001 — the dip-rise
    detector already captures it); min-note floors of 100–130 ms (literature consensus, measured
    −0.013…−0.039 here because the 4-frame smoother already removes shorter runs); onset detection as
-   the *primary* boundary signal (MIREX solo-singing onset F ≈ 0.56–0.62 vs >0.95 percussive —
+   the _primary_ boundary signal (MIREX solo-singing onset F ≈ 0.56–0.62 vs >0.95 percussive —
    reconfirmed with per-class tables **[P]**).
 
 ---
@@ -287,17 +285,17 @@ design refinement.
 - **New supporting evidence**: Li's /Ta/ result (§2a) — voicing alone hits 0.645 when articulation
   guarantees gaps — is exactly the regime where a mandatory-silence transition is correct. ROSVOT's
   resolution ablation (10.7 ms → 85.3 ms boundary step = **+6.7 COnPOff**) says decode boundaries
-  should be *coarse*: ~80 ms is the true articulation/label uncertainty (P3.6 stands). **[P]**
+  should be _coarse_: ~80 ms is the true articulation/label uncertainty (P3.6 stands). **[P]**
 - **Profile gating** (the refinement): the transition structure must differ by articulation —
   **hum/syllable profile**: `n → m (m≠n)` forbidden outright (every note change passes through
-  silence; the energy dip *is* the boundary); **legato-voice profile**: `n → m` allowed with the
+  silence; the energy dip _is_ the boundary); **legato-voice profile**: `n → m` allowed with the
   existing jump cost (vibrato absorbed by the pitch-band, scoops by an attack-tolerant entry).
   Which profile applies can itself be estimated from the first seconds (density of RMS dips below
   the voiced floor) or simply swept per-recording and picked by decode likelihood.
 - **Reconciling with the measured HMM dead end** **[M]**: `note-segmenter.ts` lost globally
-  (−0.06…−0.16) with *one* config across all material — and the Findings log's own diagnosis was
+  (−0.06…−0.16) with _one_ config across all material — and the Findings log's own diagnosis was
   that sustained vibrato and fast humming need different change costs. A voice-routed profile is
-  precisely the setting where the HMM family gets a second, *fair* test: attack/stable σ asymmetry
+  precisely the setting where the HMM family gets a second, _fair_ test: attack/stable σ asymmetry
   (pYIN: attack σ = 5 st, stable σ = 0.8–0.9 st — the published scoop/portamento absorber **[P]**),
   silence state, and per-profile costs. Test it **only under the voice profile**, never re-litigate
   the global config.
@@ -315,15 +313,15 @@ design refinement.
   [PDF](https://www.eecs.qmul.ac.uk/~simond/pub/2014/JASA_136_1_401_1.pdf)) — unaccompanied singers'
   median note error **19 cents**, but whole-performance drift averages only **11 cents** and is
   significant in just 22 % of recordings. **[P]** Per-note scatter, not drift, dominates — consistent
-  with our measured result that tuning-offset correction *hurts* against absolute-pitch truth **[M]**.
+  with our measured result that tuning-offset correction _hurts_ against absolute-pitch truth **[M]**.
   Keep drift correction off the eval-driven path.
 - If a tuning reference is ever needed (e.g., display-layer cents), the citable estimator is
   **Dressler & Streich's circular mean** (ISMIR 2007): per-frame deviation mod 100 cents → unit
   vectors → `Δc = (100/2π)·arg(z̄)`, with `|z̄|` as a free confidence measure; quantization-free
   and 20 lines of code. **[P]**
 - **The product-shaped lever is key-aware snapping, and we hold the key.** Every surveyed product
-  snaps only to a **user-declared** scale (research-daw-products §18.12); our users record *into a
-  score with a key signature*. An opt-in "snap to key" for notes landing 40–60 cents between
+  snaps only to a **user-declared** scale (research-daw-products §18.12); our users record _into a
+  score with a key signature_. An opt-in "snap to key" for notes landing 40–60 cents between
   semitones is a UX feature, not an eval-gated pipeline change (the eval's absolute truth cannot
   reward it). Route to the product track (§8).
 
@@ -334,23 +332,23 @@ design refinement.
 The Findings log already concluded the remaining singing headroom is a learned note model
 (supervised systems reach ~0.80 COnP@50 ms where we reach 0.49@100 ms zero-shot on N20EMv2) **[M]**.
 ⛔ **Per the policy note at the top of this doc, we will never train one ourselves — every row
-below is evaluated purely as something to *acquire* (checkpoint as-is, licensed weights, or API);
+below is evaluated purely as something to _acquire_ (checkpoint as-is, licensed weights, or API);
 recipe details are context for judging vendors, not build instructions.**
 
-| Candidate | What it is | Amateur-voice evidence | License (code / weights) | Verdict |
-|---|---|---|---|---|
-| **Yong et al. 2023** | 2-branch CRNN, mel+PPG, tiny | ISMIR2014 COnPOff **0.773**; re-onset modelling | MIT / **MIT checkpoint published** (training data terms unclear: SSVD unstated, CSD-reannot. NC-adjacent, TIMIT=LDC) | **Benchmark as-is now** (external reference, like P3.8). Shippable only if the data chain clears (§11, KAIST/LDC/HUST) — no retrain escape hatch under the policy. |
-| **ROSVOT** | U-Net + Conformer boundary head + attention pitch decoder, 12 M | COnPOff 77.4→**77.0 under noise** (MUSAN aug is the mechanism: w/o it 76.4→70.1); OOD honesty: MIR-ST500 47.4, TONAS 30.0 — domain data matters | MIT / ⛔ NC (M4Singer + proprietary) | **Ship-as-is candidate only if the checkpoint is licensed** (§11, Zhejiang). Mandarin bias cannot be fine-tuned away (no-training policy) — the §10d benchmark must test the released checkpoint on our clips before any money moves. |
-| **Klangio DTMST** (JAES 2022) | **two small nets** (onset + pitch), trained on **synthetic singing**, eval'd on real amateurs ("SingReal") | note F1 **74.19 %**, ≥3.5 pp over all SOTA tested | [code exists](https://github.com/klangio/dtmst), license unverified **[T]** | Context: this is why **Klangio's API** (the buy route, §11) is credible on amateur voices. |
-| Dynamic HumTrans | basic-pitch-family CNN + silence-state DP | 0.651 octave-aware on humming | no license / weights not released / data NC | Take the decode idea (§4); ignore the artifact. |
-| Omnizart vocal | VOCANO re-impl | ISMIR2014 COnPOff ~0.50 | MIT | External benchmark only (P3.8 stands). |
+| Candidate                     | What it is                                                                                                 | Amateur-voice evidence                                                                                                                          | License (code / weights)                                                                                             | Verdict                                                                                                                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Yong et al. 2023**          | 2-branch CRNN, mel+PPG, tiny                                                                               | ISMIR2014 COnPOff **0.773**; re-onset modelling                                                                                                 | MIT / **MIT checkpoint published** (training data terms unclear: SSVD unstated, CSD-reannot. NC-adjacent, TIMIT=LDC) | **Benchmark as-is now** (external reference, like P3.8). Shippable only if the data chain clears (§11, KAIST/LDC/HUST) — no retrain escape hatch under the policy.                                                                    |
+| **ROSVOT**                    | U-Net + Conformer boundary head + attention pitch decoder, 12 M                                            | COnPOff 77.4→**77.0 under noise** (MUSAN aug is the mechanism: w/o it 76.4→70.1); OOD honesty: MIR-ST500 47.4, TONAS 30.0 — domain data matters | MIT / ⛔ NC (M4Singer + proprietary)                                                                                 | **Ship-as-is candidate only if the checkpoint is licensed** (§11, Zhejiang). Mandarin bias cannot be fine-tuned away (no-training policy) — the §10d benchmark must test the released checkpoint on our clips before any money moves. |
+| **Klangio DTMST** (JAES 2022) | **two small nets** (onset + pitch), trained on **synthetic singing**, eval'd on real amateurs ("SingReal") | note F1 **74.19 %**, ≥3.5 pp over all SOTA tested                                                                                               | [code exists](https://github.com/klangio/dtmst), license unverified **[T]**                                          | Context: this is why **Klangio's API** (the buy route, §11) is credible on amateur voices.                                                                                                                                            |
+| Dynamic HumTrans              | basic-pitch-family CNN + silence-state DP                                                                  | 0.651 octave-aware on humming                                                                                                                   | no license / weights not released / data NC                                                                          | Take the decode idea (§4); ignore the artifact.                                                                                                                                                                                       |
+| Omnizart vocal                | VOCANO re-impl                                                                                             | ISMIR2014 COnPOff ~0.50                                                                                                                         | MIT                                                                                                                  | External benchmark only (P3.8 stands).                                                                                                                                                                                                |
 
-**Data strategy — under the no-training policy these corpora serve *evaluation only*** (they
+**Data strategy — under the no-training policy these corpora serve _evaluation only_** (they
 remain essential: acquired models must be judged on our input distribution, and research-benchmarks'
 "don't touch NC data" stays binding, including HumTrans):
 
 1. **Synthetic articulated singing** — the Klangio-validated path. Our `lib/synth.ts` voice proxy
-   is a *continuous* 3-formant vowel: it has **no articulation**, so neither training data nor the
+   is a _continuous_ 3-formant vowel: it has **no articulation**, so neither training data nor the
    synthetic eval tier currently exercises re-onsets at all. Add a syllable model (voiceless-gap +
    burst for /ta,pu/; nasal/lateral amplitude-dip-without-gap for /la,na,ma/; none for hum), plus
    scoops into notes, per-note pitch scatter (~19 cents, §5), and drift — then reuse `lib/degrade.ts`
@@ -412,18 +410,18 @@ New primary material this pass **[P unless noted]**:
 - **Klangio DTMST retrieved** (§6) — the "only profitable company in our market" trains small
   dual-task nets on synthetic voices and expects an Edit Mode to absorb the rest.
 - **imitone devlogs**: even the resonator-DSP purist added an ML tracker specifically "better at
-  capturing brief notes … better in rooms with reverberation"; ships an explicit *interpretation*
+  capturing brief notes … better in rooms with reverberation"; ships an explicit _interpretation_
   layer above the raw tracker (Hold/Lock slide modes = "change notes only when pitch stabilizes");
   prescribes **syllables per instrument preset** ("daah" keys, "dooh" plucked, "waah" trombone).
 - **Dubler 2**: ~30 s per-user calibration (range + timbre) seeds its tracker — the analogue of our
   pitch-scan profile, but user-blessed; a **Stickiness** slider is literally a user-facing
   split/merge control; scale-lock + "sing in notes to suggest a key".
 - **ScoreCloud**: officially tips "singing with **da-de-dum** etc. is easier … than lyrics"; no
-  metronome needed but listens for a *foot stomp* as a beat cue; flagship correction UX is
+  metronome needed but listens for a _foot stomp_ as a beat cue; flagship correction UX is
   **audio-vs-MIDI A/B playback** ("far more efficient than reading the notation").
 - **Answer to the "impose behaviour" question**: no product imposes; all soft-guide (quiet room,
-  headphones, syllable *tips*). The measured evidence (§2a) says the one constraint with real
-  payoff is *plosive syllables*, which users largely do naturally — and which our decode currently
+  headphones, syllable _tips_). The measured evidence (§2a) says the one constraint with real
+  payoff is _plosive syllables_, which users largely do naturally — and which our decode currently
   ignores rather than exploits. **Vowels-only would be counterproductive.** Constraint policy:
   exploit articulation in the decode first; ship a one-line tip second; impose nothing.
 
@@ -489,24 +487,24 @@ substitute during beta.
 
 ### 10a. Decisions needed (nothing below §10b blocks on these)
 
-| # | Decision | Options → consequence | Blocks | Default until decided |
-|---|---|---|---|---|
-| **D1** | Pursue direct licenses? (§11) | Yes → cheap emails + TIMIT purchase; existing checkpoints (ROSVOT, Yong) become shippable **as-is**. No → the only learned-model route left is a vendor API (Klangio), else the DSP ceiling stands. Building/training our own is a permanent no-go (policy note) — this decision is purely about *acquisition* | the learned-model route only | send the cheap emails, commit nothing |
-| **D2** | Put data-use consent in the **beta terms now** (+ optionally a guided "help us improve" recording flow for active collection, §6.4) | Pre-launch this is a terms edit; post-launch it becomes a migration/consent-UX project. Payoff is deferred but compounds from day one | the golden **eval** tier + model-selection evidence (not training — policy) — months from now | consent ships with beta terms; active collection when §10d says a model is worth acquiring |
-| **D3** | V2 serving shape/budget | New inference sidecar on GKE (Autopilot bills per pod request 24/7) vs ONNX in-process | V2 deployment only | decide after the §10d measurement |
-| **D4** | UX backlog priority (§8): key-snap from score key, split/merge slider, live pitch feedback, A/B playback, "ta-ta-ta" tip, optional calibration | apps/web track, independent of the pipeline | nothing | parked |
-| **D5** | Exact scope of the no-training policy: does "never train weights" also bar a **tiny classifier head** (e.g. logistic regression on frozen YAMNet embeddings for voice-vs-instrument routing, §7)? As written it does | the post-beta audio router only — beta uses an explicit toggle instead, so nothing is blocked now | policy read literally: **no**, so no classifier head |
+| #      | Decision                                                                                                                                                                                                             | Options → consequence                                                                                                                                                                                                                                                                                          | Blocks                                                                                        | Default until decided                                                                      |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **D1** | Pursue direct licenses? (§11)                                                                                                                                                                                        | Yes → cheap emails + TIMIT purchase; existing checkpoints (ROSVOT, Yong) become shippable **as-is**. No → the only learned-model route left is a vendor API (Klangio), else the DSP ceiling stands. Building/training our own is a permanent no-go (policy note) — this decision is purely about _acquisition_ | the learned-model route only                                                                  | send the cheap emails, commit nothing                                                      |
+| **D2** | Put data-use consent in the **beta terms now** (+ optionally a guided "help us improve" recording flow for active collection, §6.4)                                                                                  | Pre-launch this is a terms edit; post-launch it becomes a migration/consent-UX project. Payoff is deferred but compounds from day one                                                                                                                                                                          | the golden **eval** tier + model-selection evidence (not training — policy) — months from now | consent ships with beta terms; active collection when §10d says a model is worth acquiring |
+| **D3** | V2 serving shape/budget                                                                                                                                                                                              | New inference sidecar on GKE (Autopilot bills per pod request 24/7) vs ONNX in-process                                                                                                                                                                                                                         | V2 deployment only                                                                            | decide after the §10d measurement                                                          |
+| **D4** | UX backlog priority (§8): key-snap from score key, split/merge slider, live pitch feedback, A/B playback, "ta-ta-ta" tip, optional calibration                                                                       | apps/web track, independent of the pipeline                                                                                                                                                                                                                                                                    | nothing                                                                                       | parked                                                                                     |
+| **D5** | Exact scope of the no-training policy: does "never train weights" also bar a **tiny classifier head** (e.g. logistic regression on frozen YAMNet embeddings for voice-vs-instrument routing, §7)? As written it does | the post-beta audio router only — beta uses an explicit toggle instead, so nothing is blocked now                                                                                                                                                                                                              | policy read literally: **no**, so no classifier head                                          |
 
 ### 10b. Start now — no decision needed, no license risk (V0)
 
-| Task | Where | Size | Done when |
-|---|---|---|---|
-| Plumb segmentation/decode options through the profile | `profiles/pipeline-profile.ts` (new fields) · `recording-pipeline.ts` `pitchOptions()` (forward them) · `profiles/profile-resolver.ts` (`applyVoice()` on the `applyReverb` template) | S | a `voice` profile can select decode mode + gates end-to-end |
-| Route on the score's instrument | resolver consumes the existing instrument hint; Voice family → voice profile | XS | voice-lead scores hit the voice profile |
-| Report split/merge in the headline run | `lib/segErrors.ts` already implements Molina split/merged/missed/spurious but is wired **only** into `sweep-segmenter.ts` — wire it into `run-eval.ts` (§9.1) | XS | every eval run prints split/merged/missed + repair-seconds |
-| Re-onset/transition metric (genuinely new) | `scripts/eval/lib/metrics.ts` (or extend `segErrors.ts`); Yong definition verbatim (onset ≤20 ms after previous offset; same pitch = re-onset) | S | per-class recall in every eval run |
-| Articulated synthetic voice | `scripts/eval/lib/synth.ts` + `generate.ts`: plosive gap+burst (/ta,pu/), continuant amplitude dip (/la,na,ma/), hum = none; onset scoops; ~19-cent per-note scatter (§5) | M | synthetic tier produces re-onsets; fixtures regenerated (bump both `CACHE_VERSION`s) |
-| Routing for beta: score instrument + explicit toggle | With a handful of beta users, an explicit "what are you recording?" source choice in the recording UI (defaulted from the score's instrument) is acceptable and 100 % accurate — beta is exactly when adding a required control is free. The YAMNet-embedding audio classifier (§7) is **deferred to post-beta polish** — and note fitting even a tiny logistic head is *training weights*, so it needs the D5 ruling first | S | voice recordings reliably reach the voice profile in beta |
+| Task                                                  | Where                                                                                                                                                                                                                                                                                                                                                                                                                       | Size | Done when                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
+| Plumb segmentation/decode options through the profile | `profiles/pipeline-profile.ts` (new fields) · `recording-pipeline.ts` `pitchOptions()` (forward them) · `profiles/profile-resolver.ts` (`applyVoice()` on the `applyReverb` template)                                                                                                                                                                                                                                       | S    | a `voice` profile can select decode mode + gates end-to-end                          |
+| Route on the score's instrument                       | resolver consumes the existing instrument hint; Voice family → voice profile                                                                                                                                                                                                                                                                                                                                                | XS   | voice-lead scores hit the voice profile                                              |
+| Report split/merge in the headline run                | `lib/segErrors.ts` already implements Molina split/merged/missed/spurious but is wired **only** into `sweep-segmenter.ts` — wire it into `run-eval.ts` (§9.1)                                                                                                                                                                                                                                                               | XS   | every eval run prints split/merged/missed + repair-seconds                           |
+| Re-onset/transition metric (genuinely new)            | `scripts/eval/lib/metrics.ts` (or extend `segErrors.ts`); Yong definition verbatim (onset ≤20 ms after previous offset; same pitch = re-onset)                                                                                                                                                                                                                                                                              | S    | per-class recall in every eval run                                                   |
+| Articulated synthetic voice                           | `scripts/eval/lib/synth.ts` + `generate.ts`: plosive gap+burst (/ta,pu/), continuant amplitude dip (/la,na,ma/), hum = none; onset scoops; ~19-cent per-note scatter (§5)                                                                                                                                                                                                                                                   | M    | synthetic tier produces re-onsets; fixtures regenerated (bump both `CACHE_VERSION`s) |
+| Routing for beta: score instrument + explicit toggle  | With a handful of beta users, an explicit "what are you recording?" source choice in the recording UI (defaulted from the score's instrument) is acceptable and 100 % accurate — beta is exactly when adding a required control is free. The YAMNet-embedding audio classifier (§7) is **deferred to post-beta polish** — and note fitting even a tiny logistic head is _training weights_, so it needs the D5 ruling first | S    | voice recordings reliably reach the voice profile in beta                            |
 
 ### 10c. Experiment queue (V1) — one at a time, eval-gated
 
@@ -515,25 +513,26 @@ House rules apply (Findings log + research-benchmarks): tune on `EVAL_SPLIT=dev`
 the 2AFC panel before shipping; decoder changes bump `CACHE_VERSION` in both caches. Score on the
 voice slice (annotated-vocalset + vocadito + articulated synth), gate on no regression elsewhere.
 
-| # | Experiment | Targets which failure | Where | Kill if |
-|---|---|---|---|---|
-| **E1** | Silence-state sparse Viterbi; transitions profile-gated — mandatory-silence (hum/syllable) vs jump-permitted (legato) (§4) | fragmentation + re-onsets (the measured 1.7× over-segmentation) | `providers/pitch-decoder.ts` + profile flag | no CI-positive delta on the voice slice |
-| **E2** | Octave prior at voicing onsets, seeded from the pitch-scan register | wrong-octave phrases | frame-0/post-silence prior in `pitch-decoder.ts` | octave-error rate unmoved |
-| **E3** | SiPTH sustained-deviation merge guard (δ=0.5 st, Γ=0.1 st·s) (§3.3) | ±1-semitone fragment chains | note post-pass (`note-extractor.ts` or decoder post) | Split↓ but COnP↓ |
-| **E4** | Pitch-dip channel + high-threshold SuperFlux, applied only inside long pitch-flat notes (§3.1–3.2) | missed re-onsets ("la-la-la" on one pitch) | `onset-detector.ts` + fusion point | re-onset recall unmoved, or Split↑ |
-| **E5** | Low-false-alarm voicing sweep on the voice profile (P3.2) | spurious + dropped notes | profile gates via existing eval env vars | — (pure sweep) |
+| #      | Experiment                                                                                                                 | Targets which failure                                           | Where                                                | Kill if                                 |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------- |
+| **E1** | Silence-state sparse Viterbi; transitions profile-gated — mandatory-silence (hum/syllable) vs jump-permitted (legato) (§4) | fragmentation + re-onsets (the measured 1.7× over-segmentation) | `providers/pitch-decoder.ts` + profile flag          | no CI-positive delta on the voice slice |
+| **E2** | Octave prior at voicing onsets, seeded from the pitch-scan register                                                        | wrong-octave phrases                                            | frame-0/post-silence prior in `pitch-decoder.ts`     | octave-error rate unmoved               |
+| **E3** | SiPTH sustained-deviation merge guard (δ=0.5 st, Γ=0.1 st·s) (§3.3)                                                        | ±1-semitone fragment chains                                     | note post-pass (`note-extractor.ts` or decoder post) | Split↓ but COnP↓                        |
+| **E4** | Pitch-dip channel + high-threshold SuperFlux, applied only inside long pitch-flat notes (§3.1–3.2)                         | missed re-onsets ("la-la-la" on one pitch)                      | `onset-detector.ts` + fusion point                   | re-onset recall unmoved, or Split↑      |
+| **E5** | Low-false-alarm voicing sweep on the voice profile (P3.2)                                                                  | spurious + dropped notes                                        | profile gates via existing eval env vars             | — (pure sweep)                          |
 
 ### 10d. The V2 gate — measure before deciding to acquire
 
 Benchmark **Yong-2023** and **Omnizart vocal** as external references on our voice slice (run in
 Docker, score their note output with our harness — one afternoon each). This is the number that
-turns D1/D3 from taste into arithmetic: **if a checkpoint beats our best V1 configuration by
->5 pts on real amateur clips, that is the go signal for *acquiring* a model — we never build one
-(policy note).** D1 then picks the acquisition route — clear the winning checkpoint's encumbrances
-(Yong via KAIST/HUST/LDC, ROSVOT via Zhejiang, §11) or trial a vendor API (Klangio, batch mode) —
-and D3 picks the serving shape (ModelBackend sidecar vs ONNX in-process). If nothing clears and
-the API is unacceptable, **V1 + UX guidance is the accepted ceiling** — that is a legitimate
-outcome, not a failure state.
+turns D1/D3 from taste into arithmetic: \*\*if a checkpoint beats our best V1 configuration by
+
+> 5 pts on real amateur clips, that is the go signal for _acquiring_ a model — we never build one
+> (policy note).** D1 then picks the acquisition route — clear the winning checkpoint's encumbrances
+> (Yong via KAIST/HUST/LDC, ROSVOT via Zhejiang, §11) or trial a vendor API (Klangio, batch mode) —
+> and D3 picks the serving shape (ModelBackend sidecar vs ONNX in-process). If nothing clears and
+> the API is unacceptable, **V1 + UX guidance is the accepted ceiling\*\* — that is a legitimate
+> outcome, not a failure state.
 
 **Side experiment (bounded, kill-by-default, anytime):** the reverb oracle gap (+0.14/+0.23) remains open;
 the only two front-ends worth one trial each are **DeepFilterNet3 with observation-adding**
@@ -551,20 +550,20 @@ Assumption for this section: any NC/unstated-license asset can be cleared by neg
 rights holder (a direct license supersedes the public CC terms, including the ShareAlike clause).
 Grouped by **counterparty**, because several assets share one:
 
-| Counterparty | Assets unlocked | What it buys us | Ask difficulty |
-|---|---|---|---|
-| **JKU Linz (Widmer)** — the madmom LICENSE *explicitly invites* commercial-licensing contact (gerhard.widmer@jku.at) **[P]** | madmom pretrained onset CNN/RNN (+ beat/downbeat models) | The best published onset detector (F = 0.903 Böck set) as the learned third boundary channel — the exact ODF CREPE Notes uses for its in-note splitter — without training one ourselves | **Lowest** — the invitation is in the license text |
-| **Zhejiang University (Zhao's lab)** — one counterparty for both | **M4Singer** (CC-BY-NC-SA) + thereby the **ROSVOT checkpoint** (and STARS lineage) | Under the no-training policy this is **the** main route for a learned note model: license the checkpoint and ship it **as-is**. Mandarin bias cannot be fine-tuned away, so §10d must benchmark the released checkpoint on our clips *before* any money moves | Medium (academic, active lab) |
-| **KAIST (Nam's lab)** + LDC + HUST | **Yong-2023 checkpoint's** training-data chain: CSD (KAIST, same lab), **TIMIT** (LDC — a *purchase*, not a negotiation), **SSVD** (HUST, unstated) | The best amateur-voice model (ISMIR2014 COnPOff 0.773) goes from benchmark-only to shippable **as-is** (no retraining under the policy — what the checkpoint does on our clips is what we get; note it lacks noise-augmented training) | Medium (three parties, but TIMIT is just money and CSD/Yong share a lab) |
-| ~~**Tencent ARC Lab**~~ | ~~**HumTrans**~~ | ⛔ **DELETE THIS ROW (2026-08-08).** HumTrans is not merely NC-barred, it is **quality-disqualified**: Dynamic HumTrans §1.2 confirms its onsets/offsets are unaligned self-labelling *"without any post-processing"*, and its own baseline table shows four SOTA transcribers scoring F1 2.7–6.7 — the signature of broken labels, not of bad models. Even free permission would buy a corpus we cannot score against. See research-voice-datasets.md §4.1 | — |
-| **NYU/MARL (MedleyDB)** | **MDB-stem-synth** (CC-BY-NC; ⚠️ the "known commercial-licensing contact route" claim was **checked 2026-08-08 and is NOT supported — re-marked [X]**: the only contact is one researcher's personal academic address, given in a *republication* paragraph, not a licensing offer. See research-voice-datasets.md §4.4) | **Moot under the no-training policy** (its value was training-side). The CREPE-tiny weight-provenance open item is instead resolved by swapping to a clean pretrained model (SwiftF0, P1) | — (drop from the shortlist) |
-| **RMVPE parties** (Dream-High authors / yxlllc fork / MIR-1K + PTDB holders) | The shipped **RMVPE checkpoint's** provenance | P2 (RMVPE as the noisy-voice f0 provider: pub-noise 0 dB 86.3 RPA vs CREPE 61.2). Only **artifact-level** clearance helps — the "just retrain it from the Apache-2.0 code" escape hatch is void under the policy | Messy multi-party; if the artifact can't be cleared, RMVPE is out |
-| **GTSinger / Opencpop holders** | 80 h multilingual + Mandarin pro corpora | **Moot under the no-training policy** | — (drop) |
+| Counterparty                                                                                                                 | Assets unlocked                                                                                                                                                                                                                                                                                                          | What it buys us                                                                                                                                                                                                                                                                                                                                                                                                                                             | Ask difficulty                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **JKU Linz (Widmer)** — the madmom LICENSE _explicitly invites_ commercial-licensing contact (gerhard.widmer@jku.at) **[P]** | madmom pretrained onset CNN/RNN (+ beat/downbeat models)                                                                                                                                                                                                                                                                 | The best published onset detector (F = 0.903 Böck set) as the learned third boundary channel — the exact ODF CREPE Notes uses for its in-note splitter — without training one ourselves                                                                                                                                                                                                                                                                     | **Lowest** — the invitation is in the license text                       |
+| **Zhejiang University (Zhao's lab)** — one counterparty for both                                                             | **M4Singer** (CC-BY-NC-SA) + thereby the **ROSVOT checkpoint** (and STARS lineage)                                                                                                                                                                                                                                       | Under the no-training policy this is **the** main route for a learned note model: license the checkpoint and ship it **as-is**. Mandarin bias cannot be fine-tuned away, so §10d must benchmark the released checkpoint on our clips _before_ any money moves                                                                                                                                                                                               | Medium (academic, active lab)                                            |
+| **KAIST (Nam's lab)** + LDC + HUST                                                                                           | **Yong-2023 checkpoint's** training-data chain: CSD (KAIST, same lab), **TIMIT** (LDC — a _purchase_, not a negotiation), **SSVD** (HUST, unstated)                                                                                                                                                                      | The best amateur-voice model (ISMIR2014 COnPOff 0.773) goes from benchmark-only to shippable **as-is** (no retraining under the policy — what the checkpoint does on our clips is what we get; note it lacks noise-augmented training)                                                                                                                                                                                                                      | Medium (three parties, but TIMIT is just money and CSD/Yong share a lab) |
+| ~~**Tencent ARC Lab**~~                                                                                                      | ~~**HumTrans**~~                                                                                                                                                                                                                                                                                                         | ⛔ **DELETE THIS ROW (2026-08-08).** HumTrans is not merely NC-barred, it is **quality-disqualified**: Dynamic HumTrans §1.2 confirms its onsets/offsets are unaligned self-labelling _"without any post-processing"_, and its own baseline table shows four SOTA transcribers scoring F1 2.7–6.7 — the signature of broken labels, not of bad models. Even free permission would buy a corpus we cannot score against. See research-voice-datasets.md §4.1 | —                                                                        |
+| **NYU/MARL (MedleyDB)**                                                                                                      | **MDB-stem-synth** (CC-BY-NC; ⚠️ the "known commercial-licensing contact route" claim was **checked 2026-08-08 and is NOT supported — re-marked [X]**: the only contact is one researcher's personal academic address, given in a _republication_ paragraph, not a licensing offer. See research-voice-datasets.md §4.4) | **Moot under the no-training policy** (its value was training-side). The CREPE-tiny weight-provenance open item is instead resolved by swapping to a clean pretrained model (SwiftF0, P1)                                                                                                                                                                                                                                                                   | — (drop from the shortlist)                                              |
+| **RMVPE parties** (Dream-High authors / yxlllc fork / MIR-1K + PTDB holders)                                                 | The shipped **RMVPE checkpoint's** provenance                                                                                                                                                                                                                                                                            | P2 (RMVPE as the noisy-voice f0 provider: pub-noise 0 dB 86.3 RPA vs CREPE 61.2). Only **artifact-level** clearance helps — the "just retrain it from the Apache-2.0 code" escape hatch is void under the policy                                                                                                                                                                                                                                            | Messy multi-party; if the artifact can't be cleared, RMVPE is out        |
+| **GTSinger / Opencpop holders**                                                                                              | 80 h multilingual + Mandarin pro corpora                                                                                                                                                                                                                                                                                 | **Moot under the no-training policy**                                                                                                                                                                                                                                                                                                                                                                                                                       | — (drop)                                                                 |
 
 Two cheaper variants of the ask worth knowing:
 
 - **Benchmarking-only permission** is a much smaller ask than train-and-ship rights, and unlocking
-  HumTrans/MDB *for internal eval only* would already relax research-benchmarks' "don't touch NC
+  HumTrans/MDB _for internal eval only_ would already relax research-benchmarks' "don't touch NC
   data" rule where it hurts most (humming has no other benchmark).
 - **Buy instead of build**: Klangio sells a transcription API (Sing2Notes is our exact use case),
   and DoReMIR has done B2B licensing. Under the no-training policy this is one of only **two**
@@ -573,7 +572,7 @@ Two cheaper variants of the ask worth knowing:
   batch), adds per-recording cost and a competitor dependency, and sends user audio to a third
   party. A batch-mode trial is justified only if §10d shows a large gap and no checkpoint clears.
 
-**What licensing cannot buy, at any price:** a corpus of *amateur, noisy-phone, arbitrary-syllable*
+**What licensing cannot buy, at any price:** a corpus of _amateur, noisy-phone, arbitrary-syllable_
 recordings (every clearable corpus is pro/clean/Mandarin or humming-by-music-students) — the T4
 golden set and the articulated-synthetic generator stay on the critical path regardless; whistling
 data (none exists); and the correction-UX work (the ceiling stays ~0.75–0.8 even with every asset
@@ -591,20 +590,20 @@ doc (how to run, corpora, env vars) and the Findings log; this section is only t
 
 ### 12a. Files you will touch, and what each does today
 
-| Path (under `apps/api/src/recordings/pipeline/`) | Role | Why it's in scope |
-|---|---|---|
-| `recording-pipeline.ts` | session orchestrator: 1 s debounce passes, profile lock, streaming decode, commit watermark, measure emission | `pitchOptions()` is where profile→decode options must be forwarded (§7 plumbing gap); `resolveProfile()` runs **once** after ≥1.2 s of audio and is never revisited — any voice routing must decide from that prefix or the pipeline must re-resolve on the final pass |
-| `profiles/pipeline-profile.ts` | `PipelineProfile` type + `PROFILE_BANDS` table + global clamps | add the voice band family and the segmentation/decode fields (the table is documented as the thing tuning edits; the rest of the pipeline never forks) |
-| `profiles/profile-resolver.ts` | band routing + graded adaptations | add `applyVoice()` following the existing `applyReverb()` template (graded ramp + `id` suffix, not a binary switch) |
-| `profiles/pitch-scan.ts` | coarse register scan, also emits `snrDb`/`noisiness`/`harmonicityMedian` | the prefix features a routing decision can reuse; also the register estimate for the octave prior (E2) |
-| `providers/pitch-decoder.ts` | shared frame→note math: `viterbi`, `localCentsFromPath`, `segmentNotes`, `segmentNotesBySemitone` | **E1/E2 live here** (silence state, sparse transitions, onset priors) |
-| `providers/crepe-provider.ts` | CREPE trajectory provider + its `SEGMENT_OPTS` defaults | the shipping segmentation defaults it passes to the decoder |
-| `providers/pitch-provider.ts`, `provider-registry.ts` | the provider seam (a new *algorithm*) | only if a voice flow needs its own provider rather than a profile variant |
-| `providers/model-backend.ts` + `local-`/`remote-`/`composite-`/`create-model-backend.ts` | the forward-pass seam (a new *model/service*) | §12c, only if an acquired model ships |
-| `note-extractor.ts` | post-processor: `clean()` (selectMonophonic → filterPitchOutliers → suppressTransients → adaptive floor → mergeAdjacent → splitAtOnsets) then `quantize()` | **E3** (SiPTH merge guard) belongs here or immediately after the decoder; note the trajectory path already disables `pitchOutliers`+`merge` and sets `adaptiveFloorFraction 0.3` **[M]** |
-| `onset-detector.ts` | RMS envelope + dip-then-rise re-attack detector (10 ms hop, `minIoiSec` 0.09, dipRatio 0.5, riseRatio 1.8) | **E4** adds the pitch-dip channel and the selective in-note flux splitter alongside it |
-| `note-segmenter.ts` | pYIN-style note HMM, **not on the shipping path** — kept for its measured diagnosis | the starting point for E1's HMM-family variant; re-test **only** under the voice profile (§4) |
-| `audio-converter.ts` | provider-agnostic PCM→notes; picks the per-provider `NoteExtractor` cleanup set (branches on `hasNativeOnsets`) | where a voice-specific cleanup set would be selected |
+| Path (under `apps/api/src/recordings/pipeline/`)                                         | Role                                                                                                                                                       | Why it's in scope                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `recording-pipeline.ts`                                                                  | session orchestrator: 1 s debounce passes, profile lock, streaming decode, commit watermark, measure emission                                              | `pitchOptions()` is where profile→decode options must be forwarded (§7 plumbing gap); `resolveProfile()` runs **once** after ≥1.2 s of audio and is never revisited — any voice routing must decide from that prefix or the pipeline must re-resolve on the final pass |
+| `profiles/pipeline-profile.ts`                                                           | `PipelineProfile` type + `PROFILE_BANDS` table + global clamps                                                                                             | add the voice band family and the segmentation/decode fields (the table is documented as the thing tuning edits; the rest of the pipeline never forks)                                                                                                                 |
+| `profiles/profile-resolver.ts`                                                           | band routing + graded adaptations                                                                                                                          | add `applyVoice()` following the existing `applyReverb()` template (graded ramp + `id` suffix, not a binary switch)                                                                                                                                                    |
+| `profiles/pitch-scan.ts`                                                                 | coarse register scan, also emits `snrDb`/`noisiness`/`harmonicityMedian`                                                                                   | the prefix features a routing decision can reuse; also the register estimate for the octave prior (E2)                                                                                                                                                                 |
+| `providers/pitch-decoder.ts`                                                             | shared frame→note math: `viterbi`, `localCentsFromPath`, `segmentNotes`, `segmentNotesBySemitone`                                                          | **E1/E2 live here** (silence state, sparse transitions, onset priors)                                                                                                                                                                                                  |
+| `providers/crepe-provider.ts`                                                            | CREPE trajectory provider + its `SEGMENT_OPTS` defaults                                                                                                    | the shipping segmentation defaults it passes to the decoder                                                                                                                                                                                                            |
+| `providers/pitch-provider.ts`, `provider-registry.ts`                                    | the provider seam (a new _algorithm_)                                                                                                                      | only if a voice flow needs its own provider rather than a profile variant                                                                                                                                                                                              |
+| `providers/model-backend.ts` + `local-`/`remote-`/`composite-`/`create-model-backend.ts` | the forward-pass seam (a new _model/service_)                                                                                                              | §12c, only if an acquired model ships                                                                                                                                                                                                                                  |
+| `note-extractor.ts`                                                                      | post-processor: `clean()` (selectMonophonic → filterPitchOutliers → suppressTransients → adaptive floor → mergeAdjacent → splitAtOnsets) then `quantize()` | **E3** (SiPTH merge guard) belongs here or immediately after the decoder; note the trajectory path already disables `pitchOutliers`+`merge` and sets `adaptiveFloorFraction 0.3` **[M]**                                                                               |
+| `onset-detector.ts`                                                                      | RMS envelope + dip-then-rise re-attack detector (10 ms hop, `minIoiSec` 0.09, dipRatio 0.5, riseRatio 1.8)                                                 | **E4** adds the pitch-dip channel and the selective in-note flux splitter alongside it                                                                                                                                                                                 |
+| `note-segmenter.ts`                                                                      | pYIN-style note HMM, **not on the shipping path** — kept for its measured diagnosis                                                                        | the starting point for E1's HMM-family variant; re-test **only** under the voice profile (§4)                                                                                                                                                                          |
+| `audio-converter.ts`                                                                     | provider-agnostic PCM→notes; picks the per-provider `NoteExtractor` cleanup set (branches on `hasNativeOnsets`)                                            | where a voice-specific cleanup set would be selected                                                                                                                                                                                                                   |
 
 Eval side (`apps/api/scripts/eval/`): `run-eval.ts` (headline runner), `lib/metrics.ts` (COnP@±100 ms
 headline + timing stats), `lib/segErrors.ts` (Molina split/merged/missed/spurious — **exists, not
@@ -618,7 +617,7 @@ wired into `run-eval.ts`**), `lib/notation.ts` (beats-domain rhythm metrics), `l
 - Run: `pnpm --filter @mushee/api eval:run` · regenerate fixtures: `pnpm --filter @mushee/api eval:generate`
   (needs `fluidsynth` + the gitignored soundfont via `./fetch-soundfont.sh`). Other scripts:
   `pnpm --filter @mushee/api exec tsx scripts/eval/<script>.ts`.
-- **Any change to the decoder, resolver, or CREPE decode must bump `CACHE_VERSION` in *both*
+- **Any change to the decoder, resolver, or CREPE decode must bump `CACHE_VERSION` in _both_
   `lib/trackCache.ts` and `lib/variantCache.ts`** (or delete the fixture cache dirs) — otherwise you
   will measure stale tracks and conclude nothing changed.
 - `EVAL_SPLIT=dev` for all tuning, `test` once to confirm. `mir-qbsh` and `n20emv2-test` are
@@ -658,14 +657,14 @@ across `run-eval.ts`, `ablate.ts`, `sweep-segmenter.ts`, `bench-pitch-models.ts`
   not hold — its release zip contains no performed-note annotation at all (score representation +
   CREPE/pYIN-derived f0), so it cannot carry note truth either.
   **Net effect on §9.3 and §10 — SUPERSEDED 2026-08-08, see `research-voice-datasets.md`.** This
-  read *"there is no obtainable external voice corpus we are missing … the articulated synthetic
-  generator and a self-collected corpus are the only path."* That is **still true of note truth**
-  (the sweep's one surviving annotated candidate, HUST_Solfege, is wounded and conditional) and
+  read _"there is no obtainable external voice corpus we are missing … the articulated synthetic
+  generator and a self-collected corpus are the only path."_ That is **still true of note truth**
+  (the sweep's one surviving annotated candidate, HUST*Solfege, is wounded and conditional) and
   **decisively false of raw audio**. We do not need note truth to be given to us; we need
-  *annotatable* singing, and there is a lot of it under CC-BY/CC0 — chiefly **SingBAP** (7
+  \_annotatable* singing, and there is a lot of it under CC-BY/CC0 — chiefly **SingBAP** (7
   inexperienced singers captured simultaneously on iPhone, MacBook and condenser, with published
   interval patterns so only onsets need marking) and **Belyk et al.** (CC0, singers deliberately
-  recruited from *both* ends of the ability range, ~7,600 notes against known targets).
+  recruited from _both_ ends of the ability range, ~7,600 notes against known targets).
   Note also that **24 of ISMIR2014's 38 clips are MTG-QBH queries and MTG-QBH is separately
   deposited** — its licence is in conflict between two sources, but the audio under two thirds of
   a corpus we closed was not as unreachable as this bullet assumed.
@@ -675,7 +674,7 @@ across `run-eval.ts`, `ablate.ts`, `sweep-segmenter.ts`, `bench-pitch-models.ts`
 - **CPU inference cost** of every note-level model (ROSVOT, Yong, Omnizart): unpublished; measure.
 - Yong et al.'s re-onset/transition numbers are **digitised from a figure** (±~0.003), and their
   figure caption's colour legend contradicts the labels (labels + body text used).
-- **No study runs modern neural systems against tuned classical pipelines on amateur *wordless*
+- **No study runs modern neural systems against tuned classical pipelines on amateur _wordless_
   input** (hum/scat) — HumTrans is the only humming benchmark and it is NC. Our own corpus is the
   only way to know.
 - Whistling: still no literature, no data (unchanged).

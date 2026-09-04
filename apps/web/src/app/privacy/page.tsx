@@ -11,41 +11,38 @@ export const metadata: Metadata = {
 
 const LAST_UPDATED = '11 July 2026'
 
-
 export default function PrivacyPolicyPage() {
     return (
         <PublicPageShell title="Privacy Policy" subtitle={`Last updated: ${LAST_UPDATED}`}>
             <p>
-                Solkey is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of
-                your personal data — this policy explains exactly what we collect, why, how long we keep it, and the rights you have
-                over it. We&apos;ve tried to keep it readable; if anything is unclear, write to{' '}
+                Solkey is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of your
+                personal data — this policy explains exactly what we collect, why, how long we keep it, and the rights you have over it.
+                We&apos;ve tried to keep it readable; if anything is unclear, write to{' '}
                 <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>.
             </p>
 
             <h2 id="controller">1. Who is responsible for your data</h2>
             <p>
-                The data controller for Solkey is <strong>Karel Van De Winkel, trading as Solkey</strong> (sole proprietorship,
-                enterprise no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Solkey&quot;, &quot;we&quot;,
-                &quot;us&quot;). For any privacy matter, contact{' '}
-                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>.
+                The data controller for Solkey is <strong>Karel Van De Winkel, trading as Solkey</strong> (sole proprietorship, enterprise
+                no. 1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium (&quot;Solkey&quot;, &quot;we&quot;, &quot;us&quot;). For any
+                privacy matter, contact <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>.
             </p>
 
             <h2 id="data-we-collect">2. What we collect and why</h2>
 
             <h3>Account data</h3>
             <p>
-                When you create an account we store your <strong>name, email address, and a hash of your password</strong> (we never
-                store the password itself). We use this to operate your account, sign you in, and send you essential service email
-                such as verification codes and password resets. For each signed-in session we also record the{' '}
-                <strong>IP address and browser (user agent)</strong> it was started from, to secure your account and let us revoke
-                stolen sessions; these are deleted with the session. Legal basis: <strong>performance of a contract</strong> (Art.
-                6(1)(b) GDPR).
+                When you create an account we store your <strong>name, email address, and a hash of your password</strong> (we never store
+                the password itself). We use this to operate your account, sign you in, and send you essential service email such as
+                verification codes and password resets. For each signed-in session we also record the{' '}
+                <strong>IP address and browser (user agent)</strong> it was started from, to secure your account and let us revoke stolen
+                sessions; these are deleted with the session. Legal basis: <strong>performance of a contract</strong> (Art. 6(1)(b) GDPR).
             </p>
 
             <h3>Your music</h3>
             <p>
-                Scores you create — notes, titles, instrument choices — are stored so you can access them from any device. Your music
-                is <strong>yours</strong>: we don&apos;t use it for anything except providing the service to you. Legal basis:{' '}
+                Scores you create — notes, titles, instrument choices — are stored so you can access them from any device. Your music is{' '}
+                <strong>yours</strong>: we don&apos;t use it for anything except providing the service to you. Legal basis:{' '}
                 <strong>performance of a contract</strong>.
             </p>
 
@@ -53,22 +50,21 @@ export default function PrivacyPolicyPage() {
             <p>
                 When you press Record, audio from your microphone is streamed to our servers and{' '}
                 <strong>transcribed to notation in real time</strong>. The resulting notation is saved to your score. The{' '}
-                <strong>recording itself is stored too</strong>, together with the transcription data derived from it, linked to
-                your account and the score you recorded into. We use these recordings to operate the service (so we can diagnose
-                a transcription that went wrong for you) and to <strong>improve our transcription technology</strong>. Your
-                recordings are never published, never shared with other users, and never sold. We also keep a record of{' '}
-                <em>how long</em> you recorded, for the daily recording budget of your plan. Capture only happens while you have
-                actively started a recording — never in the background. Your recordings are deleted when you delete your account.
-                Legal basis: <strong>performance of a contract</strong> for storing and transcribing your recordings;{' '}
-                <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving transcription quality — contact{' '}
-                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object to that use.
+                <strong>recording itself is stored too</strong>, together with the transcription data derived from it, linked to your
+                account and the score you recorded into. We use these recordings to operate the service (so we can diagnose a transcription
+                that went wrong for you) and to <strong>improve our transcription technology</strong>. Your recordings are never published,
+                never shared with other users, and never sold. We also keep a record of <em>how long</em> you recorded, for the daily
+                recording budget of your plan. Capture only happens while you have actively started a recording — never in the background.
+                Your recordings are deleted when you delete your account. Legal basis: <strong>performance of a contract</strong> for
+                storing and transcribing your recordings; <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving
+                transcription quality — contact <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object to that use.
             </p>
 
             <h3>Payments</h3>
             <p>
-                Paid plans are sold through <strong>Polar (Polar Software Inc.)</strong>, who act as merchant of record. Card and
-                payment details go directly to Polar — <strong>we never see or store your payment card data</strong>. Polar shares
-                with us your subscription status and a billing reference so we can activate your plan. See{' '}
+                Paid plans are sold through <strong>Polar (Polar Software Inc.)</strong>, who act as merchant of record. Card and payment
+                details go directly to Polar — <strong>we never see or store your payment card data</strong>. Polar shares with us your
+                subscription status and a billing reference so we can activate your plan. See{' '}
                 <a href="https://polar.sh/legal/privacy" target="_blank" rel="noreferrer">
                     Polar&apos;s privacy policy
                 </a>
@@ -78,33 +74,32 @@ export default function PrivacyPolicyPage() {
             <h3>Anonymous usage statistics (no cookies)</h3>
             <p>
                 We use <strong>PostHog</strong> (hosted in the EU, Frankfurt) to count page visits and feature use in{' '}
-                <strong>anonymous, cookieless</strong> form: nothing is stored on your device, no profile is built, and the events
-                are not linked to your account or identity. We use these counts to understand what gets used and to improve Solkey.
-                Legal basis: <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in understanding aggregate usage of the
-                service — contact <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object.
+                <strong>anonymous, cookieless</strong> form: nothing is stored on your device, no profile is built, and the events are not
+                linked to your account or identity. We use these counts to understand what gets used and to improve Solkey. Legal basis:{' '}
+                <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in understanding aggregate usage of the service — contact{' '}
+                <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object.
             </p>
 
             <h3>Session replay &amp; account-linked analytics (opt-in)</h3>
             <p>
-                With your <strong>consent</strong> — and only with it — we additionally enable pseudonymous session replays of rough
-                edges in the interface — linked to your account id but never your name or email, with keystrokes and form inputs
-                masked — link analytics events to your account id, and set one persistent PostHog cookie so your visits connect.
-                You give or refuse this consent in the cookie banner and can change your mind any time via{' '}
-                <strong>Cookie settings</strong> in the footer; withdrawing deletes the cookie and drops you back to the anonymous
-                statistics above. Refusing has no effect on how Solkey works. Legal basis: <strong>consent</strong> (Art. 6(1)(a)
-                GDPR).
+                With your <strong>consent</strong> — and only with it — we additionally enable pseudonymous session replays of rough edges
+                in the interface — linked to your account id but never your name or email, with keystrokes and form inputs masked — link
+                analytics events to your account id, and set one persistent PostHog cookie so your visits connect. You give or refuse this
+                consent in the cookie banner and can change your mind any time via <strong>Cookie settings</strong> in the footer;
+                withdrawing deletes the cookie and drops you back to the anonymous statistics above. Refusing has no effect on how Solkey
+                works. Legal basis: <strong>consent</strong> (Art. 6(1)(a) GDPR).
             </p>
             <p>
-                Independent of consent, our servers report <strong>technical errors</strong> (stack traces, request metadata — not
-                your scores or audio) so we can fix crashes. Legal basis: <strong>legitimate interest</strong> in providing a
-                reliable service (Art. 6(1)(f) GDPR).
+                Independent of consent, our servers report <strong>technical errors</strong> (stack traces, request metadata — not your
+                scores or audio) so we can fix crashes. Legal basis: <strong>legitimate interest</strong> in providing a reliable service
+                (Art. 6(1)(f) GDPR).
             </p>
 
             <h3>Onboarding answers</h3>
             <p>
-                The optional questions after signup (musical background, instruments, how you found us) tune Solkey&apos;s defaults
-                and tell us where new users come from. Answering is optional. Legal basis: <strong>legitimate interest</strong>; the
-                answers are deleted with your account.
+                The optional questions after signup (musical background, instruments, how you found us) tune Solkey&apos;s defaults and tell
+                us where new users come from. Answering is optional. Legal basis: <strong>legitimate interest</strong>; the answers are
+                deleted with your account.
             </p>
 
             <h2 id="cookies">3. Cookies and similar technologies</h2>
@@ -141,8 +136,8 @@ export default function PrivacyPolicyPage() {
             </table>
             <p>
                 Essential cookies don&apos;t require consent (they&apos;re strictly necessary to provide the service you asked for).
-                Analytics storage is only set after you accept it in the banner. Withdraw any time via{' '}
-                <strong>Cookie settings</strong> in the footer.
+                Analytics storage is only set after you accept it in the banner. Withdraw any time via <strong>Cookie settings</strong> in
+                the footer.
             </p>
 
             <h2 id="processors">4. Who processes data on our behalf</h2>
@@ -151,8 +146,8 @@ export default function PrivacyPolicyPage() {
                     <strong>Polar Software Inc.</strong> — payment processing and subscription billing (merchant of record).
                 </li>
                 <li>
-                    <strong>PostHog</strong> (EU cloud, Frankfurt) — analytics, session replay, and error tracking, only after your
-                    consent (client-side) or for server error reports (legitimate interest).
+                    <strong>PostHog</strong> (EU cloud, Frankfurt) — analytics, session replay, and error tracking, only after your consent
+                    (client-side) or for server error reports (legitimate interest).
                 </li>
                 <li>
                     <strong>Twilio SendGrid</strong> — delivery of transactional email (verification codes, password resets, beta
@@ -163,8 +158,8 @@ export default function PrivacyPolicyPage() {
                 </li>
             </ul>
             <p>
-                Each processor is bound by a data-processing agreement. Where a processor is established outside the EEA, transfers
-                are protected by the EU Standard Contractual Clauses or an adequacy decision.
+                Each processor is bound by a data-processing agreement. Where a processor is established outside the EEA, transfers are
+                protected by the EU Standard Contractual Clauses or an adequacy decision.
             </p>
 
             <h2 id="retention">5. How long we keep your data</h2>
@@ -173,18 +168,18 @@ export default function PrivacyPolicyPage() {
                     <strong>Account, scores, settings:</strong> for as long as your account exists.
                 </li>
                 <li>
-                    <strong>Account deletion:</strong> deleting your account (Settings → Delete account) deactivates it immediately
-                    and starts a 7-day grace period during which you can change your mind. After 7 days your account, scores,
-                    recordings (audio and history), subscription record, and onboarding answers are <strong>permanently and
-                    irreversibly deleted</strong>, and we ask Polar to delete your customer record.
+                    <strong>Account deletion:</strong> deleting your account (Settings → Delete account) deactivates it immediately and
+                    starts a 7-day grace period during which you can change your mind. After 7 days your account, scores, recordings (audio
+                    and history), subscription record, and onboarding answers are <strong>permanently and irreversibly deleted</strong>, and
+                    we ask Polar to delete your customer record.
                 </li>
                 <li>
-                    <strong>Recording usage counters:</strong> per-day totals used to enforce your plan&apos;s recording budget;
+                    <strong>Recording usage counters:</strong> per-day totals used to enforce your plan&apos;s recording budget; deleted
+                    with your account.
+                </li>
+                <li>
+                    <strong>Recorded audio:</strong> kept for as long as your account exists so we can diagnose and improve transcription;
                     deleted with your account.
-                </li>
-                <li>
-                    <strong>Recorded audio:</strong> kept for as long as your account exists so we can diagnose and improve
-                    transcription; deleted with your account.
                 </li>
                 <li>
                     <strong>Invoices &amp; payment records:</strong> kept by Polar for as long as tax law requires.
@@ -221,27 +216,26 @@ export default function PrivacyPolicyPage() {
                 </li>
             </ul>
             <p>
-                To exercise any of these, email <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>. We respond within one
-                month.
+                To exercise any of these, email <a href="mailto:privacy@solkey.io">privacy@solkey.io</a>. We respond within one month.
             </p>
 
             <h2 id="security">7. Security</h2>
             <p>
-                All traffic is encrypted in transit (TLS). Passwords are stored as salted hashes. Access to production systems is
-                limited to the people who operate the service. Should a breach ever affect your personal data, we will notify the
-                supervisory authority and, where required, you — within the legal deadlines.
+                All traffic is encrypted in transit (TLS). Passwords are stored as salted hashes. Access to production systems is limited to
+                the people who operate the service. Should a breach ever affect your personal data, we will notify the supervisory authority
+                and, where required, you — within the legal deadlines.
             </p>
 
             <h2 id="children">8. Children</h2>
             <p>
-                Solkey is not directed at children under 16, and we don&apos;t knowingly collect their data. If you believe a child
-                has created an account, contact us and we will delete it.
+                Solkey is not directed at children under 16, and we don&apos;t knowingly collect their data. If you believe a child has
+                created an account, contact us and we will delete it.
             </p>
 
             <h2 id="changes">9. Changes to this policy</h2>
             <p>
-                When we change this policy we&apos;ll update the date at the top; for material changes we&apos;ll notify you by email
-                or in the app before they take effect. Earlier versions are available on request.
+                When we change this policy we&apos;ll update the date at the top; for material changes we&apos;ll notify you by email or in
+                the app before they take effect. Earlier versions are available on request.
             </p>
 
             <h2 id="contact">10. Contact</h2>

@@ -57,7 +57,10 @@ describe('TupletFinder', () => {
 
     it('keeps a triplet with merged slots (eighth + quarter) as one group', () => {
         const quarterTriplet = () =>
-            new Note({ duration: new Duration({ type: 'q', ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            new Note({
+                duration: new Duration({ type: 'q', ratio: { actualNotes: 3, normalNotes: 2 } }),
+                pitch: new Pitch({ name: 'C', octave: 4 }),
+            })
         const m = freshMeasure()
         m.addNotes([tripletEighth(), quarterTriplet()])
         const finder = new TupletFinder(m)
@@ -85,7 +88,10 @@ describe('TupletFinder', () => {
 
     it('flushes an incomplete group when the ratio changes mid-stream', () => {
         const quintupletSixteenth = () =>
-            new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            new Note({
+                duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }),
+                pitch: new Pitch({ name: 'C', octave: 4 }),
+            })
         // Open 3:2 group (incomplete after two eighths), then a 5:4 note: the ratio change closes the
         // first group and starts a fresh one.
         const m = freshMeasure()

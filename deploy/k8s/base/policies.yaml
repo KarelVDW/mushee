@@ -6,20 +6,20 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: api
+    name: api
 spec:
-  minAvailable: 1
-  selector:
-    matchLabels: { app: api }
+    minAvailable: 1
+    selector:
+        matchLabels: { app: api }
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: crepe-inference
+    name: crepe-inference
 spec:
-  minAvailable: 1
-  selector:
-    matchLabels: { app: crepe-inference }
+    minAvailable: 1
+    selector:
+        matchLabels: { app: crepe-inference }
 ---
 # The inference service speaks unauthenticated plaintext gRPC — restrict it
 # to the API pods so a compromised neighbour can't burn its CPU. (Inert on
@@ -27,14 +27,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: crepe-inference-from-api-only
+    name: crepe-inference-from-api-only
 spec:
-  podSelector:
-    matchLabels: { app: crepe-inference }
-  policyTypes: [Ingress]
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels: { app: api }
-      ports:
-        - port: 50051
+    podSelector:
+        matchLabels: { app: crepe-inference }
+    policyTypes: [Ingress]
+    ingress:
+        - from:
+              - podSelector:
+                    matchLabels: { app: api }
+          ports:
+              - port: 50051

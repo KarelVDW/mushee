@@ -23,11 +23,16 @@ export function LandingPage() {
         router.push(authed ? '/scores' : '/signup')
     }
 
-    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : "Start free"
+    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : 'Start free'
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <LandingNav authed={authed} cta={authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'} onSignIn={onSignIn} onGetStarted={() => onGetStarted('nav')} />
+            <LandingNav
+                authed={authed}
+                cta={authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'}
+                onSignIn={onSignIn}
+                onGetStarted={() => onGetStarted('nav')}
+            />
             <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
             <HowItWorks />
             <FeatureGrid />
@@ -74,17 +79,7 @@ function LandingNav({
     )
 }
 
-function Hero({
-    authed,
-    cta,
-    onSignIn,
-    onGetStarted,
-}: {
-    authed: boolean
-    cta: string
-    onSignIn: () => void
-    onGetStarted: () => void
-}) {
+function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: string; onSignIn: () => void; onGetStarted: () => void }) {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
@@ -231,8 +226,8 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
                         Pay for recording time, nothing else.
                     </h2>
                     <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                        Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
-                        record per day — and Sketch holds up to five scores.
+                        Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can record
+                        per day — and Sketch holds up to five scores.
                     </p>
                 </div>
 
@@ -271,8 +266,8 @@ function BetaPricing() {
                     Free while the beta runs.
                 </h2>
                 <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
-                    Every beta account gets the same plan: the full editor, live audio-to-notation, playback, and 30 minutes of
-                    recording per day — no card, no charge. Paid plans arrive at launch.
+                    Every beta account gets the same plan: the full editor, live audio-to-notation, playback, and 30 minutes of recording
+                    per day — no card, no charge. Paid plans arrive at launch.
                 </p>
             </div>
         </section>
@@ -352,7 +347,9 @@ function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currenc
         <div
             className={[
                 'rounded-lg p-7 flex flex-col gap-4',
-                emphasis ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
+                emphasis
+                    ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)'
+                    : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
             ].join(' ')}>
             <div className="flex justify-between items-start">
                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
@@ -410,7 +407,7 @@ function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void
                     <em className="font-serif font-normal">It takes one take.</em>
                 </h2>
                 <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                   Sign up now and get it on paper before it slips away.
+                    Sign up now and get it on paper before it slips away.
                 </p>
                 <div className="mt-2">
                     <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>

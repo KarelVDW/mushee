@@ -3,31 +3,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api
+    name: api
 spec:
-  template:
-    spec:
-      serviceAccountName: api
-      containers:
-        - name: api
-          env:
-            - { name: BETTER_AUTH_URL, value: 'https://api.solkey.io' }
-            - { name: WEB_APP_URL, value: 'https://solkey.io' }
-            - { name: CORS_ORIGIN, value: 'https://solkey.io' }
-            - { name: TRUSTED_ORIGINS, value: 'https://solkey.io' }
-            # Web and API sit on different subdomains of one site; the session
-            # cookie must be scoped to the shared parent or the web middleware
-            # never sees it and every signed-in user bounces to /login.
-            - { name: COOKIE_DOMAIN, value: '.solkey.io' }
-            - { name: STORAGE_DRIVER, value: 'gcs' }
-            - { name: GCS_BUCKET, value: 'sheemu-prod-storage' }
-            # Cloud SQL over private IP with TLS; credentials come from the
-            # POSTGRES_URL in api-secrets.
-            - { name: POSTGRES_SSL, value: 'require' }
-            # Closed beta: signups join the waitlist until approved in the
-            # admin console (admin.solkey.io). Flip to 'false' (and
-            # NEXT_PUBLIC_BETA_MODE on Vercel) to open up.
-            - { name: BETA_MODE, value: 'true' }
-            # Admin console base URL — links in signup-notification emails.
-            # ADMIN_SECRET itself lives in Secret/api-secrets.
-            - { name: ADMIN_APP_URL, value: 'https://admin.solkey.io' }
+    template:
+        spec:
+            serviceAccountName: api
+            containers:
+                - name: api
+                  env:
+                      - { name: BETTER_AUTH_URL, value: 'https://api.solkey.io' }
+                      - { name: WEB_APP_URL, value: 'https://solkey.io' }
+                      - { name: CORS_ORIGIN, value: 'https://solkey.io' }
+                      - { name: TRUSTED_ORIGINS, value: 'https://solkey.io' }
+                      # Web and API sit on different subdomains of one site; the session
+                      # cookie must be scoped to the shared parent or the web middleware
+                      # never sees it and every signed-in user bounces to /login.
+                      - { name: COOKIE_DOMAIN, value: '.solkey.io' }
+                      - { name: STORAGE_DRIVER, value: 'gcs' }
+                      - { name: GCS_BUCKET, value: 'sheemu-prod-storage' }
+                      # Cloud SQL over private IP with TLS; credentials come from the
+                      # POSTGRES_URL in api-secrets.
+                      - { name: POSTGRES_SSL, value: 'require' }
+                      # Closed beta: signups join the waitlist until approved in the
+                      # admin console (admin.solkey.io). Flip to 'false' (and
+                      # NEXT_PUBLIC_BETA_MODE on Vercel) to open up.
+                      - { name: BETA_MODE, value: 'true' }
+                      # Admin console base URL — links in signup-notification emails.
+                      # ADMIN_SECRET itself lives in Secret/api-secrets.
+                      - { name: ADMIN_APP_URL, value: 'https://admin.solkey.io' }

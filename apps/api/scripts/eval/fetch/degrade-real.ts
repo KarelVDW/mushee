@@ -12,15 +12,15 @@
  * variants up automatically (missing variants are skipped).
  */
 
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'fs'
+import { join, resolve } from 'path'
 
-import { degrade } from '../lib/degrade';
-import { discoverRealDatasets } from '../lib/realCorpus';
-import { CONDITIONS } from '../scenarios';
+import { degrade } from '../lib/degrade'
+import { discoverRealDatasets } from '../lib/realCorpus'
+import { CONDITIONS } from '../scenarios'
 
-const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real');
-const SAMPLE_RATE = 44100;
+const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real')
+const SAMPLE_RATE = 44100
 
 /**
  * Duration of a RIFF/WAVE file, by walking its chunk list (the `data` chunk can
@@ -47,26 +47,26 @@ const SAMPLE_RATE = 44100;
  * diagnosis needs.
  */
 function wavDurationSec(path: string): number | undefined {
-  let buf: Buffer;
-  try {
-    buf = readFileSync(path);
-  } catch {
-    return undefined;
-  }
-  if (buf.length < 44 || buf.toString('ascii', 0, 4) !== 'RIFF') return undefined;
-  let byteRate = 0;
-  let offset = 12;
-  while (offset + 8 <= buf.length) {
-    const id = buf.toString('ascii', offset, offset + 4);
-    const size = buf.readUInt32LE(offset + 4);
-    if (id === 'fmt ') byteRate = buf.readUInt32LE(offset + 16);
-    if (id === 'data') {
-      const bytes = Math.min(size, buf.length - offset - 8);
-      return byteRate > 0 ? bytes / byteRate : undefined;
+    let buf: Buffer
+    try {
+        buf = readFileSync(path)
+    } catch {
+        return undefined
     }
-    offset += 8 + size + (size % 2);
-  }
-  return undefined;
+    if (buf.length < 44 || buf.toString('ascii', 0, 4) !== 'RIFF') return undefined
+    let byteRate = 0
+    let offset = 12
+    while (offset + 8 <= buf.length) {
+        const id = buf.toString('ascii', offset, offset + 4)
+        const size = buf.readUInt32LE(offset + 4)
+        if (id === 'fmt ') byteRate = buf.readUInt32LE(offset + 16)
+        if (id === 'data') {
+            const bytes = Math.min(size, buf.length - offset - 8)
+            return byteRate > 0 ? bytes / byteRate : undefined
+        }
+        offset += 8 + size + (size % 2)
+    }
+    return undefined
 }
 
 // The adverse tier only — room-mic/noisy-phone add little over the raw takes
@@ -75,7 +75,7 @@ function wavDurationSec(path: string): number | undefined {
 // (`phone-opus-96k` etc.) is deliberately NOT here either: it answered its
 // question once (null, ±0.03 — see the README's findings log) and is reached by
 // naming it, e.g. DEGRADE_CONDITIONS=phone-opus-16k.
-const DEFAULT_CONDITION_IDS = ['echoey-room', 'wind-outdoor', 'street-noise', 'distant-mic'];
+const DEFAULT_CONDITION_IDS = ['echoey-room', 'wind-outdoor', 'street-noise', 'distant-mic']
 
 /**
  * Both narrowable from the environment, because generating the full cross product
@@ -86,8 +86,11 @@ const DEFAULT_CONDITION_IDS = ['echoey-room', 'wind-outdoor', 'street-noise', 'd
  *   DEGRADE_DATASETS=annotated-vocalset,guitarset-solo
  */
 function idsFromEnv(key: string, fallback: string[]): string[] {
-  const raw = (process.env[key] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  return raw.length ? raw : fallback;
+    const raw = (process.env[key] ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    return raw.length ? raw : fallback
 }
 
 /**
@@ -97,40 +100,37 @@ function idsFromEnv(key: string, fallback: string[]): string[] {
  * generate both and diff them with `sweep-reverb.ts`
  * (`SWEEP_REVERB_VARIANTS=echoey-room-legacy`). Not part of any normal run.
  */
-const LEGACY = process.env.DEGRADE_LEGACY_10S_NOISE === '1';
+const LEGACY = process.env.DEGRADE_LEGACY_10S_NOISE === '1'
 
 function main(): void {
-  if (!existsSync(REAL_ROOT)) {
-    console.error(`No real corpus at ${REAL_ROOT} — run the fetch-*.ts scripts first.`);
-    process.exit(1);
-  }
-  const wantConditions = idsFromEnv('DEGRADE_CONDITIONS', DEFAULT_CONDITION_IDS);
-  const wantDatasets = idsFromEnv('DEGRADE_DATASETS', []);
-  const conditions = CONDITIONS.filter((c) => wantConditions.includes(c.id));
-
-  let made = 0;
-  for (const dataset of discoverRealDatasets(REAL_ROOT)) {
-    if (wantDatasets.length && !wantDatasets.includes(dataset.id)) continue;
-    const dir = dataset.dir;
-    const clips = readdirSync(dir).filter((f) => f.endsWith('__real.wav'));
-
-    for (const clip of clips) {
-      const base = clip.replace('__real.wav', '');
-      const src = join(dir, clip);
-      const durationSec = wavDurationSec(src);
-      for (const condition of conditions) {
-        const out = join(
-          dir,
-          `${base}__${condition.id}${LEGACY ? '-legacy' : ''}.wav`,
-        );
-        if (existsSync(out)) continue;
-        degrade(src, out, condition, SAMPLE_RATE, LEGACY ? undefined : durationSec);
-        made += 1;
-      }
+    if (!existsSync(REAL_ROOT)) {
+        console.error(`No real corpus at ${REAL_ROOT} — run the fetch-*.ts scripts first.`)
+        process.exit(1)
     }
-    console.log(`  ${dataset.id}: ${clips.length} clips × ${conditions.length} conditions`);
-  }
-  console.log(`\nWrote ${made} degraded variants under ${REAL_ROOT}`);
+    const wantConditions = idsFromEnv('DEGRADE_CONDITIONS', DEFAULT_CONDITION_IDS)
+    const wantDatasets = idsFromEnv('DEGRADE_DATASETS', [])
+    const conditions = CONDITIONS.filter((c) => wantConditions.includes(c.id))
+
+    let made = 0
+    for (const dataset of discoverRealDatasets(REAL_ROOT)) {
+        if (wantDatasets.length && !wantDatasets.includes(dataset.id)) continue
+        const dir = dataset.dir
+        const clips = readdirSync(dir).filter((f) => f.endsWith('__real.wav'))
+
+        for (const clip of clips) {
+            const base = clip.replace('__real.wav', '')
+            const src = join(dir, clip)
+            const durationSec = wavDurationSec(src)
+            for (const condition of conditions) {
+                const out = join(dir, `${base}__${condition.id}${LEGACY ? '-legacy' : ''}.wav`)
+                if (existsSync(out)) continue
+                degrade(src, out, condition, SAMPLE_RATE, LEGACY ? undefined : durationSec)
+                made += 1
+            }
+        }
+        console.log(`  ${dataset.id}: ${clips.length} clips × ${conditions.length} conditions`)
+    }
+    console.log(`\nWrote ${made} degraded variants under ${REAL_ROOT}`)
 }
 
-main();
+main()

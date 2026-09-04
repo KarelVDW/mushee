@@ -1,2653 +1,2653 @@
 {
-  "prefixSec": 0,
-  "routed": [
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f1_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f2_arepggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f3_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f4_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f5_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f6_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f7_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f8_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_f_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_f_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_f_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "f9_arpeggios_f_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_o",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_o",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_u",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_forte_u",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_o",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m11_arpeggios_c_fast_piano_o",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_forte_u",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_forte_u",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_o",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_o",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_u",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_c_fast_piano_u",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_f_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m1_arpeggios_f_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m2_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_f_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m3_arpeggios_f_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m4_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m5_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m5_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m5_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_o",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_forte_o",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m6_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m7_arpeggios_c_fast_piano_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_i",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_forte_i",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_piano_a",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_piano_a",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_piano_e",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "annotated-vocalset",
-      "clip": "m8_arpeggios_c_fast_piano_e",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P13_HHclosed_Fixed",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P13_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P13_HHopened_Fixed",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P13_Snare_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P15_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P16_Snare_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P20_HHopened_Fixed",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P23_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P23_HHopened_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P23_Improvisation_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P23_Snare_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P24_Snare_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P25_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P25_Improvisation_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P25_Snare_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P26_HHopened_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_HHclosed_Fixed",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_HHopened_Fixed",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_HHopened_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_Improvisation_Fixed",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P27_Snare_Fixed",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P28_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P28_Snare_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P2_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P2_HHopened_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P3_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P7_HHopened_Personal",
-      "condition": "real",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P8_HHclosed_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "real",
-      "dataset": "avp",
-      "clip": "avp_P8_HHopened_Personal",
-      "condition": "real",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "scale",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "tune",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "piccolo-veryhigh",
-      "clip": "tune",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-bass",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-tenor",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-alto",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-soprano",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-plosive",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-continuant",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-hum",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "voice-legato",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise+hint",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "rhythm",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "scale",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-mid",
-      "clip": "tune",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "distant-mic",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "echoey-room",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "noisy-phone",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "room-mic",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "street-noise",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "arpeggio",
-      "condition": "wind-outdoor",
-      "profileId": "default-wide+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "rhythm",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "scale",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "clean",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "distant-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "echoey-room",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "noisy-phone",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "room-mic",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "street-noise",
-      "profileId": "very-high+noise",
-      "provider": "basic-pitch"
-    },
-    {
-      "corpus": "synth",
-      "dataset": "whistle-high",
-      "clip": "tune",
-      "condition": "wind-outdoor",
-      "profileId": "very-high",
-      "provider": "basic-pitch"
-    }
-  ]
+    "prefixSec": 0,
+    "routed": [
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f1_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f2_arepggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f3_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f4_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f5_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f6_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f7_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f8_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_f_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_f_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_f_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "f9_arpeggios_f_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_o",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_o",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_u",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_forte_u",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_o",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m11_arpeggios_c_fast_piano_o",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_forte_u",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_forte_u",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_o",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_o",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_u",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_c_fast_piano_u",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_f_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m1_arpeggios_f_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m2_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_f_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m3_arpeggios_f_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m4_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m5_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m5_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m5_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_o",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_forte_o",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m6_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m7_arpeggios_c_fast_piano_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_i",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_forte_i",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_piano_a",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_piano_a",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_piano_e",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "annotated-vocalset",
+            "clip": "m8_arpeggios_c_fast_piano_e",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P13_HHclosed_Fixed",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P13_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P13_HHopened_Fixed",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P13_Snare_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P15_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P16_Snare_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P20_HHopened_Fixed",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P23_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P23_HHopened_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P23_Improvisation_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P23_Snare_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P24_Snare_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P25_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P25_Improvisation_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P25_Snare_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P26_HHopened_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_HHclosed_Fixed",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_HHopened_Fixed",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_HHopened_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_Improvisation_Fixed",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P27_Snare_Fixed",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P28_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P28_Snare_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P2_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P2_HHopened_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P3_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P7_HHopened_Personal",
+            "condition": "real",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P8_HHclosed_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "real",
+            "dataset": "avp",
+            "clip": "avp_P8_HHopened_Personal",
+            "condition": "real",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "scale",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "tune",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "piccolo-veryhigh",
+            "clip": "tune",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-bass",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-tenor",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-alto",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-soprano",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-plosive",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-continuant",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-hum",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "voice-legato",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise+hint",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "rhythm",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "scale",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-mid",
+            "clip": "tune",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "distant-mic",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "echoey-room",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "noisy-phone",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "room-mic",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "street-noise",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "arpeggio",
+            "condition": "wind-outdoor",
+            "profileId": "default-wide+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "rhythm",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "scale",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "clean",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "distant-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "echoey-room",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "noisy-phone",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "room-mic",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "street-noise",
+            "profileId": "very-high+noise",
+            "provider": "basic-pitch"
+        },
+        {
+            "corpus": "synth",
+            "dataset": "whistle-high",
+            "clip": "tune",
+            "condition": "wind-outdoor",
+            "profileId": "very-high",
+            "provider": "basic-pitch"
+        }
+    ]
 }

@@ -38,7 +38,19 @@ export class MidiExporter {
         const bytes = new Uint8Array(14 + 8 + track.length)
         // MThd: format 0, one track, TICKS_PER_QUARTER division
         bytes.set([0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, TICKS_PER_QUARTER >> 8, TICKS_PER_QUARTER & 0xff], 0)
-        bytes.set([0x4d, 0x54, 0x72, 0x6b, (track.length >>> 24) & 0xff, (track.length >>> 16) & 0xff, (track.length >>> 8) & 0xff, track.length & 0xff], 14)
+        bytes.set(
+            [
+                0x4d,
+                0x54,
+                0x72,
+                0x6b,
+                (track.length >>> 24) & 0xff,
+                (track.length >>> 16) & 0xff,
+                (track.length >>> 8) & 0xff,
+                track.length & 0xff,
+            ],
+            14,
+        )
         bytes.set(track, 22)
         return bytes
     }
@@ -63,7 +75,11 @@ export class MidiExporter {
             }
             for (const tempo of measure.tempos) {
                 if (measureStart + tempo.beatPosition === 0) hasOpeningTempo = true
-                events.push({ tick: MidiExporter.toTicks(measureStart + tempo.beatPosition), order: 0, data: MidiExporter.tempoMeta(tempo.bpm) })
+                events.push({
+                    tick: MidiExporter.toTicks(measureStart + tempo.beatPosition),
+                    order: 0,
+                    data: MidiExporter.tempoMeta(tempo.bpm),
+                })
             }
             for (const note of measure.notes) {
                 const start = position

@@ -43,7 +43,10 @@ export function SelectionPopover({ x, y, canPaste, onCopy, onPaste, onDelete, on
         const bar = barRef.current
         const parent = bar?.offsetParent as HTMLElement | null
         if (!bar || !parent) return
-        const left = Math.min(Math.max(x - bar.offsetWidth / 2, EDGE_MARGIN), Math.max(EDGE_MARGIN, parent.clientWidth - bar.offsetWidth - EDGE_MARGIN))
+        const left = Math.min(
+            Math.max(x - bar.offsetWidth / 2, EDGE_MARGIN),
+            Math.max(EDGE_MARGIN, parent.clientWidth - bar.offsetWidth - EDGE_MARGIN),
+        )
         setPos({ left, top: Math.max(y - bar.offsetHeight, MIN_TOP) })
     }, [x, y, canPaste])
 

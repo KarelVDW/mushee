@@ -18,8 +18,7 @@ const jsonLd = {
     url: SITE_URL,
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web',
-    description:
-        'Solkey turns what you play or sing into sheet music, live. The fastest way to get a melody on the page.',
+    description: 'Solkey turns what you play or sing into sheet music, live. The fastest way to get a melody on the page.',
     // During the closed beta the tier ladder is unannounced (prices may still
     // change), so search results only see the one truthful offer: free.
     offers: BETA_MODE

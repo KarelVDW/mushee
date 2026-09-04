@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { expect, type Page, type Route,test as base } from '@playwright/test'
+import { expect, type Page, type Route, test as base } from '@playwright/test'
 
 import { CONSENT_VERSION } from '../src/lib/consent'
 
@@ -45,9 +45,10 @@ const SESSION = {
 
 // Generated from the real ScoreSerializer — see tests/_genfixture (throwaway).
 // Playwright runs with cwd = apps/web, so resolve the fixture from there.
-const SCORE_PARTWISE = JSON.parse(
-    readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8'),
-) as Record<string, unknown>
+const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as Record<
+    string,
+    unknown
+>
 
 /** Records the requests the app makes to the mocked API, for assertions. */
 export interface ApiMock {

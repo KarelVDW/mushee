@@ -56,118 +56,97 @@
  * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-annotated-vocalset.ts
  */
 
-import { execFileSync } from 'child_process';
-import ffmpegPath from 'ffmpeg-static';
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'fs';
-import { basename,join, resolve } from 'path';
+import { execFileSync } from 'child_process'
+import ffmpegPath from 'ffmpeg-static'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { basename, join, resolve } from 'path'
 
-import { hzToMidi } from '../lib/groundTruth';
-import type { GroundTruth, TruthNote } from '../types';
+import { hzToMidi } from '../lib/groundTruth'
+import type { GroundTruth, TruthNote } from '../types'
 
-const NOTES_URL =
-  'https://zenodo.org/api/records/7061507/files/Annotated%20VocalSet.zip/content';
-const AUDIO_URL =
-  'https://zenodo.org/api/records/1193957/files/VocalSet.zip/content';
+const NOTES_URL = 'https://zenodo.org/api/records/7061507/files/Annotated%20VocalSet.zip/content'
+const AUDIO_URL = 'https://zenodo.org/api/records/1193957/files/VocalSet.zip/content'
 
-const CACHE = resolve(__dirname, '../.cache', 'annotated-vocalset');
-const NOTES_ZIP = join(CACHE, 'annotated-vocalset.zip');
-const AUDIO_ZIP = join(CACHE, 'vocalset-audio.zip');
-const NOTES_EXTRACT = join(CACHE, 'annotations'); // -> Annotated VocalSet/…
-const AUDIO_EXTRACT = join(CACHE, 'audio'); // -> FULL/<singer>/…
-const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/annotated-vocalset');
+const CACHE = resolve(__dirname, '../.cache', 'annotated-vocalset')
+const NOTES_ZIP = join(CACHE, 'annotated-vocalset.zip')
+const AUDIO_ZIP = join(CACHE, 'vocalset-audio.zip')
+const NOTES_EXTRACT = join(CACHE, 'annotations') // -> Annotated VocalSet/…
+const AUDIO_EXTRACT = join(CACHE, 'audio') // -> FULL/<singer>/…
+const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/annotated-vocalset')
 
 // Which of the four smoothing variants to read. Pitch GT is identical across
 // them; "extended 1" keeps the finest onset/offset segmentation.
-const ANNOT_SUBDIR = join('extended 1', 'without file header');
+const ANNOT_SUBDIR = join('extended 1', 'without file header')
 
 // Singing scales/arpeggios are free-tempo; bpm is only handed to the converter's
 // quantizer and does not affect the seconds-based scoring metrics. Mirrors the
 // nominal tempo the live pipeline assumes absent a user-set one.
-const NOMINAL_BPM = 120;
+const NOMINAL_BPM = 120
 
 // Plausible sung register (MIDI). Drops octave-error / garbage GT rows.
-const MIN_MIDI = 40;
-const MAX_MIDI = 84;
+const MIN_MIDI = 40
+const MAX_MIDI = 84
 
 // Target subset size and the per-clip minimum note count for inclusion.
 // Overridable because the corpus has thousands of eligible clips and the harness's
 // statistical power is bounded by clip count: measured per-clip sigma is ~0.20-0.25,
 // so ~50 clips can only resolve differences of ~5 points. VOCALSET_TARGET raises it.
-const SUBSET_TARGET = Number(process.env.VOCALSET_TARGET) || 50;
-const MIN_NOTES = 5;
+const SUBSET_TARGET = Number(process.env.VOCALSET_TARGET) || 50
+const MIN_NOTES = 5
 
 // Techniques worth scoring: standard melodic production of written scales /
 // arpeggios with clear, discrete pitch targets. Excludes "spoken" (no melody)
 // and the rapid-oscillation trills/lip_trill/trillo (note boundaries are
 // ill-defined for a frame-segmenter, so their GT timing is least trustworthy).
-const TECHNIQUES = [
-  'straight',
-  'vibrato',
-  'forte',
-  'belt',
-  'breathy',
-  'messa',
-  'slow_forte',
-  'slow_piano',
-  'fast_forte',
-  'fast_piano',
-];
+const TECHNIQUES = ['straight', 'vibrato', 'forte', 'belt', 'breathy', 'messa', 'slow_forte', 'slow_piano', 'fast_forte', 'fast_piano']
 
 function download(url: string, dest: string, label: string): void {
-  if (existsSync(dest)) {
-    console.log(`  ${label} already cached: ${dest}`);
-    return;
-  }
-  mkdirSync(CACHE, { recursive: true });
-  console.log(`  downloading ${label} …`);
-  execFileSync('curl', ['-sL', '--fail', '--max-time', '3000', '-o', dest, url], {
-    stdio: ['ignore', 'ignore', 'inherit'],
-  });
+    if (existsSync(dest)) {
+        console.log(`  ${label} already cached: ${dest}`)
+        return
+    }
+    mkdirSync(CACHE, { recursive: true })
+    console.log(`  downloading ${label} …`)
+    execFileSync('curl', ['-sL', '--fail', '--max-time', '3000', '-o', dest, url], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+    })
 }
 
 function extract(zip: string, into: string, sentinel: string, label: string): void {
-  if (existsSync(join(into, sentinel))) {
-    console.log(`  ${label} already extracted: ${into}`);
-    return;
-  }
-  mkdirSync(into, { recursive: true });
-  // -o overwrite, -q quiet, -x drops the macOS resource-fork sidecar files.
-  execFileSync('unzip', ['-oq', zip, '-d', into, '-x', '__MACOSX/*'], {
-    stdio: ['ignore', 'ignore', 'inherit'],
-  });
+    if (existsSync(join(into, sentinel))) {
+        console.log(`  ${label} already extracted: ${into}`)
+        return
+    }
+    mkdirSync(into, { recursive: true })
+    // -o overwrite, -q quiet, -x drops the macOS resource-fork sidecar files.
+    execFileSync('unzip', ['-oq', zip, '-d', into, '-x', '__MACOSX/*'], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+    })
 }
 
 /** Recursively collect every file under `root` whose name ends with `suffix`. */
 function listFiles(root: string, suffix: string): string[] {
-  const out: string[] = [];
-  if (!existsSync(root)) return out;
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const p = join(dir, entry.name);
-      if (entry.isDirectory()) walk(p);
-      else if (entry.name.endsWith(suffix)) out.push(p);
+    const out: string[] = []
+    if (!existsSync(root)) return out
+    const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const p = join(dir, entry.name)
+            if (entry.isDirectory()) walk(p)
+            else if (entry.name.endsWith(suffix)) out.push(p)
+        }
     }
-  };
-  walk(root);
-  return out;
+    walk(root)
+    return out
 }
 
 /** Map clip basename (no extension) -> absolute path, for the first occurrence. */
 function indexByBasename(paths: string[], suffix: string): Map<string, string> {
-  const m = new Map<string, string>();
-  for (const p of paths) {
-    const key = basename(p, suffix);
-    if (!m.has(key)) m.set(key, p);
-  }
-  return m;
+    const m = new Map<string, string>()
+    for (const p of paths) {
+        const key = basename(p, suffix)
+        if (!m.has(key)) m.set(key, p)
+    }
+    return m
 }
 
 /**
@@ -178,42 +157,42 @@ function indexByBasename(paths: string[], suffix: string): Map<string, string> {
  * are dropped.
  */
 function parseNotes(csv: string): TruthNote[] {
-  const notes: TruthNote[] = [];
-  const lines = csv.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const cols = line.split(',');
-    // Header / metadata lines: first cell is not a numeric sequence index.
-    if (!Number.isFinite(Number(cols[0]))) continue;
-    if (cols[4]?.trim() !== 'Sound') continue;
+    const notes: TruthNote[] = []
+    const lines = csv.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+        const cols = line.split(',')
+        // Header / metadata lines: first cell is not a numeric sequence index.
+        if (!Number.isFinite(Number(cols[0]))) continue
+        if (cols[4]?.trim() !== 'Sound') continue
 
-    const onsetSec = Number(cols[1]);
-    const durSec = Number(cols[3]);
-    if (!Number.isFinite(onsetSec) || !Number.isFinite(durSec) || durSec <= 0) continue;
+        const onsetSec = Number(cols[1])
+        const durSec = Number(cols[3])
+        if (!Number.isFinite(onsetSec) || !Number.isFinite(durSec) || durSec <= 0) continue
 
-    const gtMidiInt = Number(cols[14]);
-    const gtFreq = Number(cols[13]);
-    let midi: number;
-    if (Number.isFinite(gtMidiInt) && gtMidiInt > 0) {
-      midi = Math.round(gtMidiInt);
-    } else if (Number.isFinite(gtFreq) && gtFreq > 0) {
-      midi = Math.round(hzToMidi(gtFreq));
-    } else {
-      continue; // degenerate row with no usable ground-truth pitch
+        const gtMidiInt = Number(cols[14])
+        const gtFreq = Number(cols[13])
+        let midi: number
+        if (Number.isFinite(gtMidiInt) && gtMidiInt > 0) {
+            midi = Math.round(gtMidiInt)
+        } else if (Number.isFinite(gtFreq) && gtFreq > 0) {
+            midi = Math.round(hzToMidi(gtFreq))
+        } else {
+            continue // degenerate row with no usable ground-truth pitch
+        }
+        if (midi < MIN_MIDI || midi > MAX_MIDI) continue
+
+        notes.push({ onsetSec, durSec, midi })
     }
-    if (midi < MIN_MIDI || midi > MAX_MIDI) continue;
-
-    notes.push({ onsetSec, durSec, midi });
-  }
-  notes.sort((a, b) => a.onsetSec - b.onsetSec);
-  return notes;
+    notes.sort((a, b) => a.onsetSec - b.onsetSec)
+    return notes
 }
 
 /** Singer id (e.g. "f1", "m11") parsed from a clip basename, or null. */
 function singerOf(clip: string): string | null {
-  const m = /^([fm]\d+)_/.exec(clip);
-  return m ? m[1] : null;
+    const m = /^([fm]\d+)_/.exec(clip)
+    return m ? m[1] : null
 }
 
 /**
@@ -224,31 +203,31 @@ function singerOf(clip: string): string | null {
  * the end of the file.
  */
 function audioDurationSec(wav: string): number | null {
-  if (!ffmpegPath) throw new Error('ffmpeg-static binary not available');
-  let stderr = '';
-  try {
-    execFileSync(ffmpegPath, ['-hide_banner', '-i', wav], { stdio: ['ignore', 'ignore', 'pipe'] });
-  } catch (e) {
-    // ffmpeg exits non-zero when given no output (it only prints stream info).
-    stderr = String((e as { stderr?: Buffer }).stderr ?? '');
-  }
-  const m = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr);
-  if (!m) return null;
-  return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+    if (!ffmpegPath) throw new Error('ffmpeg-static binary not available')
+    let stderr = ''
+    try {
+        execFileSync(ffmpegPath, ['-hide_banner', '-i', wav], { stdio: ['ignore', 'ignore', 'pipe'] })
+    } catch (e) {
+        // ffmpeg exits non-zero when given no output (it only prints stream info).
+        stderr = String((e as { stderr?: Buffer }).stderr ?? '')
+    }
+    const m = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr)
+    if (!m) return null
+    return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])
 }
 
 /** Technique tag of a clip = the parent directory name of its CSV. */
 function techniqueOf(csvPath: string): string {
-  return basename(join(csvPath, '..'));
+    return basename(join(csvPath, '..'))
 }
 
 interface Candidate {
-  clip: string;
-  csv: string;
-  wav: string;
-  technique: string;
-  singer: string;
-  notes: TruthNote[];
+    clip: string
+    csv: string
+    wav: string
+    technique: string
+    singer: string
+    notes: TruthNote[]
 }
 
 /**
@@ -257,14 +236,14 @@ interface Candidate {
  * (kept per the harness contract, in case a future release ships flac/mp3).
  */
 function writeWav(src: string, dest: string): void {
-  if (src.toLowerCase().endsWith('.wav')) {
-    copyFileSync(src, dest);
-    return;
-  }
-  if (!ffmpegPath) throw new Error('ffmpeg-static binary not available for transcode');
-  execFileSync(ffmpegPath, ['-y', '-i', src, '-ac', '1', dest], {
-    stdio: ['ignore', 'ignore', 'inherit'],
-  });
+    if (src.toLowerCase().endsWith('.wav')) {
+        copyFileSync(src, dest)
+        return
+    }
+    if (!ffmpegPath) throw new Error('ffmpeg-static binary not available for transcode')
+    execFileSync(ffmpegPath, ['-y', '-i', src, '-ac', '1', dest], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+    })
 }
 
 /**
@@ -280,155 +259,145 @@ function writeWav(src: string, dest: string): void {
  * shrink the subset. Probing lazily here keeps the (slow) ffmpeg duration check
  * to ~the subset size rather than the whole eligible pool.
  */
-function pickSubset(
-  candidates: Candidate[],
-  target: number,
-  accept: (c: Candidate) => boolean,
-): Candidate[] {
-  const byTech = new Map<string, Candidate[]>();
-  for (const c of candidates) {
-    let list = byTech.get(c.technique);
-    if (!list) {
-      list = [];
-      byTech.set(c.technique, list);
-    }
-    list.push(c);
-  }
-  for (const list of Array.from(byTech.values())) list.sort((a, b) => a.clip.localeCompare(b.clip));
-
-  const techQueues = TECHNIQUES.map((t) => byTech.get(t) ?? []).filter((q) => q.length);
-  const chosen: Candidate[] = [];
-  const singerCount = new Map<string, number>();
-
-  let any = true;
-  while (chosen.length < target && any) {
-    any = false;
-    for (const q of techQueues) {
-      if (chosen.length >= target) break;
-      // From this technique, repeatedly take the still-available clip whose
-      // singer we've used least (then earliest clip name) until one is accepted
-      // or the queue is exhausted.
-      while (q.length) {
-        let bestIdx = -1;
-        let bestKey: [number, string] | null = null;
-        for (let i = 0; i < q.length; i++) {
-          const key: [number, string] = [singerCount.get(q[i].singer) ?? 0, q[i].clip];
-          if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && key[1] < bestKey[1])) {
-            bestKey = key;
-            bestIdx = i;
-          }
+function pickSubset(candidates: Candidate[], target: number, accept: (c: Candidate) => boolean): Candidate[] {
+    const byTech = new Map<string, Candidate[]>()
+    for (const c of candidates) {
+        let list = byTech.get(c.technique)
+        if (!list) {
+            list = []
+            byTech.set(c.technique, list)
         }
-        const next = q.splice(bestIdx, 1)[0];
-        if (!accept(next)) continue; // drop and try the next from this technique
-        chosen.push(next);
-        singerCount.set(next.singer, (singerCount.get(next.singer) ?? 0) + 1);
-        any = true;
-        break;
-      }
+        list.push(c)
     }
-  }
-  return chosen;
+    for (const list of Array.from(byTech.values())) list.sort((a, b) => a.clip.localeCompare(b.clip))
+
+    const techQueues = TECHNIQUES.map((t) => byTech.get(t) ?? []).filter((q) => q.length)
+    const chosen: Candidate[] = []
+    const singerCount = new Map<string, number>()
+
+    let any = true
+    while (chosen.length < target && any) {
+        any = false
+        for (const q of techQueues) {
+            if (chosen.length >= target) break
+            // From this technique, repeatedly take the still-available clip whose
+            // singer we've used least (then earliest clip name) until one is accepted
+            // or the queue is exhausted.
+            while (q.length) {
+                let bestIdx = -1
+                let bestKey: [number, string] | null = null
+                for (let i = 0; i < q.length; i++) {
+                    const key: [number, string] = [singerCount.get(q[i].singer) ?? 0, q[i].clip]
+                    if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && key[1] < bestKey[1])) {
+                        bestKey = key
+                        bestIdx = i
+                    }
+                }
+                const next = q.splice(bestIdx, 1)[0]
+                if (!accept(next)) continue // drop and try the next from this technique
+                chosen.push(next)
+                singerCount.set(next.singer, (singerCount.get(next.singer) ?? 0) + 1)
+                any = true
+                break
+            }
+        }
+    }
+    return chosen
 }
 
 function main(): void {
-  download(NOTES_URL, NOTES_ZIP, 'Annotated VocalSet annotations (~411 MB)');
-  download(AUDIO_URL, AUDIO_ZIP, 'VocalSet audio (~2.08 GB)');
-  extract(NOTES_ZIP, NOTES_EXTRACT, 'Annotated VocalSet', 'annotations');
-  extract(AUDIO_ZIP, AUDIO_EXTRACT, 'FULL', 'audio');
+    download(NOTES_URL, NOTES_ZIP, 'Annotated VocalSet annotations (~411 MB)')
+    download(AUDIO_URL, AUDIO_ZIP, 'VocalSet audio (~2.08 GB)')
+    extract(NOTES_ZIP, NOTES_EXTRACT, 'Annotated VocalSet', 'annotations')
+    extract(AUDIO_ZIP, AUDIO_EXTRACT, 'FULL', 'audio')
 
-  const notesRoot = join(NOTES_EXTRACT, 'Annotated VocalSet', ANNOT_SUBDIR);
-  const csvFiles = listFiles(notesRoot, '.csv').filter((p) =>
-    TECHNIQUES.includes(techniqueOf(p)),
-  );
-  const wavByClip = indexByBasename(listFiles(AUDIO_EXTRACT, '.wav'), '.wav');
-  console.log(
-    `  ${csvFiles.length} annotated clips in target techniques; ${wavByClip.size} audio clips`,
-  );
+    const notesRoot = join(NOTES_EXTRACT, 'Annotated VocalSet', ANNOT_SUBDIR)
+    const csvFiles = listFiles(notesRoot, '.csv').filter((p) => TECHNIQUES.includes(techniqueOf(p)))
+    const wavByClip = indexByBasename(listFiles(AUDIO_EXTRACT, '.wav'), '.wav')
+    console.log(`  ${csvFiles.length} annotated clips in target techniques; ${wavByClip.size} audio clips`)
 
-  // Build candidates: clips that have both audio and >= MIN_NOTES parsed notes.
-  const candidates: Candidate[] = [];
-  for (const csv of csvFiles) {
-    const clip = basename(csv, '.csv');
-    const wav = wavByClip.get(clip);
-    if (!wav) continue;
-    const singer = singerOf(clip);
-    if (!singer) continue;
-    const notes = parseNotes(readFileSync(csv, 'utf8'));
-    if (notes.length < MIN_NOTES) continue;
-    candidates.push({ clip, csv, wav, technique: techniqueOf(csv), singer, notes });
-  }
-  candidates.sort((a, b) => a.clip.localeCompare(b.clip));
-  console.log(`  ${candidates.length} clips have audio + >=${MIN_NOTES} notes`);
-
-  // Reject clips whose annotation timeline overruns the audio (a handful of
-  // source-corpus clips were annotated against a longer take). 0.5 s slack.
-  let rejected = 0;
-  const aligned = (c: Candidate): boolean => {
-    const dur = audioDurationSec(c.wav);
-    if (dur === null) return false;
-    const lastEnd = c.notes[c.notes.length - 1].onsetSec + c.notes[c.notes.length - 1].durSec;
-    if (lastEnd > dur + 0.5) {
-      rejected += 1;
-      return false;
+    // Build candidates: clips that have both audio and >= MIN_NOTES parsed notes.
+    const candidates: Candidate[] = []
+    for (const csv of csvFiles) {
+        const clip = basename(csv, '.csv')
+        const wav = wavByClip.get(clip)
+        if (!wav) continue
+        const singer = singerOf(clip)
+        if (!singer) continue
+        const notes = parseNotes(readFileSync(csv, 'utf8'))
+        if (notes.length < MIN_NOTES) continue
+        candidates.push({ clip, csv, wav, technique: techniqueOf(csv), singer, notes })
     }
-    return true;
-  };
+    candidates.sort((a, b) => a.clip.localeCompare(b.clip))
+    console.log(`  ${candidates.length} clips have audio + >=${MIN_NOTES} notes`)
 
-  const chosen = pickSubset(candidates, SUBSET_TARGET, aligned);
-  if (rejected) console.log(`  skipped ${rejected} clips whose annotation overran the audio`);
+    // Reject clips whose annotation timeline overruns the audio (a handful of
+    // source-corpus clips were annotated against a longer take). 0.5 s slack.
+    let rejected = 0
+    const aligned = (c: Candidate): boolean => {
+        const dur = audioDurationSec(c.wav)
+        if (dur === null) return false
+        const lastEnd = c.notes[c.notes.length - 1].onsetSec + c.notes[c.notes.length - 1].durSec
+        if (lastEnd > dur + 0.5) {
+            rejected += 1
+            return false
+        }
+        return true
+    }
 
-  rmSync(OUT, { recursive: true, force: true });
-  mkdirSync(OUT, { recursive: true });
+    const chosen = pickSubset(candidates, SUBSET_TARGET, aligned)
+    if (rejected) console.log(`  skipped ${rejected} clips whose annotation overran the audio`)
 
-  let clips = 0;
-  let totalNotes = 0;
-  const singers = new Set<string>();
-  const techniques = new Set<string>();
-  for (const c of chosen) {
-    const truth: GroundTruth = { bpm: NOMINAL_BPM, notes: c.notes };
-    writeFileSync(join(OUT, `${c.clip}.truth.json`), JSON.stringify(truth, null, 2));
-    writeWav(c.wav, join(OUT, `${c.clip}__real.wav`));
-    clips += 1;
-    totalNotes += c.notes.length;
-    singers.add(c.singer);
-    techniques.add(c.technique);
-  }
+    rmSync(OUT, { recursive: true, force: true })
+    mkdirSync(OUT, { recursive: true })
 
-  // Manifest read by run-eval (EVAL_REAL) for the dataset's display label and
-  // adaptive instrument hint — 'voice-lead' mirrors a user picking "voice".
-  const manifest = {
-    id: 'annotated-vocalset',
-    label: 'Annotated-VocalSet (real solo singing, subset)',
-    kind: 'voice',
-    instrumentId: 'voice-lead',
-    source: 'https://zenodo.org/records/7061507',
-    license: 'CC-BY-4.0',
-    clips,
-    totalNotes,
-    notes:
-      `Representative subset of ${clips}/${candidates.length} eligible clips ` +
-      `(corpus has 2688 annotated clips), spanning ${singers.size} singers and ` +
-      `${techniques.size} techniques (${Array.from(techniques).sort().join(', ')}). ` +
-      'Audio is the original VocalSet release (https://zenodo.org/records/1193957, ' +
-      'CC-BY-4.0); the Zenodo annotation record ships no audio. Ground-truth note ' +
-      'PITCH is the written exercise score (integer MIDI, col "Ground Truth MIDI ' +
-      'code"), so it is not pitch-tracker-derived. Ground-truth note TIMING ' +
-      '(onset/offset) is SEMI-AUTOMATIC: the authors segmented pYIN+Smart-Median ' +
-      'F0 contours and reviewed them, so onsets/durations are approximate — keep ' +
-      'scoring tolerances generous. The tracker used (pYIN) differs from the ' +
-      "pipeline's CREPE/basic-pitch, so the GT is not circular against our own " +
-      'estimator, but it is still tracker-assisted. Only "Sound" rows of the ' +
-      '"extended 1" variant are converted; rests/transitions are dropped.',
-  };
-  writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2));
+    let clips = 0
+    let totalNotes = 0
+    const singers = new Set<string>()
+    const techniques = new Set<string>()
+    for (const c of chosen) {
+        const truth: GroundTruth = { bpm: NOMINAL_BPM, notes: c.notes }
+        writeFileSync(join(OUT, `${c.clip}.truth.json`), JSON.stringify(truth, null, 2))
+        writeWav(c.wav, join(OUT, `${c.clip}__real.wav`))
+        clips += 1
+        totalNotes += c.notes.length
+        singers.add(c.singer)
+        techniques.add(c.technique)
+    }
 
-  console.log(
-    `\nConverted ${clips} Annotated-VocalSet clips (${totalNotes} notes, ` +
-      `${singers.size} singers, ${techniques.size} techniques) into ${OUT}`,
-  );
-  console.log(
-    'Run: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts',
-  );
+    // Manifest read by run-eval (EVAL_REAL) for the dataset's display label and
+    // adaptive instrument hint — 'voice-lead' mirrors a user picking "voice".
+    const manifest = {
+        id: 'annotated-vocalset',
+        label: 'Annotated-VocalSet (real solo singing, subset)',
+        kind: 'voice',
+        instrumentId: 'voice-lead',
+        source: 'https://zenodo.org/records/7061507',
+        license: 'CC-BY-4.0',
+        clips,
+        totalNotes,
+        notes:
+            `Representative subset of ${clips}/${candidates.length} eligible clips ` +
+            `(corpus has 2688 annotated clips), spanning ${singers.size} singers and ` +
+            `${techniques.size} techniques (${Array.from(techniques).sort().join(', ')}). ` +
+            'Audio is the original VocalSet release (https://zenodo.org/records/1193957, ' +
+            'CC-BY-4.0); the Zenodo annotation record ships no audio. Ground-truth note ' +
+            'PITCH is the written exercise score (integer MIDI, col "Ground Truth MIDI ' +
+            'code"), so it is not pitch-tracker-derived. Ground-truth note TIMING ' +
+            '(onset/offset) is SEMI-AUTOMATIC: the authors segmented pYIN+Smart-Median ' +
+            'F0 contours and reviewed them, so onsets/durations are approximate — keep ' +
+            'scoring tolerances generous. The tracker used (pYIN) differs from the ' +
+            "pipeline's CREPE/basic-pitch, so the GT is not circular against our own " +
+            'estimator, but it is still tracker-assisted. Only "Sound" rows of the ' +
+            '"extended 1" variant are converted; rests/transitions are dropped.',
+    }
+    writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2))
+
+    console.log(
+        `\nConverted ${clips} Annotated-VocalSet clips (${totalNotes} notes, ` +
+            `${singers.size} singers, ${techniques.size} techniques) into ${OUT}`,
+    )
+    console.log('Run: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts')
 }
 
-main();
+main()

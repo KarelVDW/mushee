@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-    cancelSubscription,
-    changePlan,
-    createBillingPortalSession,
-    createCheckout,
-    getBetaStatus,
-    getBillingState,
-} from '@/lib/api'
+import { cancelSubscription, changePlan, createBillingPortalSession, createCheckout, getBetaStatus, getBillingState } from '@/lib/api'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 

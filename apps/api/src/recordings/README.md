@@ -30,7 +30,7 @@ note extraction / onset detection → MusicXML measures.
   frequency windows, instrument ranges) resolved per recording.
 
 The adaptive profile (band, provider, gates, voice routing) is locked from the
-first ≥1.2 s of *pitched* audio — a silent or spoken lead-in defers the lock (up
+first ≥1.2 s of _pitched_ audio — a silent or spoken lead-in defers the lock (up
 to `RECORDING_DETECT_MAX_WAIT_SEC`, 8 s) and a take that still locked the blind
 fallback is re-resolved over the whole take on the final pass.
 

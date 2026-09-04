@@ -30,12 +30,7 @@ export default function ClipDetailPage() {
             instrument,
             expectedScore: melodyToScore(clip.melody, instrument),
             derivedScore: transcription?.measures
-                ? mxmlMeasuresToScore(
-                      transcription.measures as Record<number, MxmlMeasure>,
-                      corpus.bpm,
-                      corpus.beatsPerMeasure,
-                      instrument,
-                  )
+                ? mxmlMeasuresToScore(transcription.measures as Record<number, MxmlMeasure>, corpus.bpm, corpus.beatsPerMeasure, instrument)
                 : null,
         }
     }, [detail.data])
@@ -77,12 +72,16 @@ export default function ClipDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     {prevClipId && (
-                        <Link href={`/corpora/${id}/clips/${prevClipId}`} className="font-label text-[13px] text-primary no-underline hover:underline">
+                        <Link
+                            href={`/corpora/${id}/clips/${prevClipId}`}
+                            className="font-label text-[13px] text-primary no-underline hover:underline">
                             ← prev
                         </Link>
                     )}
                     {nextClipId && (
-                        <Link href={`/corpora/${id}/clips/${nextClipId}`} className="font-label text-[13px] text-primary no-underline hover:underline">
+                        <Link
+                            href={`/corpora/${id}/clips/${nextClipId}`}
+                            className="font-label text-[13px] text-primary no-underline hover:underline">
                             next →
                         </Link>
                     )}
@@ -134,7 +133,9 @@ export default function ClipDetailPage() {
                 </div>
                 {transcribe.isError && <Alert>{String(transcribe.error)}</Alert>}
                 {clip.status !== 'recorded' && (
-                    <p className="font-body text-[13px] text-on-surface-variant m-0">Record this clip first, then the pipeline runs on it.</p>
+                    <p className="font-body text-[13px] text-on-surface-variant m-0">
+                        Record this clip first, then the pipeline runs on it.
+                    </p>
                 )}
                 {clip.status === 'recorded' && !transcription && !transcribe.isPending && (
                     <p className="font-body text-[13px] text-on-surface-variant m-0">

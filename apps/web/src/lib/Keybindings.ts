@@ -121,9 +121,7 @@ export interface BindableCommand {
 }
 
 /** Outcome of {@link Keybindings.rebind}: applied (possibly displacing a command) or refused. */
-export type RebindResult<C extends BindableCommand> =
-    | { ok: true; displaced: C | null }
-    | { ok: false; reservedBy: C }
+export type RebindResult<C extends BindableCommand> = { ok: true; displaced: C | null } | { ok: false; reservedBy: C }
 
 /** One persisted deviation from a command's default; null in a {@link StoredShortcuts} map means "explicitly unbound". */
 export interface StoredOverride {

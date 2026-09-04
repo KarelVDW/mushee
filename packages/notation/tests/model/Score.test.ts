@@ -373,7 +373,10 @@ describe('Score', () => {
             const lastOfM1 = m1.lastNote
             if (!lastOfM1) throw new Error('expected last note of measure 1')
             // Reshape the tail of measure 1 to end on a 16th note (0.25 free beat at the boundary).
-            score.replace([lastOfM1], [new Note({ duration: new Duration({ type: '8', dots: 1 }) }), new Note({ duration: new Duration({ type: '16' }) })])
+            score.replace(
+                [lastOfM1],
+                [new Note({ duration: new Duration({ type: '8', dots: 1 }) }), new Note({ duration: new Duration({ type: '16' }) })],
+            )
             const sixteenth = m1.lastNote
             if (!sixteenth) throw new Error('expected 16th note')
             expect(sixteenth.duration.type).toBe('16')

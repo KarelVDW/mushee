@@ -70,8 +70,8 @@ bug-fix logs were dropped; what remains is still-true reference material.
   1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium. Not VAT-registered
   yet — revisit the pages (and Polar tax settings) if that changes.
   Governing law: Belgium. Lawyer review of both documents still outstanding.
-  *Rebranded Sheemu → Solkey on 2026-07-18; KBO/CBE commercial-name update
-  still pending.*
+  _Rebranded Sheemu → Solkey on 2026-07-18; KBO/CBE commercial-name update
+  still pending._
 - Canonical domain is **solkey.io** since the 2026-07-18 rebrand (apex; www
   308-redirects to it — the Vercel primary domain must stay the apex or CORS
   breaks). sheemu.com should 301 to solkey.io during the transition. Mail
@@ -85,7 +85,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 1. Topology `solkey.io` + `api.solkey.io`; `COOKIE_DOMAIN=.solkey.io`. The
    proxy accepts both `__Secure-` and plain cookie names, but the cookie must
-   *reach* it — same parent domain required. Smoke-test one real HTTPS login first.
+   _reach_ it — same parent domain required. Smoke-test one real HTTPS login first.
 2. `POSTGRES_SSL=require` (or `verify` + `POSTGRES_SSL_CA`) against managed
    Postgres; enable PITR/backups and rehearse one restore.
 3. Production `api-secrets` needs real Polar/beta/mail values; README
@@ -149,12 +149,12 @@ bug-fix logs were dropped; what remains is still-true reference material.
 - **Editor chrome**: in-flow bottom tool dock chosen over a left vertical rail —
   it keeps the horizontal controls and popovers-open-upward pattern and fixes
   the old overlap by construction. If tool count truly explodes, revisit the rail.
-- **Consent design** (two-tier since 2026-07-11, CONSENT_VERSION 2): base
+- **Consent design** (two-tier since 2026-07-11, CONSENT*VERSION 2): base
   tier for everyone is cookieless anonymous capture (in-memory persistence +
   `person_profiles: 'identified_only'` — nothing on the device, no identity,
   legitimate interest) so top-line traffic isn't consent-gated; the one
   `analytics` consent toggle upgrades to session replay + account-id-linked
-  events + the persistent ph_* cookie. Withdrawal calls `posthog.reset()`
+  events + the persistent ph*\* cookie. Withdrawal calls `posthog.reset()`
   (drops the cookie) and falls back to the anonymous tier — never to
   opt-out. `identify` is consent-gated and sends the account id only —
   policy says "pseudonymous". Server-side error reports run on legitimate
@@ -194,7 +194,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
   (`/beta/status`, `BetaApprovalGuard`, recording gateway).
 - **`RecordingSession` cap is wall-clock via the meter tick** — a socket that
   never sends audio is closed by the WS keepalive, not the cap. Fine, but know it.
-- **Editor `handleRecordToggle`**: if `cursorEl` is missing it bails *after*
+- **Editor `handleRecordToggle`**: if `cursorEl` is missing it bails _after_
   inserting the count-off measure. Cosmetic and rare (ref exists once the score
   renders); deliberately left alone.
 - **A tier added only in the DB** shows the free tier's display decoration

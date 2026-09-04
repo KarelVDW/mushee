@@ -83,9 +83,7 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     await expect(page.getByRole('button', { name: 'Keyboard shortcuts' })).toHaveCount(0)
 
     // Nothing overflows the layout viewport horizontally.
-    const overflow = await page.evaluate(
-        () => (document.scrollingElement?.scrollWidth ?? 0) - document.documentElement.clientWidth,
-    )
+    const overflow = await page.evaluate(() => (document.scrollingElement?.scrollWidth ?? 0) - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(1)
 })
 

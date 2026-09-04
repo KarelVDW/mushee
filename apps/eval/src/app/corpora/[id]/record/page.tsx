@@ -89,8 +89,7 @@ function RecordFlow() {
             </div>
         )
     if (detail.isError) return <Alert onRetry={() => detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
-    if (!clip || !corpus || !built)
-        return <Alert>This corpus has no clips.</Alert>
+    if (!clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
 
     const clipIndex = clips!.findIndex((c) => c.id === clip.id)
     const nextClip = clips![clipIndex + 1] ?? null
@@ -163,7 +162,10 @@ function RecordFlow() {
                         · recording session · {remaining} clip{remaining === 1 ? '' : 's'} left after this one
                     </div>
                     <h1 className="font-headline font-bold text-[1.5rem] leading-tight text-on-surface m-0">
-                        {clip.name} <span className="text-on-surface-variant font-normal">({clipIndex + 1}/{clips!.length})</span>
+                        {clip.name}{' '}
+                        <span className="text-on-surface-variant font-normal">
+                            ({clipIndex + 1}/{clips!.length})
+                        </span>
                     </h1>
                     <div className="flex items-center gap-2">
                         <Chip>{clip.melody.keyLabel}</Chip>
@@ -193,7 +195,11 @@ function RecordFlow() {
                         {mode === 'playing' ? 'Stop replay' : 'Replay expected'}
                     </SecondaryButton>
                     {mode !== 'recording' && (
-                        <PrimaryButton emphasis="pop" icon="mic" onClick={startTake} disabled={flow.step === 'uploading' || flow.step === 'transcribing'}>
+                        <PrimaryButton
+                            emphasis="pop"
+                            icon="mic"
+                            onClick={startTake}
+                            disabled={flow.step === 'uploading' || flow.step === 'transcribing'}>
                             {clip.status === 'recorded' ? 'Record new take' : 'Record'} (1 measure count-in)
                         </PrimaryButton>
                     )}
@@ -207,9 +213,7 @@ function RecordFlow() {
                             Next clip
                         </PrimaryButton>
                     )}
-                    {flow.step === 'done' && (
-                        <SecondaryButton onClick={() => setFlow({ step: 'ready' })}>Redo this clip</SecondaryButton>
-                    )}
+                    {flow.step === 'done' && <SecondaryButton onClick={() => setFlow({ step: 'ready' })}>Redo this clip</SecondaryButton>}
                 </div>
 
                 {mode === 'recording' && (
@@ -242,13 +246,19 @@ function RecordFlow() {
                         <span className="font-mono text-[14px] text-on-surface">
                             note F1 {typeof doneF1 === 'number' ? doneF1.toFixed(2) : '—'}
                         </span>
-                        <Link href={`/corpora/${id}/clips/${clip.id}`} className="font-label text-[12px] text-primary no-underline hover:underline">
+                        <Link
+                            href={`/corpora/${id}/clips/${clip.id}`}
+                            className="font-label text-[12px] text-primary no-underline hover:underline">
                             inspect →
                         </Link>
                         {!nextClip && <span className="font-body text-[13px] text-on-surface-variant">That was the last clip 🎉</span>}
                     </div>
                 )}
-                {flow.step === 'error' && <Alert onRetry={() => setFlow({ step: 'ready' })} retryLabel="Back to ready">{flow.message}</Alert>}
+                {flow.step === 'error' && (
+                    <Alert onRetry={() => setFlow({ step: 'ready' })} retryLabel="Back to ready">
+                        {flow.message}
+                    </Alert>
+                )}
             </Card>
         </div>
     )

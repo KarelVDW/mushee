@@ -62,8 +62,8 @@ export function VerifyStep({
             title="Verify your email."
             subtitle={
                 <>
-                    We sent a 6-digit code to <strong className="text-on-surface">{userEmail}</strong>. Enter it below to
-                    continue — this step protects your scores.
+                    We sent a 6-digit code to <strong className="text-on-surface">{userEmail}</strong>. Enter it below to continue — this
+                    step protects your scores.
                 </>
             }>
             {!verified ? (
@@ -221,9 +221,7 @@ export function InstrumentsStep({ value, onChange }: { value: string[]; onChange
     )
 
     return (
-        <StepShell
-            title="Which instruments do you play?"
-            subtitle="Pick any that apply — or none, if you're more of a listener.">
+        <StepShell title="Which instruments do you play?" subtitle="Pick any that apply — or none, if you're more of a listener.">
             <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
                 {Instrument.selectableByCategory().map(({ category, instruments }) => (
                     <div key={category} className="flex flex-col gap-2">
@@ -253,9 +251,7 @@ export function SourceStep({
     onSourceDetailChange: (v: string) => void
 }) {
     return (
-        <StepShell
-            title="How did you find Solkey?"
-            subtitle="Helps us know what's working — entirely optional, no wrong answers.">
+        <StepShell title="How did you find Solkey?" subtitle="Helps us know what's working — entirely optional, no wrong answers.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {REFERRAL_SOURCES.map(([k, label]) => (
                     <OptionCard key={k} active={source === k} onClick={() => onSourceChange(k)} title={label} />
@@ -330,8 +326,8 @@ export function BetaPlanStep({
             </div>
             {awaitingApproval && (
                 <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3.5 font-body font-normal text-[13px] leading-normal">
-                    One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you
-                    the moment it&apos;s approved.
+                    One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you the moment
+                    it&apos;s approved.
                 </div>
             )}
         </StepShell>
@@ -361,8 +357,8 @@ export function DoneStep({
             <SubHeadline>
                 {awaitingApproval ? (
                     <>
-                        Your account is ready on the <strong>{betaPlanName}</strong> plan — it just needs a nod from us.
-                        We&apos;ll email you the moment your beta access is approved.
+                        Your account is ready on the <strong>{betaPlanName}</strong> plan — it just needs a nod from us. We&apos;ll email
+                        you the moment your beta access is approved.
                     </>
                 ) : (
                     <>

@@ -160,9 +160,7 @@ export class ScoreLayout {
                 const key = `${note.id}|${nextNote.id}`
                 const previousTie = previous?._tiesByKey.get(key)
                 const tie =
-                    previousTie?.contextSignature === TieLayout.signatureFor(context)
-                        ? previousTie
-                        : new TieLayout(note, nextNote, context)
+                    previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, nextNote, context)
                 this._tiesByKey.set(key, tie)
                 this.ties.push(tie)
             }

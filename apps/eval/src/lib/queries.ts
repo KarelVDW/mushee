@@ -37,8 +37,7 @@ export function useDeleteCorpus() {
 export function useUploadTake() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ clipId, take, trimSec }: { clipId: string; take: Blob; trimSec: number }) =>
-            api.uploadTake(clipId, take, trimSec),
+        mutationFn: ({ clipId, take, trimSec }: { clipId: string; take: Blob; trimSec: number }) => api.uploadTake(clipId, take, trimSec),
         onSuccess: (_result, { clipId }) => {
             void queryClient.invalidateQueries({ queryKey: ['clip', clipId] })
             void queryClient.invalidateQueries({ queryKey: ['corpus'] })

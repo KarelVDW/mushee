@@ -26,7 +26,10 @@ describe('tie semantics (Score.tiePartner)', () => {
         expect(score.tiePartner(plain)).toBeNull()
         // A tie-stop-only note does not tie forward either.
         const second = m.notes[1]
-        const [stop] = score.replace([second], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'stop' })])
+        const [stop] = score.replace(
+            [second],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'stop' })],
+        )
         expect(score.tiePartner(stop)).toBeNull()
     })
 
@@ -35,7 +38,10 @@ describe('tie semantics (Score.tiePartner)', () => {
         const m = score.measures[0]
         const first = m.firstNote
         if (!first) throw new Error('expected firstNote')
-        const [mid] = score.replace([first], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start-stop' })])
+        const [mid] = score.replace(
+            [first],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start-stop' })],
+        )
         expect(score.tiePartner(mid)).toBe(m.notes[1])
     })
 

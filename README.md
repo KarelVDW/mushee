@@ -2,15 +2,15 @@
 
 Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 
-| Path | What it is |
-|---|---|
-| `apps/web` | Next.js app (editor UI), dev on **:3200** |
-| `apps/admin` | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500** |
-| `apps/api` | NestJS API + WebSocket recording pipeline, dev on **:4200** |
-| `apps/inference-crepe` | Python gRPC service: CREPE forward pass (**:50051**) |
-| `packages/notation` | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
-| `packages/inference-proto` | Shared gRPC contract for the inference service |
-| `deploy/k8s` | Kustomize manifests: `base/` (production-shaped) + `overlays/local/` |
+| Path                       | What it is                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                          |
+| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                  |
+| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                        |
+| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                               |
+| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
+| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                     |
+| `deploy/k8s`               | Kustomize manifests: `base/` (production-shaped) + `overlays/local/`                                               |
 
 The API owns everything about transcription except the neural-net forward pass,
 which runs behind a `ModelBackend` seam: **in-process TF.js** by default (dev,
@@ -52,12 +52,12 @@ project on `admin.solkey.io` — see `deploy/k8s/overlays/production/README.md`.
 Seeded by `pnpm setup` / `pnpm db:reset` / `pnpm db:seed` (or any environment
 booted with `SEED_DEMO_DATA=true`). Password for all: **`mushee-demo`**.
 
-| Email | Tier | Daily recording |
-|---|---|---|
-| `demo@mushee.local` | Studio | **unlimited** — the main demo account |
-| `free@mushee.local` | Sketch (free) | 30 s |
-| `pro@mushee.local` | Composer (pro) | 10 min |
-| `studio@mushee.local` | Studio | unlimited |
+| Email                 | Tier           | Daily recording                       |
+| --------------------- | -------------- | ------------------------------------- |
+| `demo@mushee.local`   | Studio         | **unlimited** — the main demo account |
+| `free@mushee.local`   | Sketch (free)  | 30 s                                  |
+| `pro@mushee.local`    | Composer (pro) | 10 min                                |
+| `studio@mushee.local` | Studio         | unlimited                             |
 
 ### Database scripts
 
@@ -144,7 +144,7 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   better-auth, and the seeder alike.
 - **Backups**: the database is the only stateful component besides blob
   storage. Enable your managed Postgres provider's automated backups /
-  point-in-time recovery *and test a restore once* before launch; enable
+  point-in-time recovery _and test a restore once_ before launch; enable
   object versioning (or replication) on the GCS bucket holding MusicXML and
   recording archives. Nothing in this repo does this for you.
 - A metrics-server, so the HPAs scale the inference services on CPU (Docker

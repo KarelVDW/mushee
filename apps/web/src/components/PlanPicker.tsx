@@ -82,9 +82,7 @@ export function BillingToggle({ value, onChange }: { value: Billing; onChange: (
                         onClick={() => onChange(k)}
                         className={[
                             'border-0 px-3.5 py-1.75 rounded-full cursor-pointer font-label font-semibold text-[12px] leading-none transition-all duration-150 ease-solkey',
-                            active
-                                ? 'bg-primary-container text-on-primary-container'
-                                : 'bg-transparent text-on-surface-variant',
+                            active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
                         {label}
                     </button>
@@ -107,7 +105,9 @@ function cardShell(active: boolean): string {
     return [
         'relative text-left border-0 rounded-lg cursor-pointer transition-all duration-150 ease-solkey',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
+        active
+            ? 'bg-primary-soft text-on-primary-soft'
+            : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
     ].join(' ')
 }
 
@@ -224,7 +224,10 @@ export function ProfessionalTierCard({ plan, billing, currency, active, current,
                 <span className="font-body font-semibold text-[15px] leading-[1.2]">
                     {plan.name} — {plan.tagline.toLowerCase()}
                 </span>
-                <span className={['font-body font-normal text-[13px] leading-[1.4]', active ? 'opacity-85' : 'text-on-surface-variant'].join(' ')}>
+                <span
+                    className={['font-body font-normal text-[13px] leading-[1.4]', active ? 'opacity-85' : 'text-on-surface-variant'].join(
+                        ' ',
+                    )}>
                     {planFeatures(plan).join(' · ')}
                 </span>
             </div>

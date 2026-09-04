@@ -154,7 +154,9 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
             href={href}
             className={[
                 'no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap',
-                active ? 'text-on-surface border-b-[3px] border-primary-container' : 'text-on-surface-variant border-b-[3px] border-transparent',
+                active
+                    ? 'text-on-surface border-b-[3px] border-primary-container'
+                    : 'text-on-surface-variant border-b-[3px] border-transparent',
             ].join(' ')}>
             {label}
         </Link>

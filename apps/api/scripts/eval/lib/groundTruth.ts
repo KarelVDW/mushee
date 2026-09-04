@@ -1,13 +1,13 @@
-import type { GroundTruth, Melody } from '../types';
+import type { GroundTruth, Melody } from '../types'
 
 /** MIDI note number -> frequency in Hz (A4 = 69 = 440 Hz). */
 export function midiToHz(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
+    return 440 * Math.pow(2, (midi - 69) / 12)
 }
 
 /** Frequency in Hz -> fractional MIDI note number. Inverse of midiToHz. */
 export function hzToMidi(hz: number): number {
-  return 69 + 12 * Math.log2(hz / 440);
+    return 69 + 12 * Math.log2(hz / 440)
 }
 
 /**
@@ -17,13 +17,13 @@ export function hzToMidi(hz: number): number {
  * doubles as ground truth.
  */
 export function melodyToTruth(melody: Melody, rootMidi: number): GroundTruth {
-  const secPerBeat = 60 / melody.bpm;
-  let t = 0;
-  const notes = melody.notes.map((n) => {
-    const durSec = n.beats * secPerBeat;
-    const note = { onsetSec: t, durSec, midi: rootMidi + n.degree };
-    t += durSec;
-    return note;
-  });
-  return { bpm: melody.bpm, notes };
+    const secPerBeat = 60 / melody.bpm
+    let t = 0
+    const notes = melody.notes.map((n) => {
+        const durSec = n.beats * secPerBeat
+        const note = { onsetSec: t, durSec, midi: rootMidi + n.degree }
+        t += durSec
+        return note
+    })
+    return { bpm: melody.bpm, notes }
 }

@@ -116,7 +116,8 @@ export function Footer({ width = 'app' }: FooterProps) {
     const linkClass = 'font-body font-normal text-[12px] leading-none text-on-surface-variant no-underline hover:text-on-surface'
     return (
         <footer className="bg-surface py-6 border-t border-outline-variant/15">
-            <div className={`${width === 'app' ? 'max-w-384' : 'max-w-320'} mx-auto px-8 flex justify-between items-center gap-6 flex-wrap`}>
+            <div
+                className={`${width === 'app' ? 'max-w-384' : 'max-w-320'} mx-auto px-8 flex justify-between items-center gap-6 flex-wrap`}>
                 <Wordmark size={20} />
                 <nav aria-label="Legal" className="flex items-center gap-5 flex-wrap">
                     <Link href="/privacy" className={linkClass}>
@@ -213,7 +214,9 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
             <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                 <div className="flex flex-col gap-1.5">
                     <ModalTitle id={titleId}>{title}</ModalTitle>
-                    {subtitle && <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{subtitle}</span>}
+                    {subtitle && (
+                        <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{subtitle}</span>
+                    )}
                 </div>
                 {onClose && (
                     <button

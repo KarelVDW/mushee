@@ -8,34 +8,34 @@
  */
 
 export interface SubscriptionSnapshot {
-  id: string;
-  status: string;
-  productId: string;
-  customerId?: string;
-  currentPeriodEnd?: Date | null;
-  cancelAtPeriodEnd?: boolean;
-  /** Polar's `modified_at` — used to drop out-of-order webhook retries. */
-  modifiedAt?: Date | null;
+    id: string
+    status: string
+    productId: string
+    customerId?: string
+    currentPeriodEnd?: Date | null
+    cancelAtPeriodEnd?: boolean
+    /** Polar's `modified_at` — used to drop out-of-order webhook retries. */
+    modifiedAt?: Date | null
 }
 
 export interface SubscriptionRowPatch {
-  tierId: string;
-  polarCustomerId: string | null;
-  polarSubscriptionId: string | null;
-  polarProductId: string | null;
-  status: string | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  lastPolarEventAt: Date | null;
+    tierId: string
+    polarCustomerId: string | null
+    polarSubscriptionId: string | null
+    polarProductId: string | null
+    status: string | null
+    currentPeriodEnd: Date | null
+    cancelAtPeriodEnd: boolean
+    lastPolarEventAt: Date | null
 }
 
 /** Statuses during which the customer keeps the paid tier. `past_due` keeps
  *  access while Polar retries payment; Polar emits `subscription.revoked`
  *  when it finally gives up. */
-const ENTITLED_STATUSES = new Set(['active', 'trialing', 'past_due']);
+const ENTITLED_STATUSES = new Set(['active', 'trialing', 'past_due'])
 
 export function isEntitledStatus(status: string): boolean {
-  return ENTITLED_STATUSES.has(status);
+    return ENTITLED_STATUSES.has(status)
 }
 
 /**
@@ -45,37 +45,37 @@ export function isEntitledStatus(status: string): boolean {
  * product) — the event should then be acknowledged but ignored.
  */
 export function patchFromSubscription(
-  sub: SubscriptionSnapshot,
-  resolveTier: (productId: string) => string | null,
+    sub: SubscriptionSnapshot,
+    resolveTier: (productId: string) => string | null,
 ): SubscriptionRowPatch | null {
-  const tierId = resolveTier(sub.productId);
-  if (!tierId) return null;
+    const tierId = resolveTier(sub.productId)
+    if (!tierId) return null
 
-  if (isEntitledStatus(sub.status)) {
+    if (isEntitledStatus(sub.status)) {
+        return {
+            tierId,
+            polarCustomerId: sub.customerId ?? null,
+            polarSubscriptionId: sub.id,
+            polarProductId: sub.productId,
+            status: sub.status,
+            currentPeriodEnd: sub.currentPeriodEnd ?? null,
+            cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
+            lastPolarEventAt: sub.modifiedAt ?? null,
+        }
+    }
+
+    // Revoked / ended: back to the free tier, keep the customer link for the
+    // billing history but clear the dead subscription.
     return {
-      tierId,
-      polarCustomerId: sub.customerId ?? null,
-      polarSubscriptionId: sub.id,
-      polarProductId: sub.productId,
-      status: sub.status,
-      currentPeriodEnd: sub.currentPeriodEnd ?? null,
-      cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
-      lastPolarEventAt: sub.modifiedAt ?? null,
-    };
-  }
-
-  // Revoked / ended: back to the free tier, keep the customer link for the
-  // billing history but clear the dead subscription.
-  return {
-    tierId: 'free',
-    polarCustomerId: sub.customerId ?? null,
-    polarSubscriptionId: null,
-    polarProductId: null,
-    status: sub.status,
-    currentPeriodEnd: null,
-    cancelAtPeriodEnd: false,
-    lastPolarEventAt: sub.modifiedAt ?? null,
-  };
+        tierId: 'free',
+        polarCustomerId: sub.customerId ?? null,
+        polarSubscriptionId: null,
+        polarProductId: null,
+        status: sub.status,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        lastPolarEventAt: sub.modifiedAt ?? null,
+    }
 }
 
 /**
@@ -85,34 +85,32 @@ export function patchFromSubscription(
  * has no active subscriptions we ever knew about (nothing to change).
  */
 export function patchFromCustomerState(
-  state: {
-    id: string;
-    activeSubscriptions: SubscriptionSnapshot[];
-  },
-  resolveTier: (productId: string) => string | null,
-  currentTierId: string | undefined,
+    state: {
+        id: string
+        activeSubscriptions: SubscriptionSnapshot[]
+    },
+    resolveTier: (productId: string) => string | null,
+    currentTierId: string | undefined,
 ): SubscriptionRowPatch | null {
-  const entitled = state.activeSubscriptions.find(
-    (sub) => resolveTier(sub.productId) !== null && isEntitledStatus(sub.status),
-  );
+    const entitled = state.activeSubscriptions.find((sub) => resolveTier(sub.productId) !== null && isEntitledStatus(sub.status))
 
-  if (entitled) {
-    return patchFromSubscription({ ...entitled, customerId: state.id }, resolveTier);
-  }
+    if (entitled) {
+        return patchFromSubscription({ ...entitled, customerId: state.id }, resolveTier)
+    }
 
-  // No active paid subscription. Only downgrade users who currently hold a
-  // paid tier — never touch 'beta' (waitlist users can't buy) or 'free'.
-  if (currentTierId === 'pro' || currentTierId === 'studio') {
-    return {
-      tierId: 'free',
-      polarCustomerId: state.id,
-      polarSubscriptionId: null,
-      polarProductId: null,
-      status: null,
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
-      lastPolarEventAt: null,
-    };
-  }
-  return null;
+    // No active paid subscription. Only downgrade users who currently hold a
+    // paid tier — never touch 'beta' (waitlist users can't buy) or 'free'.
+    if (currentTierId === 'pro' || currentTierId === 'studio') {
+        return {
+            tierId: 'free',
+            polarCustomerId: state.id,
+            polarSubscriptionId: null,
+            polarProductId: null,
+            status: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            lastPolarEventAt: null,
+        }
+    }
+    return null
 }

@@ -68,7 +68,9 @@ export function Toaster() {
     if (visible.length === 0) return null
 
     return (
-        <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] flex flex-col items-center gap-3 pointer-events-none" role="status">
+        <div
+            className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)] flex flex-col items-center gap-3 pointer-events-none"
+            role="status">
             {visible.map((toast) => (
                 <div
                     key={toast.id}

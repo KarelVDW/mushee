@@ -5,3 +5,13 @@ pnpm-lock.yaml
 out
 build
 apps/api/data
+
+# Vendored / generated / machine-written — not hand-edited source
+**/.venv-*
+.claude
+**/next-env.d.ts
+apps/api/model-*
+apps/api/scripts/eval/annotations
+apps/api/scripts/eval/benchmarks/results
+apps/web/design/preview
+apps/web/design/ui_kits

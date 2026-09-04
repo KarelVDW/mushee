@@ -45,27 +45,19 @@
  *        --dataset=context/whistled-high-register
  */
 
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'fs';
-import { basename, join, resolve } from 'path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { basename, join, resolve } from 'path'
 
-import { type DraftNote, draftNotes, trackSinusoid, trackYin } from '../lib/sineTrack';
-import { wavToFloat } from '../lib/wav';
-import type { GroundTruth, TruthNote } from '../types';
+import { type DraftNote, draftNotes, trackSinusoid, trackYin } from '../lib/sineTrack'
+import { wavToFloat } from '../lib/wav'
+import type { GroundTruth, TruthNote } from '../types'
 
-const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real');
-const ANNOTATIONS = resolve(__dirname, '../annotations');
+const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real')
+const ANNOTATIONS = resolve(__dirname, '../annotations')
 
 function envNum(key: string, fallback: number): number {
-  const v = Number(process.env[key]);
-  return Number.isFinite(v) && process.env[key] !== '' && process.env[key] !== undefined ? v : fallback;
+    const v = Number(process.env[key])
+    return Number.isFinite(v) && process.env[key] !== '' && process.env[key] !== undefined ? v : fallback
 }
 
 /**
@@ -75,19 +67,19 @@ function envNum(key: string, fallback: number): number {
  * rather than the fundamental, which is what `ALIGN_OCTAVE_INVARIANT` is for.
  */
 const TRACK = {
-  fftSize: 2048,
-  hopSec: 0.01,
-  minHz: envNum('ALIGN_MIN_HZ', 300),
-  maxHz: envNum('ALIGN_MAX_HZ', 5000),
-  minTonality: envNum('ALIGN_MIN_TONALITY', 0.3),
-  minLevel: 0.05,
-};
+    fftSize: 2048,
+    hopSec: 0.01,
+    minHz: envNum('ALIGN_MIN_HZ', 300),
+    maxHz: envNum('ALIGN_MAX_HZ', 5000),
+    minTonality: envNum('ALIGN_MIN_TONALITY', 0.3),
+    minLevel: 0.05,
+}
 /**
  * Note floor for the drafted sequence. Higher than the whistle-real default
  * (60 ms) because a metronome performance has no notes that short, and the
  * looser floor only invites the aligner to match vibrato wobble as a note.
  */
-const SEGMENT = { minNoteSec: envNum('ALIGN_MIN_NOTE_SEC', 0.1), maxDropoutSec: 0.06, medianFrames: 5 };
+const SEGMENT = { minNoteSec: envNum('ALIGN_MIN_NOTE_SEC', 0.1), maxDropoutSec: 0.06, medianFrames: 5 }
 /**
  * DTW pitch cost (and key fit) modulo the octave — for the FFT-peak drafter on a
  * harmonic-rich source, where the strongest peak hops between f0 and 2·f0
@@ -97,20 +89,19 @@ const SEGMENT = { minNoteSec: envNum('ALIGN_MIN_NOTE_SEC', 0.1), maxDropoutSec: 
  * which folding erased (measured as a spurious 0.21 octave-error rate on the
  * pipeline until the octave was detected instead).
  */
-const OCTAVE_INVARIANT = process.env.ALIGN_OCTAVE_INVARIANT === '1';
+const OCTAVE_INVARIANT = process.env.ALIGN_OCTAVE_INVARIANT === '1'
 /**
  * Which drafter reads the audio: the FFT-peak tracker (whistling — one partial)
  * or the YIN autocorrelation tracker (`ALIGN_TRACKER=yin`; humming — harmonic-rich,
  * where the strongest peak is often a harmonic). Both are independent of the
  * pipeline's CREPE decode, which is the point of drafting truth this way.
  */
-const TRACKER: 'sine' | 'yin' = process.env.ALIGN_TRACKER === 'yin' ? 'yin' : 'sine';
+const TRACKER: 'sine' | 'yin' = process.env.ALIGN_TRACKER === 'yin' ? 'yin' : 'sine'
 const track = (samples: Float32Array, sampleRate: number): ReturnType<typeof trackSinusoid> =>
-  TRACKER === 'yin' ? trackYin(samples, sampleRate, TRACK) : trackSinusoid(samples, sampleRate, TRACK);
+    TRACKER === 'yin' ? trackYin(samples, sampleRate, TRACK) : trackSinusoid(samples, sampleRate, TRACK)
 
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const noteName = (midi: number): string =>
-  `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const noteName = (midi: number): string => `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`
 
 /**
  * In which KEY did the performer actually whistle it?
@@ -131,39 +122,37 @@ const noteName = (midi: number): string =>
  * is reported so a human looks at it rather than trusting the fit.
  */
 function detectTransposition(
-  frames: ReturnType<typeof trackSinusoid>,
-  notes: TruthNote[],
+    frames: ReturnType<typeof trackSinusoid>,
+    notes: TruthNote[],
 ): { semitones: number; residualCents: number; residualP90Cents: number; samples: number } {
-  const voiced = frames.filter((f) => f.hz);
-  const midiOf = (hz: number) => 69 + 12 * Math.log2(hz / 440);
-  const diffs: number[] = [];
-  for (const n of notes) {
-    const a = n.onsetSec + n.durSec * 0.25;
-    const b = n.onsetSec + n.durSec * 0.75;
-    const w = voiced
-      .filter((f) => f.timeSec >= a && f.timeSec <= b)
-      .map((f) => midiOf(f.hz as number));
-    if (w.length < 3) continue;
-    w.sort((x, y) => x - y);
-    let d = w[Math.floor(w.length / 2)] - n.midi;
-    // Octave-invariant mode: the drafter's harmonic hops are not a key change.
-    if (OCTAVE_INVARIANT) d = ((d % 12) + 18) % 12 - 6;
-    diffs.push(d);
-  }
-  if (!diffs.length) {
-    return { semitones: 0, residualCents: 0, residualP90Cents: 0, samples: 0 };
-  }
-  // Mean, not median: every note carries equal evidence about one shared key,
-  // and the median throws away most of it on a nine-note clip.
-  const mean = diffs.reduce((s, d) => s + d, 0) / diffs.length;
-  const semitones = Math.round(mean);
-  const resid = diffs.map((d) => Math.abs(d - mean) * 100).sort((a, b) => a - b);
-  return {
-    semitones,
-    residualCents: Math.round((mean - semitones) * 100),
-    residualP90Cents: Math.round(resid[Math.floor(resid.length * 0.9)]),
-    samples: diffs.length,
-  };
+    const voiced = frames.filter((f) => f.hz)
+    const midiOf = (hz: number) => 69 + 12 * Math.log2(hz / 440)
+    const diffs: number[] = []
+    for (const n of notes) {
+        const a = n.onsetSec + n.durSec * 0.25
+        const b = n.onsetSec + n.durSec * 0.75
+        const w = voiced.filter((f) => f.timeSec >= a && f.timeSec <= b).map((f) => midiOf(f.hz as number))
+        if (w.length < 3) continue
+        w.sort((x, y) => x - y)
+        let d = w[Math.floor(w.length / 2)] - n.midi
+        // Octave-invariant mode: the drafter's harmonic hops are not a key change.
+        if (OCTAVE_INVARIANT) d = (((d % 12) + 18) % 12) - 6
+        diffs.push(d)
+    }
+    if (!diffs.length) {
+        return { semitones: 0, residualCents: 0, residualP90Cents: 0, samples: 0 }
+    }
+    // Mean, not median: every note carries equal evidence about one shared key,
+    // and the median throws away most of it on a nine-note clip.
+    const mean = diffs.reduce((s, d) => s + d, 0) / diffs.length
+    const semitones = Math.round(mean)
+    const resid = diffs.map((d) => Math.abs(d - mean) * 100).sort((a, b) => a - b)
+    return {
+        semitones,
+        residualCents: Math.round((mean - semitones) * 100),
+        residualP90Cents: Math.round(resid[Math.floor(resid.length * 0.9)]),
+        samples: diffs.length,
+    }
 }
 
 /**
@@ -178,229 +167,224 @@ function detectTransposition(
  * is the moment the performer started the note.
  */
 function alignSequences(drafted: DraftNote[], prescribed: TruthNote[]): (DraftNote[] | null)[] {
-  const n = drafted.length;
-  const m = prescribed.length;
-  if (!n || !m) return prescribed.map(() => null);
+    const n = drafted.length
+    const m = prescribed.length
+    if (!n || !m) return prescribed.map(() => null)
 
-  const cost = (i: number, j: number): number => {
-    const d = Math.abs(drafted[i].midi - prescribed[j].midi);
-    return Math.min(6, OCTAVE_INVARIANT ? Math.min(d, Math.abs(d - 12), Math.abs(d - 24)) : d);
-  };
-  const INF = Number.POSITIVE_INFINITY;
-  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(INF));
-  const from: string[][] = Array.from({ length: n + 1 }, () => new Array<string>(m + 1).fill(''));
-  dp[0][0] = 0;
-
-  for (let i = 1; i <= n; i += 1) {
-    for (let j = 1; j <= m; j += 1) {
-      const c = cost(i - 1, j - 1);
-      // diag = this drafted note IS this prescribed note;
-      // up   = an extra drafted note folded into the same prescribed note;
-      // left = a prescribed note with no drafted note of its own (missed).
-      const diag = dp[i - 1][j - 1] + c;
-      const up = dp[i - 1][j] + c;
-      const left = dp[i][j - 1] + 3;
-      const best = Math.min(diag, up, left);
-      dp[i][j] = best;
-      from[i][j] = best === diag ? 'diag' : best === up ? 'up' : 'left';
+    const cost = (i: number, j: number): number => {
+        const d = Math.abs(drafted[i].midi - prescribed[j].midi)
+        return Math.min(6, OCTAVE_INVARIANT ? Math.min(d, Math.abs(d - 12), Math.abs(d - 24)) : d)
     }
-  }
+    const INF = Number.POSITIVE_INFINITY
+    const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(INF))
+    const from: string[][] = Array.from({ length: n + 1 }, () => new Array<string>(m + 1).fill(''))
+    dp[0][0] = 0
 
-  const assigned: DraftNote[][] = Array.from({ length: m }, () => []);
-  let i = n;
-  let j = m;
-  while (i > 0 && j > 0) {
-    const move = from[i][j];
-    if (move === 'left') {
-      j -= 1;
-    } else {
-      assigned[j - 1].push(drafted[i - 1]);
-      if (move === 'diag') j -= 1;
-      i -= 1;
+    for (let i = 1; i <= n; i += 1) {
+        for (let j = 1; j <= m; j += 1) {
+            const c = cost(i - 1, j - 1)
+            // diag = this drafted note IS this prescribed note;
+            // up   = an extra drafted note folded into the same prescribed note;
+            // left = a prescribed note with no drafted note of its own (missed).
+            const diag = dp[i - 1][j - 1] + c
+            const up = dp[i - 1][j] + c
+            const left = dp[i][j - 1] + 3
+            const best = Math.min(diag, up, left)
+            dp[i][j] = best
+            from[i][j] = best === diag ? 'diag' : best === up ? 'up' : 'left'
+        }
     }
-  }
-  return assigned.map((a) => (a.length ? a.reverse() : null));
+
+    const assigned: DraftNote[][] = Array.from({ length: m }, () => [])
+    let i = n
+    let j = m
+    while (i > 0 && j > 0) {
+        const move = from[i][j]
+        if (move === 'left') {
+            j -= 1
+        } else {
+            assigned[j - 1].push(drafted[i - 1])
+            if (move === 'diag') j -= 1
+            i -= 1
+        }
+    }
+    return assigned.map((a) => (a.length ? a.reverse() : null))
 }
 
 interface ClipReport {
-  clip: string;
-  octaveShift: number;
-  residualCents: number;
-  matched: number;
-  total: number;
-  medianShiftMs: number;
+    clip: string
+    octaveShift: number
+    residualCents: number
+    matched: number
+    total: number
+    medianShiftMs: number
 }
 
 function processDataset(datasetPath: string, outId: string): void {
-  const srcDir = join(REAL_ROOT, datasetPath);
-  if (!existsSync(srcDir)) throw new Error(`no dataset at ${srcDir}`);
-  const tier = datasetPath.includes('/') ? datasetPath.split('/')[0] : 'context';
-  const outDir = join(REAL_ROOT, tier, outId);
-  const annDir = join(ANNOTATIONS, outId);
-  rmSync(outDir, { recursive: true, force: true });
-  mkdirSync(outDir, { recursive: true });
-  mkdirSync(annDir, { recursive: true });
+    const srcDir = join(REAL_ROOT, datasetPath)
+    if (!existsSync(srcDir)) throw new Error(`no dataset at ${srcDir}`)
+    const tier = datasetPath.includes('/') ? datasetPath.split('/')[0] : 'context'
+    const outDir = join(REAL_ROOT, tier, outId)
+    const annDir = join(ANNOTATIONS, outId)
+    rmSync(outDir, { recursive: true, force: true })
+    mkdirSync(outDir, { recursive: true })
+    mkdirSync(annDir, { recursive: true })
 
-  const srcManifest = existsSync(join(srcDir, 'dataset.json'))
-    ? (JSON.parse(readFileSync(join(srcDir, 'dataset.json'), 'utf8')) as Record<string, unknown>)
-    : {};
+    const srcManifest = existsSync(join(srcDir, 'dataset.json'))
+        ? (JSON.parse(readFileSync(join(srcDir, 'dataset.json'), 'utf8')) as Record<string, unknown>)
+        : {}
 
-  const clips = readdirSync(srcDir)
-    .filter((f) => f.endsWith('.truth.json'))
-    .map((f) => f.replace('.truth.json', ''))
-    .sort();
+    const clips = readdirSync(srcDir)
+        .filter((f) => f.endsWith('.truth.json'))
+        .map((f) => f.replace('.truth.json', ''))
+        .sort()
 
-  const reports: ClipReport[] = [];
-  let totalNotes = 0;
+    const reports: ClipReport[] = []
+    let totalNotes = 0
 
-  for (const clip of clips) {
-    const wav = join(srcDir, `${clip}__real.wav`);
-    if (!existsSync(wav)) {
-      console.warn(`  ! ${clip}: no audio, skipped`);
-      continue;
+    for (const clip of clips) {
+        const wav = join(srcDir, `${clip}__real.wav`)
+        if (!existsSync(wav)) {
+            console.warn(`  ! ${clip}: no audio, skipped`)
+            continue
+        }
+        const prescribed = JSON.parse(readFileSync(join(srcDir, `${clip}.truth.json`), 'utf8')) as GroundTruth
+        const { samples, sampleRate } = wavToFloat(readFileSync(wav))
+        const frames = track(samples, sampleRate)
+        const drafted = draftNotes(frames, TRACK.hopSec, SEGMENT)
+
+        // Two passes, because the two unknowns are entangled: the transposition is
+        // measured inside each note's time window, and the prescribed windows are in
+        // the WRONG PLACE by 100–200 ms (that is the other half of the problem). A
+        // first estimate from the score's own windows is good enough to align on;
+        // re-measuring inside the ALIGNED windows is what makes it right. Measured
+        // difference on these clips: the one-pass estimate mis-keys three of six
+        // (and inflates the per-note residual p90 to 255 ¢ on clip-05, where the
+        // two-pass estimate reports 62 ¢).
+        let transposition = detectTransposition(frames, prescribed.notes)
+        let shifted = prescribed.notes.map((n) => ({ ...n, midi: n.midi + transposition.semitones }))
+        let assignment = alignSequences(drafted, shifted)
+
+        const collect = (assign: (DraftNote[] | null)[], target: TruthNote[]): { notes: TruthNote[]; shifts: number[] } => {
+            const out: TruthNote[] = []
+            const sh: number[] = []
+            for (let k = 0; k < target.length; k += 1) {
+                const group = assign[k]
+                if (!group) continue
+                const onsetSec = group[0].onsetSec
+                const last = group[group.length - 1]
+                out.push({ onsetSec, durSec: last.onsetSec + last.durSec - onsetSec, midi: target[k].midi })
+                sh.push(onsetSec - target[k].onsetSec)
+            }
+            return { notes: out, shifts: sh }
+        }
+
+        const firstPass = collect(assignment, shifted)
+        if (firstPass.notes.length >= 3) {
+            // Re-measure the key inside the windows the alignment just found, then
+            // re-align with it. `detectTransposition` reports the shift relative to
+            // the notes it is given, so feeding it the already-shifted notes yields a
+            // CORRECTION to apply on top.
+            const refined = detectTransposition(frames, firstPass.notes)
+            if (refined.semitones !== 0) {
+                transposition = {
+                    ...refined,
+                    semitones: transposition.semitones + refined.semitones,
+                }
+                shifted = prescribed.notes.map((n) => ({ ...n, midi: n.midi + transposition.semitones }))
+                assignment = alignSequences(drafted, shifted)
+            } else {
+                transposition = { ...transposition, residualCents: refined.residualCents, residualP90Cents: refined.residualP90Cents }
+            }
+        }
+
+        const { notes, shifts } = collect(assignment, shifted)
+        notes.sort((a, b) => a.onsetSec - b.onsetSec)
+        shifts.sort((a, b) => a - b)
+        const octave = transposition
+
+        const truth: GroundTruth = { bpm: prescribed.bpm, notes }
+        writeFileSync(join(outDir, `${clip}.truth.json`), `${JSON.stringify(truth, null, 2)}\n`)
+        copyFileSync(wav, join(outDir, `${clip}__real.wav`))
+
+        writeFileSync(
+            join(annDir, `${clip}.labels.tsv`),
+            notes.map((n) => `${n.onsetSec.toFixed(6)}\t${(n.onsetSec + n.durSec).toFixed(6)}\t${noteName(n.midi)}`).join('\n') +
+                (notes.length ? '\n' : ''),
+        )
+        writeFileSync(
+            join(annDir, `${clip}.meta.json`),
+            `${JSON.stringify(
+                {
+                    clip,
+                    dataset: outId,
+                    verifiedBy: null,
+                    verifiedAt: null,
+                    draftedBy: `fetch/align-prescribed-truth.ts (score identity + audio timing via ${TRACKER === 'yin' ? 'YIN' : 'FFT-peak'} drafter, DTW-aligned)`,
+                    transpositionSemitones: octave.semitones,
+                    fitResidualCents: octave.residualCents,
+                    perNoteResidualP90Cents: octave.residualP90Cents,
+                    notesAligned: notes.length,
+                    notesPrescribed: prescribed.notes.length,
+                    audio: { sampleRate, durationSec: samples.length / sampleRate },
+                    source: `${datasetPath}/${clip}`,
+                },
+                null,
+                2,
+            )}\n`,
+        )
+
+        totalNotes += notes.length
+        reports.push({
+            clip,
+            octaveShift: octave.semitones,
+            residualCents: octave.residualCents,
+            matched: notes.length,
+            total: prescribed.notes.length,
+            medianShiftMs: shifts.length ? Math.round(1000 * shifts[Math.floor(shifts.length / 2)]) : 0,
+        })
+        console.log(
+            `  ${clip}: transposed ${octave.semitones >= 0 ? '+' : ''}${octave.semitones} st ` +
+                `(fit residual ${octave.residualCents >= 0 ? '+' : ''}${octave.residualCents} ¢, ` +
+                `per-note p90 ${octave.residualP90Cents} ¢${octave.residualP90Cents > 50 ? ' ⚠ CHECK BY EAR' : ''}), ` +
+                `aligned ${notes.length}/${prescribed.notes.length}, ` +
+                `onsets moved ${reports[reports.length - 1].medianShiftMs >= 0 ? '+' : ''}` +
+                `${reports[reports.length - 1].medianShiftMs} ms (median)`,
+        )
     }
-    const prescribed = JSON.parse(
-      readFileSync(join(srcDir, `${clip}.truth.json`), 'utf8'),
-    ) as GroundTruth;
-    const { samples, sampleRate } = wavToFloat(readFileSync(wav));
-    const frames = track(samples, sampleRate);
-    const drafted = draftNotes(frames, TRACK.hopSec, SEGMENT);
-
-    // Two passes, because the two unknowns are entangled: the transposition is
-    // measured inside each note's time window, and the prescribed windows are in
-    // the WRONG PLACE by 100–200 ms (that is the other half of the problem). A
-    // first estimate from the score's own windows is good enough to align on;
-    // re-measuring inside the ALIGNED windows is what makes it right. Measured
-    // difference on these clips: the one-pass estimate mis-keys three of six
-    // (and inflates the per-note residual p90 to 255 ¢ on clip-05, where the
-    // two-pass estimate reports 62 ¢).
-    let transposition = detectTransposition(frames, prescribed.notes);
-    let shifted = prescribed.notes.map((n) => ({ ...n, midi: n.midi + transposition.semitones }));
-    let assignment = alignSequences(drafted, shifted);
-
-    const collect = (
-      assign: (DraftNote[] | null)[],
-      target: TruthNote[],
-    ): { notes: TruthNote[]; shifts: number[] } => {
-      const out: TruthNote[] = [];
-      const sh: number[] = [];
-      for (let k = 0; k < target.length; k += 1) {
-        const group = assign[k];
-        if (!group) continue;
-        const onsetSec = group[0].onsetSec;
-        const last = group[group.length - 1];
-        out.push({ onsetSec, durSec: last.onsetSec + last.durSec - onsetSec, midi: target[k].midi });
-        sh.push(onsetSec - target[k].onsetSec);
-      }
-      return { notes: out, shifts: sh };
-    };
-
-    const firstPass = collect(assignment, shifted);
-    if (firstPass.notes.length >= 3) {
-      // Re-measure the key inside the windows the alignment just found, then
-      // re-align with it. `detectTransposition` reports the shift relative to
-      // the notes it is given, so feeding it the already-shifted notes yields a
-      // CORRECTION to apply on top.
-      const refined = detectTransposition(frames, firstPass.notes);
-      if (refined.semitones !== 0) {
-        transposition = {
-          ...refined,
-          semitones: transposition.semitones + refined.semitones,
-        };
-        shifted = prescribed.notes.map((n) => ({ ...n, midi: n.midi + transposition.semitones }));
-        assignment = alignSequences(drafted, shifted);
-      } else {
-        transposition = { ...transposition, residualCents: refined.residualCents, residualP90Cents: refined.residualP90Cents };
-      }
-    }
-
-    const { notes, shifts } = collect(assignment, shifted);
-    notes.sort((a, b) => a.onsetSec - b.onsetSec);
-    shifts.sort((a, b) => a - b);
-    const octave = transposition;
-
-    const truth: GroundTruth = { bpm: prescribed.bpm, notes };
-    writeFileSync(join(outDir, `${clip}.truth.json`), `${JSON.stringify(truth, null, 2)}\n`);
-    copyFileSync(wav, join(outDir, `${clip}__real.wav`));
 
     writeFileSync(
-      join(annDir, `${clip}.labels.tsv`),
-      notes
-        .map((n) => `${n.onsetSec.toFixed(6)}\t${(n.onsetSec + n.durSec).toFixed(6)}\t${noteName(n.midi)}`)
-        .join('\n') + (notes.length ? '\n' : ''),
-    );
-    writeFileSync(
-      join(annDir, `${clip}.meta.json`),
-      `${JSON.stringify(
-        {
-          clip,
-          dataset: outId,
-          verifiedBy: null,
-          verifiedAt: null,
-          draftedBy: `fetch/align-prescribed-truth.ts (score identity + audio timing via ${TRACKER === 'yin' ? 'YIN' : 'FFT-peak'} drafter, DTW-aligned)`,
-          transpositionSemitones: octave.semitones,
-          fitResidualCents: octave.residualCents,
-          perNoteResidualP90Cents: octave.residualP90Cents,
-          notesAligned: notes.length,
-          notesPrescribed: prescribed.notes.length,
-          audio: { sampleRate, durationSec: samples.length / sampleRate },
-          source: `${datasetPath}/${clip}`,
-        },
-        null,
-        2,
-      )}\n`,
-    );
+        join(outDir, 'dataset.json'),
+        `${JSON.stringify(
+            {
+                ...srcManifest,
+                id: outId,
+                label: `${typeof srcManifest.label === 'string' ? srcManifest.label : outId} — performance-aligned`,
+                // Onsets come from our own tracker: derived until a human signs off.
+                noteTruthDerived: true,
+                annotator:
+                    'fetch/align-prescribed-truth.ts — pitch identity from the prescribed melody (octave detected per clip), timing from the audio',
+                derivedFrom: datasetPath,
+                clips: reports.length,
+                totalNotes,
+                transpositions: reports.map((r) => ({ clip: r.clip, semitones: r.octaveShift, residualCents: r.residualCents })),
+                note: 'The source dataset scores the performer against a metronome, not the pipeline (see fetch/align-prescribed-truth.ts). This copy keeps the prescribed note identities and takes every onset from the audio. Still derived — verify with fetch/import-note-labels.ts --verified-by before letting it gate anything.',
+            },
+            null,
+            2,
+        )}\n`,
+    )
 
-    totalNotes += notes.length;
-    reports.push({
-      clip,
-      octaveShift: octave.semitones,
-      residualCents: octave.residualCents,
-      matched: notes.length,
-      total: prescribed.notes.length,
-      medianShiftMs: shifts.length ? Math.round(1000 * shifts[Math.floor(shifts.length / 2)]) : 0,
-    });
-    console.log(
-      `  ${clip}: transposed ${octave.semitones >= 0 ? '+' : ''}${octave.semitones} st ` +
-        `(fit residual ${octave.residualCents >= 0 ? '+' : ''}${octave.residualCents} ¢, ` +
-        `per-note p90 ${octave.residualP90Cents} ¢${octave.residualP90Cents > 50 ? ' ⚠ CHECK BY EAR' : ''}), ` +
-        `aligned ${notes.length}/${prescribed.notes.length}, ` +
-        `onsets moved ${reports[reports.length - 1].medianShiftMs >= 0 ? '+' : ''}` +
-        `${reports[reports.length - 1].medianShiftMs} ms (median)`,
-    );
-  }
-
-  writeFileSync(
-    join(outDir, 'dataset.json'),
-    `${JSON.stringify(
-      {
-        ...srcManifest,
-        id: outId,
-        label: `${typeof srcManifest.label === 'string' ? srcManifest.label : outId} — performance-aligned`,
-        // Onsets come from our own tracker: derived until a human signs off.
-        noteTruthDerived: true,
-        annotator: 'fetch/align-prescribed-truth.ts — pitch identity from the prescribed melody (octave detected per clip), timing from the audio',
-        derivedFrom: datasetPath,
-        clips: reports.length,
-        totalNotes,
-        transpositions: reports.map((r) => ({ clip: r.clip, semitones: r.octaveShift, residualCents: r.residualCents })),
-        note: 'The source dataset scores the performer against a metronome, not the pipeline (see fetch/align-prescribed-truth.ts). This copy keeps the prescribed note identities and takes every onset from the audio. Still derived — verify with fetch/import-note-labels.ts --verified-by before letting it gate anything.',
-      },
-      null,
-      2,
-    )}\n`,
-  );
-
-  console.log(`\n  → ${reports.length} clips / ${totalNotes} notes in ${outDir}`);
-  console.log(`  → label TSVs for verification in ${annDir}`);
+    console.log(`\n  → ${reports.length} clips / ${totalNotes} notes in ${outDir}`)
+    console.log(`  → label TSVs for verification in ${annDir}`)
 }
 
 function main(): void {
-  const arg = process.argv.slice(2).find((a) => a.startsWith('--dataset='));
-  const datasetPath = arg ? arg.slice('--dataset='.length) : 'context/whistled-high-register';
-  const outArg = process.argv.slice(2).find((a) => a.startsWith('--out='));
-  const outId = outArg ? outArg.slice('--out='.length) : `${basename(datasetPath)}-aligned`;
-  processDataset(datasetPath, outId);
+    const arg = process.argv.slice(2).find((a) => a.startsWith('--dataset='))
+    const datasetPath = arg ? arg.slice('--dataset='.length) : 'context/whistled-high-register'
+    const outArg = process.argv.slice(2).find((a) => a.startsWith('--out='))
+    const outId = outArg ? outArg.slice('--out='.length) : `${basename(datasetPath)}-aligned`
+    processDataset(datasetPath, outId)
 }
 
-main();
+main()

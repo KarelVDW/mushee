@@ -46,7 +46,12 @@ export default function OnboardingPage() {
         : PLAN_TIERS
     const betaApiPlan = apiPlans?.find((p) => p.id === BETA_PLAN.id)
     const betaPlan = betaApiPlan
-        ? { ...BETA_PLAN, name: betaApiPlan.name, dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits, maxScores: betaApiPlan.maxScores }
+        ? {
+              ...BETA_PLAN,
+              name: betaApiPlan.name,
+              dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits,
+              maxScores: betaApiPlan.maxScores,
+          }
         : BETA_PLAN
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null

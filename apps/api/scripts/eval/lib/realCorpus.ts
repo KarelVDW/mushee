@@ -31,12 +31,12 @@
  * dataset's fetcher migrates it.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'fs'
+import { join } from 'path'
 
-import type { SourceKind } from '../types';
+import type { SourceKind } from '../types'
 
-export type CorpusTier = 'benchmark' | 'context';
+export type CorpusTier = 'benchmark' | 'context'
 
 /**
  * What a human would say is being recorded — the axis the product's benchmark
@@ -45,156 +45,149 @@ export type CorpusTier = 'benchmark' | 'context';
  * different products for the user. Declared as `material` in dataset.json;
  * falls back to a derivation from `kind` for manifests that predate it.
  */
-export type Material =
-  | 'singing'
-  | 'humming'
-  | 'whistling'
-  | 'instrument'
-  | 'vocal-percussion';
+export type Material = 'singing' | 'humming' | 'whistling' | 'instrument' | 'vocal-percussion'
 
 export interface RealDataset {
-  id: string;
-  dir: string;
-  label: string;
-  kind: SourceKind;
-  material: Material;
-  instrumentId?: string;
-  /** Licence as recorded by the fetcher (e.g. `CC-BY-4.0`, `CC-BY-NC-4.0`). */
-  license?: string;
-  /**
-   * The licence permits our internal evaluation but not redistribution or
-   * product incorporation (NC / research-only terms). Adopted under the
-   * product owner's 2026-09-01 standard — "defensible use, we redistribute
-   * nothing" — and shown as such wherever the dataset's numbers appear. Never a
-   * benchmark-tier dataset: numbers from it stay context-only.
-   */
-  licenceRestricted?: boolean;
-  /**
-   * `<tier>/<id>` of the dataset this one was derived from by
-   * `fetch/align-prescribed-truth.ts`. The source keeps the score's timing as
-   * its truth (known-wrong on purpose — it exists to be repaired), so wherever a
-   * derived sibling is present the source must not stand in for the material's
-   * number (the benchmark's provisional rows skip it).
-   */
-  derivedFrom?: string;
-  /** Which tier directory the dataset lives in — see the module doc above. */
-  tier: CorpusTier;
-  /**
-   * Which half of the SOURCE corpus's own published split these clips are —
-   * 'test' marks a held-out external yardstick (e.g. n20emv2-test) that must
-   * never be swept against: its only value is confirming a decision already
-   * made, and tuning on it destroys that.
-   */
-  corpusSplit?: string;
-  /**
-   * The dataset ships no note events: its `notes` were *derived* from a
-   * frame-level pitch annotation by rounding to semitones and grouping runs
-   * (mir-qbsh). That is the same algorithm family as our own segmenter, so
-   * note-level scores there reward reproducing our own artefact — a better
-   * segmenter measures *worse*. Consumers should exclude such datasets from
-   * note-F1 aggregates (run-eval.ts does by default; EVAL_INCLUDE_UNTRUSTED=1
-   * opts back in) while still using the audio for f0 / melody metrics and
-   * realism checks. Declared by `noteTruthDerived` in the dataset's
-   * dataset.json so filtering is a property, never a hard-coded dataset name.
-   */
-  noteTruthDerived?: boolean;
-  /**
-   * The dataset carries no pitch information at all — only onset timestamps
-   * (e.g. AVP's vocal-percussion CSVs: onset + drum-class label, no MIDI).
-   * `TruthNote.midi` is filled with a placeholder so the type still holds,
-   * but note-F1/chroma/octave-error and the onset-class taxonomy (which all
-   * assume real pitch) are meaningless for these clips and must stay out of
-   * the pooled aggregates. The clip's onset-only score (MIREX COn, pitch
-   * ignored) is the number that means something — see `scoreOnsets` in
-   * lib/metrics.ts and its use in run-eval.ts. Declared by `pitchless` in the
-   * dataset's dataset.json.
-   */
-  pitchless?: boolean;
-  /**
-   * The AUDIO is real recorded instrument tone, but the PERFORMANCE was
-   * assembled by us: isolated single notes spliced into a melody (TinySOL). The
-   * truth is therefore exact rather than annotated — we placed every onset — so
-   * this is the opposite failure mode from `noteTruthDerived`: nothing about the
-   * labels is untrustworthy, but nothing about the phrasing is human either.
-   * There is no performer timing, no legato shaping and no expressive rubato, so
-   * pooling these clips into the real corpus's headline would make it easier for
-   * a reason that has nothing to do with the pipeline. They are kept out of the
-   * pooled aggregate and reported on their own, which is what they are for:
-   * answering register questions (the `very-high` band has no other real
-   * pitched audio at all) without moving a number anyone compares over time.
-   * Declared by `constructedPerformance` in dataset.json.
-   */
-  constructedPerformance?: boolean;
+    id: string
+    dir: string
+    label: string
+    kind: SourceKind
+    material: Material
+    instrumentId?: string
+    /** Licence as recorded by the fetcher (e.g. `CC-BY-4.0`, `CC-BY-NC-4.0`). */
+    license?: string
+    /**
+     * The licence permits our internal evaluation but not redistribution or
+     * product incorporation (NC / research-only terms). Adopted under the
+     * product owner's 2026-09-01 standard — "defensible use, we redistribute
+     * nothing" — and shown as such wherever the dataset's numbers appear. Never a
+     * benchmark-tier dataset: numbers from it stay context-only.
+     */
+    licenceRestricted?: boolean
+    /**
+     * `<tier>/<id>` of the dataset this one was derived from by
+     * `fetch/align-prescribed-truth.ts`. The source keeps the score's timing as
+     * its truth (known-wrong on purpose — it exists to be repaired), so wherever a
+     * derived sibling is present the source must not stand in for the material's
+     * number (the benchmark's provisional rows skip it).
+     */
+    derivedFrom?: string
+    /** Which tier directory the dataset lives in — see the module doc above. */
+    tier: CorpusTier
+    /**
+     * Which half of the SOURCE corpus's own published split these clips are —
+     * 'test' marks a held-out external yardstick (e.g. n20emv2-test) that must
+     * never be swept against: its only value is confirming a decision already
+     * made, and tuning on it destroys that.
+     */
+    corpusSplit?: string
+    /**
+     * The dataset ships no note events: its `notes` were *derived* from a
+     * frame-level pitch annotation by rounding to semitones and grouping runs
+     * (mir-qbsh). That is the same algorithm family as our own segmenter, so
+     * note-level scores there reward reproducing our own artefact — a better
+     * segmenter measures *worse*. Consumers should exclude such datasets from
+     * note-F1 aggregates (run-eval.ts does by default; EVAL_INCLUDE_UNTRUSTED=1
+     * opts back in) while still using the audio for f0 / melody metrics and
+     * realism checks. Declared by `noteTruthDerived` in the dataset's
+     * dataset.json so filtering is a property, never a hard-coded dataset name.
+     */
+    noteTruthDerived?: boolean
+    /**
+     * The dataset carries no pitch information at all — only onset timestamps
+     * (e.g. AVP's vocal-percussion CSVs: onset + drum-class label, no MIDI).
+     * `TruthNote.midi` is filled with a placeholder so the type still holds,
+     * but note-F1/chroma/octave-error and the onset-class taxonomy (which all
+     * assume real pitch) are meaningless for these clips and must stay out of
+     * the pooled aggregates. The clip's onset-only score (MIREX COn, pitch
+     * ignored) is the number that means something — see `scoreOnsets` in
+     * lib/metrics.ts and its use in run-eval.ts. Declared by `pitchless` in the
+     * dataset's dataset.json.
+     */
+    pitchless?: boolean
+    /**
+     * The AUDIO is real recorded instrument tone, but the PERFORMANCE was
+     * assembled by us: isolated single notes spliced into a melody (TinySOL). The
+     * truth is therefore exact rather than annotated — we placed every onset — so
+     * this is the opposite failure mode from `noteTruthDerived`: nothing about the
+     * labels is untrustworthy, but nothing about the phrasing is human either.
+     * There is no performer timing, no legato shaping and no expressive rubato, so
+     * pooling these clips into the real corpus's headline would make it easier for
+     * a reason that has nothing to do with the pipeline. They are kept out of the
+     * pooled aggregate and reported on their own, which is what they are for:
+     * answering register questions (the `very-high` band has no other real
+     * pitched audio at all) without moving a number anyone compares over time.
+     * Declared by `constructedPerformance` in dataset.json.
+     */
+    constructedPerformance?: boolean
 }
 
-const TIER_DIRS: CorpusTier[] = ['benchmark', 'context'];
+const TIER_DIRS: CorpusTier[] = ['benchmark', 'context']
 
 /** Fallback for manifests without `material`: the honest coarse reading of `kind`. */
 function materialFromKind(kind: SourceKind): Material {
-  if (kind === 'whistle') return 'whistling';
-  if (kind === 'instrument') return 'instrument';
-  return 'singing';
+    if (kind === 'whistle') return 'whistling'
+    if (kind === 'instrument') return 'instrument'
+    return 'singing'
 }
 
 /** A dataset dir is one that actually holds scoreable clips. */
 function isDatasetDir(dir: string): boolean {
-  return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith('.truth.json'));
+    return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith('.truth.json'))
 }
 
 function readDataset(dir: string, id: string, tier: CorpusTier | null): RealDataset {
-  const manifestPath = join(dir, 'dataset.json');
-  const m = existsSync(manifestPath)
-    ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Partial<RealDataset>)
-    : {};
-  const noteTruthDerived = m.noteTruthDerived ?? false;
-  const constructedPerformance = m.constructedPerformance ?? false;
-  const kind = m.kind ?? 'voice';
-  return {
-    id,
-    dir,
-    label: m.label ?? id,
-    kind,
-    material: m.material ?? materialFromKind(kind),
-    instrumentId: m.instrumentId,
-    license: m.license,
-    licenceRestricted: m.licenceRestricted ?? false,
-    derivedFrom: m.derivedFrom,
-    // Legacy flat layout: infer the tier from the flags that were always the
-    // pooling mechanism, so an un-migrated checkout behaves identically.
-    tier: tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),
-    corpusSplit: m.corpusSplit,
-    noteTruthDerived,
-    pitchless: m.pitchless ?? false,
-    constructedPerformance,
-  };
+    const manifestPath = join(dir, 'dataset.json')
+    const m = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Partial<RealDataset>) : {}
+    const noteTruthDerived = m.noteTruthDerived ?? false
+    const constructedPerformance = m.constructedPerformance ?? false
+    const kind = m.kind ?? 'voice'
+    return {
+        id,
+        dir,
+        label: m.label ?? id,
+        kind,
+        material: m.material ?? materialFromKind(kind),
+        instrumentId: m.instrumentId,
+        license: m.license,
+        licenceRestricted: m.licenceRestricted ?? false,
+        derivedFrom: m.derivedFrom,
+        // Legacy flat layout: infer the tier from the flags that were always the
+        // pooling mechanism, so an un-migrated checkout behaves identically.
+        tier: tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),
+        corpusSplit: m.corpusSplit,
+        noteTruthDerived,
+        pitchless: m.pitchless ?? false,
+        constructedPerformance,
+    }
 }
 
 export function discoverRealDatasets(root: string): RealDataset[] {
-  if (!existsSync(root)) return [];
-  const out: RealDataset[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    // Dot-dirs are working state (e.g. import-note-labels.ts builds into one),
-    // never datasets.
-    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
-    const dir = join(root, entry.name);
-    if ((TIER_DIRS as string[]).includes(entry.name)) {
-      const tier = entry.name as CorpusTier;
-      for (const ds of readdirSync(dir, { withFileTypes: true })) {
-        if (!ds.isDirectory()) continue;
-        const dsDir = join(dir, ds.name);
-        if (isDatasetDir(dsDir)) out.push(readDataset(dsDir, ds.name, tier));
-      }
-    } else if (isDatasetDir(dir)) {
-      out.push(readDataset(dir, entry.name, null));
+    if (!existsSync(root)) return []
+    const out: RealDataset[] = []
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+        // Dot-dirs are working state (e.g. import-note-labels.ts builds into one),
+        // never datasets.
+        if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+        const dir = join(root, entry.name)
+        if ((TIER_DIRS as string[]).includes(entry.name)) {
+            const tier = entry.name as CorpusTier
+            for (const ds of readdirSync(dir, { withFileTypes: true })) {
+                if (!ds.isDirectory()) continue
+                const dsDir = join(dir, ds.name)
+                if (isDatasetDir(dsDir)) out.push(readDataset(dsDir, ds.name, tier))
+            }
+        } else if (isDatasetDir(dir)) {
+            out.push(readDataset(dir, entry.name, null))
+        }
     }
-  }
-  return out.sort((a, b) => a.id.localeCompare(b.id));
+    return out.sort((a, b) => a.id.localeCompare(b.id))
 }
 
 /** Clip base names in a dataset dir (each has `<clip>.truth.json` + `<clip>__real.wav`). */
 export function listRealClips(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.truth.json'))
-    .map((f) => f.replace('.truth.json', ''))
-    .sort();
+    return readdirSync(dir)
+        .filter((f) => f.endsWith('.truth.json'))
+        .map((f) => f.replace('.truth.json', ''))
+        .sort()
 }

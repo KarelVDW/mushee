@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm'
 
 /**
  * Purchased one-time recording minutes ("packs"). One row per user holding the
@@ -8,13 +8,13 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
  */
 @Entity('credit_balances')
 export class CreditBalance {
-  /** References user.id (ON DELETE CASCADE). */
-  @PrimaryColumn({ type: 'text' })
-  userId: string;
+    /** References user.id (ON DELETE CASCADE). */
+    @PrimaryColumn({ type: 'text' })
+    userId: string
 
-  @Column({ type: 'int', default: 0 })
-  seconds: number;
+    @Column({ type: 'int', default: 0 })
+    seconds: number
 
-  @Column({ type: 'timestamptz', default: () => 'now()' })
-  updatedAt: Date;
+    @Column({ type: 'timestamptz', default: () => 'now()' })
+    updatedAt: Date
 }

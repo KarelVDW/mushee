@@ -13,7 +13,8 @@ playwright-report/
 .cov-model/
 .cov-tmp/
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .claude/worktrees/
 *~
 logs

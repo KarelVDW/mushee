@@ -35,11 +35,7 @@ export class Interval {
         const perfectClass = PERFECT_DEGREES.has(degree)
         if (quality === 'perfect' && !perfectClass) throw new Error(`Degree ${degree} has no perfect quality`)
         if ((quality === 'major' || quality === 'minor') && perfectClass) throw new Error(`Degree ${degree} has no ${quality} quality`)
-        const adjust =
-            quality === 'augmented' ? 1
-            : quality === 'diminished' ? (perfectClass ? -1 : -2)
-            : quality === 'minor' ? -1
-            : 0
+        const adjust = quality === 'augmented' ? 1 : quality === 'diminished' ? (perfectClass ? -1 : -2) : quality === 'minor' ? -1 : 0
         const chromatic = BASE_SEMITONES[degree - 1] + adjust + octaves * 12
         const diatonic = degree - 1 + octaves * 7
         return new Interval(direction * chromatic, direction * diatonic)

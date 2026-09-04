@@ -30,9 +30,7 @@ export async function verifySessionToken(token: string | undefined, secret: stri
 }
 
 async function sign(payload: string, secret: string): Promise<string> {
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
-        'sign',
-    ])
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
     const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`solkey-admin-session:${payload}`))
     return Array.from(new Uint8Array(mac))
         .map((b) => b.toString(16).padStart(2, '0'))

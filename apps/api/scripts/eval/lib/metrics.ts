@@ -32,87 +32,87 @@
  * window censoring large errors, the timing pass uses its own, wider tolerance.
  */
 
-import type { GroundTruth, TruthNote } from '../types';
+import type { GroundTruth, TruthNote } from '../types'
 
 export interface EstNote {
-  onsetSec: number;
-  durSec: number;
-  midi: number;
+    onsetSec: number
+    durSec: number
+    midi: number
 }
 
 /** Signed timing error stats over correctly-pitched matches. + = late. */
 export interface TimingStats {
-  /** Number of matched pairs the timing stats are computed over. */
-  matched: number;
-  /** Raw signed onset errors (est − ref), milliseconds. Kept for histograms. */
-  onsetDeltasMs: number[];
-  /** Raw signed offset (end-time) errors (est − ref), milliseconds. */
-  offsetDeltasMs: number[];
-  /** Mean signed onset error (ms). + = pipeline places notes late. */
-  onsetBiasMs: number;
-  /** Median signed onset error (ms) — robust to a few wild notes. */
-  onsetMedianMs: number;
-  /** Std-dev of signed onset error (ms) — the jitter / spread. */
-  onsetStdMs: number;
-  /** Mean absolute onset error (ms) — magnitude regardless of direction. */
-  onsetMaeMs: number;
-  /** Mean signed offset error (ms). + = notes end late (run long). */
-  offsetBiasMs: number;
+    /** Number of matched pairs the timing stats are computed over. */
+    matched: number
+    /** Raw signed onset errors (est − ref), milliseconds. Kept for histograms. */
+    onsetDeltasMs: number[]
+    /** Raw signed offset (end-time) errors (est − ref), milliseconds. */
+    offsetDeltasMs: number[]
+    /** Mean signed onset error (ms). + = pipeline places notes late. */
+    onsetBiasMs: number
+    /** Median signed onset error (ms) — robust to a few wild notes. */
+    onsetMedianMs: number
+    /** Std-dev of signed onset error (ms) — the jitter / spread. */
+    onsetStdMs: number
+    /** Mean absolute onset error (ms) — magnitude regardless of direction. */
+    onsetMaeMs: number
+    /** Mean signed offset error (ms). + = notes end late (run long). */
+    offsetBiasMs: number
 }
 
 export interface Metrics {
-  refCount: number;
-  estCount: number;
-  matched: number; // exact-pitch matches
-  precision: number;
-  recall: number;
-  f1: number;
-  /** Matches allowing octave errors (same pitch class). */
-  chromaMatched: number;
-  chromaF1: number;
-  /** Fraction of ref notes matched on chroma but at the wrong octave. */
-  octaveErrorRate: number;
-  /** Median absolute pitch error (semitones) over chroma-matched pairs. */
-  medianPitchErr: number;
-  /** Signed onset/offset timing error over exact-pitch matches. */
-  timing: TimingStats;
-  /**
-   * MIREX/mir_eval **COnPOff** at the SAME onset window: exact pitch, onset
-   * within `onsetTolSec`, AND offset within max(`offsetTolSec`, `offsetRatio` ×
-   * the reference duration) — mir_eval's defaults are 50 ms / 20 %. Secondary
-   * number: it is what published note-transcription papers report (N20EMv2's
-   * 73.06 is COnPOff at 50 ms / 50 ¢), so it is the only column that can be set
-   * beside an external figure — at a matching onset window, which the headline
-   * ±100 ms is not. The offset gate also rewards getting DURATIONS right, which
-   * COnP ignores by design.
-   */
-  f1Off: number;
-  matchedOff: number;
+    refCount: number
+    estCount: number
+    matched: number // exact-pitch matches
+    precision: number
+    recall: number
+    f1: number
+    /** Matches allowing octave errors (same pitch class). */
+    chromaMatched: number
+    chromaF1: number
+    /** Fraction of ref notes matched on chroma but at the wrong octave. */
+    octaveErrorRate: number
+    /** Median absolute pitch error (semitones) over chroma-matched pairs. */
+    medianPitchErr: number
+    /** Signed onset/offset timing error over exact-pitch matches. */
+    timing: TimingStats
+    /**
+     * MIREX/mir_eval **COnPOff** at the SAME onset window: exact pitch, onset
+     * within `onsetTolSec`, AND offset within max(`offsetTolSec`, `offsetRatio` ×
+     * the reference duration) — mir_eval's defaults are 50 ms / 20 %. Secondary
+     * number: it is what published note-transcription papers report (N20EMv2's
+     * 73.06 is COnPOff at 50 ms / 50 ¢), so it is the only column that can be set
+     * beside an external figure — at a matching onset window, which the headline
+     * ±100 ms is not. The offset gate also rewards getting DURATIONS right, which
+     * COnP ignores by design.
+     */
+    f1Off: number
+    matchedOff: number
 }
 
 export interface MatchOptions {
-  /** Onset window for counting a pitch match (drives precision/recall/F1). */
-  onsetTolSec: number;
-  /**
-   * Wider onset window used only for the timing diagnostic, so a note that is
-   * (say) 180 ms late still contributes its true error instead of being dropped
-   * as unmatched. Notes off by more than this are treated as wrong, not late.
-   */
-  timingTolSec: number;
-  /** COnPOff offset gate: absolute floor (default 0.05 s)… */
-  offsetTolSec?: number;
-  /** …or this fraction of the reference duration, whichever is larger (default 0.2). */
-  offsetRatio?: number;
+    /** Onset window for counting a pitch match (drives precision/recall/F1). */
+    onsetTolSec: number
+    /**
+     * Wider onset window used only for the timing diagnostic, so a note that is
+     * (say) 180 ms late still contributes its true error instead of being dropped
+     * as unmatched. Notes off by more than this are treated as wrong, not late.
+     */
+    timingTolSec: number
+    /** COnPOff offset gate: absolute floor (default 0.05 s)… */
+    offsetTolSec?: number
+    /** …or this fraction of the reference duration, whichever is larger (default 0.2). */
+    offsetRatio?: number
 }
 
 interface MatchResult {
-  matched: number;
-  /** Absolute pitch error (semitones) per matched pair. */
-  pitchErrs: number[];
-  /** Signed onset error (est − ref) per matched pair, seconds. */
-  onsetDeltas: number[];
-  /** Signed offset (end-time) error (est − ref) per matched pair, seconds. */
-  offsetDeltas: number[];
+    matched: number
+    /** Absolute pitch error (semitones) per matched pair. */
+    pitchErrs: number[]
+    /** Signed onset error (est − ref) per matched pair, seconds. */
+    onsetDeltas: number[]
+    /** Signed offset (end-time) error (est − ref) per matched pair, seconds. */
+    offsetDeltas: number[]
 }
 
 /**
@@ -121,68 +121,66 @@ interface MatchResult {
  * pitch predicate.
  */
 function countMatches(
-  ref: TruthNote[],
-  est: EstNote[],
-  onsetTol: number,
-  pitchOk: (r: number, e: number) => boolean,
-  /** Optional offset gate (COnPOff): the estimate's end must land within this window of the reference's end. */
-  offsetOk?: (r: TruthNote, e: EstNote) => boolean,
+    ref: TruthNote[],
+    est: EstNote[],
+    onsetTol: number,
+    pitchOk: (r: number, e: number) => boolean,
+    /** Optional offset gate (COnPOff): the estimate's end must land within this window of the reference's end. */
+    offsetOk?: (r: TruthNote, e: EstNote) => boolean,
 ): MatchResult {
-  const used = new Array(est.length).fill(false);
-  const sortedRef = [...ref].sort((a, b) => a.onsetSec - b.onsetSec);
-  let matched = 0;
-  const pitchErrs: number[] = [];
-  const onsetDeltas: number[] = [];
-  const offsetDeltas: number[] = [];
+    const used = new Array(est.length).fill(false)
+    const sortedRef = [...ref].sort((a, b) => a.onsetSec - b.onsetSec)
+    let matched = 0
+    const pitchErrs: number[] = []
+    const onsetDeltas: number[] = []
+    const offsetDeltas: number[] = []
 
-  for (const r of sortedRef) {
-    let best = -1;
-    let bestDist = Infinity;
-    for (let j = 0; j < est.length; j += 1) {
-      if (used[j]) continue;
-      const dt = Math.abs(est[j].onsetSec - r.onsetSec);
-      if (dt > onsetTol) continue;
-      if (!pitchOk(r.midi, est[j].midi)) continue;
-      if (offsetOk && !offsetOk(r, est[j])) continue;
-      if (dt < bestDist) {
-        bestDist = dt;
-        best = j;
-      }
+    for (const r of sortedRef) {
+        let best = -1
+        let bestDist = Infinity
+        for (let j = 0; j < est.length; j += 1) {
+            if (used[j]) continue
+            const dt = Math.abs(est[j].onsetSec - r.onsetSec)
+            if (dt > onsetTol) continue
+            if (!pitchOk(r.midi, est[j].midi)) continue
+            if (offsetOk && !offsetOk(r, est[j])) continue
+            if (dt < bestDist) {
+                bestDist = dt
+                best = j
+            }
+        }
+        if (best >= 0) {
+            used[best] = true
+            matched += 1
+            pitchErrs.push(Math.abs(est[best].midi - r.midi))
+            onsetDeltas.push(est[best].onsetSec - r.onsetSec)
+            offsetDeltas.push(est[best].onsetSec + est[best].durSec - (r.onsetSec + r.durSec))
+        }
     }
-    if (best >= 0) {
-      used[best] = true;
-      matched += 1;
-      pitchErrs.push(Math.abs(est[best].midi - r.midi));
-      onsetDeltas.push(est[best].onsetSec - r.onsetSec);
-      offsetDeltas.push(
-        est[best].onsetSec + est[best].durSec - (r.onsetSec + r.durSec),
-      );
-    }
-  }
-  return { matched, pitchErrs, onsetDeltas, offsetDeltas };
+    return { matched, pitchErrs, onsetDeltas, offsetDeltas }
 }
 
 function f1(matched: number, refCount: number, estCount: number): number {
-  const p = estCount ? matched / estCount : 0;
-  const r = refCount ? matched / refCount : 0;
-  return p + r > 0 ? (2 * p * r) / (p + r) : 0;
+    const p = estCount ? matched / estCount : 0
+    const r = refCount ? matched / refCount : 0
+    return p + r > 0 ? (2 * p * r) / (p + r) : 0
 }
 
 function meanOf(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0
 }
 
 function median(xs: number[]): number {
-  if (!xs.length) return 0;
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    if (!xs.length) return 0
+    const s = [...xs].sort((a, b) => a - b)
+    const m = Math.floor(s.length / 2)
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
 function stdOf(xs: number[]): number {
-  if (xs.length < 2) return 0;
-  const mu = meanOf(xs);
-  return Math.sqrt(meanOf(xs.map((x) => (x - mu) ** 2)));
+    if (xs.length < 2) return 0
+    const mu = meanOf(xs)
+    return Math.sqrt(meanOf(xs.map((x) => (x - mu) ** 2)))
 }
 
 /**
@@ -191,20 +189,17 @@ function stdOf(xs: number[]): number {
  * stats. Onset and offset delta arrays are paired (same matches) but summarized
  * independently.
  */
-export function timingStats(
-  onsetDeltasMs: number[],
-  offsetDeltasMs: number[],
-): TimingStats {
-  return {
-    matched: onsetDeltasMs.length,
-    onsetDeltasMs,
-    offsetDeltasMs,
-    onsetBiasMs: meanOf(onsetDeltasMs),
-    onsetMedianMs: median(onsetDeltasMs),
-    onsetStdMs: stdOf(onsetDeltasMs),
-    onsetMaeMs: meanOf(onsetDeltasMs.map(Math.abs)),
-    offsetBiasMs: meanOf(offsetDeltasMs),
-  };
+export function timingStats(onsetDeltasMs: number[], offsetDeltasMs: number[]): TimingStats {
+    return {
+        matched: onsetDeltasMs.length,
+        onsetDeltasMs,
+        offsetDeltasMs,
+        onsetBiasMs: meanOf(onsetDeltasMs),
+        onsetMedianMs: median(onsetDeltasMs),
+        onsetStdMs: stdOf(onsetDeltasMs),
+        onsetMaeMs: meanOf(onsetDeltasMs.map(Math.abs)),
+        offsetBiasMs: meanOf(offsetDeltasMs),
+    }
 }
 
 /**
@@ -217,77 +212,59 @@ export function timingStats(
  * found the note — and those want opposite fixes.
  */
 export function scoreOnsets(
-  ref: TruthNote[],
-  est: EstNote[],
-  onsetTolSec = 0.1,
+    ref: TruthNote[],
+    est: EstNote[],
+    onsetTolSec = 0.1,
 ): { matched: number; precision: number; recall: number; f1: number } {
-  const m = countMatches(ref, est, onsetTolSec, () => true);
-  return {
-    matched: m.matched,
-    precision: est.length ? m.matched / est.length : 0,
-    recall: ref.length ? m.matched / ref.length : 0,
-    f1: f1(m.matched, ref.length, est.length),
-  };
+    const m = countMatches(ref, est, onsetTolSec, () => true)
+    return {
+        matched: m.matched,
+        precision: est.length ? m.matched / est.length : 0,
+        recall: ref.length ? m.matched / ref.length : 0,
+        f1: f1(m.matched, ref.length, est.length),
+    }
 }
 
-export function scoreNotes(
-  ref: TruthNote[],
-  est: EstNote[],
-  opts: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 },
-): Metrics {
-  const exact = countMatches(ref, est, opts.onsetTolSec, (r, e) => r === e);
-  const chroma = countMatches(
-    ref,
-    est,
-    opts.onsetTolSec,
-    (r, e) => ((r - e) % 12 + 12) % 12 === 0,
-  );
+export function scoreNotes(ref: TruthNote[], est: EstNote[], opts: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 }): Metrics {
+    const exact = countMatches(ref, est, opts.onsetTolSec, (r, e) => r === e)
+    const chroma = countMatches(ref, est, opts.onsetTolSec, (r, e) => (((r - e) % 12) + 12) % 12 === 0)
 
-  // Timing is measured on exact-pitch matches in a wider window, so a late note
-  // contributes its real error rather than falling outside the F1 gate.
-  const timingPass = countMatches(
-    ref,
-    est,
-    opts.timingTolSec,
-    (r, e) => r === e,
-  );
-  const timing = timingStats(
-    timingPass.onsetDeltas.map((s) => s * 1000),
-    timingPass.offsetDeltas.map((s) => s * 1000),
-  );
+    // Timing is measured on exact-pitch matches in a wider window, so a late note
+    // contributes its real error rather than falling outside the F1 gate.
+    const timingPass = countMatches(ref, est, opts.timingTolSec, (r, e) => r === e)
+    const timing = timingStats(
+        timingPass.onsetDeltas.map((s) => s * 1000),
+        timingPass.offsetDeltas.map((s) => s * 1000),
+    )
 
-  const precision = est.length ? exact.matched / est.length : 0;
-  const recall = ref.length ? exact.matched / ref.length : 0;
+    const precision = est.length ? exact.matched / est.length : 0
+    const recall = ref.length ? exact.matched / ref.length : 0
 
-  const offsetTol = opts.offsetTolSec ?? 0.05;
-  const offsetRatio = opts.offsetRatio ?? 0.2;
-  const withOffset = countMatches(
-    ref,
-    est,
-    opts.onsetTolSec,
-    (r, e) => r === e,
-    (r, e) =>
-      Math.abs(e.onsetSec + e.durSec - (r.onsetSec + r.durSec)) <=
-      Math.max(offsetTol, offsetRatio * r.durSec),
-  );
+    const offsetTol = opts.offsetTolSec ?? 0.05
+    const offsetRatio = opts.offsetRatio ?? 0.2
+    const withOffset = countMatches(
+        ref,
+        est,
+        opts.onsetTolSec,
+        (r, e) => r === e,
+        (r, e) => Math.abs(e.onsetSec + e.durSec - (r.onsetSec + r.durSec)) <= Math.max(offsetTol, offsetRatio * r.durSec),
+    )
 
-  return {
-    refCount: ref.length,
-    estCount: est.length,
-    matched: exact.matched,
-    precision,
-    recall,
-    f1: f1(exact.matched, ref.length, est.length),
-    f1Off: f1(withOffset.matched, ref.length, est.length),
-    matchedOff: withOffset.matched,
-    chromaMatched: chroma.matched,
-    chromaF1: f1(chroma.matched, ref.length, est.length),
-    octaveErrorRate: ref.length
-      ? (chroma.matched - exact.matched) / ref.length
-      : 0,
-    medianPitchErr: median(chroma.pitchErrs),
-    timing,
-  };
+    return {
+        refCount: ref.length,
+        estCount: est.length,
+        matched: exact.matched,
+        precision,
+        recall,
+        f1: f1(exact.matched, ref.length, est.length),
+        f1Off: f1(withOffset.matched, ref.length, est.length),
+        matchedOff: withOffset.matched,
+        chromaMatched: chroma.matched,
+        chromaF1: f1(chroma.matched, ref.length, est.length),
+        octaveErrorRate: ref.length ? (chroma.matched - exact.matched) / ref.length : 0,
+        medianPitchErr: median(chroma.pitchErrs),
+        timing,
+    }
 }
 
 /**
@@ -307,14 +284,14 @@ export function scoreNotes(
  * mutually consistent instead of being maxed independently.
  */
 export function scoreNotesBest(
-  truth: Pick<GroundTruth, 'notes' | 'alternateNotes'>,
-  est: EstNote[],
-  opts: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 },
+    truth: Pick<GroundTruth, 'notes' | 'alternateNotes'>,
+    est: EstNote[],
+    opts: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 },
 ): Metrics {
-  let best = scoreNotes(truth.notes, est, opts);
-  for (const alt of truth.alternateNotes ?? []) {
-    const m = scoreNotes(alt, est, opts);
-    if (m.f1 > best.f1) best = m;
-  }
-  return best;
+    let best = scoreNotes(truth.notes, est, opts)
+    for (const alt of truth.alternateNotes ?? []) {
+        const m = scoreNotes(alt, est, opts)
+        if (m.f1 > best.f1) best = m
+    }
+    return best
 }

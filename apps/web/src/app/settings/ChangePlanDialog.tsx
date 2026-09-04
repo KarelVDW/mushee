@@ -180,9 +180,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                             style={{ animation: 'solkey-spin 700ms linear infinite' }}
                         />
                         <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
-                            {needsCheckout
-                                ? "Sending you to Polar's secure checkout…"
-                                : 'Talking to Polar to update your subscription.'}
+                            {needsCheckout ? "Sending you to Polar's secure checkout…" : 'Talking to Polar to update your subscription.'}
                         </span>
                     </div>
                 )}

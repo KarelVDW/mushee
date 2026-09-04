@@ -56,7 +56,14 @@ function ClickableGlyph({ width, onClick, children }: { width: number; onClick?:
     )
 }
 
-export const Measure = memo(function Measure({ measure, selectedNoteIds, hoveredNote, onClefClick, onKeySignatureClick, onTimeSignatureClick }: MeasureProps) {
+export const Measure = memo(function Measure({
+    measure,
+    selectedNoteIds,
+    hoveredNote,
+    onClefClick,
+    onKeySignatureClick,
+    onTimeSignatureClick,
+}: MeasureProps) {
     const layout = measure.layout
     const clefWidth = (clef: ClefModel) => getGlyphWidth(clef.layout.glyphName, GLYPH_SCALE)
     const keyWidth = (key: KeySignatureModel) => {

@@ -1,6 +1,13 @@
 import { sumBy } from 'lodash-es'
 
-import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../../components/constants'
+import {
+    BARLINE_GAP,
+    BARLINE_THICK_WIDTH,
+    BARLINE_THIN_WIDTH,
+    NUM_STAFF_LINES,
+    SPACE_ABOVE_STAFF,
+    STAVE_LINE_DISTANCE,
+} from '../../components/constants'
 import type { BarlineType, LayoutBarline } from '../../components/types'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
@@ -164,7 +171,10 @@ export class MeasureLayout {
 
         // --- Note layouts ---
         for (const note of measure.notes) {
-            this._noteLayouts.set(note, new NoteLayout(note, { accidentalGlyph: context.accidentals.get(note), width: widthOf(note) as NoteWidth }))
+            this._noteLayouts.set(
+                note,
+                new NoteLayout(note, { accidentalGlyph: context.accidentals.get(note), width: widthOf(note) as NoteWidth }),
+            )
         }
 
         // --- Key signature layouts (leading + mid-measure) ---

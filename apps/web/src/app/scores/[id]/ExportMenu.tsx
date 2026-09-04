@@ -131,7 +131,9 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                                 <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
                                     {busy === format ? `Exporting ${label}…` : label}
                                 </span>
-                                <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">{description}</span>
+                                <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">
+                                    {description}
+                                </span>
                             </button>
                         ))}
                     </div>

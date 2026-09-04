@@ -13,41 +13,41 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: mushee-staging
 resources:
-  - namespace.yaml
-  - ../../base
-  - service-account.yaml
-  - api-ingress.yaml
+    - namespace.yaml
+    - ../../base
+    - service-account.yaml
+    - api-ingress.yaml
 patches:
-  - path: api-patch.yaml
-  - path: api-service-patch.yaml
-  # Single-replica staging: clamp every HPA to 1–2 pods…
-  - target:
-      kind: HorizontalPodAutoscaler
-    patch: |-
-      - op: replace
-        path: /spec/minReplicas
-        value: 1
-      - op: replace
-        path: /spec/maxReplicas
-        value: 2
-  # …and relax the PDBs so a lone pod never blocks an Autopilot node drain.
-  - target:
-      kind: PodDisruptionBudget
-    patch: |-
-      - op: remove
-        path: /spec/minAvailable
-      - op: add
-        path: /spec/maxUnavailable
-        value: 1
+    - path: api-patch.yaml
+    - path: api-service-patch.yaml
+    # Single-replica staging: clamp every HPA to 1–2 pods…
+    - target:
+          kind: HorizontalPodAutoscaler
+      patch: |-
+          - op: replace
+            path: /spec/minReplicas
+            value: 1
+          - op: replace
+            path: /spec/maxReplicas
+            value: 2
+    # …and relax the PDBs so a lone pod never blocks an Autopilot node drain.
+    - target:
+          kind: PodDisruptionBudget
+      patch: |-
+          - op: remove
+            path: /spec/minAvailable
+          - op: add
+            path: /spec/maxUnavailable
+            value: 1
 replicas:
-  - name: api
-    count: 1
-  - name: crepe-inference
-    count: 1
+    - name: api
+      count: 1
+    - name: crepe-inference
+      count: 1
 images:
-  - name: mushee/api
-    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/api
-    newTag: set-by-ci
-  - name: mushee/crepe-inference
-    newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/crepe-inference
-    newTag: set-by-ci
+    - name: mushee/api
+      newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/api
+      newTag: set-by-ci
+    - name: mushee/crepe-inference
+      newName: europe-west1-docker.pkg.dev/sheemu-prod/mushee/crepe-inference
+      newTag: set-by-ci

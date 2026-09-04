@@ -192,8 +192,7 @@ export function useBillingState() {
 /** Creates a Polar checkout and sends the browser there. */
 export function useStartCheckout() {
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
-            createCheckout(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => createCheckout(args.tierId, args.interval),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -227,8 +226,7 @@ export function useBillingPortal() {
 export function useChangePlan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
-            changePlan(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => changePlan(args.tierId, args.interval),
         onSuccess: (state) => queryClient.setQueryData(billingKeys.subscription, state),
         meta: { errorMessage: "Couldn't change the plan. Please try again." },
     })

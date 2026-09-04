@@ -1,0 +1,13 @@
+{
+    // Shared editor defaults for this repo: Prettier (root .prettierrc.yml) formats on save,
+    // ESLint fixes on save. VS Code's own organize-imports is off because it orders imports
+    // differently from the simple-import-sort rule and the two would fight on every save.
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit",
+        "source.organizeImports": "never"
+    },
+    "prettier.requireConfig": true,
+    "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"]
+}

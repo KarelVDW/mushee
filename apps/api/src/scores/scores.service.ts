@@ -1,203 +1,188 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { instanceToPlain } from 'class-transformer';
-import { ILike, Repository } from 'typeorm';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { instanceToPlain } from 'class-transformer'
+import { ILike, Repository } from 'typeorm'
 
-import { CacheService } from '../cache/cache.service';
-import { StorageService } from '../storage/storage.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-import { CreateScoreDto } from './dto/create-score.dto';
-import { UpdateScoreDto } from './dto/update-score.dto';
-import { Score } from './entities/score.entity';
+import { CacheService } from '../cache/cache.service'
+import { StorageService } from '../storage/storage.service'
+import { SubscriptionsService } from '../subscriptions/subscriptions.service'
+import { CreateScoreDto } from './dto/create-score.dto'
+import { UpdateScoreDto } from './dto/update-score.dto'
+import { Score } from './entities/score.entity'
 
 @Injectable()
 export class ScoresService {
-  constructor(
-    @InjectRepository(Score)
-    private readonly scoreRepo: Repository<Score>,
-    private readonly cacheService: CacheService,
-    private readonly storageService: StorageService,
-    private readonly subscriptions: SubscriptionsService,
-  ) {}
+    constructor(
+        @InjectRepository(Score)
+        private readonly scoreRepo: Repository<Score>,
+        private readonly cacheService: CacheService,
+        private readonly storageService: StorageService,
+        private readonly subscriptions: SubscriptionsService,
+    ) {}
 
-  async create(userId: string, dto: CreateScoreDto): Promise<Score> {
-    await this.assertBelowScoreCap(userId);
-    return this.insert(userId, dto.title, instanceToPlain(dto.score));
-  }
-
-  /**
-   * Copy a score into a new one owned by the same user. The copy takes the
-   * live document — the edit cache when present (unsaved edits included),
-   * otherwise the stored file — so it always matches what the editor shows.
-   */
-  async duplicate(userId: string, id: string): Promise<Score> {
-    const source = await this.findOne(userId, id);
-    await this.assertBelowScoreCap(userId);
-    const document = await this.load(userId, source.id);
-    return this.insert(userId, this.copyTitle(source.title), document);
-  }
-
-  /** "Étude" → "Étude (copy)"; the title column allows 200 characters, so trim to fit the suffix. */
-  private copyTitle(title: string): string {
-    const suffix = ' (copy)';
-    return title.slice(0, 200 - suffix.length).trimEnd() + suffix;
-  }
-
-  private async assertBelowScoreCap(userId: string): Promise<void> {
-    const tier = await this.subscriptions.tierFor(userId);
-    if (tier.maxScores === null) return;
-    // Count-then-insert is racy, but the cap is a plan entitlement, not a
-    // security boundary — a photo-finish double click slipping one score
-    // past it is harmless.
-    const count = await this.scoreRepo.countBy({ userId });
-    if (count >= tier.maxScores) {
-      throw new ForbiddenException({
-        code: 'score-limit',
-        message: `Your ${tier.name} plan holds up to ${tier.maxScores} scores. Upgrade to add more.`,
-      });
-    }
-  }
-
-  private async insert(
-    userId: string,
-    title: string,
-    document: Record<string, unknown>,
-  ): Promise<Score> {
-    const score = this.scoreRepo.create({
-      userId,
-      title,
-      storageKey: `scores/${userId}/${Date.now()}.musicxml`,
-    });
-    const saved = await this.scoreRepo.save(score);
-
-    // Put the document in the edit cache for immediate editing; the flush
-    // cron writes it to storage later.
-    await this.cacheService.upsert(saved.id, document);
-
-    return saved;
-  }
-
-  async findAll(userId: string, search?: string): Promise<Score[]> {
-    const where: Record<string, unknown> = { userId };
-    if (search) {
-      where.title = ILike(`%${search}%`);
-    }
-    return this.scoreRepo.find({ where, order: { updatedAt: 'DESC' } });
-  }
-
-  async findOneInternal(id: string): Promise<Score | null> {
-    return this.scoreRepo.findOneBy({ id });
-  }
-
-  async findOne(userId: string, id: string): Promise<Score> {
-    const score = await this.scoreRepo.findOneBy({ id });
-    if (!score) throw new NotFoundException('Score not found');
-    if (score.userId !== userId) throw new ForbiddenException();
-    return score;
-  }
-
-  /**
-   * Load a score for editing. Reads from the edit cache if available,
-   * otherwise reads MusicXML from storage, converts to JSON, and caches it.
-   */
-  async load(userId: string, id: string): Promise<Record<string, unknown>> {
-    const score = await this.findOne(userId, id);
-
-    const cached = await this.cacheService.findByScoreId(score.id);
-    if (cached) {
-      return cached.data;
+    async create(userId: string, dto: CreateScoreDto): Promise<Score> {
+        await this.assertBelowScoreCap(userId)
+        return this.insert(userId, dto.title, instanceToPlain(dto.score))
     }
 
-    // Read MusicXML from storage and convert to JSON
-    const musicxml = await this.storageService.read(score.storageKey);
-    const scoreData = this.musicxmlToJson(musicxml);
-
-    await this.cacheService.upsert(score.id, scoreData);
-
-    return scoreData;
-  }
-
-  async update(
-    userId: string,
-    id: string,
-    dto: UpdateScoreDto,
-  ): Promise<Score> {
-    const score = await this.findOne(userId, id);
-
-    if (dto.title) {
-      score.title = dto.title;
-      await this.scoreRepo.save(score);
+    /**
+     * Copy a score into a new one owned by the same user. The copy takes the
+     * live document — the edit cache when present (unsaved edits included),
+     * otherwise the stored file — so it always matches what the editor shows.
+     */
+    async duplicate(userId: string, id: string): Promise<Score> {
+        const source = await this.findOne(userId, id)
+        await this.assertBelowScoreCap(userId)
+        const document = await this.load(userId, source.id)
+        return this.insert(userId, this.copyTitle(source.title), document)
     }
 
-    if (dto.allMeasures) {
-      await this.cacheService.replaceAllMeasures(
-        score.id,
-        dto.allMeasures.map((measure) => instanceToPlain(measure)),
-      );
-    } else if (dto.measures) {
-      const measures: Record<string, Record<string, unknown>> = {};
-      for (const [index, measure] of Object.entries(dto.measures)) {
-        measures[index] = instanceToPlain(measure);
-      }
-      await this.cacheService.updateMeasures(score.id, measures);
+    /** "Étude" → "Étude (copy)"; the title column allows 200 characters, so trim to fit the suffix. */
+    private copyTitle(title: string): string {
+        const suffix = ' (copy)'
+        return title.slice(0, 200 - suffix.length).trimEnd() + suffix
     }
 
-    if (dto.partList) {
-      await this.cacheService.updatePartList(
-        score.id,
-        instanceToPlain(dto.partList),
-      );
+    private async assertBelowScoreCap(userId: string): Promise<void> {
+        const tier = await this.subscriptions.tierFor(userId)
+        if (tier.maxScores === null) return
+        // Count-then-insert is racy, but the cap is a plan entitlement, not a
+        // security boundary — a photo-finish double click slipping one score
+        // past it is harmless.
+        const count = await this.scoreRepo.countBy({ userId })
+        if (count >= tier.maxScores) {
+            throw new ForbiddenException({
+                code: 'score-limit',
+                message: `Your ${tier.name} plan holds up to ${tier.maxScores} scores. Upgrade to add more.`,
+            })
+        }
     }
 
-    return score;
-  }
+    private async insert(userId: string, title: string, document: Record<string, unknown>): Promise<Score> {
+        const score = this.scoreRepo.create({
+            userId,
+            title,
+            storageKey: `scores/${userId}/${Date.now()}.musicxml`,
+        })
+        const saved = await this.scoreRepo.save(score)
 
-  async remove(userId: string, id: string): Promise<void> {
-    const score = await this.findOne(userId, id);
-    await this.removeScore(score);
-  }
+        // Put the document in the edit cache for immediate editing; the flush
+        // cron writes it to storage later.
+        await this.cacheService.upsert(saved.id, document)
 
-  /** Delete every score a user owns, including cache entries and stored files. */
-  async removeAllForUser(userId: string): Promise<void> {
-    const scores = await this.scoreRepo.find({ where: { userId } });
-    for (const score of scores) {
-      await this.removeScore(score);
-    }
-  }
-
-  private async removeScore(score: Score): Promise<void> {
-    await this.cacheService.deleteByScoreId(score.id);
-
-    if (score.storageKey) {
-      await this.storageService.delete(score.storageKey);
+        return saved
     }
 
-    await this.scoreRepo.remove(score);
-  }
-
-  // TODO: implement actual MusicXML <-> JSON conversion.
-  // Until that exists, the storage round trip must be lossless: score JSON is
-  // persisted verbatim (serialized), and genuine MusicXML read from storage is
-  // wrapped as { raw } untouched. Never synthesize placeholder content here —
-  // the flush cron deletes the cached copy after writing, so a lossy
-  // conversion permanently destroys the score.
-  musicxmlToJson(content: string): Record<string, unknown> {
-    if (content.trimStart().startsWith('{')) {
-      try {
-        return JSON.parse(content) as Record<string, unknown>;
-      } catch {
-        // Not valid JSON after all — treat as raw MusicXML below.
-      }
+    async findAll(userId: string, search?: string): Promise<Score[]> {
+        const where: Record<string, unknown> = { userId }
+        if (search) {
+            where.title = ILike(`%${search}%`)
+        }
+        return this.scoreRepo.find({ where, order: { updatedAt: 'DESC' } })
     }
-    return { raw: content };
-  }
 
-  jsonToMusicxml(json: Record<string, unknown>): string {
-    if (typeof json.raw === 'string') return json.raw;
-    return JSON.stringify(json);
-  }
+    async findOneInternal(id: string): Promise<Score | null> {
+        return this.scoreRepo.findOneBy({ id })
+    }
+
+    async findOne(userId: string, id: string): Promise<Score> {
+        const score = await this.scoreRepo.findOneBy({ id })
+        if (!score) throw new NotFoundException('Score not found')
+        if (score.userId !== userId) throw new ForbiddenException()
+        return score
+    }
+
+    /**
+     * Load a score for editing. Reads from the edit cache if available,
+     * otherwise reads MusicXML from storage, converts to JSON, and caches it.
+     */
+    async load(userId: string, id: string): Promise<Record<string, unknown>> {
+        const score = await this.findOne(userId, id)
+
+        const cached = await this.cacheService.findByScoreId(score.id)
+        if (cached) {
+            return cached.data
+        }
+
+        // Read MusicXML from storage and convert to JSON
+        const musicxml = await this.storageService.read(score.storageKey)
+        const scoreData = this.musicxmlToJson(musicxml)
+
+        await this.cacheService.upsert(score.id, scoreData)
+
+        return scoreData
+    }
+
+    async update(userId: string, id: string, dto: UpdateScoreDto): Promise<Score> {
+        const score = await this.findOne(userId, id)
+
+        if (dto.title) {
+            score.title = dto.title
+            await this.scoreRepo.save(score)
+        }
+
+        if (dto.allMeasures) {
+            await this.cacheService.replaceAllMeasures(
+                score.id,
+                dto.allMeasures.map((measure) => instanceToPlain(measure)),
+            )
+        } else if (dto.measures) {
+            const measures: Record<string, Record<string, unknown>> = {}
+            for (const [index, measure] of Object.entries(dto.measures)) {
+                measures[index] = instanceToPlain(measure)
+            }
+            await this.cacheService.updateMeasures(score.id, measures)
+        }
+
+        if (dto.partList) {
+            await this.cacheService.updatePartList(score.id, instanceToPlain(dto.partList))
+        }
+
+        return score
+    }
+
+    async remove(userId: string, id: string): Promise<void> {
+        const score = await this.findOne(userId, id)
+        await this.removeScore(score)
+    }
+
+    /** Delete every score a user owns, including cache entries and stored files. */
+    async removeAllForUser(userId: string): Promise<void> {
+        const scores = await this.scoreRepo.find({ where: { userId } })
+        for (const score of scores) {
+            await this.removeScore(score)
+        }
+    }
+
+    private async removeScore(score: Score): Promise<void> {
+        await this.cacheService.deleteByScoreId(score.id)
+
+        if (score.storageKey) {
+            await this.storageService.delete(score.storageKey)
+        }
+
+        await this.scoreRepo.remove(score)
+    }
+
+    // TODO: implement actual MusicXML <-> JSON conversion.
+    // Until that exists, the storage round trip must be lossless: score JSON is
+    // persisted verbatim (serialized), and genuine MusicXML read from storage is
+    // wrapped as { raw } untouched. Never synthesize placeholder content here —
+    // the flush cron deletes the cached copy after writing, so a lossy
+    // conversion permanently destroys the score.
+    musicxmlToJson(content: string): Record<string, unknown> {
+        if (content.trimStart().startsWith('{')) {
+            try {
+                return JSON.parse(content) as Record<string, unknown>
+            } catch {
+                // Not valid JSON after all — treat as raw MusicXML below.
+            }
+        }
+        return { raw: content }
+    }
+
+    jsonToMusicxml(json: Record<string, unknown>): string {
+        if (typeof json.raw === 'string') return json.raw
+        return JSON.stringify(json)
+    }
 }

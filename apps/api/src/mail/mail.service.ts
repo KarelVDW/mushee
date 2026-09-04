@@ -1,221 +1,202 @@
-import { Injectable, Logger } from '@nestjs/common';
-import sgMail from '@sendgrid/mail';
+import { Injectable, Logger } from '@nestjs/common'
+import sgMail from '@sendgrid/mail'
 
 type SendArgs = {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-};
+    to: string
+    subject: string
+    html: string
+    text: string
+}
 
 @Injectable()
 export class MailService {
-  private readonly logger = new Logger(MailService.name);
-  private readonly from: string;
-  private readonly fromName: string;
-  private readonly configured: boolean;
+    private readonly logger = new Logger(MailService.name)
+    private readonly from: string
+    private readonly fromName: string
+    private readonly configured: boolean
 
-  constructor() {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    // Fallback must match the canonical site domain (solkey.io) — a mismatch
-    // breaks SPF/DKIM alignment and lands every verification code in spam.
-    this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@solkey.io';
-    this.fromName = process.env.SENDGRID_FROM_NAME ?? 'Solkey';
-    this.configured = Boolean(apiKey);
+    constructor() {
+        const apiKey = process.env.SENDGRID_API_KEY
+        // Fallback must match the canonical site domain (solkey.io) — a mismatch
+        // breaks SPF/DKIM alignment and lands every verification code in spam.
+        this.from = process.env.SENDGRID_FROM_EMAIL ?? 'no-reply@solkey.io'
+        this.fromName = process.env.SENDGRID_FROM_NAME ?? 'Solkey'
+        this.configured = Boolean(apiKey)
 
-    if (this.configured) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      sgMail.setApiKey(apiKey!);
-      if (process.env.SENDGRID_EU_RESIDENCY === 'true') {
-        (sgMail as unknown as { client: { setDataResidency: (r: string) => void } })
-          .client.setDataResidency('eu');
-      }
-    } else if (process.env.NODE_ENV === 'production') {
-      // Fail fast: without mail, signups dead-end at email verification and
-      // the dev fallback below would write OTP codes into production logs.
-      throw new Error(
-        'SENDGRID_API_KEY must be set in production — verification and password-reset emails cannot be delivered without it.',
-      );
-    } else {
-      this.logger.warn(
-        'SENDGRID_API_KEY is not set — outgoing emails will be logged but not delivered.',
-      );
-    }
-  }
-
-  async send({ to, subject, html, text }: SendArgs): Promise<void> {
-    if (!this.configured) {
-      this.logger.log(`[MAIL:skipped] to=${to} subject="${subject}"\n${text}`);
-      return;
+        if (this.configured) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            sgMail.setApiKey(apiKey!)
+            if (process.env.SENDGRID_EU_RESIDENCY === 'true') {
+                ;(sgMail as unknown as { client: { setDataResidency: (r: string) => void } }).client.setDataResidency('eu')
+            }
+        } else if (process.env.NODE_ENV === 'production') {
+            // Fail fast: without mail, signups dead-end at email verification and
+            // the dev fallback below would write OTP codes into production logs.
+            throw new Error(
+                'SENDGRID_API_KEY must be set in production — verification and password-reset emails cannot be delivered without it.',
+            )
+        } else {
+            this.logger.warn('SENDGRID_API_KEY is not set — outgoing emails will be logged but not delivered.')
+        }
     }
 
-    try {
-      await sgMail.send({
-        to,
-        from: { email: this.from, name: this.fromName },
-        subject,
-        text,
-        html,
-      });
-    } catch (err) {
-      this.logger.error(
-        `SendGrid send failed for ${to}: ${(err as Error).message}`,
-        err as Error,
-      );
-      throw err;
-    }
-  }
+    async send({ to, subject, html, text }: SendArgs): Promise<void> {
+        if (!this.configured) {
+            this.logger.log(`[MAIL:skipped] to=${to} subject="${subject}"\n${text}`)
+            return
+        }
 
-  async sendVerificationCode(to: string, code: string): Promise<void> {
-    const subject = `Your Solkey verification code: ${code}`;
-    const text =
-      `Welcome to Solkey!\n\n` +
-      `Your verification code is: ${code}\n\n` +
-      `Enter it in the app to finish setting up your account. The code expires in 10 minutes.\n\n` +
-      `If you didn't create an account, you can ignore this message.`;
-    const html = layout(
-      'Verify your email',
-      `<p>Welcome to <strong>Solkey</strong>!</p>
+        try {
+            await sgMail.send({
+                to,
+                from: { email: this.from, name: this.fromName },
+                subject,
+                text,
+                html,
+            })
+        } catch (err) {
+            this.logger.error(`SendGrid send failed for ${to}: ${(err as Error).message}`, err as Error)
+            throw err
+        }
+    }
+
+    async sendVerificationCode(to: string, code: string): Promise<void> {
+        const subject = `Your Solkey verification code: ${code}`
+        const text =
+            `Welcome to Solkey!\n\n` +
+            `Your verification code is: ${code}\n\n` +
+            `Enter it in the app to finish setting up your account. The code expires in 10 minutes.\n\n` +
+            `If you didn't create an account, you can ignore this message.`
+        const html = layout(
+            'Verify your email',
+            `<p>Welcome to <strong>Solkey</strong>!</p>
        <p>Enter this code in the app to finish setting up your account:</p>
        ${codeBlock(code)}
        <p class="muted">The code expires in 10 minutes. If you didn't create an account, you can ignore this message.</p>`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 
-  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
-    const subject = 'Reset your Solkey password';
-    const text =
-      `We received a request to reset the password on your Solkey account.\n\n` +
-      `Reset your password here:\n${resetUrl}\n\n` +
-      `This link is good for 30 minutes. If you didn't request this, you can ignore the email — your password stays the same.`;
-    const html = layout(
-      'Reset your password',
-      `<p>We received a request to reset the password on your Solkey account.</p>
+    async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+        const subject = 'Reset your Solkey password'
+        const text =
+            `We received a request to reset the password on your Solkey account.\n\n` +
+            `Reset your password here:\n${resetUrl}\n\n` +
+            `This link is good for 30 minutes. If you didn't request this, you can ignore the email — your password stays the same.`
+        const html = layout(
+            'Reset your password',
+            `<p>We received a request to reset the password on your Solkey account.</p>
        ${button(resetUrl, 'Set a new password')}
        <p class="muted">This link is good for 30 minutes. If you didn't request this, you can ignore the email — your password stays the same.</p>`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 
-  /** Beta waitlist confirmation, sent right after signup while BETA_MODE=true. */
-  async sendBetaWaitlistEmail(to: string, name: string): Promise<void> {
-    const subject = "You're on the Solkey beta waitlist";
-    const text =
-      `Hi ${name},\n\n` +
-      `Thanks for signing up for the Solkey beta!\n\n` +
-      `Solkey is currently in a closed beta, so access is granted personally. ` +
-      `You're on the waitlist now — we'll email you the moment your account is approved.\n\n` +
-      `Once you're in, your beta account comes with 30 minutes of recording per day, free of charge.\n\n` +
-      `Questions? Write to support@solkey.io.`;
-    const html = layout(
-      "You're on the waitlist",
-      `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
+    /** Beta waitlist confirmation, sent right after signup while BETA_MODE=true. */
+    async sendBetaWaitlistEmail(to: string, name: string): Promise<void> {
+        const subject = "You're on the Solkey beta waitlist"
+        const text =
+            `Hi ${name},\n\n` +
+            `Thanks for signing up for the Solkey beta!\n\n` +
+            `Solkey is currently in a closed beta, so access is granted personally. ` +
+            `You're on the waitlist now — we'll email you the moment your account is approved.\n\n` +
+            `Once you're in, your beta account comes with 30 minutes of recording per day, free of charge.\n\n` +
+            `Questions? Write to support@solkey.io.`
+        const html = layout(
+            "You're on the waitlist",
+            `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
        <p>Thanks for signing up for the <strong>Solkey</strong> beta!</p>
        <p>Solkey is currently in a closed beta, so access is granted personally. You're on the waitlist now — we'll email you the moment your account is approved.</p>
        <p>Once you're in, your beta account comes with <strong>30 minutes of recording per day</strong>, free of charge.</p>
        <p class="muted">Questions? Write to support@solkey.io.</p>`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 
-  /** Sent when an admin approves the beta signup. */
-  async sendBetaApprovedEmail(to: string, name: string): Promise<void> {
-    const appUrl = webAppUrl();
-    const subject = "You're in — your Solkey beta account is ready";
-    const text =
-      `Hi ${name},\n\n` +
-      `Good news: your Solkey beta account has been approved!\n\n` +
-      `Sign in and start recording — hum, sing or play, and watch the notation appear:\n${appUrl}/login\n\n` +
-      `Your beta plan includes 30 minutes of recording per day.\n\n` +
-      `Have fun, and tell us everything that feels rough: support@solkey.io.`;
-    const html = layout(
-      "You're in!",
-      `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
+    /** Sent when an admin approves the beta signup. */
+    async sendBetaApprovedEmail(to: string, name: string): Promise<void> {
+        const appUrl = webAppUrl()
+        const subject = "You're in — your Solkey beta account is ready"
+        const text =
+            `Hi ${name},\n\n` +
+            `Good news: your Solkey beta account has been approved!\n\n` +
+            `Sign in and start recording — hum, sing or play, and watch the notation appear:\n${appUrl}/login\n\n` +
+            `Your beta plan includes 30 minutes of recording per day.\n\n` +
+            `Have fun, and tell us everything that feels rough: support@solkey.io.`
+        const html = layout(
+            "You're in!",
+            `<p>Hi <strong>${escapeHtml(name)}</strong>,</p>
        <p>Good news: your <strong>Solkey</strong> beta account has been approved!</p>
        <p>Sign in and start recording — hum, sing or play, and watch the notation appear.</p>
        ${button(`${appUrl}/login`, 'Open Solkey')}
        <p>Your beta plan includes <strong>30 minutes of recording per day</strong>.</p>
        <p class="muted">Have fun, and tell us everything that feels rough: support@solkey.io.</p>`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 
-  /** Heads-up to an admin that someone joined the waitlist. */
-  async sendBetaSignupNotification(
-    to: string,
-    signupEmail: string,
-    signupName: string,
-  ): Promise<void> {
-    const consoleUrl = adminAppUrl();
-    const subject = `New Solkey beta signup: ${signupEmail}`;
-    const text =
-      `${signupName} (${signupEmail}) just joined the beta waitlist.\n\n` +
-      `Approve or review signups in the admin console:\n${consoleUrl}/waitlist`;
-    const html = layout(
-      'New beta signup',
-      `<p><strong>${escapeHtml(signupName)}</strong> (${escapeHtml(signupEmail)}) just joined the beta waitlist.</p>
+    /** Heads-up to an admin that someone joined the waitlist. */
+    async sendBetaSignupNotification(to: string, signupEmail: string, signupName: string): Promise<void> {
+        const consoleUrl = adminAppUrl()
+        const subject = `New Solkey beta signup: ${signupEmail}`
+        const text =
+            `${signupName} (${signupEmail}) just joined the beta waitlist.\n\n` +
+            `Approve or review signups in the admin console:\n${consoleUrl}/waitlist`
+        const html = layout(
+            'New beta signup',
+            `<p><strong>${escapeHtml(signupName)}</strong> (${escapeHtml(signupEmail)}) just joined the beta waitlist.</p>
        ${button(`${consoleUrl}/waitlist`, 'Review signups')}`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 
-  async sendChangeEmailVerification(to: string, verifyUrl: string, newEmail: string): Promise<void> {
-    const subject = 'Confirm your new Solkey email address';
-    const text =
-      `Confirm that you want to change your Solkey account email to ${newEmail}.\n\n` +
-      `Open this link to approve the change:\n${verifyUrl}\n\n` +
-      `If this wasn't you, ignore this message — nothing will change.`;
-    const html = layout(
-      'Confirm your new email',
-      `<p>Confirm that you want to change your Solkey account email to <strong>${escapeHtml(newEmail)}</strong>.</p>
+    async sendChangeEmailVerification(to: string, verifyUrl: string, newEmail: string): Promise<void> {
+        const subject = 'Confirm your new Solkey email address'
+        const text =
+            `Confirm that you want to change your Solkey account email to ${newEmail}.\n\n` +
+            `Open this link to approve the change:\n${verifyUrl}\n\n` +
+            `If this wasn't you, ignore this message — nothing will change.`
+        const html = layout(
+            'Confirm your new email',
+            `<p>Confirm that you want to change your Solkey account email to <strong>${escapeHtml(newEmail)}</strong>.</p>
        ${button(verifyUrl, 'Approve change')}
        <p class="muted">If this wasn't you, ignore this message — nothing will change.</p>`,
-    );
-    await this.send({ to, subject, html, text });
-  }
+        )
+        await this.send({ to, subject, html, text })
+    }
 }
 
-export const mailService = new MailService();
+export const mailService = new MailService()
 
 /** Public base URL of the web app, for links in emails. */
 function webAppUrl(): string {
-  return (
-    process.env.WEB_APP_URL ??
-    process.env.CORS_ORIGIN ??
-    'http://localhost:3200'
-  ).replace(/\/$/, '');
+    return (process.env.WEB_APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3200').replace(/\/$/, '')
 }
 
 /** Public base URL of the standalone admin console (apps/admin). */
 function adminAppUrl(): string {
-  return (process.env.ADMIN_APP_URL ?? 'http://localhost:3500').replace(/\/$/, '');
+    return (process.env.ADMIN_APP_URL ?? 'http://localhost:3500').replace(/\/$/, '')
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function button(href: string, label: string): string {
-  return `<p style="margin:28px 0;">
+    return `<p style="margin:28px 0;">
     <a href="${escapeHtml(href)}" style="background:#00DBE9;color:#0a0a0a;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;display:inline-block;">${escapeHtml(label)}</a>
   </p>
-  <p class="muted">Or paste this URL into your browser:<br/><span style="word-break:break-all;color:#555;">${escapeHtml(href)}</span></p>`;
+  <p class="muted">Or paste this URL into your browser:<br/><span style="word-break:break-all;color:#555;">${escapeHtml(href)}</span></p>`
 }
 
 function codeBlock(code: string): string {
-  return `<div style="margin:28px 0;text-align:center;">
+    return `<div style="margin:28px 0;text-align:center;">
     <div style="display:inline-block;background:#f5f5f4;border-radius:12px;padding:18px 28px;font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:32px;font-weight:600;letter-spacing:0.4em;color:#0a0a0a;">${escapeHtml(code)}</div>
-  </div>`;
+  </div>`
 }
 
 function layout(heading: string, bodyHtml: string): string {
-  return `<!doctype html>
+    return `<!doctype html>
 <html>
   <body style="margin:0;background:#f5f5f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
@@ -235,5 +216,5 @@ function layout(heading: string, bodyHtml: string): string {
     </table>
     <style>.muted{color:#666;font-size:13px;}</style>
   </body>
-</html>`;
+</html>`
 }

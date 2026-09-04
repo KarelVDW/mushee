@@ -102,12 +102,7 @@ export default function NewCorpusPage() {
                         options={Instrument.selectable().map((i) => ({ value: i.id, label: i.displayName ?? i.id }))}
                     />
                 )}
-                <ChipRow
-                    label="Tier (benchmark may gate decisions)"
-                    options={TIERS}
-                    value={tier}
-                    onChange={setTier}
-                />
+                <ChipRow label="Tier (benchmark may gate decisions)" options={TIERS} value={tier} onChange={setTier} />
 
                 <div className="grid grid-cols-2 gap-3">
                     <TextField label="BPM" value={bpm} onChange={setBpm} type="number" />
@@ -153,7 +148,13 @@ export default function NewCorpusPage() {
                         </button>
                     }
                 />
-                <TextArea label="Notes" value={notes} onChange={setNotes} placeholder="Why this corpus exists, recording conditions…" rows={3} />
+                <TextArea
+                    label="Notes"
+                    value={notes}
+                    onChange={setNotes}
+                    placeholder="Why this corpus exists, recording conditions…"
+                    rows={3}
+                />
 
                 {create.isError && <Alert>{String(create.error)}</Alert>}
                 <PrimaryButton emphasis="pop" disabled={!label.trim() || create.isPending || !!preview.error} onClick={submit}>

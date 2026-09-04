@@ -1,8 +1,8 @@
+import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
 import { describe, expect, it, vi } from 'vitest'
 
 import { CursorManager } from '@/lib/CursorManager'
-import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
-import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
 
 function svgRect(): SVGRectElement {
     return document.createElementNS('http://www.w3.org/2000/svg', 'rect')

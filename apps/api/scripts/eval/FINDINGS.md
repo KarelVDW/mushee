@@ -2,8 +2,7 @@
 
 The durable record of every measured experiment on the transcription pipeline: what shipped (with confidence intervals), what measured null (with the mechanism, so nobody redoes it), and the open items. Newest sections at the bottom. How to run the tools that produced these numbers: [README.md](README.md); the product benchmark and its history: [benchmarks/README.md](benchmarks/README.md).
 
-Every number was measured on this machine, on the corpus described in the README, almost always as a paired-bootstrap comparison over clips with a 95 % CI — `*` marks an interval excluding zero.
----
+## Every number was measured on this machine, on the corpus described in the README, almost always as a paired-bootstrap comparison over clips with a 95 % CI — `*` marks an interval excluding zero.
 
 ## Findings log (2026-07 accuracy push)
 
@@ -14,16 +13,16 @@ machine**, on the corpus above, almost always as a paired-bootstrap comparison o
 
 ### State of accuracy
 
-| what | value |
-|---|---|
-| Real-corpus headline, clean condition (COnP@0.1, 18 datasets / 658 clips, mir-qbsh excluded) | **0.763** |
-| vocadito vs its measured human inter-annotator ceiling | 0.671 / **0.760** (≈ 88 %) |
-| Real monophonic instruments (URMP, 13 instruments) | 0.66–0.96, note counts ≈ correct |
-| Sustained vibrato-heavy singing (annotated-vocalset) — was the weak spot | ~0.45, ~1.7× over-segmented → **0.59** at 1.3× after the voice decode (2026-08) |
-| Voice slice (annotated-vocalset + N20EMv2 + vocadito), held-out test | 0.570 → **0.668** after the voice decode |
-| Adverse: echoey-room / distant-mic (after the adaptive gate) | ~0.55 / ~0.44 (oracle ceiling: +0.14 / +0.23 above that) |
-| External yardstick (N20EMv2 test split): us zero-shot vs their in-domain supervised model | 0.489 @±100 ms vs **79.56 @±50 ms** — ≥31 pts. The strategic read: remaining singing headroom is a **learned note model**, not more post-processing |
-| Statistical floor: per-clip σ ≈ 0.20–0.28; paired ρ ≈ 0.98–0.99 → MDE ≈ 0.01 at n≈300 | nothing under ~1 pt is a result |
+| what                                                                                         | value                                                                                                                                               |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Real-corpus headline, clean condition (COnP@0.1, 18 datasets / 658 clips, mir-qbsh excluded) | **0.763**                                                                                                                                           |
+| vocadito vs its measured human inter-annotator ceiling                                       | 0.671 / **0.760** (≈ 88 %)                                                                                                                          |
+| Real monophonic instruments (URMP, 13 instruments)                                           | 0.66–0.96, note counts ≈ correct                                                                                                                    |
+| Sustained vibrato-heavy singing (annotated-vocalset) — was the weak spot                     | ~0.45, ~1.7× over-segmented → **0.59** at 1.3× after the voice decode (2026-08)                                                                     |
+| Voice slice (annotated-vocalset + N20EMv2 + vocadito), held-out test                         | 0.570 → **0.668** after the voice decode                                                                                                            |
+| Adverse: echoey-room / distant-mic (after the adaptive gate)                                 | ~0.55 / ~0.44 (oracle ceiling: +0.14 / +0.23 above that)                                                                                            |
+| External yardstick (N20EMv2 test split): us zero-shot vs their in-domain supervised model    | 0.489 @±100 ms vs **79.56 @±50 ms** — ≥31 pts. The strategic read: remaining singing headroom is a **learned note model**, not more post-processing |
+| Statistical floor: per-clip σ ≈ 0.20–0.28; paired ρ ≈ 0.98–0.99 → MDE ≈ 0.01 at n≈300        | nothing under ~1 pt is a result                                                                                                                     |
 
 ### Metric conventions (violating these silently invalidates results)
 
@@ -57,33 +56,33 @@ Two measurements, because they answer different questions.
 
 **Cached sweep** (`sweep-voice.ts`, segmentation only, paired bootstrap over clips):
 
-| slice | before | after | paired Δ |
-|---|---|---|---|
-| VOICE, dev (253 clips) | 0.567 | 0.683 | **+0.145 [+0.123, +0.168]** * |
-| VOICE, **held-out test** (289 clips) | 0.570 | 0.668 | **+0.123 [+0.102, +0.144]** * |
-| annotated-vocalset (test) | 0.46 @1.71× | 0.59 @1.29× | over-segmentation largely gone |
-| N20EMv2 (test) | 0.54 | 0.69 | |
-| vocadito (test) | 0.70 | 0.73 | at its 0.760 human ceiling |
+| slice                                | before      | after       | paired Δ                       |
+| ------------------------------------ | ----------- | ----------- | ------------------------------ |
+| VOICE, dev (253 clips)               | 0.567       | 0.683       | **+0.145 [+0.123, +0.168]** \* |
+| VOICE, **held-out test** (289 clips) | 0.570       | 0.668       | **+0.123 [+0.102, +0.144]** \* |
+| annotated-vocalset (test)            | 0.46 @1.71× | 0.59 @1.29× | over-segmentation largely gone |
+| N20EMv2 (test)                       | 0.54        | 0.69        |                                |
+| vocadito (test)                      | 0.70        | 0.73        | at its 0.760 human ceiling     |
 
 **Full production path** (`run-eval.ts EVAL_REAL=1 EVAL_ADAPTIVE=1`, every clip of
 both split halves, A/B'd with `RECORDING_VOICE_DECODE=0/1`) — profile resolution,
 routing, streaming decode, cleanup and the MusicXML round-trip included. This is
 the number that corresponds to what a user hears:
 
-| dataset | baseline | voice decode | Δ |
-|---|---|---|---|
-| annotated-vocalset (400) | 0.396 | **0.557** | **+0.160** |
-| N20EMv2 (102) | 0.537 | **0.639** | **+0.102** |
-| N20EMv2-test — the external yardstick (18) | 0.471 | **0.567** | **+0.096** |
-| vocadito (40) | 0.668 | 0.700 | +0.032 |
-| mir-qbsh (50, not pooled) | 0.642 | 0.554 | −0.089 — see below |
-| **all 14 instrument datasets** | — | — | **+0.000, every one** |
-| **repo headline (18 pooled datasets)** | 0.760 | **0.782** | **+0.022** |
+| dataset                                    | baseline | voice decode | Δ                     |
+| ------------------------------------------ | -------- | ------------ | --------------------- |
+| annotated-vocalset (400)                   | 0.396    | **0.557**    | **+0.160**            |
+| N20EMv2 (102)                              | 0.537    | **0.639**    | **+0.102**            |
+| N20EMv2-test — the external yardstick (18) | 0.471    | **0.567**    | **+0.096**            |
+| vocadito (40)                              | 0.668    | 0.700        | +0.032                |
+| mir-qbsh (50, not pooled)                  | 0.642    | 0.554        | −0.089 — see below    |
+| **all 14 instrument datasets**             | —        | —            | **+0.000, every one** |
+| **repo headline (18 pooled datasets)**     | 0.760    | **0.782**    | **+0.022**            |
 
 Two things in that table are worth more than the headline. First, the instrument
 corpora are **bit-identical**, which is the strongest available evidence that a
 change this large is genuinely confined to the input class it was built for.
-Second, pooled over the *whole* corpus the segmentation profile changes shape
+Second, pooled over the _whole_ corpus the segmentation profile changes shape
 rather than degree:
 
 ```
@@ -102,18 +101,18 @@ still wrong with voice" says why it is a frontier rather than a tuning failure.
 Composition of the win, in the order the experiments found it:
 
 1. **Onset calibration is the single biggest effect (+0.15 on its own).** A pYIN-style
-   note HMM enters its `attack` state where the contour *departs* the previous note;
-   an annotator marks where the pitch *arrives*. Measured lead: −52 ms mean / −44 ms
+   note HMM enters its `attack` state where the contour _departs_ the previous note;
+   an annotator marks where the pitch _arrives_. Measured lead: −52 ms mean / −44 ms
    median. Two controls establish this is a latency of the decode and not a habit of
-   the annotations: applying the same shift to the *shipping* segmenter buys almost
+   the annotations: applying the same shift to the _shipping_ segmenter buys almost
    nothing (+0.028 at 40 ms, +0.008 at 60 ms — it is already calibrated at −2 ms
    bias), and all three voice corpora peak at the same 70–100 ms, including N20EMv2,
    whose onsets are expert-corrected. Structural rules that try to find arrival
-   per-note measure *worse* than the constant (`'arrival'` +0.07, `'stable'` +0.05):
+   per-note measure _worse_ than the constant (`'arrival'` +0.07, `'stable'` +0.05):
    the lead is consistent, per-note estimates of it are noisy, and the noise costs
    more than the bias it removes.
 2. **The decode chooses mandatory-silence by itself.** Sweeping the note-change cost,
-   everything at ≥ 2.5 nats scores *identically to three decimals* — the direct
+   everything at ≥ 2.5 nats scores _identically to three decimals_ — the direct
    note→note jump is simply never taken, which is Dynamic HumTrans's silence-state
    structure arrived at by pricing rather than by construction (§4 of the research
    doc predicted exactly this). The transition is kept in the state space anyway, so
@@ -125,7 +124,7 @@ Composition of the win, in the order the experiments found it:
 4. **α-trimmed-mean note pitch (α = 0.3, Molina et al.) is worth +0.03** over a plain
    mean — dropping the scoop and the release rather than averaging them in.
 5. **`trust: 0.7`, not pYIN's 0.1.** pYIN decodes a probabilistic pYIN contour; we
-   decode CREPE's *already Viterbi-smoothed* trajectory, so trusting per-frame pitch
+   decode CREPE's _already Viterbi-smoothed_ trajectory, so trusting per-frame pitch
    that little merges real notes (t0.1 → 0.627 vs t0.7 → 0.684 on dev).
 6. **Downstream cleanup shrinks to `onsetSplit` alone.** The A-B-A vibrato folder
    (−0.003) and the adaptive length floor (−0.008 as part of the full set) exist to
@@ -144,12 +143,12 @@ decoder, which makes this the cleanest generalization test the harness has ever
 run. Full production path (`run-eval.ts EVAL_REAL=1 EVAL_ADAPTIVE=1`, A/B'd
 with `RECORDING_VOICE_DECODE=0/1`):
 
-| dataset | baseline | voice decode | Δ |
-|---|---|---|---|
-| csd (96, bleed, per-section truth) | 0.520 | 0.622 | **+0.102** |
-| esmuc-choir (271, bleed) | 0.463 | 0.603 | **+0.141** |
-| hust-solfege (73, solo, amateur incl. juvenile) | 0.600 | 0.743 | **+0.143** |
-| pooled (440 clips) | 0.528 | 0.656 | **+0.129** |
+| dataset                                         | baseline | voice decode | Δ          |
+| ----------------------------------------------- | -------- | ------------ | ---------- |
+| csd (96, bleed, per-section truth)              | 0.520    | 0.622        | **+0.102** |
+| esmuc-choir (271, bleed)                        | 0.463    | 0.603        | **+0.141** |
+| hust-solfege (73, solo, amateur incl. juvenile) | 0.600    | 0.743        | **+0.143** |
+| pooled (440 clips)                              | 0.528    | 0.656        | **+0.129** |
 
 The +0.123 held-out-test result above therefore **reproduces on fully external
 data**, slightly larger. The internal shape also reproduces: precision is where
@@ -223,7 +222,7 @@ Three product-layer changes, all in the NOTATION stage (`voice-notation.ts` +
    decoder's unrounded pitches (`pitchMidiFloat`, new on voice notes), applied
    before naming. Confidence-gated: incoherent scatter → offset 0 (today's
    behaviour). The naming of a reference-free take is inherently ±1 semitone
-   ambiguous (a take 41 c flat of B *is* 59 c sharp of B♭ — same lattice);
+   ambiguous (a take 41 c flat of B _is_ 59 c sharp of B♭ — same lattice);
 2. **the key signature votes** — `keyFifths` now travels in the client's meta
    frame; it breaks the naming ambiguity (duration-weighted in-key count) and
    snaps individual notes only inside the ≥35 c ambiguity band, never moving a
@@ -237,7 +236,7 @@ B♭–C–D–B♭ ×2, D–E♭–F ×2 — textbook Frère Jacques, zero acci
 
 **Why the eval headline is deliberately blind to 1–2, and how neutrality was
 still measured.** COnP scores against measured-absolute truth, where renaming
-toward the singer's grid is *by construction* a mismatch (the old "tuning
+toward the singer's grid is _by construction_ a mismatch (the old "tuning
 correction hurts" finding) — yet it is exactly what the product must write.
 So spelling happens after `deduced` (which run-eval scores) and only in
 `buildMeasure`. The seam-fill DOES touch `deduced` (durations only):
@@ -256,15 +255,15 @@ test half of the full voice slice** (515 clips) and scored with the harness's
 own conventions (`bench-external-notes.ts`; COnP@±100 ms, Amax, per-dataset
 means — comparable to sweep rows, not to published COnPOff):
 
-| dataset | ours (split+floor) | Yong-2023 | Δ |
-|---|---|---|---|
-| annotated-vocalset | 0.60 | 0.444 | **−0.16** |
-| vocadito | 0.73 | 0.730 | ±0.00 |
-| n20emv2 | 0.69 | 0.743 | +0.05 |
-| hust-solfege | 0.76 | 0.843 | +0.08 |
-| esmuc-choir | 0.65 | 0.727 | +0.08 |
-| csd | 0.68 | 0.739 | +0.06 ⚠️ CSD was in its training data — read as inflated |
-| **mean** | **0.686** | **0.704** | **+0.018** |
+| dataset            | ours (split+floor) | Yong-2023 | Δ                                                        |
+| ------------------ | ------------------ | --------- | -------------------------------------------------------- |
+| annotated-vocalset | 0.60               | 0.444     | **−0.16**                                                |
+| vocadito           | 0.73               | 0.730     | ±0.00                                                    |
+| n20emv2            | 0.69               | 0.743     | +0.05                                                    |
+| hust-solfege       | 0.76               | 0.843     | +0.08                                                    |
+| esmuc-choir        | 0.65               | 0.727     | +0.08                                                    |
+| csd                | 0.68               | 0.739     | +0.06 ⚠️ CSD was in its training data — read as inflated |
+| **mean**           | **0.686**          | **0.704** | **+0.018**                                               |
 
 Onset classes tell the real story: **re-onset recall 0.403 vs our 0.263** —
 the phonetic posteriorgram reads the re-articulations we proved unreachable by
@@ -317,7 +316,7 @@ forced choice **97.74 %**; the shipped abstain band (top ≥ 0.51, margin ≥ 0.
 score-instrument prior (the pre-classifier behaviour). Residual errors are
 bleed-heavy choral soprano stems reading as "Flute" — off the product's input
 distribution. Two mechanics worth remembering: this TF.js conversion emits
-**logits** whose absent classes sit near sigmoid ≈ 0.5, so group *sums* measure
+**logits** whose absent classes sit near sigmoid ≈ 0.5, so group _sums_ measure
 group size — compare each group's strongest member instead; and near-silent
 prefixes are exactly what the abstain band is for. Production wiring:
 `profiles/source-classifier.ts`, explicit `sourceKind` still wins, kill-switch
@@ -326,7 +325,7 @@ pass explicit `sourceKind` per dataset so cached profiles stay corpus-pure.
 
 ### Re-onsets: the shipped operating point is optimal, and here is the proof
 
-Re-onset recall is the one axis the voice decode made *worse* (pooled 0.501 →
+Re-onset recall is the one axis the voice decode made _worse_ (pooled 0.501 →
 0.471) and the most user-visible one — someone singing "la-la-la" on one pitch
 gets one note. The decode cannot see these by construction, so the only lever
 without new DSP is `OnsetDetector`, whose thresholds were tuned for a segmenter
@@ -336,11 +335,11 @@ Swept over the detector's **own 10 ms envelope** (see the resolution note below 
 the first attempt at this used the trajectory's 20 ms grid and measured the frame
 rate instead of the rule). Voice slice, dev, on top of the shipping decode:
 
-| onsets | re-onset recall | COnP | split/100 | missed/100 | repair |
-|---|---|---|---|---|---|
-| **shipped** (dip 0.5, rise 1.8) | 0.329 | **0.683** | **9** | 4 | **715 s** |
-| dip 0.65, rise 1.5 | 0.400 | 0.665 | 18 | 4 | 742 s |
-| dip 0.8, rise 1.2 | 0.494 | 0.610 | 55 | 4 | 851 s |
+| onsets                          | re-onset recall | COnP      | split/100 | missed/100 | repair    |
+| ------------------------------- | --------------- | --------- | --------- | ---------- | --------- |
+| **shipped** (dip 0.5, rise 1.8) | 0.329           | **0.683** | **9**     | 4          | **715 s** |
+| dip 0.65, rise 1.5              | 0.400           | 0.665     | 18        | 4          | 742 s     |
+| dip 0.8, rise 1.2               | 0.494           | 0.610     | 55        | 4          | 851 s     |
 
 `missed` **does not move — 4 per 100 at every setting.** That is the whole result.
 The extra sensitivity is not recovering notes the pipeline lost; it is cutting up
@@ -351,7 +350,7 @@ thresholds are a local optimum in every direction available.
 
 The corollary is the useful one: this weakness is **not reachable by thresholding
 amplitude at all**. Separating a re-articulation from a note-internal amplitude
-wobble needs a channel that can see the *spectrum* change — which is exactly what
+wobble needs a channel that can see the _spectrum_ change — which is exactly what
 the literature reports (Yong et al. reach 0.90 re-onset recall with a phonetic
 posteriorgram; our broadband accent experiment failed for the same reason). §3.2's
 selective in-note SuperFlux splitter is the remaining model-free candidate.
@@ -362,7 +361,7 @@ three decimals, same re-onset recall.
 
 #### Why this had to be swept on the 10 ms grid
 
-At *identical* thresholds, re-detecting from the cached 20 ms trajectory-grid
+At _identical_ thresholds, re-detecting from the cached 20 ms trajectory-grid
 energy scores re-onset recall **0.218** where the same rule on the detector's own
 **10 ms** envelope scores **0.329**. A re-articulation dip lasts ~30–50 ms, so
 halving the frame rate leaves one or two samples of it and loses a third of them.
@@ -377,15 +376,15 @@ voice datasets only. N20EMv2 has no degraded variants — `fetch/degrade-real.ts
 been run on it — so this rests on annotated-vocalset (800 clip/conditions) and
 vocadito (80):
 
-| dataset | baseline | voice decode | Δ |
-|---|---|---|---|
-| annotated-vocalset (800) | 0.210 | 0.218 | +0.008 |
-| vocadito (80) | 0.446 | 0.390 | −0.056 |
-| dataset-mean | 0.219 | 0.203 | −0.016 |
-| repair time | 5140 s/100 | **4939 s/100** | −4 % |
+| dataset                  | baseline   | voice decode   | Δ      |
+| ------------------------ | ---------- | -------------- | ------ |
+| annotated-vocalset (800) | 0.210      | 0.218          | +0.008 |
+| vocadito (80)            | 0.446      | 0.390          | −0.056 |
+| dataset-mean             | 0.219      | 0.203          | −0.016 |
+| repair time              | 5140 s/100 | **4939 s/100** | −4 %   |
 
 Read this as **neutral**: the dataset-mean weights 80 clips equally with 800, and
-per clip the two are within noise of each other. Both are also simply *bad* here
+per clip the two are within noise of each other. Both are also simply _bad_ here
 (0.21–0.25), which is the pre-existing reverb problem the findings log already
 documents with a +0.14/+0.23 oracle ceiling still on the table.
 
@@ -394,7 +393,7 @@ further in the voice arm under reverb (0.475 → 0.298) than it does dry
 (0.781 → 0.709), and that is exactly the predicted failure of an evidence-gated
 decode: **reverberation fills the dips the evidence channels read**, so the
 discount stops firing and every boundary reverts to full price. Note this is a
-*different* mechanism from the 2026-07 dead end "reverb fills the dips → tighten
+_different_ mechanism from the 2026-07 dead end "reverb fills the dips → tighten
 the onset splitter" (which was false — splitter behaviour is material-dependent,
 not room-dependent). Here the room really is what removes the evidence.
 
@@ -411,14 +410,14 @@ The new tier (§9.2, `lib/synth.ts`) was built to stratify voice by articulation
 the first thing it says is uncomfortable — scored adaptive, clean condition, voice
 decode on vs off:
 
-| scenario | semitone segmenter | voice decode |
-|---|---|---|
-| voice-alto (the old continuous-vowel proxy) | 1.00 | 1.00 |
-| voice-plosive ("ta-ta-ta") | 1.00 | 1.00 |
-| voice-continuant ("la-la-la") | 0.88 | 0.87 |
-| voice-hum (closed mouth) | 0.93 | **0.81** |
-| voice-legato (sustained vowel) | 0.93 | **0.68** |
-| pooled | **0.946** | 0.871 |
+| scenario                                    | semitone segmenter | voice decode |
+| ------------------------------------------- | ------------------ | ------------ |
+| voice-alto (the old continuous-vowel proxy) | 1.00               | 1.00         |
+| voice-plosive ("ta-ta-ta")                  | 1.00               | 1.00         |
+| voice-continuant ("la-la-la")               | 0.88               | 0.87         |
+| voice-hum (closed mouth)                    | 0.93               | **0.81**     |
+| voice-legato (sustained vowel)              | 0.93               | **0.68**     |
+| pooled                                      | **0.946**          | 0.871        |
 
 This does **not** overturn the real-corpus result, and the reason is the point of
 having both tiers. Synthetic singing here has ±8 cents of vibrato, exact intonation
@@ -427,24 +426,24 @@ shattering held notes) does not occur, and all that is left to measure is its
 merging. The real corpora, which are authoritative under research-benchmarks' tier
 discipline, say +0.16 / +0.10 / +0.10 / +0.03 on the same change.
 
-What the tier *does* establish, and nothing else could:
+What the tier _does_ establish, and nothing else could:
 
 1. **Where the decode is weak is legato with no boundary evidence at all.**
    `voice-legato` is adversarial by construction — `dipFloor: 1`, no closure, no
    pitch dip, only a 70 ms portamento — and that is precisely where the note model
    merges (0.93 → 0.68) while a local semitone rule does not. Real singing always
-   leaks *some* cue, which is why the real corpora do not show this. Treat it as the
+   leaks _some_ cue, which is why the real corpora do not show this. Treat it as the
    boundary of the decode's competence, not as a contradiction.
 2. **Li et al.'s articulation spread reproduces.** Plosive 1.00 → continuant 0.87 →
    hum 0.81 → legato 0.68 is the same ordering (and nearly the same 19-point spread)
    the NLP4MusA 2021 paper measured on a different system. The evidence-backed user
-   tip — *"if notes run together, try ta-ta-ta"* — now has in-house support.
+   tip — _"if notes run together, try ta-ta-ta"_ — now has in-house support.
 3. **Re-onset recall is 0.000 on every legato scenario, in BOTH arms.** Neither
    decode finds a single same-pitch re-articulation when voicing never stops. That
    is the sharpest available statement of the weakest part of the voice flow, and it
    is a measurement the harness simply could not make before this tier existed.
 
-⚠️ **A pre-existing corpus defect this exposed.** The synthetic melodies' *truth* has
+⚠️ **A pre-existing corpus defect this exposed.** The synthetic melodies' _truth_ has
 always contained re-onsets — 7 per scenario, from the repeated notes in `tune` and
 `rhythm` — but `synthesize` detaches every note by `gapSec` = 40 ms, so the rendered
 audio disagrees with its own labels and those onsets arrive as trivially easy
@@ -457,7 +456,7 @@ artefact.
 
 ### A worked example of why `noteTruthDerived` datasets are excluded
 
-mir-qbsh scores **0.64 → 0.55** under the voice decode — a 9-point *drop*, and not
+mir-qbsh scores **0.64 → 0.55** under the voice decode — a 9-point _drop_, and not
 a regression. Its note events are the harness's own derivation of the corpus's
 frame-pitch labels (semitone-rounding plus run-grouping), i.e. the same algorithm
 family as the segmenter the voice decode replaces, so a decode that stops
@@ -471,7 +470,7 @@ The July verdict ("every config −0.06…−0.16, do not reuse") was correct **
 stated diagnosis was incomplete. Two things were wrong with the earlier test, both
 invisible without the metrics added this pass:
 
-- It was scored on one global config across instruments *and* voice. On the voice
+- It was scored on one global config across instruments _and_ voice. On the voice
   slice alone the same family was already competitive on the product-relevant metric
   in July: repair time 271 s/100 notes vs the shipping segmenter's 1107, with
   missed = 1 vs 6.
@@ -479,8 +478,8 @@ invisible without the metrics added this pass:
   defect read as a modelling failure.
 
 **What this means for the general rule:** "the HMM family is a dead end" is now false
-as stated. The accurate version is *"a single global segmentation config cannot serve
-both instruments and voice"* — which is what the July diagnosis actually said, and
+as stated. The accurate version is _"a single global segmentation config cannot serve
+both instruments and voice"_ — which is what the July diagnosis actually said, and
 which is why the fix was a profile flag rather than a better global config.
 
 ### Measured nulls this pass — do not redo
@@ -491,7 +490,7 @@ which is why the fix was a profile flag rather than a better global config.
   to fix; the mechanism was sound, the failure it targeted no longer exists.
 - **SiPTH sustained-deviation merge guard (E3).** Literally zero change on the voice
   decode at every (δ, Γ) — because a mandatory-silence decode never emits two
-  *contiguous* ±1-semitone notes, so the guard has nothing to act on. On the shipping
+  _contiguous_ ±1-semitone notes, so the guard has nothing to act on. On the shipping
   segmenter it is worth +0.007. Implemented and kept (`VoiceDecodeOptions.mergeGuard`,
   `guardOnly`) since it is the right tool if a future decode reopens that failure.
 - **An in-decode re-onset transition (`reonsetCost` + `accentBonus`).** The
@@ -501,10 +500,10 @@ which is why the fix was a profile flag rather than a better global config.
   (a) as a pure transition it never fires — re-articulating the same pitch changes
   no emission, so it is pure added cost and a Viterbi will not take it however
   cheaply it is priced;
-  (b) credited as an attack-state *emission* it fires, but the credit lands on every
+  (b) credited as an attack-state _emission_ it fires, but the credit lands on every
   attack frame of every note, so re-onset recall rose 0.12 → 0.31 while transition
   recall fell 0.62 → 0.50 and COnP with it;
-  (c) credited against the *transition* only — the correct construction — it is a
+  (c) credited against the _transition_ only — the correct construction — it is a
   clean trade with no sweet spot: at 0.5–1 nats it barely fires (recall 0.129), at
   2–4 nats recall reaches 0.29 but COnP collapses to 0.40–0.53 and onset bias runs
   to +40 ms. Broadband RMS rises inside a sustained note nearly as often as at a
@@ -517,7 +516,7 @@ which is why the fix was a profile flag rather than a better global config.
 - **A second, cheaper price for wide intervals (`wideChangeCost`).** One change
   cost has to price both "a semitone with no dip" (almost always vibrato) and "a
   fourth with no dip" (almost always a real slurred leap), and the cost that
-  protects held notes forbids the leap. Splitting it in two works *mechanically* —
+  protects held notes forbids the leap. Splitting it in two works _mechanically_ —
   every onset class improves at once (transition 0.65 → 0.74, re-onset 0.33 → 0.37,
   silence 0.91 → 0.92) — and still loses COnP (0.683 → 0.653), because precision
   falls faster than recall rises. The informative part is that **estimated repair
@@ -531,11 +530,11 @@ which is why the fix was a profile flag rather than a better global config.
 ### What is still wrong with voice, in order
 
 1. **Pitch, not boundaries.** `pWrong` is 15 per 100 reference notes — cleanly
-   segmented, wrong semitone — and it is *not* octave error (octErr 0.001). This is
+   segmented, wrong semitone — and it is _not_ octave error (octErr 0.001). This is
    now the largest single bucket, and it survived a direct attack: both published
    note-pitch estimators were implemented and measured (Molina's α-trimmed mean and
    Yong et al.'s Hann-weighted median) and they are equivalent overall (0.683 vs
-   0.686, inside the MDE) while disagreeing about *which corpus to help* — Hann is
+   0.686, inside the MDE) while disagreeing about _which corpus to help_ — Hann is
    +0.03 on N20EMv2's long notes and −0.02 on vocadito's short ones. Restricting the
    estimate to the post-glide part of the note (`pitchWindow: 'onset'`) has the same
    shape and is a net loss. Two independent estimators that cannot reduce it, and
@@ -543,8 +542,8 @@ which is why the fix was a profile flag rather than a better global config.
    rather than a tuning one — the learned-note-model gap the N20EMv2 yardstick
    already identified.
    One caveat worth carrying: annotated-vocalset reads a **systematic semitone
-   sharp** (+1: 18 % of notes, −1: 8 %) and does so *identically with the voice
-   decode off*, so it is a property of that corpus's score-derived pitch labels, not
+   sharp** (+1: 18 % of notes, −1: 8 %) and does so _identically with the voice
+   decode off_, so it is a property of that corpus's score-derived pitch labels, not
    of the pipeline. Do not tune against it.
 2. **Re-onsets: 0.389 vs the shipping segmenter's 0.461.** The one place the new
    decode is behind. See the null above for what has been tried.
@@ -553,10 +552,10 @@ which is why the fix was a profile flag rather than a better global config.
 
 ### Shipped (all with CIs on dev AND held-out test unless noted)
 
-- Drop `pitchOutliers` + `merge` cleanup on the trajectory path: **+0.024 test** *.
-- `adaptiveFloorFraction: 0.3` on the trajectory path: **+0.018 dev / +0.014 test** * (708-clip corpus).
+- Drop `pitchOutliers` + `merge` cleanup on the trajectory path: **+0.024 test** \*.
+- `adaptiveFloorFraction: 0.3` on the trajectory path: **+0.018 dev / +0.014 test** \* (708-clip corpus).
 - Reverberance-adaptive voicing gate: **+0.024 echoey / +0.043 distant on test** *, clean-neutral.
-  Diagnosis: reverb halves CREPE's *confidence*, barely touches pitch — the gate was the breakage.
+  Diagnosis: reverb halves CREPE's *confidence\*, barely touches pitch — the gate was the breakage.
 - Metrical duration spelling in `MxmlBuilder`: boundary violations **33 % → 0 %** over 6,840 rhythms.
 - Fixed: touching notes read as overlapping (float epsilon) — silently dropped notes from contiguous runs.
 - Fixed: held notes emitted only in their first bar; fully-silent bars never emitted at all.
@@ -575,13 +574,13 @@ which is why the fix was a profile flag rather than a better global config.
 - **Raising the note-length floor** (literature says 100–127 ms): 60/80/100 ms identical — the
   4-frame smoother already removes anything shorter; 120/140 ms cost −0.013/−0.039.
 - **Widening the vibrato A-B-A folder** (0.25/0.35 s): monotonically worse. But do **not** remove it:
-  disabling costs −0.020 dev / −0.024 test *.
+  disabling costs −0.020 dev / −0.024 test \*.
 - **Semitone-track smoother width**: 4 frames optimal; 2, 6, 8 all worse.
 - **pYIN's amplitude-ratio onset splitter** (took Tony's COnPOff 0.38→0.50): at best **+0.001**
   [−0.002,+0.004] here, worse at any higher sensitivity — the shipping dip-then-rise detector already
   captures it. The literature gain does not transfer to a pipeline that already splits.
 - **Dereverberation by spectral subtraction** (`lib/dereverb.ts`): every setting significantly
-  negative despite a +0.14/+0.23 oracle ceiling — reverb costs *confidence*, and subtraction erodes
+  negative despite a +0.14/+0.23 oracle ceiling — reverb costs _confidence_, and subtraction erodes
   the harmonic magnitudes confidence is computed from. A future front end must preserve harmonic
   structure (neural dereverb / reverb-robust model).
 - **"Reverb fills the dips → tighten the onset splitter"**: false; splitter behaviour is
@@ -603,7 +602,7 @@ which is why the fix was a profile flag rather than a better global config.
   merges eat *substantive* notes (median 0.368 s, 3× as many as shipped), not ornaments.
   ⚠️ **Superseded in part, 2026-08** — read "Why the note HMM lost globally in 2026-07 and wins
   here" in the voice findings log above before citing this row. The result stands *as a global
-  config*; restricted to a voice profile, and with its 50 ms onset lead corrected, the same model
+  config\*; restricted to a voice profile, and with its 50 ms onset lead corrected, the same model
   family is now what ships for singing (+0.123 on held-out test).
 - Older: noise-adapt actions + `afftdn` (neutral-to-negative), Viterbi jump floor (noise),
   tuning-offset correction (hurts — truth is absolute A=440), glide-note dropping by shape (eats real
@@ -633,15 +632,15 @@ halves. Verified 0 leaked groups.
 
 **Measured, `EVAL_REAL=1 EVAL_ADAPTIVE=1`, all three excluded from the headline by design:**
 
-| dataset | COnP | COn | COnRec | split | missed | spurious |
-|---|---|---|---|---|---|---|
-| avp (280 clips) | 0.00 | 0.19 | 0.16 | 2 | **71** | 3 |
-| dagstuhl-choir (102) | 0.01 | 0.13 | 0.18 | **28** | 20 | **36** |
-| jacrc-students (175) | 0.01 | 0.28 | **0.52** | 60 | **3** | 42 |
+| dataset              | COnP | COn  | COnRec   | split  | missed | spurious |
+| -------------------- | ---- | ---- | -------- | ------ | ------ | -------- |
+| avp (280 clips)      | 0.00 | 0.19 | 0.16     | 2      | **71** | 3        |
+| dagstuhl-choir (102) | 0.01 | 0.13 | 0.18     | **28** | 20     | **36**   |
+| jacrc-students (175) | 0.01 | 0.28 | **0.52** | 60     | **3**  | 42       |
 
 🔴 **AVP is mis-scoped for `run-eval`, and only measuring it showed that.** It misses **71 of
 every 100** onsets — not because the onset detector is weak, but because `run-eval` exercises the
-*whole pitch-based pipeline*, and AVP is unpitched percussion: CREPE finds no notes, so no onsets
+_whole pitch-based pipeline_, and AVP is unpitched percussion: CREPE finds no notes, so no onsets
 are ever emitted to score. The register's pitch — "a clean way to test `OnsetDetector` in
 isolation" — is right about the corpus and wrong about the path. **To get value from AVP, drive
 the onset detector directly (the `sweep-segmenter.ts` route), not `run-eval`.** Its `run-eval`
@@ -656,13 +655,13 @@ detections the syllable truth does not list — which is why its manifest says r
 DCS stems are "not well suited for monophonic voice evaluation" because of bleed. Measured: COnP
 0.01 with **28 splits and 36 spurious per 100 notes** — the pipeline over-segments badly on
 bleed-laden legato choral audio, and the profile resolver flags every clip `NOISY` at ~0 dB SNR.
-`notation-eval` accordingly gives beat-F1 **0.03** vs GuitarSet's 0.637. That number is *not*
+`notation-eval` accordingly gives beat-F1 **0.03** vs GuitarSet's 0.637. That number is _not_
 evidence about the notation stage: transcription has already failed upstream, and the reference's
 own pitch is 32 % more than 50 cents off. **Dagstuhl's worth is the beat-grid capability and the
 rubato probe, not an accuracy score** — treat any headline use of it as a mistake.
 
-(One real defect was found and fixed while checking that 0.03: the fetcher rebased excerpt *times*
-to t=0 but left beat *numbers* absolute, so a late excerpt carried beats 380–420 against an
+(One real defect was found and fixed while checking that 0.03: the fetcher rebased excerpt _times_
+to t=0 but left beat _numbers_ absolute, so a late excerpt carried beats 380–420 against an
 estimate counting from 0. Phase search was hiding most of it while making `beatF1lock` measure
 nothing else. Beats are now shifted by whole bars, preserving metrical phase. The corrected score
 is unchanged at ~0.03, confirming the cause is the audio, not the alignment.)
@@ -670,6 +669,7 @@ is unchanged at ~0.03, confirming the cause is the audio, not the alignment.)
 ### Open items
 
 Decisions for the team:
+
 - ~~**Model-weight provenance**: CREPE-tiny (shipping) was trained partly on NC-licensed data
   (MDB-stem-synth CC-BY-NC; RWC research licence) — same class of exposure as the rejected RMVPE.
   If ever forced, the remedy is a retrain, not a swap. Decide deliberately.~~ **Resolved
@@ -678,7 +678,7 @@ Decisions for the team:
   `marl/crepe` checkpoint is published under MIT, so it is used as-is. Training-data provenance
   of a permissively licensed checkpoint is exactly the upstream archaeology the rule forbids — the
   same reading that admits CC-BY corpora without consent-form forensics. RMVPE's bar was different
-  in kind (its *own* weights carry an NC licence). No retrain is contemplated (no-training policy).
+  in kind (its _own_ weights carry an NC licence). No retrain is contemplated (no-training policy).
 - ~~**Whistling has zero real test data**~~ — **superseded 2026-08-20.** The premise still
   holds (no note-annotated whistling corpus exists anywhere, and `research/research-whistle-corpus.md`
   now proves acquisition is exhausted), but the harness is no longer at zero: `whistle-real`
@@ -693,6 +693,7 @@ Decisions for the team:
 - A 2AFC human panel remains the right tiebreaker for close segmentation calls (F1 vs repair-time).
 
 Research directions (in expected-value order):
+
 1. **A learned note model for singing** — the N20EMv2 yardstick says supervised note models reach
    ~0.80 COnP@50 ms where we reach 0.49@100 ms zero-shot; post-processing cannot close that.
 2. **Density/vibrato-adaptive change cost** for the note HMM (the measured diagnosis of why one
@@ -707,7 +708,7 @@ Research directions (in expected-value order):
 5. MV2H metre+value integration for publication-comparable notation numbers; MRSSing corpus
    (CC-BY 4.0, verify annotation granularity + a paper/card licence mismatch first).
    **Status 2026-08-13:** `verstar/MRSAudio` is now live on HuggingFace (CC-BY-4.0, ungated,
-   94k files) but the uploaded parts are MRSMusic (16 *instruments*) and MRSLife — **MRSSing,
+   94k files) but the uploaded parts are MRSMusic (16 _instruments_) and MRSLife — **MRSSing,
    the solo singing, is still not there.** Still a watch item.
 6. **Wire AVP to the onset detector directly.** The corpus is fetched and its truth is sound
    (9.8k human-placed onsets on real amateur audio), but `run-eval`'s pitch-based path cannot
@@ -722,24 +723,26 @@ Research directions (in expected-value order):
 
 Consolidated from the 2026-08-20 provider/per-band pass, which ran into most of these as
 confounds or unpowered strata. Items already tracked above are cross-referenced, not
-repeated. (Corpus *acquisition* is exhausted per research/research-voice-datasets.md §5 — most rows
+repeated. (Corpus _acquisition_ is exhausted per research/research-voice-datasets.md §5 — most rows
 below therefore mean "record and annotate our own" or "build a harness capability", not
 "find another dataset".)
 
 **Registers / sources with zero real data:**
+
 - ~~Whistling~~ — **partly closed 2026-08-20.** Acquisition is exhausted and the evidence is in
   `research/research-whistle-corpus.md`: no whistling corpus exists, and the licensable audio that does
   is now fetched (`whistle-real`, 117 clips / 18.3 min after the Freesound sweep — the first draft of this entry said 5 clips / 34 s; `whistle-vintage`, 6 clips / 180 s). Both
   carry draft labels flagged `noteTruthDerived` until a human verifies them. What remains is
-  *volume*, and it is ours to record — capture protocol in that file's §6.
+  _volume_, and it is ours to record — capture protocol in that file's §6.
 - ~~piccolo and everything above ~700 Hz~~ — **partly closed 2026-08-20** by `fetch/fetch-tinysol.ts`
   (64 clips / 512 notes of real Ircam timbre, `high` 0.924 vs `very-high` 0.654). Still
-  `constructedPerformance`: real tone, spliced phrasing. A real *performance* above 700 Hz
+  `constructedPerformance`: real tone, spliced phrasing. A real _performance_ above 700 Hz
   remains unrepresented, and piccolo specifically has no permissive corpus at all.
 - Harmonica — in the synthetic matrix, no real counterpart (URMP's 13 instruments lack it, and
   the 2026-08-20 sweep found none anywhere — research/research-voice-datasets.md §6k).
 
 **Strata too thin to power conclusions:**
+
 - Low/high-band INSTRUMENTS: n = 6 / 5 real clips in the per-band sweep (URMP is 2–4 clips
   × 15 s per instrument). Any register-specific instrument question is unanswerable on
   real data today.
@@ -750,6 +753,7 @@ below therefore mean "record and annotate our own" or "build a harness capabilit
   "low band" reads as "AV operatic vibrato". Amateur low-register solo singing would fix it.
 
 **Conditions:**
+
 - Genuinely RECORDED adverse takes: the adverse tier is synthetic degradation of real
   performances — honest, but no take was performed in a real echoey room / outdoors. (Partial
   2026-08-20: `whistle-vintage` is real whistling over real piano/orchestra with real 78-rpm
@@ -759,7 +763,7 @@ below therefore mean "record and annotate our own" or "build a harness capabilit
   **closed 2026-08-20** by `Condition.codec`: a codec round trip cannot move a note, so the
   existing truth applies. Four conditions (`phone-opus-96k/32k/16k`, `phone-aac-64k`),
   alignment verified at 0.00 ms lag, effect measured null (±0.03). What remains uncovered is
-  the browser's *audio processing*, which the app disables by constraint.
+  the browser's _audio processing_, which the app disables by constraint.
 - N20EMv2 has no degraded variants (`fetch/degrade-real.ts` never run on it) — the adverse voice
   evidence rests on annotated-vocalset + vocadito alone.
 - Real out-of-tune singing with intended-note truth: the R20 intonation tier is synthetic
@@ -787,8 +791,8 @@ Execution of `plan-plugin-improvements.md` (the batched proposals from
 ### R11: every frame-denominated knob is now hop-independent (2026-08-19)
 
 Praat's convention (`research/research-plugin-sources.md` §6.1, §16.10), applied to the four constants
-§16.10 lists: per-frame *costs* are now declared in nats **per 10 ms** and rescaled by
-`hopSec / 0.01` at decode time; frame *counts* are now declared in **seconds** and rounded onto
+§16.10 lists: per-frame _costs_ are now declared in nats **per 10 ms** and rescaled by
+`hopSec / 0.01` at decode time; frame _counts_ are now declared in **seconds** and rounded onto
 the track's own grid per decode. A hop change can no longer silently re-tune the model, and the
 hand-derived "3.4×" note in `note-segmenter.ts` is gone. `minFramesPerNote` (profile/provider
 seam) deliberately stays in provider frames — it is converted where the frame grid is known
@@ -796,14 +800,14 @@ seam) deliberately stays in provider frames — it is converted where the frame 
 
 **Conversion table** — read this to translate historical sweep numbers:
 
-| knob | was | now declared | at the 20 ms hop |
-|---|---|---|---|
-| `NoteSegmenterOptions.attackFrameCost` | 0.35 nats/frame | **0.175 nats / 10 ms** | ×2 → 0.35, unchanged |
-| `NoteSegmenterOptions.minFrames` | 5 frames | **`minNoteSec` 0.1 s** | round → 5, unchanged |
-| `VoiceDecodeOptions.attackFrameCost` | 0.35 nats/frame | **0.175 nats / 10 ms** | ×2 → 0.35, unchanged |
-| `VoiceDecodeOptions.minFrames` | 4 frames | **`minNoteSec` 0.08 s** | round → 4, unchanged |
-| basic-pitch `MIN_NOTE_LEN_FRAMES` | 11 frames | **`MIN_NOTE_LEN_SEC` 0.128 s** | ÷(256/22050) → 11, unchanged |
-| basic-pitch `ENERGY_TOLERANCE` | 11 frames | **`ENERGY_TOLERANCE_SEC` 0.128 s** | → 11, unchanged |
+| knob                                   | was             | now declared                       | at the 20 ms hop             |
+| -------------------------------------- | --------------- | ---------------------------------- | ---------------------------- |
+| `NoteSegmenterOptions.attackFrameCost` | 0.35 nats/frame | **0.175 nats / 10 ms**             | ×2 → 0.35, unchanged         |
+| `NoteSegmenterOptions.minFrames`       | 5 frames        | **`minNoteSec` 0.1 s**             | round → 5, unchanged         |
+| `VoiceDecodeOptions.attackFrameCost`   | 0.35 nats/frame | **0.175 nats / 10 ms**             | ×2 → 0.35, unchanged         |
+| `VoiceDecodeOptions.minFrames`         | 4 frames        | **`minNoteSec` 0.08 s**            | round → 4, unchanged         |
+| basic-pitch `MIN_NOTE_LEN_FRAMES`      | 11 frames       | **`MIN_NOTE_LEN_SEC` 0.128 s**     | ÷(256/22050) → 11, unchanged |
+| basic-pitch `ENERGY_TOLERANCE`         | 11 frames       | **`ENERGY_TOLERANCE_SEC` 0.128 s** | → 11, unchanged              |
 
 Sweep-name translation: `e1c minFrames3/4/5/6` → `e1c minNote60/80/100/120ms`;
 `e1c attackFrame0.15/0.35/0.7` (per frame) → `e1c attackFrame0.075/0.175/0.35` (per 10 ms).
@@ -827,17 +831,17 @@ anchored paired CIs incl. ΔP/ΔR) to measure them on the adverse tier they were
 **Every leg is a null.** The gate was "precision up on the adverse tier, recall unchanged":
 
 - **Voice decode, adverse tier** (`sweep-reverb`, annotated-vocalset+vocadito dev, vs `voice OFF`):
-  short-loud is *exactly* zero everywhere (Δ 0.000 on real/echoey-room/distant-mic — at
+  short-loud is _exactly_ zero everywhere (Δ 0.000 on real/echoey-room/distant-mic — at
   changeCost 2.5 the decode emits essentially no short runs for the exemption to save). Long-quiet
   is zero-to-negative: echoey-room lq.45 ΔR −0.005*, ΔP −0.002; distant-mic lq.45 ΔP −0.007*,
-  ΔR −0.012* — under reverb it removes real quiet notes, not tails.
+  ΔR −0.012\* — under reverb it removes real quiet notes, not tails.
 - **Why the tail theory fails here:** a reverb tail never becomes a note on the trajectory path —
   CREPE's confidence collapses on tails, so the voicing gate has already eaten the thing the
   long-quiet filter was built to catch (same reason the 2026-07 gates/afftdn attempts were dead
   ends).
 - **Clean corpus** (`sweep-voice` r15 group, 693 voice/49 guard; `sweep-segmenter`, 742 clips):
   lq ≤ 0.3 trims spurious (23→21 voice, 22→20 hmm) with recall intact — +0.002
-  [+0.002,+0.003]*, real but far under the ~1 pt bar; lq 0.45 starts eating true notes.
+  [+0.002,+0.003]\*, real but far under the ~1 pt bar; lq 0.45 starts eating true notes.
   Short-loud on the HMM: +0.000 [−0.000,+0.001].
 - **basic-pitch, very-high band** (run-eval, whistle-mid/high + piccolo × 7 conditions, fixed
   provider at the band's 500–4500 Hz window): baseline COnP 0.556; lq.3@.35s identical 0.556
@@ -863,7 +867,7 @@ unchanged" (grid: minFraction 0.25/0.5/0.75 × window 60/120/200 ms, `sweep-reve
 anchored on `voice OFF`, plus the `sweep-voice` r19 clean group):
 
 - Mild quorums (≤0.5) are zeros everywhere; the best cell in the whole grid is echoey-room
-  q.5w60 at ΔP +0.002 [+0.001,+0.004]* — real, microscopic, far under the ~1 pt bar.
+  q.5w60 at ΔP +0.002 [+0.001,+0.004]\* — real, microscopic, far under the ~1 pt bar.
 - Strict quorums collapse under reverb, and the direction is the mechanism's own: reverb HALVES
   CREPE's confidence inside held notes (the 2026-07 diagnosis), so mid-note frames barely clear
   the gate and a strict neighbourhood vote guts exactly the notes it was meant to protect —
@@ -878,6 +882,7 @@ adds nothing on top of a note-level decode; the references that ship it (Essenti
 outotune) have **no note-level decode** to lean on. Option stays, defaulted off.
 
 ### R21: single-frame dropout fill — fails its gate on clean voice, but is the largest reverb
+
 ### relief ever measured here (2026-08-19)
 
 Deep Autotuner's `interpolate_pyin` (corrected to fill **unvoiced** frames only), as
@@ -927,7 +932,7 @@ aubio's `delay` parameter (§4.2/§16.6 of the survey), added as `OnsetDetectorO
 onsets), and the answer is 0:**
 
 - Shipping segmenter path: overall onset bias at d0 is **−1 ms** — there is nothing to subtract.
-  d±10–30 ms are zeros-to-negative; d+50 costs GUARD −0.018*. The historical output is the optimum.
+  d±10–30 ms are zeros-to-negative; d+50 costs GUARD −0.018\*. The historical output is the optimum.
 - Voice-decode path: +10…50 ms trend +0.001 (inside noise, mde 0.015); the residual +19 ms mean /
   +29 ms median lateness there belongs to `onsetShiftSec` (70 ms), which the e1a/e1c sweeps chose
   on COnP over the bias-zero ~50 ms — deliberately, re-confirmed by this grid. Do not "fix" the
@@ -953,7 +958,7 @@ GUARD. Under reverb it is −0.06…−0.10* on top of an already-degraded basel
 
 The mechanism, worth keeping: the fixed "ratios" this was meant to replace are not mere
 thresholds — **the dip requirement is a structural gate** (energy must genuinely leave the note
-before a rise counts), and no threshold *level* on a plain RMS-rise novelty can substitute for it,
+before a rise counts), and no threshold _level_ on a plain RMS-rise novelty can substitute for it,
 because vibrato/tremolo swells produce rises without dips at every dynamic. aubio's scheme
 presupposes a real novelty function (spectral flux/HFC); applied to the broadband envelope it
 answers a different question. **If R3 is ever revived, put the median+mean threshold on the
@@ -967,13 +972,13 @@ Three new `pitchEstimator` variants in `voice-note-decoder.ts`, tried in the doc
 (fat1's within-note smoother, hard reset per note), `'detrend'` (MXTune's per-note linear
 detrend-then-centre). Swept on dev with the e8 SPLIT cleanup:
 
-| estimator | vs SHIPPED (anchor +0.094) | pWrong/100 | chromaF1 |
-|---|---|---|---|
-| trimmed-mean (ships) | +0.094 | 17 | 0.522 |
-| slew 30 ms | +0.094 (identical) | 17 | 0.522 |
-| one-pole τ20 ms | +0.093 | 17 | 0.519 |
-| slew 50 / pole 40 / detrend | +0.091 / +0.088 / +0.085 | 18 | 0.516→0.508 |
-| slew 100 / pole 80 | +0.076 / +0.075 | 19–20 | ≤0.493 |
+| estimator                   | vs SHIPPED (anchor +0.094) | pWrong/100 | chromaF1    |
+| --------------------------- | -------------------------- | ---------- | ----------- |
+| trimmed-mean (ships)        | +0.094                     | 17         | 0.522       |
+| slew 30 ms                  | +0.094 (identical)         | 17         | 0.522       |
+| one-pole τ20 ms             | +0.093                     | 17         | 0.519       |
+| slew 50 / pole 40 / detrend | +0.091 / +0.088 / +0.085   | 18         | 0.516→0.508 |
+| slew 100 / pole 80          | +0.076 / +0.075            | 19–20      | ≤0.493      |
 
 The pattern is monotone and unambiguous: **any smoothing gentle enough not to hurt reproduces the
 trimmed mean's answer, and anything stronger strictly worsens semitone-level naming.** This is the
@@ -996,8 +1001,8 @@ standing articulation-tier numbers exactly (1.000/0.869/0.812/0.676 vs the logge
 **The hard gate — monotone accuracy loss with dose — passes** (adaptive production pipeline,
 pooled over the four articulated scenarios):
 
-| ±0¢ | ±20¢ | ±40¢ | ±60¢ | ±80¢ |
-|---|---|---|---|---|
+| ±0¢   | ±20¢  | ±40¢  | ±60¢  | ±80¢  |
+| ----- | ----- | ----- | ----- | ----- |
 | 0.836 | 0.832 | 0.761 | 0.099 | 0.011 |
 
 The shape is the mechanically-honest one: near-lossless below the rounding boundary, ~half the
@@ -1040,7 +1045,7 @@ Gaussian-argmax. The plan's three questions, answered:
 - **Q2 (histogram): no change** (cosine vs truth 0.910 → 0.910) — offset-corrected rounding
   reproduces the integer pitches on this band.
 - **Q3 (R5, contour note pitch): no change anywhere** — f1(int) = f1(sub) to three decimals on
-  all seven conditions; aubio's frames-3..9 window *hurts* under reverb (echoey −0.006,
+  all seven conditions; aubio's frames-3..9 window _hurts_ under reverb (echoey −0.006,
   distant-mic −0.032) because degraded notes are short enough that skipping the attack starves
   the median.
 
@@ -1062,20 +1067,20 @@ weakness) plus the §16.11 octave tie-break (`octaveBias`).
 
 **Kill criteria were "beaten at k=3 AND k=5"; it lost at both** (dev VOICE slice, vs SHIPPED):
 
-| config | VOICE | splits/100 | pWrong | chromaF1 |
-|---|---|---|---|---|
-| single-candidate anchor | **+0.095** | 13 | 17 | 0.520 |
-| k=3 (y 0.5/1/2 identical) | +0.088 | 14–15 | 16 | 0.514 |
-| k=5 | +0.078 | 16–17 | 16 | 0.507 |
-| k=5 + octave tie-break | +0.075…+0.077 | 17 | 16 | 0.506 |
+| config                    | VOICE         | splits/100 | pWrong | chromaF1 |
+| ------------------------- | ------------- | ---------- | ------ | -------- |
+| single-candidate anchor   | **+0.095**    | 13         | 17     | 0.520    |
+| k=3 (y 0.5/1/2 identical) | +0.088        | 14–15      | 16     | 0.514    |
+| k=5                       | +0.078        | 16–17      | 16     | 0.507    |
+| k=5 + octave tie-break    | +0.075…+0.077 | 17         | 16     | 0.506    |
 
-The failure is monotone in k and indifferent to `yinTrust` — it is the *availability* of
+The failure is monotone in k and indifferent to `yinTrust` — it is the _availability_ of
 alternatives, not their weighting: every extra candidate is another place a pitch state can sit,
 and the decode spends that freedom on splits (13→17/100) while buying only pWrong 17→16. The
 octave tie-break has nothing to fix (octErr was already 0.006).
 
 **Why pYIN needs this and we do not:** our per-frame trajectory is already Viterbi-smoothed over
-the full 360-bin activation — frame-level continuity is applied *before* the note model — so the
+the full 360-bin activation — frame-level continuity is applied _before_ the note model — so the
 note layer's candidate freedom re-admits exactly the stray maxima that smoothing removed. pYIN's
 YIN candidates carry no frame-level smoothing; its note model is the only continuity there. The
 "single-candidate approximation" the research doc worried about is not an approximation of pYIN —
@@ -1114,6 +1119,7 @@ Both options stay, documented-off. With e7, r10a and r10b together: **stop tryin
 transition recall with transition prices** — the remaining misses are the learned-note-model gap.
 
 ### E5 (R12): asymmetric confirmation + delay compensation — mostly not applicable, and the
+
 ### applicable part is now measured (2026-08-19)
 
 Two of R12's three ideas do not map onto this pipeline, and saying so precisely is the finding:
@@ -1131,11 +1137,11 @@ that much audio exists past its end. Now env-overridable (`RECORDING_STABLE_MARG
 measured with `check-streaming.ts` (paced-feed vs whole-buffer, 6 scenarios incl. all four
 articulations × 2 melodies, margins 0.4/0.3/0.2/0.1):
 
-| margin | paced vs whole-buffer |
-|---|---|
+| margin            | paced vs whole-buffer                                           |
+| ----------------- | --------------------------------------------------------------- |
 | 0.4 (ships) / 0.3 | identical rows (incl. the same pre-existing 1-note cello quirk) |
-| 0.2 | first divergence (voice-continuant tune 0.815 → 0.769) |
-| 0.1 | broad divergence, 2-note deltas on the legato scenarios |
+| 0.2               | first divergence (voice-continuant tune 0.815 → 0.769)          |
+| 0.1               | broad divergence, 2-note deltas on the legato scenarios         |
 
 So 300 ms is validated-equal and 200 ms — Essentia's own default — is the measured edge, because
 our margin is not confirming the note-off acoustically; it is confirming that CREPE's trailing
@@ -1148,7 +1154,7 @@ wanting the latency has a measured, env-gated knob and this table.
 (a) Essentia's `PitchContourSegmentation`, written from §7.1's prose (AGPL — never read/ported),
 now lives in `sweep-segmenter.ts` as `runningMean` configs (island building against the note's own
 accumulated mean; per-segment RMS z-cut). At ±80 ¢ it beats the LEGACY shipping segmenter pooled:
-**+0.011 [+0.002, +0.020]*** over 742 dev clips — the survey's "cheapest thing that could
+**+0.011 [+0.002, +0.020]\*** over 742 dev clips — the survey's "cheapest thing that could
 plausibly beat the semitone-run segmenter" claim confirmed. But the decomposition kills the ship:
 the gain is entirely on VOICE corpora (vocadito 0.68→0.73, csd 0.57→0.66, hust 0.69→0.74), where
 production routes to `VoiceNoteDecoder`, which beats rm80c decisively (annotated-vocalset 0.62 vs
@@ -1194,12 +1200,12 @@ intonation tier, fallback on vs off.
 
 **It does not ship, and both failure modes are the estimator's, not the wiring's:**
 
-| detune | wrong% off→key | keyRight | abstain |
-|---|---|---|---|
-| ±0¢ | 1.8 → 1.8 | 9/16 | 0/16 |
-| ±20¢ | 1.8 → **2.4** | 9/16 | 0/16 |
-| ±40¢ | 31.1 → 32.2 | 7/16 | 0/16 |
-| ±60/80¢ | 65.7→66.9 / 98.8→97.1 | 1/16 / 0/16 | 0/16 |
+| detune  | wrong% off→key        | keyRight    | abstain |
+| ------- | --------------------- | ----------- | ------- |
+| ±0¢     | 1.8 → 1.8             | 9/16        | 0/16    |
+| ±20¢    | 1.8 → **2.4**         | 9/16        | 0/16    |
+| ±40¢    | 31.1 → 32.2           | 7/16        | 0/16    |
+| ±60/80¢ | 65.7→66.9 / 98.8→97.1 | 1/16 / 0/16 | 0/16    |
 
 1. **The abstain-as-incumbent never fires** (0/80): Pearson against all-positive profiles on a
    12-bin histogram essentially never lands ≤ 0, so the survey's "cleanest possible answer" needs
@@ -1219,7 +1225,7 @@ That closes the plugin-improvements plan: 15 tasks executed, every outcome logge
 
 ### R23: OpenVPI GAME — resolved at the licence gate; no benchmark run (2026-08-19)
 
-The plan's blocking check came first, and it is decisive: the GAME repository's *code* is MIT, but
+The plan's blocking check came first, and it is decisive: the GAME repository's _code_ is MIT, but
 the pretrained checkpoints (v1.0.0 release, small ~12M / medium ~50M / large ~100M) state plainly
 that **"The model files apply CC BY-NC-SA 4.0 license"** — non-commercial. Per the licence
 register's standing rule (the artifact's own published licence governs, at face value, in both
@@ -1286,9 +1292,9 @@ Every wav of both corpora resolved through the production resolver (harness hint
 full-clip scan): **331 of 3 633 routings are basic-pitch, and not one of them carries
 pitched real material.**
 
-| route | real corpus | synthetic |
-|---|---|---|
-| `very-high` band | 20 — all AVP vocal percussion (pitchless) | 53 (whistle/piccolo scenarios) |
+| route                   | real corpus                                                                                | synthetic                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| `very-high` band        | 20 — all AVP vocal percussion (pitchless)                                                  | 53 (whistle/piccolo scenarios)                   |
 | `default-wide` fallback | 198 — 188 annotated-vocalset echoey-room/distant-mic variants where the scan fails, 10 AVP | 60 (degraded variants with unscannable lead-ins) |
 
 Every pitched real clip routes to crepe-tiny (mid ≈ 1 510, low ≈ 1 006, high ≈ 231). The
@@ -1304,13 +1310,13 @@ Effective coverage ~3.9 kHz real, above the corpus's highest note (3 729 Hz). Fi
 comparison at the band anchor (whistle-mid/high + piccolo × 7 conditions, COnP@±100 ms,
 paired over 84 clips):
 
-| config | pooled | clean | echoey-room | distant-mic | Δ vs basic-pitch |
-|---|---|---|---|---|---|
-| basic-pitch (ships) | 0.556 | 0.881 | 0.341 | 0.227 | — |
-| crepe, no shift (naive drop) | 0.546 | 0.843 | 0.322 | 0.200 | −0.010 [−0.046,+0.026]; whistle-high −0.114 (39 % of its notes sit above the ceiling) |
-| crepe −1 oct | 0.578 | 0.966 | 0.244 | 0.169 | +0.022 [−0.010,+0.054] |
-| **crepe −1 oct + reverb ramp** | **0.583** | 0.966 | 0.271 | 0.181 | **+0.028 [−0.003,+0.059]** |
-| crepe −2 oct | 0.548 | 0.945 | 0.235 | 0.165 | −0.008 — no content needs the depth, 4× cost |
+| config                         | pooled    | clean | echoey-room | distant-mic | Δ vs basic-pitch                                                                      |
+| ------------------------------ | --------- | ----- | ----------- | ----------- | ------------------------------------------------------------------------------------- |
+| basic-pitch (ships)            | 0.556     | 0.881 | 0.341       | 0.227       | —                                                                                     |
+| crepe, no shift (naive drop)   | 0.546     | 0.843 | 0.322       | 0.200       | −0.010 [−0.046,+0.026]; whistle-high −0.114 (39 % of its notes sit above the ceiling) |
+| crepe −1 oct                   | 0.578     | 0.966 | 0.244       | 0.169       | +0.022 [−0.010,+0.054]                                                                |
+| **crepe −1 oct + reverb ramp** | **0.583** | 0.966 | 0.271       | 0.181       | **+0.028 [−0.003,+0.059]**                                                            |
+| crepe −2 oct                   | 0.548     | 0.945 | 0.235       | 0.165       | −0.008 — no content needs the depth, 4× cost                                          |
 
 Both hypotheses behind the question confirm in direction: the pitch-down closes the
 ceiling gap (the naive drop's whistle-high −0.114 becomes −0.02), and a gated feature
@@ -1327,13 +1333,13 @@ model, registered whenever CREPE is), the `very-high` band-table swap (which als
 voice overlay explicitly excluded (whistling is a documented voice-decode gap). Adaptive
 production path over the same scenarios:
 
-| | baseline (basic-pitch band) | consolidated | Δ paired |
-|---|---|---|---|
-| pooled COnP | 0.589 | **0.605** | **+0.016 [−0.010, +0.042]** |
-| piccolo / whistle-mid / whistle-high | 0.70 / 0.53 / 0.54 | 0.73 / 0.55 / 0.54 | |
-| missed per 100 | 36 | 30 | est. repair −16 % (5 297 → 4 445 s/100) |
-| re-onset / transition recall | 0.69 / 0.52 | 0.80 / 0.61 | |
-| echoey-room / distant-mic | 0.36 / 0.26 | 0.33 / 0.22 | the reverb deficit |
+|                                      | baseline (basic-pitch band) | consolidated       | Δ paired                                |
+| ------------------------------------ | --------------------------- | ------------------ | --------------------------------------- |
+| pooled COnP                          | 0.589                       | **0.605**          | **+0.016 [−0.010, +0.042]**             |
+| piccolo / whistle-mid / whistle-high | 0.70 / 0.53 / 0.54          | 0.73 / 0.55 / 0.54 |                                         |
+| missed per 100                       | 36                          | 30                 | est. repair −16 % (5 297 → 4 445 s/100) |
+| re-onset / transition recall         | 0.69 / 0.52                 | 0.80 / 0.61        |                                         |
+| echoey-room / distant-mic            | 0.36 / 0.26                 | 0.33 / 0.22        | the reverb deficit                      |
 
 ### The DEFAULT_PROFILE is provider-immaterial (`bench-default-provider.ts`)
 
@@ -1382,15 +1388,15 @@ test:**
   (annotated-vocalset low +0.029* vs mid +0.010) and no observed harm in any low stratum:
   dev low/voice +0.019*. **Held-out test: +0.007 [−0.006, +0.019] — not confirmed.**
 - `v.onsetShiftSec 90 ms`: dev low/voice +0.021*, test +0.002 [−0.007, +0.011] — gone; on
-  dev it also split by dataset, not band (esmuc/mid +0.013* vs csd/mid −0.033*, both choral).
+  dev it also split by dataset, not band (esmuc/mid +0.013* vs csd/mid −0.033\*, both choral).
 - Reverb-flag strata (`BAND_STRATA=band-rev`): on `+reverb` clips the relief is already
-  right — lowering the gate further costs (mid/voice/rev −0.029* at −0.15), raising it back
+  right — lowering the gate further costs (mid/voice/rev −0.029\* at −0.15), raising it back
   is n.s. everywhere — so the ramp's false-fires on sustained clean singing cost nothing
   measurable and `REVERB_CONFIDENCE_RELIEF` earns no per-band value.
 - Uniform across strata, matching the standing global verdicts: gate offsets (lowering
   hurts everywhere), R21 fill (negative on clean in every stratum), smoother width,
   changeCost ≥ 2.5 saturation, evidenceDiscount, adaptiveFloorFraction 0.3 (both directions
-  worse everywhere), onsetSplit (keep global: −0.030* to remove on mid/instr, COnP-neutral
+  worse everywhere), onsetSplit (keep global: −0.030\* to remove on mid/instr, COnP-neutral
   on voice).
 
 **Answered by mechanism, no sweep needed:** `silenceRule` (R25 — it never reclassifies a
@@ -1423,7 +1429,7 @@ records the sweep with the evidence attached: FSD50K has **no `Whistling` class 
 the audio; **MLEnd Hums and Whistles** — 6,000 files, 235 people, the biggest whistling
 collection in existence — reports `licenseName: "Unknown"` on Kaggle's own metadata API and
 states no terms anywhere, on top of eight in-copyright compositions; the Silbo Gomero corpus is
-CC BY-NC-SA; AID's Zenodo field says CC-BY-4.0 while the LICENSE *inside its archive* says
+CC BY-NC-SA; AID's Zenodo field says CC-BY-4.0 while the LICENSE _inside its archive_ says
 CC BY-NC-SA (→ NC, per §5e's precedent), and its whistling is 18.5 s of incidental material
 anyway; both Belyk Dryad deposits are CC0 with **no timing anywhere** in the annotation chain.
 
@@ -1431,10 +1437,10 @@ What does exist is now fetched, drafted and wired in. **Freesound's CC0 slice is
 this a corpus rather than a smoke test** — an API key (free, instant) reaches previews under
 token auth, and 537 candidates screened down to 112 usable clips:
 
-| dataset | clips | notes | audio | licences |
-|---|---|---|---|---|
-| `whistle-real` | **117** | **2,777** | **18.3 min** (median clip 7.8 s) | CC0 (112 Freesound) + PD / CC BY-SA 3.0/4.0 (5 Wikimedia Commons) |
-| `whistle-vintage` | 6 | 249 | 3 min | public domain (Alice J. Shaw, Frank Stafford — pre-1923 sides) |
+| dataset           | clips   | notes     | audio                            | licences                                                          |
+| ----------------- | ------- | --------- | -------------------------------- | ----------------------------------------------------------------- |
+| `whistle-real`    | **117** | **2,777** | **18.3 min** (median clip 7.8 s) | CC0 (112 Freesound) + PD / CC BY-SA 3.0/4.0 (5 Wikimedia Commons) |
+| `whistle-vintage` | 6       | 249       | 3 min                            | public domain (Alice J. Shaw, Frank Stafford — pre-1923 sides)    |
 
 ⚠️ **Assembling that by search needed two filters, and the acoustic one was not enough.**
 `whistleScreen()` gates on the property that defines whistling — nearly all energy in one moving
@@ -1443,7 +1449,7 @@ first 170 candidates, and reading those 82 titles found `tin whistle.wav`, `Celt
 Melody`, `Slide-whistle.wav`, `Hoary marmot whistles`, `Retro video game sfx - Wolf Whistle` and
 `synth Crystal`. **No threshold fixes that**: a tin whistle, a slide whistle, a sine synth and a
 marmot are acoustically the same class of signal as a person whistling. So the metadata gate
-(`FREESOUND_REQUIRE` + `FREESOUND_VETO`) requires the sound to be *described* as whistling in
+(`FREESOUND_REQUIRE` + `FREESOUND_VETO`) requires the sound to be _described_ as whistling in
 name or tags and vetoes instruments, synthesis, cartoons, animals, machines, heavy processing
 and non-melodic whistles — biased to precision, since a wrong clip costs a human's verification
 time and then poisons the truth. Funnel: 537 → 372 (described as whistling) → ~282 (not vetoed)
@@ -1454,7 +1460,7 @@ first sweep silently stopped at 150 results.
 
 New chain, four scripts: `fetch/fetch-whistle-real.ts` (acquire + verify each licence live against
 the source's API + normalise) → `fetch/draft-note-labels.ts` (`lib/sineTrack.ts` drafts labels) →
-*human corrects the TSVs* → `fetch/import-note-labels.ts` (→ scoreable dataset). **Audio is cached,
+_human corrects the TSVs_ → `fetch/import-note-labels.ts` (→ scoreable dataset). **Audio is cached,
 labels are committed** (`scripts/eval/annotations/`, Audacity's own three-column format) —
 the labels are the only artefact nobody can regenerate. Both datasets carry
 `noteTruthDerived: true` until a human verifies them, which is the flag that keeps unverified
@@ -1465,10 +1471,10 @@ labels become a sibling of the estimator).
 **Real-whistle measurement (adaptive, draft truth, n = 117 clips / ~2.8k notes — read as
 diagnosis, not accuracy):**
 
-| dataset | COnP@100 ms | octErr | missed | spurious/100 | onset bias | trans recall |
-|---|---|---|---|---|---|---|
-| `whistle-real` | 0.36 | **0.00** | 55 % | **3** | +31 ms (med +20) | 0.258 (n=1270) |
-| `whistle-vintage` | 0.02 | 0.16 | 58 % | **102** | +62 ms | 0.293 (n=41) |
+| dataset           | COnP@100 ms | octErr   | missed | spurious/100 | onset bias       | trans recall   |
+| ----------------- | ----------- | -------- | ------ | ------------ | ---------------- | -------------- |
+| `whistle-real`    | 0.36        | **0.00** | 55 %   | **3**        | +31 ms (med +20) | 0.258 (n=1270) |
+| `whistle-vintage` | 0.02        | 0.16     | 58 %   | **102**      | +62 ms           | 0.293 (n=41)   |
 
 1. **No octave errors on clean real whistling — confirmed at scale.** 0.00 over ~2,800 notes.
    The failure mode a near-sinusoidal source was expected to provoke does not appear at all, so
@@ -1477,7 +1483,7 @@ diagnosis, not accuracy):**
 2. **The failure is conservative, not noisy**: 55 % of drafted notes missed against only **3
    spurious per 100**. The pipeline drops whistled notes rather than inventing them. (Part of
    that missed rate is the draft's own over-segmentation — 2.5 notes/s — so read the
-   missed:spurious *ratio*, which is the robust part, not the absolute.)
+   missed:spurious _ratio_, which is the robust part, not the absolute.)
 3. **Transitions are the loss, now with real weight**: transition recall 0.258 over **1,270**
    real transitions vs 0.344 on silence onsets. Whistling has no consonant to mark a re-onset,
    and this is the first non-synthetic measurement of what that costs.
@@ -1492,7 +1498,7 @@ diagnosis, not accuracy):**
    pass to look at.
 5. **On accompanied material the resolver locks onto the accompaniment.** Every vintage clip
    resolved `mid+noise` or `high+noise` with a 1900 Hz ceiling from a scan reporting
-   p10/med/p90 ≈ 215–530 Hz — the *piano*, while the whistled line sits at 1.3–2.2 kHz. The
+   p10/med/p90 ≈ 215–530 Hz — the _piano_, while the whistled line sits at 1.3–2.2 kHz. The
    102-spurious-per-100 rate is the same fact from the metric's side. This is a genuine
    pipeline finding, and the only reason it is visible is that nobody synthesised it.
 
@@ -1511,24 +1517,24 @@ performer timing, no shaping. That is the opposite of `noteTruthDerived`, so it 
 manifest flag, **`constructedPerformance`** (`lib/realCorpus.ts`, honoured by `run-eval.ts`
 with its own footnote): reported, never pooled. Read it as register evidence only.
 
-| stratum | n clips | COnP@100 ms |
-|---|---|---|
-| `high` (MIDI 77–85) | 36 | **0.924** |
-| `very-high` (MIDI 86–100) | 28 | **0.654** |
-| | | **Δ −0.270** |
+| stratum                   | n clips | COnP@100 ms  |
+| ------------------------- | ------- | ------------ |
+| `high` (MIDI 77–85)       | 36      | **0.924**    |
+| `very-high` (MIDI 86–100) | 28      | **0.654**    |
+|                           |         | **Δ −0.270** |
 
 And the interaction that says where to look:
 
-| band | pp | mf | ff |
-|---|---|---|---|
-| `high` | 0.854 | 0.979 | 0.939 |
+| band        | pp        | mf    | ff    |
+| ----------- | --------- | ----- | ----- |
+| `high`      | 0.854     | 0.979 | 0.939 |
 | `very-high` | **0.451** | 0.752 | 0.780 |
 
 Per instrument, `high` → `very-high`: flute 1.000 → 0.656, violin 0.938 → 0.643, oboe 0.938 →
 0.754, viola 0.856 → 0.625, accordion 0.896 → 0.627 (clarinet tops out at MIDI 91 so it has no
 `very-high` clips; its `high` mean is 0.917). **`octErr` is 0.00 in every stratum** — the band
 does not lose notes to octave confusion, it loses them outright, and the loss concentrates in
-*quiet* high notes (`very-high` pp 0.451 vs ff 0.780). Onset bias runs +26…+40 ms late on
+_quiet_ high notes (`very-high` pp 0.451 vs ff 0.780). Onset bias runs +26…+40 ms late on
 flute/violin/viola/accordion and −16…+4 ms on clarinet/oboe, but that comparison is confounded
 by the splice convention (a note is trimmed at −34 dBFS of its own peak, which places the truth
 onset earlier than the perceptual attack on slow bowed/breathy attacks) — do not read it as a
@@ -1540,8 +1546,8 @@ is a property of the construction, not of the audio.
 
 ### The capture codec costs nothing measurable — a null with the alignment proven first
 
-The register's other standing complaint was that *"no annotated corpus of phone-mic webm/opus
-recordings"* exists and `probe-realpath.ts` probes the codec path *with no truth behind it*.
+The register's other standing complaint was that _"no annotated corpus of phone-mic webm/opus
+recordings"_ exists and `probe-realpath.ts` probes the codec path _with no truth behind it_.
 That one needed no data at all: a codec round trip cannot move a note, so every clip's existing
 truth still applies. `Condition.codec` (types.ts) + a two-pass branch in `lib/degrade.ts` now
 re-encode a finished clip through the encoders browsers actually negotiate, and four new
@@ -1557,11 +1563,11 @@ padding, trimmed off the tail), which would have silently eaten the last note of
 TinySOL clip — so the encode input is padded (`apad`, 0.25 s) and the decode trimmed back;
 lengths now match within 0.6 ms with alignment still exact.
 
-| dataset | `real` (WAV) | opus 96k | opus 32k | opus 16k | aac 64k |
-|---|---|---|---|---|---|
-| `tinysol-flute` (12) | 0.828 | 0.838 | 0.841 | 0.802 | 0.852 |
-| `tinysol-violin` (12) | 0.790 | 0.785 | 0.763 | 0.763 | 0.784 |
-| `whistle-real` (5) | 0.315 | 0.325 | 0.321 | 0.359 | 0.321 |
+| dataset               | `real` (WAV) | opus 96k | opus 32k | opus 16k | aac 64k |
+| --------------------- | ------------ | -------- | -------- | -------- | ------- |
+| `tinysol-flute` (12)  | 0.828        | 0.838    | 0.841    | 0.802    | 0.852   |
+| `tinysol-violin` (12) | 0.790        | 0.785    | 0.763    | 0.763    | 0.784   |
+| `whistle-real` (5)    | 0.315        | 0.325    | 0.321    | 0.359    | 0.321   |
 
 **Verdict: null, and a reassuring one.** Every delta is inside ±0.03 with no monotone trend in
 bitrate — even 16 kbps Opus, which is well below anything a browser negotiates. The WAV-based
@@ -1589,7 +1595,7 @@ that honours them the codec IS the capture-path transform. Where a platform igno
 - **Real measured acoustics** are researched but not implemented: DEMAND (CC-BY-4.0,
   `10.5281/zenodo.1227121`) for recorded noise beds and Arni/dEchorate/OK5 (all CC-BY-4.0, DOIs
   in `research/research-voice-datasets.md` §6c) for measured RIRs would turn the adverse tier's
-  *modelled* room and babble into *recorded* ones. Both need one optional field on `Condition`
+  _modelled_ room and babble into _recorded_ ones. Both need one optional field on `Condition`
   and NEW condition ids — never a redefinition of the existing four, or every historical
   adverse number silently changes meaning. The MIT IR Survey, the obvious first choice, is
   **barred**: its own page states no terms and the CC-BY-4.0 claim comes from a third-party
@@ -1608,7 +1614,7 @@ metronome. Two results — one about the corpus, one about the pipeline.
 
 ### The truth had to be repaired before it measured anything (`fetch/align-prescribed-truth.ts`)
 
-Scored as recorded: **COnP 0.00**. The truth is the *prescribed melody*, and the performance is
+Scored as recorded: **COnP 0.00**. The truth is the _prescribed melody_, and the performance is
 not the score:
 
 - **Wrong key, and not by a constant.** Median measured − written pitch +12.50 st, **0 %** of
@@ -1630,14 +1636,14 @@ from a per-clip fit, and TIMING from the audio, DTW-aligning the two sequences. 
 dataset is never modified; output is the sibling `whistled-high-register-aligned`, flagged
 `noteTruthDerived` until verified, with label TSVs in the usual Audacity loop.
 
-| truth | COnP | pWrong /100 | exact pitch on matched pairs |
-|---|---|---|---|
-| as recorded (prescribed) | 0.00 | 42 | 40 % |
-| aligned, key rounded to an OCTAVE | 0.19 | 35 | 40 % |
-| aligned, key rounded to a SEMITONE | **0.41** | **9** | **79 %** |
+| truth                              | COnP     | pWrong /100 | exact pitch on matched pairs |
+| ---------------------------------- | -------- | ----------- | ---------------------------- |
+| as recorded (prescribed)           | 0.00     | 42          | 40 %                         |
+| aligned, key rounded to an OCTAVE  | 0.19     | 35          | 40 %                         |
+| aligned, key rounded to a SEMITONE | **0.41** | **9**       | **79 %**                     |
 
 Two mistakes worth not repeating, both made here first: rounding the fitted key to a whole
-octave (wrong for half the clips), and measuring the key inside the *metronome's* note windows
+octave (wrong for half the clips), and measuring the key inside the _metronome's_ note windows
 rather than the aligned ones (the windows are 100–200 ms off, which mis-keyed three of six clips
 and inflated clip-05's per-note residual to 255 ¢ against 62 ¢ two-pass). The estimator now runs
 twice: rough key → align → re-measure the key in the aligned windows → re-align.
@@ -1651,17 +1657,17 @@ the measurement above in its `note`.
 The 2026-08-20 pass could only test `RECORDING_VERY_HIGH_CREPE` synthetically, because no real
 clip reached the band. Five of these six do. Same clips, same aligned truth, adaptive routing:
 
-| | shipping (basic-pitch) | `RECORDING_VERY_HIGH_CREPE=1` |
-|---|---|---|
-| COnP@±100 ms | 0.41 | **0.43** |
-| COn (onset only) | 0.50 | **0.57** |
-| COn recall | 0.56 | **0.84** |
-| onset bias / median | 49 / 43 ms | **22 / 2 ms** |
-| missed /100 | 14 | **2** |
-| split /100 | 37 | 102 |
-| spurious /100 | 4 | 14 |
-| **repair seconds /100 notes** | 2175 | **639** |
-| silence-onset recall | 0.600 | **0.840** |
+|                               | shipping (basic-pitch) | `RECORDING_VERY_HIGH_CREPE=1` |
+| ----------------------------- | ---------------------- | ----------------------------- |
+| COnP@±100 ms                  | 0.41                   | **0.43**                      |
+| COn (onset only)              | 0.50                   | **0.57**                      |
+| COn recall                    | 0.56                   | **0.84**                      |
+| onset bias / median           | 49 / 43 ms             | **22 / 2 ms**                 |
+| missed /100                   | 14                     | **2**                         |
+| split /100                    | 37                     | 102                           |
+| spurious /100                 | 4                      | 14                            |
+| **repair seconds /100 notes** | 2175                   | **639**                       |
+| silence-onset recall          | 0.600                  | **0.840**                     |
 
 CREPE-pitchdown finds almost everything (2 missed per 100 against 14) and places onsets
 essentially unbiased (median **2 ms** against 43 ms), at the cost of splitting nearly every note
@@ -1710,21 +1716,21 @@ just costs more than it buys on material that is not whistling.
 
 **The interesting part is that the two whistle datasets point opposite ways:**
 
-| config | `whistled-high-register-aligned` (dogfood) | `whistle-real` (Freesound) |
-|---|---|---|
-| LEGACY (shipping) | 0.48 | **0.50** |
-| whistle c1.2 / minChange1 | **0.72** | 0.38 |
-| whistle sigmaStable0.5 | **0.72** | 0.42 |
-| whistle minNote0.15 | **0.75** | 0.34 |
+| config                    | `whistled-high-register-aligned` (dogfood) | `whistle-real` (Freesound) |
+| ------------------------- | ------------------------------------------ | -------------------------- |
+| LEGACY (shipping)         | 0.48                                       | **0.50**                   |
+| whistle c1.2 / minChange1 | **0.72**                                   | 0.38                       |
+| whistle sigmaStable0.5    | **0.72**                                   | 0.42                       |
+| whistle minNote0.15       | **0.75**                                   | 0.34                       |
 
 That is not noise, and the explanation is provenance. **`whistle-real`'s truth is the
 `lib/sineTrack.ts` draft, which over-segments** (2.5 notes/s) — so a config that merges more
-disagrees with it *by construction*, and the dataset cannot detect over-splitting because it
+disagrees with it _by construction_, and the dataset cannot detect over-splitting because it
 over-splits itself. This is gate 3 arriving exactly where the flag warned it would.
 `whistled-high-register-aligned` has no such bias: its note COUNT comes from the prescribed
 melody (57 notes, fixed), independent of any segmenter.
 
-So for a question about splitting, the six-clip dogfood set is the *better* instrument despite
+So for a question about splitting, the six-clip dogfood set is the _better_ instrument despite
 being 20× smaller, and the 117-clip set is close to useless until it is verified. **Neither is
 sufficient to ship a whistle-scoped segmenter setting**: 57 notes cannot carry it, and the
 mechanism (profile-scoped `NoteSegmenterOptions`, which `PROFILE_BANDS` already supports) is
@@ -1740,7 +1746,7 @@ segmentation is correct everywhere it has been measured on trustworthy truth.
   on the others, so either the performance wandered or the DTW mismatched notes there.
 - **Nothing is verified.** The aligned truth is drafted from `lib/sineTrack.ts`;
   `fetch/import-note-labels.ts --verified-by=<name>` is what clears the flag.
-- **The recording protocol should change.** For the next batch, whistle *freely* rather than to
+- **The recording protocol should change.** For the next batch, whistle _freely_ rather than to
   a click and annotate what came out (`research/research-whistle-corpus.md` §6). A prescribed melody is
   still useful — it makes annotation far cheaper by fixing the note sequence — but it cannot be
   the truth on its own, and the key the performer chooses has to be recorded or recovered.
@@ -1751,13 +1757,13 @@ The dogfood A/B above covered 6 clips; the 2026-08-20 corpora it left unmeasured
 measured. `RECORDING_VERY_HIGH_CREPE=1` vs shipping, adaptive, `real` condition, paired
 bootstrap per corpus:
 
-| corpus | truth | n | shipping → flag-on | Δ paired |
-|---|---|---|---|---|
-| tinysol `very-high` stratum (real Ircam timbre) | **exact** (constructed phrasing) | 28 | 0.654 → **0.805** | **+0.150 [+0.114, +0.185]*** |
-| tinysol `high` stratum (control — never routes basic-pitch) | exact | 36 | 0.924 → 0.924 | **+0.000 exactly, bit-identical** |
-| whistle-real (117 real whistling clips) | derived draft | 117 | 0.359 → **0.634** | **+0.275 [+0.231, +0.323]*** |
-| whistled-high-register-aligned (dogfood) | derived, aligned | 6 | 0.409 → 0.433 | +0.024 [−0.052, +0.093] |
-| whistle-vintage (accompanied 78s) | derived | 6 | 0.02 → 0.02 | unchanged — routes mid/high; the accompaniment problem, not the band |
+| corpus                                                      | truth                            | n   | shipping → flag-on | Δ paired                                                             |
+| ----------------------------------------------------------- | -------------------------------- | --- | ------------------ | -------------------------------------------------------------------- |
+| tinysol `very-high` stratum (real Ircam timbre)             | **exact** (constructed phrasing) | 28  | 0.654 → **0.805**  | **+0.150 [+0.114, +0.185]\***                                        |
+| tinysol `high` stratum (control — never routes basic-pitch) | exact                            | 36  | 0.924 → 0.924      | **+0.000 exactly, bit-identical**                                    |
+| whistle-real (117 real whistling clips)                     | derived draft                    | 117 | 0.359 → **0.634**  | **+0.275 [+0.231, +0.323]\***                                        |
+| whistled-high-register-aligned (dogfood)                    | derived, aligned                 | 6   | 0.409 → 0.433      | +0.024 [−0.052, +0.093]                                              |
+| whistle-vintage (accompanied 78s)                           | derived                          | 6   | 0.02 → 0.02        | unchanged — routes mid/high; the accompaniment problem, not the band |
 
 The whistle-real decomposition is the dogfood story without the split explosion: missed
 55 → 22 per 100, precision 0.63 → 0.74, recall 0.31 → 0.60, splits only 7 → 10, octErr 0.00
@@ -1766,7 +1772,7 @@ was measured (pp 0.451 → 0.608, mf 0.752 → 0.906, ff 0.780 → 0.921), and d
 gate detection.
 
 Caveats, stated rather than waved at: whistle-real's draft labels come from `lib/sineTrack.ts`,
-a trajectory tracker, so some affinity with a trajectory *provider* is plausible — which is why
+a trajectory tracker, so some affinity with a trajectory _provider_ is plausible — which is why
 the exact-truth TinySOL +0.150 and the dogfood recall jump matter as corroboration from
 independent truth chains; TinySOL's phrasing is spliced (`constructedPerformance`); nothing is
 human-verified yet. Every corpus points the same way; the only counter-signal anywhere remains
@@ -1839,18 +1845,18 @@ names enters a pooled headline) and a `w.*` config family for this band's knobs.
 Measured three ways (run-eval A/B against the pre-scaling build, then the cached sweep):
 dogfood whistling +0.017* with splits 102 → 89/100; whistle-real −0.007 [−0.017, +0.001];
 TinySOL both strata exactly 0.000; synthetic +0.002. The cached sweep brackets the optimum:
-20 ms −0.005, 60 ms +0.007, **80 ms (ships) 0**, 120 ms −0.012*, 160 ms −0.023*. A flat
+20 ms −0.005, 60 ms +0.007, **80 ms (ships) 0**, 120 ms −0.012*, 160 ms −0.023\*. A flat
 60–80 ms plateau — the scaling stays because frame-count knobs should mean the same real time
 on every provider, not because it buys accuracy. **It is not the split mechanism.**
 
 ### Every other semitone-path knob, on the very-high stratum (n = 103, cached)
 
 - `pitchBinToleranceCents` 80/120: Δ exactly 0.000 — the tolerance never decides anything here.
-- `vibratoMaxSec` 0.25 cleanup: −0.012* — the A-B-A folder eats real whistled ornaments.
+- `vibratoMaxSec` 0.25 cleanup: −0.012\* — the A-B-A folder eats real whistled ornaments.
 - `no-onsetSplit`: +0.006 n.s. — the splitter is roughly free on this band; keep it global.
 - note floor: the one apparent winner, and it is a TRAP —
 
-### The floor "+0.031*" is draft-truth circularity, caught by the exact-truth control
+### The floor "+0.031\*" is draft-truth circularity, caught by the exact-truth control
 
 Lowering the floor from 80 ms real gains +0.031* [+0.017, +0.049] on `whistle-real`'s
 very-high clips — whose draft labels come from `lib/sineTrack.ts` with `minNoteSec: 0.06`:
@@ -1886,19 +1892,19 @@ by its −0.010…−0.016 cost on clean voice. That number was measured on `eva
 entries at **version 1**, and every one of those entries stores a profile with
 `confidenceThreshold: 0.5` — **no reverberance relief**. The variant cache header says why: it
 asks to be built with `RECORDING_REVERB_CONF_RELIEF=0` so the relief itself can be measured, and
-`CACHE_VERSION` only went to 2 at E3, *after* R21. So R21's reverb rows scored a fill applied to a
+`CACHE_VERSION` only went to 2 at E3, _after_ R21. So R21's reverb rows scored a fill applied to a
 pipeline that had already lost the relief the resolver ships: the fill was doing the relief's job.
 
 Rebuilt tonight at v2 (the reverb variants now carry the shipped gate — median 0.25–0.35 on
 echoey/distant), the same rows re-measured (`sweep-reverb.ts`, dev, annotated-vocalset +
 vocadito, 209 clip pairs, vs `voice OFF`):
 
-| row | real | echoey-room | distant-mic |
-|---|---|---|---|
-| fill20 | −0.006* | +0.012* [+0.001, +0.023] | +0.004 [−0.006, +0.014] |
-| fill40 | −0.012* | −0.009 [−0.024, +0.005] | −0.003 [−0.014, +0.009] |
-| fill60 / 80 / 120 | −0.017* / −0.021* / −0.026* | −0.020* / −0.019* / −0.020* | −0.017* / −0.017* / −0.025* |
-| fillAd ×0.10 / ×0.15 / ×0.20 | −0.011* / −0.014* / −0.018* | −0.027* / −0.031* / −0.031* | −0.026* / −0.035* / −0.036* |
+| row                          | real                         | echoey-room                  | distant-mic                  |
+| ---------------------------- | ---------------------------- | ---------------------------- | ---------------------------- |
+| fill20                       | −0.006\*                     | +0.012\* [+0.001, +0.023]    | +0.004 [−0.006, +0.014]      |
+| fill40                       | −0.012\*                     | −0.009 [−0.024, +0.005]      | −0.003 [−0.014, +0.009]      |
+| fill60 / 80 / 120            | −0.017* / −0.021* / −0.026\* | −0.020* / −0.019* / −0.020\* | −0.017* / −0.017* / −0.025\* |
+| fillAd ×0.10 / ×0.15 / ×0.20 | −0.011* / −0.014* / −0.018\* | −0.027* / −0.031* / −0.031\* | −0.026* / −0.035* / −0.036\* |
 
 With the relief in place there is nothing left for the fill to repair under reverb; the one
 surviving cell (fill20 on echoey-room, +0.012 at the edge of significance) is not worth its clean
@@ -1995,10 +2001,10 @@ August and scored ~0.19 through `run-eval`, because that path only emits onsets 
 note and beatboxing has none. The new bench drives `OnsetDetector.detectFromEnvelope` over the
 cached 10 ms envelope directly (all 280 AVP clips, all 175 JaCRC clips, COn at ±50 ms):
 
-| corpus | shipped (dip .5 / rise 1.8) | what the knobs do |
-|---|---|---|
-| AVP (percussive, every truth onset is a re-attack) | **P 0.661 / R 0.644 / F1 0.651**, 34 onsets per clip | dip ratio is not binding (.35 −0.008*, .65/.8 ±0.000); rise 1.4 −0.029*, rise 2.5 +0.002 n.s.; minIoi and a 30 ms trough all ≤ −0.01. The aubio-style adaptive threshold (R3) scores **0.827 (+0.176*)** here — |
-| JaCRC (syllable onsets ⊂ note onsets; read recall) | P 0.336 / **R 0.519** / F1 0.390, 44 per clip | — and **0.143 (−0.247*)** here, firing 140 times per clip on sustained singing. Same structural reason R3 was killed on the pitched corpora: a plain novelty threshold has no dip requirement. |
+| corpus                                             | shipped (dip .5 / rise 1.8)                          | what the knobs do                                                                                                                                                                                                |
+| -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AVP (percussive, every truth onset is a re-attack) | **P 0.661 / R 0.644 / F1 0.651**, 34 onsets per clip | dip ratio is not binding (.35 −0.008*, .65/.8 ±0.000); rise 1.4 −0.029*, rise 2.5 +0.002 n.s.; minIoi and a 30 ms trough all ≤ −0.01. The aubio-style adaptive threshold (R3) scores **0.827 (+0.176\*)** here — |
+| JaCRC (syllable onsets ⊂ note onsets; read recall) | P 0.336 / **R 0.519** / F1 0.390, 44 per clip        | — and **0.143 (−0.247\*)** here, firing 140 times per clip on sustained singing. Same structural reason R3 was killed on the pitched corpora: a plain novelty threshold has no dip requirement.                  |
 
 Read: on genuinely percussive material the shipped detector finds about two onsets in three, and
 the direction that would find more (an adaptive novelty threshold) is exactly the one that
@@ -2026,16 +2032,16 @@ drives the paced production `RecordingPipeline` with 3 s of mic-floor silence pr
 clip, `PROBE_MODE=legacy` (`RECORDING_DETECT_MAX_WAIT_SEC=0 RECORDING_FINAL_REROUTE=0`, the exact
 pre-2026-09 behaviour) vs `new`. Truth is shifted by the lead-in. Two batches:
 
-| corpus (clips) | legacy, no lead-in → with lead-in | new, no lead-in → with lead-in |
-|---|---|---|
-| vocadito (6) | 0.584 → 0.582 | 0.584 → 0.583 |
-| hust-solfege (6) | 0.616 → 0.623 | 0.600 → 0.591 |
-| urmp-flute (4) | 0.763 → 0.773 | 0.763 → 0.787 |
-| whistle-real (6, all ≤ 1.9 kHz) | 0.471 → 0.468 | 0.471 → 0.445 |
-| tinysol-flute (12) | 0.877 → 0.910 | 0.877 → 0.914 |
-| tinysol-oboe (10) | 0.881 → 0.971 | 0.881 → 0.947 |
-| **tinysol-violin (12, notes to E7)** | 0.812 → **0.784** | 0.812 → **0.883** |
-| TinySOL pooled (34) | 0.855 → 0.883 | 0.855 → **0.913** |
+| corpus (clips)                       | legacy, no lead-in → with lead-in | new, no lead-in → with lead-in |
+| ------------------------------------ | --------------------------------- | ------------------------------ |
+| vocadito (6)                         | 0.584 → 0.582                     | 0.584 → 0.583                  |
+| hust-solfege (6)                     | 0.616 → 0.623                     | 0.600 → 0.591                  |
+| urmp-flute (4)                       | 0.763 → 0.773                     | 0.763 → 0.787                  |
+| whistle-real (6, all ≤ 1.9 kHz)      | 0.471 → 0.468                     | 0.471 → 0.445                  |
+| tinysol-flute (12)                   | 0.877 → 0.910                     | 0.877 → 0.914                  |
+| tinysol-oboe (10)                    | 0.881 → 0.971                     | 0.881 → 0.947                  |
+| **tinysol-violin (12, notes to E7)** | 0.812 → **0.784**                 | 0.812 → **0.883**              |
+| TinySOL pooled (34)                  | 0.855 → 0.883                     | 0.855 → **0.913**              |
 
 Read: (1) on mid-register singing the blind fallback was nearly harmless — `default-wide` plus the
 voice-lead hint is close to the `mid` band, which is why the census never saw it as a loss there;
@@ -2068,7 +2074,7 @@ note labels exists**; the only route stays verifying our own 117 clips.
 `fetch/triage-verify-worklist.ts` now adds a fourth section to
 `annotations/whistle-real/VERIFY-WORKLIST.md`: the ten clips where the shipping pipeline and
 the draft disagree most (COnP 0.00–0.38 in the baseline run) — a corrected label there moves a
-number whichever side was wrong. The benchmark shows whistling as a *provisional* row from
+number whichever side was wrong. The benchmark shows whistling as a _provisional_ row from
 the draft-truth corpora until that pass happens.
 
 ### Humming: HumTrans adopted as restricted context, and its labels repaired
@@ -2076,7 +2082,7 @@ the draft-truth corpora until that pass happens.
 HumTrans (Liu et al., ICASSP 2024; `dadinghh2/HumTrans`, CC BY-NC 4.0) is the only hummed
 audio in existence with note truth — 10 hummers, 500 melodies, 56 h, each segment paired with
 the reference MIDI the hummer followed. Two things had kept it out: NC, and labels that are
-the *reference's* timing, not the performance's (Dynamic HumTrans, arXiv 2410.05455 §1.2;
+the _reference's_ timing, not the performance's (Dynamic HumTrans, arXiv 2410.05455 §1.2;
 four SOTA transcribers score F1 2.7–6.7 against them). The first is now a context-tier
 `licenceRestricted` matter; the second is exactly the shape `fetch/align-prescribed-truth.ts`
 was built to repair for our own dogfood whistling — identity from the score, onsets from the
@@ -2124,12 +2130,12 @@ drafter. Aligned notes: 18,853 / 19,955.
 
 Quick benchmark (`real` condition only, every corpus):
 
-| material | row | COnP | COnPOff | P / R | repair s/100 | rests on |
-|---|---|---|---|---|---|---|
-| humming | **provisional** | **0.517** | 0.172 | 0.59 / 0.48 | 286 | `humtrans-aligned` 0.49 (769 clips, 13.3k matched notes), `mir-qbsh` 0.55 |
-| whistling | **provisional** | **0.365** | 0.159 | 0.37 / 0.41 | 3572 | `whistle-real` 0.63, `whistle-vintage` 0.02, `whistled-high-register-aligned` 0.45 |
-| singing | benchmark | 0.639 | 0.311 | 0.63 / 0.66 | 686 | 7 datasets |
-| instrument | benchmark | 0.829 | 0.572 | 0.80 / 0.87 | 484 | 14 datasets |
+| material   | row             | COnP      | COnPOff | P / R       | repair s/100 | rests on                                                                           |
+| ---------- | --------------- | --------- | ------- | ----------- | ------------ | ---------------------------------------------------------------------------------- |
+| humming    | **provisional** | **0.517** | 0.172   | 0.59 / 0.48 | 286          | `humtrans-aligned` 0.49 (769 clips, 13.3k matched notes), `mir-qbsh` 0.55          |
+| whistling  | **provisional** | **0.365** | 0.159   | 0.37 / 0.41 | 3572         | `whistle-real` 0.63, `whistle-vintage` 0.02, `whistled-high-register-aligned` 0.45 |
+| singing    | benchmark       | 0.639     | 0.311   | 0.63 / 0.66 | 686          | 7 datasets                                                                         |
+| instrument | benchmark       | 0.829     | 0.572   | 0.80 / 0.87 | 484          | 14 datasets                                                                        |
 
 Three readings from the humming row, which did not exist yesterday:
 

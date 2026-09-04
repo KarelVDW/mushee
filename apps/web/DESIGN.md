@@ -11,11 +11,11 @@
 
 White-on-white tonal layering plus two accents, each in three intensities:
 
-| Intensity | Cyan | Magenta | Use for |
-| --- | --- | --- | --- |
-| **Loud** `*-container` | `#00DBE9` | `#FF2079` | The action: primary buttons, focus indicators, active-tab underline, the hero CTA's magenta offset shadow. At most one or two per surface. |
-| **Quiet** `*-soft` | `#A6F2F7` | `#FFADBF` | Identity tags (avatar initials, instrument pills, status chips) and large selectable surfaces (option cards, tap pads, **active** selectable chips). Pair with `on-*-soft`. |
-| **Text** bare `primary`/`secondary` | `#00666d` | `#b60052` | Accent/link text, step numbers, destructive text. The neons themselves fail WCAG AA as text — never use them for copy. |
+| Intensity                           | Cyan      | Magenta   | Use for                                                                                                                                                                     |
+| ----------------------------------- | --------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Loud** `*-container`              | `#00DBE9` | `#FF2079` | The action: primary buttons, focus indicators, active-tab underline, the hero CTA's magenta offset shadow. At most one or two per surface.                                  |
+| **Quiet** `*-soft`                  | `#A6F2F7` | `#FFADBF` | Identity tags (avatar initials, instrument pills, status chips) and large selectable surfaces (option cards, tap pads, **active** selectable chips). Pair with `on-*-soft`. |
+| **Text** bare `primary`/`secondary` | `#00666d` | `#b60052` | Accent/link text, step numbers, destructive text. The neons themselves fail WCAG AA as text — never use them for copy.                                                      |
 
 Note the WCAG consequence: a **selected chip is `secondary-soft`**, not loud magenta — 11px labels on `#FF2079` don't pass contrast.
 
@@ -78,11 +78,13 @@ Phones get the same design language, restructured — never a shrunken desktop:
 ## 5. Do / Don't
 
 **Do**
+
 - Define regions with tonal shifts; lift hovers away from the page tone.
 - Keep one loud accent per moment — if two things shout, neither is heard.
 - Reference tokens (`var(--color-…)`, `--shadow-*`) — never re-hardcode a hex the palette already names.
 
 **Don't**
+
 - No divider lines between list items — use background shifts.
 - No gradients on buttons or CTAs; the energy is the offset shadow.
 - No color in the score canvas beyond ink + `INTERACTION_BLUE` overlays.

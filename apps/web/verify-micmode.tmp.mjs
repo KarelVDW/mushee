@@ -24,7 +24,10 @@ async function login(page) {
 async function openFirstScore(page) {
     // Create a fresh score — library rows are role="row" divs, and a new score
     // keeps the takes isolated per context.
-    await page.getByRole('button', { name: /New score/i }).first().click()
+    await page
+        .getByRole('button', { name: /New score/i })
+        .first()
+        .click()
     await page.getByPlaceholder('Untitled composition').fill(`Mic mode check ${Date.now()}`)
     await page.getByRole('button', { name: 'Create score', exact: true }).click()
     await page.waitForURL(/\/scores\/[0-9a-f-]{36}/)
@@ -236,8 +239,7 @@ const browser = await chromium.launch({
     })
     // Denial surfaces at the warm-up: blocked toast, and the dialog never shows.
     await ctx.addInitScript(() => {
-        navigator.mediaDevices.getUserMedia = () =>
-            Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))
+        navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))
     })
     const page = await ctx.newPage()
     await login(page)

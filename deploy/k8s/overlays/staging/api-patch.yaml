@@ -7,27 +7,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api
+    name: api
 spec:
-  template:
-    spec:
-      serviceAccountName: api
-      containers:
-        - name: api
-          env:
-            - { name: BETTER_AUTH_URL, value: 'https://api.staging.solkey.io' }
-            - { name: WEB_APP_URL, value: 'https://staging.solkey.io' }
-            - { name: CORS_ORIGIN, value: 'https://staging.solkey.io' }
-            - { name: TRUSTED_ORIGINS, value: 'https://staging.solkey.io' }
-            - { name: COOKIE_DOMAIN, value: '.staging.solkey.io' }
-            - { name: STORAGE_DRIVER, value: 'gcs' }
-            - { name: GCS_BUCKET, value: 'sheemu-staging-storage' }
-            # Same Cloud SQL instance as production, separate database + user
-            # (see README.md); credentials come from POSTGRES_URL in
-            # api-secrets of the mushee-staging namespace.
-            - { name: POSTGRES_SSL, value: 'require' }
-            # Mirrors production so the waitlist/approval flow is testable.
-            - { name: BETA_MODE, value: 'true' }
-            # Admin console base URL — links in signup-notification emails.
-            # ADMIN_SECRET itself lives in Secret/api-secrets.
-            - { name: ADMIN_APP_URL, value: 'https://admin.staging.solkey.io' }
+    template:
+        spec:
+            serviceAccountName: api
+            containers:
+                - name: api
+                  env:
+                      - { name: BETTER_AUTH_URL, value: 'https://api.staging.solkey.io' }
+                      - { name: WEB_APP_URL, value: 'https://staging.solkey.io' }
+                      - { name: CORS_ORIGIN, value: 'https://staging.solkey.io' }
+                      - { name: TRUSTED_ORIGINS, value: 'https://staging.solkey.io' }
+                      - { name: COOKIE_DOMAIN, value: '.staging.solkey.io' }
+                      - { name: STORAGE_DRIVER, value: 'gcs' }
+                      - { name: GCS_BUCKET, value: 'sheemu-staging-storage' }
+                      # Same Cloud SQL instance as production, separate database + user
+                      # (see README.md); credentials come from POSTGRES_URL in
+                      # api-secrets of the mushee-staging namespace.
+                      - { name: POSTGRES_SSL, value: 'require' }
+                      # Mirrors production so the waitlist/approval flow is testable.
+                      - { name: BETA_MODE, value: 'true' }
+                      # Admin console base URL — links in signup-notification emails.
+                      # ADMIN_SECRET itself lives in Secret/api-secrets.
+                      - { name: ADMIN_APP_URL, value: 'https://admin.staging.solkey.io' }

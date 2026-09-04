@@ -20,14 +20,7 @@ export class Instrument {
     private static _byId: Map<string, Instrument> = new Map()
 
     /** Picker display order. Percussion is registry-only (the metronome click) and never offered. */
-    private static readonly _categoryOrder: InstrumentCategory[] = [
-        'Keyboard',
-        'Brass',
-        'Woodwinds',
-        'Voice',
-        'Strings',
-        'Folk & World',
-    ]
+    private static readonly _categoryOrder: InstrumentCategory[] = ['Keyboard', 'Brass', 'Woodwinds', 'Voice', 'Strings', 'Folk & World']
 
     private constructor(
         readonly id: string,
@@ -57,9 +50,7 @@ export class Instrument {
         return Instrument._categoryOrder
             .map((category) => ({
                 category,
-                instruments: selectable
-                    .filter((i) => i.category === category)
-                    .sort((a, b) => a.displayName.localeCompare(b.displayName)),
+                instruments: selectable.filter((i) => i.category === category).sort((a, b) => a.displayName.localeCompare(b.displayName)),
             }))
             .filter((group) => group.instruments.length > 0)
     }
@@ -146,7 +137,15 @@ export class Instrument {
     static readonly TenorSaxophone = new Instrument('tenor-saxophone', 'Tenor Saxophone', 'Woodwinds', 66, 'tenor_sax', -14, -8)
 
     // Octave + major 6th down — baritone sax in E♭.
-    static readonly BaritoneSaxophone = new Instrument('baritone-saxophone', 'Baritone Saxophone', 'Woodwinds', 67, 'baritone_sax', -21, -12)
+    static readonly BaritoneSaxophone = new Instrument(
+        'baritone-saxophone',
+        'Baritone Saxophone',
+        'Woodwinds',
+        67,
+        'baritone_sax',
+        -21,
+        -12,
+    )
 
     // Two octaves + major 2nd down — contrabass clarinet in B♭.
     static readonly ContrabassClarinet = new Instrument('contrabass-clarinet', 'Contrabass Clarinet', 'Woodwinds', 71, 'clarinet', -26, -15)

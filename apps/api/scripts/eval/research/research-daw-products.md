@@ -6,6 +6,7 @@ Research notes, 2026-07-24. Focus: pre/post-processing and UX affordances (the m
 the pre/post-processing and the correction surface are not).
 
 Evidence tiers used below:
+
 - **[P]** primary source (vendor docs, paper PDF, source code) — quoted
 - **[S]** secondary (review/press) — attributed
 - **[T]** thin / search-summary only — flagged
@@ -27,7 +28,7 @@ Evidence tiers used below:
    note-HMM produced "triplets that appear in single or two notes without completing a unit of beat";
    metrical HMM did not).
 5. **Scope restriction is a feature.** Monophonic-only is the default/best path in every DAW tool;
-   Klangio ships *per-instrument* models; StaffPad ships piano-only.
+   Klangio ships _per-instrument_ models; StaffPad ships piano-only.
 6. **Amplitude-ratio onset gap insertion** is the documented trick for legato/same-pitch syllable
    splitting (pYIN post-processing, below). It is ~15 lines of code and moved COnPOff F from 0.38 → 0.50.
 
@@ -36,36 +37,38 @@ Evidence tiers used below:
 ## 1. Celemony Melodyne
 
 ### 1.1 What is published / patented
+
 - **DNA Direct Note Access** is patented. The core filing is **EP2099024A1**, P. Neubäcker,
-  *"Method for acoustic object-oriented analysis and note object-oriented processing of polyphonic
-  sound recordings"* (pub. Sept 2009). https://patents.google.com/patent/EP2099024A1/en  **[P]**
+  _"Method for acoustic object-oriented analysis and note object-oriented processing of polyphonic
+  sound recordings"_ (pub. Sept 2009). https://patents.google.com/patent/EP2099024A1/en **[P]**
 - Method per the patent **[P]**:
-  - FFT on uniformly overlapping windowed frames → complex array → a 3-D **"energy landscape"
-    F(t, f, E)** with frequency in **cents**.
-  - Per bin: instantaneous frequency **plus a "tonality value"** measuring periodicity. High tonality ⇒
-    note object; low tonality ⇒ (percussive) event object. *This is the mechanism behind the
-    Melodic/Percussive auto-choice.*
-  - A **"relevance landscape"**: at each (t,f) point, sum the energy at that point **and at all integer
-    frequency multiples** — i.e. a harmonic product/sum surface. Prevents overtones being read as notes.
-  - **Iterative greedy peeling**: find the highest-prominence point in the relevance landscape → trace
-    its pitch contour forward and backward in time → **subtract that note's spectral energy** →
-    repeat until residual < threshold.
-  - Then re-assign spectral bins proportionally to identified notes using **spectral fraction functions
-    based on instrument harmonic models**, so each note can be manipulated "without noticeable loss of
-    sound or noticeable distortion."
+    - FFT on uniformly overlapping windowed frames → complex array → a 3-D **"energy landscape"
+      F(t, f, E)** with frequency in **cents**.
+    - Per bin: instantaneous frequency **plus a "tonality value"** measuring periodicity. High tonality ⇒
+      note object; low tonality ⇒ (percussive) event object. _This is the mechanism behind the
+      Melodic/Percussive auto-choice._
+    - A **"relevance landscape"**: at each (t,f) point, sum the energy at that point **and at all integer
+      frequency multiples** — i.e. a harmonic product/sum surface. Prevents overtones being read as notes.
+    - **Iterative greedy peeling**: find the highest-prominence point in the relevance landscape → trace
+      its pitch contour forward and backward in time → **subtract that note's spectral energy** →
+      repeat until residual < threshold.
+    - Then re-assign spectral bins proportionally to identified notes using **spectral fraction functions
+      based on instrument harmonic models**, so each note can be manipulated "without noticeable loss of
+      sound or noticeable distortion."
 - Takeaway: Melodyne is **not** a deep net. It is a carefully engineered iterative harmonic-peeling
   tracker over a cents-resolution spectrogram, plus a resynthesis model. Its accuracy reputation comes
   from (a) cents-resolution continuous pitch, (b) contour tracing rather than framewise classification,
   (c) an unusually good correction UI.
 
 ### 1.2 The algorithm choices
+
 https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_AudioAlgorithms **[P]**
 | Algorithm | Intended material | Notes |
 |---|---|---|
 | **Melodic** | "only one note is ever sounding at any given instant"; vocals "invariably monophonic" | includes **sibilant detection** and sibilant preservation under pitch shift |
 | **Percussive** | "material in which Melodyne cannot detect any clear pitch"; all blobs shown at one pitch | |
 | **Percussive Pitched** | "instruments that are in fact percussive yet still somehow also melodic" (808 kick, tabla) | |
-| **Polyphonic (Decay / Sustain)** | piano, guitar; DNA | "DNA is intended for polyphonic instruments recorded *singly*" — separates by **pitch, not instrument** |
+| **Polyphonic (Decay / Sustain)** | piano, guitar; DNA | "DNA is intended for polyphonic instruments recorded _singly_" — separates by **pitch, not instrument** |
 | **Universal** | "complex signals containing both percussive and tonal elements" | fast, cheap; for stretch/transpose only, not note editing |
 
 - Melodyne **auto-selects** the algorithm from the detection pass; user can override in the Algorithm
@@ -75,6 +78,7 @@ https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_AudioAlgorithms
   deliver perfect results." **[P]**
 
 ### 1.3 Note segmentation UX — the actual gold-standard bit (relevant to (a))
+
 https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_NA_Mode_Tools **[P]**
 
 Note Assignment Mode is a **separate mode whose tools do not change the sound at all**: "their object,
@@ -82,30 +86,32 @@ rather, is to bring the detected and displayed notes as closely as possible into
 music." Tools:
 
 - **Note Separation tool** — double-click to add/remove a separation; drag it in time.
-- **Hard vs soft separations**, and *"Convert Selection to Connected Sequence"* — turns adjacent notes
+- **Hard vs soft separations**, and _"Convert Selection to Connected Sequence"_ — turns adjacent notes
   into a connected sequence with **soft separations even when pitches differ**. ⇒ Melodyne has a
-  first-class representation for *legato-connected* notes, distinct from re-attacked notes.
+  first-class representation for _legato-connected_ notes, distinct from re-attacked notes.
 - **"Separate Notes as Trill"** — slices a note "into smaller segments determined by the instantaneous
   pitch of each note" by inserting separations into the **vibrato curve**; needs "fairly pronounced
   fluctuations in the Pitch Curve"; **Melodic algorithm only**. ⇒ the explicit vibrato-vs-real-notes
-  disambiguation is *punted to the user as a one-click command*, not auto-decided.
+  disambiguation is _punted to the user as a one-click command_, not auto-decided.
 - **Activation tool** — notes exist as "silhouettes" (inactive candidates) vs "solid blobs" (active).
   Deactivating redistributes its spectral energy "between the remaining (active) notes sounding at that
-  time." ⇒ **a visible confidence/candidate layer**: Melodyne shows you the notes it *considered*.
-- **Starting Point tool** + *"Reseparate Notes at Starting Point Lines"* — a second, independent
+  time." ⇒ **a visible confidence/candidate layer**: Melodyne shows you the notes it _considered_.
+- **Starting Point tool** + _"Reseparate Notes at Starting Point Lines"_ — a second, independent
   onset layer that the user can edit and then re-drive segmentation from.
 - **Energy Share tool** (polyphonic only) — drag to re-allocate overtone energy between simultaneous notes.
 - **Sibilant Range tool** — hatched regions marking consonants/breath, user-resizable.
 
 ### 1.4 Pitch correction / key-scale snapping (relevant to (c))
+
 Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_MacroPitch **[P]**
+
 - **Two sliders**, 0–100 %:
-  - upper = **pitch-centre correction**: "0% (no influence) to 100% (full power) to the pitch center of
-    the notes selected". Default target = nearest semitone; **"Snap to Chord Scale"** switches the target
-    to scale degrees / chord tones.
-  - lower = **pitch-drift reduction**: drift is "slow wavering in pitch that is symptomatic of poor
-    technique"; crucially "More rapid fluctuations in pitch, such as pitch modulation or vibrato, remain
-    unaffected." ⇒ **drift and vibrato are separated by rate**, and only drift is corrected.
+    - upper = **pitch-centre correction**: "0% (no influence) to 100% (full power) to the pitch center of
+      the notes selected". Default target = nearest semitone; **"Snap to Chord Scale"** switches the target
+      to scale degrees / chord tones.
+    - lower = **pitch-drift reduction**: drift is "slow wavering in pitch that is symptomatic of poor
+      technique"; crucially "More rapid fluctuations in pitch, such as pitch modulation or vibrato, remain
+      unaffected." ⇒ **drift and vibrato are separated by rate**, and only drift is corrected.
 - Non-uniform strength: "At lower settings it affects only those notes that are wildly out of tune,
   leaving untouched those that are already quite close to the intended pitch."
 - **Manual edits are sticky**: "notes that have been tuned manually are not affected by the macro"
@@ -114,31 +120,33 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
 - Melodyne 5 marketing mentions "improved pitch centre calculation" as a v5 change. **[P, thin detail]**
 
 ### 1.5 Tempo / grid (relevant to (b) and (d))
+
 - Melodyne detects "not only the notes but also the prevailing tempos and time signatures within a
   recording," producing "a tempo map with a time signature, an appropriately spaced grid and a tempo
   curve tracing any fluctuations in tempo it contains." **[P]**
   https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_TempoDetectionIntro_2
 - **Two distinct tempo modes** — this is the important design idea. **[P]**
   https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_TempoEditorDefinition
-  - **Edit Tempo Mode** — change the tempo, notes conform (audio is altered).
-  - **Assign Tempo Mode** — "you are adjusting the metronome click to fit the music – not the other way
-    around." The user corrects the *grid*, not the audio.
+    - **Edit Tempo Mode** — change the tempo, notes conform (audio is altered).
+    - **Assign Tempo Mode** — "you are adjusting the metronome click to fit the music – not the other way
+      around." The user corrects the _grid_, not the audio.
 - Failure modes and escapes documented by Celemony itself:
-  - the classic **offbeat/phase error**: "some of the beats coincide with the offbeat, with the result
-    that the metronome click, too, sounds on the offbeat" — fixed with a quantized-move tool.
-  - drift: a **Wave tool** "Reshapes the wave within a given selection of beats," for when "the tempo
-    as detected gets ahead of, or lags behind, the actual tempo."
-  - **"Free Tempo Assignment"** — declare a passage's tempo as *free*, replacing detection with a
-    constant tempo line the user adjusts.
-  - **re-detect from a subset**: "Edit > Tempo > Detect Tempo of Selection and Merge with Current Tempo"
-    — select only the rhythmically reliable notes/tracks and re-run. ⇒ **detection restricted to a
-    user-chosen reliable subset** is a shipped affordance.
-  - recommended workflow: "listen to the whole piece once through with the metronome running… check that
-    the time signature is correct and that the '1' really does coincide with the start of the bar."
-  - Celemony advises **excluding "solo instruments played very freely"** from batch import because they
-    "might confuse the tempo detection."
+    - the classic **offbeat/phase error**: "some of the beats coincide with the offbeat, with the result
+      that the metronome click, too, sounds on the offbeat" — fixed with a quantized-move tool.
+    - drift: a **Wave tool** "Reshapes the wave within a given selection of beats," for when "the tempo
+      as detected gets ahead of, or lags behind, the actual tempo."
+    - **"Free Tempo Assignment"** — declare a passage's tempo as _free_, replacing detection with a
+      constant tempo line the user adjusts.
+    - **re-detect from a subset**: "Edit > Tempo > Detect Tempo of Selection and Merge with Current Tempo"
+      — select only the rhythmically reliable notes/tracks and re-run. ⇒ **detection restricted to a
+      user-chosen reliable subset** is a shipped affordance.
+    - recommended workflow: "listen to the whole piece once through with the metronome running… check that
+      the time signature is correct and that the '1' really does coincide with the start of the bar."
+    - Celemony advises **excluding "solo instruments played very freely"** from batch import because they
+      "might confuse the tempo detection."
 
 ### 1.6 ARA / ARA2 — why whole-file access is the enabling condition
+
 - ARA is "an extension for established plug-in standard APIs such as VST3, Audio Units, AAX or CLAP to
   allow for a much-improved DAW integration of plug-ins" that are "conceptually closer to a sample
   editor than to a conventional realtime audio processor." https://github.com/Celemony/ARA_SDK **[P]**
@@ -154,11 +162,12 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   entire recording plus declared musical context, and cannot be done well in a streaming/causal setting.
 
 ### 1.7 Reputation and complaints
+
 - Tony's authors (academics) on Melodyne: "offers a very sleek interface, but frequency estimation
   procedures are not public (proprietary code), notes cannot be sonified, and clear-text export of note
   and pitch track data is not provided." **[P]**
 - Only 3 of 31 MIR-researcher survey respondents named Melodyne as a pitch-annotation tool (vs Sonic
-  Visualiser 12, Praat 11). Its gold-standard status is with *producers*, not annotators. **[P]**
+  Visualiser 12, Praat 11). Its gold-standard status is with _producers_, not annotators. **[P]**
 - Bundled **Melodyne Essential** cannot do polyphonic editing at all — polyphonic audio yields "a very
   sad-looking display of greyed-out blobs." https://www.soundonsound.com/techniques/studio-one-melodyne-essential **[S]**
 - Studio One users report the **ARA build mis-selects the algorithm**: "detecting melodic material as
@@ -180,7 +189,7 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   result — you must let your ears be the judge." **[S]**
 - **Cubase 12 Scale Assistant** — colour-codes segments by scale/chord and snaps to the
   **user-declared** key/scale rather than nearest semitone. ⇒ direct evidence for (c): the shipped
-  solution is *user declares key, tool snaps to it*. **[S]**
+  solution is _user declares key, tool snaps to it_. **[S]**
   https://www.musicradar.com/how-to/how-to-get-your-head-around-cubase-10s-variaudio-3
 - **Extract MIDI** pre-conditions, per SoS: "Performances featuring single notes (no chords), and
   recorded as mono rather than stereo, are essential"; dry/clean signal; user should manually align
@@ -190,15 +199,15 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
 - Early-version accuracy was bad enough to be a known problem: "the accuracy of the pitch-detection
   algorithm could be troublesome." https://www.soundonsound.com/techniques/vari-ability **[S]**
 - **Complaints (concrete):**
-  - "Poor pitch detection in VariAudio" — user fed 440 Hz and 442 Hz **pure sine tones**; both read as
-    "A3+4%", i.e. failed to resolve ~8 cents on the simplest possible input.
-    https://forums.steinberg.net/t/poor-pitch-detection-in-variaudio/136427 **[P — forum]**
-  - "Cubase VariAudio is a con…" — claims corrected notes revert on render and "the same flawed
-    algorithms have remained unchanged across 15 years." Contested in-thread: other users null-tested
-    and got silence, suggesting the **numeric readout** is wrong rather than the audio.
-    https://forums.steinberg.net/t/cubase-variaudio-is-a-con-it-doesnt-render-correctly-never-has-and-steinberg-know-it/940832 **[P — forum, disputed]**
-  - Recurring pattern: segmentation "gets distracted by harmonics" on aggressive/overtone-rich vocals;
-    weak at low pitches; widely considered inferior to Melodyne outside clean solo vocal. **[T]**
+    - "Poor pitch detection in VariAudio" — user fed 440 Hz and 442 Hz **pure sine tones**; both read as
+      "A3+4%", i.e. failed to resolve ~8 cents on the simplest possible input.
+      https://forums.steinberg.net/t/poor-pitch-detection-in-variaudio/136427 **[P — forum]**
+    - "Cubase VariAudio is a con…" — claims corrected notes revert on render and "the same flawed
+      algorithms have remained unchanged across 15 years." Contested in-thread: other users null-tested
+      and got silence, suggesting the **numeric readout** is wrong rather than the audio.
+      https://forums.steinberg.net/t/cubase-variaudio-is-a-con-it-doesnt-render-correctly-never-has-and-steinberg-know-it/940832 **[P — forum, disputed]**
+    - Recurring pattern: segmentation "gets distracted by harmonics" on aggressive/overtone-rich vocals;
+      weak at low pitches; widely considered inferior to Melodyne outside clean solo vocal. **[T]**
 
 ---
 
@@ -226,26 +235,26 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
 ## 4. Ableton Live "Convert Melody / Harmony / Drums to New MIDI Track"
 
 - **The Zynaptiq / Jean-Baptiste Rolland attribution appears to be FALSE. [X]**
-  - Rolland is **Steinberg** — "Technical Lead AI & DSP at Steinberg Media Technologies" since 2014.
-    His publications are chord detection, mixing-style transfer, MIDI-GPT, and a 2018 patent "Method for
-    projected regularization of audio data" — all Cubase-adjacent. No Ableton link found.
-  - No Ableton doc, release note, press item or patent credits Zynaptiq for Convert Melody/Harmony/Drums.
-    Zynaptiq appears only as a maker of unrelated third-party plugins (Pitchmap).
-  - Notable: Ableton *does* publicly credit Cytomic for the Glue Compressor, so the absence of any
-    credit here is meaningful. Also checked Klapuri and zplane — no documented link.
-  - ⇒ **Ableton does not publicly document this algorithm's authorship at all.**
+    - Rolland is **Steinberg** — "Technical Lead AI & DSP at Steinberg Media Technologies" since 2014.
+      His publications are chord detection, mixing-style transfer, MIDI-GPT, and a 2018 patent "Method for
+      projected regularization of audio data" — all Cubase-adjacent. No Ableton link found.
+    - No Ableton doc, release note, press item or patent credits Zynaptiq for Convert Melody/Harmony/Drums.
+      Zynaptiq appears only as a maker of unrelated third-party plugins (Pitchmap).
+    - Notable: Ableton _does_ publicly credit Cytomic for the Glue Compressor, so the absence of any
+      credit here is meaningful. Also checked Klapuri and zplane — no documented link.
+    - ⇒ **Ableton does not publicly document this algorithm's authorship at all.**
 - What Ableton **does** document — https://www.ableton.com/en/manual/converting-audio-to-midi/ **[P]**
-  - **Convert Melody** "identifies the pitches in monophonic audio"; works on "singing, whistling, or
-    playing a solo instrument such as a guitar."
-  - **Segmentation is transient-based, not pitch-contour-based**: all three converters use "transient
-    markers in the original audio clip to determine the divisions between notes."
-  - The resulting failure mode is stated outright: "notes that fade in or 'swell' may not be detected
-    by the conversion process" — recommends "music that has clear attacks."
-    ⇒ **This is exactly the legato/soft-onset failure we must not replicate.**
-  - **Convert Harmony** = polyphonic version. **Convert Drums** = transient-only, exactly three classes
-    (kick/snare/hihat), a note placed at *every* transient marker.
-  - Pre-processing advice: uncompressed WAV/AIFF; SoS adds pre-EQ/filtering to isolate the range and
-    manual deletion of spurious transient markers afterwards. **[P/S]**
+    - **Convert Melody** "identifies the pitches in monophonic audio"; works on "singing, whistling, or
+      playing a solo instrument such as a guitar."
+    - **Segmentation is transient-based, not pitch-contour-based**: all three converters use "transient
+      markers in the original audio clip to determine the divisions between notes."
+    - The resulting failure mode is stated outright: "notes that fade in or 'swell' may not be detected
+      by the conversion process" — recommends "music that has clear attacks."
+      ⇒ **This is exactly the legato/soft-onset failure we must not replicate.**
+    - **Convert Harmony** = polyphonic version. **Convert Drums** = transient-only, exactly three classes
+      (kick/snare/hihat), a note placed at _every_ transient marker.
+    - Pre-processing advice: uncompressed WAV/AIFF; SoS adds pre-EQ/filtering to isolate the range and
+      manual deletion of spurious transient markers afterwards. **[P/S]**
 - Complaints: "Bass is typically easy to convert… however 'Harmony' … is harder for software to
   decipher"; exported MIDI reported "out of sync." **[T — forum 403]**
 
@@ -257,11 +266,11 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M5tour_WorkingWithARA?env=studioOne **[P]**
 - Deep hook: "Studio One and Celemony developers worked together… to make Melodyne's **tempo and chord
   detection** available directly to the respective **Tempo and Chord Tracks**." ⇒ analysis results
-  become first-class *project-level* metadata, not just plugin-internal state. **[P]**
+  become first-class _project-level_ metadata, not just plugin-internal state. **[P]**
 - Audio→notation path is indirect: analyse in Melodyne → **drag note events onto an instrument track**
   to materialise real MIDI → then to notation (Score view / Notion). Studio One's Score view renders
   MIDI; Melodyne does not feed it directly. **[S]**
-- ARA is a *transport*, not a capability: bundled Melodyne Essential is monophonic-only; DNA requires
+- ARA is a _transport_, not a capability: bundled Melodyne Essential is monophonic-only; DNA requires
   the paid full Melodyne. **[S]**
 
 ---
@@ -269,12 +278,13 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
 ## 6. ScoreCloud / DoReMIR (Sven Ahlbäck)
 
 ### 6.1 The academic root
+
 - Sven Ahlbäck, **"Melody Beyond Notes: A Study of Melody Cognition"**, PhD thesis, Göteborg University
   2004 (full text: https://www.diva-portal.org/smash/get/diva2:1366565/FULLTEXT01.pdf). Music-theoretic
-  /cognitive account of **melodic segmentation** — segmentation indicated by *sequences*, by
-  *discontinuity/change*, and by **melodic parallelism**; plus tonal-centre inference. **[P]**
+  /cognitive account of **melodic segmentation** — segmentation indicated by _sequences_, by
+  _discontinuity/change_, and by **melodic parallelism**; plus tonal-centre inference. **[P]**
 - Related published work: Ahlbäck, "Melodic similarity as a determinant of melody structure,"
-  *Musicae Scientiae* 2007; "Musical Parallelism and Melodic Segmentation." **[P]**
+  _Musicae Scientiae_ 2007; "Musical Parallelism and Melodic Segmentation." **[P]**
 - DoReMIR founded 2008 by Ahlbäck. ScoreCloud's own line: "The way in which ScoreCloud Express listens
   to and understands musical structure is based on research performed at KTH into how people interpret
   music." https://scorecloud.com/about/ **[P]**
@@ -284,6 +294,7 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   (parallelism, grouping, similarity), not by DSP beat-tracking.** This is why it tolerates rubato.
 
 ### 6.2 What it does in practice
+
 - **No tempo, key, time signature or click required up front.** SoS review: "There's no need to set
   anything up or hit a Record button: you simply start playing… and notes appear in the Listener."
   https://www.soundonsound.com/reviews/doremir-scorecloud **[S]**
@@ -305,18 +316,18 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
 ## 7. AnthemScore (Lunaverus)
 
 - Developer's own technical page: https://www.lunaverus.com/cnn **[P]**
-  - CNN over a spectrogram that is **not a plain FFT** — "something closer to the constant Q transform,
-    a constant frequency to bandwidth ratio with **4 frequency bins per note**", plus a **"dynamic Q"**
-    trick raising Q near detected harmonics to reduce harmonic interference. ⇒ hand-engineered
-    front-end, not off-the-shelf mel.
-  - Convolutions "long and skinny, alternating between time and frequency dimensions: an Mx1 followed
-    by a 1xN," with ResNet-style forward skips.
-  - **88 independent output nodes**, no softmax.
-  - Training: "2.5 million training examples from 3,000 MIDI files spanning several different genres,"
-    avg 3 notes/example, single 980 Ti, TensorFlow. Synthesised-from-MIDI; **no MAPS mention**.
-  - Self-reported accuracy, with the developer's own honesty about it: 99.2 % at output-node level but
-    96.6 % is the always-say-no baseline; **60.3 %** for "all 88 outputs correct"; end-to-end
-    **F ≈ 0.8** for piano.
+    - CNN over a spectrogram that is **not a plain FFT** — "something closer to the constant Q transform,
+      a constant frequency to bandwidth ratio with **4 frequency bins per note**", plus a **"dynamic Q"**
+      trick raising Q near detected harmonics to reduce harmonic interference. ⇒ hand-engineered
+      front-end, not off-the-shelf mel.
+    - Convolutions "long and skinny, alternating between time and frequency dimensions: an Mx1 followed
+      by a 1xN," with ResNet-style forward skips.
+    - **88 independent output nodes**, no softmax.
+    - Training: "2.5 million training examples from 3,000 MIDI files spanning several different genres,"
+      avg 3 notes/example, single 980 Ti, TensorFlow. Synthesised-from-MIDI; **no MAPS mention**.
+    - Self-reported accuracy, with the developer's own honesty about it: 99.2 % at output-node level but
+      96.6 % is the always-say-no baseline; **60.3 %** for "all 88 outputs correct"; end-to-end
+      **F ≈ 0.8** for piano.
 - Workflow: transcription first (accuracy setting 1–10), **then** beats/tempo/key.
   "AnthemScore needs to know where the beats and downbeats are located in order to create sheet music."
   User **taps along** to playback to mark downbeats, or drags beat markers. Tempo export as per-beat
@@ -348,7 +359,8 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   meaningful," and that it is "essentially just a help for transcription that has to be done mainly by
   hand or ear." **[T — 403, search-summary only]**
 
-## 9. Dorico — does NOT do audio transcription  **[confirmed negative]**
+## 9. Dorico — does NOT do audio transcription **[confirmed negative]**
+
 - No audio-to-notation feature, no roadmap statement. Has "smart MIDI import" with automatic voice
   separation. A forum thread requesting audio→orchestral score got **no official reply**; a user
   called it "the equivalent of separating the eggs from the omelette."
@@ -357,7 +369,8 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   Quantization Unit**, **Fill Gaps**.
   https://archive.steinberg.help/dorico_pro/v3.5/en/dorico/topics/project_file_handling/project_file_handling_midi_quantize_options_dialog_r.html **[P]**
 
-## 10. MuseScore — no native audio transcription  **[confirmed negative]**
+## 10. MuseScore — no native audio transcription **[confirmed negative]**
+
 - Muse Group instead distributes **Klangio's "Music Transcription Studio"** as a third-party paid app
   through **Muse Hub** (upload audio/YouTube or record, per-instrument models, export
   MIDI/MusicXML/PDF/GuitarPro). Not native MuseScore code.
@@ -365,7 +378,9 @@ Correct Pitch macro: https://helpcenter.celemony.com/M5/doc/melodyneStudio5/en/M
   https://www.scoringnotes.com/news/muse-hub-transforms-into-a-platform-for-playback-options-and-audio-tools/ **[S]**
 
 ## 11. StaffPad "Piano Capture"
+
 https://staffpad.zendesk.com/hc/en-us/articles/16640272408594-Piano-Capture **[P]**
+
 - Built-in mic + **on-device ML**, "modeled on an acoustic piano" — degraded on electric pianos;
   external mics/interfaces "may not work as well."
 - **Tempo set before recording**, optional metronome with count-in bars. No key/time-signature config.
@@ -384,20 +399,21 @@ https://staffpad.zendesk.com/hc/en-us/articles/16640272408594-Piano-Capture **[P
 Klangio (Karlsruhe; Sebastian Murgul, KIT) publishes its research. Listed at
 https://klang.io/about-us/research/ **[P]**, cross-checked on arXiv **[P]**:
 
-| Paper | Venue / ID | Why it matters to us |
-|---|---|---|
-| **Dual Task Monophonic Singing Transcription** | *J. Audio Eng. Soc.* | note-level sung transcription via dual-task learning — their Sing2Notes core |
-| **Estimation of Music Recording Quality to Predict Automatic Music Transcription Performance** | ICSM 2022 | **predicting AMT performance from recording quality** — a gating/warning model |
-| A Multimodal Approach to Acoustic Guitar Strumming Action Transcription | ISMIR 2022 | |
-| **Beat and Downbeat Tracking in Performance MIDI Using an End-to-End Transformer** | SMC 2025, arXiv 2507.00466 | beat grid from *symbolic* note events; beats A-MAPS/ASAP/GuitarSet/Leduc; beats HMMs |
-| **Beat-Based Rhythm Quantization of MIDI Performances** | arXiv 2508.19262 (Wachter, Murgul, Heizmann) | see below |
-| **Transformer-Based Rhythm Quantization … Using Beat Annotations** | arXiv 2604.22290 (2026-04) | see below |
-| Fine-Tuning MIDI-to-Audio Alignment (piano roll + CQT) | arXiv 2506.22237 | CRNN alignment "up to 20% higher alignment accuracy than … DTW" |
-| Fretting-Transformer (MIDI→tab) | ICMC 2025, arXiv 2506.14223 | "surpasses … A* and commercial applications like Guitar Pro" |
-| Exploring Procedural Data Generation for … Fingerpicking Transcription | arXiv 2508.07987 | **procedurally synthesised training data + small real fine-tune** |
-| Joint Transcription of Acoustic Guitar Strumming Directions and Chords | arXiv 2508.07973 | "hybrid … synthetic and real-world data achieving the highest accuracy" |
+| Paper                                                                                          | Venue / ID                                   | Why it matters to us                                                                 |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Dual Task Monophonic Singing Transcription**                                                 | _J. Audio Eng. Soc._                         | note-level sung transcription via dual-task learning — their Sing2Notes core         |
+| **Estimation of Music Recording Quality to Predict Automatic Music Transcription Performance** | ICSM 2022                                    | **predicting AMT performance from recording quality** — a gating/warning model       |
+| A Multimodal Approach to Acoustic Guitar Strumming Action Transcription                        | ISMIR 2022                                   |                                                                                      |
+| **Beat and Downbeat Tracking in Performance MIDI Using an End-to-End Transformer**             | SMC 2025, arXiv 2507.00466                   | beat grid from _symbolic_ note events; beats A-MAPS/ASAP/GuitarSet/Leduc; beats HMMs |
+| **Beat-Based Rhythm Quantization of MIDI Performances**                                        | arXiv 2508.19262 (Wachter, Murgul, Heizmann) | see below                                                                            |
+| **Transformer-Based Rhythm Quantization … Using Beat Annotations**                             | arXiv 2604.22290 (2026-04)                   | see below                                                                            |
+| Fine-Tuning MIDI-to-Audio Alignment (piano roll + CQT)                                         | arXiv 2506.22237                             | CRNN alignment "up to 20% higher alignment accuracy than … DTW"                      |
+| Fretting-Transformer (MIDI→tab)                                                                | ICMC 2025, arXiv 2506.14223                  | "surpasses … A\* and commercial applications like Guitar Pro"                        |
+| Exploring Procedural Data Generation for … Fingerpicking Transcription                         | arXiv 2508.07987                             | **procedurally synthesised training data + small real fine-tune**                    |
+| Joint Transcription of Acoustic Guitar Strumming Directions and Chords                         | arXiv 2508.07973                             | "hybrid … synthetic and real-world data achieving the highest accuracy"              |
 
 **Their rhythm-quantization results (arXiv 2508.19262 / 2604.22290)** **[P]**:
+
 - T5 transformer with **beat-aware tokenization**; "a flexible preprocessing pipeline that uses beat
   estimations or ground truth beats."
 - **The money quote for (d):** the method is "capable of leveraging metronome information, which entails
@@ -416,6 +432,7 @@ rhythm-quantization transformer → notation**, with per-instrument specialisati
 data. That is a directly copyable blueprint from a company whose economics resemble ours.
 
 **Melody Scanner / Klangio product UX** **[P]** (https://klang.io/melodyscanner/, /piano2notes/):
+
 - "Record, upload, or paste a YouTube link" → transcribe → edit in browser/app; views = sheet music,
   piano roll, guitar tabs. **No pre-recording tempo/key setup, no click track, no scale-snap, no
   confidence display** documented.
@@ -435,15 +452,17 @@ data. That is a directly copyable blueprint from a company whose economics resem
 
 Mauch, Cannam, Bittner, Fazekas, Salamon, Dai, Bello, Dixon,
 **"Computer-aided Melody Note Transcription Using the Tony Software: Accuracy and Efficiency"**,
-TENOR 2015. PDF: https://www.tenor-conference.org/proceedings/2015/04-Mauch-Tony.pdf  **[P — read in full]**
+TENOR 2015. PDF: https://www.tenor-conference.org/proceedings/2015/04-Mauch-Tony.pdf **[P — read in full]**
 Code: https://github.com/sonic-visualiser/tony ; https://www.sonicvisualiser.org/tony/
 
 ### 13.1 Framing
+
 44.1 kHz, frames of **2048 samples (~46 ms), hop 256 (~6 ms)**.
 Stage 1 = pYIN pitch track (ICASSP 2014): YIN's single threshold replaced by a **distribution over
 threshold settings** → multiple candidates with probabilities → HMM Viterbi for a smooth track.
 
 ### 13.2 The note HMM (relevant to (a)) — verbatim design
+
 - **Not quantised to semitones.** "Unlike other similar models, ours does not quantise the pitches to
   semitones, but instead allows a more fine-grained analysis."
 - State space: MIDI 35 (B1, ≈61 Hz) → 85 (C♯6, ≈1109 Hz) at **3 steps per semitone ⇒ n = 207 pitches**.
@@ -455,30 +474,33 @@ threshold settings** → multiple candidates with probabilities → HMM Viterbi 
   ⇒ **this is how you tolerate scoops/portamento/vibrato without fragmenting notes.**
 - Self-transition probabilities **0.9 (attack), 0.99 (stable), 0.9999 (silent)**.
 - Transition heuristic between notes, three rules only:
-  1. next note pitch is **either the same as the previous, or ≥ 2/3 semitone different**;
-  2. small pitch changes more likely than large;
-  3. **max 13 semitones** between consecutive notes.
+    1. next note pitch is **either the same as the previous, or ≥ 2/3 semitone different**;
+    2. small pitch changes more likely than large;
+    3. **max 13 semitones** between consecutive notes.
 
 ### 13.3 Note post-processing — the legato/same-pitch fix (THE trick)
+
 Two steps, both trivial:
+
 1. **Amplitude-based onset segmentation.** Compute frame RMS aᵢ. Take the ratio across the frame,
    **r = a₍ᵢ₊₁₎ / a₍ᵢ₋₁₎**. With sensitivity s, any rise with **1/r < s** counts as an onset, and
    **frame i−2 is set to unvoiced — "thus creating a gap within any existing note."**
    Crucially: "If no note is present, nothing changes, i.e. **no additional notes are introduced** in
-   this onset detection step." ⇒ It is a *splitter*, never a creator. This is exactly what separates
+   this onset detection step." ⇒ It is a _splitter_, never a creator. This is exactly what separates
    consecutive same-pitch syllables in legato singing.
 2. **Minimum-duration pruning** — discard notes shorter than a threshold, "usually chosen around 100 ms."
 
 ### 13.4 Measured accuracy (38 solo vocal recordings: 11 adult F, 13 adult M, 14 children)
-| System | Overall Acc | Raw Pitch Acc | Voicing FA | Voicing Recall | F COnPOff | F COnP | F COn |
-|---|---|---|---|---|---|---|---|
-| melotranscript | 0.80 | 0.87 | 0.37 | 0.97 | 0.45 | 0.57 | 0.63 |
-| ryynanen | 0.72 | 0.76 | 0.37 | 0.94 | 0.30 | 0.47 | 0.64 |
-| smstools | 0.80 | 0.88 | 0.41 | 0.99 | 0.39 | 0.55 | 0.66 |
-| **pYIN s=0, prn=0** (no post-proc) | 0.83 | **0.91** | 0.37 | 0.98 | 0.38 | 0.56 | 0.61 |
-| **pYIN s=0.7, prn=0.10** | 0.85 | 0.90 | 0.29 | 0.96 | 0.47 | 0.64 | 0.69 |
-| **pYIN s=0.8, prn=0.10** | 0.85 | 0.89 | 0.24 | 0.94 | **0.49** | **0.68** | **0.73** |
-| **pYIN s=0.8, prn=0.15** | 0.85 | 0.87 | 0.22 | 0.91 | **0.50** | 0.67 | 0.71 |
+
+| System                             | Overall Acc | Raw Pitch Acc | Voicing FA | Voicing Recall | F COnPOff | F COnP   | F COn    |
+| ---------------------------------- | ----------- | ------------- | ---------- | -------------- | --------- | -------- | -------- |
+| melotranscript                     | 0.80        | 0.87          | 0.37       | 0.97           | 0.45      | 0.57     | 0.63     |
+| ryynanen                           | 0.72        | 0.76          | 0.37       | 0.94           | 0.30      | 0.47     | 0.64     |
+| smstools                           | 0.80        | 0.88          | 0.41       | 0.99           | 0.39      | 0.55     | 0.66     |
+| **pYIN s=0, prn=0** (no post-proc) | 0.83        | **0.91**      | 0.37       | 0.98           | 0.38      | 0.56     | 0.61     |
+| **pYIN s=0.7, prn=0.10**           | 0.85        | 0.90          | 0.29       | 0.96           | 0.47      | 0.64     | 0.69     |
+| **pYIN s=0.8, prn=0.10**           | 0.85        | 0.89          | 0.24       | 0.94           | **0.49**  | **0.68** | **0.73** |
+| **pYIN s=0.8, prn=0.15**           | 0.85        | 0.87          | 0.22       | 0.91           | **0.50**  | 0.67     | 0.71     |
 
 - **Post-processing alone lifted COnPOff F from 0.38 → 0.50** (+31 % relative) with **no model change**.
   "minimum duration pruning alone does not lead to substantial improvements. However, a combination of
@@ -493,17 +515,18 @@ Two steps, both trivial:
   voicing false alarm outcomes may change on different data."
 
 ### 13.5 The human-correction economics (THE most actionable result in this whole report)
-96 recordings, 32 amateur singers × 3 tunes from *The Sound of Music*, expert annotator, timing edits only.
 
-| Edit op | Mean count / recording | Marginal time cost (regression) | p |
-|---|---|---|---|
-| **Delete** | **8.82** | 3.51 s | 0.06 |
-| **Join (merge)** | **8.64** | 3.18 s | 0.18 |
-| **Split** | 4.73 | **5.58 s** | 0.06 |
-| Move boundary | 0.28 | 45.51 s | 0.25 |
-| **Create** | 0.17 | **145.08 s** | <0.01 |
-| Familiarity (per day) | — | **−2.31 s** | 0.01 |
-| Intercept (baseline) | — | **437 s** | <0.01 |
+96 recordings, 32 amateur singers × 3 tunes from _The Sound of Music_, expert annotator, timing edits only.
+
+| Edit op               | Mean count / recording | Marginal time cost (regression) | p     |
+| --------------------- | ---------------------- | ------------------------------- | ----- |
+| **Delete**            | **8.82**               | 3.51 s                          | 0.06  |
+| **Join (merge)**      | **8.64**               | 3.18 s                          | 0.18  |
+| **Split**             | 4.73                   | **5.58 s**                      | 0.06  |
+| Move boundary         | 0.28                   | 45.51 s                         | 0.25  |
+| **Create**            | 0.17                   | **145.08 s**                    | <0.01 |
+| Familiarity (per day) | —                      | **−2.31 s**                     | 0.01  |
+| Intercept (baseline)  | —                      | **437 s**                       | <0.01 |
 
 - Mean piece duration 179 s; baseline annotation time 437 s ⇒ **~2.4× realtime even before edits**.
 - Author conclusion, quoted: "the fact that **Merges are much cheaper than Splits** suggests that
@@ -512,6 +535,7 @@ Two steps, both trivial:
 - ⇒ Design rule for us: **over-segment slightly and make merging one keystroke.** Never require Create.
 
 ### 13.6 Tony's UX affordances worth stealing
+
 - **No pre-analysis configuration.** "As soon as the user opens an audio file, melodic representations of
   pitch track and notes are calculated… This contrasts with general tools like Praat, Sonic Visualiser or
   AudioSculpt, which offer a range of processing options the user has to select from." Params are
@@ -523,9 +547,9 @@ Two steps, both trivial:
   All pitch corrections happen on the pitch-track layer. ⇒ **pitch is derived, never independently
   edited** — eliminates a whole class of inconsistency.
 - **Octave-error correction as first-class UX**: pYIN's stage 2 is re-decoded **13 times** with the
-  candidate probabilities re-weighted by a Gaussian centred at cⱼ = 48 + 3j, j = 1…13, σ_r = 8, giving
+  candidate probabilities re-weighted by a Gaussian centred at cⱼ = 48 + 3j, j = 1…13, σ*r = 8, giving
   13 alternative pitch tracks over a user-selected interval; near-duplicates (≥80 % pitch coincidence)
-  are dropped and the user picks. ⇒ **present *alternative interpretations*, not a single answer.**
+  are dropped and the user picks. ⇒ \*\*present \_alternative interpretations*, not a single answer.\*\*
 - **Last-resort manual escape**: user draws a **time-pitch rectangle** and a YIN-independent **harmonic
   product spectrum** method returns the per-frame max inside it (or nothing if the max sits on the
   boundary). ⇒ always have a "just do what I mean in this box" tool.
@@ -540,21 +564,22 @@ Two steps, both trivial:
 ## 14. Rhythm / grid: the published state of the art (relevant to (b) and (d))
 
 ### 14.1 Nakamura, Yoshii, Sagayama — merged-output HMM, SMC 2016
+
 https://eita-nakamura.github.io/articles/Nakamura_etal_RhythmTranscriptionOfPolyphonicMIDIPerformances_SMC2016.pdf **[P — read in full]**
 
 - Two established families, and the distinction matters enormously for us:
-  - **Note HMMs** — score = Markov chain over **note values**; a latent Markov **tempo** variable;
-    observed duration = note value × tempo + onset noise.
-  - **Metrical HMMs** — score = Markov process on a **grid of beat positions within a bar**; note values
-    are *differences between successive beat positions*. "Incorporation of the metre structure is an
-    advantage of metrical HMMs."
+    - **Note HMMs** — score = Markov chain over **note values**; a latent Markov **tempo** variable;
+      observed duration = note value × tempo + onset noise.
+    - **Metrical HMMs** — score = Markov process on a **grid of beat positions within a bar**; note values
+      are _differences between successive beat positions_. "Incorporation of the metre structure is an
+      advantage of metrical HMMs."
 - Generative model, with the authors' measured parameter values — these are useful priors:
-  - note values: categorical Markov chain, learned from a score corpus;
-  - tempo: **Gaussian random walk on log tempo**, ln vₙ | ln vₙ₋₁ ~ N(ln vₙ₋₁, σ_v²), **σ_v = 1.08**;
-    discretised to **50 log-spaced values from 0.3–1.5 s per quarter note (200–40 BPM)**;
-  - onset time given note value: tₙ ~ N(tₙ₋₁ + rₙ₋₁ vₙ₋₁, σ_t²), **σ_t = 0.02 s**;
-  - chord (simultaneous) notes: IOI ~ Exp(λ), **λ = 0.0101 s**, chords as self-transitions.
-  - pitch modelled explicitly as a Markov chain per voice (needed to separate voices).
+    - note values: categorical Markov chain, learned from a score corpus;
+    - tempo: **Gaussian random walk on log tempo**, ln vₙ | ln vₙ₋₁ ~ N(ln vₙ₋₁, σ_v²), **σ_v = 1.08**;
+      discretised to **50 log-spaced values from 0.3–1.5 s per quarter note (200–40 BPM)**;
+    - onset time given note value: tₙ ~ N(tₙ₋₁ + rₙ₋₁ vₙ₋₁, σ_t²), **σ_t = 0.02 s**;
+    - chord (simultaneous) notes: IOI ~ Exp(λ), **λ = 0.0101 s**, chords as self-transitions.
+    - pitch modelled explicitly as a Markov chain per voice (needed to separate voices).
 - Metric: **rhythm correction ratio R = (min # edit operations to fix) / (# notes)** — note-wise shift
   plus a **scaling operation over subsequences**, because "there is arbitrariness in choosing the unit of
   note values: … a quarter note played in a tempo of 60 BPM has the same duration as a half note played
@@ -575,24 +600,25 @@ https://eita-nakamura.github.io/articles/Nakamura_etal_RhythmTranscriptionOfPoly
   Set expectations accordingly.
 
 ### 14.2 Liu, Kong, Morfi, Benetos — PM2S by neural beat tracking, ISMIR 2022
+
 https://www.turing.ac.uk/sites/default/files/2022-09/midi_quantisation_paper_ismir_2022_0.pdf
 code: https://github.com/cheriell/PM2S **[P — read in full]**
 
 - Core reframing: "**Considering rhythm quantisation as a fine-grained tracking of beats and beat
   subdivisions**", predict musical onset as **moₙ = sₙ / S** (subdivision index within a beat).
 - Two-part beat handling, which is a neat practical idea:
-  - **in-note beats** (coincident with ≥1 onset) predicted by a CRNN as **binary classification per note**,
-    with **dynamic thresholding** (threshold derived from the max probability in a fixed-length segment);
-  - **out-of-note beats** (no note there) **inferred by dynamic programming**: candidate insertions of
-    K ∈ {0,1,2,3} evenly spaced beats per gap, minimising
-    **O = Σ |log((b₍ₙ₊₂₎−b₍ₙ₊₁₎)/(b₍ₙ₊₁₎−bₙ))| + λ·N_out** — i.e. minimise log-tempo change, penalise
-    inserting too many beats, subject to a tempo-range constraint.
+    - **in-note beats** (coincident with ≥1 onset) predicted by a CRNN as **binary classification per note**,
+      with **dynamic thresholding** (threshold derived from the max probability in a fixed-length segment);
+    - **out-of-note beats** (no note there) **inferred by dynamic programming**: candidate insertions of
+      K ∈ {0,1,2,3} evenly spaced beats per gap, minimising
+      **O = Σ |log((b₍ₙ₊₂₎−b₍ₙ₊₁₎)/(b₍ₙ₊₁₎−bₙ))| + λ·N_out** — i.e. minimise log-tempo change, penalise
+      inserting too many beats, subject to a tempo-range constraint.
 - **Multi-task CRNN** (3 conv + 2 BiGRU per branch) predicting, per note, all of:
   musical onset (24 classes), note value (96), **time-signature numerator (5: {0,2,3,4,6}) and
   denominator (4: {0,2,4,8})**, **key signature (12)**, hand part (binary), beat, downbeat, tempo (200).
   Branches are cross-linked so subtasks inform each other.
 - **Input encoding ablation — directly reusable finding**: best combination is
-  **MIDI pitch one-hot + one-hot *onset-shift* (Δ from previous onset, 10 ms bins, capped 4 s) + raw
+  **MIDI pitch one-hot + one-hot _onset-shift_ (Δ from previous onset, 10 ms bins, capped 4 s) + raw
   duration in seconds**. Note-level beat F rose from 79.9 (absolute raw onset) to **91.3** (one-hot
   onset shift). Onset representation is by far the most important input; "**onset shift leads to better
   results than absolute onset across all encoding combinations**."
@@ -617,7 +643,9 @@ code: https://github.com/cheriell/PM2S **[P — read in full]**
   errors include **double/half tempo error** and errors introduced by **missing/extra beat predictions**."
 
 ### 14.3 Wachter, Murgul, Heizmann (Klangio) — transformer rhythm quantization, 2025/2026
+
 arXiv **2508.19262**, **2604.22290** **[P]** — see §12. Key transferable points:
+
 - T5 with **beat-aware tokenization**; pipeline accepts "beat estimations **or ground truth beats**."
 - "capable of leveraging **metronome information**, which entails the possibility of **completely
   eliminating the uncertainty of beat estimations**."
@@ -627,12 +655,13 @@ arXiv **2508.19262**, **2604.22290** **[P]** — see §12. Key transferable poin
   part**, consistently, across every system in this report.
 
 ### 14.4 Related pointers not read in depth
+
 - Foscarin et al., "A Parse-Based Framework for Coupled Rhythm Quantization and Score Structuring"
   (MCM 2019) — https://link.springer.com/chapter/10.1007/978-3-030-21392-3_20 — quantization jointly with
   the notational tree (beaming/tuplet nesting). Relevant if we care about engraving quality. **[not read]**
 - Nishikimi/Nakamura/Goto/Yoshii, "Audio-to-score singing transcription based on a **CRNN-HSMM hybrid
   model**", APSIPA Trans. — https://www.cambridge.org/core/journals/apsipa-transactions-on-signal-and-information-processing/article/audiotoscore-singing-transcription-based-on-a-crnnhsmm-hybrid-model/0AE8AEECB24DC3D9B689459E11DDA03F
-  — the closest published *audio-to-score singing* system; semi-Markov duration modelling. **[not read — highest-value next read]**
+  — the closest published _audio-to-score singing_ system; semi-Markov duration modelling. **[not read — highest-value next read]**
 - Nakamura, Benetos, Yoshii, Dixon, "Towards Complete Polyphonic Music Transcription: Integrating
   Multi-Pitch Detection and Rhythm Quantization", ICASSP 2018. **[not read]**
 - Cogliati, Temperley, Duan, "Transcribing Human Piano Performance into Music Notation", ISMIR 2016 —
@@ -643,7 +672,9 @@ arXiv **2508.19262**, **2604.22290** **[P]** — see §12. Key transferable poin
 ## 15. NeuralNote + Spotify basic-pitch — the open-source reference post-processing stack
 
 ### 15.1 basic-pitch (Bittner et al., ICASSP 2022, arXiv:2203.09893)
+
 Source verified in `spotify/basic-pitch@main`, `note_creation.py`, `inference.py`. **[P — source read]**
+
 - Defaults: `DEFAULT_ONSET_THRESHOLD = 0.5`, `DEFAULT_FRAME_THRESHOLD = 0.3`,
   `DEFAULT_MINIMUM_NOTE_LENGTH_MS = 127.7`.
 - `output_to_notes_polyphonic`: onset peaks via `scipy.signal.argrelmax` above `onset_thresh`, then walk
@@ -667,8 +698,10 @@ Source verified in `spotify/basic-pitch@main`, `note_creation.py`, `inference.py
   note-level "substantially better than a comparable baseline".
 
 ### 15.2 NeuralNote (DamRsn/NeuralNote) — the parameter design is the lesson
+
 Source verified: `Lib/Model/BasicPitch.cpp`, `Lib/Model/Notes.h`, `Lib/MidiPostProcessing/NoteOptions.*`,
 `NeuralNote/Source/ParameterHelpers.h`, `TimeQuantizeOptions.h`, `TranscriptionManager.cpp`. **[P — source read]**
+
 ```cpp
 mParams.frameThreshold = 1.0f - inNoteSensitivity;   // UI "Note Sensitivity" 0.05–0.95, default 0.70
 mParams.onsetThreshold = 1.0f - inSplitSensitivity;  // UI "Split Sensitivity" 0.05–0.95, default 0.50
@@ -677,9 +710,10 @@ mParams.pitchBend      = MultiPitchBend;   // always
 mParams.melodiaTrick   = true;             // always
 mParams.inferOnsets    = true;             // always
 ```
+
 - The two raw thresholds are surfaced as **inverted, musically-named sensitivities**, with the source
   comments spelling out the user-facing semantics: `/* Confidence threshold (0.05 to 0.95, More-Less
-  notes) */` and `/* Note segmentation (0.05 - 0.95, Split-Merge Notes) */`.
+notes) */` and `/* Note segmentation (0.05 - 0.95, Split-Merge Notes) */`.
   ⇒ **Ship "more/fewer notes" and "split/merge" sliders, not "onset_threshold".**
 - **Minimum Note Duration**: 35–580 ms, **default 125 ms** (matches basic-pitch's 127.7 ms and Tony's ~100 ms).
 - **Min/Max MIDI note** (21–108) as a pure post-filter — a cheap, effective range prior.
@@ -700,7 +734,9 @@ mParams.inferOnsets    = true;             // always
   other things I've tried." https://www.kvraudio.com/forum/viewtopic.php?t=611044 **[P — forum]**
 
 ### 15.3 ByteDance high-resolution piano transcription (Kong et al., arXiv:2010.01815, TASLP 2021)
+
 **[P — ar5iv full text]**
+
 - Replace framewise binary onset/offset classification with a **continuous regression target: how far each
   frame is from its nearest onset/offset**. Binary labels cap timing resolution at the hop size (~32 ms).
 - **The quantified argument**: with labels randomly shifted ±50 ms (simulating annotation misalignment),
@@ -719,18 +755,20 @@ mParams.inferOnsets    = true;             // always
 ## 16. Query-by-humming and consumer apps — the contour-normalisation and known-reference tricks
 
 ### 16.1 SoundHound / Midomi — retrieval, not transcription
+
 - Patents e.g. **US9396257B2**, **US8116746B2** ("Query by humming for ringtone search and download").
   Pipeline: pitch tracking + note segmentation via "**energy contour segmentation and pitch variation
   segmentation**", then each note reduced to a **triplet: (contour direction up/down relative to previous
   note, interval magnitude, duration)**. **[P — patent text]**
 - ⇒ The representation is **relative/contour-based, not absolute pitch or absolute tempo.** That is the
-  whole reason an off-key, off-tempo hum still matches. Transferable to *our* fuzzy matching / "did the
+  whole reason an off-key, off-tempo hum still matches. Transferable to _our_ fuzzy matching / "did the
   user mean this melody" features, and to key/tempo-invariant similarity checks.
 - "Sound2Sound" as a SoundHound product name: **not found — do not repeat.** **[X]**
 - Broader QBH literature agrees: extract melodic contour → normalise tempo and key → compare against a
   contour DB (e.g. arXiv:2302.04577).
 
 ### 16.2 Consumer pitch apps — they all avoid transcription entirely
+
 - Simply Piano, Yousician, Sing Sharp, Smule all score against a **known reference melody**, never open
   transcription. Simply Piano: "real-time note detection that **validates pressed notes against what the
   learner is meant to play**." Yousician "quantif[ies] both pitch and timing **against lesson targets**."
@@ -747,6 +785,7 @@ mParams.inferOnsets    = true;             // always
   with NeuralNote's non-causality explanation above. **[T]**
 
 ### 16.3 Samplab
+
 - Positioned as a Melodyne-style **note-level polyphonic audio editor** ("edit polyphonic audio as if it
   were MIDI, while preserving the original timbre"), not a notation tool. **No published paper or model
   description — treat any architecture claim as unverifiable.** **[X / thin]**
@@ -754,6 +793,7 @@ mParams.inferOnsets    = true;             // always
 - Complaints: drag-and-drop into Logic/Mixcraft; "vocal pitch fidelity below Melodyne's". **[T]**
 
 ### 16.4 iZotope RX Music Rebalance
+
 - Source separation for de-mixing, not transcription. UX: four sliders (Vocals/Bass/Drums/Other) +
   a global Quality setting.
 - **No public documentation of the model/architecture.** Do not assert a method. **[X / thin]**
@@ -763,6 +803,7 @@ mParams.inferOnsets    = true;             // always
   competitor explicitly scopes to solo sources, this is a later-stage concern.
 
 ### 16.5 "Waves Hummingbird" / "Waves Sonic apps" for hum-to-score
+
 **No evidence these exist. [X]** Waves has no such plugin; the only "Hummingbird" on the market is
 Prominy's acoustic-guitar sample library. Waves' relevant products are Waves Tune (vocal pitch
 correction) and OVox (vocal-to-synth) — neither is hum-to-notation.
@@ -782,7 +823,7 @@ Every product surveyed does the same three things:
    record clean/dry/mono with clear attacks (Ableton and Steinberg docs both say this explicitly).
 3. **Make the correction surface the product, not the detection.** Editable segments/blobs/notes with
    direct manipulation, a "snap everything" bulk action, and an explicit mode for correcting the
-   *analysis* separately from the *audio* (Melodyne Note Assignment Mode + Assign Tempo Mode;
+   _analysis_ separately from the _audio_ (Melodyne Note Assignment Mode + Assign Tempo Mode;
    Tony's note vs pitch-track layers; ScoreCloud's Edit Rhythm / Drag Barlines).
 
 Nobody claims automatic accuracy. Melodyne says so in its own manual.
@@ -796,96 +837,96 @@ Nobody claims automatic accuracy. Melodyne says so in its own manual.
 1. **Optimise for merge-not-split; over-segment deliberately.** Tony measured Split at 5.6 s and Create
    at 145 s of user time vs Join 3.2 s / Delete 3.5 s, and concluded "high onset recall is more important
    than high onset precision." Tune thresholds toward recall, then make Join/Delete one keystroke each.
-   *(§13.5)*
+   _(§13.5)_
 2. **Add pYIN's amplitude-ratio onset splitter + minimum-duration pruning.** ~15 lines: r = a₍ᵢ₊₁₎/a₍ᵢ₋₁₎,
    if 1/r < s mark frame i−2 unvoiced (splits, never creates); then prune < ~100–125 ms. Measured
-   COnPOff F 0.38 → 0.50 with no model change. Sweep s ∈ [0.6, 0.8]. *(§13.3–13.4)*
+   COnPOff F 0.38 → 0.50 with no model change. Sweep s ∈ [0.6, 0.8]. _(§13.3–13.4)_
 3. **Derive note pitch as the median of the underlying pitch contour, and never let it be edited
    independently.** Tony's two-layer model (notes carry only time; pitch is computed) eliminates an
-   entire class of inconsistency and makes note edits cheap. *(§13.6)*
-4. **Estimate a tempo *curve*, never a single global tempo.** Measured: this is the single biggest cause
-   of MuseScore's and Finale's bad output (F_metre 15.3 and 9.9 vs 61.7). *(§14.2)*
+   entire class of inconsistency and makes note edits cheap. _(§13.6)_
+4. **Estimate a tempo _curve_, never a single global tempo.** Measured: this is the single biggest cause
+   of MuseScore's and Finale's bad output (F*metre 15.3 and 9.9 vs 61.7). *(§14.2)\_
 5. **Condition rhythm quantization on an explicit beat/downbeat grid**, and make that grid a first-class,
    user-editable object (Melodyne's Assign Tempo Mode / ScoreCloud's Drag Barlines / AnthemScore's beat
-   markers). Do not let quantization and beat inference be one opaque step. *(§14.2, §14.3)*
+   markers). Do not let quantization and beat inference be one opaque step. _(§14.2, §14.3)_
 6. **Ship "more/fewer notes" and "split/merge" sliders**, implemented as inverted frame/onset thresholds,
    plus a minimum-note-duration control (default ~125 ms). Copy NeuralNote's naming; it's the same two
-   thresholds every system has, just made musical. *(§15.2)*
+   thresholds every system has, just made musical. _(§15.2)_
 7. **Use a metrical (beat-position) state space, not a note-value chain**, for the notation step.
    Nakamura measured that note-value models emit ungrammatical rhythms ("triplets that appear in single
    or two notes without completing a unit of beat") while metrical models don't. Ungrammatical rhythm is
-   catastrophic *visually* even when numerically close. *(§14.1)*
+   catastrophic _visually_ even when numerically close. _(§14.1)_
 8. **Encode onsets as one-hot Δ-from-previous-onset, not absolute time**, wherever a model consumes note
-   sequences. Measured beat-tracking F 79.9 → 91.3. Onset is by far the most informative feature. *(§14.2)*
+   sequences. Measured beat-tracking F 79.9 → 91.3. Onset is by far the most informative feature. _(§14.2)_
 
 **Tier 2 — high value, more work**
 
 9. **Offer a reference click / user-declared tempo as an explicit "easy mode", and exploit it hard.**
    Klangio: metronome information "entails the possibility of completely eliminating the uncertainty of
    beat estimations." AudioScore and StaffPad both simply require tempo up front. Concretely: a count-in
-   + click recording path that skips beat inference entirely, alongside a free-tempo path.
-10. **Separate pitch *drift* from *vibrato* by rate, and only correct drift.** Melodyne: drift is "slow
+    - click recording path that skips beat inference entirely, alongside a free-tempo path.
+10. **Separate pitch _drift_ from _vibrato_ by rate, and only correct drift.** Melodyne: drift is "slow
     wavering… symptomatic of poor technique" while "More rapid fluctuations… such as pitch modulation or
     vibrato, remain unaffected." Same decomposition in Flex Pitch's per-note drift-start/drift-end/vibrato
-    handles. This is what makes correction sound musical rather than robotic. *(§1.4, §3)*
+    handles. This is what makes correction sound musical rather than robotic. _(§1.4, §3)_
 11. **Attack-vs-stable variance in the note model.** pYIN uses σ = 5 semitones for attack states and
     σ = 0.9 for stable states. This single asymmetry is how you tolerate scoops and portamento without
-    fragmenting the note. Cheap to replicate in any HMM/CRF post-processing layer. *(§13.2)*
+    fragmenting the note. Cheap to replicate in any HMM/CRF post-processing layer. _(§13.2)_
 12. **Key/scale snapping with user-declared key.** Nobody auto-detects key reliably enough to snap
     silently; every shipped implementation snaps to a **declared** scale (Cubase Scale Assistant, Melodyne
     "Snap to Chord Scale", NeuralNote root+scale). Offer detected-key-as-default-suggestion, snap only on
     confirmation, and use the note's pitch-bend direction as the tie-breaker for which neighbour to snap
-    to (NeuralNote's trick). *(§1.4, §2, §15.2)*
+    to (NeuralNote's trick). _(§1.4, §2, §15.2)_
 13. **Soft quantization strength as a slider (0–100 %), not a binary snap.** NeuralNote's Quantization
     Force and Melodyne's Correct Pitch percentage both blend rather than snap; Melodyne additionally
     applies correction non-uniformly ("At lower settings it affects only those notes that are wildly out
-    of tune"). *(§1.4, §15.2)*
+    of tune"). _(§1.4, §15.2)_
 14. **Never clobber manual edits.** Melodyne: "notes that have been tuned manually are not affected by the
-    macro" unless opted in. Any re-run of detection or quantization must preserve user decisions. *(§1.4)*
+    macro" unless opted in. Any re-run of detection or quantization must preserve user decisions. _(§1.4)_
 15. **Present alternative interpretations instead of a single answer.** Tony re-decodes 13 Gaussian-
     reweighted pitch tracks over a user-selected interval, dedupes at 80 % overlap, and lets the user
     pick — an octave-error fix that costs one click. Analogue for us: alternate time signatures
     (the 6/8-vs-2/4-with-triplets failure ScoreCloud exhibits), alternate half/double tempo (a named
-    failure mode in Liu et al.), alternate enharmonic keys. *(§13.6, §6.2, §14.2)*
+    failure mode in Liu et al.), alternate enharmonic keys. _(§13.6, §6.2, §14.2)_
 16. **Sonify both the raw pitch contour and the quantized notes, independently toggleable.** Tony's
     authors built this because ear-based error-spotting is faster than eye-based; synthesis is not
-    constrained to integer MIDI. We already have playback — the missing piece is A/B'ing *interpretation*
-    against *performance*.
+    constrained to integer MIDI. We already have playback — the missing piece is A/B'ing _interpretation_
+    against _performance_.
 
 **Tier 3 — worth knowing, situational**
 
 17. **Melodia trick / backward-growing note recovery** for sustained notes with missed onsets — already
     in basic-pitch and always-on in NeuralNote. If we use basic-pitch, confirm it's enabled; if we roll
-    our own, replicate it. *(§15.1)*
+    our own, replicate it. _(§15.1)_
 18. **Onset inference from frame-activation derivatives** as a free second onset detector
-    (`get_infered_onsets`). *(§15.1)*
+    (`get_infered_onsets`). _(§15.1)_
 19. **Regression-of-time-to-onset targets** instead of framewise binary classification, if we train
     anything ourselves — measured 96.39 % vs 76.52 % F1 under ±50 ms label noise, and gives sub-hop
     timing via a 3-point analytic peak solve. Highly relevant if our training labels are weakly aligned.
-    *(§15.3)*
+    _(§15.3)_
 20. **A recording-quality → expected-accuracy model as a UX gate.** Klangio published exactly this
     (ICSM 2022, "Estimation of Music Recording Quality to Predict Automatic Music Transcription
     Performance"). Warn before transcribing, or route to a different pipeline. Cheap, differentiating,
-    and reduces support load and refund requests. *(§12)*
+    and reduces support load and refund requests. _(§12)_
 21. **Per-instrument models over one generic model.** Klangio's stated rationale: "An AI model trained
     exclusively on piano music will theoretically outperform a generic, one-size-fits-all model."
     They also publish procedural/synthetic data generation + small real fine-tune as the way to afford it.
-    *(§12)*
+    _(§12)_
 22. **Restrict detection to a user-selected reliable subset when re-running analysis.** Melodyne ships
     "Detect Tempo of Selection and Merge with Current Tempo" — the user picks the rhythmically solid
     passage and the grid is re-derived from it. Very cheap to implement, disproportionately useful on
-    rubato intros. *(§1.5)*
+    rubato intros. _(§1.5)_
 23. **A "free tempo" escape hatch** for passages that genuinely have no pulse — Melodyne's Free Tempo
-    Assignment replaces detection with a constant line. Better than fighting a bad grid. *(§1.5)*
+    Assignment replaces detection with a constant line. Better than fighting a bad grid. _(§1.5)_
 24. **Contour-relative (direction, interval, duration) triplet representation** for any fuzzy melody
     matching we do — SoundHound's patented QBH normalisation, key- and tempo-invariant by construction.
-    *(§16.1)*
+    _(§16.1)_
 25. **A user-drawn "just do what I mean in this box" tool** — Tony's time-pitch rectangle with a harmonic
-    product spectrum fallback. The last-resort escape that prevents rage-quitting. *(§13.6)*
+    product spectrum fallback. The last-resort escape that prevents rage-quitting. _(§13.6)_
 26. **If any part of the product can assume a known target melody** (sing-along, practice, "transcribe
     this melody I'm teaching you"), the problem collapses from open transcription to reference matching
-    with a widened tolerance band — which is what *every* consumer pitch app does. Enormously easier.
-    *(§16.2)*
+    with a widened tolerance band — which is what _every_ consumer pitch app does. Enormously easier.
+    _(§16.2)_
 
 **Explicit anti-patterns, evidenced**
 
@@ -910,10 +951,10 @@ Nobody claims automatic accuracy. Melodyne says so in its own manual.
   Ableton credits Cytomic for the Glue Compressor but credits nobody here.
 - **Neuratron/AudioScore**: no confirmed patent; the strongest complaints are search-summarised only
   (forum 403s).
-- **ScoreCloud/DoReMIR**: no patents (checked, zero results), and no paper describing the *product*
+- **ScoreCloud/DoReMIR**: no patents (checked, zero results), and no paper describing the _product_
   algorithm — only Ahlbäck's cognition research as the acknowledged basis. The most interesting
   competitor is also the least documented.
-- **Melodyne's monophonic (Melodic) algorithm specifically**: EP2099024 covers the *polyphonic* DNA
+- **Melodyne's monophonic (Melodic) algorithm specifically**: EP2099024 covers the _polyphonic_ DNA
   method. I did not locate a separate patent for the monophonic pitch tracker, which predates it (1997+).
 - **Tony's stated ±5 ms COnPOff onset tolerance** is almost certainly a typo for Molina et al.'s standard
   ±50 ms. Do not benchmark against ±5 ms on the basis of that paper alone.

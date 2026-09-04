@@ -9,7 +9,7 @@ re-asked and re-answered inconsistently across `research-benchmarks.md`,
 recorded there was wrong. One register, one verdict per corpus, evidence attached.
 
 Companions: `research-benchmarks.md` (eval methodology, tiers, gating — authoritative on
-*how* to measure) · `research-voice-transcription.md` (the voice flow's design) ·
+_how_ to measure) · `research-voice-transcription.md` (the voice flow's design) ·
 `README.md` findings log (what we have measured).
 
 ---
@@ -27,11 +27,11 @@ internal evaluation.
 What stays barred is unchanged, because there the dataset itself says no:
 
 - **NC / ND licences** — the licence is the dataset telling us "not commercially".
-  §4.0's reading (NC restricts *use*, not just redistribution) stands.
+  §4.0's reading (NC restricts _use_, not just redistribution) stands.
 - **Research-only terms** stated in the dataset's own terms (TONAS, SingStyle111).
 - **No licence at all** (SSVD, MIR-ST500) — silence is not a grant.
 - **Third-party re-uploads** that contradict the original's own page (NUS-48E,
-  OpenSinger re-hosts) — there the *original's* published terms are the record.
+  OpenSinger re-hosts) — there the _original's_ published terms are the record.
 
 Consequences applied in this file: **ESMUC and CSD are ADOPTED** (CC-BY-4.0 on their
 own Zenodo records, first-party MTG deposits, manually corrected note truth);
@@ -48,12 +48,12 @@ A corpus is only useful to us if it clears **all four**. Most fail on gate 2 or 
 failures are not interchangeable — record which gate, because a gate-4 failure can change
 and a gate-2 failure cannot.
 
-| # | Gate | Why, and the trap |
-|---|---|---|
-| **1** | **Real human singing**, solo or as isolated per-singer stems | Synthesised voice cannot exercise the failures we care about; our own `lib/synth.ts` tier already covers what synthesis can say. |
-| **2** | **Note-level truth**: onset **and** offset **and** pitch | ⚠️ *The decisive gate.* Frame-f0-only corpora do not qualify, and neither do score-aligned ones. |
-| **3** | **Annotation provenance is independent of our own estimator** | ⚠️ *The subtle one.* Notes derived by rounding-and-grouping a pitch tracker's f0 mean we score a segmenter against a sibling of itself — a **better** segmenter then measures **worse**. We have a live demonstration: mir-qbsh drops 0.64 → 0.55 under the improved voice decode purely for this reason. Score-derived truth has the mirror problem: it measures the written music, not the performance. |
-| **4** | **Licence permits commercial use** | Solkey is a commercial product, so NC and ND are barred. `research-benchmarks` §7 frames "don't touch NC data" as a conservative house rule; §4.0 below shows it is simply **the correct reading of the licence** — CC BY-NC restricts *reproduction*, not only redistribution, so "evaluation only, never shared" is not an exemption. Do not look for a way around this gate; look for a published commercial route. |
+| #     | Gate                                                          | Why, and the trap                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | **Real human singing**, solo or as isolated per-singer stems  | Synthesised voice cannot exercise the failures we care about; our own `lib/synth.ts` tier already covers what synthesis can say.                                                                                                                                                                                                                                                                                       |
+| **2** | **Note-level truth**: onset **and** offset **and** pitch      | ⚠️ _The decisive gate._ Frame-f0-only corpora do not qualify, and neither do score-aligned ones.                                                                                                                                                                                                                                                                                                                       |
+| **3** | **Annotation provenance is independent of our own estimator** | ⚠️ _The subtle one._ Notes derived by rounding-and-grouping a pitch tracker's f0 mean we score a segmenter against a sibling of itself — a **better** segmenter then measures **worse**. We have a live demonstration: mir-qbsh drops 0.64 → 0.55 under the improved voice decode purely for this reason. Score-derived truth has the mirror problem: it measures the written music, not the performance.              |
+| **4** | **Licence permits commercial use**                            | Solkey is a commercial product, so NC and ND are barred. `research-benchmarks` §7 frames "don't touch NC data" as a conservative house rule; §4.0 below shows it is simply **the correct reading of the licence** — CC BY-NC restricts _reproduction_, not only redistribution, so "evaluation only, never shared" is not an exemption. Do not look for a way around this gate; look for a published commercial route. |
 
 ### Verification discipline (learned the hard way)
 
@@ -68,7 +68,7 @@ and a gate-2 failure cannot.
 - **Read the archive without downloading it.** A zip's central directory is at its end, so a
   ranged GET of the last few MB lists every file in a 5 GB record for the cost of a few
   seconds. This is how Dagstuhl and Cantoría were ruled out, and how the two adopted corpora
-  were ruled *in*.
+  were ruled _in_.
 - **The search that works is licence-filter → content-check, not keywords.** Descriptions say
   "annotations" and mean frame f0 about half the time. The pipeline that produced this file:
   query the Zenodo API, drop anything not in {CC-BY, CC-BY-SA, CC0, MIT, Apache}, then
@@ -84,7 +84,7 @@ and a gate-2 failure cannot.
 
 ## 1. THE MTG/TROMPA CONSENT INVESTIGATION — ⚠️ SUPERSEDED by the acquisition policy
 
-> **⚠️ SUPERSEDED 2026-08-08.** This section blocked ESMUC and CSD by looking *behind*
+> **⚠️ SUPERSEDED 2026-08-08.** This section blocked ESMUC and CSD by looking _behind_
 > their published CC-BY-4.0 grants — exactly the depth of diligence the acquisition
 > policy at the top of this file rules out. Both records are first-party deposits by
 > the corpus authors' own group with an unambiguous licence field; that is the record,
@@ -98,7 +98,7 @@ that on a consent-scope passage found in the depositor's PhD thesis:
 
 ### The passage, confirmed verbatim
 
-Helena Cuesta, *Data-driven Pitch Content Description of Choral Singing Recordings* (PhD,
+Helena Cuesta, _Data-driven Pitch Content Description of Choral Singing Recordings_ (PhD,
 Universitat Pompeu Fabra, 2022) — the canonical documentation for these corpora — **printed
 page 66, PDF page 102 of 307**, in a `Note:` block in the Chapter 3 preamble, immediately
 after the sentence enumerating all four datasets:
@@ -117,13 +117,14 @@ in all 307 pages. The thesis never states any dataset's licence anywhere.
 ### Three findings that make this hard to wave away
 
 **1. Every primary source that describes the consent limits it to research.** Not just the NC
-wording — the *research-purposes* framing is unanimous:
-- the thesis: *"used for research purposes"*;
-- the Dagstuhl TISMIR paper §3.1: *"All singers have provided their consent to publish the
-  recorded material **for research purposes** under a Creative Commons license"* (note: no NC
+wording — the _research-purposes_ framing is unanimous:
+
+- the thesis: _"used for research purposes"_;
+- the Dagstuhl TISMIR paper §3.1: _"All singers have provided their consent to publish the
+  recorded material **for research purposes** under a Creative Commons license"_ (note: no NC
   qualifier there, and no ethics-committee reference);
-- TROMPA's Data Management Plan D8.4 §5: *"Access to data is given only for research
-  purposes."*
+- TROMPA's Data Management Plan D8.4 §5: _"Access to data is given only for research
+  purposes."_
 
 There is **no** source anywhere describing the consent as unrestricted. Internal benchmarking
 to ship a paid product sits outside that framing however the NC question resolves.
@@ -144,11 +145,11 @@ cure a defect in the licensor's upstream authority by pointing at the licence ta
 
 ### Scope, per dataset
 
-| Corpus | Risk | Why |
-|---|---|---|
-| **ESMUC**, **Cantoría** | **Highest** | Recorded inside TROMPA under the CIREP procedure the note describes; released *with* the thesis as sole documentation. Cantoría adds a professional touring quartet in a commercial studio, with Cuesta stating *"we were not directly involved in the recording"* — undocumented performer agreements on top |
-| **Choral Singing Dataset** | **High** | Recorded at UPF's own Phonos studio; TROMPA D3.1 treats it as project data. Its README and ICMPC paper are silent — an absence of contradiction, not a permission |
-| **Dagstuhl ChoirSet** | **Ambiguous, still blocked** | Recorded in Germany by AudioLabs Erlangen with seminar participants; CIREP's remit plausibly did not reach it, and its own TISMIR paper omits "Non-commercial". But it still carries the *research purposes* limitation, which blocks us regardless |
+| Corpus                     | Risk                         | Why                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ESMUC**, **Cantoría**    | **Highest**                  | Recorded inside TROMPA under the CIREP procedure the note describes; released _with_ the thesis as sole documentation. Cantoría adds a professional touring quartet in a commercial studio, with Cuesta stating _"we were not directly involved in the recording"_ — undocumented performer agreements on top |
+| **Choral Singing Dataset** | **High**                     | Recorded at UPF's own Phonos studio; TROMPA D3.1 treats it as project data. Its README and ICMPC paper are silent — an absence of contradiction, not a permission                                                                                                                                             |
+| **Dagstuhl ChoirSet**      | **Ambiguous, still blocked** | Recorded in Germany by AudioLabs Erlangen with seminar participants; CIREP's remit plausibly did not reach it, and its own TISMIR paper omits "Non-commercial". But it still carries the _research purposes_ limitation, which blocks us regardless                                                           |
 
 ### The NC wording is NOT a TROMPA requirement — which matters for how to resolve it
 
@@ -169,7 +170,7 @@ deliverables index lists WP2–WP8 only, and CORDIS has no H/POPD Requirement en
 **Why this matters practically:** the conflict is one consent form against a project policy that
 called for maximal openness, not a deliberate NC regime. That makes a clarification request to
 UPF/MTG more likely to succeed than if the restriction were project-mandated — but it does not
-change the position today. The operative *"research purposes"* limitation still appears in every
+change the position today. The operative _"research purposes"_ limitation still appears in every
 primary source, and nothing public resolves what the singers actually signed.
 
 ### What could not be established
@@ -177,19 +178,19 @@ primary source, and nothing public resolves what the singers actually signed.
 The documents that would settle it — the CIREP protocol and signed consent forms, referenced as
 TROMPA deliverables D1.1–D1.3 / H Requirement No. 4 / POPD Requirement No. 5–6 — **are not
 public**. They are absent from the TROMPA deliverables index (WP2–WP8 only) and from CORDIS for
-grant 770376. Notably, TROMPA's *own* public policy points the other way — D8.4 §3.4 calls for
-licences *"as open as possible"* with CC-BY-4.0 as the exemplar, while delegating the choice to
+grant 770376. Notably, TROMPA's _own_ public policy points the other way — D8.4 §3.4 calls for
+licences _"as open as possible"_ with CC-BY-4.0 as the exemplar, while delegating the choice to
 each partner. So the public record neither corroborates nor refutes the NC wording; it only
 confirms the research-purposes limitation.
 
 ### Gate 5, which this file should have had from the start
 
 **Performer consent must support the published licence.** Every other gate in §0 asks about the
-*data*. This one asks whether the depositor was in a position to grant what the record says
+_data_. This one asks whether the depositor was in a position to grant what the record says
 they granted — and it is invisible in the licence field, the README, and the dataset paper. It
 surfaced only from a `Note:` block on page 66 of a 307-page dissertation.
 
-*Not legal advice.* The clean paths are written clarification from the rights-holders, or
+_Not legal advice._ The clean paths are written clarification from the rights-holders, or
 corpora with unambiguous commercial terms.
 
 ---
@@ -198,18 +199,18 @@ corpora with unambiguous commercial terms.
 
 ### 1a. ESMUC Choir Dataset — the strongest new find
 
-| | |
-|---|---|
-| Source | [Zenodo 5848990](https://zenodo.org/records/5848990) · 2.34 GB, single zip |
-| Licence | **CC-BY-4.0** (Zenodo record licence field) |
-| Content | 12 singers (undergraduate vocal-performance students, ESMUC Barcelona), SATB, **individual close-up microphone per voice** + 2 room mics. ~31 min accumulated audio, 44.1 kHz. Three pieces (Schütz, Haydn, Heiller) plus warm-up exercises. |
-| Annotations | ⭐ The record states: *"manually corrected annotations of F0 contours and notes"*, and *"All audio tracks from the dataset, except the room microphones, have two associated annotation files: one for the F0 contour, and a second one with the note annotations."* |
-| Verified | Zip central directory read by range request: 495 `.wav`, 300 `.f0`, 276 `.lab`, per-singer naming (`DG_FT_take1_A1.wav/.f0/.lab`, S/A/T/B + index). |
+|             |                                                                                                                                                                                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source      | [Zenodo 5848990](https://zenodo.org/records/5848990) · 2.34 GB, single zip                                                                                                                                                                                           |
+| Licence     | **CC-BY-4.0** (Zenodo record licence field)                                                                                                                                                                                                                          |
+| Content     | 12 singers (undergraduate vocal-performance students, ESMUC Barcelona), SATB, **individual close-up microphone per voice** + 2 room mics. ~31 min accumulated audio, 44.1 kHz. Three pieces (Schütz, Haydn, Heiller) plus warm-up exercises.                         |
+| Annotations | ⭐ The record states: _"manually corrected annotations of F0 contours and notes"_, and _"All audio tracks from the dataset, except the room microphones, have two associated annotation files: one for the F0 contour, and a second one with the note annotations."_ |
+| Verified    | Zip central directory read by range request: 495 `.wav`, 300 `.f0`, 276 `.lab`, per-singer naming (`DG_FT_take1_A1.wav/.f0/.lab`, S/A/T/B + index).                                                                                                                  |
 
 **Why it clears gate 3 — settled by extracting the file, not by reading the description.**
-Two independent reviewers reached *opposite* verdicts from the same Zenodo text: one read
-*"Tracks from the warm-up exercises only have F0 contours, since there is no associated score
-to them"* as proof the notes are score-derived ("UNCLEAR, leaning BARRED"). That is a fair
+Two independent reviewers reached _opposite_ verdicts from the same Zenodo text: one read
+_"Tracks from the warm-up exercises only have F0 contours, since there is no associated score
+to them"_ as proof the notes are score-derived ("UNCLEAR, leaning BARRED"). That is a fair
 inference. It is also wrong, and one range-extracted file shows why —
 `SC1_FT_take3_A1.lab`, i.e. **alto 1, per singer, per take**:
 
@@ -225,11 +226,11 @@ inference. It is also wrong, and one range-extracted file shows why —
 
 Seven notes around E4 (329.63 Hz) and **every one a different frequency**, drifting from
 +7 cents to −37 cents. Score-derived truth gives 329.63 every time. This is measured pitch with
-real intonation variation, annotated per singer, and the README confirms *"manually corrected
-annotations of F0 contours and notes."*
+real intonation variation, annotated per singer, and the README confirms _"manually corrected
+annotations of F0 contours and notes."_
 
 The score's role is what it is for any human annotator — knowing where the notes are. It does
-not make the *values* score-derived, and the values are what gate 3 is about. Warm-ups lack
+not make the _values_ score-derived, and the values are what gate 3 is about. Warm-ups lack
 note files simply because nobody knew what the intended notes were.
 
 ⚠️ **This disagreement is the best argument in this file for its own method.** Two careful
@@ -237,6 +238,7 @@ readers, one description, opposite conclusions — and a 3 KB ranged read decide
 Extract the file.
 
 **Caveats to carry into any result:**
+
 - Trained singers (conservatoire students), not amateurs on a phone. Different from our
   users; complements rather than replaces the amateur corpora.
 - Recorded **simultaneously** with close mics, so expect bleed from neighbouring singers.
@@ -246,13 +248,13 @@ Extract the file.
 
 ### 1b. Choral Singing Dataset (CSD) — second, with one open question
 
-| | |
-|---|---|
-| Source | [Zenodo 2649950](https://zenodo.org/records/2649950) · 1.07 GB |
-| Licence | **CC-BY-4.0** (Zenodo record licence field) |
-| Content | 16 singers of the Anton Bruckner Choir, Barcelona; 3 a cappella pieces (incl. Bruckner's *Locus Iste*); recorded in groups of 4 per section, individual cardioid close mics; conducted via video for synchronisation, piano reference on headphones. |
-| Annotations | Per-singer `.f0` (**manually corrected**) and `_notes.lab`, plus a per-section `.mid` score file described as *semi-synchronized*. |
-| Verified | Central directory read by range request; one `_notes.lab` extracted in full. |
+|             |                                                                                                                                                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source      | [Zenodo 2649950](https://zenodo.org/records/2649950) · 1.07 GB                                                                                                                                                                                       |
+| Licence     | **CC-BY-4.0** (Zenodo record licence field)                                                                                                                                                                                                          |
+| Content     | 16 singers of the Anton Bruckner Choir, Barcelona; 3 a cappella pieces (incl. Bruckner's _Locus Iste_); recorded in groups of 4 per section, individual cardioid close mics; conducted via video for synchronisation, piano reference on headphones. |
+| Annotations | Per-singer `.f0` (**manually corrected**) and `_notes.lab`, plus a per-section `.mid` score file described as _semi-synchronized_.                                                                                                                   |
+| Verified    | Central directory read by range request; one `_notes.lab` extracted in full.                                                                                                                                                                         |
 
 **The `_notes.lab` format**, extracted from the archive — `onset_sec · frequency_Hz · duration_sec`:
 
@@ -265,7 +267,7 @@ Extract the file.
 
 Those frequencies are **measured, not written**: 354.865 / 354.674 / 353.476 / 353.998 Hz
 are all the same notated pitch (F4 = 349.23 Hz, so ~+28 cents) recorded with per-note
-variation. A score-derived annotation would give one identical value. So the *pitch* is
+variation. A score-derived annotation would give one identical value. So the _pitch_ is
 performance-derived, which clears gate 3 for pitch.
 
 ✅ **Open question RESOLVED, and a third reviewer's contrary claim refuted.** The in-zip
@@ -280,9 +282,9 @@ that everyone has been conflating:
 > MIDI files."
 
 So: the `_notes.lab` files are Tony-extracted and **hand-corrected**; the separate `.mid` files
-are the score, explicitly flagged as *not* matching performed durations. One reviewer concluded
+are the score, explicitly flagged as _not_ matching performed durations. One reviewer concluded
 "notes come from MIDI with one global offset correction" — that is the `.mid`, not the `.lab`.
-My own extracted `.lab` agrees with the README: the field is `meanf0`, a *measured* mean, which
+My own extracted `.lab` agrees with the README: the field is `meanf0`, a _measured_ mean, which
 is why identical written notes carry different frequencies.
 
 Tony is pYIN-based, so note for the record that its raw output would be a sibling-estimator
@@ -290,37 +292,37 @@ risk — but pYIN is not our estimator (we run CREPE), and the human correction 
 gate 3 either way.
 
 **Two further details from the README worth carrying:** the authors acknowledge bleed —
-*"Each voice is very predominant in its corresponding track, although some interferences from
-other singers exist in some files"* — and the sections sang to *"the same backing MIDI track
-through headphones"* plus a video of the conductor, so tempo is externally driven rather than
+_"Each voice is very predominant in its corresponding track, although some interferences from
+other singers exist in some files"_ — and the sections sang to _"the same backing MIDI track
+through headphones"_ plus a video of the conductor, so tempo is externally driven rather than
 freely expressive. Neither is disqualifying; both belong in any write-up of a result.
 
 ⚠️ **A caveat I initially got wrong: the note files are per SECTION, not per singer.** The
-README: *"only one note file is generated for each section because note boundaries are very
-similar."* 12 note files for 48 audio tracks — 4 singers per section, all singing the same
+README: _"only one note file is generated for each section because note boundaries are very
+similar."_ 12 note files for 48 audio tracks — 4 singers per section, all singing the same
 line in unison. Each singer's stem can therefore be scored against its section's notes, but
 individual timing deviation within a section is invisible to the annotation. For onset
 metrics that is a real ceiling; ESMUC, which annotates **per singer per take**, does not have
 it. That is why ESMUC is listed first.
 
-⚠️ **Name collision:** this "CSD" is *not* the barred CSD (Children's Song Dataset, KAIST,
+⚠️ **Name collision:** this "CSD" is _not_ the barred CSD (Children's Song Dataset, KAIST,
 CC-BY-NC-SA). Different corpus, different licence. Do not let the abbreviation merge them.
 
 ### 1c. The three MTG choral releases are NOT interchangeable
 
 Helena Cuesta's PhD produced three superficially identical CC-BY-4.0 multitrack choral
 corpora. Only two carry note truth, and a keyword search cannot tell them apart — this is the
-clearest illustration in this file of why gate 2/3 must be checked against the *files*:
+clearest illustration in this file of why gate 2/3 must be checked against the _files_:
 
-| Corpus | Zenodo | f0 | Notes | Verdict |
-|---|---|---|---|---|
-| **ESMUC Choir Dataset** | 5848990 | **manually corrected** | **manually corrected** | ✅ USABLE |
-| **Choral Singing Dataset** | 2649950 | **manually corrected** | `_notes.lab`, measured pitch | ✅ USABLE (boundary provenance open) |
-| **Cantoría Dataset** | 5878677 | **pYIN + CREPE, automatic** | **none** | ⛔ BARRED |
+| Corpus                     | Zenodo  | f0                          | Notes                        | Verdict                              |
+| -------------------------- | ------- | --------------------------- | ---------------------------- | ------------------------------------ |
+| **ESMUC Choir Dataset**    | 5848990 | **manually corrected**      | **manually corrected**       | ✅ USABLE                            |
+| **Choral Singing Dataset** | 2649950 | **manually corrected**      | `_notes.lab`, measured pitch | ✅ USABLE (boundary provenance open) |
+| **Cantoría Dataset**       | 5878677 | **pYIN + CREPE, automatic** | **none**                     | ⛔ BARRED                            |
 
-Cantoría's own record says it provides *"automatically extracted F0 trajectories… with pYIN
-and CREPE"* and nothing else — the `F0_pyin/` and `F0_crepe/` directory names are visible in
-the archive. It is 11 songs by a *professional* vocal quartet (Iberian Golden Age repertoire),
+Cantoría's own record says it provides _"automatically extracted F0 trajectories… with pYIN
+and CREPE"_ and nothing else — the `F0_pyin/` and `F0_crepe/` directory names are visible in
+the archive. It is 11 songs by a _professional_ vocal quartet (Iberian Golden Age repertoire),
 so it would have been an attractive addition on description alone. It fails both gate 2 (no
 notes) and gate 3 (tracker-derived), i.e. the Dagstuhl trap exactly.
 
@@ -329,7 +331,7 @@ notes) and gate 3 (tracker-derived), i.e. the Dagstuhl trap exactly.
 > **Policy update 2026-08-08:** the repo carries an MIT LICENSE at its root; that is the
 > published grant and we use it (`fetch/fetch-hust-solfege.ts`). The "MIT-covers-data needs a
 > lawyer" and juvenile-consent threads below are the over-diligence the acquisition
-> policy removes. What *stays* is everything data-quality: MARG files excluded (their
+> policy removes. What _stays_ is everything data-quality: MARG files excluded (their
 > pitch column is unusable per the README), offsets synthetic (onset-only corpus), and
 > the pitch convention needs the measured offset correction — re-derived empirically in
 > the fetcher, see there.
@@ -337,12 +339,12 @@ notes) and gate 3 (tracker-derived), i.e. the Dagstuhl trap exactly.
 Red-teaming corrected this entry substantially. **Four statements I made about it were
 false**:
 
-| I wrote | Actually |
-|---|---|
-| "64 of HUST_Solfege's 103 appear in SSVD v2.0" | **2** (IDs `1150`, `1325`) |
-| "onset agreement, max difference 0.0000 s" | **Not identical** — 22/27 and 40/50 onsets equal, max divergence **150 ms** |
-| "constant +20.0 semitone offset" | **Not constant** — mean 19.96, per-note spread up to **0.94 semitone** |
-| "a lawful route into SSVD" | With a 2-file overlap, **there is no route** |
+| I wrote                                        | Actually                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------- |
+| "64 of HUST_Solfege's 103 appear in SSVD v2.0" | **2** (IDs `1150`, `1325`)                                                  |
+| "onset agreement, max difference 0.0000 s"     | **Not identical** — 22/27 and 40/50 onsets equal, max divergence **150 ms** |
+| "constant +20.0 semitone offset"               | **Not constant** — mean 19.96, per-note spread up to **0.94 semitone**      |
+| "a lawful route into SSVD"                     | With a 2-file overlap, **there is no route**                                |
 
 **Consequence: we cannot claim SSVD-inherited annotation quality.** HUST_Solfege's README
 documents file formats only — **no annotation protocol of its own**. The four-trained-annotator
@@ -358,10 +360,10 @@ licences appear only where there is code; every other dataset repo is unlicensed
 the root of a data repo conventionally reads as covering the contents — but this is a question
 for a lawyer with the commit order disclosed, not a settled fact.
 
-**🔴 The 30 MARG files must be excluded, and they are now identified exactly.** README: *"103
-audios including 73 self-built solfege recordings and **30 singing recordings from MARG**."*
+**🔴 The 30 MARG files must be excluded, and they are now identified exactly.** README: _"103
+audios including 73 self-built solfege recordings and **30 singing recordings from MARG**."_
 The MARG source page (SNU, recovered from Wayback) carries **no licence and no terms**, only
-*"Copyright © 2014, Music and Audio Research Group"* — all rights reserved, and the host is now
+_"Copyright © 2014, Music and Audio Research Group"_ — all rights reserved, and the host is now
 dead, so there is nobody to ask. HUST cannot sublicense them.
 **Exclusion rule: drop every file whose basename does not parse as an integer.** The MARG files
 are `man1`–`man6`, `man6_1`, `woman1`–`woman3` × 3 Korean children's songs = exactly 30. The 73
@@ -371,19 +373,20 @@ nothing.
 **🔴 Unresolved: consent for 37 juvenile voices.** No consent statement, ethics approval or DUA
 anywhere in the repo. The defining paper (IEEE TMM, DOI 10.1109/tmm.2022.3168132) is **closed
 access and unread** — that is the one document that could settle it. Adverse context: the same
-lab's sibling repo states its audio *"come from the WeChat Mini Program Sight-singing Talent"* —
+lab's sibling repo states its audio _"come from the WeChat Mini Program Sight-singing Talent"_ —
 consumer-app recordings of the public, republished with no licence and no consent basis. For an
 EU-facing commercial product, 37 children's voices with an unknown consent basis is real GDPR
 exposure.
 
 **Data faults that would otherwise have shipped into the harness:**
+
 - **Two incompatible pitch conventions in one directory.** The 73 solfège files hold fractional
   measured f0 spanning MIDI 22.8–63.96 (22.8 ≈ 29 Hz — impossible for a voice, so the offset is
   real). The 30 MARG files are **100 % integers already in a sane range** (men 42–63, women
   56–68). **A global +20 would silently corrupt MARG.** Correction is per-group, or moot once
   MARG is excluded.
-- **A trap in the pitch column.** README: *"The 30 recordings from MARG are just for onset
-  detection. Pitch notations are not done for MARG recordings."* The column is nevertheless
+- **A trap in the pitch column.** README: _"The 30 recordings from MARG are just for onset
+  detection. Pitch notations are not done for MARG recordings."_ The column is nevertheless
   **fully populated with 1,440 plausible-looking integers.**
 - **Offsets are 100 % synthetic** — all 5,111 rows are exactly `onset + 0.03`. No offset metric
   is ever computable. (Our headline COnP has no offset gate, so this costs us nothing.)
@@ -403,20 +406,21 @@ I called this "the highest-value licensing ask on this page". It is not an ask; 
 and the reason is stated in the paper's own abstract.
 
 The three excerpts are **Edelweiss**, **Do-Re-Mi** and **My Favourite Things**. Paper §2.1,
-verbatim: *"We chose three songs from the musical "The Sound of Music" as our material."* Rodgers
+verbatim: _"We chose three songs from the musical "The Sound of Music" as our material."_ Rodgers
 & Hammerstein, 1959; Rodgers died 1979 → **EU/UK protection to 2049, US to 2054**. The CC-BY-4.0
-on figshare is granted over the *sound recording*; neither QMUL nor the authors hold any right in
+on figshare is granted over the _sound recording_; neither QMUL nor the authors hold any right in
 Rodgers' composition, and CC-BY §2(a) cannot sublicense what the licensor does not own.
 
 The nickname "Sound of Music corpus" turned out to be **literal**, and the licence field shows
 none of it. Partial mitigation: everything is sung on "ta", so Hammerstein's lyrics are not
-reproduced — but the melody *is* the protected work, performed in full, three times, by 39
+reproduced — but the melody _is_ the protected work, performed in full, three times, by 39
 singers.
 
 Two further problems, either of which would need sign-off on its own:
+
 - **No consent basis published anywhere.** The paper has no ethics statement and no approval
-  number; §6 is two sentences of acknowledgements. Participants were *"members of our
-  university's music society or our music-technology focused research group"*, recruited
+  number; §6 is two sentences of acknowledgements. Participants were _"members of our
+  university's music society or our music-technology focused research group"_, recruited
   informally pre-GDPR.
 - **The annotations are unlicensed** — `tsom-intonation.csv`, exhumed from a Wayback capture of
   a dead Mercurial host, with no LICENSE, no README grant and no licence field on the project
@@ -430,7 +434,7 @@ Two further problems, either of which would need sign-off on its own:
 
 ### ISMIR2014 / Molina — ⛔ non-commercial. Closed, do not chase again.
 
-Every previous note in our docs treated this as an *availability* problem worth an email.
+Every previous note in our docs treated this as an _availability_ problem worth an email.
 It is a **licence** problem. The published URL is `http://www.atic.uma.es/ismir2014singing`
 (earlier notes had the path wrong, which is why the first chase "exhausted" so fast). Its
 `readme.txt`, recovered from the Wayback Machine, states:
@@ -447,10 +451,10 @@ Same class as HumTrans. Two further facts, so nobody re-runs the search:
   nothing. The live path soft-404s.
 - Only 14 of the 38 clips were ATIC recordings. The other 24 are **MTG-QBH** clips
   (`MTGQBH_renaming.m` maps `q1→afemale1`, `q21→amale1`, …), and MTG-QBH is a
-  query-by-humming *retrieval* corpus with no note truth of its own — the same category as
+  query-by-humming _retrieval_ corpus with no note truth of its own — the same category as
   the mir-qbsh we already hold and flag `noteTruthDerived`.
 
-The *toolbox* (CommandLineTool + GUI) is GPL-3.0 and would be reusable, but we already
+The _toolbox_ (CommandLineTool + GUI) is GPL-3.0 and would be reusable, but we already
 implement Molina's split/merge/missed/spurious taxonomy independently in `lib/segErrors.ts`.
 
 ### Dagstuhl ChoirSet — ⛔ not note truth · ✅ **our only real-tempo reference on singing**
@@ -462,16 +466,16 @@ interpretation was wrong, and the wrong reason nearly cost us the genuinely usef
 the dataset.**
 
 **What `annotations_csv_scorerepresentation` actually is.** 80 CSVs, one per
-(take × SATB section) across 20 takes — *per-performance* alignments, not one static score;
+(take × SATB section) across 20 takes — _per-performance_ alignments, not one static score;
 files differ between takes of the same piece. Format is `onset_s, offset_s, MIDI_pitch`, and
 `mirdata.dagstuhl_choirset` exposes it as `load_score()` across 108 singer tracks. vocadito's
 own survey table counts ChoirSet as having Notes ✓. Produced, per the paper §3.5, by aligning
-CPDL MIDI to the room mic *"using the beat annotations… as anchor points"* through a DTW
-pipeline. The authors explicitly propose the use I dismissed (§5): *"the time-aligned score
-representations could serve as a reference for the evaluation of note-tracking algorithms."*
+CPDL MIDI to the room mic _"using the beat annotations… as anchor points"_ through a DTW
+pipeline. The authors explicitly propose the use I dismissed (§5): _"the time-aligned score
+representations could serve as a reference for the evaluation of note-tracking algorithms."_
 
 **So why it is still not note truth — measured, not assumed.** Both manual-F0 takes carry a
-manual F0 reference *and* a score CSV, which allows the alignment to be checked directly
+manual F0 reference _and_ a score CSV, which allows the alignment to be checked directly
 (n=122 phrase onsets, n=864 notes):
 
 ```
@@ -486,9 +490,9 @@ honest disqualifier: notated-score times pushed through a beat-anchored DTW, plu
 pitch on a drifting amateur choir. Right verdict, wrong reason.
 
 **✅ The part we missed: 20 manual, expert-reviewed beat + measure grids.**
-Paper §3.4, verbatim: *"annotations were manually created by an annotator… using the
+Paper §3.4, verbatim: _"annotations were manually created by an annotator… using the
 annotation by tapping feature in Sonic Visualiser… In the second stage, annotations were
-reviewed and refined by a second, experienced annotator."* Format `time_s,
+reviewed and refined by a second, experienced annotator."_ Format `time_s,
 measure.beatfraction` — so **downbeats and bar numbers**, not a flat pulse — over genuinely
 expressive tempo (±20 % within a take, ritardando to ~35 BPM at final cadences).
 
@@ -501,9 +505,10 @@ Because STM and every close mic in a take are channels of one synchronous multit
 grid applies frame-exactly to each singer's stem.
 
 **Limits to state whenever it is used:**
-- Ensemble, not solo. vocadito's authors, verbatim: *"While ChoirSet includes stems of
+
+- Ensemble, not solo. vocadito's authors, verbatim: _"While ChoirSet includes stems of
   individual singers, they contain bleed or artifacts due to the style of microphone, and are
-  not well suited for monophonic voice evaluation."* LRX is a throat contact mic (bleed-free
+  not well suited for monophonic voice evaluation."_ LRX is a throat contact mic (bleed-free
   but off-distribution timbre); the HSM headset stems are closest to normal input.
 - Two pieces, both 4/4, both slow sacred choral. A **probe**, not a rhythm benchmark.
 - Notated durations in beats are not shipped; recover them by mapping the score CSV back
@@ -513,34 +518,34 @@ grid applies frame-exactly to each singer's stem.
 together are **~1.1 MB compressed** — the beat/score data needs none of the 5.1 GB. Adding the
 52 quartet stems is 0.4–0.6 GB per mic type.
 
-Licence, verbatim (Zenodo 4618287 and the paper): *"Creative Commons Attribution 4.0
-International… permits unrestricted use, distribution, and reproduction in any medium."*
-Worth recording alongside it: singer consent was given *"to publish the recorded material for
-research purposes under a Creative Commons license."* The licence itself is unrestricted
+Licence, verbatim (Zenodo 4618287 and the paper): _"Creative Commons Attribution 4.0
+International… permits unrestricted use, distribution, and reproduction in any medium."_
+Worth recording alongside it: singer consent was given _"to publish the recorded material for
+research purposes under a Creative Commons license."_ The licence itself is unrestricted
 CC-BY; that phrasing is not a licence term but is worth knowing.
 
 ### DALI — ⛔ barred three ways, and **our licence note was wrong**
 
 ⚠️ **Correction:** our notes said the annotations are CC-BY-SA-4.0. The only explicit licence
 at the primary source — the footer of
-[github.com/gabolsgabs/DALI](https://github.com/gabolsgabs/DALI) — reads *"licensed under a
-Creative Commons Attribution-**NonCommercial**-ShareAlike 4.0 International License"*, and
+[github.com/gabolsgabs/DALI](https://github.com/gabolsgabs/DALI) — reads _"licensed under a
+Creative Commons Attribution-**NonCommercial**-ShareAlike 4.0 International License"_, and
 mirdata's `dali.py` agrees. The CC-BY-4.0 we probably picked up belongs to Zenodo record
 1492443, which is the ISMIR **paper**, not the data. The actual data deposit
 ([Zenodo 2577915](https://zenodo.org/records/2577915)) is `access_right: restricted`,
 `license: null`.
 
-Barred on licence, on access, and on the merits — vocadito's authors, verbatim: *"the
+Barred on licence, on access, and on the merits — vocadito's authors, verbatim: _"the
 annotations are crowdsourced and automatically aligned – while this is useful for training, it
-is not an appropriate dataset for evaluation."* v2 improved *global* offset (2.23 s → 1.82 s)
-but the repo's own open issues still list unsolved *local* note alignment, and no audio is
+is not an appropriate dataset for evaluation."_ v2 improved _global_ offset (2.23 s → 1.82 s)
+but the repo's own open issues still list unsolved _local_ note alignment, and no audio is
 distributed (YouTube retrieval, some links dead).
 
 ### TONAS — ⛔ "internal non-commercial use only", and access is academically gated
 
 Genuinely the profile we want, which is why it is worth recording precisely: 72 monophonic
-**a cappella flamenco** excerpts (~36 min), with *"manual melodic transcriptions, generated by
-the COFLA team and Cristina López Gómez"* — note-level `onset, duration, MIDI, energy`, and an
+**a cappella flamenco** excerpts (~36 min), with _"manual melodic transcriptions, generated by
+the COFLA team and Cristina López Gómez"_ — note-level `onset, duration, MIDI, energy`, and an
 f0 file that ships **both** an automatic and a **manually corrected** column.
 
 Licence, verbatim from the access conditions on [Zenodo 1290722](https://zenodo.org/records/1290722):
@@ -549,23 +554,23 @@ Licence, verbatim from the access conditions on [Zenodo 1290722](https://zenodo.
 > may not redistribute, publically communicate or modify it… All Rights Reserved."
 
 Zenodo metadata: `access_right: restricted`, `license: null`; files gated behind a request
-form requiring *"your academic affiliation… and a brief description of your research topics."*
+form requiring _"your academic affiliation… and a brief description of your research topics."_
 
 **No access request was made, deliberately.** Obtaining it on a research justification and
 then using it to tune a commercial product would breach the terms being agreed to. Note that
 "internal non-commercial use" bars exactly the gitignored-fixtures use we had hoped might be
-available — the operative clause restricts *use*, not redistribution (cf. §4.0).
+available — the operative clause restricts _use_, not redistribution (cf. §4.0).
 
 ### SSVD v2.0 — ⛔ **no licence at all**, and it is the painful one
 
-Technically the best-matched corpus found anywhere in this sweep, and *exactly* our target
+Technically the best-matched corpus found anywhere in this sweep, and _exactly_ our target
 domain: amateur **sight-singing captured through a WeChat mini-app** (600+ users, 60k samples,
 194 released as `.flac` + `.txt`, ungated, in-repo). Annotation provenance is the strongest of
 any corpus reviewed — four researchers with professional sight-singing training set approximate
-onsets by slowed listening, then refined each to *"the occurrence time of the second harmonic
-signal"* on a high-resolution spectrogram, set offsets *"when most harmonic signals
-disappeared"*, and *"checked each other's annotation files until no annotation errors were
-found."* **No pitch tracker anywhere in the chain.** Format `onset⇥offset⇥pitch` with
+onsets by slowed listening, then refined each to _"the occurrence time of the second harmonic
+signal"_ on a high-resolution spectrogram, set offsets _"when most harmonic signals
+disappeared"_, and _"checked each other's annotation files until no annotation errors were
+found."_ **No pitch tracker anywhere in the chain.** Format `onset⇥offset⇥pitch` with
 fractional MIDI.
 
 ⛔ **And there is no licence.** GitHub API `license: null`, `/license` → 404, no
@@ -573,7 +578,7 @@ LICENSE/COPYING/terms in 1,303 tree entries, nothing in the README. No licence m
 exclusive copyright — silence is not a permissive default.
 
 **This is a lab-wide pattern, not an oversight awaiting a fix.** Across HUST's `itec-hust`
-org, *code* is licensed deliberately (MusicYOLO Apache-2.0, HUST_Solfege MIT) while **every
+org, _code_ is licensed deliberately (MusicYOLO Apache-2.0, HUST_Solfege MIT) while **every
 one of seven dataset repos is unlicensed** — SSVD v1/v2, OMAPS, OMAPS2, ocarinaKT, singKT,
 Alignment-dataset, CPMS — the most recent from 2026-03. Waiting for a licence is not a plan.
 
@@ -585,8 +590,8 @@ might not cover what we would need.
 
 `license: null` on [york135/singing_transcription_ICASSP2021](https://github.com/york135/singing_transcription_ICASSP2021);
 no terms anywhere in the tree, though the repo is actively maintained (last push 2026-03).
-Contextual signal on intent: the same author's later dataset MIRMLPop states verbatim *"This
-repo is not allowed for commercial usage. Academic usage is OK."*
+Contextual signal on intent: the same author's later dataset MIRMLPop states verbatim _"This
+repo is not allowed for commercial usage. Academic usage is OK."_
 
 **The audio is a separate and worse problem.** The repo ships none — only
 `MIR-ST500_link.json` with 500 **YouTube** URLs and a `yt_dlp` script. That is bulk automated
@@ -601,15 +606,15 @@ would score against are partly a model's output.
 
 The most painful near-miss, and the design to copy. ~10 min of audio across **five traditions**
 (Russian, Japanese Minyo, Chinese Hebei Bangzi, Jewish Romaniote chant, Alpine yodel), with
-**≥2 independent expert transcribers per item**. Annotation method, verbatim: *"Note-level
+**≥2 independent expert transcribers per item**. Annotation method, verbatim: _"Note-level
 annotation was performed manually instead of using Tony's automated note-annotation function.
 Note pitch was manually adjusted in Sonic Visualizer, in cases where the transcriber disagreed
-with the note frequency automatically assigned by Tony."* Genuinely manual, explicitly not
+with the note frequency automatically assigned by Tony."_ Genuinely manual, explicitly not
 tracker-derived.
 
 The **annotations** are `cc-by-4.0` ([Zenodo 10065955](https://zenodo.org/records/10065955)).
-The **audio** is not: *"Access to the original audio is restricted. Access can be granted only
-for academic research. To gain access, you need to agree to the Data Use Agreement."*
+The **audio** is not: _"Access to the original audio is restricted. Access can be granted only
+for academic research. To gain access, you need to agree to the Data Use Agreement."_
 
 ⛔ Barred — annotations without audio cannot score a transcriber. Retained here because its
 multi-independent-transcriber design is what §2b says our own annotation effort should copy.
@@ -621,16 +626,16 @@ Most CompMusic jingju records are **CC-BY-NC-4.0** or **CC-BY-NC-ND-4.0**: Zenod
 [1286350](https://zenodo.org/records/1286350), [814800](https://zenodo.org/records/814800).
 None carries note-level pitch.
 
-⚠️ **An asymmetry worth a second look:** *part 2* ([Zenodo 1421692](https://zenodo.org/records/1421692))
+⚠️ **An asymmetry worth a second look:** _part 2_ ([Zenodo 1421692](https://zenodo.org/records/1421692))
 is reported as **CC-BY-4.0**, open and ungated — 6 GB of real traditional singing with
 **manual syllable-level time boundaries** — while parts 1 and 3 are NC. Two cautions: a
-separate reviewer found *divergent rights across part-2 versions* (CC-BY vs CC-BY-NC), so the
+separate reviewer found _divergent rights across part-2 versions_ (CC-BY vs CC-BY-NC), so the
 record must be re-verified version-by-version before anything is downloaded; and it is not
 note-level, so it cannot score a transcriber.
 
 **Why it is still interesting.** Our own 2026-08 work found that syllables are boundary
 evidence, that re-onsets are the voice flow's weakest axis, and that a broadband energy accent
-cannot find them — the literature's answer is a *phonetic* channel. A corpus of real singing
+cannot find them — the literature's answer is a _phonetic_ channel. A corpus of real singing
 with **manual syllable boundaries** is exactly what would let us measure the ceiling of a
 syllable-boundary channel before building one. Different question from note transcription,
 worth keeping on the list for that question alone.
@@ -651,33 +656,33 @@ fails gate 2 regardless.
 **But note what it would be good for.** Manual phoneme boundaries on sung audio are exactly
 the channel the voice literature says fixes our worst remaining weakness: Yong et al. reach
 0.90 re-onset recall with a phonetic posteriorgram where our broadband-energy accent reached
-nothing. A phoneme-annotated sung corpus would let us *measure the ceiling* of a phonetic
+nothing. A phoneme-annotated sung corpus would let us _measure the ceiling_ of a phonetic
 re-onset channel before building one. If the original NUS licence turns out to be
 commercially usable, revisit it for that purpose, not as a note-transcription benchmark.
 
 ### Checked and rejected on content, not licence (all CC-BY-4.0)
 
-These surfaced from a licence-filtered, *content-verified* sweep (see method below) and all
+These surfaced from a licence-filtered, _content-verified_ sweep (see method below) and all
 fail an early gate. Recorded so the same records do not resurface as leads:
 
-| Corpus | Zenodo | Why it fails |
-|---|---|---|
-| **Cantoría Dataset** | 5878677 | Gate 2+3 — pYIN/CREPE f0 only, no notes (see §1c) |
-| **Saraga-Carnatic-Melody-Synth** | 5553925 | Gate 1 — *resynthesized* audio (the "-Synth" is the point), f0 truth exact by construction. Same shape as MDB-stem-synth, and our own `lib/synth.ts` already covers what synthesis can say |
-| **Larynx Microphone Singer-Songwriter** | 20287765 | Gate 2 — 348 wav but only 12 `.txt` and one split `.csv`; no per-note annotation. *(Intriguing for another reason: a throat contact mic is an unusual acoustic condition.)* |
-| **Raga Ornamentation Detection (ROD)** | 17851882 | Gate 2 — expert annotations, but of *ornaments*, not note onsets/offsets |
-| **AdoVoc Pro** | 3383118 | Gate 2 — ornament classification (`mordente_superior/…_f0.csv`), f0 per excerpt |
-| **Amateur Vocal Percussion** / **AVP-LVT** | 5036529 / 5578744 | Gate 1 — beatboxing, not pitched singing. ⚠️ *Worth remembering separately:* both ship per-event onset annotations on **amateur** vocal audio, which is a clean way to test `OnsetDetector` in isolation — our weakest component — even though they can never score a note transcriber |
+| Corpus                                     | Zenodo            | Why it fails                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cantoría Dataset**                       | 5878677           | Gate 2+3 — pYIN/CREPE f0 only, no notes (see §1c)                                                                                                                                                                                                                                      |
+| **Saraga-Carnatic-Melody-Synth**           | 5553925           | Gate 1 — _resynthesized_ audio (the "-Synth" is the point), f0 truth exact by construction. Same shape as MDB-stem-synth, and our own `lib/synth.ts` already covers what synthesis can say                                                                                             |
+| **Larynx Microphone Singer-Songwriter**    | 20287765          | Gate 2 — 348 wav but only 12 `.txt` and one split `.csv`; no per-note annotation. _(Intriguing for another reason: a throat contact mic is an unusual acoustic condition.)_                                                                                                            |
+| **Raga Ornamentation Detection (ROD)**     | 17851882          | Gate 2 — expert annotations, but of _ornaments_, not note onsets/offsets                                                                                                                                                                                                               |
+| **AdoVoc Pro**                             | 3383118           | Gate 2 — ornament classification (`mordente_superior/…_f0.csv`), f0 per excerpt                                                                                                                                                                                                        |
+| **Amateur Vocal Percussion** / **AVP-LVT** | 5036529 / 5578744 | Gate 1 — beatboxing, not pitched singing. ⚠️ _Worth remembering separately:_ both ship per-event onset annotations on **amateur** vocal audio, which is a clean way to test `OnsetDetector` in isolation — our weakest component — even though they can never score a note transcriber |
 
 ### ⚠️ Re-host licence laundering — a recurring pattern, three instances found
 
 A re-uploader cannot broaden a licence, and this happens often enough to be a standing check:
 
-| Re-host | Claims | Upstream actually is |
-|---|---|---|
-| `pymaster/CrawlSinger-OS` (HF) | **MIT** | OpenSinger: *"All users of the dataset must follow the CC BY-NC-SA LICENSE"* |
-| Zenodo 19595152 "NUS-48E" | **CC-BY-4.0** | Third-party upload, creator `"None"`, created 2026-04-15, empty description — original NUS terms govern |
-| `J1mmymm/MIMuT_Data_v2` (HF) | `other` | 13-corpus bulk re-host incl. MAESTRO (CC-BY-NC-SA) and RWC (CC-BY-NC); its own card admits *"does not replace or relicense the terms of any upstream dataset"* |
+| Re-host                        | Claims        | Upstream actually is                                                                                                                                           |
+| ------------------------------ | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pymaster/CrawlSinger-OS` (HF) | **MIT**       | OpenSinger: _"All users of the dataset must follow the CC BY-NC-SA LICENSE"_                                                                                   |
+| Zenodo 19595152 "NUS-48E"      | **CC-BY-4.0** | Third-party upload, creator `"None"`, created 2026-04-15, empty description — original NUS terms govern                                                        |
+| `J1mmymm/MIMuT_Data_v2` (HF)   | `other`       | 13-corpus bulk re-host incl. MAESTRO (CC-BY-NC-SA) and RWC (CC-BY-NC); its own card admits _"does not replace or relicense the terms of any upstream dataset"_ |
 
 **Always resolve to the originating project's own page.** Where a re-host and an original
 disagree, the original governs.
@@ -696,7 +701,7 @@ internal-non-commercial. Treat it strictly as a lead generator.
 ### Folk and ethnomusicology archives — a structural dead end
 
 Checked and empty as a class, which is worth recording because it looks so promising from the
-outside. **Meertens MTC** pairs field audio with *JPG scans of handwritten transcriptions* (and
+outside. **Meertens MTC** pairs field audio with _JPG scans of handwritten transcriptions_ (and
 is CC-BY-NC-SA 3.0 regardless); **Essen** and Finnish **eSävelmät** are symbolic-only with no
 audio (Finnish also explicitly NC); Estonian archives are text corpora; ITMA, Svenskt visarkiv,
 ZRC SAZU and the Hungarian Bartók system distribute no note-level annotations at all. Latvian,
@@ -707,7 +712,7 @@ formally unverified.
 
 RWC's audio was **re-released openly in 2026** ([Zenodo 18656623](https://zenodo.org/records/18656623),
 315 pieces, WAV) — a genuine change from its old research-only distribution. The licence is
-*"Creative Commons Attribution Non Commercial 4.0 International"*. Still NC, so still barred,
+_"Creative Commons Attribution Non Commercial 4.0 International"_. Still NC, so still barred,
 but worth knowing the door moved.
 
 ### Repositories checked and empty
@@ -751,18 +756,18 @@ ISMIR 2023 paper is decisive and needs no access to the Wix page:
 That is contractually scoped performer consent, which no licence tag could cure — the same
 defect class as §1, and here stated by the authors themselves. No CC grant is asserted over the
 data anywhere; the CC-BY-4.0 that Zenodo and every index show belongs to the **paper** (record
-10265401 contains only `000091.pdf`). The site footer reads *"All Rights Reserved"*.
+10265401 contains only `000091.pdf`). The site footer reads _"All Rights Reserved"_.
 
-Painful, because the annotation is the best found anywhere — verbatim: *"We manually input
+Painful, because the annotation is the best found anywhere — verbatim: _"We manually input
 performance MIDI files that **strictly align to singing audio** using MIDI piano, **including
-multiple rounds of correction**."* The paper even names the failure mode we care about:
-*"Utilizing performance MIDI for singing voice synthesis and claiming it as score-based is, in
-reality, a deceptive approach."* 12.8 h, 8 professional singers, studio-clean — and
+multiple rounds of correction**."_ The paper even names the failure mode we care about:
+_"Utilizing performance MIDI for singing voice synthesis and claiming it as score-based is, in
+reality, a deceptive approach."_ 12.8 h, 8 professional singers, studio-clean — and
 commercially unusable.
 
 ## 2b. Annotatable audio — the reframe, now with verified candidates
 
-We do not need an *annotated* corpus; we need commercially-clean **annotatable** audio that we
+We do not need an _annotated_ corpus; we need commercially-clean **annotatable** audio that we
 annotate in-house. That is cheaper, better-controlled and less consent-fraught than recording
 our own, and it is a better plan than `research-voice-transcription.md` §6.3's "record our own".
 
@@ -778,26 +783,26 @@ out to have put its whole 50-year archive on Wikimedia Commons.
   recordings collected across Spain over 50 years. **172 named performers**, with per-file
   performer / location / date metadata usable for speaker-disjoint splits.
 - Genre subcategories confirm it is predominantly sung: Jotas 1,652 · Christmas carols 414 ·
-  Coplas 86 · Habaneras 53, plus *romances* (Conde Niño, Don Bueso, Rico Franco), villancicos
+  Coplas 86 · Habaneras 53, plus _romances_ (Conde Niño, Don Bueso, Rico Franco), villancicos
   and misa settings. A 50-title sample suggests **75–85 % sung**, the rest spoken.
 - **Licence**, from each file's `extmetadata`: `LicenseShortName` = **"CC BY-SA 3.0"**,
-  `UsageTerms` = *"Creative Commons Attribution-Share Alike 3.0"*. Fully open bulk download
+  `UsageTerms` = _"Creative Commons Attribution-Share Alike 3.0"_. Fully open bulk download
   from `upload.wikimedia.org`, no account.
-- The Fundación's own site confirms the deposit: *"…ponen a disposición de todo el mundo las
-  grabaciones realizadas durante los últimos 50 años"* (funjdiaz.net/colecciones.php).
+- The Fundación's own site confirms the deposit: _"…ponen a disposición de todo el mundo las
+  grabaciones realizadas durante los últimos 50 años"_ (funjdiaz.net/colecciones.php).
 
 ⚠️ **Quality caveat, and it cuts both ways.** These are 1970s–2000s cassette field tapes
 transcoded to low-bitrate Ogg Vorbis (sampled file: 52 kbps). Expect tape hiss, room noise and
-limited HF. That is poor material for clean pitch ground truth — and *excellent* material for
+limited HF. That is poor material for clean pitch ground truth — and _excellent_ material for
 an adverse-conditions tier, which our corpus currently gets only from synthetic degradation.
 
 ⚠️ **ShareAlike.** CC BY-SA 3.0 is commercially usable with attribution, but SA attaches to
-*adaptations*. Using the audio as evaluation input is one thing; redistributing a derived
+_adaptations_. Using the audio as evaluation input is one thing; redistributing a derived
 annotated corpus alongside it is a question for a lawyer.
 
-**A CC0 sibling exists**: the Digital Library of Castilla y León's *Archivo de la Tradición
-Oral* — 265 items, ~9.1 h of the same 1977–79 Valladolid/Palencia material, licence field
-verbatim *"The Creative Commons CCO"* → `publicdomain/zero/1.0/`. Tiny, but unencumbered by
+**A CC0 sibling exists**: the Digital Library of Castilla y León's _Archivo de la Tradición
+Oral_ — 265 items, ~9.1 h of the same 1977–79 Valladolid/Palencia material, licence field
+verbatim _"The Creative Commons CCO"_ → `publicdomain/zero/1.0/`. Tiny, but unencumbered by
 ShareAlike, so it is the natural pilot slice.
 
 ### ✅ Larynx Microphone Singer-Songwriter Dataset (LM-SSD) — cleanest raw material
@@ -813,41 +818,42 @@ ShareAlike, so it is the natural pilot slice.
 - **No timing information of any kind** — 12 lyric `.txt` files with no timestamps, and a
   take-level split CSV. That is fine: we are supplying the annotation.
 
-⚠️ **Composition rights.** The in-zip README states it plainly: *"Note that some songs in the
+⚠️ **Composition rights.** The in-zip README states it plainly: _"Note that some songs in the
 dataset are cover versions. In these cases, it may be required to obtain a separate license for
-the composition, depending on the intended use case."* Low risk for internal evaluation;
+the composition, depending on the intended use case."_ Low risk for internal evaluation;
 relevant if audio or derived score data is ever redistributed.
 
 ### ✅ PJS — tiny, but the only corpus with NO third-party composition risk
 
 [Takamichi's PJS corpus](https://sites.google.com/site/shinnosuketakamichi/research-topics/pjs_corpus),
-CC-BY-**SA**-4.0, open Google Drive, 275 MB. README verbatim: *"All the data in the corpus is
-licensed with CC BY-SA 4.0"* / *"Free for non-commercial and commercial use."*
+CC-BY-**SA**-4.0, open Google Drive, 275 MB. README verbatim: _"All the data in the corpus is
+licensed with CC BY-SA 4.0"_ / _"Free for non-commercial and commercial use."_
 
 Its melodies were **composed for the corpus**, so unlike every other candidate on this page
 there is no underlying copyrighted work. 48 kHz / 24-bit, soundproof room, dry, solo.
 
 Limits: **26.9 minutes, one amateur male singer.** And its note timings are **worthless as
 ground truth** — proven by parsing all 100 MIDIs: exactly one tempo event per file, **96.6 % of
-onsets and offsets exactly on the 1/16 grid**, notated duration vocabulary. That is the *guide
-melody the singer tracked*, not a transcription of what he sang. (Its `.lab` phoneme labels
-*are* audio-aligned, and a third party re-labelled them because the shipped ones were wrong.)
+onsets and offsets exactly on the 1/16 grid**, notated duration vocabulary. That is the _guide
+melody the singer tracked_, not a transcription of what he sang. (Its `.lab` phoneme labels
+_are_ audio-aligned, and a third party re-labelled them because the shipped ones were wrong.)
 ⚠️ CC-BY-**SA**: share-alike may attach to annotations we publish downstream.
 
 ### ⛔ Vocal92 — not the resource it looked like
 
 I flagged this as potentially the most valuable audio find (146 h). It fails three ways:
-- **The CC-BY tag is contradicted by the authors.** The IEEE Access paper says verbatim: *"**For
-  non-commercial use**, the dataset will be available free of charge at the IEEE DataPort."*
+
+- **The CC-BY tag is contradicted by the authors.** The IEEE Access paper says verbatim: _"**For
+  non-commercial use**, the dataset will be available free of charge at the IEEE DataPort."_
   A contradicted grant is not a reliable grant.
-- **Paywalled**: *"This dataset requires an IEEE DataPort Subscription to access."*
+- **Paywalled**: _"This dataset requires an IEEE DataPort Subscription to access."_
 - **Covers of copyrighted pop** in Chinese and English — the composition layer again.
-- Also: the real singing total is **95 h, not 146** (the rest is lyric *reading*), and the audio
+- Also: the real singing total is **95 h, not 146** (the rest is lyric _reading_), and the audio
   is 16 kHz transcoded from phone recordings — poor material to annotate.
 
 ### ⛔ MULTIVOX / VocalnetOpenDataset
 
-MULTIVOX is **CC-BY-4.0** and open (the BSD-3-Clause sighting was its 354 KB *mirdata index*,
+MULTIVOX is **CC-BY-4.0** and open (the BSD-3-Clause sighting was its 354 KB _mirdata index_,
 not the data; the real total is ~81.5 GB across two records) — but it is **group** singing with
 heavy bleed and **zero annotation of any kind**, confirmed three ways. Wrong shape.
 VocalnetOpenDataset **does not exist**: the repo is `LICENSE` + `README` only, 11 KB, abandoned
@@ -856,7 +862,7 @@ VocalnetOpenDataset **does not exist**: the repo is `LICENSE` + `README` only, 1
 ### ⭐ Library of Congress, American Folklife Center — amateur solo singing at volume
 
 The largest body of **amateur, field-recorded, often solo unaccompanied singing** with open
-rights found anywhere: ~10,635 online audio items (Lomax *Southern Mosaic*, Capt. Pearl R. Nye,
+rights found anywhere: ~10,635 online audio items (Lomax _Southern Mosaic_, Capt. Pearl R. Nye,
 Chicago Ethnic Arts). A 400-item sample found **86 % marked free-to-use** → an estimated
 **7,000–9,000 usable items**. Open MP3, no account, no form.
 Rights field, verbatim: `"No known restrictions on use or reproduction."`
@@ -864,8 +870,8 @@ Rights field, verbatim: `"No known restrictions on use or reproduction."`
 ⚠️ **Read that carefully — it is a non-warranty, not a licence grant.** LoC is saying it holds
 no rights and knows of none, explicitly leaving performer publicity rights and underlying
 composition copyright to the user. That is a residual-risk position, not CC0. The one LoC
-holding with an *affirmative* commercial grant is **Citizen DJ** (*"free to use and reuse
-without restriction… even for commercial purposes, all without asking permission"*) — but that
+holding with an _affirmative_ commercial grant is **Citizen DJ** (_"free to use and reuse
+without restriction… even for commercial purposes, all without asking permission"_) — but that
 is 1–3 second chops of professional accompanied 78s, so it is the wrong content with the best
 licence wording found in this whole exercise.
 
@@ -875,12 +881,12 @@ mandatory; rate-limit ~3.2 s/page and use `curl --http1.1`.
 ### 💔 Meertens Tune Collections — the best-fit corpus in the world, and it is NC
 
 **7,178 MP3s of amateur Dutch solo unaccompanied singing** (1950s–80s field recordings of
-elderly informants, ~200–240 h) *plus* **2,503 melodies manually transcribed by musicologists**
+elderly informants, ~200–240 h) _plus_ **2,503 melodies manually transcribed by musicologists**
 to \*\*kern/MIDI. That is our exact input distribution with expert note transcriptions.
 
-Verbatim from liederenbank.nl/mtc/: *"Meertens Tune Collections by Meertens Instituut is
+Verbatim from liederenbank.nl/mtc/: _"Meertens Tune Collections by Meertens Instituut is
 licensed under a Creative Commons Attribution-**NonCommercial**-ShareAlike 3.0 Unported
-License."*
+License."_
 
 Single rightsholder (KNAW / Meertens Instituut). No commercial tier is published, and nobody
 was contacted. **This is a business decision rather than a research dead end** — one
@@ -893,48 +899,48 @@ self-reported inexperienced singers**, 5 intermediate, 2 professional, with docu
 range per participant. Four exercises, repeated across reference pitches spanning each singer's
 range — and the exercise design maps onto our failure taxonomy almost line for line:
 
-| Exercise | Material | What it exercises for us |
-|---|---|---|
-| `simple` | triad **ma-me-mi-mo-muu**, 1–3–5–3–1 | one note per plosive/nasal syllable — the *favourable* articulation regime |
-| `vowel` | **ngi-nge-nga-o-u**, 1–2–1–3–1–5–3–1 | mixed articulation |
-| `sustained` | legato on **ruu**, 1–3–5–8–7–5–4–2–1 | 🔴 the hard legato-vowel case — our documented weakness |
-| `glissando` | sustained **mm** octave glide | hummed pitch glide, no onset at all |
+| Exercise    | Material                             | What it exercises for us                                                   |
+| ----------- | ------------------------------------ | -------------------------------------------------------------------------- |
+| `simple`    | triad **ma-me-mi-mo-muu**, 1–3–5–3–1 | one note per plosive/nasal syllable — the _favourable_ articulation regime |
+| `vowel`     | **ngi-nge-nga-o-u**, 1–2–1–3–1–5–3–1 | mixed articulation                                                         |
+| `sustained` | legato on **ruu**, 1–3–5–8–7–5–4–2–1 | 🔴 the hard legato-vowel case — our documented weakness                    |
+| `glissando` | sustained **mm** octave glide        | hummed pitch glide, no onset at all                                        |
 
 Plus a directed **breathy** phonation condition and posture conditions (`hunched_back`,
 `chest_breathing`, `over_articulation`, `under_articulation`, `sideways`) — **a built-in adverse
 tier**, in the same spirit as our own reverb/wind/babble tier.
 
 **Three simultaneous microphones: Behringer C-3 condenser, iPhone 14 Pro built-in, MacBook Air
-built-in.** That is our capture distribution, recorded in parallel, so the *same* performance can
+built-in.** That is our capture distribution, recorded in parallel, so the _same_ performance can
 be scored across mic quality — a controlled A/B we currently cannot construct. 40,052 files,
 ~23.7 GB unzipped, 44.1 kHz/16-bit mono WAV. Filenames encode everything:
 `inex-5-before_instruction-simple-2-phone-audio.wav`.
 
 **Annotation cost is the lowest of anything on this page.** There is no note truth — but the
-*interval pattern of every exercise is published*, so pitch sequence and note count are given a
+_interval pattern of every exercise is published_, so pitch sequence and note count are given a
 priori. Only onsets/offsets need marking, against a known answer.
 
-Licence, verbatim from `LICENSE.md` inside the release: *"Creative Commons Attribution 4.0
+Licence, verbatim from `LICENSE.md` inside the release: _"Creative Commons Attribution 4.0
 International License (CC BY 4.0) … You are free to: **Share** … **Adapt** — remix, transform,
-and build upon the material for any purpose, **including commercially**."*
+and build upon the material for any purpose, **including commercially**."_
 https://zenodo.org/records/20744738 · open download, no account.
 
 **No repertoire risk** — exercises only, so the §"composition is a separate right" trap does not
 apply. **USABLE-RAW-AUDIO, top priority.**
 
-### ⭐⭐ Belyk, Johnson & Kotz — CC0, and they deliberately recruited *bad* singers
+### ⭐⭐ Belyk, Johnson & Kotz — CC0, and they deliberately recruited _bad_ singers
 
 34 participants, median age 21, **only two with any vocal training**, recruited via two ad
-wordings chosen *"to attract either strong or poor singers in order to draw from both ends of
-the spectrum of singing ability"*. That deliberate sampling of poor singers is unique here and
+wordings chosen _"to attract either strong or poor singers in order to draw from both ends of
+the spectrum of singing ability"_. That deliberate sampling of poor singers is unique here and
 is exactly the tail our product fails on.
 
 Each participant sang back **45 melodies of 5 notes each** → ~7,600 sung notes, 44.1 kHz/16-bit,
 7 s between trials. Plus a range assessment: a stable comfortable note, a **descending sweep to
 their lowest**, an **ascending sweep to their highest**, ×3 → clean pitch glides.
 
-Files are *"labeled by the stimulus being imitated"* and stimuli are *"labelled according to a
-western chromatic scale"*, so the 5-note target sequence is known per file; Praat pitch
+Files are _"labeled by the stimulus being imitated"_ and stimuli are _"labelled according to a
+western chromatic scale"_, so the 5-note target sequence is known per file; Praat pitch
 measurements ship alongside (tracker output, not manual — so onsets still need marking, but
 cheaply, against a known target).
 
@@ -958,7 +964,7 @@ That description is our input distribution almost verbatim, written by someone e
 different purpose.
 
 **And the sting:** §"ISMIR2014 / Molina" records that **24 of the 38 ISMIR2014 clips are MTG-QBH
-queries**. We closed ISMIR2014 as NC-barred. The *audio* under two thirds of it has been sitting
+queries**. We closed ISMIR2014 as NC-barred. The _audio_ under two thirds of it has been sitting
 in an open repository the whole time. Molina's annotations remain barred — but the recordings do
 not have to be.
 
@@ -968,8 +974,8 @@ not have to be.
 
 **⚠️ Licence conflict, unresolved, do not use until settled.** Zenodo record 1290712 reports
 `"license": {"id": "cc-by-4.0"}`, `access_right: open`. But an earlier pass found UPF's own
-project page stating the set is for *"internal non-commercial use only"* and *"may not
-redistribute"*. Two agents, two sources, opposite answers. Given §4.0 (NC restricts *use*, not
+project page stating the set is for _"internal non-commercial use only"_ and _"may not
+redistribute"_. Two agents, two sources, opposite answers. Given §4.0 (NC restricts _use_, not
 just sharing) and the §"Re-host licence laundering" pattern, **the restrictive reading wins until
 someone reads the operator's own current terms**. Recorded as a conflict, not resolved — per the
 no-new-research instruction.
@@ -988,7 +994,7 @@ only.
 The canonical German clinical voice corpus, mirrored on Zenodo as 73 zips / **38.1 GB**,
 `"license": {"id": "cc-by-4.0"}`, open. The SVD protocol is vowels /a/, /i/, /u/ at normal, high
 and low pitch **plus a rising–falling pitch contour**, each with a simultaneous
-**electroglottograph channel** — and an EGG trace is arguably a *better* f0 reference than manual
+**electroglottograph channel** — and an EGG trace is arguably a _better_ f0 reference than manual
 annotation for a glide/sustained-vowel tier. There is even a `Sängerstimme.zip` ("singer's
 voice") pathology class.
 
@@ -1000,17 +1006,17 @@ https://zenodo.org/api/records/16874898
 
 ### ✅ Smaller verified CC-BY / CC0 raw audio
 
-| Corpus | Content | Licence | Note |
-|---|---|---|---|
-| **JaCRC** (Zenodo 6536490) | 314 a cappella jingju, incl. 75 amateur student recordings (children + adults) | CC-BY-4.0, **with explicit written performer consent for public release** | 🔴 exclude rows whose metadata `source` is `SVAD` (Isophonics, CC-BY-NC-SA) and the 15 commercial-release ones. Heavily ornamented opera. |
-| **MAST melody** (Zenodo 8007358) | 3,884 clips, ITU conservatory **entrance-exam candidates** imitating melodic patterns, 5 expert grades each | CC-BY-4.0 | Genuinely amateur at scale. Hard cap: **m4a at 8 kHz**. |
-| **URSing** (Zenodo 6404999) | 65 pieces, 22 singers, isolated `Vocal.wav` 44.1 kHz + video | CC-BY-4.0 | ⚠️ karaoke covers → composition rights unresolved. Singers not described as amateur. |
-| **Schotanus stimuli** (DataverseNL KS6QCQ) | 472 MP3s, Dutch sentences sung to **specified melodies, scores published in the accompanying PDF** | **CC0** | Performer identity and spoken/sung split unverified. |
-| **ECura** (Zenodo 20234272 / 20434128 / 20569113) | Miao, Bai, Yi tone languages — **paired spoken and sung renditions of identical lyrics**, ~4 GB, with IPA | CC-BY-**SA**-4.0 | ShareAlike attaches to redistributed adaptations (i.e. annotations), not to internal eval or the product. Flag before publishing derived labels. |
-| **Voices of the Mountains** (Zenodo 21627162) | 50 Kurdish Bayati-Kurd maqam songs, 13 vocalists, 1.81 h, 221 expert **error spans** | CC-BY-4.0 | 22.05 kHz. Microtonal — off-distribution, but a real stress test for a semitone grid. |
-| **EMVD** | 27 singers, ~40 min clear-voice subset | CC-BY-4.0 | Small. |
-| **AdoVoc Pro** (Zenodo 3383118) | Isolated flamenco, 3 expert singers | CC-BY-4.0 | Tiny, idiom-specific. |
-| **Tuvan throat singing** (Dryad cvdncjt14) | Solo unaccompanied, 133 MB | CC0 | Biphonic — pathological for any f0 tracker. A deliberate torture case only. |
+| Corpus                                            | Content                                                                                                     | Licence                                                                   | Note                                                                                                                                             |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **JaCRC** (Zenodo 6536490)                        | 314 a cappella jingju, incl. 75 amateur student recordings (children + adults)                              | CC-BY-4.0, **with explicit written performer consent for public release** | 🔴 exclude rows whose metadata `source` is `SVAD` (Isophonics, CC-BY-NC-SA) and the 15 commercial-release ones. Heavily ornamented opera.        |
+| **MAST melody** (Zenodo 8007358)                  | 3,884 clips, ITU conservatory **entrance-exam candidates** imitating melodic patterns, 5 expert grades each | CC-BY-4.0                                                                 | Genuinely amateur at scale. Hard cap: **m4a at 8 kHz**.                                                                                          |
+| **URSing** (Zenodo 6404999)                       | 65 pieces, 22 singers, isolated `Vocal.wav` 44.1 kHz + video                                                | CC-BY-4.0                                                                 | ⚠️ karaoke covers → composition rights unresolved. Singers not described as amateur.                                                             |
+| **Schotanus stimuli** (DataverseNL KS6QCQ)        | 472 MP3s, Dutch sentences sung to **specified melodies, scores published in the accompanying PDF**          | **CC0**                                                                   | Performer identity and spoken/sung split unverified.                                                                                             |
+| **ECura** (Zenodo 20234272 / 20434128 / 20569113) | Miao, Bai, Yi tone languages — **paired spoken and sung renditions of identical lyrics**, ~4 GB, with IPA   | CC-BY-**SA**-4.0                                                          | ShareAlike attaches to redistributed adaptations (i.e. annotations), not to internal eval or the product. Flag before publishing derived labels. |
+| **Voices of the Mountains** (Zenodo 21627162)     | 50 Kurdish Bayati-Kurd maqam songs, 13 vocalists, 1.81 h, 221 expert **error spans**                        | CC-BY-4.0                                                                 | 22.05 kHz. Microtonal — off-distribution, but a real stress test for a semitone grid.                                                            |
+| **EMVD**                                          | 27 singers, ~40 min clear-voice subset                                                                      | CC-BY-4.0                                                                 | Small.                                                                                                                                           |
+| **AdoVoc Pro** (Zenodo 3383118)                   | Isolated flamenco, 3 expert singers                                                                         | CC-BY-4.0                                                                 | Tiny, idiom-specific.                                                                                                                            |
+| **Tuvan throat singing** (Dryad cvdncjt14)        | Solo unaccompanied, 133 MB                                                                                  | CC0                                                                       | Biphonic — pathological for any f0 tracker. A deliberate torture case only.                                                                      |
 
 ### ⛔ Newly barred this pass
 
@@ -1018,12 +1024,12 @@ https://zenodo.org/api/records/16874898
   BY-**NC**-SA 4.0. Painful: by shape (amateur adults singing unaccompanied) it was the single
   most on-target corpus found.
 - **MIREX-hosted QBSH corpora** (IOACAS/ThinkIT, 759 amateur sung queries, 2.77 h, openly
-  downloadable) — no licence grant, *"Copyright: Institute of Acoustics, Chinese Academy of
-  Sciences"*, **and** the MIREX Participant Agreement §C states verbatim: *"Participants must
-  not use the datasets for commercial purposes."*
+  downloadable) — no licence grant, _"Copyright: Institute of Acoustics, Chinese Academy of
+  Sciences"_, **and** the MIREX Participant Agreement §C states verbatim: _"Participants must
+  not use the datasets for commercial purposes."_
 - **Cmedia** (MIREX 2020, note-level onset/offset/pitch) — no licence, YouTube-scraped, training
   link dead, test set never released.
-- **SVDD 2024 CtrSVDD** CC-BY-NC-ND; **WildSVDD** CC-BY covers *CSVs only*, audio is
+- **SVDD 2024 CtrSVDD** CC-BY-NC-ND; **WildSVDD** CC-BY covers _CSVs only_, audio is
   participant-scraped from YouTube/Bilibili.
 - **Cadenza CLIP1** — Zenodo tags CC-BY-4.0 but the README says the licence is per-source-track;
   of 1,452 FMA tracks ~1,220 are NC, **and the id↔signal mapping is not published**, so the
@@ -1033,7 +1039,7 @@ https://zenodo.org/api/records/16874898
   lyric-only labels.
 - **MoisesDB** CC-BY-NC-SA · **KiSing** CC-BY-NC-ND · **SVCC 2023** derived from NHSS behind a
   signed EULA and registration-gated.
-- **Bridge2AI-Voice** — registered-access DUA, **and** *"does not contain raw audios"*.
+- **Bridge2AI-Voice** — registered-access DUA, **and** _"does not contain raw audios"_.
 - **OpenSLR SLR98/SLR99** (Deeply parent–child, labels literally include `singing`) —
   CC-BY-NC-ND. The page does offer a **commercial licence from Deeply Inc.** for ~282 h — an
   acquisition lead, not a free one.
@@ -1065,9 +1071,9 @@ them. **Internet Archive**: dead end. **DataCite**: saturated at 33 queries.
 
 ### The structural pattern worth internalising
 
-Rights and content are **inversely correlated** across this whole space. National *libraries*
+Rights and content are **inversely correlated** across this whole space. National _libraries_
 publish openly — because their audio holdings are out-of-copyright commercial 78s: professional,
-accompanied, noisy. National *folklore archives* hold exactly what we want — amateur, solo,
+accompanied, noisy. National _folklore archives_ hold exactly what we want — amateur, solo,
 unaccompanied — and lock it down, because informant recordings carry living-relative and
 personal-data concerns. **LoC's American Folklife Center is the significant exception**, which
 is why it is worth the per-item rights work.
@@ -1080,7 +1086,7 @@ fraction is unquantified and there are no note annotations.
 ### ⚠️ Cross-cutting: the composition is a separate right from the recording
 
 This bit three candidates and is not something a licence field ever shows. A CC-BY deposit
-licenses the *sound recording*; if the singer performed someone else's song, the *musical work*
+licenses the _sound recording_; if the singer performed someone else's song, the _musical work_
 is a distinct right the depositor never held. **PJS is the only corpus on this page provably
 free of it**, because its melodies were written for the corpus. Weigh it by intended use:
 negligible for internal evaluation, material for redistribution.
@@ -1091,7 +1097,7 @@ negligible for internal evaluation, material for redistribution.
 
 > **⚠️ Read §5 first (2026-08-12/13).** Three corpora have been adopted since this section
 > was written — **AVP**, **Dagstuhl ChoirSet** and **JaCRC students** — via a new
-> *onset-only* (`pitchless`) path and a new *beat-grid* path that did not exist when the
+> _onset-only_ (`pitchless`) path and a new _beat-grid_ path that did not exist when the
 > tables below were drawn up. Several rankings below are also withdrawn there on evidence:
 > **MAST** (priority 3) has no note truth at all and CREPE-derived f0; **SingBAP**
 > (priority 1) was checked for hidden timing and has none; **Belyk** (priority 2) is killed
@@ -1100,15 +1106,15 @@ negligible for internal evaluation, material for redistribution.
 **Note truth: three corpora adopted and fetched.** The earlier "still empty" conclusion
 rested on the consent-archaeology bar the acquisition policy removed.
 
-| Candidate | Status | Basis |
-|---|---|---|
-| **ESMUC Choir Dataset** — 271 annotated singer-tracks, ~17k notes | ✅ **ADOPTED** (`fetch/fetch-esmuc.ts`) | CC-BY-4.0 on its own record; manually corrected per-singer note truth. Caveats: mic bleed, trained singers |
-| **CSD** — 96 excerpts, ~3.6k notes | ✅ **ADOPTED** (`fetch/fetch-csd.ts`) | CC-BY-4.0 on its own record; Tony-extracted + hand-corrected notes. Caveats: per-SECTION truth, mic bleed |
-| **HUST_Solfege** — 73 files, ~3.7k notes | ✅ **ADOPTED** (`fetch/fetch-hust-solfege.ts`) | MIT LICENSE at repo root. Data conditions stand: MARG excluded, offsets synthetic (durations derived), pitch convention calibrated per file against the audio |
-| **SingStyle111** (12.8 h, hand-entered performance MIDI) | ⛔ **CLOSED** | The dataset's own terms are research-scoped — its authors say so |
-| **Dagstuhl ChoirSet** | ⛔ (as note truth) | Quality, not licence: score-aligned onsets measure 70 ms MAE. Beat grids remain interesting |
-| **Dai / Mauch / Dixon 2015** | ⛔ **KILLED** | *The Sound of Music*, in copyright to 2049/2054 |
-| **SSVD v2.0**, **VocalNotes**, **MIR-ST500**, **DALI**, **TONAS**, **ISMIR2014** | ⛔ | No licence / NC / academic DUA — the dataset itself says no |
+| Candidate                                                                        | Status                                         | Basis                                                                                                                                                         |
+| -------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ESMUC Choir Dataset** — 271 annotated singer-tracks, ~17k notes                | ✅ **ADOPTED** (`fetch/fetch-esmuc.ts`)        | CC-BY-4.0 on its own record; manually corrected per-singer note truth. Caveats: mic bleed, trained singers                                                    |
+| **CSD** — 96 excerpts, ~3.6k notes                                               | ✅ **ADOPTED** (`fetch/fetch-csd.ts`)          | CC-BY-4.0 on its own record; Tony-extracted + hand-corrected notes. Caveats: per-SECTION truth, mic bleed                                                     |
+| **HUST_Solfege** — 73 files, ~3.7k notes                                         | ✅ **ADOPTED** (`fetch/fetch-hust-solfege.ts`) | MIT LICENSE at repo root. Data conditions stand: MARG excluded, offsets synthetic (durations derived), pitch convention calibrated per file against the audio |
+| **SingStyle111** (12.8 h, hand-entered performance MIDI)                         | ⛔ **CLOSED**                                  | The dataset's own terms are research-scoped — its authors say so                                                                                              |
+| **Dagstuhl ChoirSet**                                                            | ⛔ (as note truth)                             | Quality, not licence: score-aligned onsets measure 70 ms MAE. Beat grids remain interesting                                                                   |
+| **Dai / Mauch / Dixon 2015**                                                     | ⛔ **KILLED**                                  | _The Sound of Music_, in copyright to 2049/2054                                                                                                               |
+| **SSVD v2.0**, **VocalNotes**, **MIR-ST500**, **DALI**, **TONAS**, **ISMIR2014** | ⛔                                             | No licence / NC / academic DUA — the dataset itself says no                                                                                                   |
 
 **The annotatable-audio reframe (§2b) stays valid** — SingBAP and Belyk remain the path to
 amateur-phone-mic truth the adopted corpora cannot provide:
@@ -1116,23 +1122,23 @@ amateur-phone-mic truth the adopted corpora cannot provide:
 The reframe in §2b is the answer, and it is now backed by verified, downloadable, commercially
 licensed audio in our exact input distribution:
 
-| Priority | Corpus | Why | Licence |
-|---|---|---|---|
-| **1** | **SingBAP** | 7 inexperienced singers · **iPhone + MacBook + condenser in parallel** · syllabic *and* legato *and* glissando · built-in adverse tier · **published interval patterns** so only onsets need marking · no repertoire risk | CC-BY-4.0, "including commercially" |
-| **2** | **Belyk et al.** | **Deliberately recruited poor singers** · ~7,600 notes with known 5-note targets · range glides | **CC0** |
-| **3** | **MAST** | 3,884 clips of genuinely amateur exam candidates, expert-graded | CC-BY-4.0 (8 kHz) |
-| **4** | **Fundación Joaquín Díaz** | ~725–1,000 h, 172 named performers, bulk download | CC BY-SA 3.0 |
-| **5** | **LM-SSD**, **JaCRC**, **URSing**, **Schotanus**, **PJS**, **LoC AFC**, **ECura**, **SVD** | see §2b | CC-BY-4.0 / CC0 / CC-BY-SA |
+| Priority | Corpus                                                                                     | Why                                                                                                                                                                                                                       | Licence                             |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **1**    | **SingBAP**                                                                                | 7 inexperienced singers · **iPhone + MacBook + condenser in parallel** · syllabic _and_ legato _and_ glissando · built-in adverse tier · **published interval patterns** so only onsets need marking · no repertoire risk | CC-BY-4.0, "including commercially" |
+| **2**    | **Belyk et al.**                                                                           | **Deliberately recruited poor singers** · ~7,600 notes with known 5-note targets · range glides                                                                                                                           | **CC0**                             |
+| **3**    | **MAST**                                                                                   | 3,884 clips of genuinely amateur exam candidates, expert-graded                                                                                                                                                           | CC-BY-4.0 (8 kHz)                   |
+| **4**    | **Fundación Joaquín Díaz**                                                                 | ~725–1,000 h, 172 named performers, bulk download                                                                                                                                                                         | CC BY-SA 3.0                        |
+| **5**    | **LM-SSD**, **JaCRC**, **URSing**, **Schotanus**, **PJS**, **LoC AFC**, **ECura**, **SVD** | see §2b                                                                                                                                                                                                                   | CC-BY-4.0 / CC0 / CC-BY-SA          |
 
 That is a real T3 voice slice, obtainable today, needing only in-house onset/offset annotation
 under our own Molina-derived rules.
 
 **Four things worth carrying forward beyond this file.**
 
-1. **NC restricts *reproduction*, not just redistribution** (§4.0). "Internal eval, gitignored,
+1. **NC restricts _reproduction_, not just redistribution** (§4.0). "Internal eval, gitignored,
    never shared" was never available. That permanently closes ~a dozen attractive corpora and
-   means the only question worth asking about an NC corpus is whether a *published commercial
-   route* exists.
+   means the only question worth asking about an NC corpus is whether a _published commercial
+   route_ exists.
 2. **The licence field is not the licence.** Four separate corpora carry a permissive Zenodo/
    figshare tag over material the depositor could not license — MTG/TROMPA (performer consent),
    Dai 2015 (Rodgers & Hammerstein), HUST_Solfege (the MARG third), WildSVDD (CC-BY on the CSVs,
@@ -1142,12 +1148,12 @@ under our own Molina-derived rules.
    and personal-data concerns. The corpora that are open are professional, accompanied, or
    synthetic. LoC's AFC and Fundación Joaquín Díaz are the exceptions, which is why they are
    worth the per-item rights work.
-4. **My own claims needed red-teaming and four of them failed it.** The HUST_Solfege/SSVD
+4. **My own claims needed red-teaming and four of them failed it.** The HUST*Solfege/SSVD
    overlap, the "byte-identical" onsets, the "constant +20" offset and the "lawful route into
-   SSVD" were all wrong, and all four were wrong in the *optimistic* direction. Nothing in this
+   SSVD" were all wrong, and all four were wrong in the \_optimistic* direction. Nothing in this
    file should be acted on without re-verifying the operative text at the source.
 
-The prior conclusion — *"there is no obtainable external voice corpus we are missing"* — is
+The prior conclusion — _"there is no obtainable external voice corpus we are missing"_ — is
 **still true of note truth, and decisively false of raw audio**. The annotation effort is the
 path, and it does not have to start with a microphone.
 
@@ -1158,6 +1164,7 @@ path, and it does not have to start with a microphone.
 Written down per instruction rather than researched. Roughly ordered by expected value.
 
 **Highest value**
+
 1. **Freesound API** — the largest CC-BY/CC0 audio pool in existence, with tag search and a
    `license` filter. Needs an API token, which is why it was never swept. **The single biggest
    unexplored channel on this list.**
@@ -1167,58 +1174,37 @@ Written down per instruction rather than researched. Roughly ordered by expected
    was scoped; `vocals` and `female_vocals` are untouched.
 3. **FMA-full, filtered on non-NC.** Cadenza validated the recipe (licence filter → drop
    instrumental/classical/experimental → HTDemucs + Silero VAD + RMS to keep vocal tracks).
-   Applying it with a *non-NC* rather than non-ND filter would yield a large permissive pool of
+   Applying it with a _non-NC_ rather than non-ND filter would yield a large permissive pool of
    real sung music. Polyphonic, so it needs separation before annotation.
 4. **IEEE TMM 10.1109/tmm.2022.3168132** (closed access, unread) — the only plausible published
    home for HUST_Solfege's consent/ethics statement. **The one document that could flip our one
    surviving annotated corpus either way.**
 5. **`stimmdb.coli.uni-saarland.de` primary terms** — would confirm or kill the 38 GB SVD find.
 
-**Clinical / phonetics vein** (shape-promising, barely scratched)
-6. **Gender-affirming voice-therapy corpora** — pitch glides and sung scales are routine outcome
-   measures. Completely unexplored and, on shape, the most promising remaining clinical vein.
-7. **Phonetogram / voice-range-profile deposits** — a phonetogram *is* a sung pitch sweep across
-   the full range. Zenodo returned zero; clinical repositories untried.
-8. **PVQD, AVFAD, VOICED (PhysioNet slug `voiced`), MEEI/KayPENTAX** — licences unread.
-9. **Speech-to-song illusion stimulus sets** (Deutsch; Tierney/Dick/Patel; Falk & Rathcke;
-   Margulis; Vanden Bosch der Nederlanden) — participants often *sing back* the phrase. OSF and
-   journal supplements unexplored.
-10. **Seattle Singing Accuracy Protocol** (Pfordresher) and the **AIRS Test Battery of Singing
-    Skills** (Cohen) — large corpora of untrained singers pitch-matching. Likely on **Databrary**,
-    which needs institutional authorisation; probably a hard barrier, worth one confirmation.
-11. **NCVS, KTH/Sundberg (DiVA), RNCM, Institute of Musicians' Medicine Dresden** deposits.
+**Clinical / phonetics vein** (shape-promising, barely scratched) 6. **Gender-affirming voice-therapy corpora** — pitch glides and sung scales are routine outcome
+measures. Completely unexplored and, on shape, the most promising remaining clinical vein. 7. **Phonetogram / voice-range-profile deposits** — a phonetogram _is_ a sung pitch sweep across
+the full range. Zenodo returned zero; clinical repositories untried. 8. **PVQD, AVFAD, VOICED (PhysioNet slug `voiced`), MEEI/KayPENTAX** — licences unread. 9. **Speech-to-song illusion stimulus sets** (Deutsch; Tierney/Dick/Patel; Falk & Rathcke;
+Margulis; Vanden Bosch der Nederlanden) — participants often _sing back_ the phrase. OSF and
+journal supplements unexplored. 10. **Seattle Singing Accuracy Protocol** (Pfordresher) and the **AIRS Test Battery of Singing
+Skills** (Cohen) — large corpora of untrained singers pitch-matching. Likely on **Databrary**,
+which needs institutional authorisation; probably a hard barrier, worth one confirmation. 11. **NCVS, KTH/Sundberg (DiVA), RNCM, Institute of Musicians' Medicine Dresden** deposits.
 
-**Channels never opened**
-12. **Competition platforms** — AIcrowd, Codabench, CodaLab, EvalAI, Zindi, Tianchi. Verified
-    entry points: `codabench.org/api/competitions/?search=singing`,
-    `eval.ai/api/challenges/challenge/present/approved/public`, `aicrowd.com/challenges.json`.
-13. **ISMIR Late-Breaking/Demo 2020–2026** — `ismir.net/lbd/` 404s and the per-year sites are JS
-    SPAs that return nothing to curl. Needs a headless browser.
-14. **Interspeech 2020–2026 special sessions** — not checked at all.
-15. **CLARIN VLO** (Solr endpoint returns 401), **The Language Archive** (MPI Nijmegen), **ELAR**.
-16. **Smithsonian Folkways**, **Global Jukebox / Cantometrics**, **Natural History of Song**.
-17. **Regional platforms**: Gitee (token-gated), BAAI Data (503), Baidu AI Studio, Korea AI
-    Hub / Gugak / DataON, Taiwan data.gov.tw / Academia Sinica / iKala, Japanese SVS community
-    releases, Chinese 非物质文化遗产 archives.
-18. **UK Data Service**, **CoCoON's CC0 slice**, **karaoke-app dataset releases**.
+**Channels never opened** 12. **Competition platforms** — AIcrowd, Codabench, CodaLab, EvalAI, Zindi, Tianchi. Verified
+entry points: `codabench.org/api/competitions/?search=singing`,
+`eval.ai/api/challenges/challenge/present/approved/public`, `aicrowd.com/challenges.json`. 13. **ISMIR Late-Breaking/Demo 2020–2026** — `ismir.net/lbd/` 404s and the per-year sites are JS
+SPAs that return nothing to curl. Needs a headless browser. 14. **Interspeech 2020–2026 special sessions** — not checked at all. 15. **CLARIN VLO** (Solr endpoint returns 401), **The Language Archive** (MPI Nijmegen), **ELAR**. 16. **Smithsonian Folkways**, **Global Jukebox / Cantometrics**, **Natural History of Song**. 17. **Regional platforms**: Gitee (token-gated), BAAI Data (503), Baidu AI Studio, Korea AI
+Hub / Gugak / DataON, Taiwan data.gov.tw / Academia Sinica / iKala, Japanese SVS community
+releases, Chinese 非物质文化遗产 archives. 18. **UK Data Service**, **CoCoON's CC0 slice**, **karaoke-app dataset releases**.
 
-**Acquisition leads** (money, not search)
-19. **Meertens Tune Collections** — 7,178 MP3s of amateur Dutch solo unaccompanied singing plus
-    2,503 expert transcriptions. Our exact distribution with note truth. NC, single rightsholder
-    (KNAW), no published commercial tier. **One institution, one ask, and it would be the
-    strongest corpus we could hold.**
-20. **Deeply Inc.** — the OpenSLR SLR98 page explicitly offers a commercial licence to ~282 h
-    including labelled child singing.
-21. **Cadenza CLIP1 revisit** once the FMA-id ↔ signal mapping ships (~224 clean tracks).
-22. **MRSAudio / MRSSing** — 80 h of solo singing announced under CC-BY-4.0 but **files not yet
-    uploaded**. A watch item.
+**Acquisition leads** (money, not search) 19. **Meertens Tune Collections** — 7,178 MP3s of amateur Dutch solo unaccompanied singing plus
+2,503 expert transcriptions. Our exact distribution with note truth. NC, single rightsholder
+(KNAW), no published commercial tier. **One institution, one ask, and it would be the
+strongest corpus we could hold.** 20. **Deeply Inc.** — the OpenSLR SLR98 page explicitly offers a commercial licence to ~282 h
+including labelled child singing. 21. **Cadenza CLIP1 revisit** once the FMA-id ↔ signal mapping ships (~224 clean tracks). 22. **MRSAudio / MRSSing** — 80 h of solo singing announced under CC-BY-4.0 but **files not yet
+uploaded**. A watch item.
 
-**Small checks left open**
-23. **SingBAP** — confirm the EMG electrodes introduce no audible noise into the voice channels.
-24. **MAST** — confirm the reference piano pattern does not bleed into the sung `per` clips.
-25. **LM-SSD / URSing** — read the song lists for composition-rights exposure.
-26. **Jiajie Dai's QMUL thesis (2019)** — closed, EThOS offline since the 2023 cyberattack. Moot
-    now that Dai 2015 is killed, but it is the classic hiding place for a consent restriction.
+**Small checks left open** 23. **SingBAP** — confirm the EMG electrodes introduce no audible noise into the voice channels. 24. **MAST** — confirm the reference piano pattern does not bleed into the sung `per` clips. 25. **LM-SSD / URSing** — read the song lists for composition-rights exposure. 26. **Jiajie Dai's QMUL thesis (2019)** — closed, EThOS offline since the 2023 cyberattack. Moot
+now that Dai 2015 is killed, but it is the classic hiding place for a consent restriction.
 
 ---
 
@@ -1236,14 +1222,14 @@ the licensee the right to:
 
 The NonCommercial qualifier attaches to **reproduce**, not only to Share, and
 `NonCommercial` is defined as "not primarily intended for or directed towards commercial
-advantage." Downloading a corpus into our fixtures *is* reproduction, and doing it to score a
+advantage." Downloading a corpus into our fixtures _is_ reproduction, and doing it to score a
 paid product's transcriber is directed toward commercial advantage. The use/redistribution
-split we were hoping for does not exist in the CC text — it exists only in *bespoke* terms
+split we were hoping for does not exist in the CC text — it exists only in _bespoke_ terms
 (JVS-MuSiC has it; see 4.5).
 
 So `research-benchmarks` §7's "don't touch NC data" is not merely a conservative house rule.
 On this reading it is the correct reading of the licence. **Stop looking for a way around
-NC.** The productive question is only ever whether a *published commercial route* exists.
+NC.** The productive question is only ever whether a _published commercial route_ exists.
 
 ### 4.1 HumTrans — BARRED twice over; delete the Tencent ask from §11
 
@@ -1262,10 +1248,10 @@ NC.** The productive question is only ever whether a *published commercial route
   and `/LICENSE` 404s. **No commercial route is published anywhere** — §11's "Tencent ARC Lab"
   counterparty was inferred, not documented.
 - **The quality claim is confirmed, and it is worse than our note said.** Dynamic HumTrans
-  ([arXiv:2410.05455](https://arxiv.org/html/2410.05455v1) §1.2): *"A major issue with the
-  HUMTRANS dataset is that the ground truth onsets and offsets are not well aligned"* — the
+  ([arXiv:2410.05455](https://arxiv.org/html/2410.05455v1) §1.2): _"A major issue with the
+  HUMTRANS dataset is that the ground truth onsets and offsets are not well aligned"_ — the
   labels are the reference melody's MIDI, and alignment rests entirely on subjects humming in
-  sync, *"without any post-processing."*
+  sync, _"without any post-processing."_
 - Corroborated by HumTrans's own baseline table: four SOTA vocal transcribers score F1
   **2.70–6.74** on it. Nothing scores 3 F1 because it is a bad model; that is the signature
   of misaligned labels.
@@ -1282,17 +1268,17 @@ unchanged since 2023-10-08. But the disqualifier is content, not licence: it is 
 pitches. It cannot score a note transcriber. **Remove it from the shortlist.**
 
 ⚠️ Trap worth remembering: the companion repo [`amanteur/CHAD`](https://github.com/amanteur/CHAD)
-is **MIT** — that is the *code*. An MIT badge on a code repo says nothing about the audio.
+is **MIT** — that is the _code_. An MIT badge on a code repo says nothing about the audio.
 
 ### 4.3 ACE-Opencpop — BARRED, with a broken licence chain upstream
 
 `license: cc-by-nc-4.0` on [`espnet/ace-opencpop-segments`](https://huggingface.co/datasets/espnet/ace-opencpop-segments/raw/main/README.md).
 **New and worth knowing:** its upstream **Opencpop** is
-[CC BY-NC-**ND** 4.0](https://wenet-e2e.github.io/opencpop/liscense/) — *NoDerivatives*. A
+[CC BY-NC-**ND** 4.0](https://wenet-e2e.github.io/opencpop/liscense/) — _NoDerivatives_. A
 BY-NC-ND upstream does not authorise a redistributed derivative under BY-NC, so the ESPnet
 release's own footing is questionable. Stay away independent of our use.
-Upstream Opencpop *does* publish a commercial route (*"If want to use it commercially, you
-are welcome to contact us by email"*), but the derivative does not.
+Upstream Opencpop _does_ publish a commercial route (_"If want to use it commercially, you
+are welcome to contact us by email"_), but the derivative does not.
 Wrong shape for us anyway: synthesized output of one professional Mandarin voice, with truth
 exact by construction — which is precisely what our own `lib/synth.ts` already provides
 under a clean licence.
@@ -1303,12 +1289,12 @@ under a clean licence.
 - MedleyDB's [downloads page](https://medleydb.weebly.com/downloads.html) **contradicts
   itself** — prose says CC Attribution-NonCommercial, the badge says
   Attribution-NonCommercial-**ShareAlike** 4.0. Either way NC binds.
-- It is also the one page that *does* separate use from redistribution, and it goes the wrong
-  way for us: redistribution is asked to be restrained *beyond* CC, while the operative use
-  restriction is *"free of charge for non-commercial research use **only**"*.
+- It is also the one page that _does_ separate use from redistribution, and it goes the wrong
+  way for us: redistribution is asked to be restrained _beyond_ CC, while the operative use
+  restriction is _"free of charge for non-commercial research use **only**"_.
 - ⚠️ **Correction to `research-voice-transcription.md` §11:** the claim that MedleyDB has "a
   known commercial-licensing contact route **[S]**" is **not supported**. The only contact is
-  one researcher's personal academic address, appearing in the *republication* paragraph, not
+  one researcher's personal academic address, appearing in the _republication_ paragraph, not
   a licensing offer — no form, no dual licence, no tech-transfer office. **Re-mark it `[X]`.**
   (The row was already "drop from shortlist" for other reasons, so nothing downstream moves.)
 - Content also fails gate 2: MDB-stem-synth is **f0 only, not notes**, and exact by
@@ -1321,18 +1307,18 @@ This is the only corpus of the five with a genuine, **published, institutional**
 route, and the only one whose terms address our exact situation.
 
 From [the corpus page](https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_music),
-verbatim: the audio *"may be used for: Research by academic institutions / Non-commercial
-research, **including research conducted within commercial organizations** / Personal use"*,
-and *"**Re-distribution is not permitted**"* (with a ~3-file carve-out). That is a real
-use/redistribution split — the thing CC BY-NC does not give. And: *"We welcome your commercial
-use… Please feel free to contact the following members"*, listing the **University of Tokyo
+verbatim: the audio _"may be used for: Research by academic institutions / Non-commercial
+research, **including research conducted within commercial organizations** / Personal use"_,
+and _"**Re-distribution is not permitted**"_ (with a ~3-file carve-out). That is a real
+use/redistribution split — the thing CC BY-NC does not give. And: _"We welcome your commercial
+use… Please feel free to contact the following members"_, listing the **University of Tokyo
 TLO**. A TLO contact is a standing licensing process, not a favour-ask — the JKU/madmom
 pattern.
 
 **And yet: do not spend the email.** JVS-MuSiC has **no note-level annotation.** Its tags are
 singer-similarity, key and tempo; the only pitch-bearing artifacts are **Melodyne project
-files**, i.e. Celemony's proprietary detection hand-adjusted for *resynthesis*, in a closed
-format needing a Melodyne licence to open. Content is also 100 singers of the *same*
+files**, i.e. Celemony's proprietary detection hand-adjusted for _resynthesis_, in a closed
+format needing a Melodyne licence to open. Content is also 100 singers of the _same_
 children's song. Clearing the licence would buy nothing scoreable.
 
 ### 4.6 What this pass changed
@@ -1340,7 +1326,7 @@ children's song. Clearing the licence would buy nothing scoreable.
 Nothing in the plan, and that is the useful outcome — four of five are hard-barred by a
 licence term we had misread as narrower than it is, and the fifth is clearable but empty for
 our purposes. Two corrections to bank upstream: the MedleyDB commercial-route claim becomes
-`[X]`, and the HumTrans row becomes *NC-barred **and** quality-disqualified* with its
+`[X]`, and the HumTrans row becomes _NC-barred **and** quality-disqualified_ with its
 benchmarking-only ask deleted.
 
 ---
@@ -1349,24 +1335,24 @@ benchmarking-only ask deleted.
 
 **New harness capability, not just a new dataset.** Everything above judges a corpus by
 whether it clears gate 2 (note-level onset+offset+pitch). This session adds a fifth option:
-a corpus can be **onset-only** — real, human-labelled onset timestamps with *no* pitch
+a corpus can be **onset-only** — real, human-labelled onset timestamps with _no_ pitch
 anywhere in the annotation chain — and still be genuinely useful, scored via MIREX **COn**
 (onset F1, pitch ignored) rather than note-F1. `lib/metrics.ts`'s `scoreOnsets()` already
 implemented this and was simply never wired up; it now is (`run-eval.ts`, `lib/realCorpus.ts`
 — datasets declare `pitchless: true` in `dataset.json`, get excluded from the pooled note-F1
 the same way `noteTruthDerived` datasets are, and get a per-scenario `onsetF1` column instead).
 This reopens exactly the class of corpus §2's "Checked and rejected on content, not licence"
-table dismissed for failing gate 1 (real *pitched* singing) — they still exercise the
+table dismissed for failing gate 1 (real _pitched_ singing) — they still exercise the
 `OnsetDetector` in isolation, our documented weakest component, on real amateur audio.
 
 ### 5a. ✅ AVP (Amateur Vocal Percussion) — ADOPTED, pitchless
 
-| | |
-|---|---|
-| Source | [Zenodo 5036529](https://zenodo.org/records/5036529) · `AVP_Dataset.zip`, ~220 MB |
-| Licence | **CC-BY-4.0** (`metadata.license.id`, re-verified 2026-08-12) |
-| Content | `AVP_Dataset/{Personal,Fixed}/Participant_N/`, 280 paired `.wav`/`.csv` (kick/snare/closed-hihat/open-hihat vocal-percussion imitations, plus one improvisation per participant/modality) |
-| Annotation | CSV, no header, real row: `0.085623582582766,kd,p,ə` — `onset_seconds, class_label, onset_phoneme, coda_phoneme`. No pitch tracker anywhere; onsets are a direct human label. |
+|            |                                                                                                                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source     | [Zenodo 5036529](https://zenodo.org/records/5036529) · `AVP_Dataset.zip`, ~220 MB                                                                                                         |
+| Licence    | **CC-BY-4.0** (`metadata.license.id`, re-verified 2026-08-12)                                                                                                                             |
+| Content    | `AVP_Dataset/{Personal,Fixed}/Participant_N/`, 280 paired `.wav`/`.csv` (kick/snare/closed-hihat/open-hihat vocal-percussion imitations, plus one improvisation per participant/modality) |
+| Annotation | CSV, no header, real row: `0.085623582582766,kd,p,ə` — `onset_seconds, class_label, onset_phoneme, coda_phoneme`. No pitch tracker anywhere; onsets are a direct human label.             |
 
 Fetcher: `fetch/fetch-avp.ts`. `durSec` is a derived, clamped gap-to-next-onset (onset-only scoring
 ignores it); `midi` is a constant placeholder (60) since there is no pitch to report — both
@@ -1379,7 +1365,7 @@ flagged as valuable for `OnsetDetector` isolation, now actually wired in.**
 [Zenodo 5578744](https://zenodo.org/records/5578744), CC-BY-4.0, confirmed — but the zip
 re-bundles AVP's own audio+annotations verbatim under `AVP-LVT_Dataset/AVP_Dataset/...` and
 ships **LVT annotations only** (`Annotations_LVT_Frase/*.csv`, `Annotations_LVT_Improviso/*.csv`,
-same 4-column format) for the *extended vocal techniques* recordings — whose audio is a
+same 4-column format) for the _extended vocal techniques_ recordings — whose audio is a
 **separate, not-yet-located dataset** per the zip's own `Instructions_to_build_AVP-LVT_Dataset.rtf`.
 Searched GitHub for the standalone "LVT" / extended-vocal-technique corpus and found nothing.
 Not implemented; revisit only if the LVT audio source surfaces.
@@ -1402,12 +1388,12 @@ these Hz values track E3/D3/C♯3/A2/C3 closely).
 timing column of any kind. Reading the shipped `melody_measure.praat` script (the tool that
 produced it) explains why: it is a **manual, interactive** Praat protocol — a human places the
 cursor "at the center of a note" by eye/ear in the Praat editor, the script measures pitch in a
-±125 ms window around *that cursor position*, prints the pitch, and **discards the cursor
+±125 ms window around _that cursor position_, prints the pitch, and **discards the cursor
 position** without ever writing it to the CSV. The paper itself (Belyk, Johnson & Kotz 2018,
-*R. Soc. Open Sci.* 5:171544, read via Europe PMC's open full text) confirms there was never a
-fixed intra-trial cadence to fall back on either — §2.2.3: *"Each melody was presented one at a
+_R. Soc. Open Sci._ 5:171544, read via Europe PMC's open full text) confirms there was never a
+fixed intra-trial cadence to fall back on either — §2.2.3: _"Each melody was presented one at a
 time and separated by 7 s silent gaps during which participants' imitations were recorded…
-[no metronome or per-note cue during the participant's 7 s response window]."* So there is no
+[no metronome or per-note cue during the participant's 7 s response window]."_ So there is no
 route to onset ground truth here — not measured, not fixed-cadence, not recoverable from
 anything the corpus or the paper ships. The pitch sequence is real, human-verified, and
 completely orphaned from any timing.
@@ -1454,10 +1440,11 @@ revisiting the moment the licence stops contradicting itself. Not implemented.
 claimed "every one is already held or barred" — true, but neither had its own dedicated
 entry anywhere in this file; that claim rested on nothing. Checked directly against
 `mirdata`'s own `LICENSE_INFO` blocks:
-- **cante100**: *"offered free of charge for internal non-commercial use. We do not grant any
-  rights for redistribution or modification."* — same COFLA-project NC-and-gated profile as
+
+- **cante100**: _"offered free of charge for internal non-commercial use. We do not grant any
+  rights for redistribution or modification."_ — same COFLA-project NC-and-gated profile as
   TONAS. ⛔ Barred, confirmed.
-- **iKala**: *"used to have a custom license"* — genuinely unresolved (mirdata itself doesn't
+- **iKala**: _"used to have a custom license"_ — genuinely unresolved (mirdata itself doesn't
   know), and separately the audio is Chinese pop karaoke (commercial compositions, the Dai/
   MedleyDB composition-rights trap again) with pYIN-derived notes (`ikala-pyin-notes.zip`,
   gate-3 circularity). Low expected value even if the licence were resolved. Not pursued
@@ -1481,7 +1468,7 @@ The Zenodo mirror ([16874898](https://zenodo.org/records/16874898)) file list wa
 before the block below hit: 73 zips by pathology category, `healthy.zip` alone is 6.02 GB, and
 a `Sängerstimme.zip` ("singer's voice", 23.6 MB) sits alongside it — worth checking on its own
 once reachable. **The NSP-format and EGG-channel claims in §2b's SVD entry are carried over
-from general knowledge of the *original* corpus, not verified against THIS Zenodo mirror's
+from general knowledge of the _original_ corpus, not verified against THIS Zenodo mirror's
 actual files** — no member of any zip was opened this session. Do not write a binary NSP
 parser from that claim alone; open one file first (§0's own verification discipline). Blocked
 below before this could happen.
@@ -1539,7 +1526,7 @@ choir following a conductor; the grid can.
 grid: **80.6 % of onsets land within 1/32 beat** of a sixteenth grid position (median
 distance 0.013 beats), and note values collapse onto real musical durations — 1155 exact
 quarters, 243 halves, 113 dotted halves, 108 eighths, 100 dotted quarters. So the beat grid
-plus the score alignment together *do* recover the written rhythm, which is the claim the
+plus the score alignment together _do_ recover the written rhythm, which is the claim the
 whole dataset rests on.
 
 Three caveats are baked into its manifest and must survive into any write-up: the note truth
@@ -1571,19 +1558,19 @@ this case.
 
 **Killed this pass, each on evidence rather than reputation:**
 
-| Corpus | Verdict |
-|---|---|
-| **MAST melody** (8007358) | ⛔ **Gate 2 + gate 3.** Its `annotations.csv` is a per-clip **4-level quality grade** from 3 experts (`1-Completely Off … 4-Perfect`) — no onsets, no notes, nothing time-localized. Its only pitch data is `f0data_crepe/`, i.e. **CREPE-derived — our own estimator**, the circularity trap at its purest. §3's priority-3 ranking for MAST was too generous and is withdrawn. |
-| **Voices of the Mountains** (21628262) | ⛔ **Gate 2.** 221 expert annotations are **error spans** (fine pitch error / rhythm error / modal drift) with start–end times, not note events. Cannot score a transcriber. |
-| **ECura** (20234272 / 20434128 / 20569113) | ⛔ **Gate 2.** The "annotation" is the *file segmentation* — audio is pre-cut into one-word and one-phrase files with xlsx script/translation metadata. There is no in-file timing, so a word file has exactly one trivial onset. |
-| **AVP-LVT's LVT half** (5578744) | ⛔ **Unlicensed upstream.** Its `Instructions_to_build_AVP-LVT_Dataset.rtf`, extracted and read, points at a bare Google Drive id (`0BxZsTXp2zMDIR3hzTkNvSU1LYkE`) for the LVT audio — a third-party dataset with no published licence. The CC-BY-4.0 covers the *annotations* only. Textbook §"Re-host licence laundering". The AVP half is already adopted (§5a); this closes the rest. |
-| **SingBAP** (20744738) | ⛔ **Still no onsets — verified, not assumed.** §3 ranks it priority 1, so its `feature_sets.zip` was checked directly for hidden timing: the features are **fixed-window frame statistics at 100/1000 ms** with `pitch` "estimated via autocorrelation" and a derived `note` name column. That is tracker-derived frame data, not note onsets. SingBAP remains exactly what §2b says — outstanding *annotatable* audio, still needing in-house annotation. |
-| **PJS** | ⛔ blocked differently than §5d recorded — see the dedicated diagnosis in §5m. Not a licence or a rendering problem: a Google Drive per-file download quota. **The closest remaining corpus.** |
+| Corpus                                     | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MAST melody** (8007358)                  | ⛔ **Gate 2 + gate 3.** Its `annotations.csv` is a per-clip **4-level quality grade** from 3 experts (`1-Completely Off … 4-Perfect`) — no onsets, no notes, nothing time-localized. Its only pitch data is `f0data_crepe/`, i.e. **CREPE-derived — our own estimator**, the circularity trap at its purest. §3's priority-3 ranking for MAST was too generous and is withdrawn.                                                                            |
+| **Voices of the Mountains** (21628262)     | ⛔ **Gate 2.** 221 expert annotations are **error spans** (fine pitch error / rhythm error / modal drift) with start–end times, not note events. Cannot score a transcriber.                                                                                                                                                                                                                                                                                |
+| **ECura** (20234272 / 20434128 / 20569113) | ⛔ **Gate 2.** The "annotation" is the _file segmentation_ — audio is pre-cut into one-word and one-phrase files with xlsx script/translation metadata. There is no in-file timing, so a word file has exactly one trivial onset.                                                                                                                                                                                                                           |
+| **AVP-LVT's LVT half** (5578744)           | ⛔ **Unlicensed upstream.** Its `Instructions_to_build_AVP-LVT_Dataset.rtf`, extracted and read, points at a bare Google Drive id (`0BxZsTXp2zMDIR3hzTkNvSU1LYkE`) for the LVT audio — a third-party dataset with no published licence. The CC-BY-4.0 covers the _annotations_ only. Textbook §"Re-host licence laundering". The AVP half is already adopted (§5a); this closes the rest.                                                                   |
+| **SingBAP** (20744738)                     | ⛔ **Still no onsets — verified, not assumed.** §3 ranks it priority 1, so its `feature_sets.zip` was checked directly for hidden timing: the features are **fixed-window frame statistics at 100/1000 ms** with `pitch` "estimated via autocorrelation" and a derived `note` name column. That is tracker-derived frame data, not note onsets. SingBAP remains exactly what §2b says — outstanding _annotatable_ audio, still needing in-house annotation. |
+| **PJS**                                    | ⛔ blocked differently than §5d recorded — see the dedicated diagnosis in §5m. Not a licence or a rendering problem: a Google Drive per-file download quota. **The closest remaining corpus.**                                                                                                                                                                                                                                                              |
 
 **Watch item updated — MRSAudio/MRSSing.** §3a listed it as "announced under CC-BY-4.0 but
 files not yet uploaded". The upload has partly happened: `verstar/MRSAudio` on HuggingFace is
 live, CC-BY-4.0, ungated, 94,279 files. But the uploaded parts are **MRSMusic** (16
-*instruments*: violin, erhu, pipa, xiao, … — no vocal category) and MRSLife. **MRSSing, the
+_instruments_: violin, erhu, pipa, xiao, … — no vocal category) and MRSLife. **MRSSing, the
 80 h of solo singing that is the reason to care, is still not there.** Keep watching.
 MRSMusic itself is not adopted: it is instruments rather than voice, and its per-note CSVs
 (`start_time_s,end_time_s,pitch_midi,velocity,pitch_bend[]`, with overlapping notes on a
@@ -1609,11 +1596,12 @@ Retried 2026-08-13 evening. Still blocked, but the diagnosis is now exact, so a 
 is a single command rather than an investigation.
 
 **What is true:**
+
 - The corpus file is Drive id `1hPHwOkSe2Vnq6hXrhVtzNskJjVMQmvN_`, real filename
   **`PJS_corpus_ver1.1.zip`** (read off the Drive viewer page, which renders fine under
   Playwright — §5d's "JS wall" was the wrong diagnosis and is withdrawn).
-- The block is Google's *"Quota exceeded — too many users have viewed or downloaded this file
-  recently… it may take up to 24 hours"*.
+- The block is Google's _"Quota exceeded — too many users have viewed or downloaded this file
+  recently… it may take up to 24 hours"_.
 - ⭐ **The quota is FILE-specific, not network-specific — proven, not assumed.** A control
   download of a different Drive file linked from the same page (`pjs056_song.wav`, id
   `1NJ3_xuUFPRUfpI276yce1mcsHPpVdoCM`) returns HTTP 200 with a real
@@ -1622,7 +1610,7 @@ is a single command rather than an investigation.
   browser — all were tried and all hit the same per-file wall.
 
 **No mirror exists.** Checked and empty: the author's own `ss-takashi.sakura.ne.jp/corpus/`
-host (which *does* serve `jsut_ver1.1.zip` at 2.7 GB, so the host pattern is real — PJS simply
+host (which _does_ serve `jsut_ver1.1.zip` at 2.7 GB, so the host pattern is real — PJS simply
 is not on it; 9 filename variants including the exact capitalisation all 404, and the
 directory index is 403), HuggingFace datasets, GitHub repo and code search, and OpenSLR.
 
@@ -1650,7 +1638,7 @@ Per instruction to keep working §3a's unexplored leads, not just the corpora bl
 - **ccMixter's open API works exactly as §3a claimed** — `ccmixter.org/api/query?tags=acappella`
   returns real, individually-licensed tracks with direct download URLs and no token (verified:
   one CC-BY-4.0 track, direct mp3 URL). Confirms the lead is real but doesn't change its
-  shape: it is annotatable *raw* audio with zero onset/pitch annotation of any kind, so it
+  shape: it is annotatable _raw_ audio with zero onset/pitch annotation of any kind, so it
   cannot become a scored corpus without the in-house annotation effort §2b already scopes —
   it is not a shortcut around that, just a confirmed-viable source for it.
 - **SVD's primary site** (`stimmdb.coli.uni-saarland.de`) loaded (200, 52 KB) but a first pass
@@ -1685,7 +1673,7 @@ D7 on flute (2349 Hz), E7 on violin (2637 Hz), C♯8 on accordion (4435 Hz), eac
 melody has to be assembled. `fetch/fetch-tinysol.ts` trims each note at −34 dBFS of its own peak,
 cuts it to 350 ms with a 6 ms fade at the splice, and lays eight of them out in two layouts
 (`legato`, 0 ms gap → real pitch transitions; `detached`, 80 ms gap → the silence-onset
-control). Truth is therefore **exact** — we placed every onset — but the *performance* is ours:
+control). Truth is therefore **exact** — we placed every onset — but the _performance_ is ours:
 no performer timing, no legato shaping, no rubato. That is the opposite failure mode from
 `noteTruthDerived` (weak labels, real performance), so it needed its own flag rather than a
 reuse of that one: **`constructedPerformance: true`** in `dataset.json`, honoured by
@@ -1699,8 +1687,8 @@ while scoring and reporting them with their own footnote. Built: **64 clips / 51
 acoustic noise in 18 environments across 6 categories (café, office, street, park, transport,
 domestic), at 16 kHz and 48 kHz, ~100–300 MB per environment.
 
-The register's complaint is that *"the adverse tier is synthetic degradation of real
-performances — honest, but no take was performed in a real echoey room / outdoors"*. Half of
+The register's complaint is that _"the adverse tier is synthetic degradation of real
+performances — honest, but no take was performed in a real echoey room / outdoors"_. Half of
 that is fixable cheaply: `lib/degrade.ts` currently mixes `synthesizeSpeechNoise` /
 `synthesizeWind` beds from `lib/acoustics.ts`, and a `Condition` that names a real DEMAND wav
 instead would make `street-noise` and `wind-outdoor` **recorded** maskers rather than modelled
@@ -1710,17 +1698,17 @@ of the existing four) or every historical adverse number silently changes meanin
 
 ### 6c. ✅ Real measured room impulse responses — several CC-BY-4.0 options, verified
 
-Same motive as 6b for the reverb axis: `degrade()` convolves with a *synthesised* exponential
+Same motive as 6b for the reverb axis: `degrade()` convolves with a _synthesised_ exponential
 IR (`synthesizeRoomImpulse`). Real measured IRs are abundant and permissively licensed; checked
 via the Zenodo API, all **cc-by-4.0** on their own records:
 
-| dataset | DOI | shape |
-|---|---|---|
-| **Arni** (Aalto, variable acoustics) | `10.5281/zenodo.6985104` | one room, thousands of IRs across panel configurations → a measured RT60 *continuum*, which is exactly what a graded reverb axis wants |
-| **dEchorate** | `10.5281/zenodo.6576203` | 6 rooms, calibrated, echo-annotated |
-| **OK5** | `10.5281/zenodo.18622201` | spatial IRs from 25 real work-environment spaces → room *diversity* |
-| **FLAIR** | `10.5281/zenodo.17037517` | laser-calibrated room geometry alongside the IRs |
-| **RAVes** | `10.5281/zenodo.19809790` | spatial + binaural, room-acoustic variance study |
+| dataset                              | DOI                       | shape                                                                                                                                  |
+| ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arni** (Aalto, variable acoustics) | `10.5281/zenodo.6985104`  | one room, thousands of IRs across panel configurations → a measured RT60 _continuum_, which is exactly what a graded reverb axis wants |
+| **dEchorate**                        | `10.5281/zenodo.6576203`  | 6 rooms, calibrated, echo-annotated                                                                                                    |
+| **OK5**                              | `10.5281/zenodo.18622201` | spatial IRs from 25 real work-environment spaces → room _diversity_                                                                    |
+| **FLAIR**                            | `10.5281/zenodo.17037517` | laser-calibrated room geometry alongside the IRs                                                                                       |
+| **RAVes**                            | `10.5281/zenodo.19809790` | spatial + binaural, room-acoustic variance study                                                                                       |
 
 Recommended pick if this gets built: **Arni for the axis, OK5 for the diversity check.** Same
 warning as 6b — new condition ids, and note that a measured IR needs its direct path normalised
@@ -1731,7 +1719,7 @@ shifts.
 
 271 measured IRs (Traer & McDermott, PNAS 2016), and the obvious first candidate for 6c. **The
 original page (`mcdermottlab.mit.edu/Reverb/IR_Survey.html`) states no licence, no terms and no
-permission** — just *"Download all 271 IRs (zip of audio files)"*. A HuggingFace re-upload
+permission** — just _"Download all 271 IRs (zip of audio files)"_. A HuggingFace re-upload
 (`benjamin-paine/mit-impulse-response-survey`) asserts **CC-BY-4.0**, which the original does
 not support. That is §2's re-host laundering pattern, third-party-assertion variety, and the
 rule is that the original's published terms are the record: **silence is not a grant → barred.**
@@ -1787,7 +1775,7 @@ future pass is not tempted by the licence.
   (`harmonica-mid`) stays the only evidence, and that is now a documented state rather than an
   unexplored one.
 - **Real out-of-tune singing with intended-note truth** — the only corpora that exist are
-  Smule's: `Intonation` and DAMP, both distributed *on request* through CCRMA under
+  Smule's: `Intonation` and DAMP, both distributed _on request_ through CCRMA under
   research-scoped terms → barred on the same footing as SingStyle111. The R20 synthetic
   intonation tier remains the only route, as designed.
 - **Amateur low-register solo singing** (to break annotated-vocalset's operatic-male dominance

@@ -30,66 +30,59 @@
  *                                   reproducing that artefact.
  */
 
-import { resolve } from 'path';
+import { resolve } from 'path'
 
-import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor';
-import { NoteSegmenter, type NoteSegmenterOptions } from '../../src/recordings/pipeline/note-segmenter';
-import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder';
-import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
-import { type EstNote, scoreNotesBest } from './lib/metrics';
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus';
-import {
-  formatSegErrors,
-  repairSecondsPer100,
-  type SegErrorCounts,
-  segErrors,
-} from './lib/segErrors';
-import { inSplit, splitFromEnv } from './lib/split';
-import { formatComparison, pairedDiffCI } from './lib/stats';
-import { type CachedClip, TrackCache } from './lib/trackCache';
-import type { GroundTruth } from './types';
+import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor'
+import { NoteSegmenter, type NoteSegmenterOptions } from '../../src/recordings/pipeline/note-segmenter'
+import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { type EstNote, scoreNotesBest } from './lib/metrics'
+import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { formatSegErrors, repairSecondsPer100, type SegErrorCounts, segErrors } from './lib/segErrors'
+import { inSplit, splitFromEnv } from './lib/split'
+import { formatComparison, pairedDiffCI } from './lib/stats'
+import { type CachedClip, TrackCache } from './lib/trackCache'
+import type { GroundTruth } from './types'
 
-const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real');
-const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache');
+const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real')
+const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache')
 const MODELS = {
-  crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-};
+    crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
+}
 
-type Stage = 'seg' | 'clean' | 'quant';
+type Stage = 'seg' | 'clean' | 'quant'
 
 interface Config {
-  name: string;
-  /** Legacy-segmenter gate overrides (note-length floor / smoother width / tuning-first). */
-  legacyOver?: { minFrames?: number; smoothFrames?: number; tuningCorrect?: boolean };
-  /** Essentia-style running-mean island baseline (E6/R13a) instead of the HMM. */
-  runningMean?: { thresholdCents?: number; minDurSec?: number; rmsZ?: number | null };
-  /**
-   * Replace the dip-then-rise onset splitter's onsets with pYIN's amplitude-ratio
-   * rule at this sensitivity: onset at frame i-1 wherever energy[i+1]/energy[i-1]
-   * exceeds 1/s. pYIN marks the frame unvoiced (splits, never creates), which maps
-   * onto our mechanism as an extra split point handed to `splitAtOnsets`.
-   */
-  ratioSplitSens?: number;
-  /** Legacy semitone-run segmenter (the shipping one) instead of the HMM. */
-  legacy?: boolean;
-  seg?: NoteSegmenterOptions;
-  ext?: NoteExtractorOptions;
-  /** Skip NoteExtractor.clean entirely — the HMM may not need it. */
-  noClean?: boolean;
+    name: string
+    /** Legacy-segmenter gate overrides (note-length floor / smoother width / tuning-first). */
+    legacyOver?: { minFrames?: number; smoothFrames?: number; tuningCorrect?: boolean }
+    /** Essentia-style running-mean island baseline (E6/R13a) instead of the HMM. */
+    runningMean?: { thresholdCents?: number; minDurSec?: number; rmsZ?: number | null }
+    /**
+     * Replace the dip-then-rise onset splitter's onsets with pYIN's amplitude-ratio
+     * rule at this sensitivity: onset at frame i-1 wherever energy[i+1]/energy[i-1]
+     * exceeds 1/s. pYIN marks the frame unvoiced (splits, never creates), which maps
+     * onto our mechanism as an extra split point handed to `splitAtOnsets`.
+     */
+    ratioSplitSens?: number
+    /** Legacy semitone-run segmenter (the shipping one) instead of the HMM. */
+    legacy?: boolean
+    seg?: NoteSegmenterOptions
+    ext?: NoteExtractorOptions
+    /** Skip NoteExtractor.clean entirely — the HMM may not need it. */
+    noClean?: boolean
 }
 
 function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0
 }
 
-function toEst(
-  notes: { startTimeSeconds: number; durationSeconds: number; pitchMidi: number }[],
-): EstNote[] {
-  return notes.map((n) => ({
-    onsetSec: n.startTimeSeconds,
-    durSec: n.durationSeconds,
-    midi: n.pitchMidi,
-  }));
+function toEst(notes: { startTimeSeconds: number; durationSeconds: number; pitchMidi: number }[]): EstNote[] {
+    return notes.map((n) => ({
+        onsetSec: n.startTimeSeconds,
+        durSec: n.durationSeconds,
+        midi: n.pitchMidi,
+    }))
 }
 
 /**
@@ -102,115 +95,109 @@ function toEst(
  * segment's contour mean, rounded.
  */
 function runningMeanSegment(
-  c: CachedClip,
-  over: { thresholdCents?: number; minDurSec?: number; rmsZ?: number | null } = {},
+    c: CachedClip,
+    over: { thresholdCents?: number; minDurSec?: number; rmsZ?: number | null } = {},
 ): { startTimeSeconds: number; durationSeconds: number; pitchMidi: number; amplitude: number }[] {
-  const threshold = over.thresholdCents ?? 60;
-  const minFrames = Math.max(
-    1,
-    Math.round((over.minDurSec ?? 0.1) / c.track.hopSec),
-  );
-  const rmsZ = over.rmsZ === null ? null : (over.rmsZ ?? -2);
-  const voiced = c.track.voicedMask({
-    confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
-    minFreqHz: c.profile.minFreqHz,
-    maxFreqHz: c.profile.maxFreqHz,
-  });
+    const threshold = over.thresholdCents ?? 60
+    const minFrames = Math.max(1, Math.round((over.minDurSec ?? 0.1) / c.track.hopSec))
+    const rmsZ = over.rmsZ === null ? null : (over.rmsZ ?? -2)
+    const voiced = c.track.voicedMask({
+        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+        minFreqHz: c.profile.minFreqHz,
+        maxFreqHz: c.profile.maxFreqHz,
+    })
 
-  // Stage 1: pitch-distance islands over voiced runs.
-  const segments: Array<[number, number]> = [];
-  let start = -1;
-  let mean = 0;
-  let count = 0;
-  const cut = (end: number): void => {
-    if (start >= 0 && end - start >= minFrames) segments.push([start, end]);
-    start = -1;
-    mean = 0;
-    count = 0;
-  };
-  for (let i = 0; i < c.track.frames; i += 1) {
-    if (!voiced[i]) {
-      cut(i);
-      continue;
+    // Stage 1: pitch-distance islands over voiced runs.
+    const segments: Array<[number, number]> = []
+    let start = -1
+    let mean = 0
+    let count = 0
+    const cut = (end: number): void => {
+        if (start >= 0 && end - start >= minFrames) segments.push([start, end])
+        start = -1
+        mean = 0
+        count = 0
     }
-    const cents = c.track.cents[i];
-    if (start < 0) {
-      start = i;
-      mean = cents;
-      count = 1;
-      continue;
+    for (let i = 0; i < c.track.frames; i += 1) {
+        if (!voiced[i]) {
+            cut(i)
+            continue
+        }
+        const cents = c.track.cents[i]
+        if (start < 0) {
+            start = i
+            mean = cents
+            count = 1
+            continue
+        }
+        if (Math.abs(cents - mean) < threshold) {
+            count += 1
+            mean += (cents - mean) / count
+        } else {
+            cut(i)
+            start = i
+            mean = cents
+            count = 1
+        }
     }
-    if (Math.abs(cents - mean) < threshold) {
-      count += 1;
-      mean += (cents - mean) / count;
-    } else {
-      cut(i);
-      start = i;
-      mean = cents;
-      count = 1;
-    }
-  }
-  cut(c.track.frames);
+    cut(c.track.frames)
 
-  // Stage 2: RMS z-score cut, per segment, then re-collect.
-  const finals: Array<[number, number]> = [];
-  for (const [s, e] of segments) {
-    if (rmsZ === null || !c.energy) {
-      finals.push([s, e]);
-      continue;
+    // Stage 2: RMS z-score cut, per segment, then re-collect.
+    const finals: Array<[number, number]> = []
+    for (const [s, e] of segments) {
+        if (rmsZ === null || !c.energy) {
+            finals.push([s, e])
+            continue
+        }
+        let mu = 0
+        for (let i = s; i < e; i += 1) mu += c.energy[i]
+        mu /= e - s
+        let varr = 0
+        for (let i = s; i < e; i += 1) varr += (c.energy[i] - mu) ** 2
+        const sd = Math.sqrt(varr / (e - s))
+        let from = s
+        for (let i = s; i < e; i += 1) {
+            if (sd > 1e-9 && (c.energy[i] - mu) / sd < rmsZ) {
+                if (i - from >= minFrames) finals.push([from, i])
+                from = i + 1
+            }
+        }
+        if (e - from >= minFrames) finals.push([from, e])
     }
-    let mu = 0;
-    for (let i = s; i < e; i += 1) mu += c.energy[i];
-    mu /= e - s;
-    let varr = 0;
-    for (let i = s; i < e; i += 1) varr += (c.energy[i] - mu) ** 2;
-    const sd = Math.sqrt(varr / (e - s));
-    let from = s;
-    for (let i = s; i < e; i += 1) {
-      if (sd > 1e-9 && (c.energy[i] - mu) / sd < rmsZ) {
-        if (i - from >= minFrames) finals.push([from, i]);
-        from = i + 1;
-      }
-    }
-    if (e - from >= minFrames) finals.push([from, e]);
-  }
 
-  return finals.map(([s, e]) => {
-    let sum = 0;
-    let n = 0;
-    let peak = 0;
-    for (let i = s; i < e; i += 1) {
-      if (!voiced[i]) continue;
-      sum += c.track.cents[i];
-      n += 1;
-      if (c.track.confidence[i] > peak) peak = c.track.confidence[i];
-    }
-    return {
-      startTimeSeconds: s * c.track.hopSec,
-      durationSeconds: (e - s) * c.track.hopSec,
-      pitchMidi: Math.round(n > 0 ? sum / n / 100 : c.track.cents[s] / 100),
-      amplitude: peak,
-    };
-  });
+    return finals.map(([s, e]) => {
+        let sum = 0
+        let n = 0
+        let peak = 0
+        for (let i = s; i < e; i += 1) {
+            if (!voiced[i]) continue
+            sum += c.track.cents[i]
+            n += 1
+            if (c.track.confidence[i] > peak) peak = c.track.confidence[i]
+        }
+        return {
+            startTimeSeconds: s * c.track.hopSec,
+            durationSeconds: (e - s) * c.track.hopSec,
+            pitchMidi: Math.round(n > 0 ? sum / n / 100 : c.track.cents[s] / 100),
+            amplitude: peak,
+        }
+    })
 }
 
 /** The shipping segmenter, driven off a cached track. */
-function legacySegment(
-  c: CachedClip,
-  over: { minFrames?: number; smoothFrames?: number; tuningCorrect?: boolean } = {},
-) {
-  return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
-    hopSize: 1,
-    sampleRate: 1 / c.track.hopSec,
-    confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
-    minFreqHz: c.profile.minFreqHz,
-    maxFreqHz: c.profile.maxFreqHz,
-    minFramesPerNote: over.minFrames ?? c.profile.minFramesPerNote ?? 4,
-    pitchBinToleranceCents: 50,
-    mode: 'semitone',
-    smoothFrames: over.smoothFrames ?? 4,
-    tuningCorrect: over.tuningCorrect,
-  });
+function legacySegment(c: CachedClip, over: { minFrames?: number; smoothFrames?: number; tuningCorrect?: boolean } = {}) {
+    return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
+        hopSize: 1,
+        sampleRate: 1 / c.track.hopSec,
+        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+        minFreqHz: c.profile.minFreqHz,
+        maxFreqHz: c.profile.maxFreqHz,
+        minFramesPerNote: over.minFrames ?? c.profile.minFramesPerNote ?? 4,
+        pitchBinToleranceCents: 50,
+        mode: 'semitone',
+        smoothFrames: over.smoothFrames ?? 4,
+        tuningCorrect: over.tuningCorrect,
+    })
 }
 
 /**
@@ -221,485 +208,485 @@ function legacySegment(
  * DETECTION rule rather than the spacing policy.
  */
 function ratioOnsets(energy: Float32Array, hopSec: number, s: number): number[] {
-  const out: number[] = [];
-  const minGap = Math.max(1, Math.round(0.09 / hopSec));
-  let last = -minGap;
-  // Ignore near-silence so the ratio can't fire on noise-floor flicker.
-  let peak = 0;
-  for (let i = 0; i < energy.length; i += 1) peak = Math.max(peak, energy[i]);
-  const floor = peak * 0.08;
-  for (let i = 1; i < energy.length - 1; i += 1) {
-    const prev = energy[i - 1];
-    if (energy[i + 1] < floor) continue;
-    if (prev > 0 && prev / energy[i + 1] < s && i - last >= minGap) {
-      out.push((i - 1) * hopSec);
-      last = i;
+    const out: number[] = []
+    const minGap = Math.max(1, Math.round(0.09 / hopSec))
+    let last = -minGap
+    // Ignore near-silence so the ratio can't fire on noise-floor flicker.
+    let peak = 0
+    for (let i = 0; i < energy.length; i += 1) peak = Math.max(peak, energy[i])
+    const floor = peak * 0.08
+    for (let i = 1; i < energy.length - 1; i += 1) {
+        const prev = energy[i - 1]
+        if (energy[i + 1] < floor) continue
+        if (prev > 0 && prev / energy[i + 1] < s && i - last >= minGap) {
+            out.push((i - 1) * hopSec)
+            last = i
+        }
     }
-  }
-  return out;
+    return out
 }
 
 interface Acc {
-  f1: Record<string, number[]>;
-  /**
-   * Recall-weighted F (β=2) at ±0.1 s. Reported alongside F1 because the symmetric
-   * F1 misprices this problem: measured expert-correction time is ~3.5 s to delete
-   * a spurious note but ~145 s to create a missing one, so a missed note is worth
-   * roughly forty spurious ones. F2 is the metric that reflects that.
-   */
-  f2: number[];
-  estN: number[];
-  refN: number[];
+    f1: Record<string, number[]>
+    /**
+     * Recall-weighted F (β=2) at ±0.1 s. Reported alongside F1 because the symmetric
+     * F1 misprices this problem: measured expert-correction time is ~3.5 s to delete
+     * a spurious note but ~145 s to create a missing one, so a missed note is worth
+     * roughly forty spurious ones. F2 is the metric that reflects that.
+     */
+    f2: number[]
+    estN: number[]
+    refN: number[]
 }
 const newAcc = (): Acc => ({
-  f1: { '0.05': [], '0.1': [], '0.2': [] },
-  f2: [],
-  estN: [],
-  refN: [],
-});
+    f1: { '0.05': [], '0.1': [], '0.2': [] },
+    f2: [],
+    estN: [],
+    refN: [],
+})
 
 function record(acc: Acc, truth: GroundTruth, est: EstNote[]): void {
-  // Best-of-annotators, matching run-eval: where a clip carries independent
-  // alternate annotations (vocadito), disagreement between them is stylistic and
-  // an estimate is scored against whichever it matches better.
-  for (const tol of ['0.05', '0.1', '0.2']) {
-    acc.f1[tol].push(
-      scoreNotesBest(truth, est, { onsetTolSec: Number(tol), timingTolSec: 0.3 }).f1,
-    );
-  }
-  const m = scoreNotesBest(truth, est, { onsetTolSec: 0.1, timingTolSec: 0.3 });
-  const denom = 4 * m.precision + m.recall;
-  acc.f2.push(denom > 0 ? (5 * m.precision * m.recall) / denom : 0);
-  acc.estN.push(est.length);
-  acc.refN.push(m.refCount);
+    // Best-of-annotators, matching run-eval: where a clip carries independent
+    // alternate annotations (vocadito), disagreement between them is stylistic and
+    // an estimate is scored against whichever it matches better.
+    for (const tol of ['0.05', '0.1', '0.2']) {
+        acc.f1[tol].push(scoreNotesBest(truth, est, { onsetTolSec: Number(tol), timingTolSec: 0.3 }).f1)
+    }
+    const m = scoreNotesBest(truth, est, { onsetTolSec: 0.1, timingTolSec: 0.3 })
+    const denom = 4 * m.precision + m.recall
+    acc.f2.push(denom > 0 ? (5 * m.precision * m.recall) / denom : 0)
+    acc.estN.push(est.length)
+    acc.refN.push(m.refCount)
 }
 
 async function main(): Promise<void> {
-  const registry = new ProviderRegistry(MODELS);
-  await registry.initAll();
-  const cache = new TrackCache(registry, CACHE_ROOT);
-  const split = splitFromEnv();
-  const stage = (process.env.SWEEP_STAGE as Stage) ?? 'clean';
-  const only = process.env.SWEEP_ONLY;
-  const baselineName = process.env.SWEEP_BASELINE ?? 'LEGACY (shipping)';
-  // Excluded BY DEFAULT (previously every caller had to remember to pass them):
-  //  - datasets whose note truth our own fetcher manufactured (`noteTruthDerived`)
-  //    — gating on those rewards reproducing the derivation artefact;
-  //  - held-out halves of a source corpus's own split (`corpusSplit: 'test'`) —
-  //    they exist solely as external yardsticks, and sweeping against one
-  //    destroys its only purpose;
-  //  - datasets whose PERFORMANCE we assembled (`constructedPerformance`, i.e.
-  //    tinysol-*) — their truth is exact, but gating a config on spliced
-  //    phrasing tunes for our splice, not for a player.
-  // Setting SWEEP_EXCLUDE (even to '') replaces the default entirely.
-  const excluded = new Set(
-    process.env.SWEEP_EXCLUDE !== undefined
-      ? process.env.SWEEP_EXCLUDE.split(',').map((x) => x.trim()).filter(Boolean)
-      : discoverRealDatasets(REAL_ROOT)
-          .filter(
-            (d) =>
-              d.noteTruthDerived ||
-              d.constructedPerformance ||
-              // onset-only truth (placeholder MIDI) — COnP is meaningless there
-              d.pitchless ||
-              d.corpusSplit === 'test',
-          )
-          .map((d) => d.id),
-  );
+    const registry = new ProviderRegistry(MODELS)
+    await registry.initAll()
+    const cache = new TrackCache(registry, CACHE_ROOT)
+    const split = splitFromEnv()
+    const stage = (process.env.SWEEP_STAGE as Stage) ?? 'clean'
+    const only = process.env.SWEEP_ONLY
+    const baselineName = process.env.SWEEP_BASELINE ?? 'LEGACY (shipping)'
+    // Excluded BY DEFAULT (previously every caller had to remember to pass them):
+    //  - datasets whose note truth our own fetcher manufactured (`noteTruthDerived`)
+    //    — gating on those rewards reproducing the derivation artefact;
+    //  - held-out halves of a source corpus's own split (`corpusSplit: 'test'`) —
+    //    they exist solely as external yardsticks, and sweeping against one
+    //    destroys its only purpose;
+    //  - datasets whose PERFORMANCE we assembled (`constructedPerformance`, i.e.
+    //    tinysol-*) — their truth is exact, but gating a config on spliced
+    //    phrasing tunes for our splice, not for a player.
+    // Setting SWEEP_EXCLUDE (even to '') replaces the default entirely.
+    const excluded = new Set(
+        process.env.SWEEP_EXCLUDE !== undefined
+            ? process.env.SWEEP_EXCLUDE.split(',')
+                  .map((x) => x.trim())
+                  .filter(Boolean)
+            : discoverRealDatasets(REAL_ROOT)
+                  .filter(
+                      (d) =>
+                          d.noteTruthDerived ||
+                          d.constructedPerformance ||
+                          // onset-only truth (placeholder MIDI) — COnP is meaningless there
+                          d.pitchless ||
+                          d.corpusSplit === 'test',
+                  )
+                  .map((d) => d.id),
+    )
 
-  // The HMM's note-change cost is the dominant knob; gammaCents (vibrato
-  // tolerance) and minFrames interact with it. Sweep those, and keep the shipping
-  // segmenter in the table as the thing to beat.
-  const configs: Config[] = [{ name: 'LEGACY (shipping)', legacy: true, ext: { maxGridDivisor: 4 } }];
-  configs.push({ name: 'LEGACY no-clean', legacy: true, noClean: true, ext: { maxGridDivisor: 4 } });
-  // changeCost is the dominant knob; `trust` scales how loudly the per-frame pitch
-  // argues against it, so the two have to be swept together.
-  for (const changeCost of [0.1, 0.2, 0.4, 0.8, 3]) {
-    for (const trust of [0.3, 1, 3]) {
-      configs.push({
-        name: `hmm c${changeCost} t${trust}`,
-        seg: { changeCost, trust },
+    // The HMM's note-change cost is the dominant knob; gammaCents (vibrato
+    // tolerance) and minFrames interact with it. Sweep those, and keep the shipping
+    // segmenter in the table as the thing to beat.
+    const configs: Config[] = [{ name: 'LEGACY (shipping)', legacy: true, ext: { maxGridDivisor: 4 } }]
+    configs.push({ name: 'LEGACY no-clean', legacy: true, noClean: true, ext: { maxGridDivisor: 4 } })
+    // changeCost is the dominant knob; `trust` scales how loudly the per-frame pitch
+    // argues against it, so the two have to be swept together.
+    for (const changeCost of [0.1, 0.2, 0.4, 0.8, 3]) {
+        for (const trust of [0.3, 1, 3]) {
+            configs.push({
+                name: `hmm c${changeCost} t${trust}`,
+                seg: { changeCost, trust },
+                ext: { maxGridDivisor: 4 },
+                noClean: true,
+            })
+        }
+    }
+    // Note-length floor. Ours is 4 frames = 80 ms; pYIN (~100 ms), basic-pitch
+    // (127.7 ms) and NeuralNote (125 ms default) all sit higher, and a floor is the
+    // cheapest defence against vibrato fragments. Swept with the shipped cleanup.
+    for (const minFrames of [3, 5, 6, 7]) {
+        configs.push({
+            name: `floor ${minFrames}f=${minFrames * 20}ms`,
+            legacy: true,
+            legacyOver: { minFrames },
+            ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
+        })
+    }
+    // R15: WaoN's joint duration × velocity filters on the HMM segmenter (plugin
+    // survey §9.3). Compare within the family: SWEEP_BASELINE='hmm r15 OFF'.
+    configs.push({ name: 'hmm r15 OFF', seg: {}, ext: { maxGridDivisor: 4 }, noClean: true })
+    for (const keepShortLoudRatio of [1.2, 1.5, 2]) {
+        configs.push({
+            name: `hmm r15 sl${keepShortLoudRatio}`,
+            seg: { keepShortLoudRatio },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    for (const quietRatio of [0.2, 0.3, 0.45]) {
+        configs.push({
+            name: `hmm r15 lq${quietRatio}`,
+            seg: { dropLongQuiet: { minSec: 0.35, quietRatio } },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    // E6/R13: (a) the Essentia-style running-mean island baseline, from §7.1's
+    // prose — the cheapest thing in the survey that could plausibly beat the
+    // semitone-run segmenter, and the only one that follows UNBOUNDED drift;
+    // (b) tuning-first ordering on the shipping segmenter (`tuningCorrect`,
+    // measured off in 2026-07 against absolute truth — re-run for the paired CI
+    // on the widened corpus).
+    for (const thresholdCents of [40, 60, 80]) {
+        configs.push({
+            name: `r13 rm${thresholdCents}c`,
+            runningMean: { thresholdCents },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    configs.push({
+        name: 'r13 rm60c noZ',
+        runningMean: { rmsZ: null },
         ext: { maxGridDivisor: 4 },
         noClean: true,
-      });
-    }
-  }
-  // Note-length floor. Ours is 4 frames = 80 ms; pYIN (~100 ms), basic-pitch
-  // (127.7 ms) and NeuralNote (125 ms default) all sit higher, and a floor is the
-  // cheapest defence against vibrato fragments. Swept with the shipped cleanup.
-  for (const minFrames of [3, 5, 6, 7]) {
+    })
     configs.push({
-      name: `floor ${minFrames}f=${minFrames * 20}ms`,
-      legacy: true,
-      legacyOver: { minFrames },
-      ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
-    });
-  }
-  // R15: WaoN's joint duration × velocity filters on the HMM segmenter (plugin
-  // survey §9.3). Compare within the family: SWEEP_BASELINE='hmm r15 OFF'.
-  configs.push({ name: 'hmm r15 OFF', seg: {}, ext: { maxGridDivisor: 4 }, noClean: true });
-  for (const keepShortLoudRatio of [1.2, 1.5, 2]) {
+        name: 'r13 rm60c +clean',
+        runningMean: {},
+        ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
+    })
     configs.push({
-      name: `hmm r15 sl${keepShortLoudRatio}`,
-      seg: { keepShortLoudRatio },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  for (const quietRatio of [0.2, 0.3, 0.45]) {
-    configs.push({
-      name: `hmm r15 lq${quietRatio}`,
-      seg: { dropLongQuiet: { minSec: 0.35, quietRatio } },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  // E6/R13: (a) the Essentia-style running-mean island baseline, from §7.1's
-  // prose — the cheapest thing in the survey that could plausibly beat the
-  // semitone-run segmenter, and the only one that follows UNBOUNDED drift;
-  // (b) tuning-first ordering on the shipping segmenter (`tuningCorrect`,
-  // measured off in 2026-07 against absolute truth — re-run for the paired CI
-  // on the widened corpus).
-  for (const thresholdCents of [40, 60, 80]) {
-    configs.push({
-      name: `r13 rm${thresholdCents}c`,
-      runningMean: { thresholdCents },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  configs.push({
-    name: 'r13 rm60c noZ',
-    runningMean: { rmsZ: null },
-    ext: { maxGridDivisor: 4 },
-    noClean: true,
-  });
-  configs.push({
-    name: 'r13 rm60c +clean',
-    runningMean: {},
-    ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
-  });
-  configs.push({
-    name: 'r13 tuningFirst',
-    legacy: true,
-    legacyOver: { tuningCorrect: true },
-    ext: { maxGridDivisor: 4 },
-  });
-  // Median-smoother width on the semitone track — the other lever against flutter.
-  for (const smoothFrames of [2, 6, 8]) {
-    configs.push({
-      name: `smooth ${smoothFrames}`,
-      legacy: true,
-      legacyOver: { smoothFrames },
-      ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
-    });
-  }
-  // The shipped configuration, as the reference point for the two sweeps above.
-  configs.push({
-    name: 'SHIPPED',
-    legacy: true,
-    ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
-  });
-  // pYIN's amplitude-RATIO onset splitter (r = a[i+1]/a[i-1]; an onset wherever
-  // the envelope rises by more than 1/s), the untested half of the literature
-  // recommendation that took COnPOff 0.38→0.50 for Tony. Computed from the cached
-  // per-frame energy, replacing the shipping dip-then-rise detector's onsets.
-  for (const sens of [0.6, 0.7, 0.8]) {
-    configs.push({
-      name: `ratioSplit s=${sens}`,
-      legacy: true,
-      ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false }, adaptiveFloorFraction: 0.3 },
-      ratioSplitSens: sens,
-    });
-  }
-  // The two knobs designed FOR the remaining failure (vibrato shattering sustained
-  // notes on annotated-vocalset, still 1.61x over-segmented) and never validated
-  // with an interval. `vibratoMaxSec` folds an A-B-A flutter back into one note;
-  // `adaptiveFloorFraction` scales the fragment floor to the clip's own note
-  // density and currently ships DISABLED.
-  for (const vibratoMaxSec of [0, 0.25, 0.35]) {
-    configs.push({
-      name: `vibrato ${vibratoMaxSec}s`,
-      legacy: true,
-      ext: {
-        maxGridDivisor: 4,
-        vibratoMaxSec,
-        steps: { pitchOutliers: false, merge: false },
-      },
-    });
-  }
-  for (const adaptiveFloorFraction of [0.3, 0.4, 0.5]) {
-    configs.push({
-      name: `adaptFloor ${adaptiveFloorFraction}`,
-      legacy: true,
-      ext: {
-        maxGridDivisor: 4,
-        adaptiveFloorFraction,
-        steps: { pitchOutliers: false, merge: false },
-      },
-    });
-  }
-  // Both together, at their best-guess settings.
-  configs.push({
-    name: 'vibrato.35+floor.4',
-    legacy: true,
-    ext: {
-      maxGridDivisor: 4,
-      vibratoMaxSec: 0.35,
-      adaptiveFloorFraction: 0.4,
-      steps: { pitchOutliers: false, merge: false },
-    },
-  });
-  // Which cleanup steps earn their keep? `clean` as a whole measures net-NEGATIVE
-  // on the real corpus, so at least one of these five is harmful; each row below
-  // disables exactly one, so a row scoring ABOVE 'LEGACY (shipping)' indicts that
-  // step. Legacy segmenter throughout, so only the cleanup varies.
-  const STEP_NAMES = ['monophonic', 'pitchOutliers', 'transients', 'merge', 'onsetSplit'] as const;
-  for (const off of STEP_NAMES) {
-    configs.push({
-      name: `no-${off}`,
-      legacy: true,
-      ext: { maxGridDivisor: 4, steps: { [off]: false } },
-    });
-  }
-  // The two indicted steps dropped together, which is the candidate default.
-  configs.push({
-    name: 'no-outliers+merge',
-    legacy: true,
-    ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
-  });
-  configs.push({
-    name: 'onsetSplit-only',
-    legacy: true,
-    ext: {
-      maxGridDivisor: 4,
-      steps: { pitchOutliers: false, merge: false, transients: false, monophonic: false },
-    },
-  });
-  // Does the wide-attack state actually earn its keep? (σ_attack = σ_stable ⇒ off.)
-  for (const changeCost of [0.8, 1.2, 2]) {
-    configs.push({
-      name: `hmm c${changeCost} flat-σ`,
-      seg: { changeCost, sigmaAttackSemitones: 0.9 },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  // Semitone-only states, to isolate what sub-semitone resolution buys.
-  configs.push({
-    name: 'hmm c1.2 1step',
-    seg: { changeCost: 1.2, stepsPerSemitone: 1 },
-    ext: { maxGridDivisor: 4 },
-    noClean: true,
-  });
-  // Best-guess region with the cleanup back on, to see whether it still helps.
-  for (const changeCost of [0.8, 1.2, 2]) {
-    configs.push({
-      name: `hmm c${changeCost} +clean`,
-      seg: { changeCost },
-      ext: { maxGridDivisor: 4 },
-    });
-  }
-
-  // --- whistle group (2026-08-22) -------------------------------------------
-  // Whistling's dominant error is SPLITTING, not pitch: on the dogfood clips the
-  // pipeline emits 87 notes for 57 real ones (37 splits per 100 shipping, 102
-  // under the now-default octave-down provider), while octErr is 0.00 and 79 % of matched
-  // pairs are exactly right. The mechanism is specific: a whistle has no
-  // consonant, so the only thing crossing a semitone boundary inside a sustain
-  // is its own vibrato — and every knob below was tuned where consonants exist.
-  // `SWEEP_ONLY=whistle` runs just this group.
-  for (const changeCost of [1.2, 2, 3]) {
-    configs.push({
-      name: `whistle c${changeCost}`,
-      seg: { changeCost },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  // pYIN's rule is "the same, or at least 2/3 of a semitone different" (the
-  // default). A whistled vibrato can be wider than that, so this asks whether a
-  // whole semitone — or more — is the right floor for this source.
-  for (const minChangeSemitones of [1, 1.5]) {
-    configs.push({
-      name: `whistle minChange${minChangeSemitones}`,
-      seg: { minChangeSemitones },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  // A wider stable-phase σ says "a held whistled note legitimately wanders",
-  // which is the same claim from the emission side rather than the transition
-  // side; if both help, they are measuring one thing and only one should ship.
-  for (const sigmaStableSemitones of [0.3, 0.5]) {
-    configs.push({
-      name: `whistle sigmaStable${sigmaStableSemitones}`,
-      seg: { sigmaStableSemitones },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  for (const minNoteSec of [0.15, 0.2]) {
-    configs.push({
-      name: `whistle minNote${minNoteSec}`,
-      seg: { minNoteSec },
-      ext: { maxGridDivisor: 4 },
-      noClean: true,
-    });
-  }
-  configs.push({
-    name: 'whistle c2+minChange1',
-    seg: { changeCost: 2, minChangeSemitones: 1 },
-    ext: { maxGridDivisor: 4 },
-    noClean: true,
-  });
-
-  const selected = configs.filter(
-    (c) => c.name === baselineName || !only || c.name.includes(only),
-  );
-  const datasets = discoverRealDatasets(REAL_ROOT);
-
-  // Load every clip once, up front, so config loops touch only arithmetic.
-  const clips: CachedClip[] = [];
-  for (const ds of datasets) {
-    for (const clip of listRealClips(ds.dir)) {
-      if (excluded.has(ds.id)) continue;
-      if (!inSplit(ds.id, clip, split)) continue;
-      let c: CachedClip | null = null;
-      try {
-        c = await cache.load(ds, clip);
-      } catch {
-        c = null;
-      }
-      if (c) clips.push(c);
-    }
-  }
-  const dsIds = [...new Set(clips.map((c) => c.dataset))].sort();
-  console.log(
-    `split=${split} stage=${stage} clips=${clips.length} ` +
-      `(${dsIds.map((d) => `${d}:${clips.filter((c) => c.dataset === d).length}`).join(' ')})`,
-  );
-
-  const header =
-    'config'.padEnd(22) +
-    dsIds.map((d) => `${d.slice(0, 12)} COnP/F2/n`.padEnd(16)).join('') +
-    'meanCOnP'.padEnd(10) +
-    'meanF2'.padEnd(8) +
-    'worstF1';
-  console.log('\n' + header);
-  console.log('-'.repeat(header.length));
-
-  const results: {
-    name: string; mean: number; worst: number; line: string; f2: number;
-    /** Per-clip F1@0.1 in a fixed clip order — the paired-bootstrap input. */
-    perClip: number[];
-    /** Pooled segmentation-error counts — HOW it is wrong, not just how much. */
-    seg: SegErrorCounts;
-  }[] = [];
-  for (const cfg of selected) {
-    const per: Record<string, Acc> = {};
-    for (const d of dsIds) per[d] = newAcc();
-
-    const extractor = new NoteExtractor(cfg.ext);
-    const perClip: number[] = [];
-    const seg: SegErrorCounts = {
-      clean: 0, split: 0, merged: 0, missed: 0, spurious: 0,
-      tangled: 0, pitchWrong: 0, refTotal: 0, estTotal: 0,
-    };
-
-    for (const c of clips) {
-      const segOpts: NoteSegmenterOptions = {
-        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
-        minFreqHz: c.profile.minFreqHz,
-        maxFreqHz: c.profile.maxFreqHz,
-        minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
-        ...cfg.seg,
-      };
-      const raw = cfg.runningMean
-        ? runningMeanSegment(c, cfg.runningMean)
-        : cfg.legacy
-          ? legacySegment(c, cfg.legacyOver)
-          : new NoteSegmenter(segOpts).segment(c.track, c.energy);
-
-      let notes = raw;
-      if (stage !== 'seg') {
-        if (!cfg.noClean) {
-          const onsetTimesSec = cfg.ratioSplitSens
-            ? ratioOnsets(c.energy, c.track.hopSec, cfg.ratioSplitSens)
-            : c.onsetTimesSec;
-          notes = extractor.clean(raw, { bpm: 120, onsetTimesSec });
-        }
-        if (stage === 'quant') notes = extractor.quantize(notes, 120);
-      }
-      record(per[c.dataset], c.truth, toEst(notes));
-      perClip.push(
-        scoreNotesBest(c.truth, toEst(notes), { onsetTolSec: 0.1, timingTolSec: 0.3 }).f1,
-      );
-      const e = segErrors(c.truth.notes, toEst(notes));
-      for (const k of Object.keys(seg) as Array<keyof SegErrorCounts>) seg[k] += e[k];
-    }
-
-    const f1s = dsIds.map((d) => mean(per[d].f1['0.1']));
-    const f2s = dsIds.map((d) => mean(per[d].f2));
-    const m = mean(f1s);
-    const worst = Math.min(...f1s);
-    const line =
-      cfg.name.padEnd(22) +
-      // per dataset: F1 / F2 / est-per-ref ratio, so a config that "wins" by
-      // dropping notes is visible rather than hidden in an average.
-      dsIds
-        .map((d, i) => {
-          const ratio = mean(per[d].estN) / Math.max(1e-9, mean(per[d].refN));
-          return `${f1s[i].toFixed(2)}/${f2s[i].toFixed(2)}/${ratio.toFixed(2)}`.padEnd(16);
+        name: 'r13 tuningFirst',
+        legacy: true,
+        legacyOver: { tuningCorrect: true },
+        ext: { maxGridDivisor: 4 },
+    })
+    // Median-smoother width on the semitone track — the other lever against flutter.
+    for (const smoothFrames of [2, 6, 8]) {
+        configs.push({
+            name: `smooth ${smoothFrames}`,
+            legacy: true,
+            legacyOver: { smoothFrames },
+            ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
         })
-        .join('') +
-      m.toFixed(3).padEnd(8) +
-      mean(f2s).toFixed(3).padEnd(8) +
-      worst.toFixed(3);
-    console.log(line);
-    results.push({ name: cfg.name, mean: m, worst, line, f2: mean(f2s), perClip, seg });
-  }
-
-  // Every config vs the shipping baseline, PAIRED over the same clips. Without an
-  // interval a 1-2 point difference on ~60 clips is indistinguishable from noise,
-  // and most differences this sweep produces are in that band.
-  const baseline = results.find((r) => r.name === baselineName)
-    ?? results.find((r) => r.name.startsWith(baselineName));
-  if (baseline) {
-    console.log(
-      `\n--- vs ${baseline.name}, paired bootstrap over clips (* = CI excludes 0)` +
-        `${excluded.size ? `, excluding ${[...excluded].join(',')}` : ''} ---`,
-    );
-    for (const r of [...results].sort((x, y) => y.mean - x.mean)) {
-      if (r === baseline) continue;
-      const cmp = pairedDiffCI(baseline.perClip, r.perClip);
-      console.log(`${r.name.padEnd(22)} ${formatComparison(cmp)}`);
     }
-  }
+    // The shipped configuration, as the reference point for the two sweeps above.
+    configs.push({
+        name: 'SHIPPED',
+        legacy: true,
+        ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
+    })
+    // pYIN's amplitude-RATIO onset splitter (r = a[i+1]/a[i-1]; an onset wherever
+    // the envelope rises by more than 1/s), the untested half of the literature
+    // recommendation that took COnPOff 0.38→0.50 for Tony. Computed from the cached
+    // per-frame energy, replacing the shipping dip-then-rise detector's onsets.
+    for (const sens of [0.6, 0.7, 0.8]) {
+        configs.push({
+            name: `ratioSplit s=${sens}`,
+            legacy: true,
+            ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false }, adaptiveFloorFraction: 0.3 },
+            ratioSplitSens: sens,
+        })
+    }
+    // The two knobs designed FOR the remaining failure (vibrato shattering sustained
+    // notes on annotated-vocalset, still 1.61x over-segmented) and never validated
+    // with an interval. `vibratoMaxSec` folds an A-B-A flutter back into one note;
+    // `adaptiveFloorFraction` scales the fragment floor to the clip's own note
+    // density and currently ships DISABLED.
+    for (const vibratoMaxSec of [0, 0.25, 0.35]) {
+        configs.push({
+            name: `vibrato ${vibratoMaxSec}s`,
+            legacy: true,
+            ext: {
+                maxGridDivisor: 4,
+                vibratoMaxSec,
+                steps: { pitchOutliers: false, merge: false },
+            },
+        })
+    }
+    for (const adaptiveFloorFraction of [0.3, 0.4, 0.5]) {
+        configs.push({
+            name: `adaptFloor ${adaptiveFloorFraction}`,
+            legacy: true,
+            ext: {
+                maxGridDivisor: 4,
+                adaptiveFloorFraction,
+                steps: { pitchOutliers: false, merge: false },
+            },
+        })
+    }
+    // Both together, at their best-guess settings.
+    configs.push({
+        name: 'vibrato.35+floor.4',
+        legacy: true,
+        ext: {
+            maxGridDivisor: 4,
+            vibratoMaxSec: 0.35,
+            adaptiveFloorFraction: 0.4,
+            steps: { pitchOutliers: false, merge: false },
+        },
+    })
+    // Which cleanup steps earn their keep? `clean` as a whole measures net-NEGATIVE
+    // on the real corpus, so at least one of these five is harmful; each row below
+    // disables exactly one, so a row scoring ABOVE 'LEGACY (shipping)' indicts that
+    // step. Legacy segmenter throughout, so only the cleanup varies.
+    const STEP_NAMES = ['monophonic', 'pitchOutliers', 'transients', 'merge', 'onsetSplit'] as const
+    for (const off of STEP_NAMES) {
+        configs.push({
+            name: `no-${off}`,
+            legacy: true,
+            ext: { maxGridDivisor: 4, steps: { [off]: false } },
+        })
+    }
+    // The two indicted steps dropped together, which is the candidate default.
+    configs.push({
+        name: 'no-outliers+merge',
+        legacy: true,
+        ext: { maxGridDivisor: 4, steps: { pitchOutliers: false, merge: false } },
+    })
+    configs.push({
+        name: 'onsetSplit-only',
+        legacy: true,
+        ext: {
+            maxGridDivisor: 4,
+            steps: { pitchOutliers: false, merge: false, transients: false, monophonic: false },
+        },
+    })
+    // Does the wide-attack state actually earn its keep? (σ_attack = σ_stable ⇒ off.)
+    for (const changeCost of [0.8, 1.2, 2]) {
+        configs.push({
+            name: `hmm c${changeCost} flat-σ`,
+            seg: { changeCost, sigmaAttackSemitones: 0.9 },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    // Semitone-only states, to isolate what sub-semitone resolution buys.
+    configs.push({
+        name: 'hmm c1.2 1step',
+        seg: { changeCost: 1.2, stepsPerSemitone: 1 },
+        ext: { maxGridDivisor: 4 },
+        noClean: true,
+    })
+    // Best-guess region with the cleanup back on, to see whether it still helps.
+    for (const changeCost of [0.8, 1.2, 2]) {
+        configs.push({
+            name: `hmm c${changeCost} +clean`,
+            seg: { changeCost },
+            ext: { maxGridDivisor: 4 },
+        })
+    }
 
-  // How each config is wrong, per 100 reference notes. Read `missed` first: a missing
-  // note costs ~145 s of expert time to restore versus ~3.5 s to delete a spurious
-  // one, so two configs with the same F1 are not equally good products.
-  console.log(
-    '\n--- segmentation errors per 100 reference notes, ranked by estimated repair time ---',
-  );
-  for (const r of [...results].sort(
-    (a, b) => repairSecondsPer100(a.seg) - repairSecondsPer100(b.seg),
-  )) {
-    console.log(`${r.name.padEnd(22)} ${formatSegErrors(r.seg)}`);
-  }
+    // --- whistle group (2026-08-22) -------------------------------------------
+    // Whistling's dominant error is SPLITTING, not pitch: on the dogfood clips the
+    // pipeline emits 87 notes for 57 real ones (37 splits per 100 shipping, 102
+    // under the now-default octave-down provider), while octErr is 0.00 and 79 % of matched
+    // pairs are exactly right. The mechanism is specific: a whistle has no
+    // consonant, so the only thing crossing a semitone boundary inside a sustain
+    // is its own vibrato — and every knob below was tuned where consonants exist.
+    // `SWEEP_ONLY=whistle` runs just this group.
+    for (const changeCost of [1.2, 2, 3]) {
+        configs.push({
+            name: `whistle c${changeCost}`,
+            seg: { changeCost },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    // pYIN's rule is "the same, or at least 2/3 of a semitone different" (the
+    // default). A whistled vibrato can be wider than that, so this asks whether a
+    // whole semitone — or more — is the right floor for this source.
+    for (const minChangeSemitones of [1, 1.5]) {
+        configs.push({
+            name: `whistle minChange${minChangeSemitones}`,
+            seg: { minChangeSemitones },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    // A wider stable-phase σ says "a held whistled note legitimately wanders",
+    // which is the same claim from the emission side rather than the transition
+    // side; if both help, they are measuring one thing and only one should ship.
+    for (const sigmaStableSemitones of [0.3, 0.5]) {
+        configs.push({
+            name: `whistle sigmaStable${sigmaStableSemitones}`,
+            seg: { sigmaStableSemitones },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    for (const minNoteSec of [0.15, 0.2]) {
+        configs.push({
+            name: `whistle minNote${minNoteSec}`,
+            seg: { minNoteSec },
+            ext: { maxGridDivisor: 4 },
+            noClean: true,
+        })
+    }
+    configs.push({
+        name: 'whistle c2+minChange1',
+        seg: { changeCost: 2, minChangeSemitones: 1 },
+        ext: { maxGridDivisor: 4 },
+        noClean: true,
+    })
 
-  console.log('\n--- ranked by mean COnP@0.1 ---');
-  for (const r of [...results].sort((a, b) => b.mean - a.mean).slice(0, 6)) {
-    console.log(`F1=${r.mean.toFixed(3)}  F2=${r.f2.toFixed(3)}  worst=${r.worst.toFixed(3)}  ${r.name}`);
-  }
-  console.log('\n--- ranked by mean F2 (recall-weighted — the product-relevant order) ---');
-  for (const r of [...results].sort((a, b) => b.f2 - a.f2).slice(0, 6)) {
-    console.log(`F2=${r.f2.toFixed(3)}  F1=${r.mean.toFixed(3)}  worst=${r.worst.toFixed(3)}  ${r.name}`);
-  }
+    const selected = configs.filter((c) => c.name === baselineName || !only || c.name.includes(only))
+    const datasets = discoverRealDatasets(REAL_ROOT)
+
+    // Load every clip once, up front, so config loops touch only arithmetic.
+    const clips: CachedClip[] = []
+    for (const ds of datasets) {
+        for (const clip of listRealClips(ds.dir)) {
+            if (excluded.has(ds.id)) continue
+            if (!inSplit(ds.id, clip, split)) continue
+            let c: CachedClip | null = null
+            try {
+                c = await cache.load(ds, clip)
+            } catch {
+                c = null
+            }
+            if (c) clips.push(c)
+        }
+    }
+    const dsIds = [...new Set(clips.map((c) => c.dataset))].sort()
+    console.log(
+        `split=${split} stage=${stage} clips=${clips.length} ` +
+            `(${dsIds.map((d) => `${d}:${clips.filter((c) => c.dataset === d).length}`).join(' ')})`,
+    )
+
+    const header =
+        'config'.padEnd(22) +
+        dsIds.map((d) => `${d.slice(0, 12)} COnP/F2/n`.padEnd(16)).join('') +
+        'meanCOnP'.padEnd(10) +
+        'meanF2'.padEnd(8) +
+        'worstF1'
+    console.log('\n' + header)
+    console.log('-'.repeat(header.length))
+
+    const results: {
+        name: string
+        mean: number
+        worst: number
+        line: string
+        f2: number
+        /** Per-clip F1@0.1 in a fixed clip order — the paired-bootstrap input. */
+        perClip: number[]
+        /** Pooled segmentation-error counts — HOW it is wrong, not just how much. */
+        seg: SegErrorCounts
+    }[] = []
+    for (const cfg of selected) {
+        const per: Record<string, Acc> = {}
+        for (const d of dsIds) per[d] = newAcc()
+
+        const extractor = new NoteExtractor(cfg.ext)
+        const perClip: number[] = []
+        const seg: SegErrorCounts = {
+            clean: 0,
+            split: 0,
+            merged: 0,
+            missed: 0,
+            spurious: 0,
+            tangled: 0,
+            pitchWrong: 0,
+            refTotal: 0,
+            estTotal: 0,
+        }
+
+        for (const c of clips) {
+            const segOpts: NoteSegmenterOptions = {
+                confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+                minFreqHz: c.profile.minFreqHz,
+                maxFreqHz: c.profile.maxFreqHz,
+                minNoteSec: (c.profile.minFramesPerNote ?? 4) * c.track.hopSec,
+                ...cfg.seg,
+            }
+            const raw = cfg.runningMean
+                ? runningMeanSegment(c, cfg.runningMean)
+                : cfg.legacy
+                  ? legacySegment(c, cfg.legacyOver)
+                  : new NoteSegmenter(segOpts).segment(c.track, c.energy)
+
+            let notes = raw
+            if (stage !== 'seg') {
+                if (!cfg.noClean) {
+                    const onsetTimesSec = cfg.ratioSplitSens ? ratioOnsets(c.energy, c.track.hopSec, cfg.ratioSplitSens) : c.onsetTimesSec
+                    notes = extractor.clean(raw, { bpm: 120, onsetTimesSec })
+                }
+                if (stage === 'quant') notes = extractor.quantize(notes, 120)
+            }
+            record(per[c.dataset], c.truth, toEst(notes))
+            perClip.push(scoreNotesBest(c.truth, toEst(notes), { onsetTolSec: 0.1, timingTolSec: 0.3 }).f1)
+            const e = segErrors(c.truth.notes, toEst(notes))
+            for (const k of Object.keys(seg) as Array<keyof SegErrorCounts>) seg[k] += e[k]
+        }
+
+        const f1s = dsIds.map((d) => mean(per[d].f1['0.1']))
+        const f2s = dsIds.map((d) => mean(per[d].f2))
+        const m = mean(f1s)
+        const worst = Math.min(...f1s)
+        const line =
+            cfg.name.padEnd(22) +
+            // per dataset: F1 / F2 / est-per-ref ratio, so a config that "wins" by
+            // dropping notes is visible rather than hidden in an average.
+            dsIds
+                .map((d, i) => {
+                    const ratio = mean(per[d].estN) / Math.max(1e-9, mean(per[d].refN))
+                    return `${f1s[i].toFixed(2)}/${f2s[i].toFixed(2)}/${ratio.toFixed(2)}`.padEnd(16)
+                })
+                .join('') +
+            m.toFixed(3).padEnd(8) +
+            mean(f2s).toFixed(3).padEnd(8) +
+            worst.toFixed(3)
+        console.log(line)
+        results.push({ name: cfg.name, mean: m, worst, line, f2: mean(f2s), perClip, seg })
+    }
+
+    // Every config vs the shipping baseline, PAIRED over the same clips. Without an
+    // interval a 1-2 point difference on ~60 clips is indistinguishable from noise,
+    // and most differences this sweep produces are in that band.
+    const baseline = results.find((r) => r.name === baselineName) ?? results.find((r) => r.name.startsWith(baselineName))
+    if (baseline) {
+        console.log(
+            `\n--- vs ${baseline.name}, paired bootstrap over clips (* = CI excludes 0)` +
+                `${excluded.size ? `, excluding ${[...excluded].join(',')}` : ''} ---`,
+        )
+        for (const r of [...results].sort((x, y) => y.mean - x.mean)) {
+            if (r === baseline) continue
+            const cmp = pairedDiffCI(baseline.perClip, r.perClip)
+            console.log(`${r.name.padEnd(22)} ${formatComparison(cmp)}`)
+        }
+    }
+
+    // How each config is wrong, per 100 reference notes. Read `missed` first: a missing
+    // note costs ~145 s of expert time to restore versus ~3.5 s to delete a spurious
+    // one, so two configs with the same F1 are not equally good products.
+    console.log('\n--- segmentation errors per 100 reference notes, ranked by estimated repair time ---')
+    for (const r of [...results].sort((a, b) => repairSecondsPer100(a.seg) - repairSecondsPer100(b.seg))) {
+        console.log(`${r.name.padEnd(22)} ${formatSegErrors(r.seg)}`)
+    }
+
+    console.log('\n--- ranked by mean COnP@0.1 ---')
+    for (const r of [...results].sort((a, b) => b.mean - a.mean).slice(0, 6)) {
+        console.log(`F1=${r.mean.toFixed(3)}  F2=${r.f2.toFixed(3)}  worst=${r.worst.toFixed(3)}  ${r.name}`)
+    }
+    console.log('\n--- ranked by mean F2 (recall-weighted — the product-relevant order) ---')
+    for (const r of [...results].sort((a, b) => b.f2 - a.f2).slice(0, 6)) {
+        console.log(`F2=${r.f2.toFixed(3)}  F1=${r.mean.toFixed(3)}  worst=${r.worst.toFixed(3)}  ${r.name}`)
+    }
 }
 
 main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+    console.error(e)
+    process.exit(1)
+})

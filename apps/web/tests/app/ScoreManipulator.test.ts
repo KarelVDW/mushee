@@ -264,7 +264,11 @@ describe('ScoreManipulator clipboard', () => {
         manipulator.extendSelectionTo(notes[1]) // cut C5 D5
         manipulator.cut()
 
-        expect(allNotes(manipulator).slice(0, 2).every((n) => n.isRest)).toBe(true)
+        expect(
+            allNotes(manipulator)
+                .slice(0, 2)
+                .every((n) => n.isRest),
+        ).toBe(true)
         expect(manipulator.canPaste).toBe(true)
 
         manipulator.select(allNotes(manipulator)[2]) // paste onto E5 → overwrites E5 F5
@@ -388,7 +392,9 @@ describe('ScoreManipulator in-score attribute setters', () => {
 describe('ScoreManipulator pitch operations (transpose / minimize accidentals)', () => {
     const spellings = (manipulator: ScoreManipulator): string[] =>
         allNotes(manipulator).map((n) =>
-            n.pitch ? `${n.pitch.name}${n.pitch.alter > 0 ? '#'.repeat(n.pitch.alter) : 'b'.repeat(-n.pitch.alter)}${n.pitch.octave}` : 'rest',
+            n.pitch
+                ? `${n.pitch.name}${n.pitch.alter > 0 ? '#'.repeat(n.pitch.alter) : 'b'.repeat(-n.pitch.alter)}${n.pitch.octave}`
+                : 'rest',
         )
 
     it('transposes the whole score (keys included) and re-anchors the active note by position', () => {
@@ -441,9 +447,10 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         const score = manipulator.score
         if (!score?.firstMeasure) throw new Error('expected a score')
         score.setKeySignature(score.firstMeasure.firstNote, -1) // F major
-        score.replace([score.firstMeasure.notes[0]], [
-            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'A', octave: 4, alter: 1 }) }),
-        ])
+        score.replace(
+            [score.firstMeasure.notes[0]],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'A', octave: 4, alter: 1 }) })],
+        )
         const notes = allNotes(manipulator)
         manipulator.select(notes[0])
         manipulator.extendSelectionTo(notes[1])

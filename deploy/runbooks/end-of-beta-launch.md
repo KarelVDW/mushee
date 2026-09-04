@@ -61,7 +61,7 @@ Unconfigured→configured is graceful in both directions: if Polar
 misbehaves, removing `POLAR_ACCESS_TOKEN` + restart puts billing back into
 its 503/hidden state without touching anything else.
 
-## 3. Decide the beta users' fate *before* the flip
+## 3. Decide the beta users' fate _before_ the flip
 
 They're on tier `beta` (300 credits = 5 min/day, not sellable). Options:
 
@@ -89,7 +89,7 @@ the web client too, so the gate drops even before the web rebuild.
    tier at signup and receives signup notifications; console access itself
    is `ADMIN_SECRET`.)
 2. Vercel env: `NEXT_PUBLIC_BETA_MODE=false` (Production) → redeploy web.
-   This is the flip that changes the *copy* — landing CTA, pricing buttons,
+   This is the flip that changes the _copy_ — landing CTA, pricing buttons,
    signup messaging (build-time baked, needs the rebuild).
 3. Smoke: new signup goes straight to onboarding (no waiting room), pricing
    buttons lead to Polar checkout, `/beta` for an approved user shows
@@ -106,7 +106,7 @@ the web client too, so the gate drops even before the web rebuild.
   Autopilot adds nodes by itself; nothing else to pre-warm.
 - Cloud SQL `db-custom-1-3840` is the most likely first bottleneck under
   real load; the resize is a 2-minute restart (Runbook 4 §7) — decide the
-  threshold (CPU > 70% sustained in Cloud SQL monitoring) *before* the day.
+  threshold (CPU > 70% sustained in Cloud SQL monitoring) _before_ the day.
 - Keep an eye on the known product gap: an inference outage silently burns
   users' credits with no notes appearing (Runbook 3 §3, last rows). Under
   launch load, inference HPA lag looks exactly like that for a minute or

@@ -12,15 +12,15 @@
 
 /** FNV-1a — small, fast, and stable across runs and platforms. */
 function hash(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i += 1) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
+    let h = 0x811c9dc5
+    for (let i = 0; i < s.length; i += 1) {
+        h ^= s.charCodeAt(i)
+        h = Math.imul(h, 0x01000193)
+    }
+    return h >>> 0
 }
 
-export type Split = 'dev' | 'test' | 'all';
+export type Split = 'dev' | 'test' | 'all'
 
 /**
  * The unit the split is drawn over — the **performer or piece**, not the clip.
@@ -58,39 +58,39 @@ export type Split = 'dev' | 'test' | 'all';
  * honoured separately, by keeping their test songs in their own `n20emv2-test` dir.
  */
 function groupKeyFor(dataset: string, clip: string): string {
-  if (dataset === 'mir-qbsh') {
-    return clip.match(/person\d+/)?.[0] ?? clip;
-  }
-  if (dataset === 'avp') {
-    // `avp_P10_HHclosed_Fixed` → `P10`
-    return clip.split('_')[1] ?? clip;
-  }
-  if (dataset === 'dagstuhl-choir') {
-    // `DCS_LI_QuartetA_Take01_A1_HSM_ex01` → `QuartetA_A1`: the same four people
-    // sing every take of both pieces, so the quartet+voice pair is the person.
-    const p = clip.split('_');
-    return p.length >= 5 ? `${p[2]}_${p[4]}` : clip;
-  }
-  if (dataset === 'jacrc-students') {
-    // `daxp-Meng_ting_de-…-dx-S8_ex00` → `dx-S8`. Student ids repeat across
-    // schools (every school has an S1), so the school prefix is part of the key;
-    // `S2(1)`/`S2(2)` are two takes by one student and must group together,
-    // which stopping the match at the digits achieves.
-    const m = /-([a-z]+)-(S\d+)/.exec(clip);
-    return m ? `${m[1]}-${m[2]}` : clip;
-  }
-  if (
-    dataset === 'annotated-vocalset' ||
-    dataset === 'guitarset-solo' ||
-    dataset === 'csd' ||
-    dataset === 'esmuc-choir' ||
-    dataset.startsWith('urmp-') ||
-    dataset.startsWith('n20emv2')
-  ) {
-    const head = clip.split('_')[0];
-    return head || clip;
-  }
-  return clip;
+    if (dataset === 'mir-qbsh') {
+        return clip.match(/person\d+/)?.[0] ?? clip
+    }
+    if (dataset === 'avp') {
+        // `avp_P10_HHclosed_Fixed` → `P10`
+        return clip.split('_')[1] ?? clip
+    }
+    if (dataset === 'dagstuhl-choir') {
+        // `DCS_LI_QuartetA_Take01_A1_HSM_ex01` → `QuartetA_A1`: the same four people
+        // sing every take of both pieces, so the quartet+voice pair is the person.
+        const p = clip.split('_')
+        return p.length >= 5 ? `${p[2]}_${p[4]}` : clip
+    }
+    if (dataset === 'jacrc-students') {
+        // `daxp-Meng_ting_de-…-dx-S8_ex00` → `dx-S8`. Student ids repeat across
+        // schools (every school has an S1), so the school prefix is part of the key;
+        // `S2(1)`/`S2(2)` are two takes by one student and must group together,
+        // which stopping the match at the digits achieves.
+        const m = /-([a-z]+)-(S\d+)/.exec(clip)
+        return m ? `${m[1]}-${m[2]}` : clip
+    }
+    if (
+        dataset === 'annotated-vocalset' ||
+        dataset === 'guitarset-solo' ||
+        dataset === 'csd' ||
+        dataset === 'esmuc-choir' ||
+        dataset.startsWith('urmp-') ||
+        dataset.startsWith('n20emv2')
+    ) {
+        const head = clip.split('_')[0]
+        return head || clip
+    }
+    return clip
 }
 
 /**
@@ -99,15 +99,15 @@ function groupKeyFor(dataset: string, clip: string): string {
  * rather than the clip so a performer never straddles the split.
  */
 export function splitOf(dataset: string, clip: string): 'dev' | 'test' {
-  return hash(`${dataset}/${groupKeyFor(dataset, clip)}`) % 2 === 0 ? 'dev' : 'test';
+    return hash(`${dataset}/${groupKeyFor(dataset, clip)}`) % 2 === 0 ? 'dev' : 'test'
 }
 
 export function inSplit(dataset: string, clip: string, want: Split): boolean {
-  return want === 'all' || splitOf(dataset, clip) === want;
+    return want === 'all' || splitOf(dataset, clip) === want
 }
 
 /** Reads EVAL_SPLIT (dev | test | all), defaulting to dev — the safe default. */
 export function splitFromEnv(): Split {
-  const v = (process.env.EVAL_SPLIT ?? 'dev').toLowerCase();
-  return v === 'test' || v === 'all' ? v : 'dev';
+    const v = (process.env.EVAL_SPLIT ?? 'dev').toLowerCase()
+    return v === 'test' || v === 'all' ? v : 'dev'
 }

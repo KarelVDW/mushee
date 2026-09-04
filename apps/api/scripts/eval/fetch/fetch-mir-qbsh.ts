@@ -49,94 +49,86 @@
  * Idempotent. Run: pnpm --filter api exec tsx scripts/eval/fetch/fetch-mir-qbsh.ts
  */
 
-import { execFileSync } from 'child_process';
-import ffmpegPath from 'ffmpeg-static';
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'fs';
-import { join,resolve } from 'path';
+import { execFileSync } from 'child_process'
+import ffmpegPath from 'ffmpeg-static'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { join, resolve } from 'path'
 
-import type { GroundTruth, TruthNote } from '../types';
+import type { GroundTruth, TruthNote } from '../types'
 
-const ZIP_URL = 'http://mirlab.org/dataSet/public/MIR-QBSH.zip';
+const ZIP_URL = 'http://mirlab.org/dataSet/public/MIR-QBSH.zip'
 
-const CACHE = resolve(__dirname, '../.cache', 'mir-qbsh');
-const ZIP = join(CACHE, 'MIR-QBSH.zip');
+const CACHE = resolve(__dirname, '../.cache', 'mir-qbsh')
+const ZIP = join(CACHE, 'MIR-QBSH.zip')
 // The zip unpacks to a top-level "MIR-QBSH" directory.
-const ROOT = join(CACHE, 'MIR-QBSH');
-const WAVE_ROOT = join(ROOT, 'waveFile');
-const OUT = resolve(__dirname, '../../fixtures/eval-real/context/mir-qbsh');
+const ROOT = join(CACHE, 'MIR-QBSH')
+const WAVE_ROOT = join(ROOT, 'waveFile')
+const OUT = resolve(__dirname, '../../fixtures/eval-real/context/mir-qbsh')
 
 // 256-sample frames at the corpus's fixed 8 kHz sampling rate, overlap 0.
-const FRAME_SEC = 256 / 8000; // 0.032 s
+const FRAME_SEC = 256 / 8000 // 0.032 s
 
 // A note must span at least this many frames (3 * 32 ms = 96 ms) to be kept;
 // shorter same-pitch runs are treated as labeling/portamento glitches.
-const MIN_RUN_FRAMES = 3;
+const MIN_RUN_FRAMES = 3
 
 // Queries are free, un-metered singing/humming with no annotated tempo. bpm is
 // only handed to the converter's quantizer; the metrics compare onsets in
 // seconds, so this value does not affect scoring.
-const NOMINAL_BPM = 120;
+const NOMINAL_BPM = 120
 
 // How many clean queries to convert out of the 4431 in the corpus.
-const SUBSET_TARGET = 50;
+const SUBSET_TARGET = 50
 
 // Plausible sung/hummed vocal register (semitones). Used both to drop garbage
 // frames and to score a clip's cleanliness.
-const MIN_MIDI = 40;
-const MAX_MIDI = 76;
+const MIN_MIDI = 40
+const MAX_MIDI = 76
 
 function download(): void {
-  if (existsSync(ZIP)) {
-    console.log(`  zip already cached: ${ZIP}`);
-    return;
-  }
-  mkdirSync(CACHE, { recursive: true });
-  console.log('  downloading MIR-QBSH.zip (~145 MB) …');
-  // mirlab.org only answers on plain HTTP (port 443 times out), so no -L upgrade.
-  execFileSync('curl', ['-sL', '--fail', '--max-time', '1200', '-o', ZIP, ZIP_URL], {
-    stdio: ['ignore', 'ignore', 'inherit'],
-  });
+    if (existsSync(ZIP)) {
+        console.log(`  zip already cached: ${ZIP}`)
+        return
+    }
+    mkdirSync(CACHE, { recursive: true })
+    console.log('  downloading MIR-QBSH.zip (~145 MB) …')
+    // mirlab.org only answers on plain HTTP (port 443 times out), so no -L upgrade.
+    execFileSync('curl', ['-sL', '--fail', '--max-time', '1200', '-o', ZIP, ZIP_URL], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+    })
 }
 
 function extract(): void {
-  if (existsSync(WAVE_ROOT)) {
-    console.log(`  already extracted: ${ROOT}`);
-    return;
-  }
-  execFileSync('unzip', ['-oq', ZIP, '-d', CACHE, '-x', '__MACOSX/*'], {
-    stdio: ['ignore', 'ignore', 'inherit'],
-  });
+    if (existsSync(WAVE_ROOT)) {
+        console.log(`  already extracted: ${ROOT}`)
+        return
+    }
+    execFileSync('unzip', ['-oq', ZIP, '-d', CACHE, '-x', '__MACOSX/*'], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+    })
 }
 
 /** Recursively collect every NNNNN.pv path under the waveFile tree. */
 function listPvFiles(root: string): string[] {
-  const out: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const p = join(dir, entry.name);
-      if (entry.isDirectory()) walk(p);
-      else if (entry.name.endsWith('.pv')) out.push(p);
+    const out: string[] = []
+    const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const p = join(dir, entry.name)
+            if (entry.isDirectory()) walk(p)
+            else if (entry.name.endsWith('.pv')) out.push(p)
+        }
     }
-  };
-  walk(root);
-  return out;
+    walk(root)
+    return out
 }
 
 /** Read a .pv file into one float (MIDI semitone) per frame; <=0 = unvoiced. */
 function readFramePitches(pvPath: string): number[] {
-  return readFileSync(pvPath, 'utf8')
-    .trim()
-    .split(/\s+/)
-    .filter((t) => t.length > 0)
-    .map(Number);
+    return readFileSync(pvPath, 'utf8')
+        .trim()
+        .split(/\s+/)
+        .filter((t) => t.length > 0)
+        .map(Number)
 }
 
 /**
@@ -145,53 +137,53 @@ function readFramePitches(pvPath: string): number[] {
  * shorter than MIN_RUN_FRAMES are dropped as glitches.
  */
 function framesToNotes(frames: number[]): TruthNote[] {
-  const notes: TruthNote[] = [];
+    const notes: TruthNote[] = []
 
-  let runMidi: number | null = null;
-  let runStart = 0;
-  let runLen = 0;
+    let runMidi: number | null = null
+    let runStart = 0
+    let runLen = 0
 
-  const flush = (): void => {
-    if (runMidi !== null && runLen >= MIN_RUN_FRAMES) {
-      notes.push({
-        onsetSec: runStart * FRAME_SEC,
-        durSec: runLen * FRAME_SEC,
-        midi: runMidi,
-      });
+    const flush = (): void => {
+        if (runMidi !== null && runLen >= MIN_RUN_FRAMES) {
+            notes.push({
+                onsetSec: runStart * FRAME_SEC,
+                durSec: runLen * FRAME_SEC,
+                midi: runMidi,
+            })
+        }
+        runMidi = null
+        runLen = 0
     }
-    runMidi = null;
-    runLen = 0;
-  };
 
-  for (let i = 0; i < frames.length; i++) {
-    const hz = frames[i];
-    const voiced = Number.isFinite(hz) && hz > 0;
-    const midi = voiced ? Math.round(hz) : null;
-    if (midi !== null && midi === runMidi) {
-      runLen += 1;
-    } else {
-      flush();
-      if (midi !== null) {
-        runMidi = midi;
-        runStart = i;
-        runLen = 1;
-      }
+    for (let i = 0; i < frames.length; i++) {
+        const hz = frames[i]
+        const voiced = Number.isFinite(hz) && hz > 0
+        const midi = voiced ? Math.round(hz) : null
+        if (midi !== null && midi === runMidi) {
+            runLen += 1
+        } else {
+            flush()
+            if (midi !== null) {
+                runMidi = midi
+                runStart = i
+                runLen = 1
+            }
+        }
     }
-  }
-  flush();
+    flush()
 
-  notes.sort((a, b) => a.onsetSec - b.onsetSec);
-  return notes;
+    notes.sort((a, b) => a.onsetSec - b.onsetSec)
+    return notes
 }
 
 interface Candidate {
-  /** Stable, filesystem-safe clip id, e.g. year2006a_person00001_00001. */
-  id: string;
-  wav: string;
-  pcm?: string;
-  notes: TruthNote[];
-  /** Higher = cleaner. */
-  score: number;
+    /** Stable, filesystem-safe clip id, e.g. year2006a_person00001_00001. */
+    id: string
+    wav: string
+    pcm?: string
+    notes: TruthNote[]
+    /** Higher = cleaner. */
+    score: number
 }
 
 /**
@@ -200,41 +192,40 @@ interface Candidate {
  * range, too sparse, or barely voiced.
  */
 function evaluate(pvPath: string): Candidate | null {
-  const frames = readFramePitches(pvPath);
-  if (frames.length < 32) return null; // < ~1 s of audio
+    const frames = readFramePitches(pvPath)
+    if (frames.length < 32) return null // < ~1 s of audio
 
-  const voiced = frames.filter((p) => Number.isFinite(p) && p > 0);
-  if (voiced.length === 0) return null;
-  const voicedRatio = voiced.length / frames.length;
+    const voiced = frames.filter((p) => Number.isFinite(p) && p > 0)
+    if (voiced.length === 0) return null
+    const voicedRatio = voiced.length / frames.length
 
-  const medianMidi = [...voiced].sort((a, b) => a - b)[Math.floor(voiced.length / 2)];
-  if (medianMidi < MIN_MIDI || medianMidi > MAX_MIDI) return null;
+    const medianMidi = [...voiced].sort((a, b) => a - b)[Math.floor(voiced.length / 2)]
+    if (medianMidi < MIN_MIDI || medianMidi > MAX_MIDI) return null
 
-  const notes = framesToNotes(frames).filter((n) => n.midi >= MIN_MIDI && n.midi <= MAX_MIDI);
-  if (notes.length < 5) return null; // need a real melody, not a couple of blips
+    const notes = framesToNotes(frames).filter((n) => n.midi >= MIN_MIDI && n.midi <= MAX_MIDI)
+    if (notes.length < 5) return null // need a real melody, not a couple of blips
 
-  // Mean note length in frames — very short mean = fragmented / unstable label.
-  const meanRunFrames =
-    notes.reduce((s, n) => s + n.durSec / FRAME_SEC, 0) / notes.length;
+    // Mean note length in frames — very short mean = fragmented / unstable label.
+    const meanRunFrames = notes.reduce((s, n) => s + n.durSec / FRAME_SEC, 0) / notes.length
 
-  // Fraction of the original voiced frames that survived segmentation: a clean,
-  // stable melody keeps most of its voiced frames; a smeary one loses many to
-  // the min-run filter.
-  const keptFrames = notes.reduce((s, n) => s + n.durSec / FRAME_SEC, 0);
-  const keptRatio = keptFrames / voiced.length;
+    // Fraction of the original voiced frames that survived segmentation: a clean,
+    // stable melody keeps most of its voiced frames; a smeary one loses many to
+    // the min-run filter.
+    const keptFrames = notes.reduce((s, n) => s + n.durSec / FRAME_SEC, 0)
+    const keptRatio = keptFrames / voiced.length
 
-  const score =
-    voicedRatio * 2 + // mostly-voiced clips are cleaner
-    keptRatio * 2 + // little lost to glitch filtering
-    Math.min(meanRunFrames, 12) / 12 + // reasonably sustained notes
-    Math.min(notes.length, 30) / 30; // a melody with substance
+    const score =
+        voicedRatio * 2 + // mostly-voiced clips are cleaner
+        keptRatio * 2 + // little lost to glitch filtering
+        Math.min(meanRunFrames, 12) / 12 + // reasonably sustained notes
+        Math.min(notes.length, 30) / 30 // a melody with substance
 
-  const rel = pvPath.slice(WAVE_ROOT.length + 1, -'.pv'.length); // year/person/NNNNN
-  const id = rel.replace(/[\\/]/g, '_');
-  const wav = pvPath.replace(/\.pv$/, '.wav');
-  const pcm = pvPath.replace(/\.pv$/, '.pcm');
+    const rel = pvPath.slice(WAVE_ROOT.length + 1, -'.pv'.length) // year/person/NNNNN
+    const id = rel.replace(/[\\/]/g, '_')
+    const wav = pvPath.replace(/\.pv$/, '.wav')
+    const pcm = pvPath.replace(/\.pv$/, '.pcm')
 
-  return { id, wav, pcm: existsSync(pcm) ? pcm : undefined, notes, score };
+    return { id, wav, pcm: existsSync(pcm) ? pcm : undefined, notes, score }
 }
 
 /**
@@ -244,99 +235,95 @@ function evaluate(pvPath: string): Candidate | null {
  * ffmpeg.
  */
 function writeWav(c: Candidate, dest: string): void {
-  if (existsSync(c.wav)) {
-    copyFileSync(c.wav, dest);
-    return;
-  }
-  if (c.pcm) {
-    if (!ffmpegPath) throw new Error('ffmpeg-static binary not available for .pcm transcode');
-    execFileSync(
-      ffmpegPath,
-      ['-y', '-f', 's16le', '-ar', '8000', '-ac', '1', '-i', c.pcm, dest],
-      { stdio: ['ignore', 'ignore', 'inherit'] },
-    );
-    return;
-  }
-  throw new Error(`no audio for ${c.id}`);
+    if (existsSync(c.wav)) {
+        copyFileSync(c.wav, dest)
+        return
+    }
+    if (c.pcm) {
+        if (!ffmpegPath) throw new Error('ffmpeg-static binary not available for .pcm transcode')
+        execFileSync(ffmpegPath, ['-y', '-f', 's16le', '-ar', '8000', '-ac', '1', '-i', c.pcm, dest], {
+            stdio: ['ignore', 'ignore', 'inherit'],
+        })
+        return
+    }
+    throw new Error(`no audio for ${c.id}`)
 }
 
 function main(): void {
-  download();
-  extract();
+    download()
+    extract()
 
-  console.log('  scanning .pv files for clean queries …');
-  const pvFiles = listPvFiles(WAVE_ROOT);
-  console.log(`  found ${pvFiles.length} .pv files`);
+    console.log('  scanning .pv files for clean queries …')
+    const pvFiles = listPvFiles(WAVE_ROOT)
+    console.log(`  found ${pvFiles.length} .pv files`)
 
-  const candidates: Candidate[] = [];
-  for (const pv of pvFiles) {
-    if (!existsSync(pv.replace(/\.pv$/, '.wav')) && !existsSync(pv.replace(/\.pv$/, '.pcm'))) {
-      continue;
+    const candidates: Candidate[] = []
+    for (const pv of pvFiles) {
+        if (!existsSync(pv.replace(/\.pv$/, '.wav')) && !existsSync(pv.replace(/\.pv$/, '.pcm'))) {
+            continue
+        }
+        const c = evaluate(pv)
+        if (c) candidates.push(c)
     }
-    const c = evaluate(pv);
-    if (c) candidates.push(c);
-  }
-  console.log(`  ${candidates.length} clips passed the cleanliness gate`);
+    console.log(`  ${candidates.length} clips passed the cleanliness gate`)
 
-  candidates.sort((a, b) => b.score - a.score);
-  const chosen = candidates.slice(0, SUBSET_TARGET);
+    candidates.sort((a, b) => b.score - a.score)
+    const chosen = candidates.slice(0, SUBSET_TARGET)
 
-  rmSync(OUT, { recursive: true, force: true });
-  mkdirSync(OUT, { recursive: true });
+    rmSync(OUT, { recursive: true, force: true })
+    mkdirSync(OUT, { recursive: true })
 
-  let clips = 0;
-  let totalNotes = 0;
-  for (const c of chosen) {
-    const truth: GroundTruth = { bpm: NOMINAL_BPM, notes: c.notes };
-    writeFileSync(join(OUT, `${c.id}.truth.json`), JSON.stringify(truth, null, 2));
-    writeWav(c, join(OUT, `${c.id}__real.wav`));
-    clips += 1;
-    totalNotes += c.notes.length;
-  }
+    let clips = 0
+    let totalNotes = 0
+    for (const c of chosen) {
+        const truth: GroundTruth = { bpm: NOMINAL_BPM, notes: c.notes }
+        writeFileSync(join(OUT, `${c.id}.truth.json`), JSON.stringify(truth, null, 2))
+        writeWav(c, join(OUT, `${c.id}__real.wav`))
+        clips += 1
+        totalNotes += c.notes.length
+    }
 
-  const manifest = {
-    id: 'mir-qbsh',
-    label: 'MIR-QBSH (real sung/hummed queries, clean subset)',
-    kind: 'voice',
-    instrumentId: 'voice-lead',
-    source: 'http://mirlab.org/dataSet/public/MIR-QBSH.zip',
-    license: 'academic/research',
-    // Research-only terms: usable for internal evaluation under the 2026-09-01
-    // defensible-use standard, never pooled, never redistributed.
-    licenceRestricted: true,
-    material: 'humming',
-    // The corpus has no note events; ours come out of the .pv frame pitch by
-    // the derivation described above — which is the same algorithm family as
-    // the shipping segmenter, so agreeing with these labels partly means
-    // reproducing our own artefact. Measured on vocadito (the one corpus with
-    // both f0 and human notes), that derivation itself scores only F1
-    // 0.43-0.55 at 2.7-3.2x over-segmentation, i.e. a *perfect* f0 tracker
-    // would cap out near 0.50 here. Consumers filter on this flag (see
-    // lib/realCorpus.ts) to keep the clips for f0/melody metrics and realism
-    // checks while leaving them out of note-F1 aggregates.
-    noteTruthDerived: true,
-    clips,
-    totalNotes,
-    notes:
-      `Clean subset of ${clips}/${pvFiles.length} queries. Low-fi 8 kHz/8-bit mono audio, ` +
-      'sung and hummed nursery rhymes by ~195 subjects. Ground truth derived from the ' +
-      'corpus .pv frame-pitch labels (256-sample frames @ 8 kHz = 0.032 s/frame, semitone ' +
-      'units, 0 = unvoiced): same-integer-MIDI runs of >=3 frames become notes, unvoiced ' +
-      'gaps break runs. Subset ranked by voiced ratio, vocal register, and note stability. ' +
-      'noteTruthDerived: these note events are OUR derivation of the frame-pitch labels, ' +
-      'not dataset annotations (the students who recorded the queries self-labelled the ' +
-      'pitch, "with no guarantee for their correctness") — valid for f0/melody metrics and ' +
-      'realism, NOT trustworthy as a note-F1 gate.',
-  };
-  writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2));
+    const manifest = {
+        id: 'mir-qbsh',
+        label: 'MIR-QBSH (real sung/hummed queries, clean subset)',
+        kind: 'voice',
+        instrumentId: 'voice-lead',
+        source: 'http://mirlab.org/dataSet/public/MIR-QBSH.zip',
+        license: 'academic/research',
+        // Research-only terms: usable for internal evaluation under the 2026-09-01
+        // defensible-use standard, never pooled, never redistributed.
+        licenceRestricted: true,
+        material: 'humming',
+        // The corpus has no note events; ours come out of the .pv frame pitch by
+        // the derivation described above — which is the same algorithm family as
+        // the shipping segmenter, so agreeing with these labels partly means
+        // reproducing our own artefact. Measured on vocadito (the one corpus with
+        // both f0 and human notes), that derivation itself scores only F1
+        // 0.43-0.55 at 2.7-3.2x over-segmentation, i.e. a *perfect* f0 tracker
+        // would cap out near 0.50 here. Consumers filter on this flag (see
+        // lib/realCorpus.ts) to keep the clips for f0/melody metrics and realism
+        // checks while leaving them out of note-F1 aggregates.
+        noteTruthDerived: true,
+        clips,
+        totalNotes,
+        notes:
+            `Clean subset of ${clips}/${pvFiles.length} queries. Low-fi 8 kHz/8-bit mono audio, ` +
+            'sung and hummed nursery rhymes by ~195 subjects. Ground truth derived from the ' +
+            'corpus .pv frame-pitch labels (256-sample frames @ 8 kHz = 0.032 s/frame, semitone ' +
+            'units, 0 = unvoiced): same-integer-MIDI runs of >=3 frames become notes, unvoiced ' +
+            'gaps break runs. Subset ranked by voiced ratio, vocal register, and note stability. ' +
+            'noteTruthDerived: these note events are OUR derivation of the frame-pitch labels, ' +
+            'not dataset annotations (the students who recorded the queries self-labelled the ' +
+            'pitch, "with no guarantee for their correctness") — valid for f0/melody metrics and ' +
+            'realism, NOT trustworthy as a note-F1 gate.',
+    }
+    writeFileSync(join(OUT, 'dataset.json'), JSON.stringify(manifest, null, 2))
 
-  console.log(
-    `\nConverted ${clips} MIR-QBSH clips (${totalNotes} notes) into ${OUT}` +
-      `\n(clean subset of ${pvFiles.length} corpus queries; frameSec=${FRAME_SEC})`,
-  );
-  console.log(
-    'Run: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts',
-  );
+    console.log(
+        `\nConverted ${clips} MIR-QBSH clips (${totalNotes} notes) into ${OUT}` +
+            `\n(clean subset of ${pvFiles.length} corpus queries; frameSec=${FRAME_SEC})`,
+    )
+    console.log('Run: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts')
 }
 
-main();
+main()

@@ -1,9 +1,9 @@
-import { Logger } from '@nestjs/common';
-import { type GraphModel, io, loadGraphModel, type Tensor,tensor1d } from '@tensorflow/tfjs';
-import { existsSync, readFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { Logger } from '@nestjs/common'
+import { type GraphModel, io, loadGraphModel, type Tensor, tensor1d } from '@tensorflow/tfjs'
+import { existsSync, readFileSync } from 'fs'
+import { join, resolve } from 'path'
 
-import { ensureWasmBackend } from '../providers/tf-backend';
+import { ensureWasmBackend } from '../providers/tf-backend'
 
 /**
  * Training-free voice/instrument source classification from the recording's
@@ -48,21 +48,21 @@ import { ensureWasmBackend } from '../providers/tf-backend';
  *   comfortably inside the profile lock's existing budget.
  */
 
-const logger = new Logger('SourceClassifier');
+const logger = new Logger('SourceClassifier')
 
 function describeError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+    return err instanceof Error ? err.message : String(err)
 }
 
 /** Kill-switch, mirroring RECORDING_VOICE_DECODE: `0` disables classification. */
-const CLASSIFY = process.env.RECORDING_SOURCE_CLASSIFY !== '0';
+const CLASSIFY = process.env.RECORDING_SOURCE_CLASSIFY !== '0'
 
-const MODEL_DIR = process.env.YAMNET_MODEL_DIR ?? resolve(__dirname, '../../../../model-yamnet');
+const MODEL_DIR = process.env.YAMNET_MODEL_DIR ?? resolve(__dirname, '../../../../model-yamnet')
 
 /** YAMNet's native rate — happily also the pipeline's detect rate. */
-export const YAMNET_SAMPLE_RATE = 16000;
+export const YAMNET_SAMPLE_RATE = 16000
 /** One 0.96 s YAMNet analysis frame is the minimum decidable audio. */
-const MIN_SAMPLES = Math.round(0.96 * YAMNET_SAMPLE_RATE) + 1;
+const MIN_SAMPLES = Math.round(0.96 * YAMNET_SAMPLE_RATE) + 1
 
 /**
  * The two published class groups, fixed a priori from the AudioSet ontology:
@@ -71,25 +71,75 @@ const MIN_SAMPLES = Math.round(0.96 * YAMNET_SAMPLE_RATE) + 1;
  * abstain band.
  */
 const VOICE_CLASSES = new Set([
-  'Speech', 'Child speech, kid speaking', 'Male speech, man speaking',
-  'Female speech, woman speaking', 'Singing', 'Choir', 'Yodeling', 'Chant',
-  'Mantra', 'Male singing', 'Female singing', 'Child singing',
-  'Synthetic singing', 'Rapping', 'Humming', 'A capella', 'Vocal music',
-]);
+    'Speech',
+    'Child speech, kid speaking',
+    'Male speech, man speaking',
+    'Female speech, woman speaking',
+    'Singing',
+    'Choir',
+    'Yodeling',
+    'Chant',
+    'Mantra',
+    'Male singing',
+    'Female singing',
+    'Child singing',
+    'Synthetic singing',
+    'Rapping',
+    'Humming',
+    'A capella',
+    'Vocal music',
+])
 const INSTRUMENT_CLASSES = new Set([
-  'Musical instrument', 'Plucked string instrument', 'Guitar',
-  'Electric guitar', 'Bass guitar', 'Acoustic guitar',
-  'Steel guitar, slide guitar', 'Banjo', 'Sitar', 'Mandolin', 'Ukulele',
-  'Keyboard (musical)', 'Piano', 'Electric piano', 'Organ',
-  'Electronic organ', 'Hammond organ', 'Synthesizer', 'Harpsichord',
-  'Percussion', 'Marimba, xylophone', 'Glockenspiel', 'Vibraphone',
-  'Steelpan', 'Orchestra', 'Brass instrument', 'French horn', 'Trumpet',
-  'Trombone', 'Bowed string instrument', 'String section', 'Violin, fiddle',
-  'Pizzicato', 'Cello', 'Double bass',
-  'Wind instrument, woodwind instrument', 'Flute', 'Saxophone', 'Clarinet',
-  'Harp', 'Harmonica', 'Accordion', 'Bagpipes', 'Didgeridoo', 'Shofar',
-  'Theremin', 'Singing bowl', 'Musical ensemble', 'Bass (instrument role)',
-]);
+    'Musical instrument',
+    'Plucked string instrument',
+    'Guitar',
+    'Electric guitar',
+    'Bass guitar',
+    'Acoustic guitar',
+    'Steel guitar, slide guitar',
+    'Banjo',
+    'Sitar',
+    'Mandolin',
+    'Ukulele',
+    'Keyboard (musical)',
+    'Piano',
+    'Electric piano',
+    'Organ',
+    'Electronic organ',
+    'Hammond organ',
+    'Synthesizer',
+    'Harpsichord',
+    'Percussion',
+    'Marimba, xylophone',
+    'Glockenspiel',
+    'Vibraphone',
+    'Steelpan',
+    'Orchestra',
+    'Brass instrument',
+    'French horn',
+    'Trumpet',
+    'Trombone',
+    'Bowed string instrument',
+    'String section',
+    'Violin, fiddle',
+    'Pizzicato',
+    'Cello',
+    'Double bass',
+    'Wind instrument, woodwind instrument',
+    'Flute',
+    'Saxophone',
+    'Clarinet',
+    'Harp',
+    'Harmonica',
+    'Accordion',
+    'Bagpipes',
+    'Didgeridoo',
+    'Shofar',
+    'Theremin',
+    'Singing bowl',
+    'Musical ensemble',
+    'Bass (instrument role)',
+])
 
 /**
  * Abstain band. Below MIN_TOP no group hypothesis rose meaningfully above the
@@ -104,16 +154,16 @@ const INSTRUMENT_CLASSES = new Set([
  * band are choral soprano stems with heavy neighbour bleed reading as
  * "Flute"/"Theremin" — off the product's input distribution.
  */
-const MIN_TOP = 0.51;
-const MIN_MARGIN = 0.005;
+const MIN_TOP = 0.51
+const MIN_MARGIN = 0.005
 
 /**
  * Classification never needs more than the lock prefix; cap the input so a
  * late-locking recording cannot make the one-off classify call expensive.
  */
-const MAX_CLASSIFY_SEC = 4;
+const MAX_CLASSIFY_SEC = 4
 
-export type SourceVerdict = 'voice' | 'instrument';
+export type SourceVerdict = 'voice' | 'instrument'
 
 /**
  * The decision rule, pure so it is testable without the model: sigmoid the
@@ -121,44 +171,44 @@ export type SourceVerdict = 'voice' | 'instrument';
  * abstain inside the band.
  */
 export function decideSource(
-  frameLogits: Float32Array,
-  frames: number,
-  numClasses: number,
-  classNames: string[],
+    frameLogits: Float32Array,
+    frames: number,
+    numClasses: number,
+    classNames: string[],
 ): SourceVerdict | undefined {
-  const mean = new Float32Array(numClasses);
-  for (let f = 0; f < frames; f += 1) {
-    for (let c = 0; c < numClasses; c += 1) {
-      mean[c] += 1 / (1 + Math.exp(-frameLogits[f * numClasses + c]));
+    const mean = new Float32Array(numClasses)
+    for (let f = 0; f < frames; f += 1) {
+        for (let c = 0; c < numClasses; c += 1) {
+            mean[c] += 1 / (1 + Math.exp(-frameLogits[f * numClasses + c]))
+        }
     }
-  }
-  let voice = 0;
-  let instrument = 0;
-  for (let c = 0; c < numClasses; c += 1) {
-    mean[c] /= frames;
-    if (VOICE_CLASSES.has(classNames[c])) voice = Math.max(voice, mean[c]);
-    if (INSTRUMENT_CLASSES.has(classNames[c])) instrument = Math.max(instrument, mean[c]);
-  }
-  if (Math.max(voice, instrument) < MIN_TOP) return undefined;
-  if (Math.abs(voice - instrument) < MIN_MARGIN) return undefined;
-  return voice > instrument ? 'voice' : 'instrument';
+    let voice = 0
+    let instrument = 0
+    for (let c = 0; c < numClasses; c += 1) {
+        mean[c] /= frames
+        if (VOICE_CLASSES.has(classNames[c])) voice = Math.max(voice, mean[c])
+        if (INSTRUMENT_CLASSES.has(classNames[c])) instrument = Math.max(instrument, mean[c])
+    }
+    if (Math.max(voice, instrument) < MIN_TOP) return undefined
+    if (Math.abs(voice - instrument) < MIN_MARGIN) return undefined
+    return voice > instrument ? 'voice' : 'instrument'
 }
 
 /** index,mid,display_name — display_name may be quoted and contain commas. */
 export function parseClassMap(csv: string): string[] {
-  return csv
-    .split('\n')
-    .slice(1)
-    .filter((l) => l.trim())
-    .map((l) => {
-      const m = l.match(/^\d+,[^,]+,"?(.*?)"?\s*$/);
-      return m ? m[1] : l;
-    });
+    return csv
+        .split('\n')
+        .slice(1)
+        .filter((l) => l.trim())
+        .map((l) => {
+            const m = l.match(/^\d+,[^,]+,"?(.*?)"?\s*$/)
+            return m ? m[1] : l
+        })
 }
 
 interface LoadedModel {
-  model: GraphModel;
-  classNames: string[];
+    model: GraphModel
+    classNames: string[]
 }
 
 /**
@@ -166,101 +216,87 @@ interface LoadedModel {
  * on first use and takes ~a second; classify() abstains until it completes,
  * which degrades to the score prior rather than blocking the profile lock.
  */
-let loading: Promise<LoadedModel | null> | null = null;
-let loaded: LoadedModel | null = null;
+let loading: Promise<LoadedModel | null> | null = null
+let loaded: LoadedModel | null = null
 
 async function loadModel(): Promise<LoadedModel | null> {
-  if (!existsSync(join(MODEL_DIR, 'model.json'))) {
-    logger.warn(`YAMNet model not found at ${MODEL_DIR} — source classification off`);
-    return null;
-  }
-  await ensureWasmBackend();
-  const modelJson = JSON.parse(
-    readFileSync(join(MODEL_DIR, 'model.json'), 'utf8'),
-  ) as io.ModelJSON;
-  const weightSpecs = modelJson.weightsManifest.flatMap((e) => e.weights);
-  const shards = modelJson.weightsManifest.flatMap((e) => e.paths);
-  const buffers = shards.map((p) => readFileSync(join(MODEL_DIR, p)));
-  const total = buffers.reduce((n, b) => n + b.byteLength, 0);
-  const weightData = new Uint8Array(total);
-  let off = 0;
-  for (const b of buffers) {
-    weightData.set(new Uint8Array(b.buffer, b.byteOffset, b.byteLength), off);
-    off += b.byteLength;
-  }
-  const model = await loadGraphModel(
-    io.fromMemory({
-      modelTopology: modelJson.modelTopology,
-      weightSpecs,
-      weightData: weightData.buffer,
-    }),
-  );
-  const classNames = parseClassMap(
-    readFileSync(join(MODEL_DIR, 'yamnet_class_map.csv'), 'utf8'),
-  );
-  logger.log('YAMNet source classifier ready');
-  return { model, classNames };
+    if (!existsSync(join(MODEL_DIR, 'model.json'))) {
+        logger.warn(`YAMNet model not found at ${MODEL_DIR} — source classification off`)
+        return null
+    }
+    await ensureWasmBackend()
+    const modelJson = JSON.parse(readFileSync(join(MODEL_DIR, 'model.json'), 'utf8')) as io.ModelJSON
+    const weightSpecs = modelJson.weightsManifest.flatMap((e) => e.weights)
+    const shards = modelJson.weightsManifest.flatMap((e) => e.paths)
+    const buffers = shards.map((p) => readFileSync(join(MODEL_DIR, p)))
+    const total = buffers.reduce((n, b) => n + b.byteLength, 0)
+    const weightData = new Uint8Array(total)
+    let off = 0
+    for (const b of buffers) {
+        weightData.set(new Uint8Array(b.buffer, b.byteOffset, b.byteLength), off)
+        off += b.byteLength
+    }
+    const model = await loadGraphModel(
+        io.fromMemory({
+            modelTopology: modelJson.modelTopology,
+            weightSpecs,
+            weightData: weightData.buffer,
+        }),
+    )
+    const classNames = parseClassMap(readFileSync(join(MODEL_DIR, 'yamnet_class_map.csv'), 'utf8'))
+    logger.log('YAMNet source classifier ready')
+    return { model, classNames }
 }
 
 export class SourceClassifier {
-  constructor() {
-    if (!CLASSIFY) return;
-    if (!loading) {
-      loading = loadModel()
-        .then((m) => (loaded = m))
-        .catch((err: unknown) => {
-          logger.warn(
-            `YAMNet load failed — source classification off: ${describeError(err)}`,
-          );
-          return null;
-        });
+    constructor() {
+        if (!CLASSIFY) return
+        if (!loading) {
+            loading = loadModel()
+                .then((m) => (loaded = m))
+                .catch((err: unknown) => {
+                    logger.warn(`YAMNet load failed — source classification off: ${describeError(err)}`)
+                    return null
+                })
+        }
     }
-  }
 
-  /** Whether classification can ever produce a verdict in this process. */
-  get enabled(): boolean {
-    return CLASSIFY;
-  }
-
-  /** Resolves once the model has loaded (or failed). For tests and warm-up. */
-  async ready(): Promise<void> {
-    await loading;
-  }
-
-  /**
-   * Verdict for a mono 16 kHz prefix, or undefined (not ready / too short /
-   * wrong rate / abstain). Synchronous by design — the resolver is synchronous,
-   * and YAMNet has no control-flow ops so `execute` runs eagerly.
-   */
-  classify(samples: Float32Array, sampleRate: number): SourceVerdict | undefined {
-    if (!CLASSIFY || !loaded) return undefined;
-    if (sampleRate !== YAMNET_SAMPLE_RATE || samples.length < MIN_SAMPLES) {
-      return undefined;
+    /** Whether classification can ever produce a verdict in this process. */
+    get enabled(): boolean {
+        return CLASSIFY
     }
-    const capped = samples.subarray(
-      0,
-      Math.min(samples.length, MAX_CLASSIFY_SEC * YAMNET_SAMPLE_RATE),
-    );
-    const input = tensor1d(capped);
-    let outputs: Tensor[] = [];
-    try {
-      const out = loaded.model.execute({ waveform: input });
-      outputs = Array.isArray(out) ? (out) : [out];
-      const scoresT = outputs.find((t) => t.shape[t.shape.length - 1] === 521);
-      if (!scoresT) return undefined;
-      const [frames, numClasses] = scoresT.shape as [number, number];
-      return decideSource(
-        scoresT.dataSync() as Float32Array,
-        frames,
-        numClasses,
-        loaded.classNames,
-      );
-    } catch (err) {
-      logger.warn(`YAMNet classify failed: ${describeError(err)}`);
-      return undefined;
-    } finally {
-      input.dispose();
-      outputs.forEach((t) => t.dispose());
+
+    /** Resolves once the model has loaded (or failed). For tests and warm-up. */
+    async ready(): Promise<void> {
+        await loading
     }
-  }
+
+    /**
+     * Verdict for a mono 16 kHz prefix, or undefined (not ready / too short /
+     * wrong rate / abstain). Synchronous by design — the resolver is synchronous,
+     * and YAMNet has no control-flow ops so `execute` runs eagerly.
+     */
+    classify(samples: Float32Array, sampleRate: number): SourceVerdict | undefined {
+        if (!CLASSIFY || !loaded) return undefined
+        if (sampleRate !== YAMNET_SAMPLE_RATE || samples.length < MIN_SAMPLES) {
+            return undefined
+        }
+        const capped = samples.subarray(0, Math.min(samples.length, MAX_CLASSIFY_SEC * YAMNET_SAMPLE_RATE))
+        const input = tensor1d(capped)
+        let outputs: Tensor[] = []
+        try {
+            const out = loaded.model.execute({ waveform: input })
+            outputs = Array.isArray(out) ? out : [out]
+            const scoresT = outputs.find((t) => t.shape[t.shape.length - 1] === 521)
+            if (!scoresT) return undefined
+            const [frames, numClasses] = scoresT.shape as [number, number]
+            return decideSource(scoresT.dataSync() as Float32Array, frames, numClasses, loaded.classNames)
+        } catch (err) {
+            logger.warn(`YAMNet classify failed: ${describeError(err)}`)
+            return undefined
+        } finally {
+            input.dispose()
+            outputs.forEach((t) => t.dispose())
+        }
+    }
 }

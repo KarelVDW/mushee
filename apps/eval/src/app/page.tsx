@@ -39,8 +39,8 @@ export default function CorporaPage() {
             {corpora.data && corpora.data.length === 0 && (
                 <Card>
                     <p className="font-body text-[14px] text-on-surface-variant m-0">
-                        No UI-created corpora yet. The script-fetched corpora still live in the fixtures tree — this list holds the
-                        ones you create and record here.
+                        No UI-created corpora yet. The script-fetched corpora still live in the fixtures tree — this list holds the ones you
+                        create and record here.
                     </p>
                 </Card>
             )}
@@ -51,7 +51,9 @@ export default function CorporaPage() {
                         <thead>
                             <tr className="text-left">
                                 {['Corpus', 'Kind', 'Tier', 'BPM', 'Clips', 'Created'].map((h) => (
-                                    <th key={h} className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
+                                    <th
+                                        key={h}
+                                        className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
                                         {h}
                                     </th>
                                 ))}
@@ -72,8 +74,12 @@ export default function CorporaPage() {
                                         </Link>
                                         <span className="block font-mono text-[11px] text-on-surface-variant">{corpus.id}</span>
                                     </td>
-                                    <td className="px-5 py-3"><Chip>{corpus.kind}</Chip></td>
-                                    <td className="px-5 py-3"><Chip active={corpus.tier === 'benchmark'}>{corpus.tier}</Chip></td>
+                                    <td className="px-5 py-3">
+                                        <Chip>{corpus.kind}</Chip>
+                                    </td>
+                                    <td className="px-5 py-3">
+                                        <Chip active={corpus.tier === 'benchmark'}>{corpus.tier}</Chip>
+                                    </td>
                                     <td className="px-5 py-3 font-mono text-[13px] text-on-surface">{corpus.bpm}</td>
                                     <td className="px-5 py-3 font-mono text-[13px] text-on-surface">
                                         {corpus.recordedCount}/{corpus.clipCount}
@@ -119,7 +125,10 @@ function LatestRun({ runs }: { runs?: RunDto[] }) {
                             {!s.pooled && <span className="text-outline"> †</span>}
                         </span>
                         <div className="h-4 flex items-center">
-                            <div className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5" style={{ width: `${Math.max(1, (s.f1 / max) * 100)}%` }} />
+                            <div
+                                className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5"
+                                style={{ width: `${Math.max(1, (s.f1 / max) * 100)}%` }}
+                            />
                         </div>
                         <span className="font-mono text-[13px] leading-none text-on-surface-variant text-right">{s.f1.toFixed(2)}</span>
                     </div>
