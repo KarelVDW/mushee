@@ -3,8 +3,12 @@
 Working document for marketing. Grounded in what the product actually does today:
 a browser-based sheet-music editor whose differentiator is **live audio-to-notation**
 (play or sing → notation appears, then fix it with keystrokes and hear it back),
-with autosave, mobile support, and pricing of Free "Sketch" (30 s recording/day),
-Composer $8/mo (10 min/day), Studio $18/mo (unlimited).
+with autosave, mobile support, MusicXML/MIDI import and MusicXML/PDF/MIDI export,
+and — since the 2026-07 pricing relaunch — Free "Sketch" (3 min recording/day, 5
+scores), Songwriter $9/mo (20 min/day), Studio $19/mo (3 h/day), Arranger $49/mo
+(8 h/day), plus non-expiring minute packs ($6 / $15 / $39). Tier names below were
+updated accordingly (Composer → Songwriter); the budget figures in the prose are
+the relaunch ones.
 
 The strategic thread across all three ICPs: **people for whom notation is a
 bottleneck between "music in my head/hands" and "music on paper someone else can
@@ -27,7 +31,7 @@ ideas out of their head into a shareable, editable form before the idea dies.
   strong ears
 - **Geography:** US/UK/EU/LATAM, English-content consumers
 - **Budget mindset:** pays for Spotify and maybe one plugin/app subscription;
-  $8/mo is an easy yes _if_ the tool is used weekly
+  $9/mo is an easy yes _if_ the tool is used weekly
 
 ### Jobs to be done
 
@@ -57,8 +61,8 @@ ideas out of their head into a shareable, editable form before the idea dies.
 - Hum/play → notation is the whole pitch; the editor is the safety net for the
   transcription's mistakes, not a separate skill to learn.
 - Browser + phone: works where the idea happens.
-- Free tier's 30 s/day is exactly one idea — perfect wedge, natural upgrade
-  pressure for "daily writers" (Composer's literal tagline).
+- Free tier's 3 min/day is a handful of ideas — a real wedge, natural upgrade
+  pressure for "daily writers" (Songwriter's literal tagline).
 
 ### Objections / risks
 
@@ -74,7 +78,7 @@ ideas out of their head into a shareable, editable form before the idea dies.
   niche B); short-form "hum → sheet music in 20 seconds" demos.
 - r/Songwriting, r/WeAreTheMusicMakers, worship-leader communities.
 
-**Tier mapping:** Free → Composer. Studio only for heavy co-writers/arrangers.
+**Tier mapping:** Free → Songwriter. Studio only for heavy co-writers/arrangers.
 
 ---
 
@@ -122,7 +126,7 @@ note entry takes longer than the musical thinking.
 - Play-in entry is _faster than typing_ for people who already play fluently —
   this crowd feels that speed difference most.
 - Zero install on school Chromebooks/lab machines; autosave means no lost homework.
-- 30 s/day free is a real trial; 10 min/day at $8 covers a homework session.
+- 3 min/day free is a real trial; 20 min/day at $9 covers a homework session.
 
 ### Objections / risks
 
@@ -137,7 +141,7 @@ note entry takes longer than the musical thinking.
   niche A) — sponsorships and "I transcribed X by playing it" formats.
 - r/musictheory, r/piano, r/Jazz; college music-department Discords.
 
-**Tier mapping:** Free (light users) → Composer. Volume opportunity later:
+**Tier mapping:** Free (light users) → Songwriter. Volume opportunity later:
 school/site licences — but that's a different motion, don't build for it yet.
 
 ---
@@ -156,7 +160,7 @@ adopts.
 - **Musical profile:** conservatory-trained or long-time professional; notation
   fluent, time poor
 - **Budget mindset:** already pays for business tools (My Music Staff, Tonara,
-  Zoom); $8–18/mo is a business expense, not a hobby purchase. Lowest churn of the
+  Zoom); $9–19/mo is a business expense, not a hobby purchase. Lowest churn of the
   three ICPs.
 
 ### Jobs to be done
@@ -206,7 +210,7 @@ adopts.
 - Music-teacher pedagogy channels, podcasts, and communities (see INFLUENCERS.md,
   niche C); teacher Facebook groups; MTNA/ISM-style associations later.
 
-**Tier mapping:** Composer → Studio (unlimited recording fits lesson-length use).
+**Tier mapping:** Songwriter → Studio (3 h/day fits a full teaching day).
 Highest LTV of the three.
 
 ---
@@ -231,4 +235,4 @@ Highest LTV of the three.
   conversion markets to students automatically. Start with private studio teachers;
   defer school/classroom (procurement + child-privacy requirements).
 
-_Last updated: 2026-07-11. Companion doc: [INFLUENCERS.md](./INFLUENCERS.md)._
+_Last updated: 2026-09-05 (pricing/tier names refreshed). Companion docs: [INFLUENCERS.md](./INFLUENCERS.md), [LAUNCH-KIT.md](./LAUNCH-KIT.md)._
