@@ -298,7 +298,9 @@ export class Measure {
      * if context changes) but not drawn or serialized.
      */
     get midMeasureKeySignatures(): KeySignature[] {
-        return this._keyList.midMeasureChanges((active, key) => active.fifths !== key.fifths)
+        // Mode counts: a mode-only change (C major → A minor, same fifths) carries forward via `lastKey`,
+        // so it must be serialized too or the next bar's inherited key would not survive a reload.
+        return this._keyList.midMeasureChanges((active, key) => active.fifths !== key.fifths || active.mode !== key.mode)
     }
 
     /** Whether the leading key signature is an intentional change (a carry-forward boundary). */
@@ -323,7 +325,8 @@ export class Measure {
      */
     setKeySignature(beatPosition: number, fifths: number, mode?: string) {
         this._keySignatures = this._keySignatures.filter((k) => k.beatPosition !== beatPosition)
-        if (beatPosition > 0 && this.keyBefore(beatPosition).fifths === fifths) {
+        const before = beatPosition > 0 ? this.keyBefore(beatPosition) : undefined
+        if (before && before.fifths === fifths && before.mode === mode) {
             // Redundant mid-measure change — leave the position governed by the preceding key.
         } else {
             this._keySignatures.push(new KeySignature(this, beatPosition, fifths, mode))

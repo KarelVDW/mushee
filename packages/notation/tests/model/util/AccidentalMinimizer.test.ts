@@ -131,7 +131,7 @@ describe('AccidentalMinimizer', () => {
 
     it('a tie whose notes do not sound alike does not force the spelling', () => {
         const score = makeScore(1)
-        const m = fill(score, 0, [q(p('C', 4), 'start'), q(p('D', 4)), q(), q()])
+        fill(score, 0, [q(p('C', 4), 'start'), q(p('D', 4)), q(), q()])
         const result = minimize(score)
         expect(result.respelled.size).toBe(0)
         expect(result.drawnCount).toBe(0)

@@ -356,6 +356,45 @@ describe('instrument serialization round-trip', () => {
         expect(restored.instrument).toBe(Instrument.Piano)
     })
 
+    it('keeps an instrument that shares its General MIDI program with another', () => {
+        // Bass clarinet, clarinet and alto clarinet all sit on GM program 72 with different transpositions;
+        // French horn and horn in C on 61. The stored name, not the program, must decide on reload.
+        for (const instrument of [Instrument.BassClarinet, Instrument.AltoClarinet, Instrument.FrenchHorn, Instrument.Violoncello]) {
+            const score = makeScore(1)
+            score.setInstrument(instrument)
+            expect(roundTrip(score).instrument).toBe(instrument)
+        }
+    })
+
+    it('falls back to the midi program for a part whose name is not one of ours', () => {
+        const score = makeScore(1)
+        score.setInstrument(Instrument.Trumpet)
+        const input = toInput(score)
+        input.partList.scoreParts[0].partName = 'Tromba in B♭'
+        input.partList.scoreParts[0].scoreInstrument = { id: 'P1-I1', instrumentName: 'Tromba in B♭' }
+        expect(new ScoreDeserializer(input).toScore().instrument).toBe(Instrument.Trumpet)
+    })
+
+    it('falls back to Piano for an unknown instrument name without a midi program', () => {
+        const score = makeScore(1)
+        const input = toInput(score)
+        delete input.partList.scoreParts[0].midiInstrument
+        input.partList.scoreParts[0].partName = 'Kazoo'
+        input.partList.scoreParts[0].scoreInstrument = { id: 'P1-I1', instrumentName: 'Kazoo' }
+        expect(new ScoreDeserializer(input).toScore().instrument).toBe(Instrument.Piano)
+    })
+
+    it('round-trips a mode-only key change (relative minor) and the bar that inherits it', () => {
+        const score = makeScore(2)
+        const first = score.measures[0]
+        first.addKeySignature(first.beatOffsetOf(first.notes[2]), 0, 'minor')
+        score.addMeasure() // inherits A minor from the change above
+        expect(score.measures[1].keySignature.mode).toBe('minor')
+        const restored = roundTrip(score)
+        expect(restored.measures[0].midMeasureKeySignatures.map((k) => [k.beatPosition, k.fifths, k.mode])).toEqual([[2, 0, 'minor']])
+        expect(restored.measures.map((m) => m.keySignature.mode)).toEqual([undefined, 'minor', 'minor'])
+    })
+
     it('resolves the instrument by partName when scoreInstrument is absent', () => {
         const score = makeScore(1)
         const input = toInput(score)

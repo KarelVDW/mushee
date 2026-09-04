@@ -66,8 +66,13 @@ export class Instrument {
 
     /** Resolve by display name, case-insensitive. Falls back to Piano. */
     static byDisplayName(name: string): Instrument {
+        return Instrument.findByDisplayName(name) ?? Instrument.Piano
+    }
+
+    /** Resolve by display name, case-insensitive; undefined when no instrument carries that name. */
+    static findByDisplayName(name: string): Instrument | undefined {
         const lower = name.trim().toLowerCase()
-        return Instrument._all.find((i) => i.displayName.toLowerCase() === lower) ?? Instrument.Piano
+        return Instrument._all.find((i) => i.displayName.toLowerCase() === lower)
     }
 
     /** Default; also used as the fallback for unknown ids. */
