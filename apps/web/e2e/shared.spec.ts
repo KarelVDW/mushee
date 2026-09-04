@@ -19,7 +19,7 @@ test('a valid share link renders the score read-only with its title, export and 
     await expect(page.getByRole('group', { name: 'Note duration' })).toHaveCount(0)
 
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Open library|Start free/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Library|Start free/ })).toBeVisible()
 
     // Signed in (the mock session): the score can be saved as an editable copy of one's own.
     await page.getByRole('button', { name: 'Save a copy' }).click()

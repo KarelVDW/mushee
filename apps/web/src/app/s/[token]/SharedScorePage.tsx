@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import { Footer, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
+import { Footer, IconButton, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
@@ -67,9 +67,7 @@ export function SharedScorePage({ token }: { token: string }) {
                     <Link href="/" className="no-underline shrink-0" aria-label="Solkey home">
                         <Wordmark size={24} />
                     </Link>
-                    <h1 className="font-headline font-semibold text-[16px] sm:text-[18px] leading-none tracking-[-0.01em] text-on-surface m-0 truncate flex-1 min-w-0">
-                        {shared.data?.title ?? (notFound ? 'Shared score' : '')}
-                    </h1>
+                    <span className="flex-1" />
                     {score && shared.data && (
                         <ExportMenu
                             score={score}
@@ -79,15 +77,27 @@ export function SharedScorePage({ token }: { token: string }) {
                         />
                     )}
                     {authed && score && (
-                        <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
+                        <>
+                            <span className="max-sm:hidden">
+                                <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
+                            </span>
+                            <span className="sm:hidden">
+                                <IconButton icon="copy" ariaLabel="Save a copy" onClick={saveCopy} />
+                            </span>
+                        </>
                     )}
                     <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
-                        {authed ? 'Open library' : 'Start free'}
+                        {authed ? 'Library' : 'Start free'}
                     </PrimaryButton>
                 </div>
             </header>
 
             <main className="flex-1 w-full max-w-320 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
+                {(shared.data || notFound) && (
+                    <h1 className="font-display font-bold text-[26px] sm:text-[34px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0 w-full max-w-240 mx-auto">
+                        {shared.data?.title ?? 'Shared score'}
+                    </h1>
+                )}
                 {shared.isPending && <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />}
                 {shared.isError && (
                     <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
