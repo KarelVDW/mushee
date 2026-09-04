@@ -147,8 +147,8 @@ export function topKCandidates(
 ): { cents: Float32Array; strength: Float32Array } {
     const cents = new Float32Array(frames * k)
     const strength = new Float32Array(frames * k)
-    const topBin: number[] = new Array(k)
-    const topVal: number[] = new Array(k)
+    const topBin = new Array<number>(k)
+    const topVal = new Array<number>(k)
     for (let t = 0; t < frames; t += 1) {
         const off = t * numBins
         let count = 0

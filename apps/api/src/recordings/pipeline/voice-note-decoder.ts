@@ -600,11 +600,11 @@ export class VoiceNoteDecoder {
         const minFrames = Math.max(1, Math.round(this.o.minNoteSec / track.hopSec))
         // Joint duration × velocity filters (WaoN): both are anchored to the clip's
         // own median voiced energy, so "quiet" adapts to the take's level.
-        const energyRef =
-            this.o.keepShortLoudRatio !== undefined || this.o.dropLongQuiet ? medianVoicedEnergy(voiced, frames, energy) : null
+        const loudRatio = this.o.keepShortLoudRatio
+        const energyRef = loudRatio !== undefined || this.o.dropLongQuiet ? medianVoicedEnergy(voiced, frames, energy) : null
         const keepShortLoud =
-            this.o.keepShortLoudRatio !== undefined && energyRef !== null && energy
-                ? (run: Run): boolean => peakOver(energy, run) >= this.o.keepShortLoudRatio! * energyRef
+            loudRatio !== undefined && energyRef !== null && energy
+                ? (run: Run): boolean => peakOver(energy, run) >= loudRatio * energyRef
                 : undefined
         const longQuiet =
             this.o.dropLongQuiet && energyRef !== null && energy

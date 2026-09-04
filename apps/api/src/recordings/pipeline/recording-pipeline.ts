@@ -450,11 +450,13 @@ export class RecordingPipeline {
     }
 
     /** Install `profile` (and a converter for its provider) as the session's routing. */
-    private lockProfile(profile: PipelineProfile): void {
+    /** Commit to `profile`: build its converter (returned, so callers need not re-read the nullable field). */
+    private lockProfile(profile: PipelineProfile): AudioConverter {
         this.profile = profile
-        this.converter = new AudioConverter(this.registry.get(profile.providerName), {
+        const converter = new AudioConverter(this.registry.get(profile.providerName), {
             profile,
         })
+        this.converter = converter
         this.logger.log(
             `Adaptive profile locked: ${profile.id} provider=${profile.providerName} ` +
                 `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
@@ -474,6 +476,7 @@ export class RecordingPipeline {
             source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
             decidedBy: profile.sourceDecidedBy ?? 'prior',
         })
+        return converter
     }
 
     private spawnDecoder(profile: PipelineProfile, sampleRate: number, loudnorm: boolean): StreamingDecoder {
@@ -525,8 +528,7 @@ export class RecordingPipeline {
         )
         // Let the old ffmpeg drain and exit; its PCM is not needed any more.
         void this.streamDecoder.finalize().catch(() => undefined)
-        this.lockProfile(profile)
-        const provider = this.converter!.provider
+        const provider = this.lockProfile(profile).provider
         this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
         this.emittedNotes.length = 0
         this.emittedKeys.clear()

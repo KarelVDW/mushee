@@ -84,16 +84,17 @@ export class PitchTrack {
         const voiced = this.voicedMask(opts)
         const cents = this.cents.slice()
         const confidence = this.confidence.slice()
-        const energy = opts.energy && opts.energyFloorRatio !== undefined && opts.energy.length >= this.frames ? opts.energy : undefined
+        const floorRatio = opts.energyFloorRatio
+        const energy = opts.energy && floorRatio !== undefined && opts.energy.length >= this.frames ? opts.energy : undefined
         const ctx = Math.max(0, opts.energyContextFrames ?? 0)
         const sustained = (from: number, to: number): boolean => {
-            if (!energy) return true
+            if (!energy || floorRatio === undefined) return true
             let ref = 0
             for (let j = Math.max(0, from - 1 - ctx); j <= Math.min(this.frames - 1, to + ctx); j += 1) {
                 if (j >= from && j < to) continue
                 if (energy[j] > ref) ref = energy[j]
             }
-            const floor = opts.energyFloorRatio! * ref
+            const floor = floorRatio * ref
             for (let j = from; j < to; j += 1) if (energy[j] < floor) return false
             return true
         }
