@@ -95,3 +95,21 @@ Each entry: **what** → **why it matters** → **verification**.
   Songwriter, so grandfathering beta users means they never need to pay).
   Checklist rows updated for the CAPTCHA, data export and the error-tracking
   state (web half exists, API half doesn't).
+
+## 6. Inference outage: user signal + credits stop burning (launch-day risk)
+
+- **What:** `RecordingPipeline.setOnHealth` fires on the first failed
+  transcription pass and on the next success; `RecordingSession` pauses the
+  credit meter while degraded and settles the waived wall-clock/audio time so
+  the catch-up never bills it retroactively (hard caps still count raw time);
+  the gateway sends a `recording-health {ok}` frame (no internal error text
+  crosses the wire); the web engine forwards it and the recorder toasts
+  "Transcription is unavailable… not charging for this time" / "back".
+- **Why:** both runbooks named this the known product gap: an inference
+  outage looked like "I sang it wrong" and burned the daily budget for
+  nothing; the launch runbook asked for this before any launch traffic.
+- **Verification:** 3 new API session tests with fake timers (per-second
+  billing, pause/resume without retro-billing, single client notification,
+  post-close reports ignored), 1 web engine test; api+web type-check/lint
+  clean. Follow-up idea: a persistent banner instead of a toast for long
+  outages.

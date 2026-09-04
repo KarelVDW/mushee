@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common'
 import { Repository } from 'typeorm'
 
 import { Recording } from './entities/recording.entity'
-import type { RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
+import type { PipelineHealth, RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
 import type { RecordingArchiver } from './recording-archiver'
 import type { RecordingCreditBalance } from './recording-credits.service'
 import { RecordingCreditsService } from './recording-credits.service'
@@ -20,6 +20,13 @@ export interface RecordingSessionEvents {
      * user as live feedback so a mis-classified take is visible, not silent.
      */
     onSourceResolved?(resolution: SourceResolution): void
+    /**
+     * Fired when transcription stops getting through (inference unreachable) and
+     * again when it recovers. While it is down the session keeps archiving audio
+     * but stops metering credits — the user is told, and not charged, for time
+     * that produces no notes.
+     */
+    onHealth?(health: PipelineHealth): void
 }
 
 export type SessionCapReason = 'max-duration' | 'max-bytes'
@@ -52,6 +59,10 @@ export class RecordingSession {
     private closed = false
     private bytesReceived = 0
     private meterStartedAt = 0
+    /** Set while transcription is failing: wall-clock and decoded-audio marks at the moment it went down. */
+    private degradedSince: { wallMs: number; audioSec: number } | null = null
+    /** Time already waived because transcription was down — never billed, even retroactively. */
+    private waived = { wallMs: 0, audioSec: 0 }
 
     constructor(
         readonly userId: string,
@@ -67,6 +78,27 @@ export class RecordingSession {
     ) {
         this.pipeline.setOnUpdate((update) => this.events.onUpdate(update))
         this.pipeline.setOnSourceResolved((resolution) => this.events.onSourceResolved?.(resolution))
+        this.pipeline.setOnHealth((health) => this.onHealth(health))
+    }
+
+    /** Whether transcription is currently failing (credits are not metered meanwhile). */
+    get degraded(): boolean {
+        return this.degradedSince !== null
+    }
+
+    private onHealth(health: PipelineHealth): void {
+        if (this.closed) return
+        if (!health.ok && !this.degradedSince) {
+            this.degradedSince = { wallMs: Date.now(), audioSec: this.pipeline.audioDurationSec }
+            this.logger.warn(`Transcription down for user ${this.userId} — metering paused (${health.message})`)
+            this.events.onHealth?.(health)
+        } else if (health.ok && this.degradedSince) {
+            this.waived.wallMs += Date.now() - this.degradedSince.wallMs
+            this.waived.audioSec += Math.max(0, this.pipeline.audioDurationSec - this.degradedSince.audioSec)
+            this.degradedSince = null
+            this.logger.log(`Transcription back for user ${this.userId} — metering resumed (${Math.round(this.waived.wallMs / 1000)}s waived so far)`)
+            this.events.onHealth?.(health)
+        }
     }
 
     async open(): Promise<void> {
@@ -149,13 +181,21 @@ export class RecordingSession {
         // actually decoded. Wall-clock alone lets a scripted client stream audio
         // faster than real time and pay a fraction of it; audio alone would make
         // a stalled decode free. The max of both is server-authoritative.
-        const wallSec = Math.ceil((Date.now() - this.meterStartedAt) / 1000) || 1
-        const audioSec = Math.ceil(this.pipeline.audioDurationSec)
-        const targetSpend = Math.max(wallSec, audioSec, this.creditsSpent + 1)
-        if (Math.max(wallSec, audioSec) > MAX_SESSION_SECONDS) {
+        const elapsedMs = Date.now() - this.meterStartedAt
+        const rawAudioSec = this.pipeline.audioDurationSec
+        // The hard caps protect the process, so they count everything — waived or not.
+        if (Math.max(Math.ceil(elapsedMs / 1000), Math.ceil(rawAudioSec)) > MAX_SESSION_SECONDS) {
             this.cap('max-duration')
             return
         }
+        // No notes can come out while transcription is down: leave the meter alone.
+        // The pause is settled into `waived` on recovery so the catch-up below never
+        // bills that stretch after the fact.
+        if (this.degradedSince) return
+
+        const wallSec = Math.ceil((elapsedMs - this.waived.wallMs) / 1000) || 1
+        const audioSec = Math.ceil(rawAudioSec - this.waived.audioSec)
+        const targetSpend = Math.max(wallSec, audioSec, this.creditsSpent + 1)
 
         const toSpend = targetSpend - this.creditsSpent
         let balance: RecordingCreditBalance

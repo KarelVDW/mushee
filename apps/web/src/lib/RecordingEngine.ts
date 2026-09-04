@@ -146,6 +146,13 @@ export interface RecordingOptions {
      * Arrives once per take, ~1.2 s in, when the server locks its profile.
      */
     onSourceResolved?: (resolution: { source: 'voice' | 'instrument'; decidedBy: 'explicit' | 'classifier' | 'prior' }) => void
+    /**
+     * Transcription health from the server: `ok: false` when its inference
+     * backend stops answering (audio is still archived, credits are not metered
+     * meanwhile), `ok: true` when it recovers. Surface it — a take that shows
+     * waveform bars but never notes must not look like the user's fault.
+     */
+    onHealth?: (health: { ok: boolean }) => void
 }
 
 /**
@@ -546,6 +553,7 @@ export class RecordingEngine implements Tickable {
                 usedSeconds?: number
                 source?: 'voice' | 'instrument'
                 decidedBy?: 'explicit' | 'classifier' | 'prior'
+                ok?: boolean
             }
             if (payload.type === 'score-update' && payload.measures) {
                 // Via the captured opts, not this.options: stop() nulls the
@@ -571,6 +579,8 @@ export class RecordingEngine implements Tickable {
                     source: payload.source,
                     decidedBy: payload.decidedBy ?? 'prior',
                 })
+            } else if (payload.type === 'recording-health' && typeof payload.ok === 'boolean') {
+                this.options?.onHealth?.({ ok: payload.ok })
             }
         })
     }

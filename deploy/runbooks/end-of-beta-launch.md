@@ -120,12 +120,11 @@ the web client too, so the gate drops even before the web rebuild.
 - Cloud SQL `db-custom-1-3840` is the most likely first bottleneck under
   real load; the resize is a 2-minute restart (Runbook 4 §7) — decide the
   threshold (CPU > 70% sustained in Cloud SQL monitoring) _before_ the day.
-- Keep an eye on the known product gap: an inference outage silently burns
-  users' credits with no notes appearing (Runbook 3 §3, last rows). Under
-  launch load, inference HPA lag looks exactly like that for a minute or
-  two. If launch traffic is a real possibility, fix the user-facing error
-  signal first — it converts "Solkey is broken" tweets into "it told me to
-  retry".
+- The old product gap — an inference outage silently burning credits with
+  no notes appearing — is closed since 2026-09-05: the recorder shows a
+  toast and the session stops metering until transcription is back (Runbook
+  3 §3). Under launch load, inference HPA lag will trigger that signal for
+  a minute or two; that is the signal working, not a new incident.
 - Have the two rollback levers ready in a terminal: previous-SHA redeploy
   (Runbook 3 §2) and Vercel instant rollback. Nothing about launch changes
   them; the point is not looking them up mid-incident.

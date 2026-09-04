@@ -92,6 +92,9 @@ export interface ScoreUpdate {
  * hearing — a mis-routed take is invisible otherwise, and the user is the one
  * person who knows the truth.
  */
+/** Transcription health: `ok: false` after a failed pass (with the internal error for the log), `ok: true` once a pass succeeds again. */
+export type PipelineHealth = { ok: true } | { ok: false; message: string }
+
 export interface SourceResolution {
     source: 'voice' | 'instrument'
     decidedBy: 'explicit' | 'classifier' | 'prior'
@@ -176,6 +179,8 @@ export class RecordingPipeline {
     private debounceTimer: NodeJS.Timeout | null = null
     private onUpdate: (update: ScoreUpdate) => void = () => {}
     private onSourceResolved: (resolution: SourceResolution) => void = () => {}
+    private onHealth: (health: PipelineHealth) => void = () => {}
+    private consecutiveFailures = 0
 
     // Resolved once, from the first ~1.2 s of audio (or on finalize), then locked
     // for the session: which provider runs and with what frequency window /
@@ -240,6 +245,18 @@ export class RecordingPipeline {
         this.onSourceResolved = cb
     }
 
+    /**
+     * Whether transcription passes are getting through. Fired on the transition
+     * into failure (first failed pass — typically the inference service being
+     * unreachable, surfacing as a gRPC deadline/UNAVAILABLE) and on recovery
+     * (the next pass that succeeds). Lets the session stop billing and the user
+     * see why no notes appear, instead of an audio take that silently burns
+     * credits against a dead model.
+     */
+    setOnHealth(cb: (health: PipelineHealth) => void): void {
+        this.onHealth = cb
+    }
+
     setArchiver(archiver: RecordingArchiver): void {
         this.archiver = archiver
     }
@@ -300,11 +317,18 @@ export class RecordingPipeline {
                 const start = Date.now()
                 try {
                     await this.process(isFinal)
+                    if (this.consecutiveFailures > 0) {
+                        this.logger.log(`Transcription recovered after ${this.consecutiveFailures} failed pass(es)`)
+                        this.consecutiveFailures = 0
+                        this.onHealth({ ok: true })
+                    }
                 } catch (err) {
                     this.logger.warn(`Process pass failed: ${describeError(err)}`)
                     if (err instanceof Error && err.stack) {
                         this.logger.warn(err.stack)
                     }
+                    this.consecutiveFailures += 1
+                    if (this.consecutiveFailures === 1) this.onHealth({ ok: false, message: describeError(err) })
                 }
                 const elapsed = Date.now() - start
                 this.timings.processCount += 1

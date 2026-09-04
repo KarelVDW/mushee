@@ -434,6 +434,23 @@ describe('RecordingEngine', () => {
         expect(onScoreUpdate).not.toHaveBeenCalled()
     })
 
+    it('forwards recording-health messages to onHealth, and only well-formed ones', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const onHealth = vi.fn()
+        const { options } = makeOptions()
+        await engine.start({ ...options, onHealth })
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-health', ok: false }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-health', ok: true }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-health' }) }) // no state: ignored
+        expect(onHealth.mock.calls).toEqual([[{ ok: false }], [{ ok: true }]])
+    })
+
     it('forwards recording-limit messages to onLimitReached with the budget info', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)

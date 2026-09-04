@@ -264,6 +264,12 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
                 // rather than a silently mangled transcription.
                 client.send(JSON.stringify({ type: 'recording-source', ...resolution }))
             },
+            onHealth: (health) => {
+                if (client.readyState !== client.OPEN) return
+                // Transcription down/back. Only the state crosses the wire — the
+                // internal error text stays in the server log.
+                client.send(JSON.stringify({ type: 'recording-health', ok: health.ok }))
+            },
         })
         if (!session) {
             this.reject(client, 'concurrent-recording')
