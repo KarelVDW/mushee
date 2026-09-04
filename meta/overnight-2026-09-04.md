@@ -113,3 +113,66 @@ Each entry: **what** → **why it matters** → **verification**.
   post-close reports ignored), 1 web engine test; api+web type-check/lint
   clean. Follow-up idea: a persistent banner instead of a toast for long
   outages.
+
+## 7. API error tracking (runbook pre-flight item)
+
+- **What:** `apps/api/src/telemetry/` — `ErrorReporter` seam (no-op unless
+  `POSTHOG_API_KEY`), PostHog-backed implementation via `posthog-node`
+  `captureException`, global `ReportExceptionsFilter` (unknown errors + 5xx →
+  tracker with method/path/status/user/request id, then Nest's default
+  response), `uncaughtExceptionMonitor` crash hook that keeps fail-fast exit.
+  Env docs, production secret list, runbook updated.
+- **Why:** the web half existed (`capture_exceptions`), the API half didn't;
+  the launch runbook lists it as pre-flight. Same PostHog project → one place
+  for both halves of an incident. New dependency: `posthog-node`.
+- **Remaining for Karel:** `POSTHOG_API_KEY` in `Secret/api-secrets`, enable
+  Error tracking in the PostHog project.
+- **Verification:** 9 unit tests; API suite 236/236; type-check/lint clean.
+
+## 8. API image hygiene + slimming (DevOps / security)
+
+- **Found:** the production API image shipped the developer's
+  `apps/api/.env.development` (real dev keys), the local `storage/` dir
+  (14 MB of dev recordings and scores), `src/`, `test/`, `scripts/` — the
+  Dockerfile copies `apps/api` wholesale and `.dockerignore` didn't cover
+  them. It also carried the whole workspace's dependency store: Next.js +
+  two SWC binaries (~370 MB), vitest, happy-dom, mongodb, TypeScript, the
+  Nest CLI. Root cause for the web packages: better-auth declares `next`,
+  `vitest`, `react`, `mongodb` as *optional* peers and pnpm's
+  auto-install-peers resolved them from the workspace into the API's
+  production graph (`pnpm why --prod next` showed it).
+- **Fixed:** `.dockerignore` excludes `**/.env*` (keeps `.env.example`),
+  `apps/api/{storage,test,scripts,coverage}`, test artifacts. Root
+  `pnpm.overrides` remove the optional peer edges (`better-auth>next: "-"`,
+  `better-auth>vitest`, `*>mongodb`) — lockfile −73 lines, web unaffected
+  (it depends on next directly; react/react-dom peers left alone because
+  `better-auth/react` needs them). Dockerfile assembles the runtime tree with
+  `pnpm deploy --prod` into `/app` (API files + prod deps only, workspace
+  proto package copied in). `pnpm prune --prod` was tried first and emptied
+  the API's node_modules on a filtered install — documented in the Dockerfile.
+- **Verification:** image boots (reaches the DB retry with a proper
+  message), modules/proto resolve, no `.env`/storage/next in the image; all
+  suites green after the lockfile change (api 236, web 266, notation 1338).
+  Size: **1.38 GB → 793 MB** (−43%); local tag `mushee/api:slim` left for inspection.
+
+## 9. Opt-in Spot capacity for inference (cost lever)
+
+- `deploy/k8s/components/spot-inference/` — kustomize Component putting the
+  CREPE pods on GKE Spot (nodeSelector + toleration + 25 s grace). Not
+  enabled: with the 1-replica production floor a preemption is a 1–3 min
+  transcription blip (now user-visible and unbilled thanks to §6); the
+  README explains the trade-off and suggests a floor of 2 when enabling.
+  Rendered through `kubectl kustomize` against the production overlay.
+
+## 10. N-session recording load test (master-todo #13)
+
+- `apps/api/scripts/load-test-recording.ts` (`pnpm --filter @mushee/api
+  load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
+  `CREPE_INFERENCE_URL`). Real-time-paced fixture streaming, per-session
+  first-notes latency, pass p50/p95/max, finalize time; process peak RSS and
+  event-loop lag; JSON summary + verdict against the 1 s pass cadence.
+  `RecordingPipeline.stats` exposes the timings.
+- Local, in-process, 2 sessions: first notes ~3.4 s, pass p50 ~315 ms,
+  p95 365 ms, peak RSS 359 MB, loop lag 478 ms (WASM inference blocks the
+  loop — production is remote; size pods from a remote-mode run against the
+  inference service).

@@ -1,5 +1,18 @@
-# Keep build contexts small and reproducible.
+# Keep build contexts small and reproducible — and keep local-only files out of
+# the images: the API stage copies apps/api wholesale, so anything not listed
+# here ends up in the production container.
 **/node_modules
+# Local environment files carry real keys (SendGrid, Polar sandbox, admin
+# secret); only the documented example may ship.
+**/.env*
+!**/.env.example
+# Local blob storage (dev recordings + scores) and test/dev-only trees.
+apps/api/storage
+apps/api/test
+apps/api/scripts
+apps/api/coverage
+**/test-results
+**/playwright-report
 **/.venv*
 **/dist
 **/*.tsbuildinfo

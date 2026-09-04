@@ -94,6 +94,19 @@ kubectl create secret generic api-secrets -n mushee \
 #   POLAR_PRODUCT_PACK_{SINGLE,EP,ALBUM}
 ```
 
+## Cost levers
+
+The overlay already runs one always-on replica per service and relaxes the
+PDBs (see its kustomization). Two further, opt-in levers live in
+`deploy/k8s/components/`:
+
+- **`spot-inference`** — schedules the CREPE inference pods on Spot capacity
+  (60–90% cheaper). Preemptions become short, user-visible transcription
+  blips (the recorder shows a notice and stops metering credits meanwhile).
+  Enable with `components: [../../components/spot-inference]` in this
+  overlay; consider a floor of two inference replicas alongside it.
+- Scaling the staging overlay to zero when idle (staging README).
+
 ## Admin console (admin.solkey.io)
 
 The standalone console (`apps/admin`) deploys as its own Vercel project — it
