@@ -18,6 +18,7 @@ import { ScoresModule } from './scores/scores.module'
 import { SettingsModule } from './settings/settings.module'
 import { StorageModule } from './storage/storage.module'
 import { SubscriptionsModule } from './subscriptions/subscriptions.module'
+import { TelemetryModule } from './telemetry/telemetry.module'
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module'
             // serializes concurrent replicas — not TypeORM's lockless migrationsRun.
         }),
         ScheduleModule.forRoot(),
+        TelemetryModule,
         MailModule,
         AuthModule,
         AccountModule,

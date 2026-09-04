@@ -79,7 +79,10 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
   --from-literal=ADMIN_EMAILS='info@solkey.io' \
   --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)" \
-  --from-literal=TURNSTILE_SECRET_KEY='<cloudflare turnstile secret>'
+  --from-literal=TURNSTILE_SECRET_KEY='<cloudflare turnstile secret>' \
+  --from-literal=POSTHOG_API_KEY='<posthog project key>'
+# POSTHOG_API_KEY turns on server-side error tracking (unexpected 5xx and
+# crashes land in the PostHog project's Error tracking, next to the web's).
 # TURNSTILE_SECRET_KEY gates signup with a CAPTCHA (required before the beta
 # gate comes off); its site key goes to the web project's Vercel env as
 # NEXT_PUBLIC_TURNSTILE_SITE_KEY. Omitting it disables the CAPTCHA (boot warns).

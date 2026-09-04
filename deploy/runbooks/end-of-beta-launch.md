@@ -17,10 +17,12 @@ audience is still small and forgiving.
       sign up once for real. Without the secret the API boots with a warning
       and signup is unprotected — treat the keys as a blocker for the
       BETA_MODE flip, not a nice-to-have.
-- [ ] Error tracking wired — the web half exists (PostHog `capture_exceptions`
-      in `lib/analytics.ts`; enable Error tracking in the PostHog project).
-      The API still has no exception reporter (`main.ts` hook point) —
-      public users report bugs as vibes; you need stack traces.
+- [ ] Error tracking wired — code done on both halves (web: PostHog
+      `capture_exceptions` in `lib/analytics.ts`; API: `TelemetryModule`
+      reports 5xx + crashes when `POSTHOG_API_KEY` is set, 2026-09-05).
+      Remaining: put `POSTHOG_API_KEY` in `Secret/api-secrets` and enable
+      Error tracking in the PostHog project settings — public users report
+      bugs as vibes; you need stack traces.
 - [ ] N-session recording load test ran (master-todo item 13,
       `scripts/test-recording-ws.ts`) so the per-pod ceiling and HPA maxima
       are numbers, not guesses.

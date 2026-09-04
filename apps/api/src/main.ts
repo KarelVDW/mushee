@@ -10,6 +10,7 @@ import type { FastifyRequest } from 'fastify'
 import { AppModule } from './app.module'
 import { runMigrationsLocked } from './database/run-migrations'
 import { seedDemoData } from './database/seed/demo-seed'
+import { ErrorReporter, monitorProcessErrors } from './telemetry/error-reporter'
 
 /** Cap on HTTP request bodies (score JSON). WebSocket audio chunks are
  *  capped separately via `maxPayload` on the recordings gateway. */
@@ -70,6 +71,9 @@ async function bootstrap() {
     // Flush SIGTERM through Nest's shutdown hooks so long-lived work (recording
     // sessions, ffmpeg children) drains instead of dying with the pod.
     app.enableShutdownHooks()
+
+    // Crashes reach the error tracker too (best-effort, without changing how the process dies).
+    monitorProcessErrors(app.get(ErrorReporter))
 
     app.useWebSocketAdapter(new WsAdapter(app))
 
