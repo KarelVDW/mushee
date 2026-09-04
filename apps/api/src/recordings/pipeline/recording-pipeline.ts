@@ -158,6 +158,8 @@ export class RecordingPipeline {
         processCount: 0,
         processTotalMs: 0,
         processMaxMs: 0,
+        /** Every pass's wall time, for percentiles in the load-test harness (bounded: one entry per pass, ~1/s). */
+        passMs: [] as number[],
     }
 
     private bpm = DEFAULT_BPM
@@ -239,6 +241,11 @@ export class RecordingPipeline {
 
     setOnUpdate(cb: (update: ScoreUpdate) => void): void {
         this.onUpdate = cb
+    }
+
+    /** Processing statistics of this take (read-only view) — what the load-test harness reports per session. */
+    get stats(): Readonly<RecordingPipeline['timings']> {
+        return this.timings
     }
 
     setOnSourceResolved(cb: (resolution: SourceResolution) => void): void {
@@ -333,6 +340,7 @@ export class RecordingPipeline {
                 const elapsed = Date.now() - start
                 this.timings.processCount += 1
                 this.timings.processTotalMs += elapsed
+                if (this.timings.passMs.length < 100_000) this.timings.passMs.push(elapsed)
                 if (elapsed > this.timings.processMaxMs) {
                     this.timings.processMaxMs = elapsed
                 }
