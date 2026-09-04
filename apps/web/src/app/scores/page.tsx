@@ -154,7 +154,8 @@ export default function ScoresPage() {
                                 type="file"
                                 accept={ScoreFileImporter.ACCEPT}
                                 aria-label="Import a score file"
-                                className="hidden"
+                                className="sr-only"
+                                tabIndex={-1}
                                 onChange={(e) => {
                                     const file = e.target.files?.[0]
                                     if (file) void handleImportFile(file)

@@ -179,6 +179,29 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 }
 
 export const test = base.extend<{ apiMock: ApiMock }>({
+    // Every navigation waits for React to hydrate before the test acts. Server-rendered
+    // forms look ready before that, but a fill() into one is lost (state stays empty, the
+    // submit stays disabled) — the flaky "button stays disabled" runs on a slow CI runner.
+    // The marker is set by <HydrationMarker /> in the root layout.
+    page: async ({ page }, use) => {
+        const hydrated = () => page.waitForSelector('html[data-hydrated]', { state: 'attached' })
+        const goto = page.goto.bind(page)
+        page.goto = async (url, options) => {
+            const response = await goto(url, options)
+            await hydrated()
+            return response
+        }
+        // Full document loads too: a reload or history move re-renders from the server.
+        for (const method of ['reload', 'goBack', 'goForward'] as const) {
+            const original = page[method].bind(page)
+            page[method] = async (options) => {
+                const response = await original(options)
+                if (response) await hydrated()
+                return response
+            }
+        }
+        await use(page)
+    },
     apiMock: async ({ page, context }, use) => {
         const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [] }
         // Satisfy the Next.js middleware cookie gate for protected routes.

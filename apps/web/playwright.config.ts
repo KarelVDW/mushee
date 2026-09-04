@@ -29,7 +29,8 @@ export default defineConfig({
     expect: { timeout: 10_000 },
     use: {
         baseURL: `http://localhost:${WEB_PORT}`,
-        trace: 'on-first-retry',
+        // CI keeps the trace of the failing attempt itself (a retry that passes tells us nothing).
+        trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
         actionTimeout: 10_000,
     },
     projects: [
@@ -48,9 +49,12 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: `next dev --turbopack -p ${WEB_PORT}`,
+        // CI serves a production build: the dev server compiles each route on its first request,
+        // and under two browser projects on a 2-core runner that took 10 s+ — long enough for tests
+        // to type into forms before React had hydrated them (the flaky "button stays disabled" runs).
+        command: process.env.CI ? `next build && next start -p ${WEB_PORT}` : `next dev --turbopack -p ${WEB_PORT}`,
         url: `http://localhost:${WEB_PORT}`,
-        timeout: 120_000,
+        timeout: process.env.CI ? 300_000 : 120_000,
         reuseExistingServer: !process.env.CI,
         env: {
             // Point the client at a dead origin; the tests intercept every call to it.

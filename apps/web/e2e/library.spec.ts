@@ -1,3 +1,5 @@
+import type { FileChooser, Page } from '@playwright/test'
+
 import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
 
 /**
@@ -265,12 +267,22 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await expect(page).toHaveURL(/\/settings$/)
 })
 
+/**
+ * Import through the visible button and the browser's file chooser, as a user would.
+ * Setting files straight on the hidden input never fired `change` on Linux WebKit in CI.
+ */
+async function pickImportFile(page: Page, file: Parameters<FileChooser['setFiles']>[0]): Promise<void> {
+    const chooser = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Import file' }).click()
+    await (await chooser).setFiles(file)
+}
+
 test('imports a MusicXML file: confirms title and instrument, reports simplifications, then creates the score', async ({
     page,
     apiMock,
 }) => {
     await page.goto('/scores')
-    await page.getByLabel('Import a score file').setInputFiles('e2e/fixtures/import.musicxml')
+    await pickImportFile(page, 'e2e/fixtures/import.musicxml')
 
     const dialog = page.getByRole('dialog', { name: 'Import score' })
     await expect(dialog).toBeVisible()
@@ -300,9 +312,7 @@ test('imports a MusicXML file: confirms title and instrument, reports simplifica
 
 test('a file that is not a score is refused with a toast and no dialog', async ({ page, apiMock }) => {
     await page.goto('/scores')
-    await page
-        .getByLabel('Import a score file')
-        .setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('just some text') })
+    await pickImportFile(page, { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('just some text') })
 
     await expect(page.getByText('This is not a score file.', { exact: false })).toBeVisible()
     await expect(page.getByRole('dialog', { name: 'Import score' })).toHaveCount(0)

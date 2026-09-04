@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google'
 
 import { AuthGate } from '@/components/AuthGate'
+import { HydrationMarker } from '@/components/HydrationMarker'
 
 import { Providers } from './providers'
 
@@ -79,6 +80,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+                <HydrationMarker />
                 <Providers>
                     <AuthGate>{children}</AuthGate>
                 </Providers>

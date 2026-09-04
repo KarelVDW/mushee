@@ -21,6 +21,16 @@ pnpm --filter @mushee/web exec playwright install chromium   # one-time
 pnpm --filter @mushee/web test:e2e
 ```
 
+Locally the suite runs against `next dev` (and reuses a 3300 server that is
+already up). **In CI it runs against a production build** (`next build && next
+start`): the dev server compiles each route on its first request, and on a
+2-core runner that left Linux WebKit still hydrating pages while tests were
+already typing into them. For the same reason every `page.goto` in
+`fixtures.ts` waits for the `data-hydrated` attribute that `<HydrationMarker />`
+(root layout) stamps on `<html>` once React has taken over — a fill into a
+server-rendered form before that moment is silently lost. CI keeps the trace of
+every failing attempt (`retain-on-failure`); locally only a failed retry is traced.
+
 What it covers:
 
 - `editor.spec.ts` — editor loads and engraves; keyboard pitch editing +
