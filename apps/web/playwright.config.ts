@@ -59,6 +59,9 @@ export default defineConfig({
         env: {
             // Point the client at a dead origin; the tests intercept every call to it.
             NEXT_PUBLIC_API_URL: MOCK_API_URL,
+            // The mocked suite asserts the launch copy ("Start free", the tier ladder); a developer's
+            // .env.development may run the closed-beta flow — pin it off so runs don't depend on it.
+            NEXT_PUBLIC_BETA_MODE: 'false',
             // Own dist dir so this server can boot while a dev server holds .next's lock.
             NEXT_DIST_DIR: '.next-e2e',
         },

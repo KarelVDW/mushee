@@ -119,7 +119,10 @@ export function Footer({ width = 'app' }: FooterProps) {
             <div
                 className={`${width === 'app' ? 'max-w-384' : 'max-w-320'} mx-auto px-8 flex justify-between items-center gap-6 flex-wrap`}>
                 <Wordmark size={20} />
-                <nav aria-label="Legal" className="flex items-center gap-5 flex-wrap">
+                <nav aria-label="Site" className="flex items-center gap-5 flex-wrap">
+                    <Link href="/pricing" className={linkClass}>
+                        Pricing
+                    </Link>
                     <Link href="/privacy" className={linkClass}>
                         Privacy
                     </Link>

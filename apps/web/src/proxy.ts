@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 // '/' must match exactly — as a prefix it would match every path and turn
 // this gate into a no-op.
 const publicExactPaths = ['/']
-const publicPathPrefixes = ['/login', '/signup', '/reset-password', '/privacy', '/terms', '/contact']
+const publicPathPrefixes = ['/login', '/signup', '/reset-password', '/pricing', '/privacy', '/terms', '/contact']
 
 // better-auth prefixes the cookie with __Secure- when its baseURL is HTTPS,
 // so production and dev use different names — check both.
