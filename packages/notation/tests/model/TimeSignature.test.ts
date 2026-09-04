@@ -92,6 +92,16 @@ describe('TimeSignature', () => {
             expect(new TimeSignature(2, 2).pulsesPerMeasure).toBe(2)
         })
 
+        it('beamUnit is the pulse, or the whole bar when the pulse is the eighth itself', () => {
+            expect(new TimeSignature(4, 4).beamUnit).toBe(1)
+            expect(new TimeSignature(2, 2).beamUnit).toBe(2)
+            expect(new TimeSignature(6, 8).beamUnit).toBe(1.5)
+            expect(new TimeSignature(12, 8).beamUnit).toBe(1.5)
+            expect(new TimeSignature(3, 8).beamUnit).toBe(1.5)
+            expect(new TimeSignature(5, 8).beamUnit).toBe(2.5)
+            expect(new TimeSignature(7, 8).beamUnit).toBe(3.5)
+        })
+
         it("converts between the model's quarter-note bpm and the written pulse bpm", () => {
             expect(new TimeSignature(4, 4).pulseBpmOf(90)).toBe(90)
             expect(new TimeSignature(6, 8).pulseBpmOf(90)).toBe(60)

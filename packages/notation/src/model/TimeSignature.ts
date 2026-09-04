@@ -67,6 +67,17 @@ export class TimeSignature {
         return Math.round(this.maxBeats / this.pulse.beats)
     }
 
+    /**
+     * The span (quarter-note units) beams are grouped within: the pulse — one
+     * quarter in 4/4, a dotted quarter in 6/8, a half in 2/2. When the pulse is
+     * the eighth itself (3/8, 5/8, 7/8) nothing could ever beam, so the whole
+     * bar is the unit: 3/8 beams its three eighths together and the irregular
+     * meters beam per bar, as we store no 2+2+3-style grouping.
+     */
+    get beamUnit(): number {
+        return this.beatType >= 8 && !this.isCompound ? this.maxBeats : this.pulse.beats
+    }
+
     /** A quarter-note bpm expressed in this meter's pulse (90 quarter-bpm in 6/8 → ♩. = 60). */
     pulseBpmOf(quarterBpm: number): number {
         return quarterBpm / this.pulse.beats
