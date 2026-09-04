@@ -8,12 +8,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import { Footer, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
+import { Footer, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { BETA_MODE } from '@/lib/plans'
-import { useSharedScore } from '@/lib/queries'
+import { useCreateScore, useSharedScore } from '@/lib/queries'
 
 import { ExportMenu } from '../../scores/[id]/ExportMenu'
 
@@ -42,6 +42,22 @@ export function SharedScorePage({ token }: { token: string }) {
         track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
         router.push(authed ? '/scores' : '/signup')
     }
+
+    // A signed-in visitor can take the shared score home as an editable copy of their own.
+    const create = useCreateScore()
+    const saveCopy = () => {
+        if (!shared.data || create.isPending) return
+        create.mutate(
+            { title: shared.data.title, score: shared.data.document },
+            {
+                onSuccess: (created) => router.push(`/scores/${created.id}`),
+                onError: (err) =>
+                    showToast(
+                        err instanceof ApiError && err.code === 'score-limit' ? err.message : 'Could not save a copy. Please try again.',
+                    ),
+            },
+        )
+    }
     const notFound = shared.isError && shared.error instanceof ApiError && shared.error.isClientError
 
     return (
@@ -61,6 +77,9 @@ export function SharedScorePage({ token }: { token: string }) {
                             getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
                             compact
                         />
+                    )}
+                    {authed && score && (
+                        <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
                     )}
                     <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
                         {authed ? 'Open library' : 'Start free'}

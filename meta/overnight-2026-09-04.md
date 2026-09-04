@@ -7,6 +7,31 @@ Baseline at start: type-check clean, 1453 unit tests green (notation 884, playba
 
 Each entry: **what** → **why it matters** → **verification**.
 
+> **TL;DR for the morning** (details per item below; everything is committed on
+> `experimental`, all suites green at the last run — notation 1338, api 248,
+> web 266 unit tests; 157+ mocked e2e across chromium/webkit/mobile; full
+> `pnpm build` passes):
+>
+> 1. Generative round-trip suite for the score model → found and fixed two
+>    persistence bugs (instrument swapped on reload for 17 instruments; key mode lost).
+> 2. `/pricing` route with FAQ + structured data (todo #18).
+> 3. GDPR "Download my data" in Settings (todo #14).
+> 4. Signup CAPTCHA (Turnstile) — the launch blocker; needs two keys (todo #15).
+> 5. Runbook corrections (stale pre-relaunch pricing, beta tier facts).
+> 6. Inference outage → user is told + credits stop metering (the runbooks' known gap).
+> 7. API error tracking into PostHog (needs `POSTHOG_API_KEY`).
+> 8. API image: `.env.development` + dev recordings were being shipped; fixed. 1.38 GB → 793 MB.
+> 9. Opt-in Spot-capacity component for inference (cost lever, documented, not enabled).
+> 10. N-session recording load test harness (todo #13) + first numbers.
+> 11. "Takes": replay/delete your recordings from the editor (todo #22).
+> 12. Read-only share links `/s/<token>` with export and "Save a copy" (new).
+> 13. Marketing launch kit + ICP pricing refresh; docs/README env updates.
+>
+> **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
+> beta users' fate, run the load test in remote-inference mode, review the
+> Docker/lockfile change before the next deploy (it changes the runtime
+> layout to `/app` via `pnpm deploy`).
+
 ## 1. Generative round-trip suite for the notation model — 2 persistence bugs fixed
 
 - **What:** `packages/notation/tests/model/util/RoundTrip.test.ts` — a seeded
@@ -215,6 +240,9 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   revoke+re-mint, public payload without owner, 404 parity + DB shielding),
   editor e2e (turn on → link → turn off), shared e2e (renders read-only with
   export + CTA; unknown token explains itself). Web 266 / API suites green.
+- **Also:** a signed-in visitor gets "Save a copy" on the shared page — the
+  score lands in their library as an editable score of their own (the plan's
+  score cap applies; the server's refusal message is shown).
 - **Not done (deliberate):** playback on the shared page (the Transport
-  stack is editor-bound; the recipient can export MIDI/PDF) — a good
-  follow-up; expiring links / passwords — YAGNI until asked.
+  stack is bound to the editor's manipulator; the recipient can export
+  MIDI/PDF) — a good follow-up; expiring links / passwords — YAGNI until asked.

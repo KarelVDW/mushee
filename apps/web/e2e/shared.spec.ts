@@ -20,6 +20,11 @@ test('a valid share link renders the score read-only with its title, export and 
 
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Open library|Start free/ })).toBeVisible()
+
+    // Signed in (the mock session): the score can be saved as an editable copy of one's own.
+    await page.getByRole('button', { name: 'Save a copy' }).click()
+    await expect(page).toHaveURL(/\/scores\/e2e-created-1$/)
+    expect(apiMock.creates.map((body) => body.title)).toEqual([MOCK_TITLE])
 })
 
 test('an unknown or revoked token explains itself instead of erroring', async ({ page, apiMock }) => {
