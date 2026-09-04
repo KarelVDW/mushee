@@ -255,7 +255,7 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   payload = title/updatedAt/document only (no owner). Web page is `noindex`,
   robots-disallowed.
 - `GET /recordings/:id/audio`, `DELETE /recordings/:id`, `POST/DELETE
-  /scores/:id/share`: `AuthGuard` + `BetaApprovalGuard`, ownership checked in
+/scores/:id/share`: `AuthGuard` + `BetaApprovalGuard`, ownership checked in
   the service (403 for another user's row, 404 for unknown), UUID pipe on ids;
   signed audio URLs expire after 15 min.
 - CAPTCHA: verification server-side (better-auth plugin, Cloudflare
