@@ -430,3 +430,15 @@ lands on onboarding. Only the real keys remain (runbook §1).
   directly, so the model type-checks in a non-JSX consumer (the API's tests).
 - **Verification:** api 403 (contract fuzz 150/150), notation 1845, web
   fuzzes green; both type-checks clean.
+
+## 21. Fuzz extension, rebar settle, speller property
+
+- Editor fuzz now 200 seeds × 5–40 edits incl. transpose / minimize
+  accidentals / instrument change, respecting the 23-step undo depth. It
+  found one more: after a meter change, `MeasureRebar` completed only the
+  last bar, so a tuplet cut at an interior barline could leave that bar a
+  triplet-sixteenth short although a rest fits — every rebar bar now settles
+  (non-destructively). `DurationSpeller` property (300 seeds, 12 meters):
+  written values always sum exactly to the span, never fragment absurdly —
+  no finding.
+- Running totals: notation 2146, api 403, web 588 unit tests, all green.
