@@ -55,6 +55,12 @@ export function SharedScorePage({ token }: { token: string }) {
         if (shared.data) track('shared_score_viewed', { authed })
     }, [shared.data, authed])
 
+    // The server may not have reached the API when it rendered the <title> (generateMetadata
+    // falls back to a generic one); once the token resolves here, the tab carries the score's name.
+    useEffect(() => {
+        if (shared.data?.title) document.title = `${shared.data.title} — Solkey`
+    }, [shared.data?.title])
+
     const onGetStarted = () => {
         track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
         // Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done.

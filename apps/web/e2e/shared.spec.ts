@@ -10,6 +10,9 @@ test('a valid share link renders the score read-only with its title, export and 
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(MOCK_TITLE)
+    // The tab is named after the score once the token resolves (the server-rendered title is generic
+    // in this hermetic run: the mock API only exists inside the browser).
+    await expect(page).toHaveTitle(`${MOCK_TITLE} — Solkey`)
     const score = page.getByTestId('shared-score')
     await expect(score.locator('svg').first()).toBeVisible()
     expect(await score.locator('svg line').count()).toBeGreaterThanOrEqual(5)
@@ -39,6 +42,8 @@ test('an unknown or revoked token explains itself instead of erroring', async ({
     await page.goto('/s/nosuchtoken00000000')
     await expect(page.getByRole('heading', { name: /doesn’t open anything/ })).toBeVisible()
     await expect(page.getByTestId('shared-score')).toHaveCount(0)
+    // No score name to show: the generic title stays.
+    await expect(page).toHaveTitle('Shared score — Solkey')
 })
 
 test('a visitor without an account is sent to signup with the score as the way back', async ({ page }) => {
