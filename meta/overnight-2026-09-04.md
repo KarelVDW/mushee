@@ -52,6 +52,13 @@ Each entry: **what** → **why it matters** → **verification**.
 > (§22). Nine property/fuzz suites now guard the model, importers, editor and
 > the recording→editor contract (~1,400 seeded cases).
 >
+> **Morning (your suggestions):** bulk e-mail answered and built — admin
+> **Announcements** page (filtered audience, live count, CSV export, test send,
+> confirmed send, sandboxed preview, `**bold**`/`[link](url)` markup) over
+> transactional SendGrid; marketing mail goes CSV → SendGrid Marketing
+> Campaigns (§25). Burst plan for the last 20 minutes of the week:
+> `meta/burst/burst-plan-2026-09-05.md` (prompt at its top).
+>
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
 > Docker/lockfile change before the next deploy (runtime moved to `/app` via
