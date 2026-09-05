@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { CAPTCHA_ENDPOINTS, captchaSecretKey, signupCaptchaPlugins } from '../../src/auth/captcha-config'
+import { CAPTCHA_ENDPOINTS, signupCaptchaPlugins } from '../../src/auth/captcha-config'
 
 describe('signup CAPTCHA configuration', () => {
     afterEach(() => vi.restoreAllMocks())
@@ -24,13 +24,5 @@ describe('signup CAPTCHA configuration', () => {
         expect(plugin.id).toBe('captcha')
         expect(plugin.options).toMatchObject({ provider: 'cloudflare-turnstile', secretKey: '0x-secret', endpoints: ['/sign-up/email'] })
         expect(CAPTCHA_ENDPOINTS).toEqual(['/sign-up/email'])
-    })
-
-    it('reads the secret from the process environment, trimmed', () => {
-        vi.stubEnv('TURNSTILE_SECRET_KEY', '  key  ')
-        expect(captchaSecretKey()).toBe('key')
-        vi.stubEnv('TURNSTILE_SECRET_KEY', '')
-        expect(captchaSecretKey()).toBeUndefined()
-        vi.unstubAllEnvs()
     })
 })

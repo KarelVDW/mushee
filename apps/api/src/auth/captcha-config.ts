@@ -19,11 +19,6 @@ import { captcha } from 'better-auth/plugins'
  */
 export const CAPTCHA_ENDPOINTS = ['/sign-up/email'] as const
 
-export function captchaSecretKey(): string | undefined {
-    const key = process.env.TURNSTILE_SECRET_KEY?.trim()
-    return key || undefined
-}
-
 /** The better-auth plugins to install for signup bot protection: one when configured, none otherwise. */
 export function signupCaptchaPlugins(env: NodeJS.ProcessEnv = process.env): ReturnType<typeof captcha>[] {
     const key = env.TURNSTILE_SECRET_KEY?.trim()

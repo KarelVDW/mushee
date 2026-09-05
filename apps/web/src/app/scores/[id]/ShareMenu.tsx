@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-
 import { ChipToggle, Eyebrow, Icon, PrimaryButton, SecondaryButton, showToast, TertiaryButton } from '@/components/ui'
 import { useShareScore, useUnshareScore } from '@/lib/queries'
+import { useDismissablePopover } from '@/lib/useDismissablePopover'
 
 /** The public address of a shared score, on whatever host the app is served from. */
 export function shareLinkFor(token: string): string {
@@ -24,34 +23,10 @@ interface ShareMenuProps {
  * Takes and Export, same glass-panel pattern.
  */
 export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const popRef = useRef<HTMLDivElement>(null)
-    const [open, setOpen] = useState(false)
+    const { open, setOpen, anchorRef, popRef } = useDismissablePopover()
     const share = useShareScore(scoreId)
     const unshare = useUnshareScore(scoreId)
     const link = shareToken ? shareLinkFor(shareToken) : null
-
-    useEffect(() => {
-        if (!open) return
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault()
-                setOpen(false)
-            }
-            e.stopPropagation()
-        }
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef.current?.contains(target)) setOpen(false)
-        }
-        window.addEventListener('keydown', onKey)
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            window.removeEventListener('keydown', onKey)
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
-    }, [open])
 
     const copy = async () => {
         if (!link) return

@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common'
 import type { RecordingArchiver } from '../recording-archiver'
 import { AudioConverter } from './audio-converter'
 import { AudioDecoder, StreamingDecoder } from './audio-decoder'
+import { describeError } from './describe-error'
 import type { MxmlMeasure } from './mxml.types'
 import { MxmlBuilder, PendingNote } from './mxml-builder'
 import type { NoteEventTime } from './note-event'
@@ -98,10 +99,6 @@ export type PipelineHealth = { ok: true } | { ok: false; message: string }
 export interface SourceResolution {
     source: 'voice' | 'instrument'
     decidedBy: 'explicit' | 'classifier' | 'prior'
-}
-
-function describeError(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
 }
 
 /**

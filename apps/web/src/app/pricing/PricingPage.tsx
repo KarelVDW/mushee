@@ -25,7 +25,7 @@ export function PricingPage() {
         track('landing_cta_clicked', { location, beta: BETA_MODE })
         router.push(authed ? '/scores' : '/signup')
     }
-    const cta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : 'Start free'
+    const cta = authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">

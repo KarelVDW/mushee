@@ -75,7 +75,8 @@ export class PostHogErrorReporter extends ErrorReporter {
 
     async shutdown(): Promise<void> {
         try {
-            await this.client.shutdown()
+            // Bounded: a PostHog outage must not eat the pod's termination grace period.
+            await this.client.shutdown(SHUTDOWN_TIMEOUT_MS)
         } catch (err) {
             this.logger.warn(`Error reporter shutdown failed: ${err instanceof Error ? err.message : String(err)}`)
         }
@@ -83,6 +84,7 @@ export class PostHogErrorReporter extends ErrorReporter {
 }
 
 const DEFAULT_HOST = 'https://eu.i.posthog.com'
+const SHUTDOWN_TIMEOUT_MS = 5000
 
 /**
  * Build the reporter from the environment: `POSTHOG_API_KEY` (the project API
@@ -100,8 +102,10 @@ export function errorReporterFromEnv(env: NodeJS.ProcessEnv = process.env): Erro
     }
     const client = new PostHog(key, {
         host: env.POSTHOG_HOST?.trim() || DEFAULT_HOST,
-        // Errors are rare and precious: send them promptly rather than batching.
-        flushAt: 1,
+        // Deliver within a couple of seconds, but batch: during an outage every
+        // request fails at once, and one POST per error would add a second load
+        // to a pod that is already unhealthy.
+        flushAt: 20,
         flushInterval: 2000,
         // We register our own crash monitor (below) so the process keeps its
         // fail-fast semantics; the SDK's hook would take over the handlers.

@@ -7,17 +7,10 @@ import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
 import { usePlans } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
+import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 // Format seconds as S"s" under a minute, M:SS under an hour, then H"h".
-function fmtRecTime(sec: number): string {
-    const s = Math.max(0, Math.floor(sec))
-    if (s < 60) return `${s}s`
-    const m = Math.floor(s / 60)
-    if (m < 60) return `${m}:${String(s % 60).padStart(2, '0')}`
-    const h = Math.floor(m / 60)
-    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
-}
 
 function useEscape(onClose: () => void) {
     useEffect(() => {
@@ -54,7 +47,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     return (
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
-                title={`You've used today's ${fmtRecTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
+                title={`You've used today's ${formatRecordingTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
                 subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
                 onClose={onClose}
                 width={480}

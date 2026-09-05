@@ -30,6 +30,7 @@ import {
     type RecordingSummary,
     requestAccountDeletion,
     resumeSubscription,
+    type ScoreDocument,
     type ScoreMeta,
     shareScore,
     unshareScore,
@@ -122,15 +123,13 @@ export function useSharedScore(token: string) {
     })
 }
 
-type ScoreDocumentData = { meta: ScoreMeta; document: Record<string, unknown> }
-
 /** Mint/keep the score's share link and reflect it on the cached score meta. */
 export function useShareScore(id: string) {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: () => shareScore(id),
         onSuccess: ({ token }) => {
-            queryClient.setQueryData<ScoreDocumentData>(scoreKeys.detail(id), (data) =>
+            queryClient.setQueryData<ScoreDocument>(scoreKeys.detail(id), (data) =>
                 data ? { ...data, meta: { ...data.meta, shareToken: token } } : data,
             )
         },
@@ -143,7 +142,7 @@ export function useUnshareScore(id: string) {
     return useMutation({
         mutationFn: () => unshareScore(id),
         onSuccess: () => {
-            queryClient.setQueryData<ScoreDocumentData>(scoreKeys.detail(id), (data) =>
+            queryClient.setQueryData<ScoreDocument>(scoreKeys.detail(id), (data) =>
                 data ? { ...data, meta: { ...data.meta, shareToken: null } } : data,
             )
         },
@@ -170,10 +169,10 @@ export function useDeleteRecording() {
     return useMutation({
         mutationFn: (id: string) => deleteRecording(id),
         onSuccess: (_data, id) => {
+            // The server answers nothing new, so the patched lists are already right — no refetch.
             queryClient.setQueriesData<RecordingSummary[]>({ queryKey: [...recordingKeys.all, 'list'] }, (rows) =>
                 rows?.filter((row) => row.id !== id),
             )
-            void queryClient.invalidateQueries({ queryKey: recordingKeys.all })
         },
         meta: { errorMessage: 'Could not delete the take. Please try again.' },
     })

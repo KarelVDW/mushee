@@ -102,7 +102,13 @@ export class ScoresService {
         return this.loadDocument(await this.findOne(userId, id))
     }
 
-    private async loadDocument(score: Score): Promise<Record<string, unknown>> {
+    /**
+     * The live document: the edit cache when present, else storage. Editing
+     * loads prime the cache (the editor's saves patch it); read-only loads (the
+     * share page) must not — an anonymous visit would otherwise write a cache
+     * row that the flush cron later rewrites to storage for nothing.
+     */
+    private async loadDocument(score: Score, { prime = true } = {}): Promise<Record<string, unknown>> {
         const cached = await this.cacheService.findByScoreId(score.id)
         if (cached) {
             return cached.data
@@ -112,7 +118,7 @@ export class ScoresService {
         const musicxml = await this.storageService.read(score.storageKey)
         const scoreData = this.musicxmlToJson(musicxml)
 
-        await this.cacheService.upsert(score.id, scoreData)
+        if (prime) await this.cacheService.upsert(score.id, scoreData)
 
         return scoreData
     }
@@ -151,7 +157,7 @@ export class ScoresService {
         if (!ScoresService.isShareToken(token)) throw new NotFoundException('Score not found')
         const score = await this.scoreRepo.findOneBy({ shareToken: token })
         if (!score) throw new NotFoundException('Score not found')
-        return { id: score.id, title: score.title, updatedAt: score.updatedAt, document: await this.loadDocument(score) }
+        return { id: score.id, title: score.title, updatedAt: score.updatedAt, document: await this.loadDocument(score, { prime: false }) }
     }
 
     /** The shape share() mints — anything else is rejected before touching the database. */

@@ -3,6 +3,7 @@ import { type GraphModel, io, loadGraphModel, type Tensor, tensor1d } from '@ten
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
+import { describeError } from '../describe-error'
 import { ensureWasmBackend } from '../providers/tf-backend'
 
 /**
@@ -49,10 +50,6 @@ import { ensureWasmBackend } from '../providers/tf-backend'
  */
 
 const logger = new Logger('SourceClassifier')
-
-function describeError(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
-}
 
 /** Kill-switch, mirroring RECORDING_VOICE_DECODE: `0` disables classification. */
 const CLASSIFY = process.env.RECORDING_SOURCE_CLASSIFY !== '0'

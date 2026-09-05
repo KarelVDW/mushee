@@ -3,6 +3,7 @@ import type { Writable } from 'stream'
 import { finished } from 'stream/promises'
 
 import type { StorageService } from '../storage/storage.service'
+import { describeError } from './pipeline/describe-error'
 
 /**
  * Archives one recording session to blob storage under
@@ -96,51 +97,38 @@ export class RecordingArchiver {
 }
 
 /** Container sniffing from the stream's first bytes (magic numbers). */
-/** Content type of an archived audio object by its extension (the inverse of what `sniffContainer` wrote). */
-const AUDIO_CONTENT_TYPES: Record<string, string> = {
-    '.webm': 'audio/webm',
-    '.mp3': 'audio/mpeg',
-    '.ogg': 'audio/ogg',
-    '.wav': 'audio/wav',
-    '.flac': 'audio/flac',
-    '.mp4': 'audio/mp4',
+/**
+ * The containers browsers' MediaRecorder produces, by magic bytes: the same table
+ * names the object's extension when the audio is written and its content type
+ * when it is replayed, so the two can never disagree.
+ */
+const CONTAINERS: ReadonlyArray<{ extension: string; contentType: string; matches(buffer: Buffer): boolean }> = [
+    { extension: '.webm', contentType: 'audio/webm', matches: (b) => b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3 },
+    {
+        extension: '.mp3',
+        contentType: 'audio/mpeg',
+        matches: (b) => (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0),
+    },
+    { extension: '.ogg', contentType: 'audio/ogg', matches: (b) => b[0] === 0x4f && b[1] === 0x67 && b[2] === 0x67 && b[3] === 0x53 },
+    { extension: '.wav', contentType: 'audio/wav', matches: (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 },
+    { extension: '.flac', contentType: 'audio/flac', matches: (b) => b[0] === 0x66 && b[1] === 0x4c && b[2] === 0x61 && b[3] === 0x43 },
+    // MP4/M4A (Safari's MediaRecorder): 'ftyp' at offset 4.
+    {
+        extension: '.mp4',
+        contentType: 'audio/mp4',
+        matches: (b) => b.length >= 8 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70,
+    },
+]
+const UNKNOWN_CONTAINER = { extension: '.bin', contentType: 'application/octet-stream' }
+
+export function sniffContainer(buffer: Buffer): { extension: string; contentType: string } {
+    if (buffer.length < 4) return UNKNOWN_CONTAINER
+    const match = CONTAINERS.find((container) => container.matches(buffer))
+    return match ? { extension: match.extension, contentType: match.contentType } : UNKNOWN_CONTAINER
 }
 
+/** Content type of an archived audio object by its extension — the replay side of `sniffContainer`. */
 export function audioContentTypeFor(key: string): string {
-    return AUDIO_CONTENT_TYPES[key.slice(key.lastIndexOf('.'))] ?? 'application/octet-stream'
-}
-
-export function sniffContainer(buffer: Buffer): {
-    extension: string
-    contentType: string
-} {
-    if (buffer.length >= 4) {
-        if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
-            return { extension: '.webm', contentType: 'audio/webm' }
-        }
-        if (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) {
-            return { extension: '.mp3', contentType: 'audio/mpeg' }
-        }
-        if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) {
-            return { extension: '.mp3', contentType: 'audio/mpeg' }
-        }
-        if (buffer[0] === 0x4f && buffer[1] === 0x67 && buffer[2] === 0x67 && buffer[3] === 0x53) {
-            return { extension: '.ogg', contentType: 'audio/ogg' }
-        }
-        if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) {
-            return { extension: '.wav', contentType: 'audio/wav' }
-        }
-        if (buffer[0] === 0x66 && buffer[1] === 0x4c && buffer[2] === 0x61 && buffer[3] === 0x43) {
-            return { extension: '.flac', contentType: 'audio/flac' }
-        }
-        // MP4/M4A (Safari's MediaRecorder): 'ftyp' at offset 4.
-        if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
-            return { extension: '.mp4', contentType: 'audio/mp4' }
-        }
-    }
-    return { extension: '.bin', contentType: 'application/octet-stream' }
-}
-
-function describeError(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
+    const extension = key.slice(key.lastIndexOf('.'))
+    return CONTAINERS.find((container) => container.extension === extension)?.contentType ?? UNKNOWN_CONTAINER.contentType
 }

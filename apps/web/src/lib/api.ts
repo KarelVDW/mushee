@@ -78,6 +78,12 @@ export interface ScoreMeta {
     shareToken?: string | null
 }
 
+/** What the editor and the data export work from: a score's metadata plus its stored document. */
+export interface ScoreDocument {
+    meta: ScoreMeta
+    document: Record<string, unknown>
+}
+
 export function listScores(search?: string): Promise<ScoreMeta[]> {
     const params = search ? `?search=${encodeURIComponent(search)}` : ''
     return api(`/scores${params}`)

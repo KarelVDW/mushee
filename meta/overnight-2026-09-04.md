@@ -266,3 +266,29 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
 - Image: `.env*` and dev storage no longer ship (see §8).
 - Screens checked at 1280 and 390 px: editor header with the three chips,
   Takes and Share panels, shared page, pricing page.
+
+## 14. Code review of the branch (`/code-review master medium`) and fixes
+
+- Three of eight review angles completed before the session limit cut the
+  rest (the skill spawns eight agents — it cost ~20% of a session window; the
+  correctness angles did not finish, so the unit/e2e suites remain the
+  correctness gate for tonight's work).
+- **Acted on:** one `useDismissablePopover` hook replaces the three copied
+  Escape/outside-click scaffolds (Export/Share/Takes menus); one
+  `downloadBlob`; one `formatRecordingTime` for takes, budget meter and
+  limit dialog (they disagreed on rounding); one exported `describeError`
+  instead of five private copies; the archiver's container table now drives
+  both sniffing and replay content types; public shared loads no longer
+  prime the edit cache (anonymous visits caused cache writes + a cron
+  rewrite); data export loads 4 documents at a time (150 parallel requests
+  would have tripped the 120/min rate limit); PostHog batches (flushAt 20)
+  and shuts down within 5 s; shared page derives its score with `useMemo`;
+  deleting a take no longer refetches a list it just patched; dead
+  `captchaSecretKey` removed; `ScoreDocument` type shared; pricing nav CTA
+  copy aligned with the landing nav.
+- **Deliberately not done:** persisting the audio object key on the
+  Recording row to save a bucket list per replay (needs a migration for a
+  per-click cost that is fine at current scale — noted for later); merging
+  the load-test harness with `test-recording-ws.ts`; extracting a shared
+  marketing nav (three small variants exist; worth doing when a fourth
+  appears).

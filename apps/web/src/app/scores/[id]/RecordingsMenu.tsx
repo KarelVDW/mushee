@@ -5,14 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, ChipToggle, Eyebrow, Icon, showToast, TertiaryButton } from '@/components/ui'
 import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
 import { useDeleteRecording, useRecordings } from '@/lib/queries'
-
-/** 42 → "0:42", 3725 → "1:02:05" */
-export function formatTakeDuration(seconds: number): string {
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = Math.round(seconds % 60)
-    return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`
-}
+import { formatRecordingTime } from '@/lib/recordingTime'
+import { useDismissablePopover } from '@/lib/useDismissablePopover'
 
 /** "Today, 14:02" / "Yesterday, 09:10" / "3 Sep, 14:02" / "3 Sep 2025, 14:02" */
 export function formatTakeDate(iso: string, now = new Date()): string {
@@ -45,9 +39,7 @@ interface RecordingsMenuProps {
  * any time" — the audio object goes first, then the row.
  */
 export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const popRef = useRef<HTMLDivElement>(null)
-    const [open, setOpen] = useState(false)
+    const { open, setOpen, anchorRef, popRef } = useDismissablePopover()
     const takes = useRecordings(scoreId, { enabled: open })
     const remove = useDeleteRecording()
     const [confirming, setConfirming] = useState<string | null>(null)
@@ -60,30 +52,13 @@ export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps
         setPlaying(null)
     }
 
+    // Closing the panel stops whatever was playing and forgets a pending delete confirmation.
     useEffect(() => {
-        if (!open) {
-            stopAudio()
-            setConfirming(null)
-            return
-        }
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault()
-                setOpen(false)
-            }
-            e.stopPropagation()
-        }
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef.current?.contains(target)) setOpen(false)
-        }
-        window.addEventListener('keydown', onKey)
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            window.removeEventListener('keydown', onKey)
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
+        if (open) return
+        audioRef.current?.pause()
+        audioRef.current = null
+        setPlaying(null)
+        setConfirming(null)
     }, [open])
 
     // A take's audio outlives nothing: leaving the editor stops it.
@@ -163,7 +138,7 @@ export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps
                                             {formatTakeDate(take.startedAt)}
                                         </span>
                                         <span className="font-mono font-normal text-[11px] leading-none text-on-surface-variant">
-                                            {formatTakeDuration(take.seconds)}
+                                            {formatRecordingTime(take.seconds)}
                                         </span>
                                     </div>
                                     {confirming === take.id ? (

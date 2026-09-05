@@ -6,7 +6,7 @@ import type { Score } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import { Footer, IconButton, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
@@ -32,11 +32,11 @@ export function SharedScorePage({ token }: { token: string }) {
     // The score is immutable here, but its layout reflows with the container width
     // (ScoreView observes it and calls setLayoutWidth), so re-render on change.
     const [, bump] = useState(0)
-    const [score, setScore] = useState<Score | null>(null)
-    useEffect(() => {
-        if (!shared.data) return
-        setScore(new ScoreDeserializer(shared.data.document as unknown as ScorePartwise).toScore(() => bump((n) => n + 1)))
-    }, [shared.data])
+    const score = useMemo<Score | null>(
+        () =>
+            shared.data ? new ScoreDeserializer(shared.data.document as unknown as ScorePartwise).toScore(() => bump((n) => n + 1)) : null,
+        [shared.data],
+    )
 
     const onGetStarted = () => {
         track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })

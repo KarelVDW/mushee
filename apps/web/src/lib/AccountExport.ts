@@ -2,7 +2,7 @@ import type { ScorePartwise } from '@mushee/notation/components/types'
 import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 
-import { getSettings, listScores, loadScore, type ScoreMeta, type UserSettings } from './api'
+import { getSettings, listScores, loadScore, type ScoreDocument, type UserSettings } from './api'
 
 /**
  * A minimal zip writer for the data export: stored (uncompressed) entries with
@@ -121,11 +121,6 @@ export interface ExportProfile {
     createdAt?: string
 }
 
-export interface ExportedScore {
-    meta: ScoreMeta
-    document: Record<string, unknown>
-}
-
 /**
  * The GDPR "download my data" archive: everything Solkey holds for an account
  * that the account holder can carry elsewhere — profile, settings, and every
@@ -139,15 +134,22 @@ export class AccountExport {
     constructor(
         readonly profile: ExportProfile,
         readonly settings: UserSettings | null,
-        readonly scores: readonly ExportedScore[],
+        readonly scores: readonly ScoreDocument[],
         readonly exportedAt = new Date(),
     ) {}
 
+    /** How many score documents load at once — well under the API's per-user rate limit even for large libraries. */
+    static readonly CONCURRENCY = 4
+
     /** Fetch everything the export needs. Settings are optional — a failure there must not block the scores. */
     static async collect(profile: ExportProfile): Promise<AccountExport> {
-        const metas = await listScores()
-        const scores = await Promise.all(metas.map(async (meta) => ({ meta, document: await loadScore(meta.id) })))
-        const settings = await getSettings().catch(() => null)
+        const [metas, settings] = await Promise.all([listScores(), getSettings().catch(() => null)])
+        const scores: ScoreDocument[] = new Array<ScoreDocument>(metas.length)
+        let next = 0
+        const worker = async () => {
+            for (let i = next++; i < metas.length; i = next++) scores[i] = { meta: metas[i], document: await loadScore(metas[i].id) }
+        }
+        await Promise.all(Array.from({ length: Math.min(AccountExport.CONCURRENCY, metas.length) }, worker))
         return new AccountExport(profile, settings, scores)
     }
 
