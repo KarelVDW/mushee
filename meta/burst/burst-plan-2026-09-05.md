@@ -25,7 +25,12 @@ Claude will only use single subagents.)
   `pnpm install --frozen-lockfile --offline` (≈7 s from the warm store —
   measured; never without `--offline`, never `pnpm install` alone). Workspace
   packages resolve from source, so nothing needs building before tests run.
-  Touch only the files listed for your task. Never edit `pnpm-lock.yaml`, `package.json` files, migrations of other
+  Touch only the files listed for your task.
+- **Playwright port.** The mocked e2e suite reuses any server already on its
+  port, so two agents on :3300 would test each other's code. Every e2e-running
+  task sets its own `E2E_WEB_PORT` (T3 3310, T5 3320, T10 3330 — written into
+  the Verify lines); never run e2e on the default port.
+- Never edit `pnpm-lock.yaml`, `package.json` files, migrations of other
   tasks, or anything under `meta/` except your own note.
 - Budget: **12 minutes**. At minute 10, if your verification isn't green,
   revert (`git checkout -- .`), write what you learned to
@@ -82,7 +87,7 @@ Files: `apps/web/e2e/mobile.spec.ts` only.
 Goal: on the mobile project, Share → turn link on/off, Takes → list + delete,
 Export menu opens as icon-only chips; assert nothing overflows the header
 (`header` bounding box width ≤ viewport).
-Verify: `cd apps/web && npx playwright test mobile.spec --project=mobile-chromium`.
+Verify: `cd apps/web && E2E_WEB_PORT=3310 npx playwright test mobile.spec --project=mobile-chromium`.
 
 ### T4 — eval app lint debt (eval)
 
@@ -99,13 +104,14 @@ Goal: `document.title` = `<score title> — Solkey` once the token resolves;
 `generateMetadata` may fetch `GET /shared/:token` server-side (no session
 needed; `NEXT_PUBLIC_API_URL`) for a real title/description with `noindex`
 kept; fall back gracefully on 404.
-Verify: `cd apps/web && pnpm type-check && npx playwright test shared.spec --project=chromium`.
+Verify: `cd apps/web && pnpm type-check && E2E_WEB_PORT=3320 npx playwright test shared.spec --project=chromium`.
 
 ### T6 — announcement copy for the beta ending (marketing)
 
 Files: `meta/marketing/BETA-ENDING-EMAIL.md` (new).
 Goal: two ready-to-paste announcements for the admin Announcements tool
-(grandfather variant / migrate-to-Sketch variant; plain text; `{{name}}`;
+(grandfather variant / migrate-to-Sketch variant; plain text with the tool's
+`**bold**` and `[label](https://…)` markup where useful; `{{name}}`;
 ≤ 180 words each; subject lines; send timing suggestion), consistent with
 `meta/marketing/LAUNCH-KIT.md` §5 and `deploy/runbooks/end-of-beta-launch.md` §3.
 Verify: `pnpm exec prettier --check meta/marketing`.
@@ -141,7 +147,7 @@ TAKES mock: add a take on a second, deleted score to cover the "Deleted score"
 label).
 Goal: settings inventory shows the score title per take and "Deleted score"
 for an orphan; play button disabled for audio-less takes.
-Verify: `cd apps/web && npx playwright test settings --project=chromium`.
+Verify: `cd apps/web && E2E_WEB_PORT=3330 npx playwright test settings --project=chromium`.
 
 ## If fewer than 10 agents can run
 
