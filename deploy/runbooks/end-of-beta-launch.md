@@ -89,8 +89,12 @@ migration, not sellable). Options:
 
 Whatever you choose, email them about it before they notice — from the admin
 console's **Announcements** page (audience filter: plan `Beta`; send a test copy
-to yourself first; every send is logged). A "you were here first" discount code
-in Polar costs nothing and buys goodwill.
+to yourself first; every send is logged). If the result says SendGrid rejected
+some recipients, do **not** send again to the same filter — the accounts that
+were reached already have it. Fix the cause (SendGrid status page, API key,
+sender verification) and use the history row's **"Resend to N not reached"**,
+which goes to exactly those accounts. A "you were here first" discount code in
+Polar costs nothing and buys goodwill.
 
 ## 4. The flip
 

@@ -37,7 +37,10 @@ bug-fix logs were dropped; what remains is still-true reference material.
   transactional SendGrid integration as one personalization per recipient in
   batches of 500 (SendGrid caps a request at 1,000; recipients never see each
   other), `{{name}}` → first name, footer names the account as the reason;
-  every send is logged in `announcements`. These are service e-mail under the
+  every send is logged in `announcements` — including partial ones: a rejected
+  SendGrid batch does not abort the run, the row records reached vs. unreached
+  (with the addresses), and the history offers a resend to exactly the
+  unreached. These are service e-mail under the
   privacy policy's "essential service email" — no unsubscribe link, so **never
   use it for marketing**.
 - **Marketing-shaped mail** (newsletters, promotions, re-engagement): export
