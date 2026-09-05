@@ -7,30 +7,48 @@ Baseline at start: type-check clean, 1453 unit tests green (notation 884, playba
 
 Each entry: **what** → **why it matters** → **verification**.
 
-> **TL;DR for the morning** (details per item below; everything is committed on
-> `experimental`, all suites green at the last run — notation 1338, api 248,
-> web 266 unit tests; 157+ mocked e2e across chromium/webkit/mobile; full
-> `pnpm build` passes):
+> **TL;DR for the morning** (details per numbered item below; everything is
+> committed on `experimental`, every suite green at the last run — notation
+> 1845 / api 247 / web 388 unit tests, mocked e2e across chromium/webkit/mobile,
+> `pnpm build` passes, real-stack verification 11/11):
 >
-> 1. Generative round-trip suite for the score model → found and fixed two
->    persistence bugs (instrument swapped on reload for 17 instruments; key mode lost).
-> 2. `/pricing` route with FAQ + structured data (todo #18).
-> 3. GDPR "Download my data" in Settings (todo #14).
-> 4. Signup CAPTCHA (Turnstile) — the launch blocker; needs two keys (todo #15).
-> 5. Runbook corrections (stale pre-relaunch pricing, beta tier facts).
-> 6. Inference outage → user is told + credits stop metering (the runbooks' known gap).
-> 7. API error tracking into PostHog (needs `POSTHOG_API_KEY`).
-> 8. API image: `.env.development` + dev recordings were being shipped; fixed. 1.38 GB → 793 MB.
-> 9. Opt-in Spot-capacity component for inference (cost lever, documented, not enabled).
-> 10. N-session recording load test harness (todo #13) + first numbers.
-> 11. "Takes": replay/delete your recordings from the editor (todo #22).
-> 12. Read-only share links `/s/<token>` with export and "Save a copy" (new).
-> 13. Marketing launch kit + ICP pricing refresh; docs/README env updates.
+> **Launch blockers & safety**
+>
+> 1. Signup CAPTCHA (Turnstile) shipped and verified end-to-end with Cloudflare's
+>    test keys — needs the two real keys (§4, §17).
+> 2. Inference outage → user is told, credits stop metering (§6). API error
+>    tracking into PostHog — needs `POSTHOG_API_KEY` (§7).
+> 3. Production image no longer ships `.env.development` + dev recordings;
+>    1.38 GB → 793 MB (§8). Runbooks corrected (§5).
+> 4. Terms/privacy paragraphs for share links (legal text I wrote — please
+>    read), admin can revoke a reported link (§18).
+>
+> **Product**
+>
+> 5. `/pricing` route with FAQ + structured data (§2); GDPR "Download my data"
+>    (§3); "Takes" — replay/delete your recordings (§11); read-only share links
+>    `/s/<token>` with playback, export and "Save a copy" (§12).
+>
+> **Bugs found by new property/fuzz suites (all fixed)**
+>
+> 6. Instrument swapped on reload for 17 instruments; key mode lost (§1).
+> 7. Importer: incomplete tuplet bars stayed short; a garbled duration made it
+>    allocate without bound (§16). MIDI cap lowered (a garbled file stalled 14 s).
+> 8. Editor: dotting a sixteenth corrupted the bar for good; pasting tuplets
+>    left bars short; the last bar could be removed (§19).
+>
+> **Also:** load-test harness + first numbers (§10), opt-in Spot inference
+> component (§9), marketing launch kit (§13), code-review fixes (§14), analytics
+> events for the new surfaces.
 >
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
-> Docker/lockfile change before the next deploy (it changes the runtime
-> layout to `/app` via `pnpm deploy`).
+> Docker/lockfile change before the next deploy (runtime moved to `/app` via
+> `pnpm deploy`; `posthog-node` added), read the two legal paragraphs.
+>
+> **Side note:** the Docker disk filled up during my image builds and crashed
+> your local Postgres container; I freed ~63 GB of build cache and untagged
+> layers (nothing tagged of yours) and it recovered cleanly (§15).
 
 ## 1. Generative round-trip suite for the notation model — 2 persistence bugs fixed
 
