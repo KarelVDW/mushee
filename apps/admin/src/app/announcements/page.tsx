@@ -286,7 +286,10 @@ export default function AnnouncementsPage() {
                                         {item.failedCount > 0 && (
                                             <span className="text-error"> · {formatCount(item.failedCount)} not delivered</span>
                                         )}{' '}
-                                        · filter {JSON.stringify(item.filters)}
+                                        ·{' '}
+                                        {item.filters.retryOf
+                                            ? 'resend to the accounts an earlier run did not reach'
+                                            : `filter ${JSON.stringify(item.filters)}`}
                                     </span>
                                 </div>
                                 {item.retryable > 0 && (
@@ -307,7 +310,8 @@ export default function AnnouncementsPage() {
                                     onClick={() => {
                                         setSubject(item.subject)
                                         setBody(item.body)
-                                        setFilters(item.filters)
+                                        // A resend row carries no audience of its own; keep the current filter.
+                                        if (!item.filters.retryOf) setFilters(item.filters)
                                     }}>
                                     Reuse
                                 </TertiaryButton>

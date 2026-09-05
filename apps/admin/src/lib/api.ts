@@ -348,7 +348,8 @@ export interface Announcement {
     id: string
     subject: string
     body: string
-    filters: AudienceFilter
+    /** The audience filter, or `{ retryOf }` for a resend to an earlier run's unreached accounts. */
+    filters: AudienceFilter & { retryOf?: string }
     recipientCount: number
     failedCount: number
     /** Unreached accounts still on record — the size of a "Resend to those" run. */
