@@ -20,8 +20,12 @@ Claude will only use single subagents.)
 ## Ground rules for every agent
 
 - Work in **your own git worktree** on branch `burst/<task-id>` off
-  `experimental` (`isolation: "worktree"`). Touch only the files listed for your
-  task. Never edit `pnpm-lock.yaml`, `package.json` files, migrations of other
+  `experimental` (`isolation: "worktree"`). A fresh worktree has **no
+  `node_modules`**: your first command is
+  `pnpm install --frozen-lockfile --offline` (≈7 s from the warm store —
+  measured; never without `--offline`, never `pnpm install` alone). Workspace
+  packages resolve from source, so nothing needs building before tests run.
+  Touch only the files listed for your task. Never edit `pnpm-lock.yaml`, `package.json` files, migrations of other
   tasks, or anything under `meta/` except your own note.
 - Budget: **12 minutes**. At minute 10, if your verification isn't green,
   revert (`git checkout -- .`), write what you learned to
