@@ -29,13 +29,13 @@ const geistMono = Geist_Mono({
     subsets: ['latin'],
 })
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://solkey.io'
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
     title: {
-        default: 'Solkey — the fastest way to get a melody on the page',
-        template: '%s · Solkey',
+        default: 'Solkey',
+        template: '%s — Solkey',
     },
     description:
         'Solkey turns what you play or sing into sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
