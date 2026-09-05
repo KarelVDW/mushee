@@ -69,6 +69,16 @@ const TAKES = [
         hasAudio: true,
     },
     { id: 'take-0', scoreId: MOCK_SCORE_ID, startedAt: '2026-08-01T09:10:00.000Z', endedAt: null, seconds: 7, hasAudio: false },
+    // An orphan: its score is gone, so the settings inventory labels it "Deleted score".
+    // The editor's per-score list filters on scoreId and never sees it.
+    {
+        id: 'take-orphan',
+        scoreId: 'e2e-deleted-score',
+        startedAt: '2026-07-20T18:30:00.000Z',
+        endedAt: '2026-07-20T18:30:30.000Z',
+        seconds: 30,
+        hasAudio: true,
+    },
 ]
 
 /** Records the requests the app makes to the mocked API, for assertions. */
