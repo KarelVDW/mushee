@@ -314,6 +314,24 @@ describe('AdminService audience + announcements', () => {
         )
     })
 
+    it('neutralises spreadsheet formula injection in exported cells', async () => {
+        const query = vi.fn(() =>
+            Promise.resolve([
+                {
+                    email: 'b@x',
+                    name: '=HYPERLINK("http://evil")',
+                    tier: 'free',
+                    betaStatus: null,
+                    createdAt: new Date(0),
+                    lastActiveAt: null,
+                },
+            ]),
+        )
+        const { service } = makeService({ query })
+        const csv = await service.audienceCsv(filters({}))
+        expect(csv.split('\n')[1]).toBe(`b@x,"'=HYPERLINK(""http://evil"")",free,,1970-01-01T00:00:00.000Z,`)
+    })
+
     it('a test send goes to the test address only and is recorded as such', async () => {
         const query = vi.fn((sql: string) =>
             Promise.resolve(

@@ -417,7 +417,10 @@ export class AdminService {
             params,
         )
         const cell = (v: string | Date | null | undefined) => {
-            const s = v instanceof Date ? v.toISOString() : (v ?? '')
+            let s = v instanceof Date ? v.toISOString() : (v ?? '')
+            // Names are user-typed: a value starting with = + - @ would run as a formula when the
+            // file is opened in a spreadsheet. A leading apostrophe makes it plain text there.
+            if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
             return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
         }
         const header = ['email', 'name', 'tier', 'betaStatus', 'signedUpAt', 'lastActiveAt']

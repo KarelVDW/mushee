@@ -126,6 +126,11 @@ deploy.yml) once the GCP project exists.
     — signed URL or stream, owner-scoped). A cross-score "all my recordings" page can build on
     the same endpoint (`GET /recordings` without `scoreId`).
 
+22c. **Bulk e-mail to users** — **decided + built 2026-09-05**: service announcements from the admin
+console (`/announcements`, audience filter, test copy, audit log) over the transactional SendGrid
+integration; marketing mail via the page's CSV export into SendGrid Marketing Campaigns. See
+notes.md §1 "Bulk e-mail" and the end-of-beta runbook §3.
+
 22b. **Read-only share links** — **shipped 2026-09-05** (new, not previously listed):
 `/s/<token>` public page (view, export), Share chip in the editor, `POST/DELETE /scores/:id/share`,
 `GET /shared/:token`, migration `ScoreShareToken`. Playback (`useSharedPlayback`) and "Save a copy" landed the same night. Follow-ups if wanted: link
