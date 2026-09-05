@@ -79,11 +79,11 @@ export class AccidentalMinimizer {
     private candidatesFor(note: Note, pitch: Pitch, targets: ReadonlySet<Note>): Pitch[] {
         if (!targets.has(note)) return [pitch]
         if (note.tiesBack) {
+            // A note ties back only behind a same-sounding partner (Score.tiePartner), so the
+            // continuation simply takes the predecessor's spelling.
             const previous = note.getPrevious()
-            // Guard the MIDI match: an imported tie between differently-sounding notes must not rewrite the pitch.
-            if (previous?.pitch && previous.pitch.toMidi() === pitch.toMidi()) {
-                return [this.chosen.get(previous) ?? previous.pitch]
-            }
+            /* v8 ignore next -- type narrowing only: tiesBack guarantees a pitched predecessor */
+            if (previous?.pitch) return [this.chosen.get(previous) ?? previous.pitch]
         }
         return Pitch.spellingsOf(pitch.toMidi())
     }

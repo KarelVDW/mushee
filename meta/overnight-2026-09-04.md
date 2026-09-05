@@ -41,6 +41,10 @@ Each entry: **what** → **why it matters** → **verification**.
 > 9. **Recording:** a 6/8 (or 2/2) take was cut into bars twice the editor's
 >    length, and bars could come out a sixteenth short — the API's bar
 >    arithmetic ignored the meter's denominator and rounded per note (§20).
+> 10. **Ties:** a tie into a rest or another pitch was drawn and, in playback and
+>     MIDI export, held the note through the rest while the neighbour fell silent;
+>     ties now bind only the same sounding pitch (§24). Open: minimize-accidentals
+>     is not idempotent (§24).
 >
 > **Also:** load-test harness + first numbers (§10), opt-in Spot inference
 > component (§9), marketing launch kit (§13), code-review fixes (§14), analytics
