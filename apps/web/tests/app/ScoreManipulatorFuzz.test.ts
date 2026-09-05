@@ -1,4 +1,5 @@
 import type { ClefType, DurationType } from '@mushee/notation/components/types'
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { Note, Pitch } from '@mushee/notation/model'
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
 import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
@@ -19,6 +20,7 @@ import {
     TOGGLE_TIE,
     TOGGLE_TUPLET,
 } from '@/app/scores/[id]/actions'
+import { ManipulationHistoryManager } from '@/app/scores/[id]/ManipulationHistoryManager'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 
 /**
@@ -29,8 +31,8 @@ import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
  * Seeded, so a failure names the one seed to replay.
  */
 
-/** A cut tuplet may leave a sub-sixteenth residue (the model keeps the note rather than dropping it). */
-const RESIDUE = 1 / 6
+/** A cut tuplet may leave a residue smaller than a triplet sixteenth (the model keeps the note rather than dropping it). */
+const RESIDUE = 1 / 6 - BEAT_EPSILON
 
 class Rng {
     private state: number
@@ -135,13 +137,26 @@ function randomEdit(manipulator: ScoreManipulator, rng: Rng): string {
         manipulator.setTempoAt(i, 0, rng.int(40, 200))
         return 'tempo'
     }
-    if (roll < 0.97) return (manipulator.setClefAt(rng.int(0, scoreOf(manipulator).measures.length - 1), rng.pick(CLEFS)), 'clef')
-    if (roll < 0.99) return (manipulator.setKeyAt(rng.int(0, scoreOf(manipulator).measures.length - 1), rng.int(-7, 7)), 'key')
+    if (roll < 0.96) return (manipulator.setClefAt(rng.int(0, scoreOf(manipulator).measures.length - 1), rng.pick(CLEFS)), 'clef')
+    if (roll < 0.97) return (manipulator.setKeyAt(rng.int(0, scoreOf(manipulator).measures.length - 1), rng.int(-7, 7)), 'key')
+    if (roll < 0.98) {
+        const chromatic = rng.int(-12, 12)
+        // A diatonic step count that fits the chromatic interval keeps spellings sane (as the popover does).
+        const diatonic = Math.round((chromatic * 7) / 12)
+        manipulator.transpose(chromatic, diatonic, rng.pick(['score', 'selection']))
+        return `transpose ${chromatic}/${diatonic}`
+    }
+    if (roll < 0.985) return (manipulator.minimizeAccidentals(), 'minimize accidentals')
+    if (roll < 0.99)
+        return (
+            manipulator.setInstrument(rng.pick([Instrument.Piano, Instrument.Trumpet, Instrument.AltoSaxophone, Instrument.Piccolo])),
+            'instrument'
+        )
     manipulator.setTimeSignatureAt(rng.int(0, scoreOf(manipulator).measures.length - 1), rng.pick([2, 3, 4, 6]), rng.pick([4, 8]))
     return 'time signature'
 }
 
-const SEEDS = Array.from({ length: 120 }, (_, i) => i + 1)
+const SEEDS = Array.from({ length: 200 }, (_, i) => i + 1)
 
 describe('ScoreManipulator under random edit sequences', () => {
     it.each(SEEDS)('keeps the score well-formed and undo/redo exact (seed %i)', (seed) => {
@@ -151,7 +166,7 @@ describe('ScoreManipulator under random edit sequences', () => {
         const initial = serialize(manipulator)
         const steps: string[] = []
 
-        const count = rng.int(5, 25)
+        const count = rng.int(5, 40)
         for (let i = 0; i < count; i++) {
             const label = randomEdit(manipulator, rng)
             steps.push(label)
@@ -166,7 +181,11 @@ describe('ScoreManipulator under random edit sequences', () => {
             assertWellFormed(manipulator, `undo #${undone} of ${steps.join(' → ')}`)
             expect(undone, 'undo never runs out').toBeLessThanOrEqual(count + 1)
         }
-        expect(serialize(manipulator), `after undoing ${steps.join(' → ')}`).toBe(initial)
+        // The history keeps MAX_STEPS snapshots: a shorter session undoes back to the start exactly; a
+        // longer one undoes as far as the bound allows and must simply be well-formed there.
+        if (count <= ManipulationHistoryManager.MAX_STEPS)
+            expect(serialize(manipulator), `after undoing ${steps.join(' → ')}`).toBe(initial)
+        expect(manipulator.canUndo).toBe(false)
 
         while (manipulator.canRedo) manipulator.redo()
         expect(serialize(manipulator), `after redoing ${steps.join(' → ')}`).toBe(final)
