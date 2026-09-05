@@ -311,7 +311,8 @@ export class ScoreManipulator {
 
     removeMeasure(): void {
         const score = this._score
-        if (!score) return
+        // A score always has at least one bar; the UI disables the control too, this keeps every path honest.
+        if (!score || score.measures.length <= 1) return
         this.manipulate(() => {
             score.removeLastMeasure()
             this.setSingle(score.lastMeasure?.lastNote ?? null)

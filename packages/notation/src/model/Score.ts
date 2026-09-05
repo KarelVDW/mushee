@@ -556,7 +556,12 @@ export class Score {
     setDuration(note: Note | null | undefined, value: { type?: DurationType; dots?: number }): Note | null {
         if (!note) return null
         const ratio = note.duration.ratio
-        let durations = [new Duration({ type: value.type ?? note.duration.type, dots: value.dots ?? note.duration.dots, ratio })]
+        const type = value.type ?? note.duration.type
+        const dots = value.dots ?? note.duration.dots
+        // The sixteenth is the model's finest value: a dotted one would leave a thirty-second's
+        // worth of bar that no rest can fill, so the bar would come out short for good.
+        if (type === '16' && dots > 0) return null
+        let durations = [new Duration({ type, dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {
             /* v8 ignore next -- defensive: `note` came from this same tuplet, so getIndex always finds it */
@@ -624,11 +629,16 @@ export class Score {
             targetBeats += nextNote.duration.effectiveBeats
         }
         if (targetBeats > valueBeats + BEAT_EPSILON) {
-            // The gap sits at the end of the replaced range — pad in that note's space:
-            // inside a tuplet it is a fraction no plain duration can express.
-            const ratio = targets[targets.length - 1].duration.ratio
-            values = [...values, ...Duration.fromBeats(targetBeats - valueBeats, ratio).map((d) => new Note({ duration: d }))]
-            valueBeats += targetBeats - valueBeats
+            // The gap sits at the end of the replaced range. Plain rests when the gap is a plain
+            // length; otherwise the gap is a tuplet fraction — of the notes being written (a pasted
+            // triplet over a plain quarter) or of the notes being replaced (a shortened triplet
+            // note) — and is padded in whichever tuplet space fills it exactly.
+            const gap = targetBeats - valueBeats
+            const candidates = [undefined, values[values.length - 1].duration.ratio, targets[targets.length - 1].duration.ratio]
+            const fills = candidates.map((ratio) => Duration.fromBeats(gap, ratio))
+            const exact = fills.find((rests) => Math.abs(sumBy(rests, (d) => d.effectiveBeats) - gap) < BEAT_EPSILON)
+            values = [...values, ...(exact ?? fills[2]).map((d) => new Note({ duration: d }))]
+            valueBeats += gap
         }
         const measuresById = keyBy(
             targets.map((n) => n.measure),
@@ -661,6 +671,9 @@ export class Score {
                 }
             }
             measure.replaceNotes(notes, newNotes)
+            // Whatever the padding above could not express exactly, the bar settles itself in tuplet space
+            // (Measure.complete), leaving at most a sub-sixteenth residue rather than a hole a rest could fill.
+            if (measure.beats < measure.maxBeats - BEAT_EPSILON) measure.complete()
             replaceValues = [...remainderNotes, ...replaceValues]
             allNewNotes.push(...newNotes)
         }

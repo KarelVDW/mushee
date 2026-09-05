@@ -1349,3 +1349,67 @@ describe('Score', () => {
         })
     })
 })
+
+describe('Score.setDuration / replace — bars always add up', () => {
+    it('refuses a dotted sixteenth (there is no thirty-second to pad the bar with)', () => {
+        const score = makeScore(1)
+        const sixteenth = score.replace([score.measures[0].notes[0]], [pitched('C', 5, '16')])[0]
+        expect(score.setDuration(sixteenth, { dots: 1 })).toBeNull()
+        expect(score.setDuration(sixteenth, { type: '16', dots: 1 })).toBeNull()
+        expect(score.measures[0].beats).toBeCloseTo(4, 9)
+        // A dotted eighth is fine, and a sixteenth may still become one.
+        expect(score.setDuration(sixteenth, { type: '8', dots: 1 })).not.toBeNull()
+        expect(score.measures[0].beats).toBeCloseTo(4, 9)
+    })
+
+    it("pads a pasted triplet over a plain note in the triplet's own space, so the bar stays full", () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const triplet = new Note({
+            duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+            pitch: new Pitch({ name: 'D', octave: 5 }),
+        })
+        score.replace([quarter], [triplet])
+        const bar = score.measures[0]
+        expect(bar.beats).toBeCloseTo(bar.maxBeats, 9)
+        // ⅓ written + ⅔ of rests: a triplet quarter rest (⅔), not a plain eighth (½) leaving a hole.
+        expect(bar.notes.slice(0, 2).map((n) => `${n.pitch ? 'D' : 'r'}:${n.duration.type}${n.inTuplet ? '(3:2)' : ''}`)).toEqual([
+            'D:8(3:2)',
+            'r:q(3:2)',
+        ])
+    })
+
+    it('pads a lone quintuplet sixteenth over a quarter in quintuplet space', () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const quint = new Note({
+            duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }),
+            pitch: new Pitch({ name: 'E', octave: 5 }),
+        })
+        score.replace([quarter], [quint])
+        const bar = score.measures[0]
+        expect(bar.beats).toBeCloseTo(bar.maxBeats, 9)
+        expect(bar.notes[1].duration.ratio).toEqual({ actualNotes: 5, normalNotes: 4 })
+    })
+
+    it('keeps mixed-tuplet pastes and settles the bar as far as any value reaches (sub-sixteenth residue allowed)', () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const triplet = new Note({
+            duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+            pitch: new Pitch({ name: 'C', octave: 5 }),
+        })
+        const quint = new Note({
+            duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }),
+            pitch: new Pitch({ name: 'E', octave: 5 }),
+        })
+        const placed = score.replace([quarter], [triplet, quint])
+        const bar = score.measures[0]
+        // ⅓ + ⅕ = 8/15 of a beat: no single tuplet space closes the remaining 7/15 exactly, so the
+        // quintuplet rest covers what it can and a 1/15 residue remains — the notes are never dropped.
+        expect(placed.every((n) => n.isAttached)).toBe(true)
+        expect(bar.notes.slice(0, 2)).toEqual([triplet, quint])
+        expect(bar.beats).toBeLessThan(bar.maxBeats)
+        expect(bar.maxBeats - bar.beats).toBeLessThan(1 / 6)
+    })
+})

@@ -14,8 +14,8 @@ import type { ImportedScore } from './ImportedScore'
 const GRID = 0.25
 /** MIDI's assumed tempo when a file carries no tempo event. */
 const MIDI_DEFAULT_BPM = 120
-/** Matches the API's measure cap; also stops a corrupt tick value from spinning out an endless score. */
-const MAX_MEASURES = 10_000
+/** Stops a corrupt tick value from spinning out an endless score, and keeps a garbled file from freezing the tab. */
+const MAX_MEASURES = 2_000 // a 2,000-bar import already freezes a phone for seconds; real songs are a fraction of this
 const DRUM_CHANNEL = 9
 /** Lowest MIDI note the model can write (octave 0); higher than 127 cannot occur. */
 const LOWEST_MIDI = 12
@@ -333,7 +333,6 @@ export class MidiImporter {
         for (const region of regions) {
             const capacity = region.timeSignature.maxBeats
             const speller = new DurationSpeller(region.timeSignature)
-            const rests = (from: number, beats: number) => speller.spell(from, beats).map((duration) => new Note({ duration }))
             for (let start = region.start; start < region.end - BEAT_EPSILON; start += capacity) {
                 const end = Math.min(start + capacity, region.end)
                 const notes: Note[] = []
@@ -343,7 +342,7 @@ export class MidiImporter {
                     const note = melody[i]
                     const from = Math.max(note.onset, start)
                     const to = Math.min(note.end, end)
-                    if (from > cursor + BEAT_EPSILON) notes.push(...rests(cursor - start, from - cursor))
+                    notes.push(...MidiImporter.silence(speller, cursor - start, from - cursor))
                     const fifths = keyChanges.filter((key) => key.beat <= note.onset + BEAT_EPSILON).pop()?.fifths ?? 0
                     const pitch = MidiImporter.spell(note.midi, fifths)
                     const durations = speller.spell(from - start, to - from)
@@ -363,7 +362,7 @@ export class MidiImporter {
                     cursor = to
                 }
                 // Silence to the end of the bar — and, in a region that ends mid-bar, on to the barline.
-                if (cursor < start + capacity - BEAT_EPSILON) notes.push(...rests(cursor - start, start + capacity - cursor))
+                notes.push(...MidiImporter.silence(speller, cursor - start, start + capacity - cursor))
 
                 const measure = new Measure(score, 'treble', region.timeSignature)
                 measure.addNotes(notes)
@@ -378,6 +377,12 @@ export class MidiImporter {
             }
         }
         return measureStarts
+    }
+
+    /** Rests for `beats` of silence starting `from` into the bar; nothing for a gap too small to write. */
+    private static silence(speller: DurationSpeller, from: number, beats: number): Note[] {
+        if (beats < BEAT_EPSILON) return []
+        return speller.spell(from, beats).map((duration) => new Note({ duration }))
     }
 
     /** Key signature events become explicit key changes on the bar they fall in. */

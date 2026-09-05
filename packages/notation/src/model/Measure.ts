@@ -2,6 +2,7 @@ import { difference, sumBy } from 'lodash-es'
 
 import type { BarlineType, ClefType } from '../components/types'
 import { Clef } from './Clef'
+import { BEAT_EPSILON, Duration } from './Duration'
 import { KeySignature } from './KeySignature'
 import type { MeasureLayout } from './layout/MeasureLayout'
 import { Note } from './Note'
@@ -175,10 +176,44 @@ export class Measure {
         return this
     }
 
-    complete() {
-        if (this.beats >= this.maxBeats) return
-        this.addNotes(this._timeSignature.fillRests(this.beats).map((d) => new Note({ duration: d })))
+    /**
+     * Pad the bar to its meter. On the sixteenth grid plain rests do it (an empty
+     * new bar, a short final bar, a pickup — `position: 'start'` puts the rests
+     * before the music). Off the grid — an incomplete tuplet group left by an
+     * edit, a paste or an imported file — the gap is padded in the last tuplet's
+     * own space as far as written values reach. A residue smaller than any value
+     * (a twelfth of a beat, say) is left rather than dropping a note: notes are
+     * the user's, a hairline-short bar is invisible. `onUneven` reports the
+     * off-grid case with the residue that remained.
+     */
+    complete(options: { position?: 'start' | 'end'; onUneven?: (residue: number) => void } = {}): this {
+        const position = options.position ?? 'end'
+        const onGrid = (beats: number) => Math.abs(beats * 4 - Math.round(beats * 4)) < BEAT_EPSILON
+        let uneven = false
+        for (;;) {
+            const gap = this.maxBeats - this.beats
+            if (gap < BEAT_EPSILON) break
+            if (onGrid(this.beats)) {
+                this.pad(this._timeSignature.fillRests(this.beats), position)
+                continue
+            }
+            uneven = true
+            const lastTuplet = [...this._notes].reverse().find((note) => note.inTuplet)
+            /* v8 ignore next -- defensive: plain values all sit on the sixteenth grid, so an off-grid bar always holds a tuplet note */
+            if (!lastTuplet) break
+            const rests = Duration.fromBeats(gap, lastTuplet.duration.ratio)
+            if (!rests.length) break // nothing written reaches into the residue
+            this.pad(rests, position)
+        }
+        if (uneven) options.onUneven?.(this.maxBeats - this.beats)
         return this
+    }
+
+    private pad(rests: Duration[], position: 'start' | 'end') {
+        this.addNotes(
+            (position === 'start' ? [...rests].reverse() : rests).map((d) => new Note({ duration: d })),
+            position,
+        )
     }
 
     // --- Clefs (leading at beat 0 + optional mid-measure changes) ---

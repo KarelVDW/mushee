@@ -395,40 +395,10 @@ export class MusicXmlImporter {
         }
     }
 
-    /**
-     * Pad a short bar to its meter. On the sixteenth grid, plain rests do it (the
-     * common case: a short final bar, a pickup). Off the grid — an incomplete
-     * tuplet group, one triplet note lost in the file — the gap is padded in the
-     * last tuplet's own space, accepted only when that lands the bar back on the
-     * grid or completes it; otherwise the trailing tuplet note is dropped and the
-     * bar padded again. Every step adds grid-true time or removes a note, so the
-     * loop ends with a bar that adds up.
-     */
+    /** A short opening bar with notes is a pickup: its rests lead in, so the notes end on the barline. */
     private complete(measure: Measure, opening: boolean) {
-        // A short opening bar with notes is a pickup: its rests lead in, so the notes end on the barline.
         const pickup = opening && measure.notes.some((note) => note.pitch)
-        const pad = (rests: Duration[]) =>
-            measure.addNotes(
-                (pickup ? rests.reverse() : rests).map((duration) => new Note({ duration })),
-                pickup ? 'start' : 'end',
-            )
-        const onGrid = (beats: number) => Math.abs(beats * 4 - Math.round(beats * 4)) < BEAT_EPSILON
-        for (;;) {
-            const gap = measure.maxBeats - measure.beats
-            if (gap < BEAT_EPSILON) return
-            if (onGrid(measure.beats)) {
-                pad(measure.timeSignature.fillRests(measure.beats))
-                continue
-            }
-            this.warn(WARN_UNEVEN)
-            const lastTuplet = [...measure.notes].reverse().find((note) => note.inTuplet)
-            /* v8 ignore next -- defensive: plain values are all on the sixteenth grid, so an off-grid bar always holds a tuplet note */
-            if (!lastTuplet) return
-            const rests = Duration.fromBeats(gap, lastTuplet.duration.ratio)
-            const filled = measure.beats + rests.reduce((sum, rest) => sum + rest.effectiveBeats, 0)
-            if (rests.length && (onGrid(filled) || Math.abs(filled - measure.maxBeats) < BEAT_EPSILON)) pad(rests)
-            else measure.removeNotes([lastTuplet])
-        }
+        measure.complete({ position: pickup ? 'start' : 'end', onUneven: () => this.warn(WARN_UNEVEN) })
     }
 
     private trim(measure: Measure) {

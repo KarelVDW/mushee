@@ -66,22 +66,35 @@ describe('MusicXmlImporter', () => {
             expect(warnings).toContain('Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.')
         })
 
-        it('drops a trailing tuplet note whose remainder nothing can spell, then pads', () => {
-            // A triplet eighth (⅓) followed by a quintuplet sixteenth (⅕): no single tuplet space
-            // reaches the grid from 8/15 of a beat, so the quintuplet note goes and the triplet gap is padded.
-            const quint16 = note(
-                'E',
-                4,
-                '16th',
-                2,
-                '<time-modification><actual-notes>5</actual-notes><normal-notes>4</normal-notes></time-modification>',
-            )
+        it('pads what tuplet space can express and keeps the notes when a residue remains', () => {
+            // A triplet eighth (⅓) followed by a quintuplet sixteenth (⅕): 8/15 of a beat that no single
+            // tuplet space closes exactly. The quintuplet rest covers what it can; the 1/15 residue stays
+            // rather than a note being thrown away.
+            // Divisions of 60 so a quintuplet sixteenth (⅕ beat = 12) and a triplet eighth (⅓ = 20) are whole numbers.
+            const at60 = (step: string, type: string, duration: number, ratio: string) =>
+                note(
+                    step,
+                    4,
+                    type,
+                    duration,
+                    `<time-modification><actual-notes>${ratio[0]}</actual-notes><normal-notes>${ratio[2]}</normal-notes></time-modification>`,
+                )
             const full = measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + QUARTER_REST)
-            const { score } = load(doc(full + measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + triplet8('C') + quint16, '')))
+            const uneven = measure(
+                rest('quarter', 60) +
+                    rest('quarter', 60) +
+                    rest('quarter', 60) +
+                    at60('C', 'eighth', 20, '3:2') +
+                    at60('E', '16th', 12, '5:4'),
+                '<attributes><divisions>60</divisions></attributes>',
+            )
+            const { score, warnings } = load(doc(full + uneven))
             const bar = score.measures[1]
-            expect(bar.beats).toBeCloseTo(bar.maxBeats, 6)
-            expect(bar.notes.some((n) => n.pitch?.name === 'E')).toBe(false)
-            expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'r:q(3:2)'])
+            expect(bar.notes.some((n) => n.pitch?.name === 'E')).toBe(true)
+            expect(bar.maxBeats - bar.beats).toBeGreaterThan(0)
+            expect(bar.maxBeats - bar.beats).toBeLessThan(1 / 6)
+            expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'E4:16(5:4)', 'r:8(5:4)'])
+            expect(warnings).toContain('Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.')
         })
 
         it('drops a note or forward whose duration is absurd instead of spelling it', () => {

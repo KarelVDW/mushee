@@ -334,6 +334,14 @@ function ScoreRow({
                         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
                     ].join(' ')}>
                     {score.title}
+                    {score.shareToken && (
+                        <span
+                            className="inline-flex align-middle ml-2 text-on-surface-variant"
+                            title="Shared with a read-only link"
+                            aria-label="Shared with a read-only link">
+                            <Icon name="link" size={13} />
+                        </span>
+                    )}
                 </button>
                 <span className="md:hidden font-body font-normal text-[12px] leading-none text-on-surface-variant">
                     {relativeTime(score.updatedAt)}

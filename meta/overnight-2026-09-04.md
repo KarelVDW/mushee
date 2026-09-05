@@ -359,3 +359,32 @@ lands on onboarding. Only the real keys remain (runbook §1).
   "Turn link off" action → `DELETE /admin/scores/:id/share` (owner-agnostic,
   behind `ADMIN_SECRET`), the support lever for an abuse/DMCA-style report.
   API + admin unit tests cover it.
+
+## 19. Editor fuzz (random edit sequences + undo/redo) — 3 editor bugs fixed
+
+- **What:** `apps/web/tests/app/ScoreManipulatorFuzz.test.ts` — 120 seeds ×
+  5–25 random edits through the real `ScoreManipulator` (pitch nudges,
+  durations, dots, tuplets, ties, rests, accidentals, remove, delete
+  selection, copy/paste, add/remove measure, tempo/clef/key/meter) asserting
+  after every step: no bar over-full, none short by a triplet sixteenth or
+  more, every note attached; then undo-all == the starting document and
+  redo-all == the final one, byte for byte.
+- **Found + fixed:** (1) **dotting a sixteenth** left the bar short by a
+  thirty-second — permanently, since no rest can fill it. `Score.setDuration`
+  now refuses a dotted sixteenth and the Dotted chip is disabled for them.
+  (2) **pasting tuplet notes over plain ones** padded the gap in the wrong
+  tuplet ratio and left bars short by a sixth or a twelfth. `Score.replace`
+  now tries plain, then the pasted notes' ratio, then the replaced notes'
+  ratio for an exact fill, and every touched bar settles itself afterwards.
+  (3) `removeMeasure()` could remove the last remaining bar (the UI disabled
+  the button; the manipulator now refuses too).
+- **Model:** the grid-aware bar completion moved onto `Measure.complete()`
+  (one implementation for new bars, edits, pastes and imports) and is
+  deliberately non-destructive: an inexpressible residue smaller than a
+  sixteenth stays rather than a note being dropped — the trade-off the
+  existing rebar tests already encoded. The MusicXML importer delegates to it.
+- **Also:** MIDI import cap 10,000 → 2,000 bars (a garbled file took 14 s to
+  import — the fuzz timed out); popover panels move focus in on open and back
+  to the trigger on close; library rows show a link icon on shared scores.
+- **Verification:** notation 1845/1845 with the 100% model gate, web 388
+  unit tests (fuzz 120/120), import/MIDI/layout fuzz all green.

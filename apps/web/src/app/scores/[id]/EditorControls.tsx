@@ -255,7 +255,7 @@ export function NoteToolDock({
                     options={DURATIONS.map((d) => ({ value: d, label: <DurationIcon dur={d} /> }))}
                 />
                 <ToolGroup ariaLabel="Note modifiers">
-                    <ChipToggle plain active={dotted} onClick={onDotToggle} ariaLabel="Dotted">
+                    <ChipToggle plain active={dotted} onClick={onDotToggle} ariaLabel="Dotted" disabled={duration === '16'}>
                         ·
                     </ChipToggle>
                     <ChipToggle plain active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
