@@ -16,7 +16,7 @@ const capsule = [
 // covers the public marketing paths.
 export default function NotFound() {
     return (
-        <div className="min-h-dvh bg-surface text-on-surface flex items-center justify-center px-6">
+        <main className="min-h-dvh bg-surface text-on-surface flex items-center justify-center px-6">
             <div className="text-center flex flex-col items-center gap-4 max-w-md">
                 <Wordmark size={28} />
                 <h1 className="font-headline font-bold text-[1.75rem] leading-tight m-0">This page doesn&apos;t exist</h1>
@@ -34,6 +34,6 @@ export default function NotFound() {
                     </Link>
                 </div>
             </div>
-        </div>
+        </main>
     )
 }

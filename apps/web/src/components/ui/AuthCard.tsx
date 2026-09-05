@@ -117,7 +117,7 @@ function FormPanel({
                                 <button
                                     type="button"
                                     onClick={onToggleShowPassword}
-                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    aria-label="Show password"
                                     aria-pressed={showPassword}
                                     className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
                                     <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />

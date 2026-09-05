@@ -3,6 +3,11 @@ import type { Metadata } from 'next'
 import { SharedScorePage } from './SharedScorePage'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
+if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
+    // Module scope: logged once per server, not per request. Without the URL every shared page
+    // pays a failed fetch and falls back to the generic title, with nothing else to diagnose it.
+    console.warn('NEXT_PUBLIC_API_URL is not set: shared-page titles and Open Graph cards fall back to the generic text.')
+}
 
 /** Metadata for a link that doesn't resolve (or before we know): generic, and never indexed. */
 const FALLBACK: Metadata = {
@@ -21,9 +26,11 @@ const FALLBACK: Metadata = {
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
     const { token } = await params
     try {
+        // Cached per token for a minute: link previews and repeat views of one link cost the API
+        // one call, and the server's egress address stays well under the route's per-IP limit.
         const res = await fetch(`${API_URL}/shared/${encodeURIComponent(token)}`, {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(2500),
+            next: { revalidate: 60 },
+            signal: AbortSignal.timeout(1500),
         })
         if (!res.ok) return FALLBACK
         const shared = (await res.json()) as { title?: unknown }

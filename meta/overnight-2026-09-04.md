@@ -666,3 +666,36 @@ api recordings+scores 289/289, api + web type-check clean, prettier clean.
 
 Not done: no third wave (too little time before the 09:57 stop). Worktrees under the
 session scratchpad were removed; the `burst/*` branches remain for inspection.
+
+**Review pass (09:57–10:00, 16 read-only reviewers over the merged diff, 43 findings)** — all
+handled by the orchestrator afterwards; the findings note was deleted once acted on.
+
+- Fixed: the share rate-limit guard could not be constructed by Nest's injector (typed ctor
+  params → no-arg ctor + `create()` for tests); its env knobs parse to the default on garbage
+  instead of disabling the limiter; expired windows are swept once per window (was per request
+  above 10k clients, quadratic under an address flood) and the map is cleared past 50k clients;
+  knobs documented in `apps/api/.env.example`. `RecordingPipeline.archive()` memoises the
+  in-flight promise so the session's `close()` waits for the upload and persists `audioKey`
+  (was null on the ordinary end-then-close path). Signup CAPTCHA now **fails closed**: production
+  with `BETA_MODE` off and no `TURNSTILE_SECRET_KEY` refuses to boot (still only a warning during
+  the beta). Shared page: metadata fetch is cached per token for 60 s (`next.revalidate`) so
+  previews don't eat the API's per-IP budget, 1.5 s timeout, one boot warning when
+  `NEXT_PUBLIC_API_URL` is unset. One `SITE_URL` (`apps/web/src/lib/siteUrl.ts`, three-step
+  fallback) for layout/robots/sitemap/landing/pricing; sitemap no longer stamps a fake
+  `lastModified`. Accidental-picker copy describes the state set, not a delta. a11y: 404 page
+  is a `<main>`, global-error wordmark is decorative, password toggle keeps a fixed label with
+  `aria-pressed`. Eval transcriber checks the stdin pipe before registering the request.
+  README: export formats are MusicXML, PDF, MIDI (no SVG). Beta-ending mail: plan figures
+  sourced, Variant B's offer flagged for the lawyer pass, over-limit rule stated (nothing capped,
+  no new scores while over 5), reminder must go out **before** the tier migration.
+- Tests added: hand-built two-pass idempotence cases for `Score.minimizeAccidentals` (re-keying
+  E♭/E to E major, tie across the barline, double accidentals in C♯ major, redundant mid-bar key,
+  clarinet); guard edge (last ms of the window), unknown-IP bucket, flood cap, env parsing;
+  takes repo mock honours `order` (and asserts it) plus a failed-upload row; keybinding
+  uniqueness on both platforms + Mac clipboard resolution; CAPTCHA fail-closed.
+- Deliberately not changed: (1) the sounding-basis audition frees a tie continuation whose
+  predecessor lies outside the region — a small ranking undercount, but forcing the predecessor's
+  spelling would re-introduce the spelling feedback loop the fix removed; (2)
+  `settings/page.tsx` keys on `tierId === 'beta'` — which way to go depends on the grandfather vs
+  migrate decision (runbook §3), so it stays a launch must-edit; (3) the shared limiter is still
+  per replica (master-todo #21 now names both limiters).

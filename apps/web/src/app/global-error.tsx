@@ -48,7 +48,9 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
                     textAlign: 'center',
                 }}>
                 <div style={{ maxWidth: 420, padding: '0 2rem' }}>
-                    <p style={{ fontSize: 28, fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.04em', margin: '0 0 1rem' }}>
+                    <p
+                        aria-hidden="true"
+                        style={{ fontSize: 28, fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.04em', margin: '0 0 1rem' }}>
                         Solkey
                     </p>
                     <h1 style={{ fontSize: '1.75rem', lineHeight: 1.2, margin: '0 0 0.75rem' }}>Something went wrong</h1>

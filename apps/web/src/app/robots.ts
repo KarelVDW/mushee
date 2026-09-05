@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
+import { SITE_URL } from '@/lib/siteUrl'
 
 /**
  * Crawl policy for the marketing site. Everything behind login, the share
@@ -22,7 +22,8 @@ export default function robots(): MetadataRoute.Robots {
                     '/reset-password',
                     // Share links are noindex; do not let crawlers enumerate them.
                     '/s/',
-                    // Admin console and API/analytics proxies: nothing to index.
+                    // Defensive: the admin console and the API live on other hosts, but a
+                    // misrouted path here must never be indexed either. /ingest is the analytics proxy.
                     '/admin',
                     '/api',
                     '/ingest',

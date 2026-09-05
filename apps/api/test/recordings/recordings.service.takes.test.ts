@@ -52,23 +52,42 @@ const rows: Recording[] = [
         createdAt: new Date('2026-09-04T10:00:00Z'),
         endedAt: new Date('2026-09-04T10:00:12Z'),
     },
+    {
+        // The upload failed after the folder was claimed: a row with a storage path but no
+        // audio key and no audio object — only the debug bundle made it.
+        id: 'r-failed',
+        userId: 'u3',
+        scoreId: 's3',
+        creditsSpent: 5,
+        storagePath: 'recordings/u3/s3/r-failed',
+        audioKey: null,
+        createdAt: new Date('2026-09-03T10:00:00Z'),
+        endedAt: new Date('2026-09-03T10:00:05Z'),
+    },
 ]
+
+/** What the bucket holds under each take's folder. */
+const OBJECTS: Record<string, string[]> = {
+    'recordings/u1/s1/r-old': ['recordings/u1/s1/r-old/audio.webm', 'recordings/u1/s1/r-old/session.json'],
+    'recordings/u3/s3/r-failed': ['recordings/u3/s3/r-failed/session.json'],
+}
 
 function makeService(storageOverrides: Partial<StorageService> = {}) {
     const repo = {
-        find: vi.fn(({ where }: { where: { userId: string; scoreId?: string } }) =>
-            Promise.resolve(
-                rows
-                    .filter((r) => r.userId === where.userId && (!where.scoreId || r.scoreId === where.scoreId))
-                    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
-            ),
-        ),
+        // Honours the query's `order` (rows are stored oldest-first here) so a service that forgot
+        // to ask for newest-first would fail the listing test rather than be rescued by the mock.
+        find: vi.fn(({ where, order }: { where: { userId: string; scoreId?: string }; order?: { createdAt?: 'ASC' | 'DESC' } }) => {
+            const matching = rows.filter((r) => r.userId === where.userId && (!where.scoreId || r.scoreId === where.scoreId))
+            if (order?.createdAt === 'DESC') matching.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+            else if (order?.createdAt === 'ASC') matching.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+            return Promise.resolve(matching)
+        }),
         findOneBy: vi.fn(({ id }: { id: string }) => Promise.resolve(rows.find((r) => r.id === id) ?? null)),
         delete: vi.fn(() => Promise.resolve({ affected: 1 })),
     }
     const deletePrefix = vi.fn(() => Promise.resolve())
     const storage = {
-        list: vi.fn(() => Promise.resolve(['recordings/u1/s1/r-old/audio.webm', 'recordings/u1/s1/r-old/session.json'])),
+        list: vi.fn((prefix: string) => Promise.resolve(OBJECTS[prefix] ?? [])),
         signedUrl: vi.fn(() => Promise.resolve(null as string | null)),
         createReadStream: vi.fn(() => 'stream' as never),
         deletePrefix,
@@ -85,8 +104,10 @@ function makeService(storageOverrides: Partial<StorageService> = {}) {
 
 describe('RecordingsService takes', () => {
     it('lists the caller’s takes newest first, marking which have audio', async () => {
-        const { service } = makeService()
-        expect(await service.listForUser('u1')).toEqual([
+        const { service, repo } = makeService()
+        const listed = await service.listForUser('u1')
+        expect(repo.find).toHaveBeenCalledWith(expect.objectContaining({ order: { createdAt: 'DESC' } }))
+        expect(listed).toEqual([
             {
                 id: 'r-keyed',
                 scoreId: 's2',
@@ -147,6 +168,16 @@ describe('RecordingsService takes', () => {
         await expect(service.audioFor('u1', 'r-legacy')).rejects.toThrow('No audio was archived')
         const empty = makeService({ list: vi.fn(() => Promise.resolve([])) as never })
         await expect(empty.service.audioFor('u1', 'r-old')).rejects.toThrow('missing from storage')
+    })
+
+    it('a take whose upload failed still lists as having audio, and replay says the audio is missing', async () => {
+        // hasAudio keys on the storage path (rows from before audioKey existed have no key either),
+        // so the inventory cannot tell a failed upload from a legacy take; the replay can.
+        const { service, storage } = makeService()
+        const [take] = await service.listForUser('u3')
+        expect(take).toMatchObject({ id: 'r-failed', hasAudio: true })
+        await expect(service.audioFor('u3', 'r-failed')).rejects.toThrow('missing from storage')
+        expect(storage.list).toHaveBeenCalledWith('recordings/u3/s3/r-failed')
     })
 
     it('deletes the audio folder before the row, and skips storage for audio-less rows', async () => {

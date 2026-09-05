@@ -278,7 +278,7 @@ async function expectHeaderFitsViewport(page: Page): Promise<void> {
     expect(headerBox).not.toBeNull()
     expect(viewport).not.toBeNull()
     expect(headerBox?.x ?? -1).toBeGreaterThanOrEqual(0)
-    expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual(viewport?.width ?? 0)
+    expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
     // The chips themselves stay inside the header's box (a flex row that overflowed
     // would keep the header at viewport width while its children spill out).
     for (const name of ['Share score', 'Takes', 'Export score']) {

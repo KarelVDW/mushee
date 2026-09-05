@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
+import { SITE_URL } from '@/lib/siteUrl'
 
 type PublicRoute = {
     path: string
@@ -24,10 +24,10 @@ const PUBLIC_ROUTES: readonly PublicRoute[] = [
 ]
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const lastModified = new Date()
+    // No lastModified: stamping every route with the build time tells crawlers everything
+    // changed on each deploy, which they learn to ignore.
     return PUBLIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
         url: `${SITE_URL}${path}`,
-        lastModified,
         changeFrequency,
         priority,
     }))

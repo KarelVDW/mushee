@@ -50,7 +50,7 @@ const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtu
     unknown
 >
 
-/** Two archived takes on the mock score, plus one legacy row without audio. */
+/** Two archived takes on the mock score, one legacy row without audio, and an orphan take on a deleted score. */
 const TAKES = [
     {
         id: 'take-2',

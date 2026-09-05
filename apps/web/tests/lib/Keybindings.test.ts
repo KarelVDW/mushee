@@ -325,13 +325,19 @@ describe('Keybindings account sync', () => {
 })
 
 describe('Editor command defaults', () => {
-    it('gives every listed command a unique id and a unique, parseable default shortcut', () => {
+    it('gives every listed command a unique id and a unique, parseable default shortcut on both platforms', () => {
         const ids = EDITOR_COMMANDS.map((command) => command.id)
         expect(new Set(ids).size).toBe(ids.length)
-        const defaults = EDITOR_COMMANDS.map((command) => command.defaultShortcut)
-        expect(defaults.every((shortcut) => shortcut !== null)).toBe(true)
-        const canonical = defaults.map((shortcut) => Shortcut.parse(shortcut!, false).id)
-        expect(new Set(canonical).size).toBe(canonical.length)
+        const defaults = EDITOR_COMMANDS.map((command) => command.defaultShortcut).filter(
+            (shortcut): shortcut is string => shortcut !== null,
+        )
+        expect(defaults.length).toBe(EDITOR_COMMANDS.length)
+        // `Mod` canonicalises differently per platform, so a Meta+… default could collide with a
+        // Mod+… one on a Mac only.
+        for (const isMac of [false, true]) {
+            const canonical = defaults.map((shortcut) => Shortcut.parse(shortcut, isMac).id)
+            expect(new Set(canonical).size, `isMac=${isMac}`).toBe(canonical.length)
+        }
     })
 
     it('covers every dock control that has a keyboard-friendly action (durations and accidentals included)', () => {
@@ -365,5 +371,12 @@ describe('Editor command defaults', () => {
         expect(keybindings.resolve(keydown({ code: 'KeyB', key: 'b' }))?.id).toBe('set-accidental:flat')
         expect(keybindings.resolve(keydown({ code: 'Digit3', key: '#', shiftKey: true }))?.id).toBe('set-accidental:sharp')
         expect(keybindings.resolve(keydown({ code: 'Digit3', key: '3' }))?.id).toBe('toggle-tuplet')
+    })
+
+    it('on a Mac the fixed clipboard shortcuts resolve by typed character and the plain letters still reach the pickers', () => {
+        const keybindings = new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-defaults-mac', isMac: true })
+        expect(keybindings.resolve(keydown({ code: 'KeyC', key: 'c', metaKey: true }))?.id).toBe('copy')
+        expect(keybindings.resolve(keydown({ code: 'KeyB', key: 'b' }))?.id).toBe('set-accidental:flat')
+        expect(keybindings.resolve(keydown({ code: 'KeyB', key: 'b', metaKey: true }))).toBeNull()
     })
 })

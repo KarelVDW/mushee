@@ -5,6 +5,7 @@ import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google
 
 import { AuthGate } from '@/components/AuthGate'
 import { HydrationMarker } from '@/components/HydrationMarker'
+import { SITE_URL } from '@/lib/siteUrl'
 
 import { Providers } from './providers'
 
@@ -28,8 +29,6 @@ const geistMono = Geist_Mono({
     variable: '--font-geist-mono',
     subsets: ['latin'],
 })
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://solkey.io'
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),

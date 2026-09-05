@@ -42,7 +42,8 @@ test('an unknown or revoked token explains itself instead of erroring', async ({
     await page.goto('/s/nosuchtoken00000000')
     await expect(page.getByRole('heading', { name: /doesn’t open anything/ })).toBeVisible()
     await expect(page.getByTestId('shared-score')).toHaveCount(0)
-    // No score name to show: the generic title stays.
+    // No score name to show: the generic title stays. (A no-regression check — the server already
+    // rendered this title, so it only proves the client effect does not overwrite it on a 404.)
     await expect(page).toHaveTitle('Shared score — Solkey')
 })
 

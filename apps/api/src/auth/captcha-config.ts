@@ -7,8 +7,11 @@ import { captcha } from 'better-auth/plugins'
  * CAPTCHA gates it (end-of-beta runbook §1).
  *
  * Configured by TURNSTILE_SECRET_KEY. Unset → the plugin is not installed and
- * signup works as before (local dev, tests, the mocked e2e suite); production
- * logs a warning at boot so the gap is never silent. The web app renders the
+ * signup works as before (local dev, tests, the mocked e2e suite). Production
+ * during the closed beta logs a warning at boot (admin approval still gates
+ * accounts); production with BETA_MODE off refuses to boot — an open signup
+ * without a CAPTCHA is exactly the launch-day mistake a runbook line cannot
+ * prevent. The web app renders the
  * widget when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set and sends the token in the
  * `x-captcha-response` header the plugin reads.
  *
@@ -24,6 +27,12 @@ export function signupCaptchaPlugins(env: NodeJS.ProcessEnv = process.env): Retu
     const key = env.TURNSTILE_SECRET_KEY?.trim()
     if (!key) {
         if (env.NODE_ENV === 'production') {
+            if (env.BETA_MODE !== 'true') {
+                throw new Error(
+                    'TURNSTILE_SECRET_KEY is not set while BETA_MODE is off: public signup would run without a CAPTCHA. ' +
+                        'Set the Turnstile secret (or BETA_MODE=true) before starting the API.',
+                )
+            }
             console.warn('TURNSTILE_SECRET_KEY is not set: signup runs without a CAPTCHA. Set it before opening signup to the public.')
         }
         return []

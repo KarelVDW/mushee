@@ -12,10 +12,15 @@ describe('signup CAPTCHA configuration', () => {
         expect(warn).not.toHaveBeenCalled()
     })
 
-    it('warns at production boot when the secret is missing — an open signup must never go unnoticed', () => {
+    it('warns at production boot when the secret is missing during the closed beta — the gap must never be silent', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-        expect(signupCaptchaPlugins({ NODE_ENV: 'production' })).toEqual([])
+        expect(signupCaptchaPlugins({ NODE_ENV: 'production', BETA_MODE: 'true' })).toEqual([])
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('TURNSTILE_SECRET_KEY'))
+    })
+
+    it('refuses to boot production with public signup and no secret — fail closed, not open', () => {
+        expect(() => signupCaptchaPlugins({ NODE_ENV: 'production' })).toThrow(/TURNSTILE_SECRET_KEY/)
+        expect(() => signupCaptchaPlugins({ NODE_ENV: 'production', BETA_MODE: 'false' })).toThrow(/BETA_MODE/)
     })
 
     it('installs the Turnstile captcha plugin on the signup endpoint only when a secret is set', () => {

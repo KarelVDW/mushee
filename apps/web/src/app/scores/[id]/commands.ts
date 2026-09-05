@@ -79,19 +79,23 @@ const DURATION_COMMANDS: readonly EditorCommand[] = (
     fromActionWith(SET_DURATION, type, type, label, `Set the selected note to a ${label.toLowerCase()}.`, 'Durations', key),
 )
 
-/** The dock's accidental picker: ♭ on B (how it is written), ♮ on N, ♯ on the key that types # on a US layout. */
+/**
+ * The dock's accidental picker. Mnemonics assume a US layout (♭ on B, ♮ on N, ♯ where # is typed);
+ * bindings are physical keys, so other layouts see other letters — the dialog shows the live ones
+ * and everything is rebindable.
+ */
 const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
-    fromActionWith(SET_ACCIDENTAL, 'flat', 'b', 'Flat', 'Lower the selected notes by a semitone (♭).', 'Accidentals', 'KeyB'),
+    fromActionWith(SET_ACCIDENTAL, 'flat', 'b', 'Flat', 'Mark the selected notes flat (♭).', 'Accidentals', 'KeyB'),
     fromActionWith(
         SET_ACCIDENTAL,
         'natural',
         undefined,
         'Natural',
-        'Remove the accidental from the selected notes (♮).',
+        'Clear the accidental on the selected notes (♮).',
         'Accidentals',
         'KeyN',
     ),
-    fromActionWith(SET_ACCIDENTAL, 'sharp', '#', 'Sharp', 'Raise the selected notes by a semitone (♯).', 'Accidentals', 'Shift+Digit3'),
+    fromActionWith(SET_ACCIDENTAL, 'sharp', '#', 'Sharp', 'Mark the selected notes sharp (♯).', 'Accidentals', 'Shift+Digit3'),
 ]
 
 /**

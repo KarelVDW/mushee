@@ -126,8 +126,9 @@ deploy.yml) once the GCP project exists.
     `app` (uid 1000); the basic-pitch service was deleted 2026-08-22.
 21. ~~**API image slimming**~~ — **done 2026-09-05** (`pnpm deploy --prod`, 1.38 GB → 793 MB,
     no `.env*`/dev storage in the image; overnight log §8). Still open, only if OTP brute-force
-    pressure appears: a Redis store for the rate limiter (per-replica in-memory today;
-    `allowedAttempts: 5` is the real guard).
+    pressure appears: a Redis store for the rate limiters (per-replica in-memory today — the OTP
+    limiter and, since 2026-09-05, the 30/min guard on `GET /shared/:token`; `allowedAttempts: 5`
+    is the real guard).
 22. ~~**Recordings product surface**~~ — **done 2026-09-05**: the editor header's "Takes"
     menu lists every recording made into the score (newest first) with replay of the
     archived audio and confirmed deletion (`GET/DELETE /recordings`, `GET /recordings/:id/audio`

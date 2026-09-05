@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 
 import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
+import { SITE_URL } from '@/lib/siteUrl'
 
 import { LandingPage } from './LandingPage'
 
 export const metadata: Metadata = {
     alternates: { canonical: '/' },
 }
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
 
 /** Structured data for rich search results (SoftwareApplication + offers). */
 const jsonLd = {

@@ -5,8 +5,17 @@ import { ScoresService } from './scores.service'
 
 /** Requests per IP per window on the public share endpoint (default 30/min);
  *  tighter than the global limiter, which keys per-user and allows 120/min. */
-export const SHARED_RATE_LIMIT_MAX = parseInt(process.env.SHARED_RATE_LIMIT_MAX ?? '30', 10)
-export const SHARED_RATE_LIMIT_WINDOW_MS = parseInt(process.env.SHARED_RATE_LIMIT_WINDOW_MS ?? String(60_000), 10)
+export const SHARED_RATE_LIMIT_MAX = positiveIntSetting(process.env.SHARED_RATE_LIMIT_MAX, 30)
+export const SHARED_RATE_LIMIT_WINDOW_MS = positiveIntSetting(process.env.SHARED_RATE_LIMIT_WINDOW_MS, 60_000)
+
+/** Distinct client keys the guard tracks before it forgets everything: bounds memory under an IP flood. */
+export const SHARED_RATE_LIMIT_MAX_TRACKED = 50_000
+
+/** A positive integer from the environment, or the default — a typo must not silently disable the limiter (`count > NaN` is never true). */
+export function positiveIntSetting(raw: string | undefined, fallback: number): number {
+    const n = parseInt(raw ?? '', 10)
+    return Number.isFinite(n) && n > 0 ? n : fallback
+}
 
 /**
  * Fixed-window per-IP counter for the unauthenticated share route. The global
@@ -18,6 +27,7 @@ export const SHARED_RATE_LIMIT_WINDOW_MS = parseInt(process.env.SHARED_RATE_LIMI
 @Injectable()
 export class SharedScoreRateLimitGuard implements CanActivate {
     private readonly hits = new Map<string, { count: number; resetAt: number }>()
+    private nextPruneAt = 0
 
     // No constructor parameters: Nest instantiates guards through DI and would
     // try to resolve `Number`/`Function` tokens for typed params. Tests use create().
@@ -42,7 +52,15 @@ export class SharedScoreRateLimitGuard implements CanActivate {
 
         let entry = this.hits.get(key)
         if (!entry || entry.resetAt <= now) {
-            if (this.hits.size > 10_000) this.prune(now)
+            // Sweep expired windows at most once per window: a sweep walks the whole map, so doing
+            // it per request would let a flood of addresses make every request cost O(clients).
+            if (now >= this.nextPruneAt) {
+                this.prune(now)
+                this.nextPruneAt = now + this.windowMs
+            }
+            // A sweep only drops expired windows; a flood of distinct addresses inside one window
+            // could still grow the map without bound. Forgetting everyone is the lesser evil.
+            if (this.hits.size >= SHARED_RATE_LIMIT_MAX_TRACKED) this.hits.clear()
             entry = { count: 0, resetAt: now + this.windowMs }
             this.hits.set(key, entry)
         }

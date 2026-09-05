@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { BETA_MODE, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
+import { SITE_URL } from '@/lib/siteUrl'
 
 import { PRICING_FAQ } from './faq'
 import { PricingPage } from './PricingPage'
@@ -15,8 +16,6 @@ export const metadata: Metadata = {
         description: 'Free to start. Plans from $9 a month, one-time minute packs from $6. Every plan gets the full editor.',
     },
 }
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
 
 /** Structured data: the offer ladder (hidden during the beta) and the FAQ, for rich results. */
 const jsonLd = [

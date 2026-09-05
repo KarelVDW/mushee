@@ -32,7 +32,7 @@ performance into editable sheet music:
   undo/redo, transposition with minimal accidentals, metronome and playback,
   laid out by the engine in `packages/notation` and usable on phones too.
 - **Import / export** — import MusicXML (`.xml`/`.mxl`) and MIDI files; export
-  scores as MusicXML, PDF or SVG, and download a full account export.
+  scores as MusicXML, PDF or MIDI, and download a full account export.
 - **Share links** — publish a read-only link to a score (`/s/<token>`) that
   anyone can open without an account; revoke it any time.
 - **Takes** — every recording is kept as a take with its archived audio, so you
