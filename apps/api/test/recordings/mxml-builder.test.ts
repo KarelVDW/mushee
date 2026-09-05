@@ -126,3 +126,44 @@ describe('MxmlBuilder duration spelling', () => {
         expect(spell(b, 0, 3)).toBe('half.')
     })
 })
+
+describe('MxmlBuilder bar arithmetic', () => {
+    const divisionsOf = (b: MxmlBuilder, index: number, notes: PendingNote[]) =>
+        notesOf(b.buildMeasure(index, notes).entries).reduce((sum, n) => sum + (n.duration as number), 0)
+
+    it('measures a 6/8 bar as three quarter-beats, not six (bpm counts quarters)', () => {
+        const b = builder(6, 8) // at 120 bpm a quarter is 0.5 s, so a 6/8 bar is 1.5 s
+        expect(b.measureIndexFor(1.4)).toBe(0)
+        expect(b.measureIndexFor(1.6)).toBe(1)
+        expect(b.measureRangeFor(0, 3.1)).toEqual([0, 2])
+        // A held note is written across the bars it sounds through, and every bar adds up to 36 divisions (3 quarters × 12).
+        const held: PendingNote[] = [{ startTimeSeconds: 0, durationSeconds: 3, pitchMidi: 60 }]
+        expect(divisionsOf(b, 0, held)).toBe(36)
+        expect(divisionsOf(b, 1, held)).toBe(36)
+    })
+
+    it('measures a 2/2 bar as four quarter-beats', () => {
+        const b = builder(2, 2)
+        expect(b.measureIndexFor(1.9)).toBe(0)
+        expect(b.measureIndexFor(2.1)).toBe(1)
+        expect(divisionsOf(b, 0, [{ startTimeSeconds: 0, durationSeconds: 0.5, pitchMidi: 60 }])).toBe(48)
+    })
+
+    it('snaps onsets and releases to the sixteenth grid so bars never come out a sixteenth short', () => {
+        const b = builder(3, 4)
+        // Two notes with ragged timing (0.6 s = 1.2 beats): rounding each span alone used to leave a hole.
+        const notes: PendingNote[] = [
+            { startTimeSeconds: 0, durationSeconds: 1, pitchMidi: 60 },
+            { startTimeSeconds: 1.2, durationSeconds: 0.6, pitchMidi: 62 },
+        ]
+        expect(divisionsOf(b, 0, notes)).toBe(36)
+        expect(divisionsOf(b, 1, notes)).toBe(36)
+    })
+
+    it('keeps a note shorter than half a sixteenth as one sixteenth rather than losing it', () => {
+        const b = builder(4, 4)
+        const entries = notesOf(b.buildMeasure(0, [{ startTimeSeconds: 0.5, durationSeconds: 0.02, pitchMidi: 60 }]).entries)
+        expect(entries.some((n) => n.pitch && n.type === '16th')).toBe(true)
+        expect(entries.reduce((sum, n) => sum + (n.duration as number), 0)).toBe(48)
+    })
+})

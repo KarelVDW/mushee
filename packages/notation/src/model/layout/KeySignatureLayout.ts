@@ -1,4 +1,5 @@
-import { getGlyphWidth, getYForNote } from '../../components'
+import { getGlyphWidth } from '../../components/glyphUtils'
+import { getYForNote } from '../../components/noteUtils'
 import type { Clef } from '../Clef'
 import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'

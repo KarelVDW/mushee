@@ -1,5 +1,6 @@
-import { getGlyphWidth, getYForNote } from '../../components'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../components/constants'
+import { getGlyphWidth } from '../../components/glyphUtils'
+import { getYForNote } from '../../components/noteUtils'
 import type { Note } from '../Note'
 import type { NoteWidth } from '../width/NoteWidth'
 

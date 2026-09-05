@@ -722,7 +722,7 @@ export class RecordingPipeline {
                 deducedNotes: this.emittedNotes,
                 durationSec: this.lastDuration,
                 bpm: this.bpm,
-                beatsPerMeasure: this.beats,
+                beatsPerMeasure: (this.beats * 4) / this.beatType,
             })
         }
 

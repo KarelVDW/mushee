@@ -406,3 +406,27 @@ lands on onboarding. Only the real keys remain (runbook §1).
   to the trigger on close; library rows show a link icon on shared scores.
 - **Verification:** notation 1845/1845 with the 100% model gate, web 388
   unit tests (fuzz 120/120), import/MIDI/layout fuzz all green.
+
+## 20. Recording → editor contract fuzz — 2 recording bugs fixed; .mxl reader fuzz clean
+
+- **What:** `apps/api/test/recordings/recording-editor-contract.test.ts` feeds
+  150 random monophonic takes (ragged real-world timing, every meter the
+  recorder offers, all transpositions, voice spelling on/off) through the
+  API's `MxmlBuilder` and loads the result with the notation model both as a
+  whole document and bar by bar exactly as `useRecording` applies streamed
+  `score-update`s. Also `apps/web/tests/lib/MxlArchive.fuzz.test.ts`: 200
+  damaged `.mxl` containers — the zip reader never escapes its friendly errors.
+- **Found + fixed (MxmlBuilder):** (1) **bar length ignored the meter's
+  denominator** — a 6/8 take was cut into bars of six quarter-notes instead
+  of three (2/2 into two instead of four), so streamed bars were twice too
+  long/short for the editor's bars and spilled; the spelling side already
+  used the right length, the bar arithmetic now does too (and the debug plot).
+  (2) **bars a sixteenth short**: onsets and releases were spelled after
+  independent rounding, leaving cursor drift; boundaries now snap to the
+  sixteenth grid before spelling, and a note shorter than half a sixteenth
+  keeps one sixteenth instead of vanishing. 4 targeted builder tests.
+- **Hygiene:** the notation model imported `getGlyphWidth`/`getYFor…` through
+  the React components barrel; nine files now import the two helper modules
+  directly, so the model type-checks in a non-JSX consumer (the API's tests).
+- **Verification:** api 403 (contract fuzz 150/150), notation 1845, web
+  fuzzes green; both type-checks clean.

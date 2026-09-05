@@ -36,6 +36,9 @@ const STEP_TABLE: Array<{ step: MxmlStep; alter: number }> = [
     { step: 'B', alter: 0 },
 ]
 
+/** Rhythmic grid the builder writes on: sixteenths (four per quarter). */
+const GRID_PER_QUARTER = 4
+
 export interface BuilderOptions {
     bpm: number
     beats: number
@@ -74,9 +77,19 @@ export class MxmlBuilder {
         this.voiceSpelling = on
     }
 
+    /**
+     * Bar length in quarter-note beats — the unit `bpm` counts in. `beats` alone is
+     * only right for x/4 metres: a 6/8 bar is three quarters, a 2/2 bar four. The
+     * spelling side (`boundaryLevels`) always knew this; the bar arithmetic must agree
+     * or a 6/8 take lands in bars twice as long as the editor's.
+     */
+    private get measureBeats(): number {
+        return (this.options.beats * 4) / this.options.beatType
+    }
+
     measureIndexFor(timeSeconds: number): number {
         const beats = (timeSeconds * this.options.bpm) / 60
-        return Math.floor(beats / this.options.beats)
+        return Math.floor(beats / this.measureBeats)
     }
 
     /**
@@ -97,8 +110,8 @@ export class MxmlBuilder {
     }
 
     buildMeasure(index: number, allNotes: PendingNote[]): MxmlMeasure {
-        const measureStartBeat = index * this.options.beats
-        const measureEndBeat = measureStartBeat + this.options.beats
+        const measureStartBeat = index * this.measureBeats
+        const measureEndBeat = measureStartBeat + this.measureBeats
 
         // Sung takes are spelled on the take's own tuning grid: the offset must be
         // estimated over ALL notes (one constant per take, never per note), which
@@ -127,9 +140,15 @@ export class MxmlBuilder {
             endBeat: number
             pitchMidi: number
         }> = []
+        // Onsets and releases snap to the sixteenth grid before anything is spelled: the
+        // spelling rounds to that grid anyway, and rounding each span on its own left
+        // cursor drift behind — bars a sixteenth short, or a rest overlapping a note.
+        const snap = (beat: number) => Math.round(beat * GRID_PER_QUARTER) / GRID_PER_QUARTER
         for (const n of allNotes) {
-            const startBeat = (n.startTimeSeconds * this.options.bpm) / 60 - phaseShift
-            const endBeat = startBeat + (n.durationSeconds * this.options.bpm) / 60
+            const rawStart = (n.startTimeSeconds * this.options.bpm) / 60 - phaseShift
+            const startBeat = snap(rawStart)
+            // A note shorter than half a sixteenth still sounded: keep it one sixteenth long.
+            const endBeat = Math.max(snap(rawStart + (n.durationSeconds * this.options.bpm) / 60), startBeat + 1 / GRID_PER_QUARTER)
             if (endBeat <= measureStartBeat || startBeat >= measureEndBeat) continue
             segments.push({
                 startBeat: Math.max(startBeat, measureStartBeat),
