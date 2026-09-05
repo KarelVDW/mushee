@@ -34,7 +34,8 @@ export default function PrivacyPolicyPage() {
             <p>
                 When you create an account we store your <strong>name, email address, and a hash of your password</strong> (we never store
                 the password itself). We use this to operate your account, sign you in, and send you essential service email such as
-                verification codes and password resets. For each signed-in session we also record the{' '}
+                verification codes, password resets and notices about changes to the service or your plan (these are not marketing messages
+                and cannot be unsubscribed from while you hold an account). For each signed-in session we also record the{' '}
                 <strong>IP address and browser (user agent)</strong> it was started from, to secure your account and let us revoke stolen
                 sessions; these are deleted with the session. Legal basis: <strong>performance of a contract</strong> (Art. 6(1)(b) GDPR).
             </p>
@@ -157,7 +158,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                     <strong>Twilio SendGrid</strong> — delivery of transactional email (verification codes, password resets, beta
-                    notifications), configured for EU data residency.
+                    notifications, service announcements), configured for EU data residency.
                 </li>
                 <li>
                     <strong>Cloudflare, Inc.</strong> — bot protection on the signup form (Turnstile). To tell people from scripts it

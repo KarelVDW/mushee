@@ -24,7 +24,8 @@ const BETA_OPTIONS: Array<{ value: BetaStatusFilter; label: string }> = [
  * Marketing Campaigns, where contact lists, unsubscribe groups and stats live.
  */
 export default function AnnouncementsPage() {
-    const [filters, setFilters] = useState<AudienceFilter>({ betaStatus: 'any' })
+    // Verified-only by default: an unverified address may not belong to the person who typed it.
+    const [filters, setFilters] = useState<AudienceFilter>({ betaStatus: 'any', verifiedOnly: true })
     const [subject, setSubject] = useState('')
     const [body, setBody] = useState('')
     const [testTo, setTestTo] = useState('')
