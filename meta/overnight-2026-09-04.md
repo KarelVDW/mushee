@@ -292,3 +292,24 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
   the load-test harness with `test-recording-ws.ts`; extracting a shared
   marketing nav (three small variants exist; worth doing when a fourth
   appears).
+
+## 15. Real-stack verification (`/verify`, Postgres + API :4200 + web :3250, beta off)
+
+11/11 checks passed against the real API (not the mocked e2e origin):
+migration `ScoreShareToken` applied on `db:reset` (column + unique index);
+`POST /scores/:id/share` 201 → `/s/<token>` renders the seeded "Twinkle
+Twinkle" read-only in a fresh anonymous browser context (no Record button),
+MusicXML export downloads from it, `GET /shared/<token>` answers title /
+updatedAt / document only; malformed and unknown tokens 404; `DELETE share`
+200 → the link shows the not-found state and a later share mints a new token;
+`GET /recordings?scoreId=` 200 `[]` with the empty state in the Takes panel
+(no takes exist in the seed — the delete path is covered by unit + mocked e2e
+only); `GET /recordings/<unknown uuid>/audio` 404, non-uuid 400, without a
+session 401; Settings → "Download my data" produced `solkey-export-2026-09-05.zip`
+(21 KB, the demo library); `/pricing` shows the three cards, Arranger and the
+FAQ. No API warnings or 4xx/5xx besides the intended ones during the run.
+
+Side finding: the Docker disk had filled up during the night's image builds
+and crashed the local Postgres container (recovered cleanly after freeing
+~63 GB of build cache and dangling images; nothing of yours was removed —
+only build cache and untagged layers).
