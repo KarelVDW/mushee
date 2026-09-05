@@ -596,6 +596,19 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   designed — an anonymous visitor gets "Start free" and returns to the score
   after signup (§22).
 
+## 27. Announcement markup — escaping fuzz (last minutes of the session)
+
+- `apps/api/test/mail/announcement-markup.fuzz.test.ts`: 2,000 seeded paragraphs
+  mixing the `**bold**` / `[label](url)` syntax with hostile fragments
+  (`<script>`, `javascript:`/`data:` URLs, quote-breakouts, spoofed `<a>`),
+  asserting the rendered HTML never contains a tag other than `<strong>` and an
+  http(s) `<a>`, and every `href` is http(s) with no quote or angle bracket. A
+  whole hostile body rendered through `renderAnnouncement` is checked paragraph
+  by paragraph. Green on first real run (two false alarms were my own
+  assertions about the plain-text copy, which correctly keeps literal text).
+- The burst plan now branches off the tag **`burst-base-2026-09-05`**
+  (`04de72e`, verified green) and guards its merge target, per your note.
+
 ## Burst plan for the last 20 minutes of the week
 
 `meta/burst/burst-plan-2026-09-05.md` — ten independent, worktree-isolated
