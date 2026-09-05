@@ -499,3 +499,40 @@ delete; editor e2e unchanged and green.
   sounding pitch classes) touches `AccidentalMinimizer` and deserves a
   deliberate change with its own tests.
 - Totals now: notation 2600, playback 79, web 670, api 403 unit tests.
+
+## 25. Bulk e-mail: recommendation + Announcements tool (your morning suggestion)
+
+- **Recommendation:** both, split by intent. _Service announcements_ ("the
+  beta ends on …", terms changes, downtime) from a small tool in the admin
+  console over our existing transactional SendGrid integration; _marketing_
+  mail via a CSV export of the same audience into SendGrid Marketing
+  Campaigns, which already has the contact lists, unsubscribe groups,
+  templates and stats that marketing mail legally and practically needs.
+  SendGrid draws the same line (Email API for transactional/programmatic,
+  Marketing Campaigns for bulk marketing) and caps a Mail Send request at
+  1,000 personalizations — sources: the personalizations and product docs
+  linked in my message.
+- **Built:** admin `/announcements` — audience filter (plans, beta status,
+  signup window, active-in-N-days, verified only; deletion-requested
+  accounts excluded by default) with live count + sample and **Export CSV**;
+  subject + plain-text body with `{{name}}`; **Send test** to one address;
+  confirmed **Send to N accounts**; history with "Reuse". API:
+  `GET /admin/audience`, `GET /admin/audience/export.csv`,
+  `POST /admin/announcements` (test or real), `GET /admin/announcements`;
+  `MailService.sendAnnouncement` = one personalization per recipient, batches
+  of 500, first-name substitution, standard layout + account footer;
+  `announcements` audit table (migration). One SQL fragment drives count,
+  sample, CSV and send, so the preview is exactly who receives it.
+- **Verification:** 10 new API unit tests (filter SQL, CSV quoting, test vs
+  real send, empty audience refused, batching 1201 → 500/500/201, rendering,
+  first-name safety); real stack: migration applied, count/CSV/test-send/
+  validation/401 checked with curl, console page renders and its data calls
+  answer 200. The runbook's "email them before they notice" now points here.
+- **Not built (deliberately):** unsubscribe management, templates, open/click
+  stats — that is Marketing Campaigns' job; the page says so.
+
+## Burst plan for the last 20 minutes of the week
+
+`meta/burst/burst-plan-2026-09-05.md` — ten independent, worktree-isolated
+agent tasks with hard stops (agents 09:57, orchestrator 09:59), a launch
+prompt at the top, and merge rules. Priority order at the bottom.

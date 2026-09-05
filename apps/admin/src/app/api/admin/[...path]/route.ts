@@ -51,9 +51,13 @@ async function forward(request: NextRequest, path: string[], method: 'GET' | 'PO
 
     // Relay the body as a stream — most answers are JSON, but recording audio
     // from URL-less storage backends comes through here as raw bytes.
+    const disposition = res.headers.get('Content-Disposition')
     return new NextResponse(res.body, {
         status: res.status,
-        headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' },
+        headers: {
+            'Content-Type': res.headers.get('Content-Type') ?? 'application/json',
+            ...(disposition ? { 'Content-Disposition': disposition } : {}),
+        },
     })
 }
 

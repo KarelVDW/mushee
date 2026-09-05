@@ -8,6 +8,16 @@ type SendArgs = {
     text: string
 }
 
+export interface AnnouncementRecipient {
+    email: string
+    name: string
+}
+
+/** SendGrid caps a request at 1,000 personalizations; stay comfortably under it. */
+const ANNOUNCEMENT_BATCH = 500
+/** Substitution token SendGrid fills per recipient (legacy substitutions, applied to subject, text and html). */
+const NAME_TOKEN = '-firstName-'
+
 @Injectable()
 export class MailService {
     private readonly logger = new Logger(MailService.name)
@@ -58,6 +68,74 @@ export class MailService {
             this.logger.error(`SendGrid send failed for ${to}: ${(err as Error).message}`, err as Error)
             throw err
         }
+    }
+
+    /**
+     * One service announcement to many accounts: each recipient is its own
+     * personalization (nobody sees anyone else), the first name is substituted
+     * per recipient, requests go out in batches under SendGrid's 1,000 cap.
+     * Returns how many recipients were sent to. Unconfigured (dev) logs one line
+     * per batch instead.
+     */
+    async sendAnnouncement(recipients: AnnouncementRecipient[], subject: string, body: string): Promise<number> {
+        if (!recipients.length) return 0
+        const { html, text, subject: renderedSubject } = MailService.renderAnnouncement(subject, body)
+        for (let i = 0; i < recipients.length; i += ANNOUNCEMENT_BATCH) {
+            const batch = recipients.slice(i, i + ANNOUNCEMENT_BATCH)
+            if (!this.configured) {
+                this.logger.log(`[MAIL:skipped] announcement "${subject}" to ${batch.length} recipients (${batch[0].email}…)\n${text}`)
+                continue
+            }
+            try {
+                await sgMail.send({
+                    personalizations: batch.map((r) => ({ to: r.email, substitutions: { [NAME_TOKEN]: MailService.firstName(r.name) } })),
+                    from: { email: this.from, name: this.fromName },
+                    subject: renderedSubject,
+                    text,
+                    html,
+                })
+            } catch (err) {
+                this.logger.error(
+                    `SendGrid announcement batch failed (${batch.length} recipients from ${batch[0].email}): ${(err as Error).message}`,
+                    err as Error,
+                )
+                throw err
+            }
+        }
+        return recipients.length
+    }
+
+    /**
+     * The announcement as SendGrid receives it: subject/text/html with the name
+     * token in place of `{{name}}`, paragraphs from blank lines, HTML-escaped, in
+     * the standard layout with an account-footer.
+     */
+    static renderAnnouncement(subject: string, body: string): { subject: string; text: string; html: string } {
+        const withToken = (s: string) => s.replace(/\{\{\s*name\s*\}\}/g, NAME_TOKEN)
+        const paragraphs = body
+            .replace(/\r\n/g, '\n')
+            .split(/\n{2,}/)
+            .map((p) => p.trim())
+            .filter(Boolean)
+        const html = layout(
+            withToken(escapeHtml(subject)),
+            paragraphs.map((p) => `<p>${withToken(escapeHtml(p)).replace(/\n/g, '<br/>')}</p>`).join('\n') +
+                `<p class="muted" style="margin-top:28px;">You're receiving this because you have a Solkey account. Manage it at <a href="${escapeHtml(webAppUrl())}/settings">${escapeHtml(webAppUrl())}/settings</a>.</p>`,
+        )
+        const text =
+            paragraphs.map(withToken).join('\n\n') +
+            `\n\n—\nYou're receiving this because you have a Solkey account. Manage it at ${webAppUrl()}/settings`
+        return { subject: withToken(subject), text, html }
+    }
+
+    /** First name for the greeting, safe in text and HTML alike; "there" when none. */
+    static firstName(name: string): string {
+        const first =
+            name
+                .trim()
+                .split(/\s+/)[0]
+                ?.replace(/[<>&"']/g, '') ?? ''
+        return first || 'there'
     }
 
     async sendVerificationCode(to: string, code: string): Promise<void> {

@@ -323,3 +323,69 @@ export function approveBetaSignup(userId: string): Promise<BetaSignup[]> {
 export function revokeBetaSignup(userId: string): Promise<BetaSignup[]> {
     return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/revoke`, { method: 'POST', body: '{}' })
 }
+
+// ── Audience + announcements ────────────────────────────────────────────────
+
+export type BetaStatusFilter = 'any' | 'pending' | 'approved' | 'none'
+
+/** Who an announcement or export goes to; every field narrows, none = every account. */
+export interface AudienceFilter {
+    tiers?: string[]
+    betaStatus?: BetaStatusFilter
+    signedUpAfter?: string
+    signedUpBefore?: string
+    activeWithinDays?: number
+    verifiedOnly?: boolean
+    includeDeletionRequested?: boolean
+}
+
+export interface Audience {
+    total: number
+    sample: Array<{ email: string; name: string }>
+}
+
+export interface Announcement {
+    id: string
+    subject: string
+    body: string
+    filters: AudienceFilter
+    recipientCount: number
+    testTo: string | null
+    sentAt: string
+}
+
+/** The filter as query parameters (the GET endpoints' form). */
+export function audienceQuery(filters: AudienceFilter): string {
+    const params = new URLSearchParams()
+    if (filters.tiers?.length) params.set('tiers', filters.tiers.join(','))
+    if (filters.betaStatus && filters.betaStatus !== 'any') params.set('betaStatus', filters.betaStatus)
+    if (filters.signedUpAfter) params.set('signedUpAfter', filters.signedUpAfter)
+    if (filters.signedUpBefore) params.set('signedUpBefore', filters.signedUpBefore)
+    if (filters.activeWithinDays) params.set('activeWithinDays', String(filters.activeWithinDays))
+    if (filters.verifiedOnly) params.set('verifiedOnly', 'true')
+    if (filters.includeDeletionRequested) params.set('includeDeletionRequested', 'true')
+    const query = params.toString()
+    return query ? `?${query}` : ''
+}
+
+export function getAudience(filters: AudienceFilter): Promise<Audience> {
+    return api(`/api/admin/audience${audienceQuery(filters)}`)
+}
+
+/** Same-origin CSV download of the audience (the proxy relays the file). */
+export function audienceCsvUrl(filters: AudienceFilter): string {
+    return `/api/admin/audience/export.csv${audienceQuery(filters)}`
+}
+
+export function sendAnnouncement(input: { subject: string; body: string; filters: AudienceFilter; testTo?: string }): Promise<{
+    id: string
+    recipientCount: number
+    sentAt: string
+    testTo: string | null
+}> {
+    return api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function listAnnouncements(): Promise<Announcement[]> {
+    return api('/api/admin/announcements')
+}

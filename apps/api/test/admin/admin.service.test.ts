@@ -5,6 +5,7 @@ import type { DataSource } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { AdminService } from '../../src/admin/admin.service'
+import type { MailService } from '../../src/mail/mail.service'
 import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
@@ -40,13 +41,15 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
         createReadStream: vi.fn(() => 'fake-stream'),
         ...overrides?.storage,
     }
+    const mail = { sendAnnouncement: vi.fn((recipients: unknown[]) => Promise.resolve(recipients.length)) }
     const service = new AdminService(
         { query } as unknown as DataSource,
         scoresService as unknown as ScoresService,
         recordingCredits as unknown as RecordingCreditsService,
         storage as unknown as StorageService,
+        mail as unknown as MailService,
     )
-    return { service, query, scoresService, recordingCredits, storage }
+    return { service, query, scoresService, recordingCredits, storage, mail }
 }
 
 describe('AdminService.listUsers', () => {
@@ -246,5 +249,118 @@ describe('AdminService.recordingAudio', () => {
             stream: 'fake-stream',
             contentType: 'audio/webm',
         })
+    })
+})
+
+describe('AdminService audience + announcements', () => {
+    const filters = (over: Record<string, unknown> = {}) => ({ ...over }) as never
+
+    it('builds one WHERE from the filter and excludes deletion-requested accounts by default', async () => {
+        const query = vi.fn((sql: string) =>
+            Promise.resolve(sql.includes('count(*)::int AS total') ? [{ total: 7 }] : [{ email: 'a@x', name: 'A' }]),
+        )
+        const { service } = makeService({ query })
+        const result = await service.audience(
+            filters({
+                tiers: ['beta'],
+                betaStatus: 'approved',
+                signedUpAfter: '2026-07-01T00:00:00.000Z',
+                activeWithinDays: 30,
+                verifiedOnly: true,
+            }),
+        )
+        expect(result).toEqual({ total: 7, sample: [{ email: 'a@x', name: 'A' }] })
+        const [sql, params] = query.mock.calls[0] as unknown as [string, unknown[]]
+        expect(sql).toContain(`COALESCE(s."tierId", 'free') = ANY($1)`)
+        expect(sql).toContain(`u."betaStatus" = $2`)
+        expect(sql).toContain(`u."createdAt" >= $3`)
+        expect(sql).toContain(`se."lastActiveAt" >= now() - ($4 || ' days')::interval`)
+        expect(sql).toContain(`u."emailVerified" = true`)
+        expect(sql).toContain(`ad."userId" IS NULL`)
+        expect(params).toEqual([['beta'], 'approved', new Date('2026-07-01T00:00:00.000Z'), '30'])
+        // Both statements (count + sample) use the very same WHERE and parameters.
+        const [sampleSql, sampleParams] = query.mock.calls[1] as unknown as [string, unknown[]]
+        expect(sampleSql).toContain(`ad."userId" IS NULL`)
+        expect(sampleParams).toEqual(params)
+    })
+
+    it('with no filters reaches every non-deleting account; betaStatus none = NULL; deletion opt-in lifts the exclusion', async () => {
+        const query = vi.fn((sql: string) => Promise.resolve(sql.includes('count(*)') ? [{ total: 0 }] : []))
+        const { service } = makeService({ query })
+        await service.audience(filters({}))
+        expect((query.mock.calls[0] as unknown as [string])[0]).toMatch(/WHERE ad."userId" IS NULL$/)
+        await service.audience(filters({ betaStatus: 'none', includeDeletionRequested: true }))
+        const sql = (query.mock.calls[2] as unknown as [string])[0]
+        expect(sql).toContain(`u."betaStatus" IS NULL`)
+        expect(sql).not.toContain(`ad."userId" IS NULL`)
+    })
+
+    it('exports the audience as CSV with quoting', async () => {
+        const query = vi.fn(() =>
+            Promise.resolve([
+                {
+                    email: 'a@x',
+                    name: 'Ada "Countess" Lovelace, Esq.',
+                    tier: 'beta',
+                    betaStatus: 'approved',
+                    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+                    lastActiveAt: null,
+                },
+            ]),
+        )
+        const { service } = makeService({ query })
+        expect(await service.audienceCsv(filters({}))).toBe(
+            'email,name,tier,betaStatus,signedUpAt,lastActiveAt\na@x,"Ada ""Countess"" Lovelace, Esq.",beta,approved,2026-07-01T00:00:00.000Z,\n',
+        )
+    })
+
+    it('a test send goes to the test address only and is recorded as such', async () => {
+        const query = vi.fn((sql: string) =>
+            Promise.resolve(
+                sql.startsWith('INSERT')
+                    ? [{ id: 'ann-1', sentAt: new Date('2026-09-05T08:00:00Z') }]
+                    : [{ email: 'real@x', name: 'Real' }],
+            ),
+        )
+        const { service, mail } = makeService({ query })
+        const result = await service.sendAnnouncement({
+            subject: 'Beta ends',
+            body: 'Hello {{name}}',
+            filters: filters({ tiers: ['beta'] }),
+            testTo: 'me@solkey.io',
+        } as never)
+        expect(mail.sendAnnouncement).toHaveBeenCalledWith(
+            [{ email: 'me@solkey.io', name: 'Test Recipient' }],
+            'Beta ends',
+            'Hello {{name}}',
+        )
+        expect(result).toEqual({ id: 'ann-1', recipientCount: 1, sentAt: new Date('2026-09-05T08:00:00Z'), testTo: 'me@solkey.io' })
+        // No audience query ran for a test send; the log row carries the test address and the filter.
+        expect(query.mock.calls.every(([sql]) => !(sql).includes('FROM "user"'))).toBe(true)
+        const [, params] = query.mock.calls[0] as unknown as [string, unknown[]]
+        expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 'me@solkey.io'])
+    })
+
+    it('a real send resolves the audience, hands every recipient to mail, and refuses an empty audience', async () => {
+        const recipients = [
+            { email: 'a@x', name: 'A' },
+            { email: 'b@x', name: 'B' },
+        ]
+        const query = vi.fn((sql: string) => Promise.resolve(sql.startsWith('INSERT') ? [{ id: 'ann-2', sentAt: new Date() }] : recipients))
+        const { service, mail } = makeService({ query })
+        const result = await service.sendAnnouncement({
+            subject: 'Beta ends',
+            body: 'Hi {{name}}, ...',
+            filters: filters({ tiers: ['beta'] }),
+        } as never)
+        expect(mail.sendAnnouncement).toHaveBeenCalledWith(recipients, 'Beta ends', 'Hi {{name}}, ...')
+        expect(result.recipientCount).toBe(2)
+        expect(result.testTo).toBeNull()
+
+        const empty = makeService({ query: vi.fn(() => Promise.resolve([])) })
+        await expect(
+            empty.service.sendAnnouncement({ subject: 'x'.repeat(3), body: 'y'.repeat(10), filters: filters({}) } as never),
+        ).rejects.toBeInstanceOf(BadRequestException)
+        expect(empty.mail.sendAnnouncement).not.toHaveBeenCalled()
     })
 })

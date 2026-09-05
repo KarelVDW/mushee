@@ -7,6 +7,7 @@ import { PricingRelaunch1783900800000 } from './1783900800000-PricingRelaunch'
 import { FreeTierScoreLimit1784073600000 } from './1784073600000-FreeTierScoreLimit'
 import { OnboardingGoal1784332800000 } from './1784332800000-OnboardingGoal'
 import { ScoreShareToken1785024000000 } from './1785024000000-ScoreShareToken'
+import { Announcements1785110400000 } from './1785110400000-Announcements'
 
 /**
  * All migrations, in order: better-auth's tables first so the app schema can
@@ -24,4 +25,5 @@ export const migrations = [
     FreeTierScoreLimit1784073600000,
     OnboardingGoal1784332800000,
     ScoreShareToken1785024000000,
+    Announcements1785110400000,
 ]

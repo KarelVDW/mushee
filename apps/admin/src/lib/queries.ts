@@ -5,9 +5,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import {
     adjustCredits,
     approveBetaSignup,
+    type AudienceFilter,
+    getAudience,
     getScore,
     getStats,
     getUser,
+    listAnnouncements,
     listBetaSignups,
     listTiers,
     listUsers,
@@ -15,6 +18,7 @@ import {
     revokeBetaSignup,
     revokeSessions,
     revokeShare,
+    sendAnnouncement,
 } from './api'
 
 export const adminKeys = {
@@ -25,6 +29,8 @@ export const adminKeys = {
     score: (id: string) => ['score', id] as const,
     tiers: ['tiers'] as const,
     signups: ['signups'] as const,
+    audience: (filters: AudienceFilter) => ['audience', filters] as const,
+    announcements: ['announcements'] as const,
 }
 
 export function useStats() {
@@ -101,5 +107,23 @@ export function useRevokeShare(scoreId: string) {
         mutationFn: () => revokeShare(scoreId),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.score(scoreId) }),
         meta: { errorMessage: "Couldn't turn the share link off. Please try again." },
+    })
+}
+
+/** Who a filter reaches — refetched as the filter changes, kept while the next answer loads. */
+export function useAudience(filters: AudienceFilter) {
+    return useQuery({ queryKey: adminKeys.audience(filters), queryFn: () => getAudience(filters), placeholderData: (previous) => previous })
+}
+
+export function useAnnouncements() {
+    return useQuery({ queryKey: adminKeys.announcements, queryFn: listAnnouncements })
+}
+
+export function useSendAnnouncement() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: sendAnnouncement,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
+        meta: { errorMessage: "The announcement couldn't be sent. Nothing was recorded — check the API log and try again." },
     })
 }

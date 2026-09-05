@@ -3,9 +3,12 @@ import { InjectDataSource } from '@nestjs/typeorm'
 import type { Readable } from 'stream'
 import { DataSource } from 'typeorm'
 
+import { type AnnouncementRecipient, MailService } from '../mail/mail.service'
 import { RecordingCreditsService } from '../recordings/recording-credits.service'
 import { ScoresService } from '../scores/scores.service'
 import { StorageService } from '../storage/storage.service'
+import { AudienceFilterDto } from './dto/audience-filter.dto'
+import { SendAnnouncementDto } from './dto/send-announcement.dto'
 
 export interface AdminStats {
     totals: {
@@ -88,6 +91,7 @@ export class AdminService {
         private readonly scoresService: ScoresService,
         private readonly recordingCredits: RecordingCreditsService,
         private readonly storage: StorageService,
+        private readonly mail: MailService,
     ) {}
 
     async stats(): Promise<AdminStats> {
@@ -339,6 +343,114 @@ export class AdminService {
             )
         }
         return { stream: this.storage.createReadStream(audioKey), contentType }
+    }
+
+    // --- Audience + announcements ---
+
+    /**
+     * SQL for "the accounts matching this filter": one WHERE fragment shared by
+     * the count/sample, the CSV export and the send, so what you previewed is
+     * exactly who receives it. Parameters are positional from $1.
+     */
+    private audienceWhere(filters: AudienceFilterDto): { where: string; params: unknown[] } {
+        const clauses: string[] = []
+        const params: unknown[] = []
+        const add = (clause: string, value: unknown) => {
+            params.push(value)
+            clauses.push(clause.replace('?', `$${params.length}`))
+        }
+        if (filters.tiers?.length) add(`COALESCE(s."tierId", 'free') = ANY(?)`, filters.tiers)
+        if (filters.betaStatus && filters.betaStatus !== 'any') {
+            if (filters.betaStatus === 'none') clauses.push(`u."betaStatus" IS NULL`)
+            else add(`u."betaStatus" = ?`, filters.betaStatus)
+        }
+        if (filters.signedUpAfter) add(`u."createdAt" >= ?`, new Date(filters.signedUpAfter))
+        if (filters.signedUpBefore) add(`u."createdAt" < ?`, new Date(filters.signedUpBefore))
+        if (filters.activeWithinDays) add(`se."lastActiveAt" >= now() - (? || ' days')::interval`, String(filters.activeWithinDays))
+        if (filters.verifiedOnly) clauses.push(`u."emailVerified" = true`)
+        if (!filters.includeDeletionRequested) clauses.push(`ad."userId" IS NULL`)
+        return { where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params }
+    }
+
+    private static readonly AUDIENCE_FROM = `FROM "user" u
+       LEFT JOIN user_subscriptions s ON s."userId" = u.id
+       LEFT JOIN (SELECT "userId", max("updatedAt") AS "lastActiveAt" FROM session GROUP BY 1) se ON se."userId" = u.id
+       LEFT JOIN account_deletions ad ON ad."userId" = u.id`
+
+    /** Who a filter reaches: the count plus a few addresses to eyeball. */
+    async audience(filters: AudienceFilterDto): Promise<{ total: number; sample: AnnouncementRecipient[] }> {
+        const { where, params } = this.audienceWhere(filters)
+        const [{ total }]: Array<{ total: number }> = await this.dataSource.query(
+            `SELECT count(*)::int AS total ${AdminService.AUDIENCE_FROM} ${where}`,
+            params,
+        )
+        const sample: AnnouncementRecipient[] = await this.dataSource.query(
+            `SELECT u.email, u.name ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC LIMIT 5`,
+            params,
+        )
+        return { total, sample }
+    }
+
+    private async audienceRecipients(filters: AudienceFilterDto): Promise<AnnouncementRecipient[]> {
+        const { where, params } = this.audienceWhere(filters)
+        return this.dataSource.query(`SELECT u.email, u.name ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC`, params)
+    }
+
+    /**
+     * The audience as CSV (email, name, tier, beta status, signed up, last
+     * active) — for anything marketing-shaped, which belongs in SendGrid
+     * Marketing Campaigns (contact lists, unsubscribe groups, stats) rather
+     * than in this console.
+     */
+    async audienceCsv(filters: AudienceFilterDto): Promise<string> {
+        const { where, params } = this.audienceWhere(filters)
+        const rows: Array<{
+            email: string
+            name: string
+            tier: string
+            betaStatus: string | null
+            createdAt: Date
+            lastActiveAt: Date | null
+        }> = await this.dataSource.query(
+            `SELECT u.email, u.name, COALESCE(s."tierId", 'free') AS tier, u."betaStatus", u."createdAt", se."lastActiveAt"
+       ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC`,
+            params,
+        )
+        const cell = (v: string | Date | null | undefined) => {
+            const s = v instanceof Date ? v.toISOString() : (v ?? '')
+            return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+        }
+        const header = ['email', 'name', 'tier', 'betaStatus', 'signedUpAt', 'lastActiveAt']
+        return (
+            [
+                header.join(','),
+                ...rows.map((r) => [r.email, r.name, r.tier, r.betaStatus, r.createdAt, r.lastActiveAt].map(cell).join(',')),
+            ].join('\n') + '\n'
+        )
+    }
+
+    /**
+     * Send a service announcement to the audience — or, with `testTo`, one
+     * rendered copy to that address and nothing else. Every send is recorded.
+     */
+    async sendAnnouncement(dto: SendAnnouncementDto): Promise<{ id: string; recipientCount: number; sentAt: Date; testTo: string | null }> {
+        const recipients = dto.testTo ? [{ email: dto.testTo, name: 'Test Recipient' }] : await this.audienceRecipients(dto.filters)
+        if (!dto.testTo && recipients.length === 0) throw new BadRequestException('Nobody matches this audience.')
+        const recipientCount = await this.mail.sendAnnouncement(recipients, dto.subject, dto.body)
+        const [row]: Array<{ id: string; sentAt: Date }> = await this.dataSource.query(
+            `INSERT INTO announcements (subject, body, filters, "recipientCount", "testTo") VALUES ($1, $2, $3, $4, $5) RETURNING id, "sentAt"`,
+            [dto.subject, dto.body, JSON.stringify(dto.filters), recipientCount, dto.testTo ?? null],
+        )
+        this.logger.log(
+            `Announcement "${dto.subject}" sent to ${recipientCount} recipient(s)${dto.testTo ? ` (test → ${dto.testTo})` : ''}`,
+        )
+        return { id: row.id, recipientCount, sentAt: row.sentAt, testTo: dto.testTo ?? null }
+    }
+
+    async listAnnouncements(): Promise<Array<Record<string, unknown>>> {
+        return this.dataSource.query(
+            `SELECT id, subject, body, filters, "recipientCount", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
+        )
     }
 
     async listTiers(): Promise<Array<Record<string, unknown>>> {

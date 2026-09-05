@@ -113,3 +113,49 @@ describe('MailService content', () => {
         expect(msg.html).toContain('&lt;img src=x')
     })
 })
+
+describe('MailService announcements', () => {
+    it('renders paragraphs, escapes HTML and swaps {{name}} for the per-recipient token', () => {
+        const { subject, text, html } = MailService.renderAnnouncement(
+            'Hi {{name}} — the beta ends',
+            'Dear {{ name }},\n\nThe <beta> ends soon.\nThanks & see you.',
+        )
+        expect(subject).toBe('Hi -firstName- — the beta ends')
+        expect(text).toContain('Dear -firstName-,\n\nThe <beta> ends soon.\nThanks & see you.')
+        expect(text).toContain("You're receiving this because you have a Solkey account.")
+        expect(html).toContain('<p>Dear -firstName-,</p>')
+        expect(html).toContain('<p>The &lt;beta&gt; ends soon.<br/>Thanks &amp; see you.</p>')
+        expect(html).toContain('/settings')
+    })
+
+    it('greets by first name, safely, or "there"', () => {
+        expect(MailService.firstName('Ada Lovelace')).toBe('Ada')
+        expect(MailService.firstName('  <script>x</script> ')).toBe('scriptx/script')
+        expect(MailService.firstName('')).toBe('there')
+    })
+
+    it('sends one personalization per recipient in batches of at most 500', async () => {
+        process.env.SENDGRID_API_KEY = 'SG.test'
+        sgSend.mockResolvedValue(undefined)
+        const service = new MailService()
+        const recipients = Array.from({ length: 1201 }, (_, i) => ({ email: `u${i}@x`, name: `User ${i}` }))
+        const sent = await service.sendAnnouncement(recipients, 'Subject {{name}}', 'Body {{name}}')
+        expect(sent).toBe(1201)
+        expect(sgSend).toHaveBeenCalledTimes(3)
+        const sizes = sgSend.mock.calls.map(([msg]) => (msg as { personalizations: unknown[] }).personalizations.length)
+        expect(sizes).toEqual([500, 500, 201])
+        const first = sgSend.mock.calls[0][0] as {
+            personalizations: Array<{ to: string; substitutions: Record<string, string> }>
+            subject: string
+        }
+        expect(first.personalizations[0]).toEqual({ to: 'u0@x', substitutions: { '-firstName-': 'User' } })
+        expect(first.subject).toBe('Subject -firstName-')
+        delete process.env.SENDGRID_API_KEY
+    })
+
+    it('sends nothing for an empty audience', async () => {
+        const service = new MailService()
+        expect(await service.sendAnnouncement([], 'S', 'B')).toBe(0)
+        expect(sgSend).not.toHaveBeenCalled()
+    })
+})

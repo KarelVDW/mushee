@@ -27,6 +27,24 @@ bug-fix logs were dropped; what remains is still-true reference material.
   `order.refunded`.
 - Unconfigured Polar degrades gracefully: `/billing/*` answers 503, the UI hides
   paid actions, free/beta tiers keep working.
+
+### Bulk e-mail to users (decided 2026-09-05)
+
+- **Service announcements** (beta ending, terms changes, downtime) go out from
+  the admin console's Announcements page: audience filter (plan, beta status,
+  signup window, recent activity, verified only; deletion-requested accounts
+  excluded by default) → test copy to yourself → send. Sent through our
+  transactional SendGrid integration as one personalization per recipient in
+  batches of 500 (SendGrid caps a request at 1,000; recipients never see each
+  other), `{{name}}` → first name, footer names the account as the reason;
+  every send is logged in `announcements`. These are service e-mail under the
+  privacy policy's "essential service email" — no unsubscribe link, so **never
+  use it for marketing**.
+- **Marketing-shaped mail** (newsletters, promotions, re-engagement): export
+  the same audience as CSV from that page and run it through SendGrid Marketing
+  Campaigns — that product owns contact lists, unsubscribe groups, templates
+  and stats, which a homegrown client would have to rebuild (and which the law
+  requires for marketing mail). Keep the transactional API key for the app.
 - Sandbox test before launch: checkout → webhook → tier flips in Settings;
   cancel → resume; plan switch (`POST /billing/change` updates the existing
   subscription with proration — never creates a second one).

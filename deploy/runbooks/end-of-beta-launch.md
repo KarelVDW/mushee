@@ -87,8 +87,10 @@ migration, not sellable). Options:
   (`UPDATE subscription_tiers SET "dailyRecordingCredits"=… WHERE id='beta'`;
   live within 60 s, no deploy).
 
-Whatever you choose, email them about it before they notice. A "you were
-here first" discount code in Polar costs nothing and buys goodwill.
+Whatever you choose, email them about it before they notice — from the admin
+console's **Announcements** page (audience filter: plan `Beta`; send a test copy
+to yourself first; every send is logged). A "you were here first" discount code
+in Polar costs nothing and buys goodwill.
 
 ## 4. The flip
 
