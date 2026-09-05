@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { type BindableCommand, Keybindings, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
 
 const COMMANDS: BindableCommand[] = [
@@ -320,5 +321,49 @@ describe('Keybindings account sync', () => {
         expect(keybindings.shortcutFor('left')).toBeNull()
 
         expect(() => keybindings.hydrate({ version: 1, overrides: { rest: { keys: 'Bogus+KeyJ' } } })).not.toThrow()
+    })
+})
+
+describe('Editor command defaults', () => {
+    it('gives every listed command a unique id and a unique, parseable default shortcut', () => {
+        const ids = EDITOR_COMMANDS.map((command) => command.id)
+        expect(new Set(ids).size).toBe(ids.length)
+        const defaults = EDITOR_COMMANDS.map((command) => command.defaultShortcut)
+        expect(defaults.every((shortcut) => shortcut !== null)).toBe(true)
+        const canonical = defaults.map((shortcut) => Shortcut.parse(shortcut!, false).id)
+        expect(new Set(canonical).size).toBe(canonical.length)
+    })
+
+    it('covers every dock control that has a keyboard-friendly action (durations and accidentals included)', () => {
+        const ids = new Set(EDITOR_COMMANDS.map((command) => command.id))
+        for (const id of [
+            'raise-pitch',
+            'lower-pitch',
+            'remove-note',
+            'toggle-rest',
+            'toggle-tie',
+            'toggle-dot',
+            'toggle-tuplet',
+            'minimize-accidentals',
+            'transpose',
+            'set-duration:w',
+            'set-duration:h',
+            'set-duration:q',
+            'set-duration:8',
+            'set-duration:16',
+            'set-accidental:flat',
+            'set-accidental:natural',
+            'set-accidental:sharp',
+        ]) {
+            expect(ids.has(id), id).toBe(true)
+        }
+    })
+
+    it('resolves the new duration and accidental keys on a physical-key basis', () => {
+        const keybindings = new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-defaults', isMac: false })
+        expect(keybindings.resolve(keydown({ code: 'KeyQ', key: 'q' }))?.id).toBe('set-duration:q')
+        expect(keybindings.resolve(keydown({ code: 'KeyB', key: 'b' }))?.id).toBe('set-accidental:flat')
+        expect(keybindings.resolve(keydown({ code: 'Digit3', key: '#', shiftKey: true }))?.id).toBe('set-accidental:sharp')
+        expect(keybindings.resolve(keydown({ code: 'Digit3', key: '3' }))?.id).toBe('toggle-tuplet')
     })
 })

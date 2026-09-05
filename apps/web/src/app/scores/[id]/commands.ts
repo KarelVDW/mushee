@@ -8,6 +8,8 @@ import {
     RAISE_PITCH,
     REMOVE_NOTE,
     type ScoreAction,
+    SET_ACCIDENTAL,
+    SET_DURATION,
     TOGGLE_DOT,
     TOGGLE_REST,
     TOGGLE_TIE,
@@ -16,7 +18,7 @@ import {
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Display groups for the shortcuts dialog, in presentation order. */
-export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Clipboard', 'History'] as const
+export const EDITOR_COMMAND_GROUPS = ['Navigate', 'Select', 'Edit notes', 'Durations', 'Accidentals', 'Clipboard', 'History'] as const
 export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 
 /**
@@ -28,6 +30,8 @@ export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 export interface EditorCommand extends BindableCommand {
     label: string
     group: EditorCommandGroup
+    /** One-line dialog copy explaining what the command does when the label alone is terse. */
+    description?: string
     /** Perform the command. Return `false` when it didn't apply, leaving the keystroke to the browser. */
     run: (manipulator: ScoreManipulator) => boolean | void
 }
@@ -39,6 +43,56 @@ const fromAction = (action: ScoreAction, group: EditorCommandGroup, defaultShort
     defaultShortcut,
     run: (manipulator) => manipulator.run(action),
 })
+
+/**
+ * A parameterised action pinned to one argument, so a single keystroke can stand in for one
+ * choice of a dock picker (a duration, an accidental). The id is suffixed with the choice so
+ * every keystroke stays its own rebindable command.
+ */
+const fromActionWith = (
+    action: ScoreAction,
+    suffix: string,
+    arg: unknown,
+    label: string,
+    description: string,
+    group: EditorCommandGroup,
+    defaultShortcut: string | null,
+): EditorCommand => ({
+    id: `${action.id}:${suffix}`,
+    label,
+    description,
+    group,
+    defaultShortcut,
+    run: (manipulator) => manipulator.run(action, arg),
+})
+
+/** The dock's duration picker, one key per value: mnemonic letters (Digit3 is the triplet toggle). */
+const DURATION_COMMANDS: readonly EditorCommand[] = (
+    [
+        ['w', 'Whole note', 'KeyW'],
+        ['h', 'Half note', 'KeyH'],
+        ['q', 'Quarter note', 'KeyQ'],
+        ['8', 'Eighth note', 'KeyE'],
+        ['16', 'Sixteenth note', 'KeyS'],
+    ] as const
+).map(([type, label, key]) =>
+    fromActionWith(SET_DURATION, type, type, label, `Set the selected note to a ${label.toLowerCase()}.`, 'Durations', key),
+)
+
+/** The dock's accidental picker: ♭ on B (how it is written), ♮ on N, ♯ on the key that types # on a US layout. */
+const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
+    fromActionWith(SET_ACCIDENTAL, 'flat', 'b', 'Flat', 'Lower the selected notes by a semitone (♭).', 'Accidentals', 'KeyB'),
+    fromActionWith(
+        SET_ACCIDENTAL,
+        'natural',
+        undefined,
+        'Natural',
+        'Remove the accidental from the selected notes (♮).',
+        'Accidentals',
+        'KeyN',
+    ),
+    fromActionWith(SET_ACCIDENTAL, 'sharp', '#', 'Sharp', 'Raise the selected notes by a semitone (♯).', 'Accidentals', 'Shift+Digit3'),
+]
 
 /**
  * Every keyboard-triggerable command, in dialog order. Default shortcuts name physical keys
@@ -110,6 +164,8 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         // Opens the transpose popover (no direct edit); declined until the editor registers it.
         run: (manipulator) => (manipulator.onTransposeRequest ? manipulator.onTransposeRequest() : false),
     },
+    ...DURATION_COMMANDS,
+    ...ACCIDENTAL_COMMANDS,
     // Clipboard shortcuts are `fixed`: ⌘C/⌘X/⌘V (and ⌘A above) are OS-wide conventions, so
     // they're listed in the shortcuts dialog but never rebindable.
     {
