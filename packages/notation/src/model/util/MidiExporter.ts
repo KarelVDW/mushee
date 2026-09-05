@@ -87,12 +87,8 @@ export class MidiExporter {
                 // A note tying back already sounds as part of the note that started the tie chain.
                 if (!note.pitch || note.tiesBack) continue
                 let end = start + note.duration.effectiveBeats
-                let current = note
-                while (current.tiesForward) {
-                    const next = current.getNext()
-                    if (!next) break
-                    end += next.duration.effectiveBeats
-                    current = next
+                for (let partner = this.score.tiePartner(note); partner; partner = this.score.tiePartner(partner)) {
+                    end += partner.duration.effectiveBeats
                 }
                 const midi = Math.max(0, Math.min(127, note.pitch.toMidi() + instrument.chromaticTranspose))
                 events.push({ tick: MidiExporter.toTicks(start), order: 2, data: [0x90 | CHANNEL, midi, VELOCITY] })

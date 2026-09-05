@@ -468,3 +468,30 @@ each take's score title, playable and deletable one by one — the recordings
 half of "your data", since the download deliberately leaves audio out.
 `GET /recordings` without `scoreId` backs it. Settings e2e covers list +
 delete; editor e2e unchanged and green.
+
+## 24. Edit invariants + a tie-semantics fix; one open finding
+
+- **Edit invariants** (`EditInvariants.test.ts`, 150 seeds each): meter
+  change there-and-back keeps every sounding event; transpose up-then-down
+  keeps every pitch and rhythm and moves each attack by exactly the interval;
+  minimizing accidentals never changes what sounds.
+- **Found + fixed — dangling ties sounded and drew:** `Score.tiePartner`
+  bound a tied note to whatever followed, even a rest or another pitch (easy
+  to create: tie a note, then change or rest the next one; the Tie action
+  also let you tie into a different pitch). The next note was then treated
+  as a continuation — drawn tie into a rest, and in playback and MIDI export
+  the first note held through the rest while a different-pitch neighbour
+  went **silent**. A tie now binds only to the next note of the same sounding
+  pitch (C♯→D♭ included); a stray mark is inert and re-binds if the neighbour
+  changes back; explicit imported `stop`s count only with a tying
+  predecessor; the Tie action only ties where a tie can bind. Existing tie
+  tests were adjusted to same-pitch partners; new tests cover the dangling
+  cases, MIDI export and playback.
+- **Open finding (not fixed):** `minimizeAccidentals` is not idempotent — the
+  key choice ranks candidates on the notes' _current_ spellings, which the
+  pass then changes, so a second press can move a key signature again
+  (seed 2 of the invariant suite shows a mid-bar key vanishing and a leading
+  key 2→0). Sound and bars are untouched either way; the fix (rank on
+  sounding pitch classes) touches `AccidentalMinimizer` and deserves a
+  deliberate change with its own tests.
+- Totals now: notation 2600, playback 79, web 670, api 403 unit tests.

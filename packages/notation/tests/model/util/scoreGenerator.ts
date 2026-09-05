@@ -84,6 +84,8 @@ export interface GeneratorOptions {
     tuplets: boolean
     /** Tempo marks anywhere in a bar, or only on its downbeat (MIDI import keeps one marking per bar). */
     midBarTempos: boolean
+    /** One meter for the whole score (a mid-score meter change legitimately pads its run's last bar). */
+    singleMeter?: boolean
 }
 
 function randomPitch(rng: Rng): Pitch {
@@ -130,7 +132,7 @@ export function generateScore(rng: Rng, options: GeneratorOptions): Score {
     let timeSignature = new TimeSignature(...rng.pick(TIME_SIGNATURES))
     let previousPitch: Pitch | undefined
     for (let i = rng.int(1, 6); i > 0; i--) {
-        if (bars.length && rng.chance(0.2)) timeSignature = new TimeSignature(...rng.pick(TIME_SIGNATURES))
+        if (bars.length && !options.singleMeter && rng.chance(0.2)) timeSignature = new TimeSignature(...rng.pick(TIME_SIGNATURES))
         const durations = barRhythm(rng, timeSignature.maxBeats, options.tuplets)
         const pitches = durations.map(() => {
             // Repeating the previous pitch often enough makes ties common.
@@ -159,7 +161,7 @@ export function generateScore(rng: Rng, options: GeneratorOptions): Score {
         })
         const notes = bar.durations.map((duration, i) => {
             const pitch = bar.pitches[i]
-            const ties = samePitch(pitch, flat[noteIndex + 1]) && rng.chance(0.6)
+            const ties = samePitch(pitch, flat[noteIndex + i + 1]) && rng.chance(0.6)
             return new Note({ duration, pitch, ...(ties && { tie: 'start' as const }) })
         })
         noteIndex += notes.length

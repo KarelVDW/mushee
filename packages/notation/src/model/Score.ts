@@ -64,12 +64,17 @@ export class Score {
     private readonly _tiePartners = new Derived(
         () => this._version,
         () => {
+            // A tie sustains a pitch: the partner is the next note only when it sounds the same
+            // (C♯ to D♭ included). A 'start' left facing a rest or another pitch — by tying the wrong
+            // note, or by editing the note after it — is a dangling mark: not drawn, not sounded,
+            // and the following note is a fresh attack. Kept on the note so it re-binds if the
+            // neighbour changes back.
             const map = new Map<Note, Note>()
             for (const measure of this.measures) {
                 for (const note of measure.notes) {
-                    if (!note.tiesForward) continue
+                    if (!note.tiesForward || !note.pitch) continue
                     const next = this.nextNote(note)
-                    if (next) map.set(note, next)
+                    if (next?.pitch && next.pitch.toMidi() === note.pitch.toMidi()) map.set(note, next)
                 }
             }
             return map
