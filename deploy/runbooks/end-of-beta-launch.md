@@ -28,7 +28,27 @@ audience is still small and forgiving.
       are numbers, not guesses.
 - [ ] Restore rehearsal green within the last quarter (Runbook 4 §2).
 - [x] GDPR data export exists (master-todo item 14, done 2026-09-05:
-      Settings → Account → "Download my data", built client-side).
+      Settings → Account → "Download my data", built client-side). The
+      download deliberately leaves audio out; the recordings half of "your
+      data" is the takes inventory below.
+- [x] **Takes / recordings inventory** shipped 2026-09-05: per-score "Takes"
+      panel in the editor header and the all-scores inventory in Settings →
+      Your data (replay + two-step delete; `GET /recordings`,
+      `DELETE /recordings/:id`). The privacy policy's "yours, delete any time"
+      is now literally true, so nothing here blocks the flip — but spot-check
+      once on production that playback streams and a delete removes both the
+      audio folder and the row.
+- [ ] **Share links** (`/s/<token>`, shipped 2026-09-05) — confirm on
+      production before strangers arrive: a shared page carries `noindex` and
+      `robots.txt` disallows `/s/`; the public `GET /shared/:token` payload is
+      title/updatedAt/document only (no owner, never recordings); Terms §5 and
+      Privacy §2 (dated 5 September 2026) describe the feature — include them
+      in the lawyer's pass above; and the admin console's "Turn link off" on a
+      score page (`DELETE /admin/scores/:id/share`) works, since that is the
+      support lever for an abuse/DMCA-style report.
+- [ ] **Beta-ending mail is drafted** — copy lives in
+      `meta/marketing/BETA-ENDING-EMAIL.md`; send it via the admin
+      Announcements tool (§3 below), never by hand from SendGrid.
 
 ## 2. Polar production go-live
 
@@ -89,7 +109,10 @@ migration, not sellable). Options:
 
 Whatever you choose, email them about it before they notice — from the admin
 console's **Announcements** page (audience filter: plan `Beta`; send a test copy
-to yourself first; every send is logged). If the result says SendGrid rejected
+to yourself first; every send is logged). The copy is
+`meta/marketing/BETA-ENDING-EMAIL.md` — paste subject + plain-text body
+(`{{name}}` is substituted per recipient), check the live count and the
+sandboxed preview, **Send test** to yourself, then **Send to N accounts**. If the result says SendGrid rejected
 some recipients, do **not** send again to the same filter — the accounts that
 were reached already have it. Fix the cause (SendGrid status page, API key,
 sender verification) and use the history row's **"Resend to N not reached"**,
