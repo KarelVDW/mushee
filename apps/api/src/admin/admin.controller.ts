@@ -53,6 +53,12 @@ export class AdminController {
         return this.adminService.getScore(id)
     }
 
+    /** Revoke a score's read-only share link (a reported or abusive link). */
+    @Delete('scores/:id/share')
+    revokeShare(@Param('id', ParseUUIDPipe) id: string) {
+        return this.adminService.revokeShare(id)
+    }
+
     /** Replay a recording: redirect to a signed bucket URL when the backend
      *  has one, otherwise stream the archived audio. */
     @Get('recordings/:id/audio')

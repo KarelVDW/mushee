@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/terms' },
 }
 
-const LAST_UPDATED = '10 July 2026'
+const LAST_UPDATED = '5 September 2026'
 
 export default function TermsPage() {
     return (
@@ -71,6 +71,12 @@ export default function TermsPage() {
                 published, shared with other users, or sold, and we never use your music for marketing without your explicit permission.
                 Deleting your account deletes your recordings. See the <Link href="/privacy">privacy policy</Link> for details and how to
                 object.
+            </p>
+            <p>
+                <strong>Share links.</strong> You can choose to share a score through a read-only link. Anyone who has the link can view,
+                play back and download that score (not your recordings) until you turn the link off in the editor. You decide who receives
+                the link; we don&apos;t list shared scores anywhere or submit them to search engines. Don&apos;t share material you have no
+                right to distribute — we may disable a link that is reported to us.
             </p>
             <p>
                 You are responsible for your content: don&apos;t upload or transcribe material that infringes someone else&apos;s rights or

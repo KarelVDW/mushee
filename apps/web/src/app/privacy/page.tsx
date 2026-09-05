@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/privacy' },
 }
 
-const LAST_UPDATED = '11 July 2026'
+const LAST_UPDATED = '5 September 2026'
 
 export default function PrivacyPolicyPage() {
     return (
@@ -58,6 +58,12 @@ export default function PrivacyPolicyPage() {
                 Your recordings are deleted when you delete your account. Legal basis: <strong>performance of a contract</strong> for
                 storing and transcribing your recordings; <strong>legitimate interest</strong> (Art. 6(1)(f) GDPR) in improving
                 transcription quality — contact <a href="mailto:privacy@solkey.io">privacy@solkey.io</a> to object to that use.
+            </p>
+            <p>
+                <strong>Scores you choose to share.</strong> A score is private to your account unless you turn on its share link. Anyone
+                with that link can then view, play back and download the score — not your recordings, and not your name or e-mail, which
+                never appear on the shared page. Shared pages are marked not to be indexed by search engines. Turning the link off in the
+                editor makes it stop working immediately.
             </p>
 
             <h3>Payments</h3>

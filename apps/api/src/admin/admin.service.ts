@@ -290,10 +290,17 @@ export class AdminService {
             storageKey: score.storageKey,
             createdAt: score.createdAt,
             updatedAt: score.updatedAt,
+            shareToken: score.shareToken ?? null,
             document,
             documentError,
             recordings,
         }
+    }
+
+    /** Turn a score's public share link off — the support lever for a reported link. */
+    async revokeShare(scoreId: string): Promise<{ shareToken: null }> {
+        await this.scoresService.revokeShare(scoreId)
+        return { shareToken: null }
     }
 
     /**

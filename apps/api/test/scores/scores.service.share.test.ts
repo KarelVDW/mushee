@@ -76,6 +76,17 @@ describe('ScoresService share links', () => {
         expect(token).not.toBe('abcdefghijklmnop')
     })
 
+    it('lets an admin revoke any share link, and 404s for unknown scores', async () => {
+        const s = score({ shareToken: 'abcdefghijklmnop' })
+        const { service, repo } = makeService([s])
+        await service.revokeShare('s1')
+        expect(s.shareToken).toBeNull()
+        expect(repo.save).toHaveBeenCalledTimes(1)
+        await service.revokeShare('s1') // already off: nothing written
+        expect(repo.save).toHaveBeenCalledTimes(1)
+        await expect(service.revokeShare('nope')).rejects.toBeInstanceOf(NotFoundException)
+    })
+
     it('resolves a shared score to its title and live document, without the owner', async () => {
         const { service } = makeService([score({ shareToken: 'abcdefghijklmnop' })])
         const shared = await service.loadShared('abcdefghijklmnop')

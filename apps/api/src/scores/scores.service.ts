@@ -147,6 +147,15 @@ export class ScoresService {
         await this.scoreRepo.save(score)
     }
 
+    /** Admin: turn a score's share link off regardless of owner (abuse reports). No-op when not shared. */
+    async revokeShare(scoreId: string): Promise<void> {
+        const score = await this.scoreRepo.findOneBy({ id: scoreId })
+        if (!score) throw new NotFoundException('Score not found')
+        if (score.shareToken === null) return
+        score.shareToken = null
+        await this.scoreRepo.save(score)
+    }
+
     /**
      * What a share link shows: the live document (edit cache first, like the
      * owner sees it) plus the title. No owner identity leaves the server. An

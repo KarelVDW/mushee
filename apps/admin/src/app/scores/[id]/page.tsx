@@ -5,14 +5,15 @@ import { useParams } from 'next/navigation'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { EngravedScore } from '@/components/EngravedScore'
-import { Alert, Eyebrow, Pill } from '@/components/ui'
+import { Alert, Eyebrow, Pill, TertiaryButton } from '@/components/ui'
 import { type AdminScoreRecording, recordingAudioUrl } from '@/lib/api'
 import { formatDateTime, formatSeconds } from '@/lib/format'
-import { useScore } from '@/lib/queries'
+import { useRevokeShare, useScore } from '@/lib/queries'
 
 export default function ScoreDetailPage() {
     const { id } = useParams<{ id: string }>()
     const score = useScore(id)
+    const revokeShare = useRevokeShare(id)
 
     return (
         <AdminShell>
@@ -50,6 +51,27 @@ export default function ScoreDetailPage() {
                             <EngravedScore document={score.data.document} />
                         </section>
                     )}
+
+                    <section className="bg-surface-container-lowest rounded-lg tonal-layer-glow px-5 py-4 mb-4 flex items-center gap-4 flex-wrap">
+                        <div className="flex flex-col gap-1 flex-1 min-w-60">
+                            <Eyebrow>Share link</Eyebrow>
+                            {score.data.shareToken ? (
+                                <span className="font-body text-[13px] text-on-surface">
+                                    On — anyone with <code className="font-mono text-[12px]">/s/{score.data.shareToken}</code> can view,
+                                    play and download this score.
+                                </span>
+                            ) : (
+                                <span className="font-body text-[13px] text-on-surface-variant">
+                                    Off — the score is private to its owner.
+                                </span>
+                            )}
+                        </div>
+                        {score.data.shareToken && (
+                            <TertiaryButton danger onClick={() => revokeShare.mutate()}>
+                                {revokeShare.isPending ? 'Turning off…' : 'Turn link off'}
+                            </TertiaryButton>
+                        )}
+                    </section>
 
                     <Recordings recordings={score.data.recordings} />
 

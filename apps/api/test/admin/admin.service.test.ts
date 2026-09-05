@@ -140,6 +140,20 @@ describe('AdminService.getScore', () => {
         await expect(service.getScore(score.id)).rejects.toBeInstanceOf(NotFoundException)
     })
 
+    it('reports the share-link state and revokes it through the scores service', async () => {
+        const revokeShare = vi.fn(() => Promise.resolve())
+        const { service } = makeService({
+            scores: {
+                findOneInternal: vi.fn(() => Promise.resolve({ ...score, shareToken: 'abcdefghijklmnop' })),
+                load: vi.fn(() => Promise.resolve({ parts: [] })),
+                revokeShare,
+            } as unknown as Partial<ScoresService>,
+        })
+        expect((await service.getScore(score.id)).shareToken).toBe('abcdefghijklmnop')
+        expect(await service.revokeShare(score.id)).toEqual({ shareToken: null })
+        expect(revokeShare).toHaveBeenCalledWith(score.id)
+    })
+
     it('returns the document loaded via the owner', async () => {
         const load = vi.fn(() => Promise.resolve({ parts: [] }))
         const { service } = makeService({

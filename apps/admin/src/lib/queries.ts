@@ -14,6 +14,7 @@ import {
     listUserScores,
     revokeBetaSignup,
     revokeSessions,
+    revokeShare,
 } from './api'
 
 export const adminKeys = {
@@ -91,5 +92,14 @@ export function useRevokeSessions(userId: string) {
         mutationFn: () => revokeSessions(userId),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.user(userId) }),
         meta: { errorMessage: "Couldn't revoke the sessions. Please try again." },
+    })
+}
+
+export function useRevokeShare(scoreId: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => revokeShare(scoreId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.score(scoreId) }),
+        meta: { errorMessage: "Couldn't turn the share link off. Please try again." },
     })
 }

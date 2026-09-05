@@ -253,6 +253,8 @@ export interface AdminScoreDetail {
     userId: string
     owner: { id: string; name: string; email: string } | null
     storageKey: string | null
+    /** Read-only share link token; null when the score is not shared. */
+    shareToken: string | null
     createdAt: string
     updatedAt: string
     document: ScoreDocument | null
@@ -273,6 +275,11 @@ export interface AdminScoreRecording {
  *  streams the audio or passes the API's redirect to the bucket through. */
 export function recordingAudioUrl(recordingId: string): string {
     return `/api/admin/recordings/${encodeURIComponent(recordingId)}/audio`
+}
+
+/** Turn a score's public share link off (support lever for reported links). */
+export function revokeShare(id: string): Promise<{ shareToken: null }> {
+    return api(`/api/admin/scores/${encodeURIComponent(id)}/share`, { method: 'DELETE' })
 }
 
 export function getScore(id: string): Promise<AdminScoreDetail> {

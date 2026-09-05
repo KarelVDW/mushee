@@ -346,3 +346,16 @@ with a token → 200; sign-in untouched (200). In the browser the widget renders
 in the signup form ("Success!" from the test key), the submit button stays
 disabled until it passes, the request carries `x-captcha-response`, signup
 lands on onboarding. Only the real keys remain (runbook §1).
+
+## 18. Share links: legal wording + admin revoke (launch safety)
+
+- Terms §5 and Privacy §2 now describe share links honestly: private unless
+  the owner turns the link on; anyone with the link can view, play back and
+  download the score (never the recordings, never the owner's name or
+  e-mail); not indexed; off immediately when turned off; we may disable a
+  reported link. `LAST_UPDATED` bumped to 5 September 2026 on both pages —
+  **please read these two paragraphs; they are legal text I wrote for you.**
+- Admin console score page shows the share-link state (`/s/<token>`) with a
+  "Turn link off" action → `DELETE /admin/scores/:id/share` (owner-agnostic,
+  behind `ADMIN_SECRET`), the support lever for an abuse/DMCA-style report.
+  API + admin unit tests cover it.
