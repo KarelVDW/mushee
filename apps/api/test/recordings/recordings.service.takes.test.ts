@@ -18,6 +18,7 @@ const rows: Recording[] = [
         scoreId: 's1',
         creditsSpent: 42,
         storagePath: 'recordings/u1/s1/r-old',
+        audioKey: null,
         createdAt: new Date('2026-09-01T10:00:00Z'),
         endedAt: new Date('2026-09-01T10:00:42Z'),
     },
@@ -27,6 +28,7 @@ const rows: Recording[] = [
         scoreId: 's1',
         creditsSpent: 7,
         storagePath: null,
+        audioKey: null,
         createdAt: new Date('2026-08-01T10:00:00Z'),
         endedAt: null,
     },
@@ -36,15 +38,30 @@ const rows: Recording[] = [
         scoreId: 's9',
         creditsSpent: 3,
         storagePath: 'recordings/u2/s9/r-other',
+        audioKey: null,
         createdAt: new Date(),
         endedAt: null,
+    },
+    {
+        id: 'r-keyed',
+        userId: 'u1',
+        scoreId: 's2',
+        creditsSpent: 12,
+        storagePath: 'recordings/u1/s2/r-keyed',
+        audioKey: 'recordings/u1/s2/r-keyed/audio.mp4',
+        createdAt: new Date('2026-09-04T10:00:00Z'),
+        endedAt: new Date('2026-09-04T10:00:12Z'),
     },
 ]
 
 function makeService(storageOverrides: Partial<StorageService> = {}) {
     const repo = {
         find: vi.fn(({ where }: { where: { userId: string; scoreId?: string } }) =>
-            Promise.resolve(rows.filter((r) => r.userId === where.userId && (!where.scoreId || r.scoreId === where.scoreId))),
+            Promise.resolve(
+                rows
+                    .filter((r) => r.userId === where.userId && (!where.scoreId || r.scoreId === where.scoreId))
+                    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+            ),
         ),
         findOneBy: vi.fn(({ id }: { id: string }) => Promise.resolve(rows.find((r) => r.id === id) ?? null)),
         delete: vi.fn(() => Promise.resolve({ affected: 1 })),
@@ -71,6 +88,14 @@ describe('RecordingsService takes', () => {
         const { service } = makeService()
         expect(await service.listForUser('u1')).toEqual([
             {
+                id: 'r-keyed',
+                scoreId: 's2',
+                startedAt: '2026-09-04T10:00:00.000Z',
+                endedAt: '2026-09-04T10:00:12.000Z',
+                seconds: 12,
+                hasAudio: true,
+            },
+            {
                 id: 'r-old',
                 scoreId: 's1',
                 startedAt: '2026-09-01T10:00:00.000Z',
@@ -95,6 +120,18 @@ describe('RecordingsService takes', () => {
         expect(await service.audioFor('u1', 'r-old')).toEqual({ stream: 'stream', contentType: 'audio/webm' })
         expect(storage.list).toHaveBeenCalledWith('recordings/u1/s1/r-old')
         expect(storage.createReadStream).toHaveBeenCalledWith('recordings/u1/s1/r-old/audio.webm')
+    })
+
+    it('replays from the persisted audio key without listing the bucket', async () => {
+        const { service, storage } = makeService()
+        expect(await service.audioFor('u1', 'r-keyed')).toEqual({ stream: 'stream', contentType: 'audio/mp4' })
+        expect(storage.list).not.toHaveBeenCalled()
+        expect(storage.createReadStream).toHaveBeenCalledWith('recordings/u1/s2/r-keyed/audio.mp4')
+
+        const signed = makeService({ signedUrl: vi.fn(() => Promise.resolve('https://bucket/keyed?sig')) as never })
+        expect(await signed.service.audioFor('u1', 'r-keyed')).toEqual({ url: 'https://bucket/keyed?sig' })
+        expect(signed.storage.signedUrl).toHaveBeenCalledWith('recordings/u1/s2/r-keyed/audio.mp4', expect.any(Number))
+        expect(signed.storage.list).not.toHaveBeenCalled()
     })
 
     it('prefers a signed URL, and falls back to streaming when signing throws', async () => {

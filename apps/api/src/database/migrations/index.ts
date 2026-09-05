@@ -9,6 +9,7 @@ import { OnboardingGoal1784332800000 } from './1784332800000-OnboardingGoal'
 import { ScoreShareToken1785024000000 } from './1785024000000-ScoreShareToken'
 import { Announcements1785110400000 } from './1785110400000-Announcements'
 import { AnnouncementFailures1785196800000 } from './1785196800000-AnnouncementFailures'
+import { RecordingAudioKey1788566400000 } from './1788566400000-RecordingAudioKey'
 
 /**
  * All migrations, in order: better-auth's tables first so the app schema can
@@ -28,4 +29,5 @@ export const migrations = [
     ScoreShareToken1785024000000,
     Announcements1785110400000,
     AnnouncementFailures1785196800000,
+    RecordingAudioKey1788566400000,
 ]

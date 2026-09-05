@@ -24,12 +24,21 @@ export class RecordingArchiver {
     private audioStream: Writable | null = null
     private audioKey: string | null = null
     private audioFailed = false
+    private audioArchived = false
     private audioBytes = 0
 
     constructor(
         private readonly storage: StorageService,
         readonly basePath: string,
     ) {}
+
+    /**
+     * The object key of the fully uploaded audio, known after `finalize()`.
+     * Null until then, and when no audio arrived or the upload failed.
+     */
+    get archivedAudioKey(): string | null {
+        return this.audioArchived ? this.audioKey : null
+    }
 
     /**
      * Stream one encoded chunk to storage. The first chunk opens the upload,
@@ -65,6 +74,7 @@ export class RecordingArchiver {
             try {
                 this.audioStream.end()
                 await finished(this.audioStream)
+                this.audioArchived = true
                 this.logger.log(`Archived ${this.audioKey} (${this.audioBytes} bytes)`)
             } catch (err) {
                 this.failAudio(err)

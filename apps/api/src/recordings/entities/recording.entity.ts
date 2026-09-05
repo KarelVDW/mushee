@@ -28,6 +28,15 @@ export class Recording {
     @Column({ type: 'text', nullable: true })
     storagePath: string | null
 
+    /**
+     * The archived audio object itself (`<storagePath>/audio.<ext>`), written
+     * once the upload completes so replay never has to list the folder. Null
+     * for rows archived before the column existed or whose upload failed —
+     * those fall back to listing `storagePath`.
+     */
+    @Column({ type: 'text', nullable: true })
+    audioKey: string | null
+
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date
 

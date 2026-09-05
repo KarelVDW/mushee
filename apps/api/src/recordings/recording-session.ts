@@ -64,6 +64,7 @@ export class RecordingSession {
     private degradedSince: { wallMs: number; audioSec: number } | null = null
     /** Time already waived because transcription was down — never billed, even retroactively. */
     private waived = { wallMs: 0, audioSec: 0 }
+    private archiver: RecordingArchiver | null = null
 
     constructor(
         readonly userId: string,
@@ -110,6 +111,7 @@ export class RecordingSession {
         // Attach the archiver before any audio flows (the gateway holds frames
         // until open() resolves), so the very first chunk is archived too.
         const archiver = this.createArchiver(recording.id)
+        this.archiver = archiver
         this.pipeline.setArchiver(archiver)
         await this.recordings.update(recording.id, {
             storagePath: archiver.basePath,
@@ -153,9 +155,12 @@ export class RecordingSession {
         }
         if (this.recordingId) {
             try {
+                // The audio key is known only now (the upload closed in finalize);
+                // persisting it spares replay a bucket LIST per request.
                 await this.recordings.update(this.recordingId, {
                     creditsSpent: this.creditsSpent,
                     endedAt: new Date(),
+                    audioKey: this.archiver?.archivedAudioKey ?? null,
                 })
             } catch (err) {
                 this.logger.warn(`Failed to persist recording outcome: ${describeError(err)}`)

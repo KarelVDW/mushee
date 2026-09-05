@@ -126,10 +126,7 @@ export class RecordingsService implements OnModuleInit {
     async audioFor(userId: string, id: string): Promise<RecordingAudio> {
         const recording = await this.findOwned(userId, id)
         if (!recording.storagePath) throw new NotFoundException('No audio was archived for this recording')
-        // The audio object's extension depends on the container the client sent
-        // (RecordingArchiver.sniffContainer), so look it up under the take's folder.
-        const keys = await this.storage.list(recording.storagePath)
-        const audioKey = keys.find((key) => key.split('/').pop()?.startsWith('audio.'))
+        const audioKey = recording.audioKey ?? (await this.discoverAudioKey(recording.storagePath))
         if (!audioKey) throw new NotFoundException('The archived audio is missing from storage')
         try {
             const url = await this.storage.signedUrl(audioKey, SIGNED_URL_TTL_SECONDS)
@@ -138,6 +135,16 @@ export class RecordingsService implements OnModuleInit {
             this.logger.warn(`Signing audio URL for ${audioKey} failed, streaming instead: ${describeError(err)}`)
         }
         return { stream: this.storage.createReadStream(audioKey), contentType: audioContentTypeFor(audioKey) }
+    }
+
+    /**
+     * Rows archived before `audioKey` existed carry only the folder. The audio
+     * object's extension depends on the container the client sent
+     * (RecordingArchiver.sniffContainer), so look it up under the take's folder.
+     */
+    private async discoverAudioKey(storagePath: string): Promise<string | undefined> {
+        const keys = await this.storage.list(storagePath)
+        return keys.find((key) => key.split('/').pop()?.startsWith('audio.'))
     }
 
     /**
