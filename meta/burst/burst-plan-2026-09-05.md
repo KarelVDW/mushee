@@ -19,8 +19,12 @@ Claude will only use single subagents.)
 
 ## Ground rules for every agent
 
-- Work in **your own git worktree** on branch `burst/<task-id>` off
-  `experimental` (`isolation: "worktree"`). A fresh worktree has **no
+- Work in **your own git worktree** on branch `burst/<task-id>` off the tag
+  **`burst-base-2026-09-05`** (commit `04de72e`, full CI-equivalent green) —
+  **not** off the tip of `experimental`, which may carry unverified commits from a
+  session that was cut off by the usage limit. Create it with
+  `git worktree add <dir> -b burst/<task-id> burst-base-2026-09-05`
+  (`isolation: "worktree"` then works inside that directory). A fresh worktree has **no
   `node_modules`**: your first command is
   `pnpm install --frozen-lockfile --offline` (≈7 s from the warm store —
   measured; never without `--offline`, never `pnpm install` alone). Workspace
@@ -52,9 +56,15 @@ build`) at 07:45 on 2026-09-05, and fresh worktrees were exercised (offline
    tasks, not on re-verifying the base.
 1. 09:43–09:45 read this file; launch all tasks in parallel (each its own
    worktree). Do not launch anything after 09:50.
-2. 09:57 collect reports. For each green branch: `git merge --ff-only` (or a
-   plain merge if the branch diverged trivially) into `experimental`; on any
-   conflict, leave the branch unmerged and list it.
+2. 09:57 collect reports. First decide the merge target: if `experimental`'s tip
+   is the tag `burst-base-2026-09-05`, merge into `experimental`. If it has
+   extra commits, run `pnpm type-check` on it once (≤ 1 min); green → merge into
+   `experimental`; red → leave those commits on a new branch
+   `experimental-wip-<HHMM>` (`git branch experimental-wip-<HHMM> experimental`),
+   reset `experimental` to the tag (`git reset --hard burst-base-2026-09-05`),
+   note it in the summary, and merge into that. Then, for each green task branch:
+   `git merge --ff-only` (or a plain merge if the branch diverged trivially); on
+   any conflict, leave the branch unmerged and list it.
 3. 09:58 run `pnpm --filter @mushee/notation test` and
    `pnpm --filter @mushee/web test` once on the merged result if time allows;
    if red, revert the last merge(s) until green.
