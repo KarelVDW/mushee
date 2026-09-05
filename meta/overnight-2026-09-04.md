@@ -58,6 +58,9 @@ Each entry: **what** → **why it matters** → **verification**.
 > transactional SendGrid; marketing mail goes CSV → SendGrid Marketing
 > Campaigns (§25). Burst plan for the last 20 minutes of the week:
 > `meta/burst/burst-plan-2026-09-05.md` (prompt at its top).
+> Browser QA on the real stack of the editor (desktop + phone), Share/Takes
+> popovers, landing, `/pricing` and a live shared page: clean, one design note
+> about the cookie banner over the dock (§26).
 >
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
