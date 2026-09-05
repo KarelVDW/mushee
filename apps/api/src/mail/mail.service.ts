@@ -108,7 +108,10 @@ export class MailService {
     /**
      * The announcement as SendGrid receives it: subject/text/html with the name
      * token in place of `{{name}}`, paragraphs from blank lines, HTML-escaped, in
-     * the standard layout with an account-footer.
+     * the standard layout with an account-footer. Two bits of light markup are
+     * understood — `**bold**` and `[label](https://…)` links (http/https only) —
+     * so a writer gets emphasis and buttons-in-text without an HTML editor; the
+     * plain-text version shows them as "label (url)".
      */
     static renderAnnouncement(subject: string, body: string): { subject: string; text: string; html: string } {
         const withToken = (s: string) => s.replace(/\{\{\s*name\s*\}\}/g, NAME_TOKEN)
@@ -119,13 +122,25 @@ export class MailService {
             .filter(Boolean)
         const html = layout(
             withToken(escapeHtml(subject)),
-            paragraphs.map((p) => `<p>${withToken(escapeHtml(p)).replace(/\n/g, '<br/>')}</p>`).join('\n') +
+            paragraphs.map((p) => `<p>${withToken(MailService.markupToHtml(p)).replace(/\n/g, '<br/>')}</p>`).join('\n') +
                 `<p class="muted" style="margin-top:28px;">You're receiving this because you have a Solkey account. Manage it at <a href="${escapeHtml(webAppUrl())}/settings">${escapeHtml(webAppUrl())}/settings</a>.</p>`,
         )
         const text =
-            paragraphs.map(withToken).join('\n\n') +
+            paragraphs.map((p) => withToken(MailService.markupToText(p))).join('\n\n') +
             `\n\n—\nYou're receiving this because you have a Solkey account. Manage it at ${webAppUrl()}/settings`
         return { subject: withToken(subject), text, html }
+    }
+
+    /** `**bold**` → <strong>, `[label](https://url)` → <a>; everything else HTML-escaped. */
+    static markupToHtml(paragraph: string): string {
+        return escapeHtml(paragraph)
+            .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[([^\]\n]+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
+    }
+
+    /** The same markup in plain text: bold marks dropped, links as "label (url)". */
+    static markupToText(paragraph: string): string {
+        return paragraph.replace(/\*\*([^*\n]+?)\*\*/g, '$1').replace(/\[([^\]\n]+?)\]\((https?:\/\/[^\s)]+)\)/g, '$1 ($2)')
     }
 
     /** First name for the greeting, safe in text and HTML alike; "there" when none. */

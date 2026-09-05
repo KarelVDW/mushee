@@ -386,6 +386,17 @@ export function sendAnnouncement(input: { subject: string; body: string; filters
     return api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(input) })
 }
 
+export interface AnnouncementPreview {
+    subject: string
+    text: string
+    html: string
+}
+
+/** The e-mail exactly as a sample recipient ("Ada") would receive it. */
+export function previewAnnouncement(input: { subject: string; body: string }): Promise<AnnouncementPreview> {
+    return api('/api/admin/announcements/preview', { method: 'POST', body: JSON.stringify(input) })
+}
+
 export function listAnnouncements(): Promise<Announcement[]> {
     return api('/api/admin/announcements')
 }

@@ -5,6 +5,7 @@ import { AdminService } from './admin.service'
 import { AdminSecretGuard } from './admin-secret.guard'
 import { AdjustCreditsDto } from './dto/adjust-credits.dto'
 import { AudienceFilterDto, BETA_STATUS_FILTERS, type BetaStatusFilter } from './dto/audience-filter.dto'
+import { PreviewAnnouncementDto } from './dto/preview-announcement.dto'
 import { SendAnnouncementDto } from './dto/send-announcement.dto'
 
 /**
@@ -98,6 +99,12 @@ export class AdminController {
     @Post('announcements')
     sendAnnouncement(@Body() dto: SendAnnouncementDto) {
         return this.adminService.sendAnnouncement(dto)
+    }
+
+    /** The rendered e-mail (subject, plain text, HTML) for a sample recipient — what the console previews. */
+    @Post('announcements/preview')
+    previewAnnouncement(@Body() dto: PreviewAnnouncementDto) {
+        return this.adminService.previewAnnouncement(dto.subject, dto.body)
     }
 
     @Get('announcements')

@@ -528,8 +528,16 @@ delete; editor e2e unchanged and green.
   first-name safety); real stack: migration applied, count/CSV/test-send/
   validation/401 checked with curl, console page renders and its data calls
   answer 200. The runbook's "email them before they notice" now points here.
+- **Borrowed from zeus's e-mail editor (concepts, not code):** a **sandboxed
+  iframe preview** of the exact rendered mail (`POST /admin/announcements/
+preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
+  plain-text tab), and light inline markup instead of a WYSIWYG dependency:
+  `**bold**` and `[label](https://…)` (http/https only; everything else stays
+  escaped text; plain-text copy shows "label (url)").
 - **Not built (deliberately):** unsubscribe management, templates, open/click
-  stats — that is Marketing Campaigns' job; the page says so.
+  stats — that is Marketing Campaigns' job; the page says so — and no rich
+  HTML editor: for service announcements, escaped text + bold + links is the
+  safer surface.
 
 ## Burst plan for the last 20 minutes of the week
 

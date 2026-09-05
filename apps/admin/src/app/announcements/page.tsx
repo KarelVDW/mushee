@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, TertiaryButton, TextArea, TextField } from '@/components/ui'
 import { audienceCsvUrl, type AudienceFilter, type BetaStatusFilter } from '@/lib/api'
 import { formatCount, formatDateTime } from '@/lib/format'
-import { useAnnouncements, useAudience, useSendAnnouncement, useTiers } from '@/lib/queries'
+import { useAnnouncementPreview, useAnnouncements, useAudience, useSendAnnouncement, useTiers } from '@/lib/queries'
 
 const BETA_OPTIONS: Array<{ value: BetaStatusFilter; label: string }> = [
     { value: 'any', label: 'Any' },
@@ -30,6 +30,15 @@ export default function AnnouncementsPage() {
     const [testTo, setTestTo] = useState('')
     const [confirming, setConfirming] = useState(false)
     const [lastSent, setLastSent] = useState<string | null>(null)
+
+    // Preview lags the keystrokes by 400 ms so the API renders once per pause, not per character.
+    const [draft, setDraft] = useState({ subject: '', body: '' })
+    useEffect(() => {
+        const t = setTimeout(() => setDraft({ subject, body }), 400)
+        return () => clearTimeout(t)
+    }, [subject, body])
+    const preview = useAnnouncementPreview(draft.subject, draft.body)
+    const [previewMode, setPreviewMode] = useState<'html' | 'text'>('html')
 
     const tiers = useTiers()
     const audience = useAudience(filters)
@@ -169,12 +178,50 @@ export default function AnnouncementsPage() {
                     <Eyebrow>Message</Eyebrow>
                     <TextField label="Subject" value={subject} onChange={setSubject} placeholder="The Solkey beta ends on 1 October" />
                     <TextArea
-                        label="Body — plain text; blank lines separate paragraphs; {{name}} becomes the first name"
+                        label="Body — blank lines separate paragraphs; {{name}} = first name; **bold** and [label](https://link) work"
                         value={body}
                         onChange={setBody}
-                        rows={12}
+                        rows={10}
                         placeholder={'Hi {{name}},\n\nOn 1 October the closed beta ends and Solkey opens to everyone…'}
                     />
+                    {preview.data && (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <Eyebrow>Preview · as Ada will see it</Eyebrow>
+                                <div className="flex gap-1">
+                                    {(['html', 'text'] as const).map((mode) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            aria-pressed={previewMode === mode}
+                                            onClick={() => setPreviewMode(mode)}
+                                            className={[
+                                                'rounded-full px-3 py-1 border-0 cursor-pointer font-label font-semibold text-[11px] leading-none transition-colors duration-150 ease-solkey',
+                                                previewMode === mode
+                                                    ? 'bg-secondary-soft text-on-secondary-soft'
+                                                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high',
+                                            ].join(' ')}>
+                                            {mode === 'html' ? 'E-mail' : 'Plain text'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="font-body font-medium text-[13px] text-on-surface">Subject: {preview.data.subject}</div>
+                            {previewMode === 'html' ? (
+                                // The rendered mail in a sandboxed frame: nothing in it can run or reach the console.
+                                <iframe
+                                    title="E-mail preview"
+                                    sandbox=""
+                                    srcDoc={preview.data.html}
+                                    className="w-full h-105 rounded-md border-0 bg-white"
+                                />
+                            ) : (
+                                <pre className="m-0 whitespace-pre-wrap rounded-md bg-surface-container-low p-4 font-mono text-[12px] leading-relaxed text-on-surface">
+                                    {preview.data.text}
+                                </pre>
+                            )}
+                        </div>
+                    )}
                     <div className="flex items-end gap-3 flex-wrap">
                         <div className="flex-1 min-w-60">
                             <TextField

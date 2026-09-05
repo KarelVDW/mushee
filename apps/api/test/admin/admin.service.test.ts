@@ -295,6 +295,14 @@ describe('AdminService audience + announcements', () => {
         expect(sql).not.toContain(`ad."userId" IS NULL`)
     })
 
+    it('previews the rendered e-mail for a sample recipient', () => {
+        const { service } = makeService()
+        const preview = service.previewAnnouncement('Hi {{name}}', 'Dear {{name}}, **welcome**.')
+        expect(preview.subject).toBe('Hi Ada')
+        expect(preview.text).toContain('Dear Ada, welcome.')
+        expect(preview.html).toContain('<p>Dear Ada, <strong>welcome</strong>.</p>')
+    })
+
     it('exports the audience as CSV with quoting', async () => {
         const query = vi.fn(() =>
             Promise.resolve([

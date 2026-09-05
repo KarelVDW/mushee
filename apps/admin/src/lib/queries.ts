@@ -15,6 +15,7 @@ import {
     listTiers,
     listUsers,
     listUserScores,
+    previewAnnouncement,
     revokeBetaSignup,
     revokeSessions,
     revokeShare,
@@ -31,6 +32,7 @@ export const adminKeys = {
     signups: ['signups'] as const,
     audience: (filters: AudienceFilter) => ['audience', filters] as const,
     announcements: ['announcements'] as const,
+    announcementPreview: (subject: string, body: string) => ['announcement-preview', subject, body] as const,
 }
 
 export function useStats() {
@@ -125,5 +127,16 @@ export function useSendAnnouncement() {
         mutationFn: sendAnnouncement,
         onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
         meta: { errorMessage: "The announcement couldn't be sent. Nothing was recorded — check the API log and try again." },
+    })
+}
+
+/** Rendered preview of a draft; the caller debounces the inputs. Empty drafts render nothing. */
+export function useAnnouncementPreview(subject: string, body: string) {
+    return useQuery({
+        queryKey: adminKeys.announcementPreview(subject, body),
+        queryFn: () => previewAnnouncement({ subject, body }),
+        enabled: subject.trim().length > 0 && body.trim().length > 0,
+        placeholderData: (previous) => previous,
+        staleTime: Infinity,
     })
 }

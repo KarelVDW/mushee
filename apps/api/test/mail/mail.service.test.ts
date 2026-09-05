@@ -128,6 +128,16 @@ describe('MailService announcements', () => {
         expect(html).toContain('/settings')
     })
 
+    it('understands **bold** and [label](https://url) links, and nothing else', () => {
+        const { html, text } = MailService.renderAnnouncement(
+            'S',
+            'Read the **new terms** at [solkey.io/terms](https://solkey.io/terms) — <b>not html</b> [x](javascript:alert(1))',
+        )
+        expect(html).toContain('Read the <strong>new terms</strong> at <a href="https://solkey.io/terms">solkey.io/terms</a>')
+        expect(html).toContain('&lt;b&gt;not html&lt;/b&gt; [x](javascript:alert(1))')
+        expect(text).toContain('Read the new terms at solkey.io/terms (https://solkey.io/terms)')
+    })
+
     it('greets by first name, safely, or "there"', () => {
         expect(MailService.firstName('Ada Lovelace')).toBe('Ada')
         expect(MailService.firstName('  <script>x</script> ')).toBe('scriptx/script')

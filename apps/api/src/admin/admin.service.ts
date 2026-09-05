@@ -450,6 +450,13 @@ export class AdminService {
         return { id: row.id, recipientCount, sentAt: row.sentAt, testTo: dto.testTo ?? null }
     }
 
+    /** Render for a sample recipient ("Ada") so the console can show the e-mail exactly as it will arrive. */
+    previewAnnouncement(subject: string, body: string): { subject: string; text: string; html: string } {
+        const rendered = MailService.renderAnnouncement(subject, body)
+        const fill = (s: string) => s.split('-firstName-').join('Ada')
+        return { subject: fill(rendered.subject), text: fill(rendered.text), html: fill(rendered.html) }
+    }
+
     async listAnnouncements(): Promise<Array<Record<string, unknown>>> {
         return this.dataSource.query(
             `SELECT id, subject, body, filters, "recipientCount", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
