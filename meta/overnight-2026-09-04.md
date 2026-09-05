@@ -62,7 +62,7 @@ Each entry: **what** → **why it matters** → **verification**.
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
 > Docker/lockfile change before the next deploy (runtime moved to `/app` via
-> `pnpm deploy`; `posthog-node` added), read the two legal paragraphs.
+> `pnpm deploy`; `posthog-node` added), read the three legal paragraphs (share links ×2, service e-mail in the privacy policy).
 >
 > **Side note:** the Docker disk filled up during my image builds and crashed
 > your local Postgres container; I freed ~63 GB of build cache and untagged
@@ -553,6 +553,10 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   a new row with `filters: { retryOf }`, the original list emptied first so a
   double click cannot double-send. Six new unit tests; retry verified on the
   real stack (201 → 400 on the second click → 404 for unknown ids).
+- **Privacy policy** now names "notices about changes to the service or your
+  plan" as essential service e-mail (not marketing, no unsubscribe while the
+  account exists) and lists service announcements under SendGrid — please read
+  that sentence. The console's audience defaults to **verified addresses only**.
 - **Not built (deliberately):** unsubscribe management, templates, open/click
   stats — that is Marketing Campaigns' job; the page says so — and no rich
   HTML editor: for service announcements, escaped text + bold + links is the
