@@ -45,6 +45,11 @@ Claude will only use single subagents.)
 
 ## Orchestrator
 
+0. Pre-flight is **already done** — do not repeat it: `experimental` passed the
+   full CI-equivalent (prettier, eslint, type-check, every unit suite, `pnpm
+build`) at 07:45 on 2026-09-05, and fresh worktrees were exercised (offline
+   install 7 s, web/api/notation tests run from source). Spend the window on the
+   tasks, not on re-verifying the base.
 1. 09:43–09:45 read this file; launch all tasks in parallel (each its own
    worktree). Do not launch anything after 09:50.
 2. 09:57 collect reports. For each green branch: `git merge --ff-only` (or a
