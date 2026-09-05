@@ -113,13 +113,18 @@ deploy.yml) once the GCP project exists.
 18. **Dedicated `/pricing` route** ~~(pricing lives only on the landing page today)~~ +
     per-route `metadata`, canonical URLs, JSON-LD — **done 2026-09-05** (`/pricing` with
     FAQ + FAQPage/offers JSON-LD, sitemap, footer link). Remaining: Lighthouse pass.
-19. **PDF/MusicXML export polish**: the real MusicXML↔JSON converter is still the one code
-    TODO (`scores.service.ts:137`) — round-trip is lossless today, but genuine MusicXML
-    _import_ and richer export need the converter.
-20. **Inference containers non-root** _(PR H9 leftover)_ — add users to both Python images,
-    re-run `check-inference-parity` + eval gate.
-21. **API image slimming** _(PR M19)_ and rate-limit Redis store if OTP brute-force pressure
-    appears (currently per-replica in-memory, `allowedAttempts: 5` is the real guard).
+19. ~~**PDF/MusicXML export polish**~~ — **largely done 2026-09**: genuine MusicXML and
+    MIDI _import_ live in `packages/notation` (`MusicXmlImporter`, `MidiImporter`,
+    `DurationSpeller`) and are wired into the web app (`lib/ScoreFileImporter.ts`); the
+    `scores.service.ts` converter TODO is gone (stored JSON is persisted verbatim, foreign
+    MusicXML wrapped untouched). Both importers are fuzz-guarded since 2026-09-05. Remaining
+    (no launch impact): let the API reuse `@mushee/notation` instead of its own MxmlBuilder.
+20. ~~**Inference containers non-root**~~ — **done**: `apps/inference-crepe/Dockerfile` runs as
+    `app` (uid 1000); the basic-pitch service was deleted 2026-08-22.
+21. ~~**API image slimming**~~ — **done 2026-09-05** (`pnpm deploy --prod`, 1.38 GB → 793 MB,
+    no `.env*`/dev storage in the image; overnight log §8). Still open, only if OTP brute-force
+    pressure appears: a Redis store for the rate limiter (per-replica in-memory today;
+    `allowedAttempts: 5` is the real guard).
 22. ~~**Recordings product surface**~~ — **done 2026-09-05**: the editor header's "Takes"
     menu lists every recording made into the score (newest first) with replay of the
     archived audio and confirmed deletion (`GET/DELETE /recordings`, `GET /recordings/:id/audio`
