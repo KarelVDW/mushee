@@ -11,6 +11,14 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/session'
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4200'
 
+/**
+ * Serverless function budget (Vercel honours this; elsewhere it is inert). An
+ * announcement to thousands of accounts is ten-odd sequential SendGrid calls
+ * inside one API request, so the default budget would cut the answer off while
+ * the API kept sending.
+ */
+export const maxDuration = 60
+
 async function forward(request: NextRequest, path: string[], method: 'GET' | 'POST' | 'DELETE') {
     const secret = process.env.ADMIN_SECRET
     if (!secret) {

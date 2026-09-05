@@ -125,8 +125,13 @@ export function useSendAnnouncement() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: sendAnnouncement,
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
-        meta: { errorMessage: "The announcement couldn't be sent. Nothing was recorded — check the API log and try again." },
+        // Refresh the history on failure too: a run SendGrid rejected outright is
+        // still recorded, and a proxy timeout may mean the API is still sending.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
+        meta: {
+            errorMessage:
+                "The announcement couldn't be sent. Check the history below before retrying — a run that reached some accounts is recorded there.",
+        },
     })
 }
 
