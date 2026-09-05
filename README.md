@@ -20,6 +20,28 @@ the API stateless and light — scale it and the inference service independently
 basic-pitch used to; that provider and its service were removed 2026-08-22 —
 see the eval README's provider-consolidation logs.)
 
+## What Solkey does
+
+Solkey (this repo's product name; the code is still "Mushee") turns a
+performance into editable sheet music:
+
+- **Live audio-to-notation** — sing, whistle or play into the microphone and
+  notes appear on the staff as you go; the API streams audio over a WebSocket
+  through a CREPE-based pitch pipeline that adapts to the instrument's register.
+- **Editor** — a full notation editor on top of that: note entry, selection,
+  undo/redo, transposition with minimal accidentals, metronome and playback,
+  laid out by the engine in `packages/notation` and usable on phones too.
+- **Import / export** — import MusicXML (`.xml`/`.mxl`) and MIDI files; export
+  scores as MusicXML, PDF or SVG, and download a full account export.
+- **Share links** — publish a read-only link to a score (`/s/<token>`) that
+  anyone can open without an account; revoke it any time.
+- **Takes** — every recording is kept as a take with its archived audio, so you
+  can replay it and compare takes recorded into the same score.
+- **Pricing** — a free Sketch tier with a small daily recording budget, paid
+  Songwriter / Studio / Arranger subscriptions with larger budgets, and
+  non-expiring minute packs on top; tiers are DB-driven (`GET /plans`), see
+  `apps/web/src/app/pricing` and the [Billing](#billing-polar) section.
+
 ## Local development
 
 Prereqs: Node 22 + pnpm, Docker Desktop.
