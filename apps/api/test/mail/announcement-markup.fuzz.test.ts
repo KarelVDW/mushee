@@ -81,4 +81,15 @@ describe('announcement markup — escaping invariants (fuzz)', () => {
         expect(rendered.subject).toBe('Subject <b>x</b> -firstName-')
         expect(rendered.html).not.toContain('<b>x</b>')
     })
+
+    it('firstName is never empty and never carries HTML-significant characters, over 2000 seeded names', () => {
+        const PIECES = ['Ada', ' ', '  ', '<b>', '>', '&', '"', "'", 'Lovelace', '\t', '\n', '🎵', 'Ünïcödé', '']
+        for (let seed = 1; seed <= 2000; seed++) {
+            const rng = mulberry32(seed)
+            const name = Array.from({ length: Math.floor(rng() * 6) }, () => PIECES[Math.floor(rng() * PIECES.length)]).join('')
+            const first = MailService.firstName(name)
+            expect(first.length, `seed ${seed}: ${JSON.stringify(name)}`).toBeGreaterThan(0)
+            expect(first).not.toMatch(/[<>&"'\s]/)
+        }
+    })
 })
