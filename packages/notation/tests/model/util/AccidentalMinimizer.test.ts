@@ -144,6 +144,37 @@ describe('AccidentalMinimizer', () => {
         expect(spelled(result, m.notes[1])).toBe('C4')
     })
 
+    it('ranking on sounding pitch ignores the current spelling, so an audition cannot depend on what the pass rewrites', () => {
+        // C major: E♭4 then E4. Ranking on spelling keeps the written E♭ (ties break toward the
+        // current spelling), and the E♮ then needs a natural to cancel it: two accidentals. Ranking
+        // on sound spells the first note D♯ (sharp side of the pair) and the E is free: one — and
+        // the count is the same whichever way the notes arrive spelled.
+        const asFlat = makeScore(1)
+        fill(asFlat, 0, [q(p('E', 4, -1)), q(p('E', 4)), q(), q()])
+        const asSharp = makeScore(1)
+        fill(asSharp, 0, [q(p('D', 4, 1)), q(p('E', 4)), q(), q()])
+        const audition = (score: Score) => {
+            const walk = score.measures.flatMap((m) => m.notes)
+            return new AccidentalMinimizer(walk, new Set(walk), () => 0, 'sounding')
+        }
+        expect(minimize(asFlat).drawnCount).toBe(2)
+        expect(audition(asFlat).drawnCount).toBe(1)
+        expect(audition(asSharp).drawnCount).toBe(1)
+        expect(spelled(audition(asFlat), asFlat.measures[0].notes[0])).toBe('D#4')
+    })
+
+    it('ranking on sounding pitch frees a tie continuation from a predecessor outside the walk', () => {
+        const score = makeScore(2)
+        fill(score, 0, [q(), q(), q(), q(p('A', 4, 1), 'start')])
+        fill(score, 1, [q(p('A', 4, 1)), q(), q(), q()])
+        const second = score.measures[1]
+        // F major audition over bar 2 alone: the written A♯ of the (unwalked) predecessor must not
+        // decide bar 2's key, so the continuation is free to be the key's B♭.
+        const result = new AccidentalMinimizer(second.notes, new Set(second.notes), () => -1, 'sounding')
+        expect(result.drawnCount).toBe(0)
+        expect(spelled(result, second.notes[0])).toBe('Bb4')
+    })
+
     it('rests are skipped entirely', () => {
         const score = makeScore(1)
         const result = minimize(score) // four rests

@@ -464,20 +464,28 @@ export class Score {
      */
     minimizeAccidentals(notes?: Note[]): Note[] {
         if (notes) return this.respell(notes)
+        // A mid-measure key that merely restates the key in force is invisible, but it would
+        // resurface as a boundary once a leading key moves — and a second pass would then carve
+        // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
+        for (const measure of this.measures) {
+            const visible = new Set(measure.midMeasureKeySignatures)
+            for (const key of measure.keySignatures) {
+                if (key.beatPosition > 0 && !visible.has(key)) measure.setKeySignature(key.beatPosition, key.fifths, key.mode)
+            }
+        }
         for (const region of this.keyRegions()) {
             if (!region.notes.length) continue
             const targets = new Set(region.notes)
             const current = region.key.fifths
             let best = current
-            let bestRank = [
-                new AccidentalMinimizer(region.notes, targets, () => current).drawnCount,
-                0,
-                Math.abs(current),
-                current > 0 ? 0 : 1,
-            ]
+            // Every audition ranks on the notes' sounding pitch classes, never on spellings this
+            // very pass rewrites — otherwise a second pass would see different counts and could
+            // move the key again.
+            const drawnUnder = (fifths: number) => new AccidentalMinimizer(region.notes, targets, () => fifths, 'sounding').drawnCount
+            let bestRank = [drawnUnder(current), 0, Math.abs(current), current > 0 ? 0 : 1]
             for (let fifths = -7; fifths <= 7; fifths++) {
                 if (fifths === current) continue
-                const count = new AccidentalMinimizer(region.notes, targets, () => fifths).drawnCount
+                const count = drawnUnder(fifths)
                 // Rank: fewest drawn accidentals; then the key already in place (a region whose
                 // notes can't tell keys apart must not drift); then the lighter signature; then
                 // the sharp side of an enharmonic pair.

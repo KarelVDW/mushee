@@ -4,7 +4,7 @@ import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { describe, expect, it } from 'vitest'
 
 import { generateScore, Rng } from './scoreGenerator'
-import { soundingEvents } from './scoreObservations'
+import { describeScore, soundingEvents } from './scoreObservations'
 
 /**
  * Structural edits must not change the music. Over generated scores:
@@ -78,10 +78,11 @@ describe('edit invariants over generated scores', () => {
         const before = soundingEvents(score)
         score.minimizeAccidentals()
         expect(soundingEvents(score)).toEqual(before)
-        // Not asserted: idempotence. A second pass can still move a key signature — the key choice ranks
-        // candidates on the notes' *current* spellings, which the pass itself then changes (see the
-        // overnight log, §24). Sound and bar shape stay put either way.
+        // Idempotence: the key choice ranks candidates on what the notes *sound* (their pitch classes),
+        // not on spellings the pass itself rewrites, so a second pass finds nothing left to move.
+        const once = describeScore(score)
         score.minimizeAccidentals()
+        expect(describeScore(score), 'a second pass changes nothing').toEqual(once)
         expect(soundingEvents(score)).toEqual(before)
         assertBarsWellFormed(score, 'after minimize')
     })
