@@ -7,6 +7,12 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
 
 ---
 
+> **2026-09-05 overnight pass (branch `experimental`)** — items 13, 14, 15 (code), 18, 22 and
+> the runbook pre-flight rows for error tracking and the inference-outage signal were addressed
+> in one autonomous session; new: share links, editor/importer/recording bug fixes from nine
+> property suites, API image slimming. The itemised log with verification and the remaining
+> config-only steps is [overnight-2026-09-04.md](overnight-2026-09-04.md).
+
 ## Phase 1 — must happen before the beta opens (blockers)
 
 1. **Real legal/business values** _(owner input — PR B6)_ — **values done 2026-07-10**:

@@ -26,8 +26,9 @@ Each entry: **what** → **why it matters** → **verification**.
 > **Product**
 >
 > 5. `/pricing` route with FAQ + structured data (§2); GDPR "Download my data"
->    (§3); "Takes" — replay/delete your recordings (§11); read-only share links
->    `/s/<token>` with playback, export and "Save a copy" (§12).
+>    (§3); "Takes" — replay/delete your recordings, per score in the editor and
+>    across scores in Settings (§11, §23); read-only share links `/s/<token>` with
+>    playback, export and "Save a copy" (§12).
 >
 > **Bugs found by new property/fuzz suites (all fixed)**
 >
