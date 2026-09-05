@@ -1,30 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-
-import { Alert, ChipToggle, Eyebrow, Icon, showToast, TertiaryButton } from '@/components/ui'
-import { track } from '@/lib/analytics'
-import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
-import { useDeleteRecording, useRecordings } from '@/lib/queries'
-import { formatRecordingTime } from '@/lib/recordingTime'
+import { TakesList } from '@/components/TakesList'
+import { Alert, ChipToggle, Eyebrow, Icon } from '@/components/ui'
+import { useRecordings } from '@/lib/queries'
 import { useDismissablePopover } from '@/lib/useDismissablePopover'
-
-/** "Today, 14:02" / "Yesterday, 09:10" / "3 Sep, 14:02" / "3 Sep 2025, 14:02" */
-export function formatTakeDate(iso: string, now = new Date()): string {
-    const date = new Date(iso)
-    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-    const yesterday = new Date(now)
-    yesterday.setDate(now.getDate() - 1)
-    if (sameDay(date, now)) return `Today, ${time}`
-    if (sameDay(date, yesterday)) return `Yesterday, ${time}`
-    const day = date.toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-        ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
-    })
-    return `${day}, ${time}`
-}
 
 interface RecordingsMenuProps {
     scoreId: string
@@ -35,65 +14,13 @@ interface RecordingsMenuProps {
 /**
  * The score's takes: every recording made into it, newest first, with replay of
  * the archived audio and deletion. Lives in the editor header next to Export;
- * opens downward as a glass panel like the export menu. Deletion is the
- * user-facing half of the privacy policy's "recordings are yours, delete them
- * any time" — the audio object goes first, then the row.
+ * opens downward as a glass panel like the export menu. Closing the panel
+ * unmounts the list, which stops any playback. Deletion is the user-facing
+ * half of the privacy policy's "recordings are yours, delete them any time".
  */
 export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps) {
     const { open, setOpen, anchorRef, popRef } = useDismissablePopover()
     const takes = useRecordings(scoreId, { enabled: open })
-    const remove = useDeleteRecording()
-    const [confirming, setConfirming] = useState<string | null>(null)
-    const [playing, setPlaying] = useState<string | null>(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
-
-    const stopAudio = () => {
-        audioRef.current?.pause()
-        audioRef.current = null
-        setPlaying(null)
-    }
-
-    // Closing the panel stops whatever was playing and forgets a pending delete confirmation.
-    useEffect(() => {
-        if (open) return
-        audioRef.current?.pause()
-        audioRef.current = null
-        setPlaying(null)
-        setConfirming(null)
-    }, [open])
-
-    // A take's audio outlives nothing: leaving the editor stops it.
-    useEffect(() => () => audioRef.current?.pause(), [])
-
-    const togglePlay = (take: RecordingSummary) => {
-        if (playing === take.id) return stopAudio()
-        stopAudio()
-        const audio = new Audio(recordingAudioUrl(take.id))
-        audio.onended = () => setPlaying((current) => (current === take.id ? null : current))
-        audio.onerror = () => {
-            setPlaying(null)
-            showToast("This take's audio couldn't be loaded.")
-        }
-        audioRef.current = audio
-        setPlaying(take.id)
-        track('take_played', { seconds: take.seconds })
-        void audio.play().catch(() => {
-            setPlaying(null)
-            showToast("This take's audio couldn't be played.")
-        })
-    }
-
-    const confirmDelete = (take: RecordingSummary) => {
-        if (remove.isPending) return
-        if (playing === take.id) stopAudio()
-        remove.mutate(take.id, {
-            onSuccess: () => {
-                setConfirming(null)
-                track('take_deleted')
-                showToast('Take deleted.', 'info')
-            },
-        })
-    }
 
     return (
         <div ref={anchorRef} className="relative shrink-0">
@@ -118,57 +45,7 @@ export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps
                             Nothing recorded yet. Press record and every take lands here, audio included.
                         </p>
                     )}
-                    {takes.data && takes.data.length > 0 && (
-                        <ul role="list" aria-label="Takes" className="list-none m-0 p-0 flex flex-col gap-1.5 max-h-72 overflow-y-auto">
-                            {takes.data.map((take) => (
-                                <li key={take.id} className="flex items-center gap-2 rounded-md bg-surface-container-low px-3 py-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => togglePlay(take)}
-                                        disabled={!take.hasAudio}
-                                        aria-label={playing === take.id ? 'Pause take' : 'Play take'}
-                                        title={take.hasAudio ? undefined : 'No audio was kept for this take'}
-                                        className={[
-                                            'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
-                                            'bg-surface-container-lowest text-on-surface disabled:opacity-40 disabled:cursor-not-allowed',
-                                            'hover:bg-surface-container-high transition-colors duration-150 ease-solkey',
-                                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                        ].join(' ')}>
-                                        <Icon name={playing === take.id ? 'pause' : 'play'} size={14} />
-                                    </button>
-                                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                        <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
-                                            {formatTakeDate(take.startedAt)}
-                                        </span>
-                                        <span className="font-mono font-normal text-[11px] leading-none text-on-surface-variant">
-                                            {formatRecordingTime(take.seconds)}
-                                        </span>
-                                    </div>
-                                    {confirming === take.id ? (
-                                        <span className="inline-flex items-center gap-1">
-                                            <TertiaryButton danger onClick={() => confirmDelete(take)}>
-                                                {remove.isPending ? 'Deleting…' : 'Delete'}
-                                            </TertiaryButton>
-                                            <TertiaryButton onClick={() => setConfirming(null)}>Keep</TertiaryButton>
-                                        </span>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => setConfirming(take.id)}
-                                            aria-label="Delete take"
-                                            className={[
-                                                'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
-                                                'bg-transparent text-on-surface-variant hover:text-error hover:bg-surface-container-high',
-                                                'transition-colors duration-150 ease-solkey',
-                                                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                            ].join(' ')}>
-                                            <Icon name="trash-2" size={14} />
-                                        </button>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    {takes.data && takes.data.length > 0 && <TakesList takes={takes.data} />}
                     <p className="m-0 font-body font-normal text-[11px] leading-normal text-on-surface-variant">
                         Takes are private to your account and deleted with it.
                     </p>

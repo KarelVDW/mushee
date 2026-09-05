@@ -155,6 +155,15 @@ export const recordingKeys = {
     list: (scoreId?: string) => ['recordings', 'list', scoreId ?? ''] as const,
 }
 
+/** Every take the account holds, newest first (Settings → Your data). */
+export function useAllRecordings(options?: { enabled?: boolean }) {
+    return useQuery({
+        queryKey: recordingKeys.list(),
+        queryFn: () => listRecordings(),
+        enabled: options?.enabled ?? true,
+    })
+}
+
 /** The takes recorded into one score, newest first. */
 export function useRecordings(scoreId: string, options?: { enabled?: boolean }) {
     return useQuery({

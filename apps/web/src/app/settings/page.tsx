@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { type ReactNode, useEffect, useState } from 'react'
 
+import { TakesList } from '@/components/TakesList'
 import {
     Alert,
     Footer,
@@ -21,7 +22,7 @@ import { track } from '@/lib/analytics'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
-import { billingKeys, useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useBillingPortal, useBillingState, useResumeSubscription, useScores } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
@@ -176,6 +177,7 @@ export default function SettingsPage() {
                                             {exporting ? 'Preparing your download…' : 'Download my data'}
                                         </SecondaryButton>
                                     </div>
+                                    <RecordingsInventory />
                                 </Section>
                                 <Section
                                     title="Delete account"
@@ -321,6 +323,39 @@ function BillingSection() {
                 />
             )}
         </Section>
+    )
+}
+
+/**
+ * Every take the account holds, across scores, with replay and delete — the
+ * recordings half of "your data": the export leaves audio out (it is deleted with
+ * the account), so this is where it can be heard and removed one by one.
+ */
+function RecordingsInventory() {
+    const takes = useAllRecordings()
+    const scores = useScores()
+    const [open, setOpen] = useState(false)
+    const titles = new Map((scores.data ?? []).map((score) => [score.id, score.title]))
+
+    if (takes.isPending) return <div className="h-6 w-48 bg-surface-container-low rounded-md animate-pulse" />
+    if (takes.isError) return <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
+    const count = takes.data.length
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                    {count === 0
+                        ? 'No recordings kept yet — every take you record is archived here, audio included.'
+                        : `${count} ${count === 1 ? 'recording' : 'recordings'} kept — listen back or delete them one by one. They are not part of the download.`}
+                </span>
+                {count > 0 && (
+                    <TertiaryButton onClick={() => setOpen((o) => !o)}>{open ? 'Hide recordings' : 'Show recordings'}</TertiaryButton>
+                )}
+            </div>
+            {open && count > 0 && (
+                <TakesList takes={takes.data} scroll={false} subtitleFor={(take) => titles.get(take.scoreId) ?? 'Deleted score'} />
+            )}
+        </div>
     )
 }
 

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { expect, MOCK_TITLE, test } from './fixtures'
 
 /**
  * Mocked-API settings e2e: tab navigation, profile save, the change-password
@@ -19,6 +19,19 @@ test('profile: saving a display name posts the update and confirms with a toast'
     await name.fill('Renamed Tester')
     await page.getByRole('button', { name: 'Save changes' }).click()
     await expect(page.getByRole('status').first()).toContainText(/saved|updated/i)
+})
+
+test('account tab: the recordings inventory lists every take with its score and deletes one', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Account', exact: true }).click()
+    await expect(page.getByText(/3 recordings kept/)).toBeVisible()
+    await page.getByRole('button', { name: 'Show recordings' }).click()
+    const rows = page.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    await expect(rows).toHaveCount(3)
+    await expect(rows.first()).toContainText(MOCK_TITLE)
+    await rows.first().getByRole('button', { name: 'Delete take' }).click()
+    await rows.first().getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(rows).toHaveCount(2)
+    expect(apiMock.recordingDeletes).toEqual(['take-2'])
 })
 
 test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {

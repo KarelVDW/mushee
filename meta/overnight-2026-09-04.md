@@ -457,3 +457,13 @@ signup carries the safe `?next=` path the login page already understood into
 `/onboarding`, and onboarding's finish/skip honour it. One `nextPathFrom` /
 `withNext` pair (same-origin absolute paths only) replaces the inline check
 in the login page; unit-tested, e2e asserts the CTA destination.
+
+## 23. All your recordings in Settings → Your data
+
+`TakesList` (replay + two-step delete) is now a shared component used by the
+editor's Takes panel and a new recordings inventory in Settings → Your data:
+the count of archived takes across all scores, expandable into the list with
+each take's score title, playable and deletable one by one — the recordings
+half of "your data", since the download deliberately leaves audio out.
+`GET /recordings` without `scoreId` backs it. Settings e2e covers list +
+delete; editor e2e unchanged and green.
