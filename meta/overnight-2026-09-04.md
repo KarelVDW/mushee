@@ -620,6 +620,8 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   have left our origin. The guard now also lets the platform URL parser decide
   (`new URL(next, dummy).origin` must stay the dummy origin).
   `apps/web/tests/lib/nextPath.fuzz.test.ts` (3,000 seeded values) guards it.
+  The admin console's login `?next=` had the same pattern — fixed the same way
+  (`apps/admin/src/lib/nextPath.ts`, tested).
 - The burst plan now branches off the tag **`burst-base-2026-09-05`**
   (`04de72e`, verified green) and guards its merge target, per your note.
 
