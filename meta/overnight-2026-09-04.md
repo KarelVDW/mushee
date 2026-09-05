@@ -630,3 +630,39 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
 `meta/burst/burst-plan-2026-09-05.md` — ten independent, worktree-isolated
 agent tasks with hard stops (agents 09:57, orchestrator 09:59), a launch
 prompt at the top, and merge rules. Priority order at the bottom.
+
+## Burst — executed 2026-09-05 09:43–09:56
+
+Two waves, 17 agents, 17 branches, **17 merged into `experimental`, 0 unmerged, 0 conflicts**.
+Base was the tag `burst-base-2026-09-05` (= the tip of `experimental` at launch, so
+the merge target needed no reset). Post-merge: notation 2602/2602, web 674/674,
+api recordings+scores 289/289, api + web type-check clean, prettier clean.
+
+**Wave 1 (the plan's T1–T10, launched 09:43, all green):**
+
+- T1 idempotent minimize-accidentals — two root causes: key audition now ranks on
+  sounding pitch (`AccidentalMinimizer` basis `'sounding'`), and latent redundant
+  mid-bar key restatements are dropped first. **Review the second decision** (§24 is fixed).
+- T2 `recordings.audioKey` (migration `1788566400000-RecordingAudioKey`), replay no
+  longer LISTs the bucket; falls back to listing for legacy rows (§14 closed).
+- T3 mobile e2e for the header chips (+4 tests). Product finding in the branch report.
+- T4 eval lint debt: 21 errors → 0, no behaviour change.
+- T5 shared page title `<score> — Solkey` + Open Graph via server-side `generateMetadata`.
+- T6 `meta/marketing/BETA-ENDING-EMAIL.md` (two variants; only `{{name}}` is substituted).
+- T7 `GET /shared/:token` per-IP 30/min via a Nest guard (in-process store, not shared
+  across replicas; global limiter untouched).
+- T8 README "What Solkey does". T9 shortcuts for the dock duration/accidental pickers
+  (`set-duration:*`, `set-accidental:*`). T10 inventory e2e + orphan take fixture.
+
+**Wave 2 (invented at 09:49 to keep the slots full, all green):**
+
+- W1 robots (+`/admin`, `/api`) + typed sitemap table. W2 root title template
+  `%s — Solkey`, `NEXT_PUBLIC_APP_URL` fallback. W6 not-found / global-error polish.
+- W3 `meta/burst/notes/W3-beta-strings-audit.md` — **launch must-edits**: terms §3
+  "Beta access", privacy "beta notifications", and `settings/page.tsx` keys on
+  `tierId === 'beta'` (grandfathered users would keep the closed-beta copy and lose
+  upgrade buttons — contradicts runbook §3).
+- W4 master-todo pointers; W5 Runbook 5 additions; W8 a11y fixes on landing/pricing/auth.
+
+Not done: no third wave (too little time before the 09:57 stop). Worktrees under the
+session scratchpad were removed; the `burst/*` branches remain for inspection.
