@@ -584,6 +584,15 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   dock on editor routes. Left unchanged — DESIGN.md is authoritative.
   Screenshot sent in chat.
 
+- **Public pages, same run:** landing and `/pricing` on a Pixel 7 (no overflow,
+  titles right), a live `/s/<token>` page desktop + phone (title, transport,
+  download, "Start free"; the tagline under the score; reflow to two systems on
+  the phone), `/s/not-a-real-token` shows the "doesn't open anything" state; the
+  link was turned off again afterwards (DELETE 200). No page errors beyond the
+  expected 404 fetch. "Save a copy" only appears for a signed-in visitor, as
+  designed — an anonymous visitor gets "Start free" and returns to the score
+  after signup (§22).
+
 ## Burst plan for the last 20 minutes of the week
 
 `meta/burst/burst-plan-2026-09-05.md` — ten independent, worktree-isolated
