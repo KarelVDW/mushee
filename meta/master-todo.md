@@ -75,9 +75,11 @@ deploy.yml) once the GCP project exists.
 
 ## Phase 2 — should land in the first beta weeks (safety & confidence)
 
-9. **Error tracking vendor** _(PR H18 open half)_: pick Sentry (or PostHog error tracking),
-   add the DSN hook in `main.ts` + web `instrumentation.ts`. Without it, beta bug reports
-   are anecdotes.
+9. ~~**Error tracking vendor**~~ — **code done 2026-09-05**, PostHog on both sides: web
+   already had `instrumentation.ts` (`onRequestError` → `captureException`) plus the route
+   and global error boundaries; the API now has `src/telemetry` (`ErrorReporter`,
+   `ReportExceptionsFilter` for 5xx/unknown, `uncaughtExceptionMonitor`; overnight log §7).
+   Remaining (config): set `POSTHOG_API_KEY` in the API secrets.
 10. **Visual QA + full-stack verification of the 2026-07-08 UI changes** — the mocked
     Playwright suite is green on current HEAD (32/32, chromium + webkit, run 2026-07-08
     after the module-cleanup commits) and the full-stack smoke passed after the
@@ -92,9 +94,10 @@ deploy.yml) once the GCP project exists.
     from the brand `icon.svg` (sharp): `public/icon-{192,512}.png`, maskable variants on
     the surface color, `app/apple-icon.png`, PNG-encoded `app/favicon.ico` (16/32/48);
     manifest lists all of them. Worth one designer glance at the maskable crop.
-13. **N-session recording load test** _(notes.md §4 has the follow-up backlog)_: extend
-    `scripts/test-recording-ws.ts` to ramp N sessions, watch p95 pass latency + RSS,
-    and baseline the per-pod ceiling before beta invites scale up.
+13. ~~**N-session recording load test**~~ — **harness done 2026-09-05**:
+    `apps/api/scripts/load-test-recording.ts` (`pnpm load:recording`) ramps N sessions and
+    reports p95 pass latency + RSS; first local numbers in overnight log §10. Remaining: one
+    run against the staging cluster in remote-inference mode before invites scale up.
 14. ~~**GDPR data export endpoint**~~ — **done 2026-09-05** (client-side, no API change):
     Settings → Account → "Download my data" zips profile.json, settings.json and every
     score as MusicXML + JSON in the browser (`lib/AccountExport.ts`); the privacy page
