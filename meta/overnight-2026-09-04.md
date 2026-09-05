@@ -606,6 +606,11 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   whole hostile body rendered through `renderAnnouncement` is checked paragraph
   by paragraph. Green on first real run (two false alarms were my own
   assertions about the plain-text copy, which correctly keeps literal text).
+- `apps/api/test/admin/audience-csv.fuzz.test.ts`: 300 seeded audiences with
+  names built from quotes, commas, newlines, formula prefixes and unicode; the
+  CSV is parsed back with an RFC 4180 reader and every cell must round-trip
+  (formula-looking names gain the leading apostrophe), no cell may start with
+  `= + - @`. Green.
 - The burst plan now branches off the tag **`burst-base-2026-09-05`**
   (`04de72e`, verified green) and guards its merge target, per your note.
 
