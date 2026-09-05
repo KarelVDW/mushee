@@ -128,6 +128,12 @@ describe('MailService announcements', () => {
         expect(html).toContain('/settings')
     })
 
+    it('flattens markup in the subject, where HTML cannot go', () => {
+        const rendered = MailService.renderAnnouncement('Beta ends on **1 October** — see [pricing](https://solkey.io/pricing)', 'Body')
+        expect(rendered.subject).toBe('Beta ends on 1 October — see pricing (https://solkey.io/pricing)')
+        expect(rendered.html).not.toContain('**')
+    })
+
     it('understands **bold** and [label](https://url) links, and nothing else', () => {
         const { html, text } = MailService.renderAnnouncement(
             'S',

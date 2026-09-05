@@ -136,15 +136,17 @@ export class MailService {
             .split(/\n{2,}/)
             .map((p) => p.trim())
             .filter(Boolean)
+        // Subjects cannot carry HTML, so the markup is flattened there (bold marks dropped, links as "label (url)").
+        const plainSubject = MailService.markupToText(subject)
         const html = layout(
-            withToken(escapeHtml(subject)),
+            withToken(escapeHtml(plainSubject)),
             paragraphs.map((p) => `<p>${withToken(MailService.markupToHtml(p)).replace(/\n/g, '<br/>')}</p>`).join('\n') +
                 `<p class="muted" style="margin-top:28px;">You're receiving this because you have a Solkey account. Manage it at <a href="${escapeHtml(webAppUrl())}/settings">${escapeHtml(webAppUrl())}/settings</a>.</p>`,
         )
         const text =
             paragraphs.map((p) => withToken(MailService.markupToText(p))).join('\n\n') +
             `\n\n—\nYou're receiving this because you have a Solkey account. Manage it at ${webAppUrl()}/settings`
-        return { subject: withToken(subject), text, html }
+        return { subject: withToken(plainSubject), text, html }
     }
 
     /** `**bold**` → <strong>, `[label](https://url)` → <a>; everything else HTML-escaped. */

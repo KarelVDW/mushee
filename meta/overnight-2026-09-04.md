@@ -553,6 +553,10 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   a new row with `filters: { retryOf }`, the original list emptied first so a
   double click cannot double-send. Six new unit tests; retry verified on the
   real stack (201 → 400 on the second click → 404 for unknown ids).
+- **Seen in a browser (Playwright against API :4200 + a console on :3510):**
+  audience count and sample, live preview rendering bold + link + "Hi Ada", the
+  history row, no console/HTTP errors. Screenshot sent in chat. Fix from the
+  screenshot: markup is now flattened in the **subject** (no stray `**`).
 - **Privacy policy** now names "notices about changes to the service or your
   plan" as essential service e-mail (not marketing, no unsubscribe while the
   account exists) and lists service announcements under SendGrid — please read
