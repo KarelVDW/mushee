@@ -442,3 +442,12 @@ lands on onboarding. Only the real keys remain (runbook §1).
   written values always sum exactly to the span, never fragment absurdly —
   no finding.
 - Running totals: notation 2146, api 403, web 588 unit tests, all green.
+
+## 22. Shared score → signup → back to the score
+
+A visitor without an account who opens a shared score and clicks "Start free"
+now returns to that score after onboarding (where "Save a copy" waits):
+signup carries the safe `?next=` path the login page already understood into
+`/onboarding`, and onboarding's finish/skip honour it. One `nextPathFrom` /
+`withNext` pair (same-origin absolute paths only) replaces the inline check
+in the login page; unit-tested, e2e asserts the CTA destination.

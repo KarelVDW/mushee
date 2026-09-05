@@ -22,6 +22,7 @@ import {
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
+import { withNext } from '@/lib/nextPath'
 import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 
@@ -56,7 +57,8 @@ export function SharedScorePage({ token }: { token: string }) {
 
     const onGetStarted = () => {
         track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
-        router.push(authed ? '/scores' : '/signup')
+        // Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done.
+        router.push(authed ? '/scores' : withNext('/signup', `/s/${token}`))
     }
 
     // A signed-in visitor can take the shared score home as an editable copy of their own.

@@ -7,6 +7,7 @@ import { Turnstile, TURNSTILE_SITE_KEY } from '@/components/Turnstile'
 import { AuthCard, AuthShell } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { emailOtp, signUp } from '@/lib/auth-client'
+import { nextPathFrom, withNext } from '@/lib/nextPath'
 import { BETA_MODE } from '@/lib/plans'
 
 export default function SignupPage() {
@@ -47,7 +48,8 @@ export default function SignupPage() {
                     // The account exists at this point — never strand the user on a
                     // frozen form. Onboarding's verify-email step can re-send the
                     // code, so a failed initial send proceeds all the same.
-                    const goToOnboarding = () => router.push('/onboarding')
+                    // A visitor who came from somewhere specific (a shared score) gets back there after onboarding.
+                    const goToOnboarding = () => router.push(withNext('/onboarding', nextPathFrom(window.location.search)))
                     void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
                 }
             })

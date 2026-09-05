@@ -40,3 +40,27 @@ test('an unknown or revoked token explains itself instead of erroring', async ({
     await expect(page.getByRole('heading', { name: /doesn’t open anything/ })).toBeVisible()
     await expect(page.getByTestId('shared-score')).toHaveCount(0)
 })
+
+test('a visitor without an account is sent to signup with the score as the way back', async ({ page }) => {
+    await page.route(/^https?:\/\//, (route) => {
+        const url = new URL(route.request().url())
+        if (url.hostname !== 'localhost') return route.abort()
+        if (url.pathname === `/shared/${MOCK_SHARE_TOKEN}`) {
+            return route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                headers: { 'access-control-allow-origin': '*' },
+                body: JSON.stringify({
+                    id: 'x',
+                    title: MOCK_TITLE,
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                    document: { partList: { scoreParts: [] }, parts: [] },
+                }),
+            })
+        }
+        return route.continue()
+    })
+    await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
+    await page.getByRole('button', { name: 'Start free' }).click()
+    await expect(page).toHaveURL(new RegExp(`/signup\\?next=${encodeURIComponent(`/s/${MOCK_SHARE_TOKEN}`).replace(/%/g, '%')}$`))
+})
