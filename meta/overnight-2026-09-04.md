@@ -566,6 +566,24 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   HTML editor: for service announcements, escaped text + bold + links is the
   safer surface.
 
+## 26. Visual QA of the editor on the real stack (desktop + phone)
+
+- **What:** Playwright against API :4200 + web :3250 (fresh worktree), demo
+  account, "Twinkle Twinkle": desktop 1440×900 with the Share and Takes
+  popovers open, Pixel 7 phone view. Checked: no console/page errors, no
+  horizontal overflow on either viewport, header fits the phone width exactly,
+  chips collapse to icons on the phone, both popovers render their empty/intro
+  states correctly.
+- **Finding (design, not a bug):** with consent still undecided the cookie
+  banner (a `.glass-panel`, 85% white + blur per DESIGN.md) sits over the
+  bottom tool dock; on the phone the dock chips and the record button show
+  through it and the text is busy. Normally the banner is answered on the
+  landing/login page first, so the editor rarely shows it — but a first-time
+  user who ignores it will see this. Options if you care: an opaque surface
+  for the banner only (a DESIGN.md exception), or lifting the banner above the
+  dock on editor routes. Left unchanged — DESIGN.md is authoritative.
+  Screenshot sent in chat.
+
 ## Burst plan for the last 20 minutes of the week
 
 `meta/burst/burst-plan-2026-09-05.md` — ten independent, worktree-isolated
