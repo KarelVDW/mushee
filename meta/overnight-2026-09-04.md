@@ -61,6 +61,9 @@ Each entry: **what** → **why it matters** → **verification**.
 > Browser QA on the real stack of the editor (desktop + phone), Share/Takes
 > popovers, landing, `/pricing` and a live shared page: clean, one design note
 > about the cookie banner over the dock (§26).
+> Last minutes: three more fuzz suites (announcement markup escaping, CSV
+> export, `?next=` redirect) — the last one found and fixed an **open redirect**
+> via backslash normalisation (§27).
 >
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
