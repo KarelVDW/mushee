@@ -338,3 +338,13 @@ only build cache and untagged layers).
   packed in reading order (the one failure was my test asking for layouts
   of key signatures the renderer never draws).
 - **Verification:** notation 1641/1641 with the 100% model coverage gate.
+
+## 17. CAPTCHA verified end-to-end with Cloudflare's test keys
+
+Real stack with `TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`
+(always passes) on the API and the matching test site key on the web:
+`POST /api/auth/sign-up/email` without the header → **400 `MISSING_RESPONSE`**;
+with a token → 200; sign-in untouched (200). In the browser the widget renders
+in the signup form ("Success!" from the test key), the submit button stays
+disabled until it passes, the request carries `x-captcha-response`, signup
+lands on onboarding. Only the real keys remain (runbook §1).
