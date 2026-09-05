@@ -14,7 +14,6 @@ import type {
 } from '../../components/types'
 import { BEAT_EPSILON, Duration } from '../Duration'
 import type { Measure } from '../Measure'
-import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import type { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
