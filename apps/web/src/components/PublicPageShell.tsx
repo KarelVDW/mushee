@@ -10,9 +10,9 @@ import { Footer, Icon, Wordmark } from '@/components/ui'
 export function PublicPageShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
+            <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
                 <div className="max-w-320 mx-auto px-5 sm:px-8 py-4 sm:py-5 flex justify-between items-center">
-                    <Link href="/" className="no-underline">
+                    <Link href="/" className="no-underline" aria-label="Solkey home">
                         <Wordmark size={28} />
                     </Link>
                     <Link

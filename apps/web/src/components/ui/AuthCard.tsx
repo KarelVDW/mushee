@@ -117,7 +117,8 @@ function FormPanel({
                                 <button
                                     type="button"
                                     onClick={onToggleShowPassword}
-                                    aria-label="Toggle password visibility"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    aria-pressed={showPassword}
                                     className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
                                     <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
                                 </button>
@@ -159,6 +160,7 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
     return (
         <Link
             href={href}
+            aria-current={active ? 'page' : undefined}
             className={[
                 'no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap',
                 active

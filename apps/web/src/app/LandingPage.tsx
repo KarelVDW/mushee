@@ -31,11 +31,13 @@ export function LandingPage() {
                 onSignIn={onSignIn}
                 onGetStarted={() => onGetStarted('nav')}
             />
-            <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
-            <HowItWorks />
-            <FeatureGrid />
-            {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing')} />}
-            <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
+            <main className="flex-1">
+                <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
+                <HowItWorks />
+                <FeatureGrid />
+                {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing')} />}
+                <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
+            </main>
             <Footer width="marketing" />
         </div>
     )
@@ -54,7 +56,7 @@ function LandingNav({
 }) {
     const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
     return (
-        <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
+        <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
             <div className="max-w-320 mx-auto px-4 sm:px-8 py-4 sm:py-5 flex justify-between items-center gap-3">
                 <Wordmark size={28} />
                 <div className="flex items-center gap-4 sm:gap-6">
