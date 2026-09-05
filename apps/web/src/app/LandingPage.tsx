@@ -183,7 +183,7 @@ function FeatureGrid() {
         [
             'shield',
             'Yours, privately',
-            'Your music belongs to you. Recordings stay private to your account — never published, shared, or sold — and vanish when you delete it.',
+            'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
         ],
     ]
     return (

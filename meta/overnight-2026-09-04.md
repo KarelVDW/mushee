@@ -35,11 +35,17 @@ Each entry: **what** → **why it matters** → **verification**.
 > 7. Importer: incomplete tuplet bars stayed short; a garbled duration made it
 >    allocate without bound (§16). MIDI cap lowered (a garbled file stalled 14 s).
 > 8. Editor: dotting a sixteenth corrupted the bar for good; pasting tuplets
->    left bars short; the last bar could be removed (§19).
+>    left bars short; the last bar could be removed (§19); a meter change could
+>    leave an interior bar short (§21).
+> 9. **Recording:** a 6/8 (or 2/2) take was cut into bars twice the editor's
+>    length, and bars could come out a sixteenth short — the API's bar
+>    arithmetic ignored the meter's denominator and rounded per note (§20).
 >
 > **Also:** load-test harness + first numbers (§10), opt-in Spot inference
 > component (§9), marketing launch kit (§13), code-review fixes (§14), analytics
-> events for the new surfaces.
+> events for the new surfaces, a shared score brings a new signup back to itself
+> (§22). Nine property/fuzz suites now guard the model, importers, editor and
+> the recording→editor contract (~1,400 seeded cases).
 >
 > **Needs you (config, not code):** Turnstile keys, `POSTHOG_API_KEY`, decide
 > beta users' fate, run the load test in remote-inference mode, review the
