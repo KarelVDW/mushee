@@ -336,7 +336,7 @@ describe('AdminService audience + announcements', () => {
         )
         expect(result).toEqual({ id: 'ann-1', recipientCount: 1, sentAt: new Date('2026-09-05T08:00:00Z'), testTo: 'me@solkey.io' })
         // No audience query ran for a test send; the log row carries the test address and the filter.
-        expect(query.mock.calls.every(([sql]) => !(sql).includes('FROM "user"'))).toBe(true)
+        expect(query.mock.calls.every(([sql]) => !sql.includes('FROM "user"'))).toBe(true)
         const [, params] = query.mock.calls[0] as unknown as [string, unknown[]]
         expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 'me@solkey.io'])
     })
