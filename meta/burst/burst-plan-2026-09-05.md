@@ -20,7 +20,7 @@ Claude will only use single subagents.)
 ## Ground rules for every agent
 
 - Work in **your own git worktree** on branch `burst/<task-id>` off the tag
-  **`burst-base-2026-09-05`** (commit `cd92875`, full CI-equivalent green at 07:45 plus type-check/lint/prettier and the api+web+admin unit suites on the later commits) —
+  **`burst-base-2026-09-05`** (the tag is authoritative — it sits on the certified tip of `experimental`: full CI-equivalent green at 07:45, type-check/lint/prettier and the api+web+admin unit suites re-run on every later code commit) —
   **not** off the tip of `experimental`, which may carry unverified commits from a
   session that was cut off by the usage limit. Create it with
   `git worktree add <dir> -b burst/<task-id> burst-base-2026-09-05`
