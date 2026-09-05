@@ -44,6 +44,56 @@ function measureNotes(score: Score, index = 0): string[] {
 }
 
 describe('MusicXmlImporter', () => {
+    describe('robustness', () => {
+        const triplet8 = (step: string) =>
+            note(
+                step,
+                4,
+                'eighth',
+                4,
+                '<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>',
+            )
+
+        it('completes a bar whose tuplet group lost a note with a rest in tuplet space', () => {
+            // Three quarters + two triplet eighths (⅔ beat): the ⅓-beat hole is no plain value.
+            const full = measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + QUARTER_REST)
+            const { score, warnings } = load(
+                doc(full + measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + triplet8('C') + triplet8('D'), '')),
+            )
+            const bar = score.measures[1]
+            expect(bar.beats).toBeCloseTo(bar.maxBeats, 6)
+            expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'D4:8(3:2)', 'r:8(3:2)'])
+            expect(warnings).toContain('Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.')
+        })
+
+        it('drops a trailing tuplet note whose remainder nothing can spell, then pads', () => {
+            // A triplet eighth (⅓) followed by a quintuplet sixteenth (⅕): no single tuplet space
+            // reaches the grid from 8/15 of a beat, so the quintuplet note goes and the triplet gap is padded.
+            const quint16 = note(
+                'E',
+                4,
+                '16th',
+                2,
+                '<time-modification><actual-notes>5</actual-notes><normal-notes>4</normal-notes></time-modification>',
+            )
+            const full = measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + QUARTER_REST)
+            const { score } = load(doc(full + measure(QUARTER_REST + QUARTER_REST + QUARTER_REST + triplet8('C') + quint16, '')))
+            const bar = score.measures[1]
+            expect(bar.beats).toBeCloseTo(bar.maxBeats, 6)
+            expect(bar.notes.some((n) => n.pitch?.name === 'E')).toBe(false)
+            expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'r:q(3:2)'])
+        })
+
+        it('drops a note or forward whose duration is absurd instead of spelling it', () => {
+            const huge = doc(
+                measure(note('C', 4, 'quarter', 12_000_000) + '<forward><duration>9999999</duration></forward>' + QUARTER_REST),
+            )
+            const { score, warnings } = load(huge)
+            expect(measureNotes(score)).toEqual(['r:q', 'r:q', 'r:q', 'r:q'])
+            expect(warnings).toContain('Some notes could not be read and were left out.')
+        })
+    })
+
     describe('header', () => {
         it('reads the title, instrument, key, time, clef, tempo and barline of a simple part', () => {
             const xml = doc(

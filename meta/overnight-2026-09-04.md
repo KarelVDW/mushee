@@ -313,3 +313,28 @@ Side finding: the Docker disk had filled up during the night's image builds
 and crashed the local Postgres container (recovered cleanly after freeing
 ~63 GB of build cache and dangling images; nothing of yours was removed —
 only build cache and untagged layers).
+
+## 16. Layout fuzz + import robustness fuzz — 2 more importer bugs fixed
+
+- **What:** the seeded score generator moved to
+  `tests/model/util/scoreGenerator.ts`; two new property suites (150 seeds
+  each): `LayoutFuzz` lays out every generated score at 340/600/1000 units
+  and walks every coordinate the renderer reads (notes, stems, flags, beams,
+  ties, tuplets, keys, clefs, tempos, rows) for finiteness and sane packing;
+  `ImportRobustness` mutates our own MusicXML (truncation, dropped or
+  duplicated elements, garbage numbers, stripped attributes, reordered
+  nodes) and demands either a score whose bars all add up or one of the
+  importer's three friendly errors.
+- **Found + fixed (MusicXmlImporter):** (1) a bar left with an incomplete
+  tuplet group (one triplet note lost) could not be completed with plain
+  rests and stayed short — bars are now padded in the tuplet's own space when
+  that lands back on the sixteenth grid, else the trailing tuplet note is
+  dropped and the bar padded (new user-facing warning); (2) a garbled huge
+  `<duration>` or tiny `<divisions>` made the speller allocate rests without
+  bound (a vitest worker died of OOM) — notes and forwards over 64 beats are
+  dropped with the existing "could not be read" warning. Both a user-upload
+  hardening and a client-side DoS fix.
+- **Layout engine:** no finding — 150 scores × 3 widths, all finite and
+  packed in reading order (the one failure was my test asking for layouts
+  of key signatures the renderer never draws).
+- **Verification:** notation 1641/1641 with the 100% model coverage gate.

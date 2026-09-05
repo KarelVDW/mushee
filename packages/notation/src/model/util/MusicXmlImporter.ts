@@ -23,6 +23,12 @@ import type { ImportedScore } from './ImportedScore'
 import { ScoreDeserializer } from './ScoreDeserializer'
 
 const DIVISIONS = 12 // divisions per quarter note in the JSON handed to ScoreDeserializer
+/**
+ * Longest single note or forward we accept, in quarter-note beats (16 whole notes).
+ * A garbled `<duration>` or a tiny `<divisions>` can make one note span millions of
+ * beats; spelling that would allocate rests without bound, so it is dropped instead.
+ */
+const MAX_NOTE_BEATS = 64
 
 const NOTE_TYPES: Record<string, DurationType> = { whole: 'w', half: 'h', quarter: 'q', eighth: '8', '16th': '16' }
 const MXML_TYPES: Record<DurationType, MxmlNoteType> = { w: 'whole', h: 'half', q: 'quarter', '8': 'eighth', '16': '16th' }
@@ -57,6 +63,7 @@ const WARN_SIMPLIFIED = 'Some note values were rewritten with the nearest suppor
 const WARN_DROPPED = 'Some notes could not be read and were left out.'
 const WARN_SHORT = 'Notes shorter than a sixteenth were left out.'
 const WARN_OVERFLOW = 'Some bars held more than their time signature allows; the overflow was trimmed.'
+const WARN_UNEVEN = 'Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.'
 
 /**
  * Reads a MusicXML document (partwise or timewise) into a Score. The model holds a
@@ -274,6 +281,7 @@ export class MusicXmlImporter {
         const duration = this.number(element, 'duration')
         if (!duration || duration <= 0) return this.warn(WARN_DROPPED)
         const beats = duration / this.divisions
+        if (beats > MAX_NOTE_BEATS) return this.warn(WARN_DROPPED)
 
         const timeModification = this.child(element, 'time-modification')
         const actualNotes = timeModification && this.number(timeModification, 'actual-notes')
@@ -316,7 +324,7 @@ export class MusicXmlImporter {
     private readForward(element: Element) {
         if (!this.inImportedVoice(element)) return
         const duration = this.number(element, 'duration')
-        if (!duration || duration <= 0) return
+        if (!duration || duration <= 0 || duration / this.divisions > MAX_NOTE_BEATS) return
         const rests = new DurationSpeller(this.timeSignature).spell(this.fill, duration / this.divisions)
         this.entries.push(...rests.map((written) => this.noteEntry(written, undefined)))
         this.lastNote = []
@@ -383,12 +391,43 @@ export class MusicXmlImporter {
     private fit(score: Score) {
         for (const measure of score.measures) {
             if (measure.beats > measure.maxBeats + BEAT_EPSILON) this.trim(measure)
-            if (measure.beats < measure.maxBeats - BEAT_EPSILON) {
-                const rests = measure.timeSignature.fillRests(measure.beats).map((duration) => new Note({ duration }))
-                // A short opening bar with notes is a pickup: its rests lead in, so the notes end on the barline.
-                const pickup = measure === score.firstMeasure && measure.notes.some((note) => note.pitch)
-                measure.addNotes(pickup ? rests.reverse() : rests, pickup ? 'start' : 'end')
+            if (measure.beats < measure.maxBeats - BEAT_EPSILON) this.complete(measure, measure === score.firstMeasure)
+        }
+    }
+
+    /**
+     * Pad a short bar to its meter. On the sixteenth grid, plain rests do it (the
+     * common case: a short final bar, a pickup). Off the grid — an incomplete
+     * tuplet group, one triplet note lost in the file — the gap is padded in the
+     * last tuplet's own space, accepted only when that lands the bar back on the
+     * grid or completes it; otherwise the trailing tuplet note is dropped and the
+     * bar padded again. Every step adds grid-true time or removes a note, so the
+     * loop ends with a bar that adds up.
+     */
+    private complete(measure: Measure, opening: boolean) {
+        // A short opening bar with notes is a pickup: its rests lead in, so the notes end on the barline.
+        const pickup = opening && measure.notes.some((note) => note.pitch)
+        const pad = (rests: Duration[]) =>
+            measure.addNotes(
+                (pickup ? rests.reverse() : rests).map((duration) => new Note({ duration })),
+                pickup ? 'start' : 'end',
+            )
+        const onGrid = (beats: number) => Math.abs(beats * 4 - Math.round(beats * 4)) < BEAT_EPSILON
+        for (;;) {
+            const gap = measure.maxBeats - measure.beats
+            if (gap < BEAT_EPSILON) return
+            if (onGrid(measure.beats)) {
+                pad(measure.timeSignature.fillRests(measure.beats))
+                continue
             }
+            this.warn(WARN_UNEVEN)
+            const lastTuplet = [...measure.notes].reverse().find((note) => note.inTuplet)
+            /* v8 ignore next -- defensive: plain values are all on the sixteenth grid, so an off-grid bar always holds a tuplet note */
+            if (!lastTuplet) return
+            const rests = Duration.fromBeats(gap, lastTuplet.duration.ratio)
+            const filled = measure.beats + rests.reduce((sum, rest) => sum + rest.effectiveBeats, 0)
+            if (rests.length && (onGrid(filled) || Math.abs(filled - measure.maxBeats) < BEAT_EPSILON)) pad(rests)
+            else measure.removeNotes([lastTuplet])
         }
     }
 
