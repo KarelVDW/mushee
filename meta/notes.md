@@ -43,7 +43,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
   `subscription_cancel_started`, `landing_cta_clicked` (locations incl.
   `pricing-page`, `shared-score`), and since 2026-09-05 the share loop and
   data surfaces: `share_link_created` / `share_link_copied` /
-  `share_link_removed`, `shared_score_viewed` (`authed`), `shared_score_copied`,
+  `share_link_removed`, `shared_score_viewed` (`authed`), `shared_score_played`, `shared_score_copied`,
   `take_played` (`seconds`), `take_deleted`, `data_export_downloaded` (`scores`).
 
 ### Beta mode

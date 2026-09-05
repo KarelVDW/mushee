@@ -8,7 +8,17 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { Footer, IconButton, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
+import {
+    Footer,
+    Icon,
+    IconButton,
+    PrimaryButton,
+    SecondaryButton,
+    showToast,
+    TertiaryButton,
+    TransportBtn,
+    Wordmark,
+} from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
@@ -16,6 +26,7 @@ import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 
 import { ExportMenu } from '../../scores/[id]/ExportMenu'
+import { useSharedPlayback } from './useSharedPlayback'
 
 /**
  * What a share link opens: the score, engraved read-only, with its title, an
@@ -67,6 +78,7 @@ export function SharedScorePage({ token }: { token: string }) {
         )
     }
     const notFound = shared.isError && shared.error instanceof ApiError && shared.error.isClientError
+    const playback = useSharedPlayback(score)
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
@@ -76,6 +88,25 @@ export function SharedScorePage({ token }: { token: string }) {
                         <Wordmark size={24} />
                     </Link>
                     <span className="flex-1" />
+                    {score && (
+                        <span className="inline-flex items-center gap-1.5">
+                            <TransportBtn size={32} onClick={playback.stop} ariaLabel="Stop" disabled={playback.state === 'stopped'}>
+                                <Icon name="square" size={12} />
+                            </TransportBtn>
+                            <TransportBtn
+                                size={40}
+                                tone="play"
+                                active={playback.state === 'playing'}
+                                onClick={() => {
+                                    if (playback.state === 'stopped') track('shared_score_played')
+                                    playback.toggle()
+                                }}
+                                ariaLabel={playback.state === 'playing' ? 'Pause' : 'Play'}
+                                disabled={!playback.ready}>
+                                <Icon name={playback.state === 'playing' ? 'pause' : 'play'} size={16} />
+                            </TransportBtn>
+                        </span>
+                    )}
                     {score && shared.data && (
                         <ExportMenu
                             score={score}
@@ -126,7 +157,7 @@ export function SharedScorePage({ token }: { token: string }) {
                             ref={scoreAreaRef}
                             className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden w-full max-w-240 mx-auto"
                             data-testid="shared-score">
-                            <ScoreView score={score} layoutId={score.layout.id} />
+                            <ScoreView score={score} layoutId={score.layout.id} playbackCursorRef={playback.playbackCursorRef} />
                         </div>
                         <p className="m-0 text-center font-body font-normal text-[13px] leading-normal text-on-surface-variant">
                             Shared read-only from Solkey —{' '}

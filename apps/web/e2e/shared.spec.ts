@@ -19,6 +19,13 @@ test('a valid share link renders the score read-only with its title, export and 
     await expect(page.getByRole('group', { name: 'Note duration' })).toHaveCount(0)
 
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    // Playback: the play button arms once samples resolve (or fail, in this hermetic run) and toggles to Pause.
+    const play = page.getByRole('button', { name: 'Play' })
+    await expect(play).toBeEnabled({ timeout: 15000 })
+    await play.click()
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
+    await page.getByRole('button', { name: 'Stop' }).click()
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Library|Start free/ })).toBeVisible()
 
     // Signed in (the mock session): the score can be saved as an editable copy of one's own.

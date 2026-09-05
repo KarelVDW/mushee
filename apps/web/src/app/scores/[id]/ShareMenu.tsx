@@ -59,8 +59,8 @@ export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuPro
                     {link ? (
                         <>
                             <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                                Anyone with this link can view the score and download it as PDF, MusicXML or MIDI. They can&apos;t edit it,
-                                and they don&apos;t need an account.
+                                Anyone with this link can view the score, play it back and download it as PDF, MusicXML or MIDI. They
+                                can&apos;t edit it, and they don&apos;t need an account.
                             </p>
                             <div className="flex items-center gap-2">
                                 <input
@@ -83,8 +83,8 @@ export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuPro
                     ) : (
                         <>
                             <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                                Create a link anyone can open to view and download this score — no account needed, no editing. You can turn
-                                it off any time.
+                                Create a link anyone can open to view, play back and download this score — no account needed, no editing.
+                                You can turn it off any time.
                             </p>
                             <PrimaryButton
                                 onClick={() => share.mutate(undefined, { onSuccess: () => track('share_link_created') })}
