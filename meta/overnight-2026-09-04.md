@@ -243,9 +243,7 @@ load:recording`, env `SESSIONS`, `RAMP_MS`, `AUDIO_SECONDS`,
 - **Also:** a signed-in visitor gets "Save a copy" on the shared page — the
   score lands in their library as an editable score of their own (the plan's
   score cap applies; the server's refusal message is shown).
-- **Not done (deliberate):** playback on the shared page (the Transport
-  stack is bound to the editor's manipulator; the recipient can export
-  MIDI/PDF) — a good follow-up; expiring links / passwords — YAGNI until asked.
+- **Later the same night:** playback on the shared page after all — a lean `useSharedPlayback` hook over the editor's `Transport.playScore` (stop / play–pause buttons in the header, cursor on the score, always from the top); e2e covers the toggle. Not done: expiring links / passwords — YAGNI until asked.
 
 ## 13. Security pass over the new surfaces (manual; the `/security-review` skill needs a remote)
 

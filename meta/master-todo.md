@@ -122,8 +122,8 @@ deploy.yml) once the GCP project exists.
 
 22b. **Read-only share links** — **shipped 2026-09-05** (new, not previously listed):
 `/s/<token>` public page (view, export), Share chip in the editor, `POST/DELETE /scores/:id/share`,
-`GET /shared/:token`, migration `ScoreShareToken`. Follow-ups if wanted: playback on the shared
-page, link expiry/passwords, an "open in Solkey → copy to my library" action.
+`GET /shared/:token`, migration `ScoreShareToken`. Playback (`useSharedPlayback`) and "Save a copy" landed the same night. Follow-ups if wanted: link
+expiry/passwords.
 
 ## Structure / refactor backlog (no launch impact)
 
