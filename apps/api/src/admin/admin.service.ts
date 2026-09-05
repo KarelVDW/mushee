@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
 import type { Readable } from 'stream'
 import { DataSource } from 'typeorm'
@@ -82,6 +82,15 @@ const SIGNED_URL_TTL_SECONDS = 15 * 60
  * queries them with raw SQL instead of TypeORM entities. Everything else is
  * plain aggregation over the app's own tables.
  */
+export interface AnnouncementOutcome {
+    id: string
+    recipientCount: number
+    failedCount: number
+    errors: string[]
+    sentAt: Date
+    testTo: string | null
+}
+
 @Injectable()
 export class AdminService {
     private readonly logger = new Logger(AdminService.name)
@@ -436,18 +445,34 @@ export class AdminService {
      * Send a service announcement to the audience — or, with `testTo`, one
      * rendered copy to that address and nothing else. Every send is recorded.
      */
-    async sendAnnouncement(dto: SendAnnouncementDto): Promise<{ id: string; recipientCount: number; sentAt: Date; testTo: string | null }> {
+    /**
+     * Send (or test-send) an announcement and record the run. The record is
+     * written even when SendGrid rejected some or all batches — `recipientCount`
+     * is who actually got it and `failedCount` who did not — because a partial
+     * send that left no trace is exactly what leads to double-sending on retry.
+     * Only a run that reached nobody is reported as an error.
+     */
+    async sendAnnouncement(dto: SendAnnouncementDto): Promise<AnnouncementOutcome> {
         const recipients = dto.testTo ? [{ email: dto.testTo, name: 'Test Recipient' }] : await this.audienceRecipients(dto.filters)
         if (!dto.testTo && recipients.length === 0) throw new BadRequestException('Nobody matches this audience.')
-        const recipientCount = await this.mail.sendAnnouncement(recipients, dto.subject, dto.body)
+        const outcome = await this.mail.sendAnnouncement(recipients, dto.subject, dto.body)
         const [row]: Array<{ id: string; sentAt: Date }> = await this.dataSource.query(
-            `INSERT INTO announcements (subject, body, filters, "recipientCount", "testTo") VALUES ($1, $2, $3, $4, $5) RETURNING id, "sentAt"`,
-            [dto.subject, dto.body, JSON.stringify(dto.filters), recipientCount, dto.testTo ?? null],
+            `INSERT INTO announcements (subject, body, filters, "recipientCount", "failedCount", "testTo") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, "sentAt"`,
+            [dto.subject, dto.body, JSON.stringify(dto.filters), outcome.sent, outcome.failed, dto.testTo ?? null],
         )
         this.logger.log(
-            `Announcement "${dto.subject}" sent to ${recipientCount} recipient(s)${dto.testTo ? ` (test → ${dto.testTo})` : ''}`,
+            `Announcement "${dto.subject}" sent to ${outcome.sent} recipient(s)${outcome.failed ? `, ${outcome.failed} not delivered` : ''}${dto.testTo ? ` (test → ${dto.testTo})` : ''}`,
         )
-        return { id: row.id, recipientCount, sentAt: row.sentAt, testTo: dto.testTo ?? null }
+        if (outcome.sent === 0)
+            throw new BadGatewayException(`SendGrid rejected the announcement (${outcome.errors[0] ?? 'no batch went out'}).`)
+        return {
+            id: row.id,
+            recipientCount: outcome.sent,
+            failedCount: outcome.failed,
+            errors: outcome.errors,
+            sentAt: row.sentAt,
+            testTo: dto.testTo ?? null,
+        }
     }
 
     /** Render for a sample recipient ("Ada") so the console can show the e-mail exactly as it will arrive. */
@@ -459,7 +484,7 @@ export class AdminService {
 
     async listAnnouncements(): Promise<Array<Record<string, unknown>>> {
         return this.dataSource.query(
-            `SELECT id, subject, body, filters, "recipientCount", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
+            `SELECT id, subject, body, filters, "recipientCount", "failedCount", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
         )
     }
 

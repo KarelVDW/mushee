@@ -350,6 +350,7 @@ export interface Announcement {
     body: string
     filters: AudienceFilter
     recipientCount: number
+    failedCount: number
     testTo: string | null
     sentAt: string
 }
@@ -377,12 +378,23 @@ export function audienceCsvUrl(filters: AudienceFilter): string {
     return `/api/admin/audience/export.csv${audienceQuery(filters)}`
 }
 
-export function sendAnnouncement(input: { subject: string; body: string; filters: AudienceFilter; testTo?: string }): Promise<{
+export interface AnnouncementSendResult {
     id: string
+    /** Recipients SendGrid accepted. */
     recipientCount: number
+    /** Recipients in batches SendGrid rejected — they did not get the mail. */
+    failedCount: number
+    errors: string[]
     sentAt: string
     testTo: string | null
-}> {
+}
+
+export function sendAnnouncement(input: {
+    subject: string
+    body: string
+    filters: AudienceFilter
+    testTo?: string
+}): Promise<AnnouncementSendResult> {
     return api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(input) })
 }
 

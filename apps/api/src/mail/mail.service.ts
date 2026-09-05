@@ -13,6 +13,13 @@ export interface AnnouncementRecipient {
     name: string
 }
 
+/** Outcome of one announcement run: recipients reached, recipients in rejected batches, one line per rejected batch. */
+export interface AnnouncementResult {
+    sent: number
+    failed: number
+    errors: string[]
+}
+
 /** SendGrid caps a request at 1,000 personalizations; stay comfortably under it. */
 const ANNOUNCEMENT_BATCH = 500
 /** Substitution token SendGrid fills per recipient (legacy substitutions, applied to subject, text and html). */
@@ -74,16 +81,20 @@ export class MailService {
      * One service announcement to many accounts: each recipient is its own
      * personalization (nobody sees anyone else), the first name is substituted
      * per recipient, requests go out in batches under SendGrid's 1,000 cap.
-     * Returns how many recipients were sent to. Unconfigured (dev) logs one line
-     * per batch instead.
+     * A batch that SendGrid rejects does not abort the run — the remaining
+     * batches still go out, and the result says how many recipients were sent
+     * to and how many were not, so the operator never has to guess whether a
+     * retry would double-send. Unconfigured (dev) logs one line per batch.
      */
-    async sendAnnouncement(recipients: AnnouncementRecipient[], subject: string, body: string): Promise<number> {
-        if (!recipients.length) return 0
+    async sendAnnouncement(recipients: AnnouncementRecipient[], subject: string, body: string): Promise<AnnouncementResult> {
+        const result: AnnouncementResult = { sent: 0, failed: 0, errors: [] }
+        if (!recipients.length) return result
         const { html, text, subject: renderedSubject } = MailService.renderAnnouncement(subject, body)
         for (let i = 0; i < recipients.length; i += ANNOUNCEMENT_BATCH) {
             const batch = recipients.slice(i, i + ANNOUNCEMENT_BATCH)
             if (!this.configured) {
                 this.logger.log(`[MAIL:skipped] announcement "${subject}" to ${batch.length} recipients (${batch[0].email}…)\n${text}`)
+                result.sent += batch.length
                 continue
             }
             try {
@@ -94,15 +105,18 @@ export class MailService {
                     text,
                     html,
                 })
+                result.sent += batch.length
             } catch (err) {
+                const message = (err as Error).message
                 this.logger.error(
-                    `SendGrid announcement batch failed (${batch.length} recipients from ${batch[0].email}): ${(err as Error).message}`,
+                    `SendGrid announcement batch failed (${batch.length} recipients from ${batch[0].email}): ${message}`,
                     err as Error,
                 )
-                throw err
+                result.failed += batch.length
+                result.errors.push(`${batch.length} recipients from ${batch[0].email}: ${message}`)
             }
         }
-        return recipients.length
+        return result
     }
 
     /**

@@ -541,6 +541,14 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   plain-text tab), and light inline markup instead of a WYSIWYG dependency:
   `**bold**` and `[label](https://…)` (http/https only; everything else stays
   escaped text; plain-text copy shows "label (url)").
+- **Partial-send safety (added after the report):** a SendGrid batch that is
+  rejected mid-run no longer aborts the whole request with nothing recorded — the
+  worst case for a 5,000-account mail, because a retry would double-send to
+  everyone in the earlier batches. The remaining batches still go out, the
+  history row records who was reached (`recipientCount`) and who was not
+  (`failedCount`, new column via migration), the console shows the failed count
+  and the SendGrid error next to the send, and only a run that reached nobody is
+  an error (502). Four new unit tests; migration verified on the real stack.
 - **Not built (deliberately):** unsubscribe management, templates, open/click
   stats — that is Marketing Campaigns' job; the page says so — and no rich
   HTML editor: for service announcements, escaped text + bold + links is the

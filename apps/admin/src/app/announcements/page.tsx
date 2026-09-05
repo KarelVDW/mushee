@@ -30,6 +30,7 @@ export default function AnnouncementsPage() {
     const [testTo, setTestTo] = useState('')
     const [confirming, setConfirming] = useState(false)
     const [lastSent, setLastSent] = useState<string | null>(null)
+    const [partial, setPartial] = useState<string | null>(null)
 
     // Preview lags the keystrokes by 400 ms so the API renders once per pause, not per character.
     const [draft, setDraft] = useState({ subject: '', body: '' })
@@ -60,6 +61,11 @@ export default function AnnouncementsPage() {
                 onSuccess: (result) => {
                     setConfirming(false)
                     setLastSent(`Sent to ${formatCount(result.recipientCount)} ${result.recipientCount === 1 ? 'account' : 'accounts'}.`)
+                    setPartial(
+                        result.failedCount > 0
+                            ? `SendGrid rejected ${formatCount(result.failedCount)} of them — those accounts did not get the mail (${result.errors.join('; ')}). The ${formatCount(result.recipientCount)} above already have it, so check SendGrid before re-sending.`
+                            : null,
+                    )
                 },
             },
         )
@@ -255,6 +261,7 @@ export default function AnnouncementsPage() {
                         )}
                         {lastSent && <Pill tone="neutral">{lastSent}</Pill>}
                     </div>
+                    {partial && <Alert>{partial}</Alert>}
                 </section>
             </div>
 
@@ -274,8 +281,11 @@ export default function AnnouncementsPage() {
                                     <span className="font-body font-medium text-[14px] text-on-surface">{item.subject}</span>
                                     <span className="font-body text-[12px] text-on-surface-variant">
                                         {formatDateTime(item.sentAt)} ·{' '}
-                                        {item.testTo ? `test copy to ${item.testTo}` : `${formatCount(item.recipientCount)} recipients`} ·
-                                        filter {JSON.stringify(item.filters)}
+                                        {item.testTo ? `test copy to ${item.testTo}` : `${formatCount(item.recipientCount)} recipients`}
+                                        {item.failedCount > 0 && (
+                                            <span className="text-error"> · {formatCount(item.failedCount)} not delivered</span>
+                                        )}{' '}
+                                        · filter {JSON.stringify(item.filters)}
                                     </span>
                                 </div>
                                 <TertiaryButton

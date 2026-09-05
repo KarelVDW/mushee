@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import { BadRequestException, NotFoundException } from '@nestjs/common'
+import { BadGatewayException, BadRequestException, NotFoundException } from '@nestjs/common'
 import type { DataSource } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -41,7 +41,9 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
         createReadStream: vi.fn(() => 'fake-stream'),
         ...overrides?.storage,
     }
-    const mail = { sendAnnouncement: vi.fn((recipients: unknown[]) => Promise.resolve(recipients.length)) }
+    const mail = {
+        sendAnnouncement: vi.fn((recipients: unknown[]) => Promise.resolve({ sent: recipients.length, failed: 0, errors: [] as string[] })),
+    }
     const service = new AdminService(
         { query } as unknown as DataSource,
         scoresService as unknown as ScoresService,
@@ -360,11 +362,18 @@ describe('AdminService audience + announcements', () => {
             'Beta ends',
             'Hello {{name}}',
         )
-        expect(result).toEqual({ id: 'ann-1', recipientCount: 1, sentAt: new Date('2026-09-05T08:00:00Z'), testTo: 'me@solkey.io' })
+        expect(result).toEqual({
+            id: 'ann-1',
+            recipientCount: 1,
+            failedCount: 0,
+            errors: [],
+            sentAt: new Date('2026-09-05T08:00:00Z'),
+            testTo: 'me@solkey.io',
+        })
         // No audience query ran for a test send; the log row carries the test address and the filter.
         expect(query.mock.calls.every(([sql]) => !sql.includes('FROM "user"'))).toBe(true)
         const [, params] = query.mock.calls[0] as unknown as [string, unknown[]]
-        expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 'me@solkey.io'])
+        expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 0, 'me@solkey.io'])
     })
 
     it('a real send resolves the audience, hands every recipient to mail, and refuses an empty audience', async () => {
@@ -388,5 +397,30 @@ describe('AdminService audience + announcements', () => {
             empty.service.sendAnnouncement({ subject: 'x'.repeat(3), body: 'y'.repeat(10), filters: filters({}) } as never),
         ).rejects.toBeInstanceOf(BadRequestException)
         expect(empty.mail.sendAnnouncement).not.toHaveBeenCalled()
+    })
+
+    it('records a partial send with its failed count instead of failing the request', async () => {
+        const recipients = Array.from({ length: 3 }, (_, i) => ({ email: `u${i}@x`, name: 'U' }))
+        const query = vi.fn((sql: string) => Promise.resolve(sql.startsWith('INSERT') ? [{ id: 'ann-3', sentAt: new Date() }] : recipients))
+        const { service, mail } = makeService({ query })
+        mail.sendAnnouncement.mockResolvedValueOnce({ sent: 2, failed: 1, errors: ['1 recipients from u2@x: 429'] })
+        const result = await service.sendAnnouncement({ subject: 'Beta ends', body: 'Hi {{name}}', filters: filters({}) } as never)
+        expect(result.recipientCount).toBe(2)
+        expect(result.failedCount).toBe(1)
+        expect(result.errors).toEqual(['1 recipients from u2@x: 429'])
+        const insert = query.mock.calls.find(([sql]) => (sql as string).startsWith('INSERT')) as unknown as [string, unknown[]]
+        expect(insert[1].slice(3)).toEqual([2, 1, null])
+    })
+
+    it('a run that reached nobody is still recorded, then reported as a gateway error', async () => {
+        const query = vi.fn((sql: string) =>
+            Promise.resolve(sql.startsWith('INSERT') ? [{ id: 'ann-4', sentAt: new Date() }] : [{ email: 'a@x', name: 'A' }]),
+        )
+        const { service, mail } = makeService({ query })
+        mail.sendAnnouncement.mockResolvedValueOnce({ sent: 0, failed: 1, errors: ['1 recipients from a@x: 401 Unauthorized'] })
+        await expect(
+            service.sendAnnouncement({ subject: 'Beta ends', body: 'Hi {{name}}', filters: filters({}) } as never),
+        ).rejects.toBeInstanceOf(BadGatewayException)
+        expect(query.mock.calls.some(([sql]) => (sql as string).startsWith('INSERT'))).toBe(true)
     })
 })
