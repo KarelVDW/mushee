@@ -6,7 +6,7 @@ import type { Score } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Footer, IconButton, PrimaryButton, SecondaryButton, showToast, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
@@ -38,6 +38,11 @@ export function SharedScorePage({ token }: { token: string }) {
         [shared.data],
     )
 
+    // One view event per resolved link — the growth loop's top-of-funnel number.
+    useEffect(() => {
+        if (shared.data) track('shared_score_viewed', { authed })
+    }, [shared.data, authed])
+
     const onGetStarted = () => {
         track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
         router.push(authed ? '/scores' : '/signup')
@@ -50,7 +55,10 @@ export function SharedScorePage({ token }: { token: string }) {
         create.mutate(
             { title: shared.data.title, score: shared.data.document },
             {
-                onSuccess: (created) => router.push(`/scores/${created.id}`),
+                onSuccess: (created) => {
+                    track('shared_score_copied')
+                    router.push(`/scores/${created.id}`)
+                },
                 onError: (err) =>
                     showToast(
                         err instanceof ApiError && err.code === 'score-limit' ? err.message : 'Could not save a copy. Please try again.',

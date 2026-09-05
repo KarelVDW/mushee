@@ -1,6 +1,7 @@
 'use client'
 
 import { ChipToggle, Eyebrow, Icon, PrimaryButton, SecondaryButton, showToast, TertiaryButton } from '@/components/ui'
+import { track } from '@/lib/analytics'
 import { useShareScore, useUnshareScore } from '@/lib/queries'
 import { useDismissablePopover } from '@/lib/useDismissablePopover'
 
@@ -32,6 +33,7 @@ export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuPro
         if (!link) return
         try {
             await navigator.clipboard.writeText(link)
+            track('share_link_copied')
             showToast('Link copied.', 'info')
         } catch {
             showToast("Couldn't copy — select the link and copy it yourself.")
@@ -71,7 +73,9 @@ export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuPro
                                 <SecondaryButton onClick={() => void copy()}>Copy</SecondaryButton>
                             </div>
                             <div className="flex justify-end">
-                                <TertiaryButton danger onClick={() => unshare.mutate()}>
+                                <TertiaryButton
+                                    danger
+                                    onClick={() => unshare.mutate(undefined, { onSuccess: () => track('share_link_removed') })}>
                                     {unshare.isPending ? 'Turning off…' : 'Turn off link'}
                                 </TertiaryButton>
                             </div>
@@ -82,7 +86,9 @@ export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuPro
                                 Create a link anyone can open to view and download this score — no account needed, no editing. You can turn
                                 it off any time.
                             </p>
-                            <PrimaryButton onClick={() => share.mutate()} fullWidth>
+                            <PrimaryButton
+                                onClick={() => share.mutate(undefined, { onSuccess: () => track('share_link_created') })}
+                                fullWidth>
                                 {share.isPending ? 'Creating link…' : 'Turn on link'}
                             </PrimaryButton>
                         </>

@@ -17,6 +17,7 @@ import {
     TopNav,
 } from '@/components/ui'
 import { AccountExport } from '@/lib/AccountExport'
+import { track } from '@/lib/analytics'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
@@ -97,6 +98,7 @@ export default function SettingsPage() {
                 createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
             })
             downloadBlob(archive.toBlob(), archive.filename)
+            track('data_export_downloaded', { scores: archive.scores.length })
             showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
         } catch {
             showToast("Your data couldn't be exported. Please try again.")

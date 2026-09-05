@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { Alert, ChipToggle, Eyebrow, Icon, showToast, TertiaryButton } from '@/components/ui'
+import { track } from '@/lib/analytics'
 import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
 import { useDeleteRecording, useRecordings } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
@@ -75,6 +76,7 @@ export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps
         }
         audioRef.current = audio
         setPlaying(take.id)
+        track('take_played', { seconds: take.seconds })
         void audio.play().catch(() => {
             setPlaying(null)
             showToast("This take's audio couldn't be played.")
@@ -87,6 +89,7 @@ export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps
         remove.mutate(take.id, {
             onSuccess: () => {
                 setConfirming(null)
+                track('take_deleted')
                 showToast('Take deleted.', 'info')
             },
         })
