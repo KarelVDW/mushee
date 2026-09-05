@@ -5,7 +5,7 @@ import type { DataSource } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { AdminService } from '../../src/admin/admin.service'
-import type { MailService } from '../../src/mail/mail.service'
+import type { AnnouncementRecipient, MailService } from '../../src/mail/mail.service'
 import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
@@ -42,7 +42,14 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
         ...overrides?.storage,
     }
     const mail = {
-        sendAnnouncement: vi.fn((recipients: unknown[]) => Promise.resolve({ sent: recipients.length, failed: 0, errors: [] as string[] })),
+        sendAnnouncement: vi.fn((recipients: unknown[]) =>
+            Promise.resolve({
+                sent: recipients.length,
+                failed: 0,
+                failedRecipients: [] as AnnouncementRecipient[],
+                errors: [] as string[],
+            }),
+        ),
     }
     const service = new AdminService(
         { query } as unknown as DataSource,
@@ -373,7 +380,7 @@ describe('AdminService audience + announcements', () => {
         // No audience query ran for a test send; the log row carries the test address and the filter.
         expect(query.mock.calls.every(([sql]) => !sql.includes('FROM "user"'))).toBe(true)
         const [, params] = query.mock.calls[0] as unknown as [string, unknown[]]
-        expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 0, 'me@solkey.io'])
+        expect(params).toEqual(['Beta ends', 'Hello {{name}}', JSON.stringify({ tiers: ['beta'] }), 1, 0, '[]', 'me@solkey.io'])
     })
 
     it('a real send resolves the audience, hands every recipient to mail, and refuses an empty audience', async () => {
@@ -403,13 +410,18 @@ describe('AdminService audience + announcements', () => {
         const recipients = Array.from({ length: 3 }, (_, i) => ({ email: `u${i}@x`, name: 'U' }))
         const query = vi.fn((sql: string) => Promise.resolve(sql.startsWith('INSERT') ? [{ id: 'ann-3', sentAt: new Date() }] : recipients))
         const { service, mail } = makeService({ query })
-        mail.sendAnnouncement.mockResolvedValueOnce({ sent: 2, failed: 1, errors: ['1 recipients from u2@x: 429'] })
+        mail.sendAnnouncement.mockResolvedValueOnce({
+            sent: 2,
+            failed: 1,
+            failedRecipients: [recipients[2]],
+            errors: ['1 recipients from u2@x: 429'],
+        })
         const result = await service.sendAnnouncement({ subject: 'Beta ends', body: 'Hi {{name}}', filters: filters({}) } as never)
         expect(result.recipientCount).toBe(2)
         expect(result.failedCount).toBe(1)
         expect(result.errors).toEqual(['1 recipients from u2@x: 429'])
-        const insert = query.mock.calls.find(([sql]) => (sql as string).startsWith('INSERT')) as unknown as [string, unknown[]]
-        expect(insert[1].slice(3)).toEqual([2, 1, null])
+        const insert = query.mock.calls.find(([sql]) => sql.startsWith('INSERT')) as unknown as [string, unknown[]]
+        expect(insert[1].slice(3)).toEqual([2, 1, JSON.stringify([recipients[2]]), null])
     })
 
     it('a run that reached nobody is still recorded, then reported as a gateway error', async () => {
@@ -417,10 +429,46 @@ describe('AdminService audience + announcements', () => {
             Promise.resolve(sql.startsWith('INSERT') ? [{ id: 'ann-4', sentAt: new Date() }] : [{ email: 'a@x', name: 'A' }]),
         )
         const { service, mail } = makeService({ query })
-        mail.sendAnnouncement.mockResolvedValueOnce({ sent: 0, failed: 1, errors: ['1 recipients from a@x: 401 Unauthorized'] })
+        mail.sendAnnouncement.mockResolvedValueOnce({
+            sent: 0,
+            failed: 1,
+            failedRecipients: [{ email: 'a@x', name: 'A' }],
+            errors: ['1 recipients from a@x: 401 Unauthorized'],
+        })
         await expect(
             service.sendAnnouncement({ subject: 'Beta ends', body: 'Hi {{name}}', filters: filters({}) } as never),
         ).rejects.toBeInstanceOf(BadGatewayException)
-        expect(query.mock.calls.some(([sql]) => (sql as string).startsWith('INSERT'))).toBe(true)
+        expect(query.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(true)
+    })
+
+    it('retries to exactly the unreached accounts, as a new row, and empties the original list first', async () => {
+        const failed = [
+            { email: 'c@x', name: 'C' },
+            { email: 'd@x', name: 'D' },
+        ]
+        const query = vi.fn((sql: string) => {
+            if (sql.startsWith('SELECT subject'))
+                return Promise.resolve([{ subject: 'Beta ends', body: 'Hi {{name}}', failedRecipients: failed }])
+            if (sql.startsWith('INSERT')) return Promise.resolve([{ id: 'ann-6', sentAt: new Date() }])
+            return Promise.resolve([])
+        })
+        const { service, mail } = makeService({ query })
+        const result = await service.retryAnnouncement('ann-5')
+        expect(mail.sendAnnouncement).toHaveBeenCalledWith(failed, 'Beta ends', 'Hi {{name}}')
+        expect(result.recipientCount).toBe(2)
+        const kinds = query.mock.calls.map(([sql]) => sql.split(' ')[0])
+        expect(kinds).toEqual(['SELECT', 'UPDATE', 'INSERT'])
+        const insert = query.mock.calls[2] as unknown as [string, unknown[]]
+        expect(insert[1][2]).toBe(JSON.stringify({ retryOf: 'ann-5' }))
+    })
+
+    it('refuses to retry an announcement that reached everyone, and 404s unknown ids', async () => {
+        const reached = makeService({
+            query: vi.fn(() => Promise.resolve([{ subject: 'S', body: 'B', failedRecipients: [] }])),
+        })
+        await expect(reached.service.retryAnnouncement('ann-1')).rejects.toBeInstanceOf(BadRequestException)
+        expect(reached.mail.sendAnnouncement).not.toHaveBeenCalled()
+        const missing = makeService({ query: vi.fn(() => Promise.resolve([])) })
+        await expect(missing.service.retryAnnouncement('nope')).rejects.toBeInstanceOf(NotFoundException)
     })
 })

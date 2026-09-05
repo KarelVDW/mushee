@@ -16,6 +16,7 @@ import {
     listUsers,
     listUserScores,
     previewAnnouncement,
+    retryAnnouncement,
     revokeBetaSignup,
     revokeSessions,
     revokeShare,
@@ -132,6 +133,15 @@ export function useSendAnnouncement() {
             errorMessage:
                 "The announcement couldn't be sent. Check the history below before retrying — a run that reached some accounts is recorded there.",
         },
+    })
+}
+
+export function useRetryAnnouncement() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: retryAnnouncement,
+        onSettled: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
+        meta: { errorMessage: "The resend didn't go through. Check the history before trying again." },
     })
 }
 

@@ -548,7 +548,11 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   history row records who was reached (`recipientCount`) and who was not
   (`failedCount`, new column via migration), the console shows the failed count
   and the SendGrid error next to the send, and only a run that reached nobody is
-  an error (502). Four new unit tests; migration verified on the real stack.
+  an error (502). The unreached addresses are kept on the row, and the history
+  offers **"Resend to N not reached"** (`POST /admin/announcements/:id/retry`):
+  a new row with `filters: { retryOf }`, the original list emptied first so a
+  double click cannot double-send. Six new unit tests; retry verified on the
+  real stack (201 → 400 on the second click → 404 for unknown ids).
 - **Not built (deliberately):** unsubscribe management, templates, open/click
   stats — that is Marketing Campaigns' job; the page says so — and no rich
   HTML editor: for service announcements, escaped text + bold + links is the

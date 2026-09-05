@@ -448,31 +448,53 @@ export class AdminService {
     /**
      * Send (or test-send) an announcement and record the run. The record is
      * written even when SendGrid rejected some or all batches — `recipientCount`
-     * is who actually got it and `failedCount` who did not — because a partial
-     * send that left no trace is exactly what leads to double-sending on retry.
-     * Only a run that reached nobody is reported as an error.
+     * is who actually got it, `failedCount`/`failedRecipients` who did not —
+     * because a partial send that left no trace is exactly what leads to
+     * double-sending on retry. Only a run that reached nobody is reported as an
+     * error.
      */
     async sendAnnouncement(dto: SendAnnouncementDto): Promise<AnnouncementOutcome> {
         const recipients = dto.testTo ? [{ email: dto.testTo, name: 'Test Recipient' }] : await this.audienceRecipients(dto.filters)
         if (!dto.testTo && recipients.length === 0) throw new BadRequestException('Nobody matches this audience.')
-        const outcome = await this.mail.sendAnnouncement(recipients, dto.subject, dto.body)
+        return this.deliverAnnouncement(recipients, dto.subject, dto.body, dto.filters, dto.testTo ?? null)
+    }
+
+    /**
+     * Send a recorded announcement again, to exactly the accounts its run did
+     * not reach. The retry is its own history row (filters `{ retryOf }`), and
+     * the original row hands its failed recipients over so a second click
+     * cannot resend to them twice.
+     */
+    async retryAnnouncement(id: string): Promise<AnnouncementOutcome> {
+        const [row]: Array<{ subject: string; body: string; failedRecipients: AnnouncementRecipient[] }> = await this.dataSource.query(
+            `SELECT subject, body, "failedRecipients" FROM announcements WHERE id = $1`,
+            [id],
+        )
+        if (!row) throw new NotFoundException('Announcement not found.')
+        if (!row.failedRecipients.length) throw new BadRequestException('Every recipient of this announcement was reached.')
+        await this.dataSource.query(`UPDATE announcements SET "failedRecipients" = '[]'::jsonb WHERE id = $1`, [id])
+        return this.deliverAnnouncement(row.failedRecipients, row.subject, row.body, { retryOf: id }, null)
+    }
+
+    private async deliverAnnouncement(
+        recipients: AnnouncementRecipient[],
+        subject: string,
+        body: string,
+        filters: unknown,
+        testTo: string | null,
+    ): Promise<AnnouncementOutcome> {
+        const outcome = await this.mail.sendAnnouncement(recipients, subject, body)
         const [row]: Array<{ id: string; sentAt: Date }> = await this.dataSource.query(
-            `INSERT INTO announcements (subject, body, filters, "recipientCount", "failedCount", "testTo") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, "sentAt"`,
-            [dto.subject, dto.body, JSON.stringify(dto.filters), outcome.sent, outcome.failed, dto.testTo ?? null],
+            `INSERT INTO announcements (subject, body, filters, "recipientCount", "failedCount", "failedRecipients", "testTo")
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, "sentAt"`,
+            [subject, body, JSON.stringify(filters), outcome.sent, outcome.failed, JSON.stringify(outcome.failedRecipients), testTo],
         )
         this.logger.log(
-            `Announcement "${dto.subject}" sent to ${outcome.sent} recipient(s)${outcome.failed ? `, ${outcome.failed} not delivered` : ''}${dto.testTo ? ` (test → ${dto.testTo})` : ''}`,
+            `Announcement "${subject}" sent to ${outcome.sent} recipient(s)${outcome.failed ? `, ${outcome.failed} not delivered` : ''}${testTo ? ` (test → ${testTo})` : ''}`,
         )
         if (outcome.sent === 0)
             throw new BadGatewayException(`SendGrid rejected the announcement (${outcome.errors[0] ?? 'no batch went out'}).`)
-        return {
-            id: row.id,
-            recipientCount: outcome.sent,
-            failedCount: outcome.failed,
-            errors: outcome.errors,
-            sentAt: row.sentAt,
-            testTo: dto.testTo ?? null,
-        }
+        return { id: row.id, recipientCount: outcome.sent, failedCount: outcome.failed, errors: outcome.errors, sentAt: row.sentAt, testTo }
     }
 
     /** Render for a sample recipient ("Ada") so the console can show the e-mail exactly as it will arrive. */
@@ -484,7 +506,8 @@ export class AdminService {
 
     async listAnnouncements(): Promise<Array<Record<string, unknown>>> {
         return this.dataSource.query(
-            `SELECT id, subject, body, filters, "recipientCount", "failedCount", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
+            `SELECT id, subject, body, filters, "recipientCount", "failedCount",
+                    jsonb_array_length("failedRecipients")::int AS "retryable", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
         )
     }
 

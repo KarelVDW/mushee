@@ -101,6 +101,12 @@ export class AdminController {
         return this.adminService.sendAnnouncement(dto)
     }
 
+    /** Resend a recorded announcement to exactly the accounts SendGrid rejected the first time. */
+    @Post('announcements/:id/retry')
+    retryAnnouncement(@Param('id', ParseUUIDPipe) id: string) {
+        return this.adminService.retryAnnouncement(id)
+    }
+
     /** The rendered e-mail (subject, plain text, HTML) for a sample recipient — what the console previews. */
     @Post('announcements/preview')
     previewAnnouncement(@Body() dto: PreviewAnnouncementDto) {

@@ -150,7 +150,7 @@ describe('MailService announcements', () => {
         const service = new MailService()
         const recipients = Array.from({ length: 1201 }, (_, i) => ({ email: `u${i}@x`, name: `User ${i}` }))
         const outcome = await service.sendAnnouncement(recipients, 'Subject {{name}}', 'Body {{name}}')
-        expect(outcome).toEqual({ sent: 1201, failed: 0, errors: [] })
+        expect(outcome).toEqual({ sent: 1201, failed: 0, failedRecipients: [], errors: [] })
         expect(sgSend).toHaveBeenCalledTimes(3)
         const sizes = sgSend.mock.calls.map(([msg]) => (msg as { personalizations: unknown[] }).personalizations.length)
         expect(sizes).toEqual([500, 500, 201])
@@ -172,19 +172,25 @@ describe('MailService announcements', () => {
         expect(sgSend).toHaveBeenCalledTimes(3)
         expect(outcome.sent).toBe(701)
         expect(outcome.failed).toBe(500)
+        expect(outcome.failedRecipients.map((r) => r.email)).toEqual(recipients.slice(500, 1000).map((r) => r.email))
         expect(outcome.errors).toEqual(['500 recipients from u500@x: 429 rate limited'])
         delete process.env.SENDGRID_API_KEY
     })
 
     it('counts unconfigured (logged) batches as sent so dev runs look like production ones', async () => {
         const service = new MailService()
-        expect(await service.sendAnnouncement([{ email: 'a@x', name: 'A' }], 'S', 'B')).toEqual({ sent: 1, failed: 0, errors: [] })
+        expect(await service.sendAnnouncement([{ email: 'a@x', name: 'A' }], 'S', 'B')).toEqual({
+            sent: 1,
+            failed: 0,
+            failedRecipients: [],
+            errors: [],
+        })
         expect(sgSend).not.toHaveBeenCalled()
     })
 
     it('sends nothing for an empty audience', async () => {
         const service = new MailService()
-        expect(await service.sendAnnouncement([], 'S', 'B')).toEqual({ sent: 0, failed: 0, errors: [] })
+        expect(await service.sendAnnouncement([], 'S', 'B')).toEqual({ sent: 0, failed: 0, failedRecipients: [], errors: [] })
         expect(sgSend).not.toHaveBeenCalled()
     })
 })

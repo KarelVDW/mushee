@@ -13,10 +13,11 @@ export interface AnnouncementRecipient {
     name: string
 }
 
-/** Outcome of one announcement run: recipients reached, recipients in rejected batches, one line per rejected batch. */
+/** Outcome of one announcement run: recipients reached, recipients in rejected batches (and who they were), one line per rejected batch. */
 export interface AnnouncementResult {
     sent: number
     failed: number
+    failedRecipients: AnnouncementRecipient[]
     errors: string[]
 }
 
@@ -87,7 +88,7 @@ export class MailService {
      * retry would double-send. Unconfigured (dev) logs one line per batch.
      */
     async sendAnnouncement(recipients: AnnouncementRecipient[], subject: string, body: string): Promise<AnnouncementResult> {
-        const result: AnnouncementResult = { sent: 0, failed: 0, errors: [] }
+        const result: AnnouncementResult = { sent: 0, failed: 0, failedRecipients: [], errors: [] }
         if (!recipients.length) return result
         const { html, text, subject: renderedSubject } = MailService.renderAnnouncement(subject, body)
         for (let i = 0; i < recipients.length; i += ANNOUNCEMENT_BATCH) {
@@ -113,6 +114,7 @@ export class MailService {
                     err as Error,
                 )
                 result.failed += batch.length
+                result.failedRecipients.push(...batch)
                 result.errors.push(`${batch.length} recipients from ${batch[0].email}: ${message}`)
             }
         }

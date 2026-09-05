@@ -6,7 +6,7 @@ import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, TertiaryButton, TextArea, TextField } from '@/components/ui'
 import { audienceCsvUrl, type AudienceFilter, type BetaStatusFilter } from '@/lib/api'
 import { formatCount, formatDateTime } from '@/lib/format'
-import { useAnnouncementPreview, useAnnouncements, useAudience, useSendAnnouncement, useTiers } from '@/lib/queries'
+import { useAnnouncementPreview, useAnnouncements, useAudience, useRetryAnnouncement, useSendAnnouncement, useTiers } from '@/lib/queries'
 
 const BETA_OPTIONS: Array<{ value: BetaStatusFilter; label: string }> = [
     { value: 'any', label: 'Any' },
@@ -45,6 +45,7 @@ export default function AnnouncementsPage() {
     const audience = useAudience(filters)
     const history = useAnnouncements()
     const send = useSendAnnouncement()
+    const retry = useRetryAnnouncement()
 
     const total = audience.data?.total ?? 0
     const ready = subject.trim().length >= 3 && body.trim().length >= 10
@@ -288,6 +289,20 @@ export default function AnnouncementsPage() {
                                         · filter {JSON.stringify(item.filters)}
                                     </span>
                                 </div>
+                                {item.retryable > 0 && (
+                                    <SecondaryButton
+                                        onClick={() =>
+                                            retry.mutate(item.id, {
+                                                onSuccess: (result) =>
+                                                    setLastSent(
+                                                        `Resent to ${formatCount(result.recipientCount)} ${result.recipientCount === 1 ? 'account' : 'accounts'}.`,
+                                                    ),
+                                            })
+                                        }
+                                        disabled={retry.isPending}>
+                                        Resend to {formatCount(item.retryable)} not reached
+                                    </SecondaryButton>
+                                )}
                                 <TertiaryButton
                                     onClick={() => {
                                         setSubject(item.subject)

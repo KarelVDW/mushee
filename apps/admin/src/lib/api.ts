@@ -351,6 +351,8 @@ export interface Announcement {
     filters: AudienceFilter
     recipientCount: number
     failedCount: number
+    /** Unreached accounts still on record — the size of a "Resend to those" run. */
+    retryable: number
     testTo: string | null
     sentAt: string
 }
@@ -396,6 +398,11 @@ export function sendAnnouncement(input: {
     testTo?: string
 }): Promise<AnnouncementSendResult> {
     return api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Resend a recorded announcement to exactly the accounts SendGrid rejected. */
+export function retryAnnouncement(id: string): Promise<AnnouncementSendResult> {
+    return api(`/api/admin/announcements/${encodeURIComponent(id)}/retry`, { method: 'POST' })
 }
 
 export interface AnnouncementPreview {
