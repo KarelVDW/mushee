@@ -8,6 +8,8 @@ describe('nextPathFrom', () => {
         expect(nextPathFrom('?next=/pricing&x=1')).toBe('/pricing')
         expect(nextPathFrom('?next=//evil.example')).toBe('/scores')
         expect(nextPathFrom('?next=https://evil.example/')).toBe('/scores')
+        expect(nextPathFrom('?next=/\\evil.example')).toBe('/scores')
+        expect(nextPathFrom('?next=/\\/evil.example')).toBe('/scores')
         expect(nextPathFrom('')).toBe('/scores')
         expect(nextPathFrom('?other=1', '/beta')).toBe('/beta')
     })

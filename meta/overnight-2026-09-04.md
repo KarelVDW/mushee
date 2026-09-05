@@ -611,6 +611,12 @@ preview`, rendered for a sample recipient "Ada", debounced 400 ms, with a
   CSV is parsed back with an RFC 4180 reader and every cell must round-trip
   (formula-looking names gain the leading apostrophe), no cell may start with
   `= + - @`. Green.
+- **Open redirect fixed (found by a new fuzz in the last minutes):**
+  `nextPathFrom` accepted `?next=/\evil.example` — a single leading slash, but
+  browsers normalise the backslash to a slash, so the post-login redirect would
+  have left our origin. The guard now also lets the platform URL parser decide
+  (`new URL(next, dummy).origin` must stay the dummy origin).
+  `apps/web/tests/lib/nextPath.fuzz.test.ts` (3,000 seeded values) guards it.
 - The burst plan now branches off the tag **`burst-base-2026-09-05`**
   (`04de72e`, verified green) and guards its merge target, per your note.
 
