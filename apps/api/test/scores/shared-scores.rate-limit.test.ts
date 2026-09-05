@@ -27,7 +27,7 @@ describe('SharedScoreRateLimitGuard', () => {
 
     it('allows up to max requests per IP, then answers 429 with retry-after', () => {
         let now = 1_000_000
-        const guard = new SharedScoreRateLimitGuard(3, 60_000, () => now)
+        const guard = SharedScoreRateLimitGuard.create(3, 60_000, () => now)
         const { ctx, headers } = makeContext('10.0.0.1')
 
         expect(guard.canActivate(ctx)).toBe(true)
@@ -49,7 +49,7 @@ describe('SharedScoreRateLimitGuard', () => {
     })
 
     it('keys per IP: one client being throttled does not affect another', () => {
-        const guard = new SharedScoreRateLimitGuard(1, 60_000, () => 0)
+        const guard = SharedScoreRateLimitGuard.create(1, 60_000, () => 0)
         const a = makeContext('10.0.0.1')
         const b = makeContext('10.0.0.2')
         expect(guard.canActivate(a.ctx)).toBe(true)
@@ -59,7 +59,7 @@ describe('SharedScoreRateLimitGuard', () => {
 
     it('resets the counter once the window has elapsed', () => {
         let now = 0
-        const guard = new SharedScoreRateLimitGuard(1, 60_000, () => now)
+        const guard = SharedScoreRateLimitGuard.create(1, 60_000, () => now)
         const { ctx } = makeContext('10.0.0.1')
         expect(guard.canActivate(ctx)).toBe(true)
         expect(() => guard.canActivate(ctx)).toThrow(HttpException)

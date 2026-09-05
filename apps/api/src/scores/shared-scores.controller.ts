@@ -19,11 +19,19 @@ export const SHARED_RATE_LIMIT_WINDOW_MS = parseInt(process.env.SHARED_RATE_LIMI
 export class SharedScoreRateLimitGuard implements CanActivate {
     private readonly hits = new Map<string, { count: number; resetAt: number }>()
 
-    constructor(
-        private readonly max = SHARED_RATE_LIMIT_MAX,
-        private readonly windowMs = SHARED_RATE_LIMIT_WINDOW_MS,
-        private readonly now: () => number = Date.now,
-    ) {}
+    // No constructor parameters: Nest instantiates guards through DI and would
+    // try to resolve `Number`/`Function` tokens for typed params. Tests use create().
+    private max = SHARED_RATE_LIMIT_MAX
+    private windowMs = SHARED_RATE_LIMIT_WINDOW_MS
+    private now: () => number = Date.now
+
+    static create(max: number, windowMs: number, now: () => number = Date.now): SharedScoreRateLimitGuard {
+        const guard = new SharedScoreRateLimitGuard()
+        guard.max = max
+        guard.windowMs = windowMs
+        guard.now = now
+        return guard
+    }
 
     canActivate(context: ExecutionContext): boolean {
         const http = context.switchToHttp()

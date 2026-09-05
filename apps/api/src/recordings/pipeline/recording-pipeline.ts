@@ -124,7 +124,7 @@ export class RecordingPipeline {
     private readonly emittedKeys = new Set<string>()
     private lastRawNotes: NoteEventTime[] = []
     private lastDuration = 0
-    private archived = false
+    private archivePromise: Promise<void> | null = null
     // Set by the session once its recording row exists; archives the encoded
     // audio (streamed chunk-by-chunk) and the debug bundle to blob storage.
     private archiver: RecordingArchiver | null = null
@@ -711,9 +711,17 @@ export class RecordingPipeline {
      * debug bundle (pitch plot, emitted score, session metadata) beside it.
      * Idempotent — `finalize` can run more than once (end message + close).
      */
-    private async archive(): Promise<void> {
-        if (this.archived || !this.archiver) return
-        this.archived = true
+    private archive(): Promise<void> {
+        if (!this.archiver) return Promise.resolve()
+        // Memoise the in-flight promise rather than a boolean: the end message and
+        // the socket close both call finalize(), and the second caller (the session's
+        // close(), which persists the audio key) must wait for the upload to finish.
+        this.archivePromise ??= this.doArchive()
+        return this.archivePromise
+    }
+
+    private async doArchive(): Promise<void> {
+        if (!this.archiver) return
 
         let plotSvg: string | undefined
         if (this.lastDuration > 0 || this.lastRawNotes.length) {
