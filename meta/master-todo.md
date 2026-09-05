@@ -83,8 +83,7 @@ deploy.yml) once the GCP project exists.
 10. **Visual QA + full-stack verification of the 2026-07-08 UI changes** — the mocked
     Playwright suite is green on current HEAD (32/32, chromium + webkit, run 2026-07-08
     after the module-cleanup commits) and the full-stack smoke passed after the
-    restructure. Still to do: eyeball the docked tool dock / endless-scroll canvas /
-    waveform bars / octave normalization in a browser, re-run the fullstack smoke
+    restructure. Eyeballed 2026-09-05 (overnight log §26): editor desktop + phone, Share/Takes popovers, no overflow/console errors; one design note about the cookie banner over the dock. Still to do: waveform bars / octave normalization during a real take, re-run the fullstack smoke
     (`pnpm -F @mushee/web test:e2e:smoke`, needs the live stack per `e2e/README.md`),
     and record one real take end-to-end (checks the streaming GCS archive too).
 11. **Recording-archive spot check in prod**: confirm `recordings/<user>/<score>/<id>/`
