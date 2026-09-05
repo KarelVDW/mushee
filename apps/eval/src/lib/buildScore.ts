@@ -60,10 +60,10 @@ function clefFor(midis: number[]): ClefType {
 export function melodyToScore(melody: ClipMelody, instrument: Instrument): Score {
     const score = new Score()
     score.seedInstrument(instrument)
-    score.addMeasure()
-    const first = score.firstMeasure!
-    if (melody.beatsPerMeasure !== 4) score.setTimeSignature(first, new TimeSignature(melody.beatsPerMeasure, 4))
-    const firstMeasure = score.firstMeasure!
+    const seed = score.addMeasure()
+    if (melody.beatsPerMeasure !== 4) score.setTimeSignature(seed, new TimeSignature(melody.beatsPerMeasure, 4))
+    // Rebarring may have replaced the seed measure; re-read the first one.
+    const firstMeasure = score.firstMeasure ?? seed
     firstMeasure.addTempo(0, melody.bpm)
     const clef = clefFor(melody.events.flatMap((e) => (e.pitch ? [e.pitch.midi] : [])))
     if (clef !== 'treble') firstMeasure.setClef(0, clef)
@@ -105,9 +105,11 @@ export function mxmlMeasuresToScore(
 ): Score {
     const score = new Score()
     score.seedInstrument(instrument)
-    score.addMeasure()
-    if (beatsPerMeasure !== 4) score.setTimeSignature(score.firstMeasure!, new TimeSignature(beatsPerMeasure, 4))
-    score.firstMeasure!.addTempo(0, bpm)
+    const seed = score.addMeasure()
+    if (beatsPerMeasure !== 4) score.setTimeSignature(seed, new TimeSignature(beatsPerMeasure, 4))
+    // Rebarring may have replaced the seed measure; re-read the first one.
+    const firstMeasure = score.firstMeasure ?? seed
+    firstMeasure.addTempo(0, bpm)
 
     const indices = Object.keys(measures)
         .map(Number)
@@ -119,7 +121,7 @@ export function mxmlMeasuresToScore(
         allNotes.push(measures[i] ? ScoreDeserializer.mxmlMeasureToNotes(measures[i]) : [])
     }
     const clef = clefFor(allNotes.flat().flatMap((n) => (n.pitch ? [n.pitch.toMidi()] : [])))
-    if (clef !== 'treble') score.firstMeasure!.setClef(0, clef)
+    if (clef !== 'treble') firstMeasure.setClef(0, clef)
 
     for (let i = 0; i <= lastIndex; i++) {
         const measure = score.measures[i] ?? score.addMeasure()

@@ -100,6 +100,8 @@ export async function transcribeClip(request: TranscribeRequest): Promise<Transc
             if (worker.pending.delete(id)) reject(new Error('transcription timed out'))
         }, REQUEST_TIMEOUT_MS)
     })
-    worker.child.stdin!.write(JSON.stringify({ id, ...request }) + '\n')
+    const stdin = worker.child.stdin
+    if (!stdin) throw new Error('transcribe worker has no stdin pipe')
+    stdin.write(JSON.stringify({ id, ...request }) + '\n')
     return result
 }

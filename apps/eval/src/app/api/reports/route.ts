@@ -18,7 +18,7 @@ export interface ReportListing {
 }
 
 /** Every report JSON the harness or this app has written, newest first. */
-export async function GET() {
+export function GET() {
     const listings: ReportListing[] = []
     for (const [root, dir] of Object.entries(ROOTS)) {
         if (!existsSync(dir)) continue

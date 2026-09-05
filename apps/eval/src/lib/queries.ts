@@ -64,7 +64,10 @@ export function useReports() {
 export function useReportDetail(ref: { root: string; file: string } | null) {
     return useQuery({
         queryKey: ['report', ref?.root, ref?.file],
-        queryFn: () => api.reportDetail(ref!.root, ref!.file),
+        queryFn: () => {
+            if (!ref) throw new Error('report query ran without a ref')
+            return api.reportDetail(ref.root, ref.file)
+        },
         enabled: ref !== null,
         staleTime: 60_000,
     })

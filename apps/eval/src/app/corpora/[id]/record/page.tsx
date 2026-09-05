@@ -88,12 +88,12 @@ function RecordFlow() {
                 <Spinner /> Loading corpus…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
-    if (!clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
+    if (!clips || !clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
 
-    const clipIndex = clips!.findIndex((c) => c.id === clip.id)
-    const nextClip = clips![clipIndex + 1] ?? null
-    const remaining = clips!.filter((c) => c.status === 'pending' && c.id !== clip.id).length
+    const clipIndex = clips.findIndex((c) => c.id === clip.id)
+    const nextClip = clips[clipIndex + 1] ?? null
+    const remaining = clips.filter((c) => c.status === 'pending' && c.id !== clip.id).length
 
     const replay = () => {
         if (mode === 'playing') {
@@ -164,7 +164,7 @@ function RecordFlow() {
                     <h1 className="font-headline font-bold text-[1.5rem] leading-tight text-on-surface m-0">
                         {clip.name}{' '}
                         <span className="text-on-surface-variant font-normal">
-                            ({clipIndex + 1}/{clips!.length})
+                            ({clipIndex + 1}/{clips.length})
                         </span>
                     </h1>
                     <div className="flex items-center gap-2">

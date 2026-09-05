@@ -20,7 +20,7 @@ export default function CorpusDetailPage() {
                 <Spinner /> Loading corpus…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
 
     const { corpus, clips, metricsByClip } = detail.data
     const firstPending = clips.find((clip) => clip.status === 'pending')

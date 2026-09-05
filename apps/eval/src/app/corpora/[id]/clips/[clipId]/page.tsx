@@ -41,7 +41,7 @@ export default function ClipDetailPage() {
                 <Spinner /> Loading clip…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => detail.refetch()}>Couldn&apos;t load clip: {String(detail.error)}</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load clip: {String(detail.error)}</Alert>
 
     const { clip, corpus, transcription, prevClipId, nextClipId, clipIndex, clipTotal } = detail.data
 
@@ -50,7 +50,8 @@ export default function ClipDetailPage() {
             player.stop()
             return
         }
-        void player.prepare(built!.instrument).then(() => player.playScore(built!.expectedScore, { metronome: metronomeOn }))
+        if (!built) return
+        void player.prepare(built.instrument).then(() => player.playScore(built.expectedScore, { metronome: metronomeOn }))
     }
 
     return (
