@@ -100,9 +100,10 @@ deploy.yml) once the GCP project exists.
 14. ~~**GDPR data export endpoint**~~ — **done 2026-09-05** (client-side, no API change):
     Settings → Account → "Download my data" zips profile.json, settings.json and every
     score as MusicXML + JSON in the browser (`lib/AccountExport.ts`); the privacy page
-    points at it. Recordings audio deliberately excluded (deleted with the account).
-15. **Signup CAPTCHA (Turnstile)** — **code done 2026-09-05**: better-auth captcha plugin on
-    `/sign-up/email` (`auth/captcha-config.ts`), Turnstile widget on the signup form. Remaining
+    points at it (overnight log §3); "All your recordings" list in Settings → Your data (§23). Recordings audio deliberately excluded (deleted with the account).
+15. ~~**Signup CAPTCHA (Turnstile)**~~ — **code done 2026-09-05**: better-auth captcha plugin on
+    `/sign-up/email` (`auth/captcha-config.ts`), Turnstile widget on the signup form; verified
+    end-to-end with Cloudflare test keys (overnight log §4, §17). Remaining
     (config): create the widget in Cloudflare, set `TURNSTILE_SECRET_KEY` (API secret) +
     `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Vercel). Unset = unprotected, production warns at boot.
 
@@ -114,7 +115,7 @@ deploy.yml) once the GCP project exists.
     display + invoices once real charges exist).
 18. **Dedicated `/pricing` route** ~~(pricing lives only on the landing page today)~~ +
     per-route `metadata`, canonical URLs, JSON-LD — **done 2026-09-05** (`/pricing` with
-    FAQ + FAQPage/offers JSON-LD, sitemap, footer link). Remaining: Lighthouse pass.
+    FAQ + FAQPage/offers JSON-LD, sitemap, footer link; overnight log §2). Remaining: Lighthouse pass.
 19. ~~**PDF/MusicXML export polish**~~ — **largely done 2026-09**: genuine MusicXML and
     MIDI _import_ live in `packages/notation` (`MusicXmlImporter`, `MidiImporter`,
     `DurationSpeller`) and are wired into the web app (`lib/ScoreFileImporter.ts`); the
@@ -130,17 +131,17 @@ deploy.yml) once the GCP project exists.
 22. ~~**Recordings product surface**~~ — **done 2026-09-05**: the editor header's "Takes"
     menu lists every recording made into the score (newest first) with replay of the
     archived audio and confirmed deletion (`GET/DELETE /recordings`, `GET /recordings/:id/audio`
-    — signed URL or stream, owner-scoped). A cross-score "all my recordings" page can build on
+    — signed URL or stream, owner-scoped; overnight log §11). A cross-score "all my recordings" page can build on
     the same endpoint (`GET /recordings` without `scoreId`).
 
 22c. **Bulk e-mail to users** — **decided + built 2026-09-05**: service announcements from the admin
 console (`/announcements`, audience filter, test copy, audit log) over the transactional SendGrid
 integration; marketing mail via the page's CSV export into SendGrid Marketing Campaigns. See
-notes.md §1 "Bulk e-mail" and the end-of-beta runbook §3.
+notes.md §1 "Bulk e-mail", the end-of-beta runbook §3 and overnight log §25, §27 (markup-escaping fuzz).
 
 22b. **Read-only share links** — **shipped 2026-09-05** (new, not previously listed):
 `/s/<token>` public page (view, export), Share chip in the editor, `POST/DELETE /scores/:id/share`,
-`GET /shared/:token`, migration `ScoreShareToken`. Playback (`useSharedPlayback`) and "Save a copy" landed the same night. Follow-ups if wanted: link
+`GET /shared/:token`, migration `ScoreShareToken`. Playback (`useSharedPlayback`) and "Save a copy" landed the same night; legal wording + admin revoke in overnight log §18, shared score → signup → back to the score in §22 (overnight log §12 for the feature). Follow-ups if wanted: link
 expiry/passwords.
 
 ## Structure / refactor backlog (no launch impact)
