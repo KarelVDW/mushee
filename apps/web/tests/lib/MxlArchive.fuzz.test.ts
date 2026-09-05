@@ -68,7 +68,7 @@ describe('MxlArchive over damaged containers', () => {
         if (!MxlArchive.isZip(bytes)) return // the importer never hands such bytes to the reader
 
         try {
-            const xml = await new MxlArchive(bytes).rootFile()
+            const xml = await new MxlArchive(new Uint8Array(bytes)).rootFile()
             expect(typeof xml).toBe('string')
         } catch (err) {
             if (err instanceof Error && FRIENDLY.includes(err.message)) return
