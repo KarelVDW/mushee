@@ -42,6 +42,23 @@ function DurationIcon({ dur }: { dur: DurationType }) {
     )
 }
 
+// --- Tie icon ---
+
+/**
+ * The tie curve on its own — the same tapered arc the score draws (see Tie.tsx),
+ * thin at the ends and thick in the middle. Two noteheads plus the arc read as a
+ * face at chip size, so the icon keeps only the mark the button actually toggles.
+ */
+function TieIcon() {
+    const [x1, x2, y] = [2, 30, 6]
+    const midX = (x1 + x2) / 2
+    return (
+        <svg width={18} height={11} viewBox="0 0 32 20">
+            <path d={`M ${x1} ${y} Q ${midX} ${y + 9} ${x2} ${y} Q ${midX} ${y + 14} ${x1} ${y} Z`} fill="currentColor" />
+        </svg>
+    )
+}
+
 // --- Tuplet icon ---
 
 function TupletIcon() {
@@ -266,8 +283,8 @@ export function NoteToolDock({
                             <Glyph name="restQuarter" x={1} y={20} fill="currentColor" />
                         </svg>
                     </ChipToggle>
-                    <ChipToggle plain active={tie} onClick={onTieToggle} disabled={accidentalDisabled}>
-                        Tie
+                    <ChipToggle plain active={tie} onClick={onTieToggle} disabled={accidentalDisabled} ariaLabel="Tie">
+                        <TieIcon />
                     </ChipToggle>
                 </ToolGroup>
                 <Segmented
