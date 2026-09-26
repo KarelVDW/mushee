@@ -110,4 +110,56 @@ Nothing here is redistributed or ships in the product; everything is internal ev
 
 ## Results
 
-_(filled in by the overnight run — see below)_
+### Corpus (v1, 2026-09-27)
+
+_(counts filled from `out/` after the v1 build — see the log below)_
+
+### Realism (perceptual proxies, measured — no listeners overnight)
+
+`synthcorpus/realism.py`: PANNs Cnn14 (AudioSet, CC-BY-4.0) on 4-s windows, the
+new corpus's `room` takes vs REAL recordings of the same instrument (URMP,
+TinySOL, GuitarSet; vocadito/N20EMv2/CSD/HUST for voice) vs the OLD toy corpus
+(`room-mic`). *P(class)* = the tagger's probability for the instrument's own
+AudioSet class; *KAD* = kernel distance to the real set (lower = closer;
+real↔real split = the noise floor). Measured on corpus v0 (same sources and
+renderer; v1 differs in timing and voice envelope only).
+
+<!-- REALISM_TABLE -->
+
+Reading it honestly:
+- **Clearly better than the old corpus and on par with real recordings** for the
+  woodwinds (flute, oboe, clarinet — clarinet KAD 8 vs 76), violin/viola, and the
+  **voice** (tagged "singing" exactly as often as real singing corpora, 0.19 vs 0.19;
+  the old additive voice: 0.01; KAD halved).
+- **Weaker for low strings and brass**: cello, trombone, horn, bassoon score
+  below the (only 4-clip, ensemble-part) URMP references. Ablations (legato,
+  staccato use, dynamics, register, release) did not move this; the room was the
+  one lever that mattered (clarinet 0.29 dry → 0.69 in a room), so every eval
+  condition includes a room.
+- 1-NN real-vs-synthetic separability is ~1.0 for BOTH the old and new corpora,
+  even noise-matched: the embedding separates any two recording chains, so it is
+  reported but not used as a gate.
+- Listen: `out/_showcase/` (20 clips, AAC) — the realism bar is ultimately yours.
+
+### Findings that changed the corpus (worth knowing when reading eval numbers)
+
+- **Library metadata is unreliable** — every zone's pitch is measured; the
+  fetchers fixed ~200 octave/semitone mislabels (VSCO file names an octave low,
+  Karoryfer bass mapped an octave high, Philharmonia trombone f/ff an octave low,
+  an Iowa viola batch with a wrong sample-rate header = 13.5 semitones flat, an
+  EXS bansuri 11 semitones off). Three whole sources were dropped by the gate
+  (Philharmonia alto sax: trill-like neighbour notes; SSO trumpet section: 150 c
+  flat; Apple tuba: unvoiced low zones).
+- **Speaking time**: breathy/bowed samples start with air/bow noise; a note is
+  started early by its sample's speaking time so the TONE lands on the labelled
+  onset (Philharmonia was otherwise +64 ms late, p90 +112 ms).
+- **Timing model**: the app records from the count-in downbeat and quantises to
+  the score tempo, so v1 performs **along the click** (whole-beat lead-in,
+  steady tempo, human jitter/drift, ~12 ms anticipation). v0's free rubato put
+  notes off the grid by up to half a sixteenth and cost ~0.1 COnP by itself —
+  that is a product property (free-tempo takes), not a transcription error;
+  `Performer.perform(tempo='free')` keeps the rubato mode for a future tier.
+- **Voice envelope**: stretching a VocalSet unit slowed the singer's own
+  amplitude contour into ~3 Hz pulsing that the app's onset detector read as
+  re-articulations; v1 normalises grain loudness per period and adds irregular
+  shimmer + vibrato-coupled AM instead.

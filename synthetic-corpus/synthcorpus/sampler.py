@@ -175,6 +175,7 @@ class MonoSampler:
         self.sr = sr_out
         self.add_vibrato = add_vibrato
         self.breaths = breaths or []
+        self.short_stac = True  # short detached notes borrow staccato takes
         self._rr: dict[tuple, int] = {}
         self._refs: dict[tuple, float] = {}
         self._last: dict[int, Zone] = {}
@@ -237,7 +238,7 @@ class MonoSampler:
         art = 'sus'
         arts = self.s.arts()
         short = (note.offset - note.onset) < 0.18 and not note.legato_in
-        if (note.staccato or short) and 'stac' in arts:
+        if (note.staccato or (short and self.short_stac)) and 'stac' in arts:
             art = 'stac'
         elif note.vibrato_depth > 0 and 'vib' in arts:
             art = 'vib'

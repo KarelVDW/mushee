@@ -118,11 +118,20 @@ class Performer:
         return at
 
     # ------------------------------------------------------------ main
-    def perform(self, phrase: Phrase, qpm: float, skill_name: str, dynamic: str, lead_in: float = 0.5) -> Performance:
+    def perform(self, phrase: Phrase, qpm: float, skill_name: str, dynamic: str, lead_in: float = 0.5, tempo: str = 'metronome') -> Performance:
+        """`tempo='metronome'`: the take is played along the app's click — recording starts
+        on the count-in downbeat, the tempo is the score's, and only human timing error
+        (jitter, drift, a slight anticipation of the click) moves notes off the grid.
+        `tempo='free'`: phrase-arch rubato and a final ritardando, no click."""
         rng = self.rng
         p = self.p
         skill = SKILLS[skill_name]
-        at = self._time_map(phrase, qpm, skill)
+        if tempo == 'metronome':
+            beat = 60.0 / qpm
+            anticipation = rng.gauss(-0.012, 0.012)  # players lead a click by ~10-20 ms
+            at = lambda q: q * beat + anticipation  # noqa: E731
+        else:
+            at = self._time_map(phrase, qpm, skill)
         base_vel = {'p': 48, 'mp': 62, 'mf': 76, 'f': 94, 'ff': 108}[dynamic]
         notes_s = phrase.notes
         L = phrase.length_q
@@ -192,7 +201,7 @@ class Performer:
                 a.offset = b.onset
         breaths = self._breaths(out, phrase) if p.breath_capacity else []
         duration = out[-1].offset + 1.0
-        return Performance(out, qpm, skill_name, dynamic, duration, breaths)
+        return Performance(out, qpm, skill_name, dynamic, duration, breaths, meta={'tempo': tempo})
 
     @staticmethod
     def _connected_prev(prev: PerformedNote, cur: PerformedNote) -> bool:

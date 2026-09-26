@@ -203,7 +203,7 @@ class CorpusBuilder:
                 skill = rng.choices(['pro', 'good', 'amateur'], [0.4, 0.4, 0.2])[0]
                 dyn = rng.choice(t.dynamics)
                 crng = random.Random(rng.randrange(1 << 30))
-                perf = Performer(t.player, crng).perform(plan.phrase, plan.qpm, skill, dyn, lead_in=crng.uniform(0.3, 0.9))
+                perf = Performer(t.player, crng).perform(plan.phrase, plan.qpm, skill, dyn, lead_in=crng.choice((1, 2)) * 60 / plan.qpm)
                 t0 = time.time()
                 breaths = self.breath_pool() if t.player.family in ('wind', 'reed', 'brass', 'freereed') else None
                 smp = MonoSampler(sset, t.sampler, crng, SR, breaths=breaths)
@@ -217,7 +217,9 @@ class CorpusBuilder:
                     'timbre': t.id, 'app_ids': t.app_ids, 'source': src.id, 'phrase': plan.phrase.source, 'style': plan.phrase.style,
                     'part': plan.phrase.part, 'transpose': plan.shift, 'qpm': round(plan.qpm, 1), 'skill': skill, 'dynamic': dyn,
                     'render_sec': round(time.time() - t0, 2), 'duration': round(len(dry) / SR, 2), 'notes': len(truth),
-                    'legato_notes': sum(n.legato_in for n in perf.notes),
+                    'legato_notes': sum(n.legato_in for n in perf.notes), 'tempo': perf.meta.get('tempo'),
+                    # per truth note: [legato-in, staccato, glide-in s, intonation cents]
+                    'note_attrs': [[int(n.legato_in), int(n.staccato), round(n.glide_in, 3), round(n.cents, 1)] for n in perf.notes],
                 }
                 r = self._write('instruments', t.id, clip, dry, truth, plan.qpm, meta, crng)
                 results.append(r)
@@ -292,7 +294,7 @@ class VoiceBuilder:
                 singer_r = PsolaSinger(self.bank, st, crng, SR)
             except ValueError:
                 continue
-            perf = Performer(VOICE_PLAYER, crng).perform(plan.phrase, plan.qpm, skill, dyn, lead_in=crng.uniform(0.5, 1.0))
+            perf = Performer(VOICE_PLAYER, crng).perform(plan.phrase, plan.qpm, skill, dyn, lead_in=crng.choice((1, 2)) * 60 / plan.qpm)
             t0 = time.time()
             dry, truth = singer_r.render(perf)
             clip = f'{vt.id}_{singer}_{_clip_id(plan.phrase.id, singer, vowel)}'
@@ -301,7 +303,8 @@ class VoiceBuilder:
                 'vowel': vowel, 'vibrato_style': style_kind, 'vib_rate': round(rate, 2), 'vib_extent_cents': round(ext, 1), 'formant': round(st.formant, 3),
                 'derived_timbre': vt.derived, 'phrase': plan.phrase.source, 'style': plan.phrase.style, 'part': plan.phrase.part, 'transpose': plan.shift,
                 'qpm': round(plan.qpm, 1), 'skill': skill, 'dynamic': dyn, 'render_sec': round(time.time() - t0, 2), 'duration': round(len(dry) / SR, 2),
-                'notes': len(truth),
+                'notes': len(truth), 'tempo': perf.meta.get('tempo'),
+                'note_attrs': [[int(n.legato_in), int(n.staccato), 0.0, round(n.cents, 1)] for n in perf.notes],
             }
             r = cb._write('voices', vt.id, clip, dry, truth, plan.qpm, meta, crng)
             out.append(r)

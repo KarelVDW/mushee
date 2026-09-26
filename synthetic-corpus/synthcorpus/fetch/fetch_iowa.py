@@ -650,11 +650,18 @@ class RunSlicer:
             return float(P[sel].max()) + 1e-20 if sel.any() else 1e-20
 
         top = max(max(band(k * f0) for k in range(1, 9)), float(P.max()) * 1e-2)
-        if shift == -12:  # a real partial at f0/2: within 30 dB of the strongest, >= 6 dB proud
+        if shift == -12:
+            # a real partial at f0/2 (within 30 dB of the strongest, >= 6 dB proud), or - for a weak /
+            # missing fundamental (bass C1 extension) - the odd multiples of f0/2 carry the series
             lo = (fr > 0.35 * f0) & (fr < 0.65 * f0)
             bed = float(np.median(P[lo])) + 1e-20 if lo.any() else 1e-20
             h = band(f0 / 2)
-            return h > top * 1e-3 and h > bed * 4
+            wide = (fr > 0.35 * f0) & (fr < 3.65 * f0)
+            floor = float(np.median(P[wide])) + 1e-20 if wide.any() else 1e-20
+            halves = [band((k + 0.5) * f0) for k in (1, 2, 3)]
+            whole = sum(band(k * f0) for k in (1, 2, 3, 4))
+            series = sum(halves) > 0.02 * whole and sum(v > 10 * floor for v in halves) >= 2
+            return (h > top * 1e-3 and h > bed * 4) or series
         odd = sum(band(k * f0) for k in (1, 3, 5, 7))
         even = sum(band(k * f0) for k in (2, 4, 6, 8))
         strong = max(band(2 * f0), band(4 * f0)) > float(P.max()) * 1e-2  # the octave really is a partial
@@ -676,7 +683,15 @@ class RunSlicer:
         votes = Counter(d for d in offs.values() if d is not None)
         major = self.major = 0
         if votes and votes.most_common(1)[0][0] != 0 and votes.most_common(1)[0][1] >= 0.7 * len(ok):
-            major = self.major = votes.most_common(1)[0][0]
+            cand = votes.most_common(1)[0][0]
+            # a mislabelled file, or a tracker that is consistently an octave off (bass C1-string
+            # notes with no energy at the fundamental)? The spectra decide.
+            step = -12 if cand > 0 else 12
+            back = [all(self._octave_ok(self.x[int(n.a * self.sr) : int(n.b * self.sr)], Pitch.hz(n.root + k * step), step)
+                        for k in range(abs(cand) // 12)) for n in ok if offs[id(n)] == cand]
+            if sum(back) < 0.5 * len(back):
+                major = self.major = cand
+        if major:
             self.log.append(f'file name octave looks wrong: measured notes sit {major:+d} st from the '
                             f'labelled {Pitch.name(self.f.lo)}-{Pitch.name(self.f.hi)}; labels taken from the measurement')
         for n in ok:
@@ -695,10 +710,12 @@ class RunSlicer:
                         continue
                 elif steps and not steps[0] and self.f.lo - 1 <= round(n.root) - major <= self.f.hi + 1:
                     d = major  # no sub-octave partial: just the sharp top note of the run (e.g. C6 in "C5B5")
-                elif steps and not steps[0] and abs(n.root - round(n.root)) <= 0.35 and n.stable >= 0.9 \
-                        and n.peak_db >= med - 10:
-                    # no partial where the run expects the fundamental: the note really sounds an
-                    # octave off (e.g. a flageolet); keep it, labelled from the measurement
+                elif steps and not steps[0] and shift < 0 and abs(n.root - round(n.root)) <= 0.35 \
+                        and n.stable >= 0.9 and n.peak_db >= med - 10 \
+                        and not any(x.startswith(('swiftf0 unsteady', 'yin refine failed')) for x in n.flags):
+                    # nothing at all where the run expects the fundamental: the note really sounds an
+                    # octave higher (a flageolet); keep it, labelled from the measurement. The other
+                    # direction is not trusted: sympathetic open strings fake a lower octave
                     n.offrun = True
                     n.flags.append(f'sounds {-shift:+d} st from its place in the run (spectrum confirms); '
                                    f'label from the measurement')
@@ -749,8 +766,9 @@ class RunSlicer:
     def true_rate(self, notes: list[Note]) -> int | None:
         """A sample rate under which the measured pitches fit the file name's range where they do
         not under the header's rate (a mislabelled header shifts every note by 12*log2(ratio)).
-        Only shifts of > 3 st are considered: 44.1 vs 48 kHz (1.5 st) is indistinguishable
-        from intonation (the MIS alto flute plays its top octave up to 57 cents sharp)."""
+        Only shifts of > 3 st that are not octave multiples are considered: 44.1 vs 48 kHz (1.5 st)
+        is indistinguishable from intonation (the MIS alto flute plays its top octave up to 57
+        cents sharp) and 22.05 / 88.2 kHz from an octave error of the tracker."""
         roots = np.array([n.root for n in notes if n.root is not None])
         if len(roots) < 3:
             return None
@@ -759,8 +777,11 @@ class RunSlicer:
             return float(np.mean([self.f.offset(int(round(v + shift))) == 0 for v in roots]))
 
         base = fit(0.0)
-        cands = [(fit(12 * np.log2(c / self.sr)), c) for c in (22050, 32000, 44100, 48000, 88200, 96000)
-                 if abs(12 * np.log2(c / self.sr)) > 3]
+        def telling(shift: float) -> bool:  # > 3 st, and not an octave multiple (= octave error)
+            return abs(shift) > 3 and abs(shift - 12 * round(shift / 12)) > 0.5
+
+        cands = [(fit(12 * np.log2(c / self.sr)), c) for c in (32000, 44100, 48000, 96000)
+                 if telling(12 * np.log2(c / self.sr))]
         best = max(cands, default=(0.0, None))
         return best[1] if best[0] >= 0.7 and base <= 0.3 else None
 
@@ -848,7 +869,8 @@ class SetWriter:
         text = (f"Sliced from {len(self.files)} MIS files ({exp} notes claimed by the file names, {seg} segments "
                 f"found, {len(self.zones)} kept). Chromatic runs split by energy gaps / re-attacks / pitch changes; "
                 f"root = median f0 over the steady part (SwiftF0 or pYIN coarse, narrow-band YIN refine); "
-                f"nominal = nearest semitone of the measurement, required to lie inside the file name's range. "
+                f"nominal = the note's place in the file's chromatic run (measured roots aligned to the named range), "
+                f"else the nearest semitone; notes outside the named range after octave analysis are rejected. "
                 f"rr = index among zones sharing (nominal, dyn, art), e.g. the same pitch on different strings. "
                 f"Level untouched (relative pp/mf/ff preserved); 2 ms start guard only; a 4th-order high-pass at "
                 f"{float(np.clip(0.5 * Pitch.hz(self.inst.lo), 15, 40)):.0f} Hz (an octave below the lowest note) removes the "

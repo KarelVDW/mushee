@@ -257,8 +257,13 @@ def pitch_marks(x: np.ndarray, f0_hz: np.ndarray) -> np.ndarray:
         ac = np.array([np.dot(seg[: w - k], seg[k:w]) for k in range(lo, hi)]) if hi < w else None
         if ac is not None and len(ac):
             P = 0.7 * P + 0.3 * (lo + int(np.argmax(ac)))
+        # keep the tracked period within an octave of the seed (a degenerate
+        # autocorrelation must not collapse it) and always move forward
+        P = float(np.clip(P, 0.5 * SR / f_seed, 2.0 * SR / f_seed))
         a, b = int(t + 0.8 * P), int(t + 1.2 * P) + 1
-        k = a + int(np.argmax(lp[a:b]))
+        if b >= n:
+            break
+        k = max(t + 1, a + int(np.argmax(lp[a:b])))
         marks.append(k)
     return np.asarray(marks, dtype=np.int64)
 
@@ -283,6 +288,12 @@ class UnitGrains:
         self.rms = u.rms
         self.u = u
         self.lead = u.start - s0  # samples before the plateau start
+        # per-period loudness (smoothed over ~5 periods): the unit's own amplitude
+        # contour — which a time-stretch would slow into audible pulsing — is divided
+        # out grain by grain, so only the designed envelope shapes the output
+        e = np.array([np.sqrt(np.mean(self.x[max(0, m - p) : m + p] ** 2) + 1e-10) for m, p in zip(self.marks, np.maximum(self.periods, 8))])
+        k = min(5, len(e))
+        self.mark_rms = np.convolve(e, np.ones(k) / k, mode='same') if len(e) > 2 else e
 
     @classmethod
     def get(cls, bank: VoiceBank, u: Unit) -> 'UnitGrains':
@@ -292,6 +303,10 @@ class UnitGrains:
                 cls._cache.clear()
             cls._cache[k] = cls(bank, u)
         return cls._cache[k]
+
+    def level_at(self, pos: float) -> float:
+        i = int(np.clip(np.searchsorted(self.marks, pos), 0, len(self.mark_rms) - 1))
+        return float(self.mark_rms[i])
 
     def grain(self, pos: float, formant: float = 1.0):
         """Two-period Hann grain centred at the mark nearest `pos` (samples within unit).
@@ -435,6 +450,10 @@ class PsolaSinger:
                     w = (t >= nt.onset) & (t < nt.offset + 0.05)
                     ext[w] = np.maximum(ext[w], np.clip((t[w] - nt.onset - delay) / 0.3, 0, 1))
             vib = st.vib_extent / 100 * rng.uniform(0.85, 1.1) * ext * np.sin(ph)
+            # vibrato sweeps partials through the formants: loudness wobbles with it
+            self._am = 1 + min(0.12, st.vib_extent / 900) * ext * np.sin(ph + rng.uniform(-0.6, 0.6))
+        else:
+            self._am = None
         m += vib
         # drift + jitter (low-passed noise)
         g = np.random.default_rng(rng.randrange(1 << 30))
@@ -485,7 +504,7 @@ class PsolaSinger:
                 pos = off + (ts_ - on) * SR * rate
                 pos = float(np.clip(pos, lo, hi))
                 g, c = grains[j].grain(pos, self.st.formant)
-                gain = w * amp_target / max(grains[j].rms, 1e-4)
+                gain = w * amp_target / max(grains[j].level_at(pos), 1e-4)
                 a = int(s) - c
                 if a < 0:
                     g = g[-a:]
@@ -507,8 +526,17 @@ class PsolaSinger:
                 env[lo_ : c + d] *= dip[: min(2 * d, n - lo_)][: len(env[lo_ : c + d])]
         env[env == 0] = env[env > 0].min() if (env > 0).any() else 1
         env = uniform_filter1d(env, int(0.15 * SR))
-        att = int(rng.uniform(0.04, 0.12) * SR)
-        rel = int(rng.uniform(0.08, 0.2) * SR)
+        am = getattr(self, '_am', None)
+        if am is not None and len(am) == len(env):
+            env = env * am
+        # irregular shimmer (a real voice is never steady; periodic pulsing would read as
+        # re-articulation, so this is band-limited noise, not a modulation)
+        g2 = np.random.default_rng(rng.randrange(1 << 30))
+        sh = uniform_filter1d(g2.normal(size=n // 441 + 4), 3)
+        sh = sh / (sh.std() + 1e-9) * rng.uniform(0.8, 1.4)
+        env = env * 10 ** (np.interp(np.arange(n), np.linspace(0, n, len(sh)), sh) / 20)
+        att = min(int(rng.uniform(0.04, 0.12) * SR), n // 2)
+        rel = min(int(rng.uniform(0.08, 0.2) * SR), n // 2)
         env[:att] *= np.linspace(0, 1, att) ** 1.5
         env[-rel:] *= np.linspace(1, 0, rel) ** 1.2
         return (out * env).astype(np.float32)

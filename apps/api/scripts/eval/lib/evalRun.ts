@@ -305,7 +305,7 @@ export function mean(xs: number[]): number {
 
 type Transcribe = (scenario: Scenario, buf: Buffer, bpm: number) => Promise<EstNote[]>
 
-async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): Promise<Transcribe> {
+export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): Promise<Transcribe> {
     if (o.adaptive) {
         const registry = new ProviderRegistry({ crepeTiny: MODELS.crepeTiny })
         await registry.initAll()
