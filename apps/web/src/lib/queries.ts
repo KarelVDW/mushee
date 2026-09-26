@@ -3,18 +3,23 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+    ApiError,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
     createCheckout,
     createPackCheckout,
     createScore,
+    deleteRecording,
     deleteScore,
+    duplicateScore,
     getBetaStatus,
     getBillingState,
     getScore,
     getSettings,
+    getSharedScore,
     listPlans,
+    listRecordings,
     listScores,
     loadScore,
     type OnboardingPatch,
@@ -22,9 +27,13 @@ import {
     patchOnboarding,
     putKeyboardShortcuts,
     reactivateAccount,
+    type RecordingSummary,
     requestAccountDeletion,
     resumeSubscription,
+    type ScoreDocument,
     type ScoreMeta,
+    shareScore,
+    unshareScore,
     updateScore,
 } from './api'
 import type { StoredShortcuts } from './Keybindings'
@@ -75,6 +84,17 @@ export function useCreateScore() {
     })
 }
 
+export function useDuplicateScore() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (id: string) => duplicateScore(id),
+        onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
+        // Like create: a score-limit refusal opens the upgrade dialog on the
+        // library page; anything else gets its own toast there.
+        meta: { silentError: true },
+    })
+}
+
 export function useDeleteScore() {
     const queryClient = useQueryClient()
     return useMutation({
@@ -88,6 +108,82 @@ export function useDeleteScore() {
             void queryClient.invalidateQueries({ queryKey: scoreKeys.all })
         },
         meta: { errorMessage: 'Could not delete the score. Please try again.' },
+    })
+}
+
+/** A score behind its share token — public, cached for the visit. */
+export function useSharedScore(token: string) {
+    return useQuery({
+        queryKey: ['shared', token] as const,
+        queryFn: () => getSharedScore(token),
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        // 404 means unknown/revoked; retrying will not change that.
+        retry: (count, error) => !(error instanceof ApiError && error.isClientError) && count < 2,
+    })
+}
+
+/** Mint/keep the score's share link and reflect it on the cached score meta. */
+export function useShareScore(id: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => shareScore(id),
+        onSuccess: ({ token }) => {
+            queryClient.setQueryData<ScoreDocument>(scoreKeys.detail(id), (data) =>
+                data ? { ...data, meta: { ...data.meta, shareToken: token } } : data,
+            )
+        },
+        meta: { errorMessage: 'Could not create the share link. Please try again.' },
+    })
+}
+
+export function useUnshareScore(id: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => unshareScore(id),
+        onSuccess: () => {
+            queryClient.setQueryData<ScoreDocument>(scoreKeys.detail(id), (data) =>
+                data ? { ...data, meta: { ...data.meta, shareToken: null } } : data,
+            )
+        },
+        meta: { errorMessage: 'Could not turn the share link off. Please try again.' },
+    })
+}
+
+export const recordingKeys = {
+    all: ['recordings'] as const,
+    list: (scoreId?: string) => ['recordings', 'list', scoreId ?? ''] as const,
+}
+
+/** Every take the account holds, newest first (Settings → Your data). */
+export function useAllRecordings(options?: { enabled?: boolean }) {
+    return useQuery({
+        queryKey: recordingKeys.list(),
+        queryFn: () => listRecordings(),
+        enabled: options?.enabled ?? true,
+    })
+}
+
+/** The takes recorded into one score, newest first. */
+export function useRecordings(scoreId: string, options?: { enabled?: boolean }) {
+    return useQuery({
+        queryKey: recordingKeys.list(scoreId),
+        queryFn: () => listRecordings(scoreId),
+        enabled: options?.enabled ?? true,
+    })
+}
+
+export function useDeleteRecording() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (id: string) => deleteRecording(id),
+        onSuccess: (_data, id) => {
+            // The server answers nothing new, so the patched lists are already right — no refetch.
+            queryClient.setQueriesData<RecordingSummary[]>({ queryKey: [...recordingKeys.all, 'list'] }, (rows) =>
+                rows?.filter((row) => row.id !== id),
+            )
+        },
+        meta: { errorMessage: 'Could not delete the take. Please try again.' },
     })
 }
 
@@ -180,8 +276,7 @@ export function useBillingState() {
 /** Creates a Polar checkout and sends the browser there. */
 export function useStartCheckout() {
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
-            createCheckout(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => createCheckout(args.tierId, args.interval),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -215,8 +310,7 @@ export function useBillingPortal() {
 export function useChangePlan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) =>
-            changePlan(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => changePlan(args.tierId, args.interval),
         onSuccess: (state) => queryClient.setQueryData(billingKeys.subscription, state),
         meta: { errorMessage: "Couldn't change the plan. Please try again." },
     })

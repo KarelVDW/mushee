@@ -37,9 +37,7 @@ export function MetricsPanel({ metrics }: MetricsPanelProps) {
     const timing = (metrics.timing ?? {}) as Record<string, unknown>
 
     const pct = (v: number | null) => (v === null ? '—' : v.toFixed(2))
-    const segLine = (['missed', 'spurious', 'split', 'merged'] as const)
-        .map((k) => `${k} ${num(seg[k]) ?? 0}`)
-        .join(' · ')
+    const segLine = (['missed', 'spurious', 'split', 'merged'] as const).map((k) => `${k} ${num(seg[k]) ?? 0}`).join(' · ')
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

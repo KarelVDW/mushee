@@ -14,15 +14,29 @@ export const TupletBracket = memo(function TupletBracket({ tuplet }: { tuplet: T
             {bracketed && (
                 <>
                     {/* Left vertical tick */}
-                    <rect x={x1} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill={NOTATION_INK} />
+                    <rect
+                        x={x1}
+                        y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT}
+                        width={1}
+                        height={TUPLET_BRACKET_HEIGHT}
+                        fill={NOTATION_INK}
+                    />
                     {/* Left horizontal line */}
-                    {centerX - numberHalfWidth > x1 && <rect x={x1} y={y} width={centerX - numberHalfWidth - x1} height={1} fill={NOTATION_INK} />}
+                    {centerX - numberHalfWidth > x1 && (
+                        <rect x={x1} y={y} width={centerX - numberHalfWidth - x1} height={1} fill={NOTATION_INK} />
+                    )}
                     {/* Right horizontal line */}
                     {x2 > centerX + numberHalfWidth && (
                         <rect x={centerX + numberHalfWidth} y={y} width={x2 - (centerX + numberHalfWidth)} height={1} fill={NOTATION_INK} />
                     )}
                     {/* Right vertical tick */}
-                    <rect x={x2} y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT} width={1} height={TUPLET_BRACKET_HEIGHT} fill={NOTATION_INK} />
+                    <rect
+                        x={x2}
+                        y={location === 1 ? y : y - TUPLET_BRACKET_HEIGHT}
+                        width={1}
+                        height={TUPLET_BRACKET_HEIGHT}
+                        fill={NOTATION_INK}
+                    />
                 </>
             )}
 

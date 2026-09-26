@@ -8,12 +8,12 @@ This system encodes the visual + content vocabulary used to design and build for
 
 ## Sources
 
-| Source              | Path                                     | Notes                                                                                                                                       |
-| ------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Production codebase | `apps/web/`                              | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.               |
-| Color tokens        | `apps/web/src/app/globals.css`           | M3-style palette with cyan + magenta accents.                                                                                               |
-| Type loader         | `apps/web/src/app/layout.tsx`            | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded.            |
-| Notation glyphs     | `packages/notation/src/components/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                   |
+| Source              | Path                                                       | Notes                                                                                                                            |
+| ------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Production codebase | `apps/web/`                                                | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.     |
+| Color tokens        | `apps/web/src/app/globals.css`                             | M3-style palette with cyan + magenta accents.                                                                                    |
+| Type loader         | `apps/web/src/app/layout.tsx`                              | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded. |
+| Notation glyphs     | `packages/notation/src/components/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                        |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -58,21 +58,21 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 **Specific examples (canonical Solkey copy):**
 
-| Surface              | Solkey copy                                                                                                                        |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Email field label    | `Email`                                                                                                                            |
-| Password field label | `Password`                                                                                                                         |
-| Name field label     | `Your name`                                                                                                                        |
-| Sign-up CTA          | `Create account`                                                                                                                   |
-| Sign-up tagline      | `Notation made easy.`                                                                                                        |
-| Sign-in tagline      | `Welcome back.`                                                                                                                    |
-| Sign-in link copy    | `Already have an account?`                                                                                                         |
-| Library page title   | `Your scores`                                                                                                                      |
-| Empty state          | `No scores yet. Compose your first one.`                                                                                           |
-| Hero headline        | `The fastest way to get a melody on the page.`                                                                                     |
+| Surface              | Solkey copy                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| Email field label    | `Email`                                                                                          |
+| Password field label | `Password`                                                                                       |
+| Name field label     | `Your name`                                                                                      |
+| Sign-up CTA          | `Create account`                                                                                 |
+| Sign-up tagline      | `Notation made easy.`                                                                            |
+| Sign-in tagline      | `Welcome back.`                                                                                  |
+| Sign-in link copy    | `Already have an account?`                                                                       |
+| Library page title   | `Your scores`                                                                                    |
+| Empty state          | `No scores yet. Compose your first one.`                                                         |
+| Hero headline        | `The fastest way to get a melody on the page.`                                                   |
 | Hero sub             | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.` |
-| Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                                                                |
-| Footer               | `© 2026 Solkey.`                                                                                               |
+| Pricing free tier    | `Sketch` — `Free` · tagline `For trying things out`                                              |
+| Footer               | `© 2026 Solkey.`                                                                                 |
 
 **Punctuation & tics:**
 
@@ -127,12 +127,12 @@ A **white-on-white** layering system punctuated by two accent colors. Accents ar
 
 Four families, each with a clear job.
 
-| Family            | Role                 | Where                                                                                                                                                                                   |
-| ----------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                     |
-| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                   |
+| Family            | Role                 | Where                                                                                                                                                                                  |
+| ----------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                    |
+| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                  |
 | **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_on the page._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
-| **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.                                                                   |
+| **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows. Loaded weights 400–600.                                                                  |
 
 The wordmark is always **`Solkey`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
 
@@ -175,15 +175,15 @@ Every interactive element carries the shared keyboard-focus ring: `focus-visible
 
 ### Hover & press states
 
-| Element                     | Hover                                                                                                               | Press / active                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| Hero CTA (`emphasis="pop"`) | `-translate-y-[2px]`, shadow grows 3px→5px                                                                          | (no extra; it's already lifted) |
-| Standard primary button     | bg darkens slightly                                                                                                 | bg darkens further              |
-| Icon button                 | bg `surface_container` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)              | —                               |
-| List row                    | bg `surface_container_lowest` → `surface_container_high`, plus a 4px-wide cyan accent stripe slides in from the left | —                               |
-| Dock control (in a well)    | transparent at rest → `surface_container_high`; the white capsule well supplies the lift, so the control stays bare until hover | active = `primary_container` |
-| Tab text                    | `on_surface_variant` → `on_surface`; active tab gains a 3px cyan underline                                          | —                               |
-| Sign-out / destructive text | `on_surface` → `secondary` (magenta)                                                                                | —                               |
+| Element                     | Hover                                                                                                                           | Press / active                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Hero CTA (`emphasis="pop"`) | `-translate-y-[2px]`, shadow grows 3px→5px                                                                                      | (no extra; it's already lifted) |
+| Standard primary button     | bg darkens slightly                                                                                                             | bg darkens further              |
+| Icon button                 | bg `surface_container` → `primary_container` (cyan) or `secondary_container` (magenta for destructive)                          | —                               |
+| List row                    | bg `surface_container_lowest` → `surface_container_high`, plus a 4px-wide cyan accent stripe slides in from the left            | —                               |
+| Dock control (in a well)    | transparent at rest → `surface_container_high`; the white capsule well supplies the lift, so the control stays bare until hover | active = `primary_container`    |
+| Tab text                    | `on_surface_variant` → `on_surface`; active tab gains a 3px cyan underline                                                      | —                               |
+| Sign-out / destructive text | `on_surface` → `secondary` (magenta)                                                                                            | —                               |
 
 ### Borders
 
@@ -216,7 +216,7 @@ That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 | Token           | Value            | Usage                                                            |
 | --------------- | ---------------- | ---------------------------------------------------------------- |
-| `--radius-sm`   | `0.25rem` (4px)  | Input fields, score-row cells. The default. |
+| `--radius-sm`   | `0.25rem` (4px)  | Input fields, score-row cells. The default.                      |
 | `--radius-md`   | `0.5rem` (8px)   | List rows, compact cards, grouped-button ends.                   |
 | `--radius-lg`   | `0.75rem` (12px) | Standalone cards, modals, glass panels (dialogs/popovers/menus). |
 | `--radius-xl`   | `1rem` (16px)    | Full sheets, marketing hero tiles.                               |

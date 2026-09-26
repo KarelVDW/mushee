@@ -5,23 +5,22 @@
  * window and the decoder high-pass to the input instead of using one fixed band.
  */
 
-import { Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common'
 
-import { OnsetDetector } from '../onset-detector';
-import { isVoiceInstrument, rangeForInstrument } from './instrument-ranges';
+import { OnsetDetector } from '../onset-detector'
+import { isVoiceInstrument, rangeForInstrument } from './instrument-ranges'
 import {
-  DEFAULT_PROFILE,
-  GLOBAL_MAX_FREQ_HZ,
-  GLOBAL_MIN_FREQ_HZ,
-  PITCHDOWN_MODEL_CEILING_HZ,
-  PITCHDOWN_PROVIDER_NAME,
-  type PipelineProfile,
-  PROFILE_BANDS,
-  TRAJECTORY_MODEL_CEILING_HZ,
-  VOICE_OVERLAY,
-} from './pipeline-profile';
-import { scanPitch } from './pitch-scan';
-import { SourceClassifier } from './source-classifier';
+    DEFAULT_PROFILE,
+    GLOBAL_MIN_FREQ_HZ,
+    type PipelineProfile,
+    PITCHDOWN_MODEL_CEILING_HZ,
+    PITCHDOWN_PROVIDER_NAME,
+    PROFILE_BANDS,
+    TRAJECTORY_MODEL_CEILING_HZ,
+    VOICE_OVERLAY,
+} from './pipeline-profile'
+import { scanPitch } from './pitch-scan'
+import { SourceClassifier } from './source-classifier'
 
 /**
  * What the caller knows about the source before any audio is analysed.
@@ -40,9 +39,9 @@ import { SourceClassifier } from './source-classifier';
  * removable.
  */
 export interface ProfileHint {
-  instrumentId?: string;
-  /** Explicit caller declaration of what is being recorded. */
-  sourceKind?: 'voice' | 'instrument';
+    instrumentId?: string
+    /** Explicit caller declaration of what is being recorded. */
+    sourceKind?: 'voice' | 'instrument'
 }
 
 /**
@@ -52,7 +51,7 @@ export interface ProfileHint {
  * chatter) or its quiet frames sit close to its loud ones (steady backdrop).
  */
 /** A/B kill-switch shared with pitch-scan.ts: RECORDING_NOISE_ADAPT=0 = legacy. */
-const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0';
+const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0'
 /**
  * Kill-switch for voice routing: `RECORDING_VOICE_DECODE=0` sends singing back
  * through the shared semitone-run segmenter.
@@ -63,12 +62,12 @@ const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0';
  * rollback: the decode is a large behavioural change on the one input class the
  * product exists for, and reverting it should not need a deploy.
  */
-const VOICE_DECODE = process.env.RECORDING_VOICE_DECODE !== '0';
+const VOICE_DECODE = process.env.RECORDING_VOICE_DECODE !== '0'
 
 /** Env override with default — lets the eval sweep explore without code edits. */
 function envNum(key: string, fallback: number): number {
-  const v = Number(process.env[key]);
-  return Number.isFinite(v) ? v : fallback;
+    const v = Number(process.env[key])
+    return Number.isFinite(v) ? v : fallback
 }
 
 /**
@@ -77,8 +76,8 @@ function envNum(key: string, fallback: number): number {
  * wall-to-wall clean legato) are never flagged: absence of quiet frames is
  * not evidence of noise.
  */
-const NOISY_MAX_SNR_DB = envNum('RECORDING_NOISY_MAX_SNR_DB', 25);
-const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5);
+const NOISY_MAX_SNR_DB = envNum('RECORDING_NOISY_MAX_SNR_DB', 25)
+const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5)
 /**
  * Actions taken on a noisy take. ALL DEFAULT TO NO-OPS: the 2026-07 adverse
  * eval (scripts/eval, echoey-room/wind/street/distant conditions on both the
@@ -97,13 +96,13 @@ const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5);
  * because `snrDb`/`noisiness` are built for an additive stationary interferer
  * and reverberation is neither.
  */
-const NOISY_CONFIDENCE_BUMP = envNum('RECORDING_NOISY_CONF_BUMP', 0);
-const NOISY_CONFIDENCE_CAP = 0.75;
-const NOISY_MIN_FRAMES_PER_NOTE = envNum('RECORDING_NOISY_MIN_FRAMES', 4);
-const NOISY_DENOISE = process.env.RECORDING_NOISY_DENOISE === '1';
+const NOISY_CONFIDENCE_BUMP = envNum('RECORDING_NOISY_CONF_BUMP', 0)
+const NOISY_CONFIDENCE_CAP = 0.75
+const NOISY_MIN_FRAMES_PER_NOTE = envNum('RECORDING_NOISY_MIN_FRAMES', 4)
+const NOISY_DENOISE = process.env.RECORDING_NOISY_DENOISE === '1'
 
 function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
+    return Math.max(lo, Math.min(hi, x))
 }
 
 /**
@@ -111,8 +110,8 @@ function clamp(x: number, lo: number, hi: number): number {
  * floor it may never go below. See `estimateReverberance` for why this is the
  * adaptation reverb actually wants.
  */
-const REVERB_CONFIDENCE_RELIEF = envNum('RECORDING_REVERB_CONF_RELIEF', 0.25);
-const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25);
+const REVERB_CONFIDENCE_RELIEF = envNum('RECORDING_REVERB_CONF_RELIEF', 0.25)
+const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25)
 /**
  * `dipDepth` anchors for the reverberance ramp: the measured medians of the
  * clean (0.34) and reverberant (0.50–0.55) halves of the corpus. Below the low
@@ -121,8 +120,8 @@ const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25);
  * because the feature is only weakly separating (see `estimateReverberance`) and
  * a hard threshold would mean applying the full relief to false positives.
  */
-const REVERB_DIP_DRY = envNum('RECORDING_REVERB_DIP_DRY', 0.36);
-const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52);
+const REVERB_DIP_DRY = envNum('RECORDING_REVERB_DIP_DRY', 0.36)
+const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52)
 /**
  * Minimum envelope modulation (coefficient of variation over above-silence
  * frames) for the fill measurement to mean anything.
@@ -139,7 +138,7 @@ const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52);
  * never fires on real material; a constant-amplitude synthetic tone measures
  * 0.027.
  */
-const REVERB_MIN_MODULATION = envNum('RECORDING_REVERB_MIN_MODULATION', 0.15);
+const REVERB_MIN_MODULATION = envNum('RECORDING_REVERB_MIN_MODULATION', 0.15)
 
 /**
  * Blind reverberance of a take, 0 (dry) … 1 (heavily reverberant), from the
@@ -167,37 +166,28 @@ const REVERB_MIN_MODULATION = envNum('RECORDING_REVERB_MIN_MODULATION', 0.15);
  * switch: a weak signal used proportionally is worth much more than the same
  * signal used as a binary gate.
  */
-export function estimateReverberance(
-  samples: Float32Array,
-  sampleRate: number,
-): number {
-  const env = new OnsetDetector().envelope(samples, sampleRate);
-  if (env.length < 20) return 0;
-  let peak = 0;
-  for (const v of env) peak = Math.max(peak, v);
-  if (peak <= 0) return 0;
-  // Frames above the silence floor only — trailing/leading silence would
-  // otherwise drag the median down and read as a dry room.
-  const loud: number[] = [];
-  for (const v of env) if (v > peak * 0.08) loud.push(v);
-  if (loud.length < 8) return 0;
+export function estimateReverberance(samples: Float32Array, sampleRate: number): number {
+    const env = new OnsetDetector().envelope(samples, sampleRate)
+    if (env.length < 20) return 0
+    let peak = 0
+    for (const v of env) peak = Math.max(peak, v)
+    if (peak <= 0) return 0
+    // Frames above the silence floor only — trailing/leading silence would
+    // otherwise drag the median down and read as a dry room.
+    const loud: number[] = []
+    for (const v of env) if (v > peak * 0.08) loud.push(v)
+    if (loud.length < 8) return 0
 
-  // A take with no dynamic variation has no dips for a room to fill, so its
-  // fill ratio carries no information — see REVERB_MIN_MODULATION.
-  const mu = loud.reduce((a, b) => a + b, 0) / loud.length;
-  if (mu <= 0) return 0;
-  const sd = Math.sqrt(
-    loud.reduce((s, v) => s + (v - mu) ** 2, 0) / loud.length,
-  );
-  if (sd / mu < REVERB_MIN_MODULATION) return 0;
+    // A take with no dynamic variation has no dips for a room to fill, so its
+    // fill ratio carries no information — see REVERB_MIN_MODULATION.
+    const mu = loud.reduce((a, b) => a + b, 0) / loud.length
+    if (mu <= 0) return 0
+    const sd = Math.sqrt(loud.reduce((s, v) => s + (v - mu) ** 2, 0) / loud.length)
+    if (sd / mu < REVERB_MIN_MODULATION) return 0
 
-  loud.sort((a, b) => a - b);
-  const dipDepth = loud[loud.length >> 1] / peak;
-  return clamp(
-    (dipDepth - REVERB_DIP_DRY) / (REVERB_DIP_WET - REVERB_DIP_DRY),
-    0,
-    1,
-  );
+    loud.sort((a, b) => a - b)
+    const dipDepth = loud[loud.length >> 1] / peak
+    return clamp((dipDepth - REVERB_DIP_DRY) / (REVERB_DIP_WET - REVERB_DIP_DRY), 0, 1)
 }
 
 /**
@@ -275,13 +265,10 @@ export function estimateReverberance(
  * absolute numbers from `ablate.ts` / `sweep-segmenter.ts` again.
  */
 function applyReverb(base: PipelineProfile, reverberance: number): PipelineProfile {
-  if (reverberance <= 0 || base.confidenceThreshold === undefined) return base;
-  const relaxed = Math.max(
-    REVERB_CONFIDENCE_FLOOR,
-    base.confidenceThreshold - REVERB_CONFIDENCE_RELIEF * reverberance,
-  );
-  if (relaxed >= base.confidenceThreshold) return base;
-  return { ...base, id: base.id + '+reverb', confidenceThreshold: relaxed };
+    if (reverberance <= 0 || base.confidenceThreshold === undefined) return base
+    const relaxed = Math.max(REVERB_CONFIDENCE_FLOOR, base.confidenceThreshold - REVERB_CONFIDENCE_RELIEF * reverberance)
+    if (relaxed >= base.confidenceThreshold) return base
+    return { ...base, id: base.id + '+reverb', confidenceThreshold: relaxed }
 }
 
 /**
@@ -301,17 +288,16 @@ function applyReverb(base: PipelineProfile, reverberance: number): PipelineProfi
  * needs — see research-pitch-models P3.4).
  */
 function applyVoice(base: PipelineProfile, isVoice: boolean): PipelineProfile {
-  // The pitch-down wrapper is excluded: the very-high band is whistling
-  // territory, which the voice decode's literature and calibration explicitly
-  // do not cover — and its cleanup set must not switch to the voice one either.
-  if (!isVoice || !VOICE_DECODE || base.providerName === PITCHDOWN_PROVIDER_NAME)
-    return base;
-  return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice' };
+    // The pitch-down wrapper is excluded: the very-high band is whistling
+    // territory, which the voice decode's literature and calibration explicitly
+    // do not cover — and its cleanup set must not switch to the voice one either.
+    if (!isVoice || !VOICE_DECODE || base.providerName === PITCHDOWN_PROVIDER_NAME) return base
+    return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice' }
 }
 
 function band(id: string): PipelineProfile {
-  const found = PROFILE_BANDS.find((b) => b.id === id);
-  return found ?? DEFAULT_PROFILE;
+    const found = PROFILE_BANDS.find((b) => b.id === id)
+    return found ?? DEFAULT_PROFILE
 }
 
 /**
@@ -321,163 +307,130 @@ function band(id: string): PipelineProfile {
  * everything the trajectory providers can fully cover routes to them.
  */
 function bandFor(medianHz: number): PipelineProfile {
-  if (medianHz >= 1300) return band('very-high');
-  if (medianHz >= 550) return band('high');
-  if (medianHz >= 200) return band('mid');
-  return band('low');
+    if (medianHz >= 1300) return band('very-high')
+    if (medianHz >= 550) return band('high')
+    if (medianHz >= 200) return band('mid')
+    return band('low')
 }
 
 export class ProfileResolver {
-  private readonly logger = new Logger(ProfileResolver.name);
-  // Shared model under the hood, so per-recording resolver instances are free.
-  private readonly sourceClassifier = new SourceClassifier();
+    private readonly logger = new Logger(ProfileResolver.name)
+    // Shared model under the hood, so per-recording resolver instances are free.
+    private readonly sourceClassifier = new SourceClassifier()
 
-  /**
-   * @param samples     mono PCM of the first ~seconds of the recording
-   * @param sampleRate  sample rate of `samples`
-   */
-  resolve(
-    samples: Float32Array,
-    sampleRate: number,
-    hint?: ProfileHint,
-  ): PipelineProfile {
-    const scan = scanPitch(samples, sampleRate);
-    const hintRange = rangeForInstrument(hint?.instrumentId);
-    // An explicit caller declaration wins outright. Absent one, the audio
-    // itself decides (stock-YAMNet classifier, 98.7 % decided accuracy at this
-    // very prefix), and only an abstention — near-silence, ambiguity, model
-    // not loaded yet — falls back to the score's instrument prior.
-    const classified =
-      hint?.sourceKind === undefined
-        ? this.sourceClassifier.classify(samples, sampleRate)
-        : undefined;
-    const isVoice =
-      hint?.sourceKind === 'voice' ||
-      (hint?.sourceKind === undefined &&
-        (classified !== undefined
-          ? classified === 'voice'
-          : isVoiceInstrument(hint?.instrumentId)));
-    const sourceDecidedBy: PipelineProfile['sourceDecidedBy'] =
-      hint?.sourceKind !== undefined
-        ? 'explicit'
-        : classified !== undefined
-          ? 'classifier'
-          : 'prior';
-    const sourceBelief: PipelineProfile['sourceBelief'] = isVoice
-      ? 'voice'
-      : 'instrument';
-    const noisy =
-      (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) ||
-      scan.noisiness >= NOISY_MIN_NOISINESS;
-    const reverberance = estimateReverberance(samples, sampleRate);
+    /**
+     * @param samples     mono PCM of the first ~seconds of the recording
+     * @param sampleRate  sample rate of `samples`
+     */
+    resolve(samples: Float32Array, sampleRate: number, hint?: ProfileHint): PipelineProfile {
+        const scan = scanPitch(samples, sampleRate)
+        const hintRange = rangeForInstrument(hint?.instrumentId)
+        // An explicit caller declaration wins outright. Absent one, the audio
+        // itself decides (stock-YAMNet classifier, 98.7 % decided accuracy at this
+        // very prefix), and only an abstention — near-silence, ambiguity, model
+        // not loaded yet — falls back to the score's instrument prior.
+        const classified = hint?.sourceKind === undefined ? this.sourceClassifier.classify(samples, sampleRate) : undefined
+        const isVoice =
+            hint?.sourceKind === 'voice' ||
+            (hint?.sourceKind === undefined && (classified !== undefined ? classified === 'voice' : isVoiceInstrument(hint?.instrumentId)))
+        const sourceDecidedBy: PipelineProfile['sourceDecidedBy'] =
+            hint?.sourceKind !== undefined ? 'explicit' : classified !== undefined ? 'classifier' : 'prior'
+        const sourceBelief: PipelineProfile['sourceBelief'] = isVoice ? 'voice' : 'instrument'
+        const noisy = (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) || scan.noisiness >= NOISY_MIN_NOISINESS
+        const reverberance = estimateReverberance(samples, sampleRate)
 
-    if (!scan.voiced) {
-      // No reliable pitch yet — fall back to a wide default, widened to the
-      // hint range if we have one. (With the harmonicity gate this is also
-      // where pure-backdrop lead-ins land, instead of locking a garbage band.)
-      const base = {
-        ...applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
-        sourceBelief,
-        sourceDecidedBy,
-      };
-      if (!hintRange) return base;
-      return this.finalize(base, hintRange.minHz, hintRange.maxHz, base.id + '+hint');
+        if (!scan.voiced) {
+            // No reliable pitch yet — fall back to a wide default, widened to the
+            // hint range if we have one. (With the harmonicity gate this is also
+            // where pure-backdrop lead-ins land, instead of locking a garbage band.)
+            const base = {
+                ...applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
+                sourceBelief,
+                sourceDecidedBy,
+            }
+            if (!hintRange) return base
+            return this.finalize(base, hintRange.minHz, hintRange.maxHz, base.id + '+hint')
+        }
+
+        // Fit a window around the detected distribution, with headroom: pad below
+        // for the lowest note's fundamental and above for vibrato / the top note.
+        // The low bound is deliberately generous — a too-high floor *clips* notes
+        // (catastrophic), while a too-low floor only mildly risks an octave error
+        // the high-pass and post-processing still suppress. Allowing ~1.7 octaves
+        // below the median guards against the scan locking onto a harmonic of a low
+        // brass / double-reed fundamental (e.g. a trombone whose energy peaks at the
+        // 3rd harmonic), which would otherwise clip its real low notes with no hint.
+        let lowHz = Math.min(scan.p10Hz * 0.6, scan.medianHz * 0.3)
+        let highHz = scan.p90Hz * 1.5
+
+        // Union with the hint range so early/extreme notes aren't clipped before
+        // the scan saw them.
+        if (hintRange) {
+            lowHz = Math.min(lowHz, hintRange.minHz)
+            highHz = Math.max(highHz, hintRange.maxHz)
+        }
+
+        const base = {
+            ...applyVoice(applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance), isVoice),
+            sourceBelief,
+            sourceDecidedBy,
+        }
+        const profile = this.finalize(base, lowHz, highHz, base.id)
+        this.logger.debug(
+            `Resolved profile=${profile.id} provider=${profile.providerName} ` +
+                `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
+                `hp=${profile.highpassHz.toFixed(0)} ` +
+                `conf=${profile.confidenceThreshold?.toFixed(2) ?? 'n/a'} ` +
+                `(scan p10/med/p90=${scan.p10Hz.toFixed(0)}/${scan.medianHz.toFixed(0)}/${scan.p90Hz.toFixed(0)}Hz, ` +
+                `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
+                `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
+                `reverberance=${reverberance.toFixed(2)}, ` +
+                `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +
+                `${hint?.sourceKind === undefined ? `, classified=${classified ?? 'abstain'}` : ''}` +
+                `${profile.isVoice ? ' VOICE' : ''})`,
+        )
+        return profile
     }
 
-    // Fit a window around the detected distribution, with headroom: pad below
-    // for the lowest note's fundamental and above for vibrato / the top note.
-    // The low bound is deliberately generous — a too-high floor *clips* notes
-    // (catastrophic), while a too-low floor only mildly risks an octave error
-    // the high-pass and post-processing still suppress. Allowing ~1.7 octaves
-    // below the median guards against the scan locking onto a harmonic of a low
-    // brass / double-reed fundamental (e.g. a trombone whose energy peaks at the
-    // 3rd harmonic), which would otherwise clip its real low notes with no hint.
-    let lowHz = Math.min(scan.p10Hz * 0.6, scan.medianHz * 0.3);
-    let highHz = scan.p90Hz * 1.5;
-
-    // Union with the hint range so early/extreme notes aren't clipped before
-    // the scan saw them.
-    if (hintRange) {
-      lowHz = Math.min(lowHz, hintRange.minHz);
-      highHz = Math.max(highHz, hintRange.maxHz);
+    /**
+     * Adapt a band anchor to a measured noisy backdrop: turn on the decoder's
+     * spectral denoiser and tighten the note gates, trading a sliver of clean
+     * recall for not hallucinating notes out of wind, chatter, or reverb wash.
+     */
+    private applyNoise(base: PipelineProfile, noisy: boolean): PipelineProfile {
+        if (!noisy || !NOISE_ADAPT) return base
+        return {
+            ...base,
+            id: base.id + '+noise',
+            denoise: NOISY_DENOISE || undefined,
+            confidenceThreshold:
+                base.confidenceThreshold === undefined
+                    ? undefined
+                    : Math.min(NOISY_CONFIDENCE_CAP, base.confidenceThreshold + NOISY_CONFIDENCE_BUMP),
+            minFramesPerNote: NOISY_MIN_FRAMES_PER_NOTE,
+        }
     }
 
-    const base = {
-      ...applyVoice(
-        applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance),
-        isVoice,
-      ),
-      sourceBelief,
-      sourceDecidedBy,
-    };
-    const profile = this.finalize(base, lowHz, highHz, base.id);
-    this.logger.debug(
-      `Resolved profile=${profile.id} provider=${profile.providerName} ` +
-        `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
-        `hp=${profile.highpassHz.toFixed(0)} ` +
-        `conf=${profile.confidenceThreshold?.toFixed(2) ?? 'n/a'} ` +
-        `(scan p10/med/p90=${scan.p10Hz.toFixed(0)}/${scan.medianHz.toFixed(0)}/${scan.p90Hz.toFixed(0)}Hz, ` +
-        `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
-        `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
-        `reverberance=${reverberance.toFixed(2)}, ` +
-        `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +
-        `${hint?.sourceKind === undefined ? `, classified=${classified ?? 'abstain'}` : ''}` +
-        `${profile.isVoice ? ' VOICE' : ''})`,
-    );
-    return profile;
-  }
+    /** Apply the dynamic window + high-pass to a band anchor, with safety rules. */
+    private finalize(base: PipelineProfile, lowHz: number, highHz: number, id: string): PipelineProfile {
+        // The at-pitch CREPE provider can't see above its ~1997 Hz ceiling, so cap
+        // its window there — the band router already sends sources whose register
+        // sits above the ceiling to the octave-down `very-high` band, which hears
+        // to 2× that ceiling.
+        const ceiling = base.providerName === PITCHDOWN_PROVIDER_NAME ? PITCHDOWN_MODEL_CEILING_HZ : TRAJECTORY_MODEL_CEILING_HZ
 
-  /**
-   * Adapt a band anchor to a measured noisy backdrop: turn on the decoder's
-   * spectral denoiser and tighten the note gates, trading a sliver of clean
-   * recall for not hallucinating notes out of wind, chatter, or reverb wash.
-   */
-  private applyNoise(base: PipelineProfile, noisy: boolean): PipelineProfile {
-    if (!noisy || !NOISE_ADAPT) return base;
-    return {
-      ...base,
-      id: base.id + '+noise',
-      denoise: NOISY_DENOISE || undefined,
-      confidenceThreshold:
-        base.confidenceThreshold === undefined
-          ? undefined
-          : Math.min(NOISY_CONFIDENCE_CAP, base.confidenceThreshold + NOISY_CONFIDENCE_BUMP),
-      minFramesPerNote: NOISY_MIN_FRAMES_PER_NOTE,
-    };
-  }
+        const minFreqHz = clamp(lowHz, GLOBAL_MIN_FREQ_HZ, ceiling - 100)
+        const maxFreqHz = clamp(Math.max(highHz, minFreqHz + 100), minFreqHz + 100, ceiling)
+        // High-pass must sit safely below the lowest fundamental we want to keep.
+        const highpassHz = clamp(minFreqHz * 0.6, 30, 400)
 
-  /** Apply the dynamic window + high-pass to a band anchor, with safety rules. */
-  private finalize(
-    base: PipelineProfile,
-    lowHz: number,
-    highHz: number,
-    id: string,
-  ): PipelineProfile {
-    // The at-pitch CREPE provider can't see above its ~1997 Hz ceiling, so cap
-    // its window there — the band router already sends sources whose register
-    // sits above the ceiling to the octave-down `very-high` band, which hears
-    // to 2× that ceiling.
-    const ceiling =
-      base.providerName === PITCHDOWN_PROVIDER_NAME
-        ? PITCHDOWN_MODEL_CEILING_HZ
-        : TRAJECTORY_MODEL_CEILING_HZ;
-
-    const minFreqHz = clamp(lowHz, GLOBAL_MIN_FREQ_HZ, ceiling - 100);
-    const maxFreqHz = clamp(
-      Math.max(highHz, minFreqHz + 100),
-      minFreqHz + 100,
-      ceiling,
-    );
-    // High-pass must sit safely below the lowest fundamental we want to keep.
-    const highpassHz = clamp(minFreqHz * 0.6, 30, 400);
-
-    return {
-      ...base,
-      id,
-      providerName: base.providerName,
-      minFreqHz,
-      maxFreqHz,
-      highpassHz,
-    };
-  }
+        return {
+            ...base,
+            id,
+            providerName: base.providerName,
+            minFreqHz,
+            maxFreqHz,
+            highpassHz,
+        }
+    }
 }

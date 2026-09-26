@@ -13,7 +13,10 @@ interface ToolGroupProps {
  */
 export function ToolGroup({ ariaLabel, children }: ToolGroupProps) {
     return (
-        <div role="group" aria-label={ariaLabel} className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
+        <div
+            role="group"
+            aria-label={ariaLabel}
+            className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
             {children}
         </div>
     )
@@ -33,7 +36,10 @@ interface SegmentedProps<T> {
 
 export function Segmented<T extends string | undefined>({ options, value, onChange, ariaLabel }: SegmentedProps<T>) {
     return (
-        <div role="group" aria-label={ariaLabel} className="inline-flex gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
+        <div
+            role="group"
+            aria-label={ariaLabel}
+            className="inline-flex gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
             {options.map((o, i) => {
                 const active = value === o.value
                 return (

@@ -4,11 +4,13 @@ import { SCORE_WIDTH } from '@mushee/notation/components/constants'
 import type { Score } from '@mushee/notation/model'
 import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
 import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { flushSync } from 'react-dom'
 
 import { ChipToggle, Eyebrow, Icon, showToast } from '@/components/ui'
+import { downloadBlob } from '@/lib/FileDownload'
 import { PdfExporter } from '@/lib/PdfExporter'
+import { useDismissablePopover } from '@/lib/useDismissablePopover'
 
 type ExportFormat = 'musicxml' | 'pdf' | 'midi'
 
@@ -17,15 +19,6 @@ const FORMATS: Array<{ format: ExportFormat; label: string; description: string 
     { format: 'pdf', label: 'PDF', description: 'Print-ready sheet music (.pdf)' },
     { format: 'midi', label: 'MIDI', description: 'For DAWs and players (.mid)' },
 ]
-
-function download(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = filename
-    anchor.click()
-    URL.revokeObjectURL(url)
-}
 
 interface ExportMenuProps {
     score: Score
@@ -37,32 +30,8 @@ interface ExportMenuProps {
 }
 
 export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenuProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const popRef = useRef<HTMLDivElement>(null)
-    const [open, setOpen] = useState(false)
+    const { open, setOpen, anchorRef, popRef } = useDismissablePopover()
     const [busy, setBusy] = useState<ExportFormat | null>(null)
-
-    useEffect(() => {
-        if (!open) return
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault()
-                setOpen(false)
-            }
-            e.stopPropagation()
-        }
-        const onMouseDown = (e: MouseEvent) => {
-            const target = e.target as Node
-            if (popRef.current && !popRef.current.contains(target) && !anchorRef.current?.contains(target)) setOpen(false)
-        }
-        window.addEventListener('keydown', onKey)
-        const t = setTimeout(() => document.addEventListener('mousedown', onMouseDown), 0)
-        return () => {
-            window.removeEventListener('keydown', onKey)
-            clearTimeout(t)
-            document.removeEventListener('mousedown', onMouseDown)
-        }
-    }, [open])
 
     const handleExport = useCallback(
         async (format: ExportFormat) => {
@@ -72,9 +41,9 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
             try {
                 if (format === 'musicxml') {
                     const xml = new MusicXmlExporter(score).toXml(title)
-                    download(new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' }), `${basename}.musicxml`)
+                    downloadBlob(new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' }), `${basename}.musicxml`)
                 } else if (format === 'midi') {
-                    download(new Blob([new MidiExporter(score).toBytes()], { type: 'audio/midi' }), `${basename}.mid`)
+                    downloadBlob(new Blob([new MidiExporter(score).toBytes()], { type: 'audio/midi' }), `${basename}.mid`)
                 } else {
                     // The PDF is a print artifact: pin the layout to the standard page width
                     // for the snapshot (a phone displays a reflowed layout), restore after.
@@ -83,7 +52,7 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                     try {
                         const svg = getSvg()
                         if (!svg) throw new Error('Score is not rendered')
-                        download(await new PdfExporter(score, svg).toBlob(title), `${basename}.pdf`)
+                        downloadBlob(await new PdfExporter(score, svg).toBlob(title), `${basename}.pdf`)
                     } finally {
                         if (displayWidth !== SCORE_WIDTH) flushSync(() => score.setLayoutWidth(displayWidth))
                     }
@@ -131,7 +100,9 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                                 <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
                                     {busy === format ? `Exporting ${label}…` : label}
                                 </span>
-                                <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">{description}</span>
+                                <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">
+                                    {description}
+                                </span>
                             </button>
                         ))}
                     </div>

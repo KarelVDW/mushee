@@ -5,6 +5,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - api.yaml
-  - crepe-inference.yaml
-  - policies.yaml
+    - api.yaml
+    - crepe-inference.yaml
+    - policies.yaml

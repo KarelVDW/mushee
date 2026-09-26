@@ -74,6 +74,14 @@ export interface ScoreMeta {
     title: string
     createdAt: string
     updatedAt: string
+    /** Secret of the read-only share link (`/s/<token>`); null or absent when not shared. */
+    shareToken?: string | null
+}
+
+/** What the editor and the data export work from: a score's metadata plus its stored document. */
+export interface ScoreDocument {
+    meta: ScoreMeta
+    document: Record<string, unknown>
 }
 
 export function listScores(search?: string): Promise<ScoreMeta[]> {
@@ -106,8 +114,62 @@ export function updateScore(
     })
 }
 
+/** Copy a score into a new one ("Title (copy)"); counts against the plan's score cap like a create. */
+export function duplicateScore(id: string): Promise<ScoreMeta> {
+    return api(`/scores/${id}/duplicate`, { method: 'POST' })
+}
+
 export function deleteScore(id: string): Promise<void> {
     return api(`/scores/${id}`, { method: 'DELETE' })
+}
+
+// ── Read-only share links ───────────────────────────────────────────────────
+
+/** Turn the share link on (idempotent): the token that makes `/s/<token>`. */
+export function shareScore(id: string): Promise<{ token: string }> {
+    return api(`/scores/${id}/share`, { method: 'POST' })
+}
+
+export function unshareScore(id: string): Promise<void> {
+    return api(`/scores/${id}/share`, { method: 'DELETE' })
+}
+
+export interface SharedScore {
+    id: string
+    title: string
+    updatedAt: string
+    document: Record<string, unknown>
+}
+
+/** Public — no session needed; 404 for unknown or revoked tokens. */
+export function getSharedScore(token: string): Promise<SharedScore> {
+    return api(`/shared/${encodeURIComponent(token)}`)
+}
+
+// ── Recordings (takes) ──────────────────────────────────────────────────────
+
+export interface RecordingSummary {
+    id: string
+    scoreId: string
+    startedAt: string
+    endedAt: string | null
+    /** Seconds recorded. */
+    seconds: number
+    /** Whether audio was archived (takes from before archiving have none). */
+    hasAudio: boolean
+}
+
+export function listRecordings(scoreId?: string): Promise<RecordingSummary[]> {
+    return api(`/recordings${scoreId ? `?scoreId=${encodeURIComponent(scoreId)}` : ''}`)
+}
+
+export function deleteRecording(id: string): Promise<void> {
+    return api(`/recordings/${id}`, { method: 'DELETE' })
+}
+
+/** Where a media element fetches a take's audio; the session cookie rides along (same-site). */
+export function recordingAudioUrl(id: string): string {
+    return `${API_URL}/recordings/${id}/audio`
 }
 
 export interface AccountDeletionStatus {

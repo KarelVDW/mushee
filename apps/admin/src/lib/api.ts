@@ -253,6 +253,8 @@ export interface AdminScoreDetail {
     userId: string
     owner: { id: string; name: string; email: string } | null
     storageKey: string | null
+    /** Read-only share link token; null when the score is not shared. */
+    shareToken: string | null
     createdAt: string
     updatedAt: string
     document: ScoreDocument | null
@@ -273,6 +275,11 @@ export interface AdminScoreRecording {
  *  streams the audio or passes the API's redirect to the bucket through. */
 export function recordingAudioUrl(recordingId: string): string {
     return `/api/admin/recordings/${encodeURIComponent(recordingId)}/audio`
+}
+
+/** Turn a score's public share link off (support lever for reported links). */
+export function revokeShare(id: string): Promise<{ shareToken: null }> {
+    return api(`/api/admin/scores/${encodeURIComponent(id)}/share`, { method: 'DELETE' })
 }
 
 export function getScore(id: string): Promise<AdminScoreDetail> {
@@ -315,4 +322,101 @@ export function approveBetaSignup(userId: string): Promise<BetaSignup[]> {
 
 export function revokeBetaSignup(userId: string): Promise<BetaSignup[]> {
     return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/revoke`, { method: 'POST', body: '{}' })
+}
+
+// ── Audience + announcements ────────────────────────────────────────────────
+
+export type BetaStatusFilter = 'any' | 'pending' | 'approved' | 'none'
+
+/** Who an announcement or export goes to; every field narrows, none = every account. */
+export interface AudienceFilter {
+    tiers?: string[]
+    betaStatus?: BetaStatusFilter
+    signedUpAfter?: string
+    signedUpBefore?: string
+    activeWithinDays?: number
+    verifiedOnly?: boolean
+    includeDeletionRequested?: boolean
+}
+
+export interface Audience {
+    total: number
+    sample: Array<{ email: string; name: string }>
+}
+
+export interface Announcement {
+    id: string
+    subject: string
+    body: string
+    /** The audience filter, or `{ retryOf }` for a resend to an earlier run's unreached accounts. */
+    filters: AudienceFilter & { retryOf?: string }
+    recipientCount: number
+    failedCount: number
+    /** Unreached accounts still on record — the size of a "Resend to those" run. */
+    retryable: number
+    testTo: string | null
+    sentAt: string
+}
+
+/** The filter as query parameters (the GET endpoints' form). */
+export function audienceQuery(filters: AudienceFilter): string {
+    const params = new URLSearchParams()
+    if (filters.tiers?.length) params.set('tiers', filters.tiers.join(','))
+    if (filters.betaStatus && filters.betaStatus !== 'any') params.set('betaStatus', filters.betaStatus)
+    if (filters.signedUpAfter) params.set('signedUpAfter', filters.signedUpAfter)
+    if (filters.signedUpBefore) params.set('signedUpBefore', filters.signedUpBefore)
+    if (filters.activeWithinDays) params.set('activeWithinDays', String(filters.activeWithinDays))
+    if (filters.verifiedOnly) params.set('verifiedOnly', 'true')
+    if (filters.includeDeletionRequested) params.set('includeDeletionRequested', 'true')
+    const query = params.toString()
+    return query ? `?${query}` : ''
+}
+
+export function getAudience(filters: AudienceFilter): Promise<Audience> {
+    return api(`/api/admin/audience${audienceQuery(filters)}`)
+}
+
+/** Same-origin CSV download of the audience (the proxy relays the file). */
+export function audienceCsvUrl(filters: AudienceFilter): string {
+    return `/api/admin/audience/export.csv${audienceQuery(filters)}`
+}
+
+export interface AnnouncementSendResult {
+    id: string
+    /** Recipients SendGrid accepted. */
+    recipientCount: number
+    /** Recipients in batches SendGrid rejected — they did not get the mail. */
+    failedCount: number
+    errors: string[]
+    sentAt: string
+    testTo: string | null
+}
+
+export function sendAnnouncement(input: {
+    subject: string
+    body: string
+    filters: AudienceFilter
+    testTo?: string
+}): Promise<AnnouncementSendResult> {
+    return api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Resend a recorded announcement to exactly the accounts SendGrid rejected. */
+export function retryAnnouncement(id: string): Promise<AnnouncementSendResult> {
+    return api(`/api/admin/announcements/${encodeURIComponent(id)}/retry`, { method: 'POST' })
+}
+
+export interface AnnouncementPreview {
+    subject: string
+    text: string
+    html: string
+}
+
+/** The e-mail exactly as a sample recipient ("Ada") would receive it. */
+export function previewAnnouncement(input: { subject: string; body: string }): Promise<AnnouncementPreview> {
+    return api('/api/admin/announcements/preview', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function listAnnouncements(): Promise<Announcement[]> {
+    return api('/api/admin/announcements')
 }

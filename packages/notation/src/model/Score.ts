@@ -64,12 +64,17 @@ export class Score {
     private readonly _tiePartners = new Derived(
         () => this._version,
         () => {
+            // A tie sustains a pitch: the partner is the next note only when it sounds the same
+            // (C♯ to D♭ included). A 'start' left facing a rest or another pitch — by tying the wrong
+            // note, or by editing the note after it — is a dangling mark: not drawn, not sounded,
+            // and the following note is a fresh attack. Kept on the note so it re-binds if the
+            // neighbour changes back.
             const map = new Map<Note, Note>()
             for (const measure of this.measures) {
                 for (const note of measure.notes) {
-                    if (!note.tiesForward) continue
+                    if (!note.tiesForward || !note.pitch) continue
                     const next = this.nextNote(note)
-                    if (next) map.set(note, next)
+                    if (next?.pitch && next.pitch.toMidi() === note.pitch.toMidi()) map.set(note, next)
                 }
             }
             return map
@@ -268,15 +273,60 @@ export class Score {
     }
 
     removeLastMeasure() {
-        this.measures.pop()
+        const measure = this.lastMeasure
+        if (measure) this.removeMeasures([measure])
+    }
+
+    /**
+     * Remove `measures` (in any order, anywhere in the score; ones not in the score are
+     * ignored). The music that followed keeps sounding as it did: a clef, key or tempo change
+     * carried by a removed measure is re-marked on the first surviving measure after it when
+     * that measure only inherited it, and the piece's final barline moves onto the new last
+     * measure (an explicit double/none style it already carries is preserved).
+     */
+    removeMeasures(measures: Measure[]) {
+        const removed = new Set(measures.filter((m) => this.measures.includes(m)))
+        if (removed.size === 0) return
+        // The context each surviving successor of a removed run enters with — captured before the
+        // run disappears, so the run's own changes can be carried onto it afterwards.
+        const successors = this.measures
+            .filter((m, i) => !removed.has(m) && i > 0 && removed.has(this.measures[i - 1]))
+            .map((m) => ({
+                measure: m,
+                clefType: m.clef.type,
+                key: m.keySignature,
+                bpm: this.tempoEntering(m),
+            }))
+        const survivors = this.measures.filter((m) => !removed.has(m))
+        this.measures.splice(0, this.measures.length, ...survivors)
+        this.propagateContext()
+        for (const { measure, clefType, key, bpm } of successors) {
+            if (measure.clef.type !== clefType) measure.setClef(0, clefType)
+            if (measure.keySignature.fifths !== key.fifths || measure.keySignature.mode !== key.mode) {
+                measure.setKeySignature(0, key.fifths, key.mode)
+            }
+            if (!measure.tempoAtBeat(0) && this.tempoEntering(measure) !== bpm) measure.setTempo(0, bpm)
+        }
+        this.propagateContext()
         const newLast = last(this.measures)
-        // The piece's final barline moves to the new last measure, but an explicit
-        // style (double/none/end) it already carries is preserved.
         if (newLast && (newLast.endBarline === undefined || newLast.endBarline === 'single')) {
             newLast.setEndBarline('end')
         }
         this._structureChanged = true
         this.touch()
+    }
+
+    /**
+     * The bpm in effect when `measure` begins, before any marking of its own. Walks the live
+     * measure list (not the version-keyed tempo map) because it runs mid-mutation.
+     */
+    private tempoEntering(measure: Measure): number {
+        let bpm = Score.DEFAULT_BPM
+        for (const previous of this.measures.slice(0, this.measures.indexOf(measure))) {
+            const latest = previous.lastTempo
+            if (latest) bpm = latest.bpm
+        }
+        return bpm
     }
 
     /**
@@ -414,15 +464,28 @@ export class Score {
      */
     minimizeAccidentals(notes?: Note[]): Note[] {
         if (notes) return this.respell(notes)
+        // A mid-measure key that merely restates the key in force is invisible, but it would
+        // resurface as a boundary once a leading key moves — and a second pass would then carve
+        // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
+        for (const measure of this.measures) {
+            const visible = new Set(measure.midMeasureKeySignatures)
+            for (const key of measure.keySignatures) {
+                if (key.beatPosition > 0 && !visible.has(key)) measure.setKeySignature(key.beatPosition, key.fifths, key.mode)
+            }
+        }
         for (const region of this.keyRegions()) {
             if (!region.notes.length) continue
             const targets = new Set(region.notes)
             const current = region.key.fifths
             let best = current
-            let bestRank = [new AccidentalMinimizer(region.notes, targets, () => current).drawnCount, 0, Math.abs(current), current > 0 ? 0 : 1]
+            // Every audition ranks on the notes' sounding pitch classes, never on spellings this
+            // very pass rewrites — otherwise a second pass would see different counts and could
+            // move the key again.
+            const drawnUnder = (fifths: number) => new AccidentalMinimizer(region.notes, targets, () => fifths, 'sounding').drawnCount
+            let bestRank = [drawnUnder(current), 0, Math.abs(current), current > 0 ? 0 : 1]
             for (let fifths = -7; fifths <= 7; fifths++) {
                 if (fifths === current) continue
-                const count = new AccidentalMinimizer(region.notes, targets, () => fifths).drawnCount
+                const count = drawnUnder(fifths)
                 // Rank: fewest drawn accidentals; then the key already in place (a region whose
                 // notes can't tell keys apart must not drift); then the lighter signature; then
                 // the sharp side of an enharmonic pair.
@@ -506,7 +569,12 @@ export class Score {
     setDuration(note: Note | null | undefined, value: { type?: DurationType; dots?: number }): Note | null {
         if (!note) return null
         const ratio = note.duration.ratio
-        let durations = [new Duration({ type: value.type ?? note.duration.type, dots: value.dots ?? note.duration.dots, ratio })]
+        const type = value.type ?? note.duration.type
+        const dots = value.dots ?? note.duration.dots
+        // The sixteenth is the model's finest value: a dotted one would leave a thirty-second's
+        // worth of bar that no rest can fill, so the bar would come out short for good.
+        if (type === '16' && dots > 0) return null
+        let durations = [new Duration({ type, dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {
             /* v8 ignore next -- defensive: `note` came from this same tuplet, so getIndex always finds it */
@@ -519,7 +587,9 @@ export class Score {
         /* v8 ignore next -- defensive: durations starts with one element and is only re-decomposed from a positive remainder, so it is never empty */
         if (!durations.length) return null
         /* v8 ignore next -- the tie-spread branch never fires: a tuplet clip always reduces to a single written duration (durations.length === 1) */
-        const values = durations.map((d, i) => note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }))
+        const values = durations.map((d, i) =>
+            note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
+        )
         /* v8 ignore next -- defensive: replace always returns at least one note for a non-empty target */
         return this.replace([note], values)[0] ?? null
     }
@@ -542,7 +612,8 @@ export class Score {
             if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
             /* v8 ignore next 3 -- the tie-spread branch never fires: the collapsed group total is a single written duration (durations.length === 1) */
             const values = durations.map(
-                (d, i) => new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
+                (d, i) =>
+                    new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
             )
             /* v8 ignore next -- defensive: replace always returns at least one note */
             return this.replace(tuplet.notes, values)[0] ?? null
@@ -571,11 +642,16 @@ export class Score {
             targetBeats += nextNote.duration.effectiveBeats
         }
         if (targetBeats > valueBeats + BEAT_EPSILON) {
-            // The gap sits at the end of the replaced range — pad in that note's space:
-            // inside a tuplet it is a fraction no plain duration can express.
-            const ratio = targets[targets.length - 1].duration.ratio
-            values = [...values, ...Duration.fromBeats(targetBeats - valueBeats, ratio).map((d) => new Note({ duration: d }))]
-            valueBeats += targetBeats - valueBeats
+            // The gap sits at the end of the replaced range. Plain rests when the gap is a plain
+            // length; otherwise the gap is a tuplet fraction — of the notes being written (a pasted
+            // triplet over a plain quarter) or of the notes being replaced (a shortened triplet
+            // note) — and is padded in whichever tuplet space fills it exactly.
+            const gap = targetBeats - valueBeats
+            const candidates = [undefined, values[values.length - 1].duration.ratio, targets[targets.length - 1].duration.ratio]
+            const fills = candidates.map((ratio) => Duration.fromBeats(gap, ratio))
+            const exact = fills.find((rests) => Math.abs(sumBy(rests, (d) => d.effectiveBeats) - gap) < BEAT_EPSILON)
+            values = [...values, ...(exact ?? fills[2]).map((d) => new Note({ duration: d }))]
+            valueBeats += gap
         }
         const measuresById = keyBy(
             targets.map((n) => n.measure),
@@ -608,6 +684,9 @@ export class Score {
                 }
             }
             measure.replaceNotes(notes, newNotes)
+            // Whatever the padding above could not express exactly, the bar settles itself in tuplet space
+            // (Measure.complete), leaving at most a sub-sixteenth residue rather than a hole a rest could fill.
+            if (measure.beats < measure.maxBeats - BEAT_EPSILON) measure.complete()
             replaceValues = [...remainderNotes, ...replaceValues]
             allNewNotes.push(...newNotes)
         }

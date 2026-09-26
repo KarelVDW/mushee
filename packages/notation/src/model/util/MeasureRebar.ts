@@ -46,7 +46,10 @@ export class MeasureRebar {
         this.marks = marks.sort((a, b) => a.beat - b.beat)
         for (const unit of units) this.flow(unit)
         if (this.pending.length > 0 || this.measures.length === 0) this.closeMeasure()
-        this.measures[this.measures.length - 1].complete()
+        // Every bar settles, not only the last: a tuplet cut at a barline can leave an interior bar a
+        // tuplet-sixteenth short, which a rest in the tuplet's own space fills (a residue smaller than
+        // any value stays — Measure.complete never drops a note).
+        for (const measure of this.measures) measure.complete()
 
         for (const measure of this.measures) measure.setEndBarline('single')
         const finalStyle = region[region.length - 1].endBarline

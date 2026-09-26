@@ -11,55 +11,45 @@
  * partially configured environment degrades gracefully.
  */
 
-export type PaidTierId = 'pro' | 'studio' | 'arranger';
-export type BillingInterval = 'monthly' | 'yearly';
+export type PaidTierId = 'pro' | 'studio' | 'arranger'
+export type BillingInterval = 'monthly' | 'yearly'
 
-export const PAID_TIER_IDS: PaidTierId[] = ['pro', 'studio', 'arranger'];
-export const BILLING_INTERVALS: BillingInterval[] = ['monthly', 'yearly'];
+export const PAID_TIER_IDS: PaidTierId[] = ['pro', 'studio', 'arranger']
+export const BILLING_INTERVALS: BillingInterval[] = ['monthly', 'yearly']
 
 function envKey(tierId: PaidTierId, interval: BillingInterval): string {
-  return `POLAR_PRODUCT_${tierId.toUpperCase()}_${interval.toUpperCase()}`;
+    return `POLAR_PRODUCT_${tierId.toUpperCase()}_${interval.toUpperCase()}`
 }
 
-export function productIdFor(
-  tierId: PaidTierId,
-  interval: BillingInterval,
-  env: NodeJS.ProcessEnv = process.env,
-): string | null {
-  return env[envKey(tierId, interval)]?.trim() || null;
+export function productIdFor(tierId: PaidTierId, interval: BillingInterval, env: NodeJS.ProcessEnv = process.env): string | null {
+    return env[envKey(tierId, interval)]?.trim() || null
 }
 
 /** Reverse lookup: which tier does a Polar product id belong to? */
-export function tierForProduct(
-  productId: string,
-  env: NodeJS.ProcessEnv = process.env,
-): PaidTierId | null {
-  for (const tierId of PAID_TIER_IDS) {
-    for (const interval of BILLING_INTERVALS) {
-      if (productIdFor(tierId, interval, env) === productId) return tierId;
+export function tierForProduct(productId: string, env: NodeJS.ProcessEnv = process.env): PaidTierId | null {
+    for (const tierId of PAID_TIER_IDS) {
+        for (const interval of BILLING_INTERVALS) {
+            if (productIdFor(tierId, interval, env) === productId) return tierId
+        }
     }
-  }
-  return null;
+    return null
 }
 
 /** Reverse lookup: which billing interval does a Polar product id sell? */
-export function intervalForProduct(
-  productId: string | null | undefined,
-  env: NodeJS.ProcessEnv = process.env,
-): BillingInterval | null {
-  if (!productId) return null;
-  for (const tierId of PAID_TIER_IDS) {
-    for (const interval of BILLING_INTERVALS) {
-      if (productIdFor(tierId, interval, env) === productId) return interval;
+export function intervalForProduct(productId: string | null | undefined, env: NodeJS.ProcessEnv = process.env): BillingInterval | null {
+    if (!productId) return null
+    for (const tierId of PAID_TIER_IDS) {
+        for (const interval of BILLING_INTERVALS) {
+            if (productIdFor(tierId, interval, env) === productId) return interval
+        }
     }
-  }
-  return null;
+    return null
 }
 
 export function isPaidTierId(id: string): id is PaidTierId {
-  return (PAID_TIER_IDS as string[]).includes(id);
+    return (PAID_TIER_IDS as string[]).includes(id)
 }
 
 export function isBillingInterval(v: string): v is BillingInterval {
-  return (BILLING_INTERVALS as string[]).includes(v);
+    return (BILLING_INTERVALS as string[]).includes(v)
 }

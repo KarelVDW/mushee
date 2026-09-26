@@ -1,11 +1,6 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common'
 
-import { BetaService } from './beta.service';
+import { BetaService } from './beta.service'
 
 /**
  * Blocks users whose beta signup hasn't been approved yet. A no-op when
@@ -14,19 +9,19 @@ import { BetaService } from './beta.service';
  */
 @Injectable()
 export class BetaApprovalGuard implements CanActivate {
-  constructor(private readonly betaService: BetaService) {}
+    constructor(private readonly betaService: BetaService) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<{ user?: { id: string } }>();
-    const user = request.user;
-    if (!user) return false;
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        const request = context.switchToHttp().getRequest<{ user?: { id: string } }>()
+        const user = request.user
+        if (!user) return false
 
-    if (await this.betaService.isAwaitingApproval(user.id)) {
-      throw new ForbiddenException({
-        code: 'beta-pending',
-        message: 'Your beta access is awaiting approval.',
-      });
+        if (await this.betaService.isAwaitingApproval(user.id)) {
+            throw new ForbiddenException({
+                code: 'beta-pending',
+                message: 'Your beta access is awaiting approval.',
+            })
+        }
+        return true
     }
-    return true;
-  }
 }

@@ -245,9 +245,7 @@ const GLYPHS: Record<string, ReactElement> = {
             <path d="M10 20v-5.5h4V20" />
         </>
     ),
-    infinity: (
-        <path d="M12 12c-2-2.5-3.5-4-5.5-4a4 4 0 0 0 0 8c2 0 3.5-1.5 5.5-4s3.5-4 5.5-4a4 4 0 0 1 0 8c-2 0-3.5-1.5-5.5-4" />
-    ),
+    infinity: <path d="M12 12c-2-2.5-3.5-4-5.5-4a4 4 0 0 0 0 8c2 0 3.5-1.5 5.5-4s3.5-4 5.5-4a4 4 0 0 1 0 8c-2 0-3.5-1.5-5.5-4" />,
     info: (
         <>
             <circle cx="12" cy="12" r="8.5" />
@@ -499,9 +497,7 @@ const GLYPHS: Record<string, ReactElement> = {
         </>
     ),
     square: <rect x="6" y="6" width="12" height="12" />,
-    star: (
-        <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
-    ),
+    star: <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />,
     sun: (
         <>
             <circle cx="12" cy="12" r="4" />

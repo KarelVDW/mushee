@@ -1,10 +1,13 @@
 import { Duration } from '@mushee/notation/model/Duration'
+import { Instrument } from '@mushee/notation/model/Instrument'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import type { Score } from '@mushee/notation/model/Score'
 import { AccidentalMinimizer } from '@mushee/notation/model/util/AccidentalMinimizer'
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
+
+import { describeScore, soundingEvents } from './scoreObservations'
 
 /** A quarter note (or rest without `pitch`). */
 const q = (pitch?: Pitch, tie?: 'start' | 'stop') => new Note({ duration: new Duration({ type: 'q' }), pitch, tie })
@@ -131,7 +134,7 @@ describe('AccidentalMinimizer', () => {
 
     it('a tie whose notes do not sound alike does not force the spelling', () => {
         const score = makeScore(1)
-        const m = fill(score, 0, [q(p('C', 4), 'start'), q(p('D', 4)), q(), q()])
+        fill(score, 0, [q(p('C', 4), 'start'), q(p('D', 4)), q(), q()])
         const result = minimize(score)
         expect(result.respelled.size).toBe(0)
         expect(result.drawnCount).toBe(0)
@@ -142,6 +145,37 @@ describe('AccidentalMinimizer', () => {
         const m = fill(score, 0, [q(), q(p('B', 3, 1), 'stop'), q(), q()])
         const result = minimize(score)
         expect(spelled(result, m.notes[1])).toBe('C4')
+    })
+
+    it('ranking on sounding pitch ignores the current spelling, so an audition cannot depend on what the pass rewrites', () => {
+        // C major: E♭4 then E4. Ranking on spelling keeps the written E♭ (ties break toward the
+        // current spelling), and the E♮ then needs a natural to cancel it: two accidentals. Ranking
+        // on sound spells the first note D♯ (sharp side of the pair) and the E is free: one — and
+        // the count is the same whichever way the notes arrive spelled.
+        const asFlat = makeScore(1)
+        fill(asFlat, 0, [q(p('E', 4, -1)), q(p('E', 4)), q(), q()])
+        const asSharp = makeScore(1)
+        fill(asSharp, 0, [q(p('D', 4, 1)), q(p('E', 4)), q(), q()])
+        const audition = (score: Score) => {
+            const walk = score.measures.flatMap((m) => m.notes)
+            return new AccidentalMinimizer(walk, new Set(walk), () => 0, 'sounding')
+        }
+        expect(minimize(asFlat).drawnCount).toBe(2)
+        expect(audition(asFlat).drawnCount).toBe(1)
+        expect(audition(asSharp).drawnCount).toBe(1)
+        expect(spelled(audition(asFlat), asFlat.measures[0].notes[0])).toBe('D#4')
+    })
+
+    it('ranking on sounding pitch frees a tie continuation from a predecessor outside the walk', () => {
+        const score = makeScore(2)
+        fill(score, 0, [q(), q(), q(), q(p('A', 4, 1), 'start')])
+        fill(score, 1, [q(p('A', 4, 1)), q(), q(), q()])
+        const second = score.measures[1]
+        // F major audition over bar 2 alone: the written A♯ of the (unwalked) predecessor must not
+        // decide bar 2's key, so the continuation is free to be the key's B♭.
+        const result = new AccidentalMinimizer(second.notes, new Set(second.notes), () => -1, 'sounding')
+        expect(result.drawnCount).toBe(0)
+        expect(spelled(result, second.notes[0])).toBe('Bb4')
     })
 
     it('rests are skipped entirely', () => {
@@ -157,5 +191,77 @@ describe('AccidentalMinimizer', () => {
             expect(AccidentalMinimizer.compareRanks([1, 2], [1, 1])).toBeGreaterThan(0)
             expect(AccidentalMinimizer.compareRanks([1, 2, 3], [1, 2, 3])).toBe(0)
         })
+    })
+})
+
+/** The production entry point, hand-built cases: the property the generated-score invariant pins, localised. */
+describe('Score.minimizeAccidentals is idempotent', () => {
+    /** Run the whole-score pass twice; the second must be a no-op and neither may change what sounds. */
+    function expectStableUnderTwoPasses(score: Score) {
+        const heard = soundingEvents(score)
+        score.minimizeAccidentals()
+        expect(soundingEvents(score)).toEqual(heard)
+        const once = describeScore(score)
+        score.minimizeAccidentals()
+        expect(describeScore(score), 'a second pass changes nothing').toEqual(once)
+        expect(soundingEvents(score)).toEqual(heard)
+        return once
+    }
+
+    /** Accidentals the engraver would draw, under the keys now in place, with no note allowed to move. */
+    const drawn = (score: Score) => {
+        const walk = score.measures.flatMap((m) => m.notes)
+        return new AccidentalMinimizer(walk, new Set(), (note) => note.keySignature.fifths).drawnCount
+    }
+
+    it('E♭4 then E4 written in C major: the pass re-keys to E major, where D♯ and E are both free, and the pass after it agrees', () => {
+        const score = makeScore(1)
+        fill(score, 0, [q(p('E', 4, -1)), q(p('E', 4)), q(), q()])
+        expectStableUnderTwoPasses(score)
+        // Ranked on sound (pitch classes 3 and 4), the lightest key that draws nothing is E major.
+        expect(score.measures[0].keySignature.fifths).toBe(4)
+        expect(drawn(score)).toBe(0)
+        expect(score.measures[0].notes[0].pitch?.name).toBe('D')
+        expect(score.measures[0].notes[0].pitch?.alter).toBe(1)
+    })
+
+    it('a tie across the barline with both notes in the walk keeps one spelling on both sides', () => {
+        const score = makeScore(2)
+        fill(score, 0, [q(p('C', 4)), q(p('F', 4)), q(p('A', 4)), q(p('A', 4, 1), 'start')])
+        fill(score, 1, [q(p('A', 4, 1)), q(p('C', 5)), q(p('F', 4)), q(p('D', 4))])
+        expectStableUnderTwoPasses(score)
+        const [first, second] = score.measures
+        const start = first.notes[3].pitch
+        const continuation = second.notes[0].pitch
+        expect(continuation?.name).toBe(start?.name)
+        expect(continuation?.alter).toBe(start?.alter)
+        expect(second.notes[0].tiesBack).toBe(true)
+    })
+
+    it('enharmonic extremes: double accidentals in a seven-sharp key settle in one pass', () => {
+        const score = makeScore(1)
+        score.measures[0].setKeySignature(0, 7) // C♯ major
+        fill(score, 0, [q(p('B', 4, -2)), q(p('F', 4, 2)), q(p('C', 5, -1)), q(p('E', 4, 1))])
+        expectStableUnderTwoPasses(score)
+        for (const note of score.measures[0].notes) expect(Math.abs(note.pitch?.alter ?? 0)).toBeLessThanOrEqual(1)
+    })
+
+    it('a redundant mid-bar key restatement does not carve the bar into regions on the second pass', () => {
+        const score = makeScore(2)
+        fill(score, 0, [q(p('E', 4, -1)), q(p('E', 4)), q(p('B', 4, -1)), q(p('A', 4, -1))])
+        fill(score, 1, [q(p('D', 4, -1)), q(p('G', 4, -1)), q(p('C', 5)), q(p('F', 4))])
+        score.measures[0].addKeySignature(2, 0) // restates C major mid-bar: invisible until the leading key moves
+        expect(score.measures[0].midMeasureKeySignatures).toEqual([])
+        expectStableUnderTwoPasses(score)
+        expect(score.measures[0].midMeasureKeySignatures).toEqual([])
+        expect(score.measures[0].keySignatures.filter((k) => k.beatPosition > 0)).toEqual([])
+    })
+
+    it('a transposing instrument is minimized on its written pitches and still sounds the same', () => {
+        const score = makeScore(1)
+        score.setInstrument(Instrument.Clarinet)
+        fill(score, 0, [q(p('E', 4, -1)), q(p('E', 4)), q(p('B', 4, -1)), q(p('A', 4, -1))])
+        const once = expectStableUnderTwoPasses(score)
+        expect(once.instrument).toBe('clarinet')
     })
 })

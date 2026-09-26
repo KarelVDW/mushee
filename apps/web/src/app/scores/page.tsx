@@ -4,7 +4,7 @@ import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import {
     Alert,
@@ -16,6 +16,7 @@ import {
     IconButton,
     PageHeader,
     PrimaryButton,
+    SecondaryButton,
     showToast,
     TertiaryButton,
     TextField,
@@ -23,10 +24,12 @@ import {
 } from '@/components/ui'
 import { ApiError, NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { useCreateScore, useDeleteScore, useScores } from '@/lib/queries'
+import { useCreateScore, useDeleteScore, useDuplicateScore, useScores } from '@/lib/queries'
+import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
 import { CreateScoreDialog } from './CreateScoreDialog'
+import { ImportScoreDialog } from './ImportScoreDialog'
 import { ScoreLimitDialog } from './ScoreLimitDialog'
 
 function formatDate(iso: string): string {
@@ -53,11 +56,15 @@ export default function ScoresPage() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<ScoreMeta | null>(null)
+    const [importedFile, setImportedFile] = useState<ImportedScoreFile | null>(null)
+    const [readingFile, setReadingFile] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const debouncedSearch = useDebouncedValue(search, 300)
     const { data: scores, isPending, error, refetch } = useScores(debouncedSearch || undefined)
     const createMutation = useCreateScore()
     const deleteMutation = useDeleteScore()
+    const duplicateMutation = useDuplicateScore()
 
     function handleCreate(title: string, instrument: Instrument) {
         // Build the starting score through the model so a new score opens with the
@@ -67,10 +74,29 @@ export default function ScoresPage() {
         score.seedInstrument(instrument)
         const measure = score.addMeasure().complete()
         score.setTempo(measure?.firstNote, 120)
-        const emptyScore = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
+        createFromScore(title, score)
+    }
+
+    /** Read a picked MusicXML/MIDI file into a score; the import dialog then confirms title and instrument. */
+    async function handleImportFile(file: File) {
+        setReadingFile(true)
+        try {
+            setImportedFile(await new ScoreFileImporter(file).import())
+        } catch (err) {
+            console.error('Import failed', err)
+            showToast(err instanceof Error ? err.message : 'Could not read the file.')
+        } finally {
+            setReadingFile(false)
+            // Let the same file be picked again after a cancel.
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
+
+    function createFromScore(title: string, score: Score) {
+        const document = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
 
         createMutation.mutate(
-            { title, score: emptyScore },
+            { title, score: document },
             {
                 onSuccess: (created) => router.push(`/scores/${created.id}`),
                 onError: (err) => {
@@ -81,6 +107,17 @@ export default function ScoresPage() {
                 },
             },
         )
+    }
+
+    function handleDuplicate(score: ScoreMeta) {
+        duplicateMutation.mutate(score.id, {
+            onSuccess: (copy) => showToast(`Created “${copy.title}”.`, 'info', 'check'),
+            onError: (err) => {
+                // A copy is a new score, so it hits the same plan cap as a create.
+                if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                else showToast('Could not duplicate the score. Please try again.')
+            },
+        })
     }
 
     function handleDeleteConfirmed(score: ScoreMeta) {
@@ -108,8 +145,25 @@ export default function ScoresPage() {
                 <PageHeader
                     title="Your scores"
                     right={
-                        <div className="w-full md:w-64">
-                            <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                            <SecondaryButton onClick={() => fileInputRef.current?.click()} disabled={readingFile}>
+                                {readingFile ? 'Reading file…' : 'Import file'}
+                            </SecondaryButton>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept={ScoreFileImporter.ACCEPT}
+                                aria-label="Import a score file"
+                                className="sr-only"
+                                tabIndex={-1}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) void handleImportFile(file)
+                                }}
+                            />
+                            <div className="w-full sm:w-64">
+                                <TextField value={search} onChange={setSearch} leftIcon="search" placeholder="Find a score…" />
+                            </div>
                         </div>
                     }
                 />
@@ -118,7 +172,9 @@ export default function ScoresPage() {
                 {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
                 {isPending && !error ? (
                     <EmptyCard>
-                        <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">Loading your scores…</span>
+                        <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                            Loading your scores…
+                        </span>
                     </EmptyCard>
                 ) : scores === undefined ? null : scores.length === 0 ? (
                     search ? (
@@ -131,7 +187,7 @@ export default function ScoresPage() {
                             </span>
                         </EmptyCard>
                     ) : (
-                        <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} />
+                        <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} onImport={() => fileInputRef.current?.click()} />
                     )
                 ) : (
                     <div role="table" aria-label="Your scores" className="flex flex-col gap-4">
@@ -155,6 +211,7 @@ export default function ScoresPage() {
                                     key={score.id}
                                     score={score}
                                     onOpen={() => router.push(`/scores/${score.id}`)}
+                                    onDuplicate={() => handleDuplicate(score)}
                                     onDelete={() => setDeleteTarget(score)}
                                 />
                             ))}
@@ -172,9 +229,18 @@ export default function ScoresPage() {
                 }}
             />
 
-            {limitDialogOpen && (
-                <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />
+            {importedFile && (
+                <ImportScoreDialog
+                    imported={importedFile}
+                    onCancel={() => setImportedFile(null)}
+                    onCreate={(title, score) => {
+                        setImportedFile(null)
+                        createFromScore(title, score)
+                    }}
+                />
             )}
+
+            {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
 
             {deleteTarget && (
                 <DialogScrim onDismiss={() => setDeleteTarget(null)}>
@@ -208,7 +274,7 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
     )
 }
 
-function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
+function FirstScoreEmpty({ onCreate, onImport }: { onCreate: () => void; onImport: () => void }) {
     return (
         <div className="bg-surface-container-lowest rounded-md px-6 sm:px-8 py-8 sm:py-10 editorial-shadow flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-7">
             <svg viewBox="0 0 120 80" width="96" height="64" aria-hidden className="shrink-0">
@@ -221,17 +287,30 @@ function FirstScoreEmpty({ onCreate }: { onCreate: () => void }) {
             <div className="flex-1 flex flex-col gap-1.5 min-w-0">
                 <span className="font-body font-semibold text-[16px] leading-[1.3] text-on-surface">No scores yet.</span>
                 <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                    Compose your first one.
+                    Compose your first one, or bring in a MusicXML or MIDI file.
                 </span>
             </div>
-            <PrimaryButton icon="plus" onClick={onCreate}>
-                New score
-            </PrimaryButton>
+            <div className="flex items-center gap-4">
+                <TertiaryButton onClick={onImport}>Import a file</TertiaryButton>
+                <PrimaryButton icon="plus" onClick={onCreate}>
+                    New score
+                </PrimaryButton>
+            </div>
         </div>
     )
 }
 
-function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () => void; onDelete: () => void }) {
+function ScoreRow({
+    score,
+    onOpen,
+    onDuplicate,
+    onDelete,
+}: {
+    score: ScoreMeta
+    onOpen: () => void
+    onDuplicate: () => void
+    onDelete: () => void
+}) {
     return (
         <div
             role="row"
@@ -255,6 +334,14 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
                     ].join(' ')}>
                     {score.title}
+                    {score.shareToken && (
+                        <span
+                            className="inline-flex align-middle ml-2 text-on-surface-variant"
+                            title="Shared with a read-only link"
+                            aria-label="Shared with a read-only link">
+                            <Icon name="link" size={13} />
+                        </span>
+                    )}
                 </button>
                 <span className="md:hidden font-body font-normal text-[12px] leading-none text-on-surface-variant">
                     {relativeTime(score.updatedAt)}
@@ -273,6 +360,13 @@ function ScoreRow({ score, onOpen, onDelete }: { score: ScoreMeta; onOpen: () =>
                     size={32}
                     idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
                     onClick={onOpen}
+                />
+                <IconButton
+                    icon="copy"
+                    ariaLabel={`Duplicate ${score.title}`}
+                    size={32}
+                    idleClassName="bg-surface-container group-hover:bg-surface-container-lowest"
+                    onClick={onDuplicate}
                 />
                 <IconButton
                     icon="trash-2"

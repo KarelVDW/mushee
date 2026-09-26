@@ -28,14 +28,14 @@ export class ScoreDeserializer {
         const score = new Score(onChange)
         const scorePart = this.input.partList?.scoreParts?.[0]
         if (scorePart) {
+            // The instrument name is the identity: many instruments share one General MIDI program
+            // (bass clarinet and clarinet, French horn and horn in C), so resolving by program first
+            // would swap the instrument — and its transposition — on every reload. The program only
+            // decides for foreign files whose part name we don't know.
             const program = scorePart.midiInstrument?.midiProgram
             const instrumentName = scorePart.scoreInstrument?.instrumentName ?? scorePart.partName
-            const resolved =
-                program !== undefined
-                    ? Instrument.byGmProgram(program - 1)
-                    : instrumentName
-                      ? Instrument.byDisplayName(instrumentName)
-                      : Instrument.Piano
+            const named = instrumentName ? Instrument.findByDisplayName(instrumentName) : undefined
+            const resolved = named ?? (program !== undefined ? Instrument.byGmProgram(program - 1) : Instrument.Piano)
             score.seedInstrument(resolved)
         }
         const part = this.input.parts[0]

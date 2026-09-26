@@ -19,7 +19,10 @@ import { Pitch } from '../Pitch'
  *
  * The `fifthsOf` hook names the key governing each note, letting a caller audition a
  * candidate key signature without touching the score; {@link drawnCount} is that
- * audition's score (lower is better).
+ * audition's score (lower is better). An audition passes `basis: 'sounding'` so the walk
+ * ranks spellings on the notes' sounding pitch classes alone — the current spelling, which
+ * the pass itself is about to rewrite, must not tip a key choice, or a second pass could
+ * move a key signature again.
  */
 export class AccidentalMinimizer {
     /** Accidentals the walked notes draw under the chosen spellings. */
@@ -30,7 +33,12 @@ export class AccidentalMinimizer {
     /** Chosen spelling for every walked pitched note — tie continuations look their predecessor up here. */
     private readonly chosen = new Map<Note, Pitch>()
 
-    constructor(notes: Note[], targets: ReadonlySet<Note>, fifthsOf: (note: Note) => number) {
+    constructor(
+        notes: Note[],
+        targets: ReadonlySet<Note>,
+        fifthsOf: (note: Note) => number,
+        private readonly basis: 'spelling' | 'sounding' = 'spelling',
+    ) {
         let inEffect = new Map<string, number>() // "name+octave" → alteration sounding in the bar
         let measure: Measure | null = null
         let fifths: number | null = null
@@ -54,7 +62,11 @@ export class AccidentalMinimizer {
             for (const candidate of this.candidatesFor(note, pitch, targets)) {
                 const slot = candidate.name + candidate.octave
                 const prevailing = inEffect.get(slot) ?? KeySignature.alterInKey(noteFifths, candidate.name)
-                const keepsCurrent = candidate.name === pitch.name && candidate.alter === pitch.alter && candidate.octave === pitch.octave
+                const keepsCurrent =
+                    basis === 'spelling' &&
+                    candidate.name === pitch.name &&
+                    candidate.alter === pitch.alter &&
+                    candidate.octave === pitch.octave
                 const withKey = noteFifths >= 0 ? candidate.alter >= 0 : candidate.alter <= 0
                 const rank = [candidate.alter === prevailing ? 0 : 1, keepsCurrent ? 0 : 1, Math.abs(candidate.alter), withKey ? 0 : 1]
                 if (!best || AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
@@ -79,10 +91,17 @@ export class AccidentalMinimizer {
     private candidatesFor(note: Note, pitch: Pitch, targets: ReadonlySet<Note>): Pitch[] {
         if (!targets.has(note)) return [pitch]
         if (note.tiesBack) {
+            // A note ties back only behind a same-sounding partner (Score.tiePartner), so the
+            // continuation simply takes the predecessor's spelling.
             const previous = note.getPrevious()
-            // Guard the MIDI match: an imported tie between differently-sounding notes must not rewrite the pitch.
-            if (previous?.pitch && previous.pitch.toMidi() === pitch.toMidi()) {
-                return [this.chosen.get(previous) ?? previous.pitch]
+            /* v8 ignore next -- type narrowing only: tiesBack guarantees a pitched predecessor */
+            if (previous?.pitch) {
+                const forced = this.chosen.get(previous)
+                if (forced) return [forced]
+                // The predecessor lies outside the walk. A spelling respell honours what is written
+                // there; an audition on sound must not, or the previous region's rewrite would feed
+                // back into this one's key choice.
+                if (this.basis === 'spelling') return [previous.pitch]
             }
         }
         return Pitch.spellingsOf(pitch.toMidi())

@@ -2,10 +2,10 @@
 
 Two Playwright suites cover the web app:
 
-| Suite | Config | Backend | Command |
-| --- | --- | --- | --- |
-| **Mocked editor** | `playwright.config.ts` | None — API + auth are intercepted with `page.route` | `pnpm test:e2e` |
-| **Full-stack smoke** | `playwright.fullstack.config.ts` | Real `@mushee/api` + Postgres | `pnpm test:e2e:smoke` |
+| Suite                | Config                           | Backend                                             | Command               |
+| -------------------- | -------------------------------- | --------------------------------------------------- | --------------------- |
+| **Mocked editor**    | `playwright.config.ts`           | None — API + auth are intercepted with `page.route` | `pnpm test:e2e`       |
+| **Full-stack smoke** | `playwright.fullstack.config.ts` | Real `@mushee/api` + Postgres                       | `pnpm test:e2e:smoke` |
 
 > The e2e suites run on their own ports (web `3300`, api `4300`, postgres `5532`),
 > kept distinct from the main mushee dev stack (web `3200`, api `4200`, postgres
@@ -20,6 +20,16 @@ call. No database or API server is required.
 pnpm --filter @mushee/web exec playwright install chromium   # one-time
 pnpm --filter @mushee/web test:e2e
 ```
+
+Locally the suite runs against `next dev` (and reuses a 3300 server that is
+already up). **In CI it runs against a production build** (`next build && next
+start`): the dev server compiles each route on its first request, and on a
+2-core runner that left Linux WebKit still hydrating pages while tests were
+already typing into them. For the same reason every `page.goto` in
+`fixtures.ts` waits for the `data-hydrated` attribute that `<HydrationMarker />`
+(root layout) stamps on `<html>` once React has taken over — a fill into a
+server-rendered form before that moment is silently lost. CI keeps the trace of
+every failing attempt (`retain-on-failure`); locally only a failed retry is traced.
 
 What it covers:
 
@@ -66,9 +76,9 @@ app isn't reachable, so it's safe to run anywhere.
 
 1. Start the database on the e2e port (so it doesn't clash with the main dev db):
 
-   ```bash
-   docker run -d --name mushee-e2e-pg  -e POSTGRES_USER=mushee -e POSTGRES_PASSWORD=mushee -e POSTGRES_DB=mushee -p 5532:5432 postgres:17-alpine
-   ```
+    ```bash
+    docker run -d --name mushee-e2e-pg  -e POSTGRES_USER=mushee -e POSTGRES_PASSWORD=mushee -e POSTGRES_DB=mushee -p 5532:5432 postgres:17-alpine
+    ```
 
 2. Start the API on port 4300, pointed at that database. Pending TypeORM
    migrations run automatically on boot; `SEED_DEMO_DATA` provides the demo
@@ -76,27 +86,27 @@ app isn't reachable, so it's safe to run anywhere.
    trust that origin (both CORS **and** better-auth — without `TRUSTED_ORIGINS`
    the sign-in POST is rejected with 403 "Invalid origin"):
 
-   ```bash
-   cd apps/api && PORT=4300 POSTGRES_PORT=5532 SEED_DEMO_DATA=true \
-     CORS_ORIGIN=http://localhost:3300 TRUSTED_ORIGINS=http://localhost:3300 \
-     BETTER_AUTH_URL=http://localhost:4300 pnpm dev
-   ```
+    ```bash
+    cd apps/api && PORT=4300 POSTGRES_PORT=5532 SEED_DEMO_DATA=true \
+      CORS_ORIGIN=http://localhost:3300 TRUSTED_ORIGINS=http://localhost:3300 \
+      BETTER_AUTH_URL=http://localhost:4300 pnpm dev
+    ```
 
 3. Start the web app on port 3300, pointed at the API:
 
-   ```bash
-   cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:4300 next dev -p 3300
-   ```
+    ```bash
+    cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:4300 next dev -p 3300
+    ```
 
-   > Don't leave this server running when you go back to the mocked suite: it
-   > also uses port 3300 and will happily reuse a server that points at the
-   > real API instead of the mock origin — every mocked test then fails.
+    > Don't leave this server running when you go back to the mocked suite: it
+    > also uses port 3300 and will happily reuse a server that points at the
+    > real API instead of the mock origin — every mocked test then fails.
 
 4. Run the smoke:
 
-   ```bash
-   pnpm --filter @mushee/web test:e2e:smoke
-   ```
+    ```bash
+    pnpm --filter @mushee/web test:e2e:smoke
+    ```
 
 Always (when the app is up) it verifies the public login page serves and
 hydrates. The authed tests sign in through the real login form as the seeded

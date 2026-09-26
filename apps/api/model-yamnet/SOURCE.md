@@ -15,7 +15,7 @@
 
 Policy note: the classifier is used with its **stock published class scores only**
 (a fixed comparison of two class groups). No head is fitted on top — the project
-never trains model weights (see research-voice-transcription.md, policy note + D5).
+never trains model weights (see research/research-voice-transcription.md, policy note + D5).
 
 Do not edit these files by hand. Re-download from the Kaggle URL above and commit
 `model.json`, the four weight shards, the class map and this file together.

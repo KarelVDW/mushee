@@ -48,11 +48,7 @@ const PREVIEW_MAX_ZOOM = 1.2
 const PREVIEW_CROP_HEIGHT = 128
 
 // Key options mirror the key-signature picker: flats → C → sharps.
-const KEY_ROWS: number[][] = [
-    [-7, -6, -5, -4, -3, -2, -1],
-    [0],
-    [1, 2, 3, 4, 5, 6, 7],
-]
+const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
 interface TransposePopoverProps {
     score: Score
@@ -93,8 +89,9 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
     const hasSelection = selectedNotes.length > 1
     const effectiveScope = hasSelection && scope === 'selection' ? 'selection' : 'score'
     const currentFifths =
-        (effectiveScope === 'selection' && selectedNotes[0] ? selectedNotes[0].keySignature.fifths : score.firstMeasure?.keySignature.fifths) ??
-        0
+        (effectiveScope === 'selection' && selectedNotes[0]
+            ? selectedNotes[0].keySignature.fifths
+            : score.firstMeasure?.keySignature.fifths) ?? 0
 
     const interval = useMemo(() => {
         if (!advanced || tab === 'semitones') return Interval.fromSemitones(semitones)
@@ -216,7 +213,14 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                     </LabeledRow>
                     <div className="flex items-center justify-between gap-3">
                         <DirectionControl direction={direction} onChange={setDirection} />
-                        <NumberStepper ariaLabel="Extra octaves" value={octaves} min={0} max={MAX_EXTRA_OCTAVES} onChange={setOctaves} suffix="oct" />
+                        <NumberStepper
+                            ariaLabel="Extra octaves"
+                            value={octaves}
+                            min={0}
+                            max={MAX_EXTRA_OCTAVES}
+                            onChange={setOctaves}
+                            suffix="oct"
+                        />
                     </div>
                 </>
             )}
@@ -280,7 +284,9 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                 </div>
             )}
 
-            <div aria-hidden className="bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
+            <div
+                aria-hidden
+                className="bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
                 <div className="overflow-hidden" style={{ width: previewZoom.width, height: previewZoom.height }}>
                     <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
                         <ScoreView score={preview} layoutId={preview.layout.id} />

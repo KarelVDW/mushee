@@ -84,7 +84,10 @@ describe('note content round-trip', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            score.replace([m.notes[0]], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, accidental, octave: 4 }) })])
+            score.replace(
+                [m.notes[0]],
+                [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, accidental, octave: 4 }) })],
+            )
             const restored = roundTrip(score).firstMeasure
             if (!restored) throw new Error('expected restored firstMeasure')
             expect(restored.notes[0].pitch?.alter).toBe(alter)
@@ -104,7 +107,10 @@ describe('note content round-trip', () => {
         const score = makeScore(1)
         const m = score.firstMeasure
         if (!m) throw new Error('expected firstMeasure')
-        score.replace([m.notes[0]], [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 }) })])
+        score.replace(
+            [m.notes[0]],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 }) })],
+        )
         const entry = noteEntries(toInput(score))[0]
         expect(entry.pitch?.alter).toBe(1)
     })
@@ -350,6 +356,45 @@ describe('instrument serialization round-trip', () => {
         expect(restored.instrument).toBe(Instrument.Piano)
     })
 
+    it('keeps an instrument that shares its General MIDI program with another', () => {
+        // Bass clarinet, clarinet and alto clarinet all sit on GM program 72 with different transpositions;
+        // French horn and horn in C on 61. The stored name, not the program, must decide on reload.
+        for (const instrument of [Instrument.BassClarinet, Instrument.AltoClarinet, Instrument.FrenchHorn, Instrument.Violoncello]) {
+            const score = makeScore(1)
+            score.setInstrument(instrument)
+            expect(roundTrip(score).instrument).toBe(instrument)
+        }
+    })
+
+    it('falls back to the midi program for a part whose name is not one of ours', () => {
+        const score = makeScore(1)
+        score.setInstrument(Instrument.Trumpet)
+        const input = toInput(score)
+        input.partList.scoreParts[0].partName = 'Tromba in B♭'
+        input.partList.scoreParts[0].scoreInstrument = { id: 'P1-I1', instrumentName: 'Tromba in B♭' }
+        expect(new ScoreDeserializer(input).toScore().instrument).toBe(Instrument.Trumpet)
+    })
+
+    it('falls back to Piano for an unknown instrument name without a midi program', () => {
+        const score = makeScore(1)
+        const input = toInput(score)
+        delete input.partList.scoreParts[0].midiInstrument
+        input.partList.scoreParts[0].partName = 'Kazoo'
+        input.partList.scoreParts[0].scoreInstrument = { id: 'P1-I1', instrumentName: 'Kazoo' }
+        expect(new ScoreDeserializer(input).toScore().instrument).toBe(Instrument.Piano)
+    })
+
+    it('round-trips a mode-only key change (relative minor) and the bar that inherits it', () => {
+        const score = makeScore(2)
+        const first = score.measures[0]
+        first.addKeySignature(first.beatOffsetOf(first.notes[2]), 0, 'minor')
+        score.addMeasure() // inherits A minor from the change above
+        expect(score.measures[1].keySignature.mode).toBe('minor')
+        const restored = roundTrip(score)
+        expect(restored.measures[0].midMeasureKeySignatures.map((k) => [k.beatPosition, k.fifths, k.mode])).toEqual([[2, 0, 'minor']])
+        expect(restored.measures.map((m) => m.keySignature.mode)).toEqual([undefined, 'minor', 'minor'])
+    })
+
     it('resolves the instrument by partName when scoreInstrument is absent', () => {
         const score = makeScore(1)
         const input = toInput(score)
@@ -387,7 +432,14 @@ describe('edge cases', () => {
                         {
                             number: '1',
                             // Attributes only, no notes — the measure is created but addNotes is skipped.
-                            entries: [{ _type: 'attributes', divisions: 12, clef: [{ sign: 'F', line: 4 }], time: [{ beats: '4', beatType: '4' }] }],
+                            entries: [
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'F', line: 4 }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
+                            ],
                         },
                     ],
                 },
@@ -498,7 +550,12 @@ describe('edge cases', () => {
                             number: '1',
                             entries: [
                                 // 'percussion' has no entry in CLEF_DEFS, so resolution falls through to treble.
-                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'percussion', line: 3 }], time: [{ beats: '4', beatType: '4' }] },
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'percussion', line: 3 }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
                                 { _type: 'note', rest: {}, duration: 48, voice: '1', type: 'whole' },
                             ],
                         },
@@ -550,7 +607,12 @@ describe('edge cases', () => {
                             entries: [
                                 // 'percussion' is not in DEFAULT_CLEF_LINE and no line is given, so the
                                 // resolved line falls through to the absolute default (2), then to treble.
-                                { _type: 'attributes', divisions: 12, clef: [{ sign: 'percussion' }], time: [{ beats: '4', beatType: '4' }] },
+                                {
+                                    _type: 'attributes',
+                                    divisions: 12,
+                                    clef: [{ sign: 'percussion' }],
+                                    time: [{ beats: '4', beatType: '4' }],
+                                },
                                 { _type: 'note', rest: {}, duration: 48, voice: '1', type: 'whole' },
                             ],
                         },
@@ -658,7 +720,11 @@ describe('ScoreDeserializer.mxmlMeasureToNotes', () => {
 describe('full feature round-trip', () => {
     it('round-trips a score combining clef, key, time, tempo, tie, tuplet and barline changes', () => {
         const score = new Score()
-        const m0 = new Measure(score, 'bass', new TimeSignature(4, 4), { keyFifths: 2, leadingClefExplicit: true, leadingKeyExplicit: true })
+        const m0 = new Measure(score, 'bass', new TimeSignature(4, 4), {
+            keyFifths: 2,
+            leadingClefExplicit: true,
+            leadingKeyExplicit: true,
+        })
         m0.complete()
         score.addMeasure(undefined, m0)
         const m1 = new Measure(score, 'bass', new TimeSignature(3, 4), { keyFifths: 2 })

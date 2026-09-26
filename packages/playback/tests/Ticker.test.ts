@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
 import type { Tickable } from '@mushee/playback/Ticker'
 import { Ticker } from '@mushee/playback/Ticker'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /** A controllable Tickable: returns whatever `done` says and records reset/tick calls. */
 function makeTickable(done = false) {

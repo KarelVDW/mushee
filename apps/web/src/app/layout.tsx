@@ -4,6 +4,8 @@ import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google'
 
 import { AuthGate } from '@/components/AuthGate'
+import { HydrationMarker } from '@/components/HydrationMarker'
+import { SITE_URL } from '@/lib/siteUrl'
 
 import { Providers } from './providers'
 
@@ -28,13 +30,11 @@ const geistMono = Geist_Mono({
     subsets: ['latin'],
 })
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://solkey.io'
-
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
     title: {
-        default: 'Solkey — the fastest way to get a melody on the page',
-        template: '%s · Solkey',
+        default: 'Solkey',
+        template: '%s — Solkey',
     },
     description:
         'Solkey turns what you play or sing into sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
@@ -79,6 +79,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+                <HydrationMarker />
                 <Providers>
                     <AuthGate>{children}</AuthGate>
                 </Providers>

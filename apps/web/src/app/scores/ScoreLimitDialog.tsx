@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
-import { PLAN_TIERS,planById } from '@/lib/plans'
+import { PLAN_TIERS, planById } from '@/lib/plans'
 import { useBillingState, usePlans } from '@/lib/queries'
 
 function useEscape(onClose: () => void) {

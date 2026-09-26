@@ -20,6 +20,16 @@ RUN pnpm install --frozen-lockfile --filter @mushee/api...
 COPY packages/inference-proto packages/inference-proto
 COPY apps/api apps/api
 RUN pnpm --filter @mushee/api build
+# Assemble the runtime tree with `pnpm deploy`: the API's own files (dist, the
+# model dirs, package.json) plus a node_modules holding ONLY its production
+# dependencies — workspace packages (@mushee/inference-proto and its .proto)
+# copied in, not linked. Copying /repo wholesale instead shipped the whole
+# workspace's virtual store: Next.js, its SWC binaries and other web-only
+# packages (~400 MB), TypeScript, vitest, the Nest CLI, plus the TypeScript
+# sources — none of which the API runs. (`pnpm prune --prod` is not a fix: on a
+# filtered workspace install it emptied apps/api/node_modules — 2026-09-05.)
+RUN rm -rf apps/api/src \
+    && pnpm --filter @mushee/api deploy --prod /deploy
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
@@ -28,11 +38,10 @@ ENV NODE_ENV=production
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-WORKDIR /repo/apps/api
-# pnpm's node_modules is a symlink farm into /repo/node_modules/.pnpm; copying the
-# whole tree at the same path keeps every link (incl. @mushee/inference-proto,
-# whose inference.proto is resolved at runtime) valid.
-COPY --from=build /repo /repo
+WORKDIR /app
+# Model dirs and storage default to paths relative to the working directory
+# (see recordings.service.ts / storage.service.ts), so the app runs from its own root.
+COPY --from=build /deploy /app
 # Run as the image's unprivileged user: the API shells out to ffmpeg on
 # untrusted audio, so a decoder exploit must not land as root.
 USER node

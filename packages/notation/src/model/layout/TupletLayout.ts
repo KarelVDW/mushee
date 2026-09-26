@@ -1,5 +1,5 @@
-import { getGlyphWidth } from '../../components'
 import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../components/constants'
+import { getGlyphWidth } from '../../components/glyphUtils'
 import type { LayoutGlyph } from '../../components/types'
 import type { Note } from '../Note'
 import type { Tuplet } from '../Tuplet'

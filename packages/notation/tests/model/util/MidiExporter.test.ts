@@ -68,7 +68,8 @@ describe('MidiExporter', () => {
         const score = makeScore(1)
         const measure = score.firstMeasure
         if (!measure) throw new Error('expected first measure')
-        const quarter = (tie: 'start' | 'stop') => new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie })
+        const quarter = (tie: 'start' | 'stop') =>
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie })
         score.replace([measure.notes[0]], [quarter('start')])
         score.replace([measure.notes[1]], [quarter('stop')])
         const bytes = new MidiExporter(score).toBytes()

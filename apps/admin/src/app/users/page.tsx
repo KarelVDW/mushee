@@ -74,7 +74,9 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-4 py-3 font-body text-[13px] text-on-surface">{user.tierName}</td>
                                     <td className="px-4 py-3 font-mono text-[13px] text-on-surface-variant">{user.scoreCount}</td>
-                                    <td className="px-4 py-3 font-body text-[13px] text-on-surface-variant">{formatDate(user.createdAt)}</td>
+                                    <td className="px-4 py-3 font-body text-[13px] text-on-surface-variant">
+                                        {formatDate(user.createdAt)}
+                                    </td>
                                     <td className="px-4 py-3 font-body text-[13px] text-on-surface-variant">
                                         {formatDate(user.lastActiveAt)}
                                     </td>

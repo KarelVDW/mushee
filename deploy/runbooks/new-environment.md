@@ -6,14 +6,14 @@ that can't touch production data, reachable at `uat.solkey.io` /
 
 ## 0. Decide the isolation level first
 
-| Layer | Cheap & sane (recommended) | Full isolation (when compliance/load-testing demands it) |
-|---|---|---|
-| GCP project | same `sheemu-prod` | second project (repeat the whole provisioning runbook) |
-| Cluster | same `mushee-prod`, new **namespace** `mushee-uat` | second Autopilot cluster |
-| Database | same Cloud SQL instance, new **database** `mushee_uat` + own user | second (smaller) instance |
-| Bucket | new bucket `solkey-uat-storage` (always separate — GDPR deletion tests run here) | same |
-| Images | **same images, same registry** — promote the exact SHA you tested | same |
-| Web | same Vercel project, **Preview** environment on a branch, or a second project | second project |
+| Layer       | Cheap & sane (recommended)                                                       | Full isolation (when compliance/load-testing demands it) |
+| ----------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| GCP project | same `sheemu-prod`                                                               | second project (repeat the whole provisioning runbook)   |
+| Cluster     | same `mushee-prod`, new **namespace** `mushee-uat`                               | second Autopilot cluster                                 |
+| Database    | same Cloud SQL instance, new **database** `mushee_uat` + own user                | second (smaller) instance                                |
+| Bucket      | new bucket `solkey-uat-storage` (always separate — GDPR deletion tests run here) | same                                                     |
+| Images      | **same images, same registry** — promote the exact SHA you tested                | same                                                     |
+| Web         | same Vercel project, **Preview** environment on a branch, or a second project    | second project                                           |
 
 The recommended column costs almost nothing extra (Autopilot bills per pod;
 one API replica + downsized inference ≈ a few tens of €/month) and keeps one
@@ -23,7 +23,7 @@ connections; `db-custom-1-3840` allows ~100. Prod (2–6 replicas) + uat
 (1 replica) fits. Set `POSTGRES_POOL_SIZE=5` in uat to be polite.
 
 **Cookie-domain rule (the classic cross-env bug):** uat must use
-`COOKIE_DOMAIN=.uat.solkey.io`, *never* `.solkey.io` — a `.solkey.io`
+`COOKIE_DOMAIN=.uat.solkey.io`, _never_ `.solkey.io` — a `.solkey.io`
 cookie from uat would shadow the production session cookie in any browser
 that visits both. `uat.solkey.io` + `api.uat.solkey.io` share the
 `.uat.solkey.io` parent, so login works.
@@ -59,7 +59,7 @@ gcloud iam service-accounts add-iam-policy-binding \
   --member="serviceAccount:sheemu-prod.svc.id.goog[mushee-uat/api]"
 ```
 
-(Sharing the GSA means uat *could* write to the prod bucket if the code had a
+(Sharing the GSA means uat _could_ write to the prod bucket if the code had a
 bug pointing at it. If that bothers you, mint `mushee-api-uat@` instead and
 grant it only the uat bucket — one extra `iam service-accounts create` plus
 using that email in the uat ServiceAccount annotation.)
@@ -85,21 +85,21 @@ Then edit `deploy/k8s/overlays/uat/`:
   namespaced — but the static-ip annotation **must** differ or the two
   ingresses fight over one IP.
 - `api-patch.yaml` — the environment's identity, all in one reviewable place:
-  ```yaml
-  - { name: BETTER_AUTH_URL, value: 'https://api.uat.solkey.io' }
-  - { name: WEB_APP_URL,     value: 'https://uat.solkey.io' }
-  - { name: CORS_ORIGIN,     value: 'https://uat.solkey.io' }
-  - { name: TRUSTED_ORIGINS, value: 'https://uat.solkey.io' }
-  - { name: COOKIE_DOMAIN,   value: '.uat.solkey.io' }
-  - { name: STORAGE_DRIVER,  value: 'gcs' }
-  - { name: GCS_BUCKET,      value: 'solkey-uat-storage' }
-  - { name: POSTGRES_SSL,    value: 'require' }
-  - { name: POSTGRES_POOL_SIZE, value: '5' }
-  - { name: BETA_MODE,       value: 'true' }   # or false — uat's call
-  ```
-  Also worth adding in uat: patch `replicas: 1` for api and crepe-inference,
-  and drop the HPA min-replicas (a small `patches:` entry), otherwise uat
-  costs as much as prod.
+    ```yaml
+    - { name: BETTER_AUTH_URL, value: 'https://api.uat.solkey.io' }
+    - { name: WEB_APP_URL, value: 'https://uat.solkey.io' }
+    - { name: CORS_ORIGIN, value: 'https://uat.solkey.io' }
+    - { name: TRUSTED_ORIGINS, value: 'https://uat.solkey.io' }
+    - { name: COOKIE_DOMAIN, value: '.uat.solkey.io' }
+    - { name: STORAGE_DRIVER, value: 'gcs' }
+    - { name: GCS_BUCKET, value: 'solkey-uat-storage' }
+    - { name: POSTGRES_SSL, value: 'require' }
+    - { name: POSTGRES_POOL_SIZE, value: '5' }
+    - { name: BETA_MODE, value: 'true' } # or false — uat's call
+    ```
+    Also worth adding in uat: patch `replicas: 1` for api and crepe-inference,
+    and drop the HPA min-replicas (a small `patches:` entry), otherwise uat
+    costs as much as prod.
 
 Sanity-check locally: `kubectl kustomize deploy/k8s/overlays/uat | less` —
 grep that **every** occurrence of `solkey.io` is the uat variant and the
@@ -152,7 +152,7 @@ Preview-environment variables.
    right, and unset is exactly how the code degrades).
 3. Push the branch → Vercel builds → `uat.solkey.io` serves it.
 
-Caveat: Preview-scoped vars apply to *all* preview deployments, i.e. every PR
+Caveat: Preview-scoped vars apply to _all_ preview deployments, i.e. every PR
 preview will also point at the uat API. For this project that's a feature
 (PR previews get a real but non-prod backend). If it ever isn't, split into a
 second Vercel project instead.

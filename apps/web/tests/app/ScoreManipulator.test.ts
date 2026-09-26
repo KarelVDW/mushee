@@ -201,6 +201,100 @@ describe('ScoreManipulator remove-note measure reset', () => {
     })
 })
 
+describe('ScoreManipulator delete selection', () => {
+    /** A score of `count` all-rest measures (four quarter rests each), attached to a manipulator. */
+    function setupRests(count: number): ScoreManipulator {
+        const manipulator = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-shortcuts', isMac: false }))
+        manipulator.attach(makeScore(count), () => undefined)
+        return manipulator
+    }
+
+    it('clears pitches (never removes measures) when the selection holds a pitched note', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[3]) // the whole (only) measure, pitched
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toHaveLength(1)
+        expect(allNotes(manipulator).every((n) => n.isRest)).toBe(true)
+    })
+
+    it('removes a measure covered whole by an all-rest selection and lands on what took its place', () => {
+        const manipulator = setupRests(3)
+        const [m0, m1, m2] = manipulator.score?.measures ?? []
+        manipulator.select(m1.notes[0])
+        manipulator.extendSelectionTo(m1.notes[3])
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toEqual([m0, m2])
+        expect(manipulator.selectedNote).toBe(m2.notes[0])
+        expect(manipulator.selectedNotes).toEqual([m2.notes[0]])
+    })
+
+    it('lands on the final note when the removed measures were the tail', () => {
+        const manipulator = setupRests(3)
+        const [m0, m1, m2] = manipulator.score?.measures ?? []
+        manipulator.select(m1.notes[0])
+        manipulator.extendSelectionTo(m2.notes[3])
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toEqual([m0])
+        expect(manipulator.selectedNote).toBe(m0.notes[3])
+    })
+
+    it('removes only the whole measures and keeps the partially selected rests selected', () => {
+        const manipulator = setupRests(3)
+        const [m0, m1, m2] = manipulator.score?.measures ?? []
+        manipulator.select(m0.notes[2])
+        manipulator.extendSelectionTo(m1.notes[3]) // last two rests of m0 + all of m1
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toEqual([m0, m2])
+        // The partial rests go through the regular remove path (the measure stays four quarter rests).
+        expect(m0.notes.map((n) => n.duration.type)).toEqual(['q', 'q', 'q', 'q'])
+        expect(manipulator.selectedNotes).toEqual(m0.notes.slice(2))
+    })
+
+    it('keeps one measure when the whole score is selected', () => {
+        const manipulator = setupRests(3)
+        const [m0] = manipulator.score?.measures ?? []
+        manipulator.selectAll()
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toEqual([m0])
+        // The surviving measure's rests go through the regular remove path and stay selected.
+        expect(manipulator.selectedNotes).toEqual(m0.notes)
+    })
+
+    it('behaves like remove-note when the rest selection covers no whole measure', () => {
+        const manipulator = setupRests(2)
+        const [m0, m1] = manipulator.score?.measures ?? []
+        manipulator.select(m0.notes[1])
+        manipulator.extendSelectionTo(m1.notes[2])
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toEqual([m0, m1])
+        expect(manipulator.selectedNotes).toEqual([...m0.notes.slice(1), ...m1.notes.slice(0, 3)])
+    })
+
+    it('registers the removal as a single undoable step', () => {
+        const manipulator = setupRests(3)
+        const [, m1] = manipulator.score?.measures ?? []
+        manipulator.select(m1.notes[0])
+        manipulator.extendSelectionTo(m1.notes[3])
+        manipulator.deleteSelection()
+        expect(manipulator.score?.measures).toHaveLength(2)
+        expect(manipulator.undo()).toBe(true)
+        expect(manipulator.score?.measures).toHaveLength(3)
+        expect(manipulator.canUndo).toBe(false)
+    })
+
+    it('is what Backspace and the remove-note command run', () => {
+        const manipulator = setupRests(2)
+        const [m0, m1] = manipulator.score?.measures ?? []
+        manipulator.select(m1.notes[0])
+        manipulator.extendSelectionTo(m1.notes[3])
+        const event = new KeyboardEvent('keydown', { cancelable: true, code: 'Backspace', key: 'Backspace' })
+        manipulator.handleKeyDown(event)
+        expect(event.defaultPrevented).toBe(true)
+        expect(manipulator.score?.measures).toEqual([m0])
+    })
+})
+
 describe('ScoreManipulator clipboard', () => {
     const pitchNames = (notes: Note[]): Array<string | undefined> => notes.map((n) => n.pitch?.name)
 
@@ -264,7 +358,11 @@ describe('ScoreManipulator clipboard', () => {
         manipulator.extendSelectionTo(notes[1]) // cut C5 D5
         manipulator.cut()
 
-        expect(allNotes(manipulator).slice(0, 2).every((n) => n.isRest)).toBe(true)
+        expect(
+            allNotes(manipulator)
+                .slice(0, 2)
+                .every((n) => n.isRest),
+        ).toBe(true)
         expect(manipulator.canPaste).toBe(true)
 
         manipulator.select(allNotes(manipulator)[2]) // paste onto E5 → overwrites E5 F5
@@ -388,7 +486,9 @@ describe('ScoreManipulator in-score attribute setters', () => {
 describe('ScoreManipulator pitch operations (transpose / minimize accidentals)', () => {
     const spellings = (manipulator: ScoreManipulator): string[] =>
         allNotes(manipulator).map((n) =>
-            n.pitch ? `${n.pitch.name}${n.pitch.alter > 0 ? '#'.repeat(n.pitch.alter) : 'b'.repeat(-n.pitch.alter)}${n.pitch.octave}` : 'rest',
+            n.pitch
+                ? `${n.pitch.name}${n.pitch.alter > 0 ? '#'.repeat(n.pitch.alter) : 'b'.repeat(-n.pitch.alter)}${n.pitch.octave}`
+                : 'rest',
         )
 
     it('transposes the whole score (keys included) and re-anchors the active note by position', () => {
@@ -441,9 +541,10 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         const score = manipulator.score
         if (!score?.firstMeasure) throw new Error('expected a score')
         score.setKeySignature(score.firstMeasure.firstNote, -1) // F major
-        score.replace([score.firstMeasure.notes[0]], [
-            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'A', octave: 4, alter: 1 }) }),
-        ])
+        score.replace(
+            [score.firstMeasure.notes[0]],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'A', octave: 4, alter: 1 }) })],
+        )
         const notes = allNotes(manipulator)
         manipulator.select(notes[0])
         manipulator.extendSelectionTo(notes[1])

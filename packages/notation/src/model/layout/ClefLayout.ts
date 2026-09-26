@@ -1,5 +1,6 @@
-import { getGlyphWidth, getYForLine } from '../../components'
 import { CLEF_CONFIG, clefOctaveMarker, NUM_STAFF_LINES } from '../../components/constants'
+import { getGlyphWidth } from '../../components/glyphUtils'
+import { getYForLine } from '../../components/noteUtils'
 import { Clef } from '../Clef'
 
 export class ClefLayout {

@@ -1,6 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata } from 'next'
 
-import { PublicPageShell } from '@/components/PublicPageShell';
+import { PublicPageShell } from '@/components/PublicPageShell'
 
 export const metadata: Metadata = {
     title: 'Contact',
@@ -8,9 +8,12 @@ export const metadata: Metadata = {
     alternates: { canonical: '/contact' },
 }
 
-
 const CHANNELS: { label: string; email: string; blurb: string }[] = [
-    { label: 'Support', email: 'support@solkey.io', blurb: 'Something broken, confusing, or missing? We usually reply within one business day.' },
+    {
+        label: 'Support',
+        email: 'support@solkey.io',
+        blurb: 'Something broken, confusing, or missing? We usually reply within one business day.',
+    },
     { label: 'Hello', email: 'hello@solkey.io', blurb: 'Feedback, ideas, partnerships, press — or just to tell us what you wrote today.' },
     { label: 'Privacy', email: 'privacy@solkey.io', blurb: 'Anything about your personal data or GDPR requests.' },
     { label: 'Legal', email: 'legal@solkey.io', blurb: 'Terms, licensing, and other formal matters.' },
@@ -25,7 +28,9 @@ export default function ContactPage() {
                         <span className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
                             {c.label}
                         </span>
-                        <a href={`mailto:${c.email}`} className="font-headline font-semibold text-[18px] leading-[1.2] text-primary no-underline">
+                        <a
+                            href={`mailto:${c.email}`}
+                            className="font-headline font-semibold text-[18px] leading-[1.2] text-primary no-underline">
                             {c.email}
                         </a>
                         <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">{c.blurb}</p>

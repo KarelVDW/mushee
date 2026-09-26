@@ -6,9 +6,16 @@ into two layers with a deliberate boundary between them.
 ## Root: NestJS transport + persistence
 
 - `recordings.gateway.ts` — WebSocket gateway that receives audio chunks and
-  streams score updates back to the client.
+  streams score updates back to the client. Frames to the client:
+  `score-update`, `recording-source`, `recording-health` (transcription
+  down/back — the session stops metering credits while it is down),
+  `recording-limit`, `recording-capped`, `recording-error`, `recording-complete`.
+- `recordings.controller.ts` — the owner's takes over HTTP: list per score,
+  replay the archived audio (signed URL or stream), delete one (audio first,
+  then the row).
 - `recordings.service.ts` — wires sessions together: resolves a pipeline
-  profile, builds the pipeline, and enforces credits and locks.
+  profile, builds the pipeline, and enforces credits and locks; also the takes
+  queries behind the controller.
 - `recording-credits.service.ts` / `recording-locks.service.ts` — daily credit
   accounting (per subscription tier) and the one-recording-per-user lock.
 - `recording-session.ts` — bridges one live session to the pipeline and
@@ -29,5 +36,11 @@ note extraction / onset detection → MusicXML measures.
 - `profiles/` — register-based pipeline configuration (provider choice,
   frequency windows, instrument ranges) resolved per recording.
 
+The adaptive profile (band, provider, gates, voice routing) is locked from the
+first ≥1.2 s of _pitched_ audio — a silent or spoken lead-in defers the lock (up
+to `RECORDING_DETECT_MAX_WAIT_SEC`, 8 s) and a take that still locked the blind
+fallback is re-resolved over the whole take on the final pass.
+
 The pipeline is tuned and regression-gated by the eval harness in
-`scripts/eval` (see `scripts/eval/README.md`), which imports it directly.
+`scripts/eval` (see `scripts/eval/README.md`; the product benchmark and its
+committed results live in `scripts/eval/benchmarks/`), which imports it directly.

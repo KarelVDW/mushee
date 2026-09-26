@@ -40,9 +40,7 @@ describe('buildPianoRoll', () => {
     })
 
     it('respects a divisions change from attributes', () => {
-        const roll = buildPianoRoll(
-            doc([[{ _type: 'attributes', divisions: 480 }, note('C', 4, 480), note('D', 4, 240)]]),
-        )
+        const roll = buildPianoRoll(doc([[{ _type: 'attributes', divisions: 480 }, note('C', 4, 480), note('D', 4, 240)]]))
         expect(roll.notes).toEqual([
             { start: 0, duration: 1, midi: 60, partIndex: 0 },
             { start: 1, duration: 0.5, midi: 62, partIndex: 0 },
@@ -51,10 +49,7 @@ describe('buildPianoRoll', () => {
 
     it('merges tie-stop notes into the started note', () => {
         const roll = buildPianoRoll(
-            doc([
-                [note('A', 4, 48, { tie: [{ type: 'start' }] })],
-                [note('A', 4, 24, { tie: [{ type: 'stop' }] }), note('B', 4, 24)],
-            ]),
+            doc([[note('A', 4, 48, { tie: [{ type: 'start' }] })], [note('A', 4, 24, { tie: [{ type: 'stop' }] }), note('B', 4, 24)]]),
         )
         expect(roll.notes).toEqual([
             { start: 0, duration: 6, midi: 69, partIndex: 0 },

@@ -12,9 +12,7 @@ import { Component, type ReactNode } from 'react'
 export function ScoreView({ score }: { score: Score }) {
     return (
         <RenderBoundary
-            fallback={
-                <p className="font-body text-[13px] text-on-surface-variant m-0">The notation renderer failed on this score.</p>
-            }>
+            fallback={<p className="font-body text-[13px] text-on-surface-variant m-0">The notation renderer failed on this score.</p>}>
             <div className="bg-white rounded-md p-4 overflow-x-auto">
                 <NotationScore score={score} layoutId={score.layout.id} />
             </div>

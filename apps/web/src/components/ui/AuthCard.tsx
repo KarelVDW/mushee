@@ -20,6 +20,10 @@ interface AuthCardProps {
     password: string
     showPassword: boolean
     loading?: boolean
+    /** Blocks submission for a reason other than loading (e.g. a CAPTCHA still to be solved). */
+    submitDisabled?: boolean
+    /** Rendered between the fields and the submit button (the signup CAPTCHA). */
+    beforeSubmit?: ReactNode
     error?: string | null
     onNameChange?: (v: string) => void
     onEmailChange: (v: string) => void
@@ -79,6 +83,8 @@ function FormPanel({
     password,
     showPassword,
     loading,
+    submitDisabled,
+    beforeSubmit,
     error,
     onNameChange,
     onEmailChange,
@@ -111,7 +117,8 @@ function FormPanel({
                                 <button
                                     type="button"
                                     onClick={onToggleShowPassword}
-                                    aria-label="Toggle password visibility"
+                                    aria-label="Show password"
+                                    aria-pressed={showPassword}
                                     className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
                                     <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
                                 </button>
@@ -128,7 +135,8 @@ function FormPanel({
                     </div>
 
                     <div className="flex flex-col gap-3.5 pt-2">
-                        <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading}>
+                        {beforeSubmit}
+                        <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
                             {loading ? (isSignup ? 'Creating account…' : 'Signing in…') : isSignup ? 'Create account' : 'Sign in'}
                         </PrimaryButton>
                         <SwitchModeRow mode={mode} />
@@ -152,9 +160,12 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
     return (
         <Link
             href={href}
+            aria-current={active ? 'page' : undefined}
             className={[
                 'no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap',
-                active ? 'text-on-surface border-b-[3px] border-primary-container' : 'text-on-surface-variant border-b-[3px] border-transparent',
+                active
+                    ? 'text-on-surface border-b-[3px] border-primary-container'
+                    : 'text-on-surface-variant border-b-[3px] border-transparent',
             ].join(' ')}>
             {label}
         </Link>

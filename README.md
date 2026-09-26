@@ -2,15 +2,15 @@
 
 Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 
-| Path | What it is |
-|---|---|
-| `apps/web` | Next.js app (editor UI), dev on **:3200** |
-| `apps/admin` | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500** |
-| `apps/api` | NestJS API + WebSocket recording pipeline, dev on **:4200** |
-| `apps/inference-crepe` | Python gRPC service: CREPE forward pass (**:50051**) |
-| `packages/notation` | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
-| `packages/inference-proto` | Shared gRPC contract for the inference service |
-| `deploy/k8s` | Kustomize manifests: `base/` (production-shaped) + `overlays/local/` |
+| Path                       | What it is                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                          |
+| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                  |
+| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                        |
+| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                               |
+| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
+| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                     |
+| `deploy/k8s`               | Kustomize manifests: `base/` (production-shaped) + `overlays/local/`                                               |
 
 The API owns everything about transcription except the neural-net forward pass,
 which runs behind a `ModelBackend` seam: **in-process TF.js** by default (dev,
@@ -19,6 +19,28 @@ the API stateless and light — scale it and the inference service independently
 (One model serves everything: the octave-down CREPE wrapper covers the register
 basic-pitch used to; that provider and its service were removed 2026-08-22 —
 see the eval README's provider-consolidation logs.)
+
+## What Solkey does
+
+Solkey (this repo's product name; the code is still "Mushee") turns a
+performance into editable sheet music:
+
+- **Live audio-to-notation** — sing, whistle or play into the microphone and
+  notes appear on the staff as you go; the API streams audio over a WebSocket
+  through a CREPE-based pitch pipeline that adapts to the instrument's register.
+- **Editor** — a full notation editor on top of that: note entry, selection,
+  undo/redo, transposition with minimal accidentals, metronome and playback,
+  laid out by the engine in `packages/notation` and usable on phones too.
+- **Import / export** — import MusicXML (`.xml`/`.mxl`) and MIDI files; export
+  scores as MusicXML, PDF or MIDI, and download a full account export.
+- **Share links** — publish a read-only link to a score (`/s/<token>`) that
+  anyone can open without an account; revoke it any time.
+- **Takes** — every recording is kept as a take with its archived audio, so you
+  can replay it and compare takes recorded into the same score.
+- **Pricing** — a free Sketch tier with a small daily recording budget, paid
+  Songwriter / Studio / Arranger subscriptions with larger budgets, and
+  non-expiring minute packs on top; tiers are DB-driven (`GET /plans`), see
+  `apps/web/src/app/pricing` and the [Billing](#billing-polar) section.
 
 ## Local development
 
@@ -52,12 +74,12 @@ project on `admin.solkey.io` — see `deploy/k8s/overlays/production/README.md`.
 Seeded by `pnpm setup` / `pnpm db:reset` / `pnpm db:seed` (or any environment
 booted with `SEED_DEMO_DATA=true`). Password for all: **`mushee-demo`**.
 
-| Email | Tier | Daily recording |
-|---|---|---|
-| `demo@mushee.local` | Studio | **unlimited** — the main demo account |
-| `free@mushee.local` | Sketch (free) | 30 s |
-| `pro@mushee.local` | Composer (pro) | 10 min |
-| `studio@mushee.local` | Studio | unlimited |
+| Email                 | Tier           | Daily recording                       |
+| --------------------- | -------------- | ------------------------------------- |
+| `demo@mushee.local`   | Studio         | **unlimited** — the main demo account |
+| `free@mushee.local`   | Sketch (free)  | 30 s                                  |
+| `pro@mushee.local`    | Composer (pro) | 10 min                                |
+| `studio@mushee.local` | Studio         | unlimited                             |
 
 ### Database scripts
 
@@ -127,7 +149,10 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   vars, Polar vars (`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`,
   `POLAR_SERVER`, `POLAR_PRODUCT_*`), beta switches (`BETA_MODE`,
   `ADMIN_EMAILS`), admin console vars (`ADMIN_SECRET`, `ADMIN_APP_URL` —
-  without the secret the `/admin` endpoints answer 503),
+  without the secret the `/admin` endpoints answer 503), the signup CAPTCHA
+  secret (`TURNSTILE_SECRET_KEY`; unset = no CAPTCHA, production warns),
+  error tracking (`POSTHOG_API_KEY`, optional `POSTHOG_HOST`; unset = errors
+  only logged),
   and blob storage vars: `STORAGE_DRIVER=gcs` + `GCS_BUCKET`
   (auth via workload identity / `GOOGLE_APPLICATION_CREDENTIALS`; optional
   `GCS_PROJECT_ID`) for score MusicXML and recording archives —
@@ -144,7 +169,7 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   better-auth, and the seeder alike.
 - **Backups**: the database is the only stateful component besides blob
   storage. Enable your managed Postgres provider's automated backups /
-  point-in-time recovery *and test a restore once* before launch; enable
+  point-in-time recovery _and test a restore once_ before launch; enable
   object versioning (or replication) on the GCS bucket holding MusicXML and
   recording archives. Nothing in this repo does this for you.
 - A metrics-server, so the HPAs scale the inference services on CPU (Docker
@@ -199,6 +224,10 @@ default EU cloud) on the web build to enable product analytics, session
 replay, and error tracking. Everything is gated behind the GDPR cookie
 banner: nothing is captured until the visitor opts in, and events are proxied
 through `/ingest` to dodge ad blockers. Unset = analytics fully off.
+
+The API reports its own unexpected errors (5xx, crashes) into the same
+project when `POSTHOG_API_KEY` is set (`apps/api/src/telemetry/`), so one
+Error-tracking view shows both halves of an incident.
 
 ## Closed beta
 

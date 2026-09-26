@@ -4,10 +4,9 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { pitched, rest } from '@mushee/notation/testing'
-import { describe, expect, it } from 'vitest'
-
 import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
+import { describe, expect, it } from 'vitest'
 
 /** Minimal MidiPlayer stand-in: a settable clock plus a recording `schedule`. */
 function fakePlayer() {
@@ -214,21 +213,24 @@ describe('ScoreScheduler', () => {
         expect(scheduled[0].duration).toBeCloseTo(60 / 90, 5)
     })
 
-    it('does not re-strike a tie-stop note (tiesBack skips midi)', () => {
+    it('does not re-strike a tie-stop note whose predecessor ties in, but strikes a stop with no tie behind it', () => {
         const { player, scheduled, raw } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
         const score = new Score()
         const m = score.addMeasure(0)
+        const start = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
         const stop = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'stop' })
-        m.addNotes([stop])
+        // A stray 'stop' after a different pitch is not a continuation of anything: it must sound.
+        const stray = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'E', octave: 4 }), tie: 'stop' })
+        m.addNotes([start, stop, stray])
         scheduler.score = score
         scheduler.reset()
 
         raw.currentTime = 100
         scheduler.tick()
-        expect(scheduled).toHaveLength(0)
-        // Still recorded in the timeline so the cursor advances over it.
-        expect(scheduler.entries).toHaveLength(1)
+        expect(scheduled.map((s) => s.midi)).toEqual([60, 64]) // C once (held through its tie), then E
+        // Every note is in the timeline so the cursor advances over it.
+        expect(scheduler.entries).toHaveLength(3)
     })
 
     it('advances measureIdx when the current measure is exhausted, and finishes', () => {

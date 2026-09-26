@@ -88,8 +88,8 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                         <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
                             Thanks for being here. Changed your mind? Sign back in with{' '}
                             <strong className="text-on-surface">{email ?? 'your email'}</strong> before{' '}
-                            <strong className="text-on-surface">{formatPurgeDate(deletion.data?.purgeAfter)}</strong> and
-                            everything will be right where you left it.
+                            <strong className="text-on-surface">{formatPurgeDate(deletion.data?.purgeAfter)}</strong> and everything will be
+                            right where you left it.
                         </span>
                     </div>
                 ) : (
@@ -120,8 +120,8 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                                 className="mt-0.75 accent-error"
                             />
                             <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                                I understand that after the 7-day grace period this can&apos;t be undone, and that exporting my
-                                scores first is recommended.
+                                I understand that after the 7-day grace period this can&apos;t be undone, and that exporting my scores first
+                                is recommended.
                             </span>
                         </label>
                     </div>

@@ -82,6 +82,12 @@ export class Duration {
         }
     }
 
+    /** Plain-language name, as read aloud: "quarter", "dotted quarter", "eighth". */
+    get name(): string {
+        const base = { w: 'whole', h: 'half', q: 'quarter', '8': 'eighth', '16': '16th' }[this.type]
+        return this.dots > 0 ? `dotted ${base}` : base
+    }
+
     get noteheadGlyph(): string {
         switch (this.type) {
             case 'w':

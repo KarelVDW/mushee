@@ -6,14 +6,14 @@ or after offboarding anyone who ever had access.
 
 ## 1. Know what exists — the full credential inventory
 
-| Credential | Lives in | Rotating it breaks… | Downtime if done right |
-|---|---|---|---|
-| Cloud SQL password (user `mushee`) | Cloud SQL + `POSTGRES_URL` in `Secret/api-secrets` | new DB connections until secret + pods updated | none |
-| `BETTER_AUTH_SECRET` | `Secret/api-secrets` only | **every user session — everyone is logged out** | none technically; all users re-login |
-| `SENDGRID_API_KEY` | SendGrid dashboard + `Secret/api-secrets` | outgoing mail (OTP, waitlist, approval) | none if old key revoked *after* verification |
-| `POLAR_ACCESS_TOKEN` / `POLAR_WEBHOOK_SECRET` (once billing is live) | Polar dashboard + `Secret/api-secrets` | checkout/portal calls; webhook verification | none if rotated pairwise (see §6) |
-| PostHog project key (`NEXT_PUBLIC_POSTHOG_KEY`) | Vercel env (build-time) | analytics only | n/a — public by design, rotation rarely needed |
-| Google Workspace / SendGrid / Polar / Vercel / GitHub / GCP **account passwords + 2FA** | the respective services | nothing in prod | n/a |
+| Credential                                                                              | Lives in                                           | Rotating it breaks…                             | Downtime if done right                         |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| Cloud SQL password (user `mushee`)                                                      | Cloud SQL + `POSTGRES_URL` in `Secret/api-secrets` | new DB connections until secret + pods updated  | none                                           |
+| `BETTER_AUTH_SECRET`                                                                    | `Secret/api-secrets` only                          | **every user session — everyone is logged out** | none technically; all users re-login           |
+| `SENDGRID_API_KEY`                                                                      | SendGrid dashboard + `Secret/api-secrets`          | outgoing mail (OTP, waitlist, approval)         | none if old key revoked _after_ verification   |
+| `POLAR_ACCESS_TOKEN` / `POLAR_WEBHOOK_SECRET` (once billing is live)                    | Polar dashboard + `Secret/api-secrets`             | checkout/portal calls; webhook verification     | none if rotated pairwise (see §6)              |
+| PostHog project key (`NEXT_PUBLIC_POSTHOG_KEY`)                                         | Vercel env (build-time)                            | analytics only                                  | n/a — public by design, rotation rarely needed |
+| Google Workspace / SendGrid / Polar / Vercel / GitHub / GCP **account passwords + 2FA** | the respective services                            | nothing in prod                                 | n/a                                            |
 
 Deliberately **not** in the inventory, because the architecture avoids them:
 no GCP service-account key files (GCS auth is workload identity; CI auth is
@@ -62,7 +62,7 @@ openssl rand -base64 32 > /tmp/rot/better-auth.txt
 
 **a. Database password.** Postgres does not kill established connections on a
 password change, so running pods keep working on their existing pools; only
-*new* connections need the new password. That makes the order safe:
+_new_ connections need the new password. That makes the order safe:
 
 ```sh
 gcloud sql users set-password mushee --instance=mushee-prod \
@@ -123,7 +123,7 @@ kubectl logs -n mushee -l app=api --tail=100 | grep -iv '"url":"/health"'
 - SendGrid: dashboard → API Keys → delete the old key.
 - Polar (when applicable): revoke the old access token. For the webhook
   secret, Polar regenerates it on the endpoint; update the k8s secret and
-  restart *immediately after* regenerating — between those two moments,
+  restart _immediately after_ regenerating — between those two moments,
   webhook deliveries fail verification (Polar retries with backoff, and the
   `processed_webhook_events` dedup makes retries safe, so nothing is lost).
 - Old DB password died at step 4a. `BETTER_AUTH_SECRET` has no revocation —

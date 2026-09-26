@@ -23,9 +23,7 @@ test('renaming the score in the header autosaves the new title', async ({ page, 
     const title = page.getByRole('textbox', { name: 'Score title' })
     await title.fill('Renamed by e2e')
 
-    await expect
-        .poll(() => apiMock.patches.some((b) => b.title === 'Renamed by e2e'), { timeout: 8000 })
-        .toBe(true)
+    await expect.poll(() => apiMock.patches.some((b) => b.title === 'Renamed by e2e'), { timeout: 8000 }).toBe(true)
 })
 
 test('dotted, triplet, and tie dock toggles edit the selected note', async ({ page }) => {

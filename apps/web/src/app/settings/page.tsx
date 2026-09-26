@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { type ReactNode, useEffect, useState } from 'react'
 
+import { TakesList } from '@/components/TakesList'
 import {
     Alert,
     Footer,
@@ -16,9 +17,13 @@ import {
     TextField,
     TopNav,
 } from '@/components/ui'
+import { AccountExport } from '@/lib/AccountExport'
+import { track } from '@/lib/analytics'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
+import { downloadBlob } from '@/lib/FileDownload'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
-import { billingKeys, useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useBillingPortal, useBillingState, useResumeSubscription, useScores } from '@/lib/queries'
+import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -81,6 +86,28 @@ export default function SettingsPage() {
         router.push('/login')
     }
 
+    const [exporting, setExporting] = useState(false)
+    /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
+    async function handleExport() {
+        const user = session?.user
+        if (!user) return
+        setExporting(true)
+        try {
+            const archive = await AccountExport.collect({
+                name: user.name,
+                email: user.email,
+                createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
+            })
+            downloadBlob(archive.toBlob(), archive.filename)
+            track('data_export_downloaded', { scores: archive.scores.length })
+            showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
+        } catch {
+            showToast("Your data couldn't be exported. Please try again.")
+        } finally {
+            setExporting(false)
+        }
+    }
+
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
@@ -124,9 +151,7 @@ export default function SettingsPage() {
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
                                     </div>
                                 </Section>
-                                <Section
-                                    title="Support"
-                                    subtitle="Stuck, found a bug, or want to say hi? We read everything.">
+                                <Section title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
                                     <div className="flex items-center gap-4">
                                         <a
                                             href="mailto:support@solkey.io"
@@ -134,9 +159,7 @@ export default function SettingsPage() {
                                             <Icon name="mail" size={16} />
                                             support@solkey.io
                                         </a>
-                                        <a
-                                            href="/contact"
-                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        <a href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
                                             All contact options
                                         </a>
                                     </div>
@@ -145,6 +168,16 @@ export default function SettingsPage() {
                                     <div>
                                         <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
                                     </div>
+                                </Section>
+                                <Section
+                                    title="Your data"
+                                    subtitle="Download everything Solkey holds for you: your profile, settings, and every score as MusicXML and JSON.">
+                                    <div>
+                                        <SecondaryButton onClick={() => void handleExport()} disabled={exporting}>
+                                            {exporting ? 'Preparing your download…' : 'Download my data'}
+                                        </SecondaryButton>
+                                    </div>
+                                    <RecordingsInventory />
                                 </Section>
                                 <Section
                                     title="Delete account"
@@ -293,16 +326,49 @@ function BillingSection() {
     )
 }
 
+/**
+ * Every take the account holds, across scores, with replay and delete — the
+ * recordings half of "your data": the export leaves audio out (it is deleted with
+ * the account), so this is where it can be heard and removed one by one.
+ */
+function RecordingsInventory() {
+    const takes = useAllRecordings()
+    const scores = useScores()
+    const [open, setOpen] = useState(false)
+    const titles = new Map((scores.data ?? []).map((score) => [score.id, score.title]))
+
+    if (takes.isPending) return <div className="h-6 w-48 bg-surface-container-low rounded-md animate-pulse" />
+    if (takes.isError) return <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
+    const count = takes.data.length
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                    {count === 0
+                        ? 'No recordings kept yet — every take you record is archived here, audio included.'
+                        : `${count} ${count === 1 ? 'recording' : 'recordings'} kept — listen back or delete them one by one. They are not part of the download.`}
+                </span>
+                {count > 0 && (
+                    <TertiaryButton onClick={() => setOpen((o) => !o)}>{open ? 'Hide recordings' : 'Show recordings'}</TertiaryButton>
+                )}
+            </div>
+            {open && count > 0 && (
+                <TakesList takes={takes.data} scroll={false} subtitleFor={(take) => titles.get(take.scoreId) ?? 'Deleted score'} />
+            )}
+        </div>
+    )
+}
+
 /** Today's recording budget as a small meter (resets at midnight UTC), plus
  *  any purchased pack minutes waiting behind it. */
 function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; used: number; packSeconds?: number }) {
-    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
+    const fmt = formatRecordingTime
     const packLine = packSeconds > 0 && (
         <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-none text-on-surface-variant">
             <Icon name="gift" size={14} />
             <span>
-                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run
-                out, never expires.
+                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run out, never
+                expires.
             </span>
         </div>
     )
@@ -327,10 +393,7 @@ function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; 
                 </span>
             </div>
             <div className="h-1.5 rounded-full bg-surface-container overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)}>
-                <div
-                    className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'}
-                    style={{ width: `${pct}%` }}
-                />
+                <div className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'} style={{ width: `${pct}%` }} />
             </div>
             {packLine}
         </div>
@@ -357,7 +420,9 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'font-body font-medium text-[14px] leading-none',
                             'transition-colors duration-150 ease-solkey',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                            active ? 'bg-surface-container text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface',
+                            active
+                                ? 'bg-surface-container text-on-surface'
+                                : 'bg-transparent text-on-surface-variant hover:text-on-surface',
                         ].join(' ')}>
                         <Icon name={icon} size={16} />
                         {label}

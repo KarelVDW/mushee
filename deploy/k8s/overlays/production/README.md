@@ -78,7 +78,14 @@ kubectl create secret generic api-secrets -n mushee \
   --from-literal=BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
   --from-literal=SENDGRID_API_KEY='<sendgrid key>' \
   --from-literal=ADMIN_EMAILS='info@solkey.io' \
-  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)"
+  --from-literal=ADMIN_SECRET="$(openssl rand -base64 32)" \
+  --from-literal=TURNSTILE_SECRET_KEY='<cloudflare turnstile secret>' \
+  --from-literal=POSTHOG_API_KEY='<posthog project key>'
+# POSTHOG_API_KEY turns on server-side error tracking (unexpected 5xx and
+# crashes land in the PostHog project's Error tracking, next to the web's).
+# TURNSTILE_SECRET_KEY gates signup with a CAPTCHA (required before the beta
+# gate comes off); its site key goes to the web project's Vercel env as
+# NEXT_PUBLIC_TURNSTILE_SITE_KEY. Omitting it disables the CAPTCHA (boot warns).
 # ADMIN_SECRET is shared with the admin console's Vercel project (see
 # "Admin console" below) — set both to the same value.
 # Polar (add before enabling checkout; webhook path works without checkout):
@@ -86,6 +93,19 @@ kubectl create secret generic api-secrets -n mushee \
 #   POLAR_PRODUCT_{PRO,STUDIO,ARRANGER}_{MONTHLY,YEARLY},
 #   POLAR_PRODUCT_PACK_{SINGLE,EP,ALBUM}
 ```
+
+## Cost levers
+
+The overlay already runs one always-on replica per service and relaxes the
+PDBs (see its kustomization). Two further, opt-in levers live in
+`deploy/k8s/components/`:
+
+- **`spot-inference`** — schedules the CREPE inference pods on Spot capacity
+  (60–90% cheaper). Preemptions become short, user-visible transcription
+  blips (the recorder shows a notice and stops metering credits meanwhile).
+  Enable with `components: [../../components/spot-inference]` in this
+  overlay; consider a floor of two inference replicas alongside it.
+- Scaling the staging overlay to zero when idle (staging README).
 
 ## Admin console (admin.solkey.io)
 
@@ -103,15 +123,15 @@ involvement):
 - Recording replay signs 15-minute GCS URLs (V4 via IAM signBlob), which
   needs the API's service account to be able to sign as itself:
 
-  ```sh
-  gcloud iam service-accounts add-iam-policy-binding \
-    mushee-api@sheemu-prod.iam.gserviceaccount.com \
-    --role=roles/iam.serviceAccountTokenCreator \
-    --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com"
-  ```
+    ```sh
+    gcloud iam service-accounts add-iam-policy-binding \
+      mushee-api@sheemu-prod.iam.gserviceaccount.com \
+      --role=roles/iam.serviceAccountTokenCreator \
+      --member="serviceAccount:mushee-api@sheemu-prod.iam.gserviceaccount.com"
+    ```
 
-  Without it the console still plays recordings — the API just streams the
-  audio itself instead of redirecting to the bucket (see AdminService).
+    Without it the console still plays recordings — the API just streams the
+    audio itself instead of redirecting to the bucket (see AdminService).
 
 ## Deploying
 

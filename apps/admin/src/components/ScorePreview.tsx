@@ -49,13 +49,14 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
             <svg width={width} height={height} className="block">
                 {octaveLines.map((midi) => (
                     <g key={midi}>
-                        <line x1={PADDING / 2} x2={width - PADDING / 2} y1={y(midi) + ROW_HEIGHT / 2} y2={y(midi) + ROW_HEIGHT / 2} stroke={GRID} />
-                        <text
-                            x={2}
-                            y={y(midi) + ROW_HEIGHT / 2 - 3}
-                            fontSize={9}
-                            fill="#5a5c5c"
-                            fontFamily="var(--font-mono)">
+                        <line
+                            x1={PADDING / 2}
+                            x2={width - PADDING / 2}
+                            y1={y(midi) + ROW_HEIGHT / 2}
+                            y2={y(midi) + ROW_HEIGHT / 2}
+                            stroke={GRID}
+                        />
+                        <text x={2} y={y(midi) + ROW_HEIGHT / 2 - 3} fontSize={9} fill="#5a5c5c" fontFamily="var(--font-mono)">
                             {pitchLabel(midi)}
                         </text>
                     </g>

@@ -1,0 +1,38 @@
+# Opt-in cost lever: run the CREPE inference pods on GKE Spot capacity
+# (60–90% cheaper than on-demand on Autopilot, which bills per pod request
+# 24/7). Inference is stateless and the API reconnects per request, so a
+# preempted pod costs at most one in-flight pass; since 2026-09-05 the
+# recorder is told when transcription is down and credits stop metering, so
+# a preemption is a visible blip rather than a silent burn.
+#
+# Trade-off to accept before enabling: with the production floor of one
+# inference replica, every preemption (GKE gives 25 s notice) is a short
+# transcription outage until Autopilot schedules a replacement — typically
+# 1–3 minutes on a cold node. Raise the crepe-inference HPA floor to 2 (two
+# spot pods still cost less than one on-demand) if that is not acceptable.
+#
+# Enable by adding to an overlay's kustomization.yaml:
+#     components:
+#         - ../../components/spot-inference
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+    - target:
+          kind: Deployment
+          name: crepe-inference
+      patch: |-
+          - op: add
+            path: /spec/template/spec/nodeSelector
+            value: { cloud.google.com/gke-spot: 'true' }
+          - op: add
+            path: /spec/template/spec/tolerations
+            value:
+                - key: cloud.google.com/gke-spot
+                  operator: Equal
+                  value: 'true'
+                  effect: NoSchedule
+          # Spot preemption delivers SIGTERM with a 25 s grace period; match it so
+          # in-flight gRPC calls drain instead of being cut off.
+          - op: add
+            path: /spec/template/spec/terminationGracePeriodSeconds
+            value: 25

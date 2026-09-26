@@ -1,4 +1,4 @@
-import { getGlyphWidth } from '../../components'
+import { getGlyphWidth } from '../../components/glyphUtils'
 import type { KeyAccidental } from '../KeySignature'
 import { PhysicalWidth } from './PhysicalWidth'
 

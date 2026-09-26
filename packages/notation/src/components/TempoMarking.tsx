@@ -1,9 +1,8 @@
 import { memo } from 'react'
 
 import type { Tempo } from '../model/Tempo'
-import { GLYPH_SCALE, NOTATION_INK } from './constants'
-import { Glyph } from './Glyph'
-import { getGlyphWidth } from './glyphUtils'
+import { BeatUnit, beatUnitWidth } from './BeatUnit'
+import { NOTATION_INK } from './constants'
 
 const TEMPO_NOTE_STEM_HEIGHT = 14
 const TEMPO_FONT_SIZE = 10
@@ -16,14 +15,12 @@ interface TempoMarkingProps {
     layoutId: string
 }
 
+/** A metronome mark written in the measure's felt beat: `♩ = 90` in 4/4, `♩. = 60` in 6/8. */
 export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: TempoMarkingProps) {
     const { y } = tempo.layout
-    const { bpm } = tempo
-    const nhWidth = getGlyphWidth('noteheadBlack', GLYPH_SCALE)
-    const stemX = nhWidth
+    const noteWidth = beatUnitWidth(tempo.pulse)
     const stemY2 = y - TEMPO_NOTE_STEM_HEIGHT
-
-    const textX = stemX + TEMPO_TEXT_GAP
+    const textX = noteWidth + TEMPO_TEXT_GAP
 
     return (
         <g
@@ -35,9 +32,10 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
                 })
             }
             style={onClick ? { cursor: 'pointer' } : undefined}>
-            {onClick && <rect x={-2} y={stemY2 - 2} width={nhWidth + 40} height={TEMPO_NOTE_STEM_HEIGHT + 4} fill="transparent" />}
-            <line x1={stemX} y1={y} x2={stemX} y2={stemY2} stroke={NOTATION_INK} strokeWidth={1.2} />
-            <Glyph name="noteheadBlack" x={0} y={y} />
+            {onClick && <rect x={-2} y={stemY2 - 2} width={noteWidth + 40} height={TEMPO_NOTE_STEM_HEIGHT + 4} fill="transparent" />}
+            <g transform={`translate(0, ${y})`}>
+                <BeatUnit duration={tempo.pulse} />
+            </g>
             <text
                 x={textX}
                 y={y}
@@ -47,7 +45,7 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
                 dominantBaseline="central"
                 fill={NOTATION_INK}
                 style={{ userSelect: 'none' }}>
-                = {bpm}
+                = {tempo.pulseBpm}
             </text>
         </g>
     )

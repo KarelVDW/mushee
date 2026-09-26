@@ -7,21 +7,17 @@
  */
 
 export interface PolarWebhookEvent {
-  type: string;
-  data: unknown;
+    type: string
+    data: unknown
 }
 
 interface PolarWebhooksModule {
-  validateEvent: (
-    body: string | Buffer,
-    headers: Record<string, string>,
-    secret: string,
-  ) => PolarWebhookEvent;
-  WebhookVerificationError: new (message: string) => Error;
+    validateEvent: (body: string | Buffer, headers: Record<string, string>, secret: string) => PolarWebhookEvent
+    WebhookVerificationError: new (message: string) => Error
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const webhooks = require('@polar-sh/sdk/webhooks') as PolarWebhooksModule;
+const webhooks = require('@polar-sh/sdk/webhooks') as PolarWebhooksModule
 
-export const validateEvent = webhooks.validateEvent;
-export const WebhookVerificationError = webhooks.WebhookVerificationError;
+export const validateEvent = webhooks.validateEvent
+export const WebhookVerificationError = webhooks.WebhookVerificationError

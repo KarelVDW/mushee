@@ -1,4 +1,4 @@
-import { getGlyphWidth } from '../../components'
+import { getGlyphWidth } from '../../components/glyphUtils'
 import type { Note } from '../Note'
 import { PhysicalWidth } from './PhysicalWidth'
 

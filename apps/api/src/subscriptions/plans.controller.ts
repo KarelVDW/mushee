@@ -1,6 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common'
 
-import { SubscriptionsService } from './subscriptions.service';
+import { SubscriptionsService } from './subscriptions.service'
 
 /**
  * Public tier catalogue: what each plan is entitled to, straight from the
@@ -10,17 +10,17 @@ import { SubscriptionsService } from './subscriptions.service';
  */
 @Controller('plans')
 export class PlansController {
-  constructor(private readonly subscriptions: SubscriptionsService) {}
+    constructor(private readonly subscriptions: SubscriptionsService) {}
 
-  @Get()
-  async list() {
-    const tiers = await this.subscriptions.allTiers();
-    return tiers.map((tier) => ({
-      id: tier.id,
-      name: tier.name,
-      dailyRecordingCredits: tier.dailyRecordingCredits,
-      maxScores: tier.maxScores,
-      sellable: tier.sellable,
-    }));
-  }
+    @Get()
+    async list() {
+        const tiers = await this.subscriptions.allTiers()
+        return tiers.map((tier) => ({
+            id: tier.id,
+            name: tier.name,
+            dailyRecordingCredits: tier.dailyRecordingCredits,
+            maxScores: tier.maxScores,
+            sellable: tier.sellable,
+        }))
+    }
 }

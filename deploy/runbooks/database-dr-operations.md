@@ -50,14 +50,14 @@ Record the date it passed in `meta/master-todo.md`.
 
 ## 3. Point-in-time recovery for real (bad deploy ate data, bad SQL, etc.)
 
-Decide the recovery timestamp first — the moment *before* the damage. Then:
+Decide the recovery timestamp first — the moment _before_ the damage. Then:
 
 1. **Stop the writers** so the damage stops compounding:
-   ```sh
-   kubectl scale deploy api -n mushee --replicas=0
-   ```
-   (Vercel keeps serving the frontend; it will show API errors — acceptable
-   during recovery. Post a heads-up if you have a channel to users.)
+    ```sh
+    kubectl scale deploy api -n mushee --replicas=0
+    ```
+    (Vercel keeps serving the frontend; it will show API errors — acceptable
+    during recovery. Post a heads-up if you have a channel to users.)
 2. Clone at the chosen instant (same command as §2, your timestamp).
 3. Verify on the clone (§2 queries + whatever the incident concerns).
 4. **Promote by repointing, not by restoring in place**: update
@@ -66,7 +66,7 @@ Decide the recovery timestamp first — the moment *before* the damage. Then:
    production; the damaged instance is frozen evidence.
 5. After the dust settles: rename mentally (or actually re-clone back), fix
    the runbooks' recorded IP, delete the damaged instance once anything
-   worth salvaging (rows written *after* the recovery point) has been
+   worth salvaging (rows written _after_ the recovery point) has been
    extracted from it.
 
 Data loss window = time between the recovery point and the stop in step 1.
@@ -93,7 +93,7 @@ cluster half. Accepted RTO at this stage: hours.
 ## 5. Running one-off SQL safely (no public IP, and keep it that way)
 
 The instance has no public address; your laptop can't reach 10.56.0.x. Run
-psql *inside the cluster*, reusing the credentials the API already has:
+psql _inside the cluster_, reusing the credentials the API already has:
 
 ```sh
 kubectl run -n mushee psql --rm -it --restart=Never --image=postgres:17-alpine \
@@ -133,13 +133,13 @@ before the app starts listening. Failure modes:
   migration in a transaction, so a failed one didn't half-apply.
 - **Boot hangs silently at startup** → almost always waiting on the advisory
   lock. Find the holder:
-  ```sql
-  SELECT pid, query_start, state FROM pg_stat_activity
-   WHERE pid IN (SELECT pid FROM pg_locks WHERE locktype='advisory' AND objid=727271);
-  ```
-  A crashed-mid-migration pod releases the lock automatically when its
-  connection dies; a *live-but-stuck* holder you can
-  `SELECT pg_terminate_backend(<pid>);` — the waiting replica then proceeds.
+    ```sql
+    SELECT pid, query_start, state FROM pg_stat_activity
+     WHERE pid IN (SELECT pid FROM pg_locks WHERE locktype='advisory' AND objid=727271);
+    ```
+    A crashed-mid-migration pod releases the lock automatically when its
+    connection dies; a _live-but-stuck_ holder you can
+    `SELECT pg_terminate_backend(<pid>);` — the waiting replica then proceeds.
 - **Never** run `migration:revert` against production; roll forward.
   (Also on record: `synchronize` is off everywhere; nothing mutates schema
   except migrations.)

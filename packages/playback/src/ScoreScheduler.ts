@@ -102,7 +102,7 @@ export class ScoreScheduler implements Tickable {
             }
 
             let audioDuration: number | undefined
-            if (midi !== undefined && note.tiesForward) {
+            if (midi !== undefined && this.score.tiePartner(note)) {
                 audioDuration = this.getTiedAudioDuration(note, durationSecs, this.bpm)
             }
 
@@ -132,12 +132,9 @@ export class ScoreScheduler implements Tickable {
 
     private getTiedAudioDuration(note: Note, baseDuration: number, bpm: number): number {
         let total = baseDuration
-        let current: Note | null = note
-        while (current?.tiesForward) {
-            const next = current.getNext()
-            if (!next) break
-            total += (next.duration.effectiveBeats * 60) / bpm
-            current = next
+        // Only real tie partners (same sounding pitch) extend the sound; a dangling tie mark does not.
+        for (let partner = this.score?.tiePartner(note) ?? null; partner; partner = this.score?.tiePartner(partner) ?? null) {
+            total += (partner.duration.effectiveBeats * 60) / bpm
         }
         return total
     }

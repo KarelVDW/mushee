@@ -38,7 +38,7 @@ that exist only for drawing.
    Immutable: every output is a `readonly` field computed in the constructor. No lazy internal
    state, no getters that read live model state (a getter is only allowed as a trivial
    projection of the object's own readonly fields). `id` is the React memo key, so a layout must
-   never change after construction — it is *replaced*, never mutated or partially invalidated.
+   never change after construction — it is _replaced_, never mutated or partially invalidated.
    Staleness is decided in one place: `ScoreLayout` compares model versions (plus the explicit
    context signatures listed in its reuse check) and **reuses** previous sub-layouts whose
    inputs are unchanged, so memoized React subtrees stay stable.
@@ -47,7 +47,7 @@ that exist only for drawing.
 input: `Score.layoutWidth` (set via `setLayoutWidth`), the row-packing budget used for responsive
 reflow on narrow viewports. It is not semantic state — it is never serialized and changing it
 moves neither the version nor dirty tracking (it only notifies `onChange` so views re-read
-`layout`); the cached snapshot is keyed on (version, width). The requested width is a *floor*,
+`layout`); the cached snapshot is keyed on (version, width). The requested width is a _floor_,
 not a guarantee: a single measure denser than the packing budget widens the effective
 `ScoreLayout.scoreWidth` until it fits (views render scaled-to-fit against `layout.scoreWidth`,
 so the score shrinks on screen). Layout must always resolve — it never throws on any

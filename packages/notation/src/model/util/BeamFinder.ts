@@ -1,3 +1,4 @@
+import { BEAT_EPSILON } from '../Duration'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 
@@ -9,7 +10,9 @@ export interface BeamGroup {
 /**
  * Groups a measure's beamable notes (eighths/sixteenths) into beam groups:
  * runs unbroken by rests, beat boundaries, or tuplet edges, each with the stem
- * direction the group shares. Pure grouping — the geometry is BeamLayout's job.
+ * direction the group shares. "Beat" here is the meter's beaming unit
+ * (`TimeSignature.beamUnit`): quarters in 4/4, dotted quarters in 6/8 so the
+ * eighths fall in threes. Pure grouping — the geometry is BeamLayout's job.
  */
 export class BeamFinder {
     readonly groups: BeamGroup[] = []
@@ -17,6 +20,7 @@ export class BeamFinder {
     constructor(private measure: Measure) {
         let currentNotes: Note[] = []
         let beat = 0
+        const unit = measure.timeSignature.beamUnit
 
         const flushGroup = () => {
             if (currentNotes.length >= 2) {
@@ -46,8 +50,8 @@ export class BeamFinder {
                         flushGroup()
                     } else {
                         const prevBeat = beat - prevNote.duration.effectiveBeats
-                        const prevBeatBoundary = Math.floor(prevBeat)
-                        const nextBeatBoundary = Math.floor(beat)
+                        const prevBeatBoundary = Math.floor(prevBeat / unit + BEAT_EPSILON)
+                        const nextBeatBoundary = Math.floor(beat / unit + BEAT_EPSILON)
 
                         if (nextBeatBoundary > prevBeatBoundary) {
                             flushGroup()

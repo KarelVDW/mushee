@@ -135,14 +135,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
     listCorpora: () => request<CorpusDto[]>('/api/corpora'),
-    createCorpus: (body: {
-        label: string
-        kind: string
-        instrumentId?: string
-        tier: string
-        notes?: string
-        params: GeneratorParams
-    }) => request<{ id: string }>('/api/corpora', { method: 'POST', body: JSON.stringify(body) }),
+    createCorpus: (body: { label: string; kind: string; instrumentId?: string; tier: string; notes?: string; params: GeneratorParams }) =>
+        request<{ id: string }>('/api/corpora', { method: 'POST', body: JSON.stringify(body) }),
     getCorpus: (id: string) => request<CorpusDetailDto>(`/api/corpora/${encodeURIComponent(id)}`),
     deleteCorpus: (id: string) => request<{ ok: true }>(`/api/corpora/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     getClip: (id: string) => request<ClipDetailDto>(`/api/clips/${encodeURIComponent(id)}`),

@@ -18,13 +18,13 @@ non-goal for now.
 
 ## What lives where
 
-| Concern | Home |
-|---|---|
-| Corpus/clip metadata, expected notes, run history | Postgres, schema **`eval`** — own tables, own `eval.migrations` ledger (`src/server/db.ts`); never touches the API's `public` schema |
-| Recorded audio + ground truth + manifest | `apps/api/scripts/fixtures/eval-real/<tier>/<corpus>/` — materialized on every save (`src/server/fixtures.ts`), so `run-eval.ts` and the agents see UI-created corpora with **no export step** |
-| Transcription (“derived notes”, retry) | `apps/api/scripts/eval/transcribe-worker.ts`, a long-lived child process managed by `src/server/transcriber.ts`; loads the production ProviderRegistry once, then each take/retry is fast |
-| Harness runs (“Score with harness”) | spawns `run-eval.ts` with `EVAL_REAL=1 EVAL_ADAPTIVE=1`, scoped via `EVAL_SCENARIOS`; the report JSON lands next to the others and the summary is kept in `eval.run` |
-| Reports & comparison | `/reports` lists every `report*.json` under `fixtures/eval{,-real}`; pick two for per-dataset paired bars + deltas |
+| Concern                                           | Home                                                                                                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Corpus/clip metadata, expected notes, run history | Postgres, schema **`eval`** — own tables, own `eval.migrations` ledger (`src/server/db.ts`); never touches the API's `public` schema                                                           |
+| Recorded audio + ground truth + manifest          | `apps/api/scripts/fixtures/eval-real/<tier>/<corpus>/` — materialized on every save (`src/server/fixtures.ts`), so `run-eval.ts` and the agents see UI-created corpora with **no export step** |
+| Transcription (“derived notes”, retry)            | `apps/api/scripts/eval/transcribe-worker.ts`, a long-lived child process managed by `src/server/transcriber.ts`; loads the production ProviderRegistry once, then each take/retry is fast      |
+| Harness runs (“Score with harness”)               | spawns `run-eval.ts` with `EVAL_REAL=1 EVAL_ADAPTIVE=1`, scoped via `EVAL_SCENARIOS`; the report JSON lands next to the others and the summary is kept in `eval.run`                           |
+| Reports & comparison                              | `/reports` lists every `report*.json` under `fixtures/eval{,-real}`; pick two for per-dataset paired bars + deltas                                                                             |
 
 ## Corpus creation & recording
 

@@ -1,12 +1,6 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 
-import type { StoredShortcuts } from '../stored-shortcuts';
+import type { StoredShortcuts } from '../stored-shortcuts'
 
 /**
  * Per-user preferences that must follow the user across devices. One row per
@@ -14,17 +8,17 @@ import type { StoredShortcuts } from '../stored-shortcuts';
  */
 @Entity('user_settings')
 export class UserSettings {
-  /** References user.id (ON DELETE CASCADE). */
-  @PrimaryColumn({ type: 'text' })
-  userId: string;
+    /** References user.id (ON DELETE CASCADE). */
+    @PrimaryColumn({ type: 'text' })
+    userId: string
 
-  /** Keyboard shortcut overrides in the web app's storage format; null = defaults. */
-  @Column({ type: 'jsonb', nullable: true })
-  keyboardShortcuts: StoredShortcuts | null;
+    /** Keyboard shortcut overrides in the web app's storage format; null = defaults. */
+    @Column({ type: 'jsonb', nullable: true })
+    keyboardShortcuts: StoredShortcuts | null
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
+    @CreateDateColumn({ type: 'timestamptz' })
+    createdAt: Date
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
+    @UpdateDateColumn({ type: 'timestamptz' })
+    updatedAt: Date
 }

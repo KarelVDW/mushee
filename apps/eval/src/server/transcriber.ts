@@ -58,7 +58,7 @@ function startWorker(): WorkerState {
 
     const state: WorkerState = { child, ready, nextId: 1, pending: new Map() }
 
-    const rl = createInterface({ input: child.stdout! })
+    const rl = createInterface({ input: child.stdout })
     rl.on('line', (line) => {
         if (line === '@@READY') {
             markReady()
@@ -92,6 +92,10 @@ export async function transcribeClip(request: TranscribeRequest): Promise<Transc
     if (!globalWorker.__evalTranscriber) globalWorker.__evalTranscriber = startWorker()
     const worker = globalWorker.__evalTranscriber
     await worker.ready
+    // Check the pipe before registering the request, so a throw here leaves no orphaned promise
+    // and pending entry for the timeout to reject with nobody listening.
+    const stdin = worker.child.stdin
+    if (!stdin) throw new Error('transcribe worker has no stdin pipe')
 
     const id = worker.nextId++
     const result = new Promise<TranscribeResult>((resolve, reject) => {
@@ -100,6 +104,6 @@ export async function transcribeClip(request: TranscribeRequest): Promise<Transc
             if (worker.pending.delete(id)) reject(new Error('transcription timed out'))
         }, REQUEST_TIMEOUT_MS)
     })
-    worker.child.stdin!.write(JSON.stringify({ id, ...request }) + '\n')
+    stdin.write(JSON.stringify({ id, ...request }) + '\n')
     return result
 }

@@ -7,6 +7,7 @@ import { Icon, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { setUserProperties, track } from '@/lib/analytics'
 import { type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
+import { nextPathFrom } from '@/lib/nextPath'
 import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
 import { useBetaStatus, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
 
@@ -46,7 +47,12 @@ export default function OnboardingPage() {
         : PLAN_TIERS
     const betaApiPlan = apiPlans?.find((p) => p.id === BETA_PLAN.id)
     const betaPlan = betaApiPlan
-        ? { ...BETA_PLAN, name: betaApiPlan.name, dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits, maxScores: betaApiPlan.maxScores }
+        ? {
+              ...BETA_PLAN,
+              name: betaApiPlan.name,
+              dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits,
+              maxScores: betaApiPlan.maxScores,
+          }
         : BETA_PLAN
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
@@ -160,11 +166,14 @@ export default function OnboardingPage() {
         setStep((s) => Math.min(s + 1, STEP_COUNT - 1))
     }
     const back = () => setStep((s) => Math.max(s - 1, 0))
+    // Where onboarding lets out: the waiting room while approval is pending, else wherever the
+    // visitor was heading before signup (a shared score they want to keep) — the library by default.
+    const leave = () => router.push(awaitingApproval ? '/beta' : nextPathFrom(window.location.search))
     const skip = () => {
         track('onboarding_skipped', { step: STEP_NAMES[step] })
-        router.push(awaitingApproval ? '/beta' : '/scores')
+        leave()
     }
-    const finish = () => router.push(awaitingApproval ? '/beta' : '/scores')
+    const finish = () => leave()
 
     return (
         <main className="min-h-dvh bg-surface flex flex-col items-center px-6 py-8">

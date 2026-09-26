@@ -216,6 +216,96 @@ describe('Score', () => {
         })
     })
 
+    describe('removeMeasures', () => {
+        it('removes measures from the middle, closing the gap', () => {
+            const score = makeScore(4)
+            const [m0, m1, m2, m3] = score.measures
+            const before = score.version
+            score.removeMeasures([m2, m1])
+            expect(score.measures).toEqual([m0, m3])
+            expect(m3.index).toBe(1)
+            expect(m3.endBarline).toBe('end')
+            expect(score.version).toBeGreaterThan(before)
+            expect(score.flushDirty()?.allMeasures).toHaveLength(2)
+        })
+
+        it('ignores measures that are not part of the score', () => {
+            const score = makeScore(2)
+            const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
+            const before = score.version
+            score.removeMeasures([stray])
+            expect(score.measures).toHaveLength(2)
+            expect(score.version).toBe(before)
+        })
+
+        it("re-marks a removed measure's clef and key changes on the measure that follows it", () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setClef(0, 'bass')
+            m1.setKeySignature(0, 1)
+            score.setClef(m1.firstNote, 'bass') // propagate: m2 inherits bass / G major
+            expect(m2.clef.type).toBe('bass')
+            expect(m2.leadingClefExplicit).toBe(false)
+            score.removeMeasures([m1])
+            expect(m2.clef.type).toBe('bass')
+            expect(m2.leadingClefExplicit).toBe(true)
+            expect(m2.keySignature.fifths).toBe(1)
+            expect(m2.leadingKeyExplicit).toBe(true)
+        })
+
+        it('carries a mode-only key change (relative minor) across the removal', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            score.setKeySignature(m1.firstNote, 0, 'minor')
+            expect(m2.keySignature.mode).toBe('minor')
+            score.removeMeasures([m1])
+            expect(m2.keySignature.fifths).toBe(0)
+            expect(m2.keySignature.mode).toBe('minor')
+            expect(m2.leadingKeyExplicit).toBe(true)
+        })
+
+        it('carries the tempo a removed measure set onto the measure that follows it', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setTempo(0, 120)
+            score.removeMeasures([m1])
+            expect(m2.tempoAtBeat(0)?.bpm).toBe(120)
+            expect(score.bpmAt(m2.notes[0])).toBe(120)
+        })
+
+        it('leaves a successor alone when it carries its own explicit clef, key and tempo', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            m1.setClef(0, 'bass')
+            m1.setKeySignature(0, 1)
+            m1.setTempo(0, 120)
+            score.setClef(m2.firstNote, 'alto')
+            score.setKeySignature(m2.firstNote, -2)
+            m2.setTempo(0, 60)
+            score.removeMeasures([m1])
+            expect(m2.clef.type).toBe('alto')
+            expect(m2.keySignature.fifths).toBe(-2)
+            expect(m2.tempoAtBeat(0)?.bpm).toBe(60)
+        })
+
+        it('leaves a successor alone when the removed measure changed nothing', () => {
+            const score = makeScore(3)
+            const [, m1, m2] = score.measures
+            score.removeMeasures([m1])
+            expect(m2.leadingClefExplicit).toBe(false)
+            expect(m2.leadingKeyExplicit).toBe(false)
+            expect(m2.tempoAtBeat(0)).toBeUndefined()
+        })
+
+        it('removes the first measure, letting the next one open the piece', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            score.removeMeasures([m0])
+            expect(score.measures).toEqual([m1])
+            expect(m1.index).toBe(0)
+        })
+    })
+
     describe('navigation', () => {
         it('getNextMeasure / getPreviousMeasure', () => {
             const score = makeScore(3)
@@ -373,7 +463,10 @@ describe('Score', () => {
             const lastOfM1 = m1.lastNote
             if (!lastOfM1) throw new Error('expected last note of measure 1')
             // Reshape the tail of measure 1 to end on a 16th note (0.25 free beat at the boundary).
-            score.replace([lastOfM1], [new Note({ duration: new Duration({ type: '8', dots: 1 }) }), new Note({ duration: new Duration({ type: '16' }) })])
+            score.replace(
+                [lastOfM1],
+                [new Note({ duration: new Duration({ type: '8', dots: 1 }) }), new Note({ duration: new Duration({ type: '16' }) })],
+            )
             const sixteenth = m1.lastNote
             if (!sixteenth) throw new Error('expected 16th note')
             expect(sixteenth.duration.type).toBe('16')
@@ -1254,5 +1347,69 @@ describe('Score', () => {
             expect(score.lastMeasure).toBe(first)
             expect(score.measures).not.toContain(second)
         })
+    })
+})
+
+describe('Score.setDuration / replace — bars always add up', () => {
+    it('refuses a dotted sixteenth (there is no thirty-second to pad the bar with)', () => {
+        const score = makeScore(1)
+        const sixteenth = score.replace([score.measures[0].notes[0]], [pitched('C', 5, '16')])[0]
+        expect(score.setDuration(sixteenth, { dots: 1 })).toBeNull()
+        expect(score.setDuration(sixteenth, { type: '16', dots: 1 })).toBeNull()
+        expect(score.measures[0].beats).toBeCloseTo(4, 9)
+        // A dotted eighth is fine, and a sixteenth may still become one.
+        expect(score.setDuration(sixteenth, { type: '8', dots: 1 })).not.toBeNull()
+        expect(score.measures[0].beats).toBeCloseTo(4, 9)
+    })
+
+    it("pads a pasted triplet over a plain note in the triplet's own space, so the bar stays full", () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const triplet = new Note({
+            duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+            pitch: new Pitch({ name: 'D', octave: 5 }),
+        })
+        score.replace([quarter], [triplet])
+        const bar = score.measures[0]
+        expect(bar.beats).toBeCloseTo(bar.maxBeats, 9)
+        // ⅓ written + ⅔ of rests: a triplet quarter rest (⅔), not a plain eighth (½) leaving a hole.
+        expect(bar.notes.slice(0, 2).map((n) => `${n.pitch ? 'D' : 'r'}:${n.duration.type}${n.inTuplet ? '(3:2)' : ''}`)).toEqual([
+            'D:8(3:2)',
+            'r:q(3:2)',
+        ])
+    })
+
+    it('pads a lone quintuplet sixteenth over a quarter in quintuplet space', () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const quint = new Note({
+            duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }),
+            pitch: new Pitch({ name: 'E', octave: 5 }),
+        })
+        score.replace([quarter], [quint])
+        const bar = score.measures[0]
+        expect(bar.beats).toBeCloseTo(bar.maxBeats, 9)
+        expect(bar.notes[1].duration.ratio).toEqual({ actualNotes: 5, normalNotes: 4 })
+    })
+
+    it('keeps mixed-tuplet pastes and settles the bar as far as any value reaches (sub-sixteenth residue allowed)', () => {
+        const score = makeScore(1)
+        const [quarter] = score.measures[0].notes
+        const triplet = new Note({
+            duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+            pitch: new Pitch({ name: 'C', octave: 5 }),
+        })
+        const quint = new Note({
+            duration: new Duration({ type: '16', ratio: { actualNotes: 5, normalNotes: 4 } }),
+            pitch: new Pitch({ name: 'E', octave: 5 }),
+        })
+        const placed = score.replace([quarter], [triplet, quint])
+        const bar = score.measures[0]
+        // ⅓ + ⅕ = 8/15 of a beat: no single tuplet space closes the remaining 7/15 exactly, so the
+        // quintuplet rest covers what it can and a 1/15 residue remains — the notes are never dropped.
+        expect(placed.every((n) => n.isAttached)).toBe(true)
+        expect(bar.notes.slice(0, 2)).toEqual([triplet, quint])
+        expect(bar.beats).toBeLessThan(bar.maxBeats)
+        expect(bar.maxBeats - bar.beats).toBeLessThan(1 / 6)
     })
 })

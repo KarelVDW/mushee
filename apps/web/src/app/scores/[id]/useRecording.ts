@@ -29,7 +29,6 @@ function micErrorToast(err: unknown): string {
     return "Recording couldn't start. Check your microphone permission and connection, then try again."
 }
 
-
 /**
  * The recording flow: owns the live waveform store, the recording state, the
  * halt-dialog state, and the record toggle that drives a take end-to-end
@@ -124,6 +123,7 @@ export function useRecording({
         // earlier measures an octave apart.
         const recordingClef = activeNote.clef
         let octaveShift: number | null = null
+        let transcriptionDown = false
         manipulator.select(null)
         waveformStore.reset()
         const startIndex = measureIndex
@@ -159,6 +159,20 @@ export function useRecording({
                     if (state === 'idle') waveformStore.clearAll()
                 },
                 onSourceResolved: (resolution) => console.log('source', resolution),
+                onHealth: ({ ok }) => {
+                    // The server's transcription backend went away (or came back). Say so:
+                    // waveform bars with no notes must read as "Solkey is having trouble",
+                    // not "I sang it wrong" — and the time is not charged meanwhile.
+                    if (!ok) {
+                        transcriptionDown = true
+                        showToast(
+                            "Transcription is unavailable right now. We're still recording your audio and not charging for this time, but no notes will appear until it recovers.",
+                        )
+                    } else if (transcriptionDown) {
+                        transcriptionDown = false
+                        showToast('Transcription is back — notes are appearing again.', 'info')
+                    }
+                },
                 onSample: (sample) => {
                     waveformStore.add({
                         id: sample.timeMs,

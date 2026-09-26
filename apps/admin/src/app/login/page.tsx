@@ -5,6 +5,7 @@ import { type FormEvent, Suspense, useState } from 'react'
 
 import { Alert, Eyebrow, PrimaryButton, TextField, Wordmark } from '@/components/ui'
 import { ApiError, login, NetworkError } from '@/lib/api'
+import { safeNextPath } from '@/lib/nextPath'
 
 function LoginForm() {
     const router = useRouter()
@@ -22,7 +23,7 @@ function LoginForm() {
             await login(secret)
             const next = searchParams.get('next')
             // Only follow same-app relative paths — never an absolute URL.
-            router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/')
+            router.push(safeNextPath(next))
         } catch (err) {
             if (err instanceof ApiError) setError(err.message)
             else if (err instanceof NetworkError) setError("Can't reach the server — check your connection.")
