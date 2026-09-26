@@ -13,98 +13,100 @@
  *   RECORDING_DEBOUNCE_MS=300 tsx scripts/eval/bench-streaming.ts
  */
 
-import { spawn } from 'child_process';
-import ffmpegPath from 'ffmpeg-static';
-import { readFileSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join, resolve } from 'path';
+import { spawn } from 'child_process'
+import ffmpegPath from 'ffmpeg-static'
+import { readFileSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
 
-import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder';
-import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider';
-import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend';
-import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
-import { runThroughPipelineStreaming } from './lib/pipelineRun';
+import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder'
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { CrepeProvider } from '../../src/recordings/pipeline/providers/crepe-provider'
+import { LocalModelBackend } from '../../src/recordings/pipeline/providers/local-model-backend'
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { runThroughPipelineStreaming } from './lib/pipelineRun'
 
-const EVAL_ROOT = resolve(__dirname, '../fixtures/eval');
+const EVAL_ROOT = resolve(__dirname, '../fixtures/eval')
 const MODELS = {
-  crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-};
+    crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
+}
 
 /** Loop `wav` `n` times and encode to webm/opus, to synthesize a long recording. */
 function loopToWebm(wav: Buffer, n: number): Promise<Buffer> {
-  if (!ffmpegPath) throw new Error('ffmpeg-static missing');
-  // -stream_loop needs a seekable input, so stage the wav on disk (a pipe won't
-  // loop — it just plays once).
-  const tmp = join(tmpdir(), `bench-loop-${process.pid}.wav`);
-  writeFileSync(tmp, wav);
-  return new Promise<Buffer>((res, rej) => {
-    const proc = spawn(ffmpegPath as string, [
-      '-hide_banner', '-loglevel', 'error',
-      '-stream_loop', String(n - 1), '-i', tmp,
-      '-c:a', 'libopus', '-b:a', '128k', '-f', 'webm', 'pipe:1',
-    ]);
-    const out: Buffer[] = [];
-    proc.stdout.on('data', (c: Buffer) => out.push(c));
-    proc.on('error', rej);
-    proc.on('close', (code) => {
-      const o = Buffer.concat(out);
-      if (o.length) res(o);
-      else rej(new Error(`loop encode failed (${code})`));
-    });
-    proc.stdin.on('error', () => {});
-    proc.stdin.end(wav);
-  });
+    if (!ffmpegPath) throw new Error('ffmpeg-static missing')
+    // -stream_loop needs a seekable input, so stage the wav on disk (a pipe won't
+    // loop — it just plays once).
+    const tmp = join(tmpdir(), `bench-loop-${process.pid}.wav`)
+    writeFileSync(tmp, wav)
+    return new Promise<Buffer>((res, rej) => {
+        const proc = spawn(ffmpegPath as string, [
+            '-hide_banner',
+            '-loglevel',
+            'error',
+            '-stream_loop',
+            String(n - 1),
+            '-i',
+            tmp,
+            '-c:a',
+            'libopus',
+            '-b:a',
+            '128k',
+            '-f',
+            'webm',
+            'pipe:1',
+        ])
+        const out: Buffer[] = []
+        proc.stdout.on('data', (c: Buffer) => out.push(c))
+        proc.on('error', rej)
+        proc.on('close', (code) => {
+            const o = Buffer.concat(out)
+            if (o.length) res(o)
+            else rej(new Error(`loop encode failed (${code})`))
+        })
+        proc.stdin.on('error', () => {})
+        proc.stdin.end(wav)
+    })
 }
 
-const now = (): number => Number(process.hrtime.bigint() / 1000000n);
+const now = (): number => Number(process.hrtime.bigint() / 1000000n)
 
 async function main(): Promise<void> {
-  const registry = new ProviderRegistry({
-    crepeTiny: MODELS.crepeTiny,
-  });
-  await registry.initAll();
+    const registry = new ProviderRegistry({
+        crepeTiny: MODELS.crepeTiny,
+    })
+    await registry.initAll()
 
-  const wav = readFileSync(join(EVAL_ROOT, 'whistle-high', 'tune__clean.wav'));
-  const longWebm = await loopToWebm(wav, 6); // ~60 s
+    const wav = readFileSync(join(EVAL_ROOT, 'whistle-high', 'tune__clean.wav'))
+    const longWebm = await loopToWebm(wav, 6) // ~60 s
 
-  // (A) provider transcribe time vs input length (crepe-tiny since the
-  // 2026-08-22 basic-pitch removal; the O(n²)→O(n) claim is provider-agnostic).
-  console.log('=== (A) crepe-tiny transcribe time vs input length ===');
-  const sr = 16000;
-  const decoded = await new AudioDecoder().decode(longWebm, sr, {
-    loudnorm: false, highpassHz: 80,
-  });
-  const bp = new CrepeProvider(
-    new LocalModelBackend({ crepeTiny: MODELS.crepeTiny }),
-    'crepe-tiny',
-  );
-  await bp.init();
-  console.log(`${'inputSec'.padEnd(10)}${'transcribeMs'.padEnd(14)}ms/sec`);
-  for (const sec of [5, 10, 20, 30, 45, 60]) {
-    const n = Math.min(decoded.samples.length, sec * sr);
-    const slice = decoded.samples.subarray(0, n);
-    const t0 = now();
-    await bp.transcribe(slice, { minFreqHz: 559, maxFreqHz: 1900 });
-    const ms = now() - t0;
-    console.log(
-      `${String(sec).padEnd(10)}${String(ms).padEnd(14)}${(ms / sec).toFixed(1)}`,
-    );
-  }
+    // (A) provider transcribe time vs input length (crepe-tiny since the
+    // 2026-08-22 basic-pitch removal; the O(n²)→O(n) claim is provider-agnostic).
+    console.log('=== (A) crepe-tiny transcribe time vs input length ===')
+    const sr = 16000
+    const decoded = await new AudioDecoder().decode(longWebm, sr, {
+        loudnorm: false,
+        highpassHz: 80,
+    })
+    const bp = new CrepeProvider(new LocalModelBackend({ crepeTiny: MODELS.crepeTiny }), 'crepe-tiny')
+    await bp.init()
+    console.log(`${'inputSec'.padEnd(10)}${'transcribeMs'.padEnd(14)}ms/sec`)
+    for (const sec of [5, 10, 20, 30, 45, 60]) {
+        const n = Math.min(decoded.samples.length, sec * sr)
+        const slice = decoded.samples.subarray(0, n)
+        const t0 = now()
+        await bp.transcribe(slice, { minFreqHz: 559, maxFreqHz: 1900 })
+        const ms = now() - t0
+        console.log(`${String(sec).padEnd(10)}${String(ms).padEnd(14)}${(ms / sec).toFixed(1)}`)
+    }
 
-  // (B) Real streaming pipeline on the long clip — window stays bounded.
-  console.log(
-    `\n=== (B) streaming pipeline pass log (debounce=${process.env.RECORDING_DEBOUNCE_MS ?? '1000'}ms) ===`,
-  );
-  console.log('(see "Pass timings" lines: window=A-Bs stays ~bounded as audioDur grows)');
-  const resolver = new ProfileResolver();
-  await runThroughPipelineStreaming(
-    registry, resolver, longWebm, 120, 4, 'piccolo',
-    { chunks: 120, chunkDelayMs: 25 },
-  );
+    // (B) Real streaming pipeline on the long clip — window stays bounded.
+    console.log(`\n=== (B) streaming pipeline pass log (debounce=${process.env.RECORDING_DEBOUNCE_MS ?? '1000'}ms) ===`)
+    console.log('(see "Pass timings" lines: window=A-Bs stays ~bounded as audioDur grows)')
+    const resolver = new ProfileResolver()
+    await runThroughPipelineStreaming(registry, resolver, longWebm, 120, 4, 'piccolo', { chunks: 120, chunkDelayMs: 25 })
 }
 
 main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+    console.error(e)
+    process.exit(1)
+})

@@ -2,6 +2,7 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
+import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -46,8 +47,22 @@ describe('MusicXmlExporter', () => {
         score.setTempo(score.firstMeasure?.firstNote, 120)
         const xml = new MusicXmlExporter(score).toXml('Test')
 
+        expect(xml).toContain('<beat-unit>quarter</beat-unit>')
+        expect(xml).not.toContain('<beat-unit-dot/>')
         expect(xml).toContain('<per-minute>120</per-minute>')
         expect(xml).toContain('<sound tempo="120"/>')
+    })
+
+    it("writes the metronome mark in the meter's felt beat (dotted quarter in 6/8) while sound tempo stays quarter bpm", () => {
+        const score = makeScore(1)
+        const first = score.firstMeasure
+        if (!first) throw new Error('expected a first measure')
+        score.setTimeSignature(first, new TimeSignature(6, 8))
+        score.setTempo(score.firstMeasure?.firstNote, 90)
+        const xml = new MusicXmlExporter(score).toXml('Test')
+
+        expect(xml).toContain('<beat-unit>quarter</beat-unit>\n            <beat-unit-dot/>\n            <per-minute>60</per-minute>')
+        expect(xml).toContain('<sound tempo="90"/>')
     })
 
     it('writes ties as both <tie> and <notations><tied>', () => {
@@ -80,7 +95,10 @@ describe('MusicXmlExporter', () => {
 
     it('writes an <alter> for an accidental-bearing pitch', () => {
         const score = makeScore(1)
-        const sharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 4, alter: 1, accidental: '#' }) })
+        const sharp = new Note({
+            duration: new Duration({ type: 'q' }),
+            pitch: new Pitch({ name: 'F', octave: 4, alter: 1, accidental: '#' }),
+        })
         const first = score.firstMeasure?.firstNote
         if (!first) throw new Error('expected first note')
         score.replace([first], [sharp])
@@ -93,7 +111,10 @@ describe('MusicXmlExporter', () => {
     it('writes a <time-modification> block for tuplet notes', () => {
         const score = makeScore(1)
         const triplet = () =>
-            new Note({ duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            new Note({
+                duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+                pitch: new Pitch({ name: 'C', octave: 4 }),
+            })
         const first = score.firstMeasure?.firstNote
         if (!first) throw new Error('expected first note')
         score.replace([first], [triplet(), triplet(), triplet()])

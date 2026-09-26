@@ -68,7 +68,14 @@ export default tseslint.config(
 
     // Browser globals for the web workspaces
     {
-        files: ['apps/web/**/*.ts', 'apps/web/**/*.tsx', 'apps/admin/**/*.ts', 'apps/admin/**/*.tsx', 'packages/notation/**/*.ts', 'packages/notation/**/*.tsx'],
+        files: [
+            'apps/web/**/*.ts',
+            'apps/web/**/*.tsx',
+            'apps/admin/**/*.ts',
+            'apps/admin/**/*.tsx',
+            'packages/notation/**/*.ts',
+            'packages/notation/**/*.tsx',
+        ],
         languageOptions: {
             globals: { ...globals.browser },
         },

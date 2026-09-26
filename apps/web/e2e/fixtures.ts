@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { expect, type Page, type Route,test as base } from '@playwright/test'
+import { expect, type Page, type Route, test as base } from '@playwright/test'
 
 import { CONSENT_VERSION } from '../src/lib/consent'
 
@@ -45,9 +45,41 @@ const SESSION = {
 
 // Generated from the real ScoreSerializer — see tests/_genfixture (throwaway).
 // Playwright runs with cwd = apps/web, so resolve the fixture from there.
-const SCORE_PARTWISE = JSON.parse(
-    readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8'),
-) as Record<string, unknown>
+const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as Record<
+    string,
+    unknown
+>
+
+/** Two archived takes on the mock score, one legacy row without audio, and an orphan take on a deleted score. */
+const TAKES = [
+    {
+        id: 'take-2',
+        scoreId: MOCK_SCORE_ID,
+        startedAt: '2026-09-04T14:02:00.000Z',
+        endedAt: '2026-09-04T14:02:42.000Z',
+        seconds: 42,
+        hasAudio: true,
+    },
+    {
+        id: 'take-1',
+        scoreId: MOCK_SCORE_ID,
+        startedAt: '2026-09-03T09:10:00.000Z',
+        endedAt: '2026-09-03T09:12:05.000Z',
+        seconds: 125,
+        hasAudio: true,
+    },
+    { id: 'take-0', scoreId: MOCK_SCORE_ID, startedAt: '2026-08-01T09:10:00.000Z', endedAt: null, seconds: 7, hasAudio: false },
+    // An orphan: its score is gone, so the settings inventory labels it "Deleted score".
+    // The editor's per-score list filters on scoreId and never sees it.
+    {
+        id: 'take-orphan',
+        scoreId: 'e2e-deleted-score',
+        startedAt: '2026-07-20T18:30:00.000Z',
+        endedAt: '2026-07-20T18:30:30.000Z',
+        seconds: 30,
+        hasAudio: true,
+    },
+]
 
 /** Records the requests the app makes to the mocked API, for assertions. */
 export interface ApiMock {
@@ -57,7 +89,16 @@ export interface ApiMock {
     readonly creates: Array<Record<string, unknown>>
     /** IDs the app requested via DELETE /scores/:id. */
     readonly deletes: string[]
+    /** IDs the app requested via POST /scores/:id/duplicate. */
+    readonly duplicates: string[]
+    /** IDs the app requested via DELETE /recordings/:id. */
+    readonly recordingDeletes: string[]
+    /** Share-link state of the mock score: token while on, null while off. */
+    shareToken: string | null
 }
+
+/** The token the mock mints for the score's share link. */
+export const MOCK_SHARE_TOKEN = 'e2eShareToken0001'
 
 function corsHeaders(route: Route): Record<string, string> {
     const origin = route.request().headers()['origin'] ?? '*'
@@ -81,6 +122,8 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
     // Deleted scores must stay gone: the app refetches the list after a delete,
     // and a stateless mock would resurrect the row.
     const deletedIds = new Set<string>()
+    // Likewise, duplicated scores must show up in the refetched list.
+    const copies: Array<typeof SCORE_META> = []
 
     // http(s) only: intercepting `**/*` would also catch blob: URLs, which
     // WebKit cannot route — it blocks them outright, breaking e.g. the PDF
@@ -137,6 +180,45 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
 
+        // Takes recorded into the mock score (newest first), replay and deletion.
+        if (/\/recordings\/[^/]+\/audio$/.test(path)) return route.fulfill({ status: 404, headers: corsHeaders(route), body: '' })
+        const takeMatch = path.match(/\/recordings\/([^/]+)$/)
+        if (takeMatch && method === 'DELETE') {
+            mock.recordingDeletes.push(takeMatch[1])
+            return json({})
+        }
+        if (path.endsWith('/recordings')) {
+            return json(
+                TAKES.filter((take) => !mock.recordingDeletes.includes(take.id)).filter(
+                    (take) => !url.searchParams.get('scoreId') || take.scoreId === url.searchParams.get('scoreId'),
+                ),
+            )
+        }
+
+        // Read-only share link: mint/revoke on the score, resolve publicly.
+        const shareMatch = path.match(/\/scores\/([^/]+)\/share$/)
+        if (shareMatch) {
+            if (method === 'POST') {
+                mock.shareToken = MOCK_SHARE_TOKEN
+                return json({ token: MOCK_SHARE_TOKEN })
+            }
+            mock.shareToken = null
+            return json({})
+        }
+        const sharedMatch = path.match(/\/shared\/([^/]+)$/)
+        if (sharedMatch) {
+            if (sharedMatch[1] !== MOCK_SHARE_TOKEN) return json({ message: 'Score not found' }, 404)
+            return json({ id: MOCK_SCORE_ID, title: MOCK_TITLE, updatedAt: NOW, document: SCORE_PARTWISE })
+        }
+
+        const duplicateMatch = path.match(/\/scores\/([^/]+)\/duplicate$/)
+        if (duplicateMatch && method === 'POST') {
+            mock.duplicates.push(duplicateMatch[1])
+            const copy = { ...SCORE_META, id: `e2e-copy-${mock.duplicates.length}`, title: `${MOCK_TITLE} (copy)` }
+            copies.push(copy)
+            return json(copy)
+        }
+
         const idMatch = path.match(/\/scores\/([^/]+)$/)
         if (idMatch) {
             if (method === 'PATCH') {
@@ -148,7 +230,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 deletedIds.add(idMatch[1])
                 return json({})
             }
-            return json(SCORE_META) // GET meta
+            return json({ ...SCORE_META, shareToken: mock.shareToken }) // GET meta
         }
 
         if (path.endsWith('/scores')) {
@@ -158,7 +240,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
                 const { title } = body as { title?: string }
                 return json({ ...SCORE_META, id: 'e2e-created-1', title: title ?? MOCK_TITLE })
             }
-            return json([SCORE_META].filter((s) => !deletedIds.has(s.id))) // list
+            return json([SCORE_META, ...copies].filter((s) => !deletedIds.has(s.id))) // list
         }
 
         return json({})
@@ -166,8 +248,31 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
 }
 
 export const test = base.extend<{ apiMock: ApiMock }>({
+    // Every navigation waits for React to hydrate before the test acts. Server-rendered
+    // forms look ready before that, but a fill() into one is lost (state stays empty, the
+    // submit stays disabled) — the flaky "button stays disabled" runs on a slow CI runner.
+    // The marker is set by <HydrationMarker /> in the root layout.
+    page: async ({ page }, use) => {
+        const hydrated = () => page.waitForSelector('html[data-hydrated]', { state: 'attached' })
+        const goto = page.goto.bind(page)
+        page.goto = async (url, options) => {
+            const response = await goto(url, options)
+            await hydrated()
+            return response
+        }
+        // Full document loads too: a reload or history move re-renders from the server.
+        for (const method of ['reload', 'goBack', 'goForward'] as const) {
+            const original = page[method].bind(page)
+            page[method] = async (options) => {
+                const response = await original(options)
+                if (response) await hydrated()
+                return response
+            }
+        }
+        await use(page)
+    },
     apiMock: async ({ page, context }, use) => {
-        const mock: ApiMock = { patches: [], creates: [], deletes: [] }
+        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [], shareToken: null }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.

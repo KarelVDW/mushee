@@ -42,9 +42,13 @@ function crossRowTie(): { score: Score; tie: TieLayout } {
     const rowEndMeasure = score.measures[MAX_MEASURES_PER_ROW - 1]
     const lastNote = rowEndMeasure.lastNote
     if (!lastNote) throw new Error('expected last note of row-ending measure')
+    const nextRowMeasure = score.measures[MAX_MEASURES_PER_ROW]
     const [tieStart] = score.replace(
-        [lastNote],
-        [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' })],
+        [lastNote, nextRowMeasure.notes[0]],
+        [
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }) }),
+        ],
     )
     return { score, tie: tieStartingAt(score, tieStart) }
 }
@@ -147,7 +151,7 @@ describe('TieLayout', () => {
         expect(after.contextSignature).toBe(before.contextSignature)
         expect(after).toBe(before)
         // Mutate the tie's own measure (pitch change shifts the note Y) → new instance.
-        const [newStart] = score.replace([before.note], [halfNote('G', 5, 'start')])
+        const [newStart] = score.replace([before.note, m.notes[1]], [halfNote('G', 5, 'start'), halfNote('G', 5, 'stop')])
         const rebuilt = tieStartingAt(score, newStart)
         expect(rebuilt).not.toBe(before)
     })

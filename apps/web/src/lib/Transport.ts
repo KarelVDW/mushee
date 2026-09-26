@@ -1,13 +1,13 @@
 import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
-
-import { CursorManager } from './CursorManager'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
-import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 import { Ticker } from '@mushee/playback/Ticker'
+
+import { CursorManager } from './CursorManager'
+import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
 

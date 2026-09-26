@@ -103,9 +103,11 @@ export class Note {
      * the back-link is derived from the predecessor, mirroring `Score.tiePartner`.
      */
     get tiesBack(): boolean {
-        if (this.tie === 'stop' || this.tie === 'start-stop') return true
-        if (!this._measure) return false
-        return this.getPrevious()?.tiesForward ?? false
+        if (!this._measure) return this.tie === 'stop' || this.tie === 'start-stop'
+        // Bound by the predecessor's tie (same sounding pitch — see Score.tiePartner). An explicit 'stop'
+        // from an import counts only when the note before it actually ties in; otherwise it is an attack.
+        const previous = this.getPrevious()
+        return previous !== null && this._measure.score.tiePartner(previous) === this
     }
 
     get stemDir(): 'up' | 'down' {

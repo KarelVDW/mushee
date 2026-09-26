@@ -9,13 +9,11 @@
  *  - 'verify'           → encrypted + verified: against POSTGRES_SSL_CA
  *                         (inline PEM) when set, else the system CA bundle
  */
-export function postgresSsl():
-  | false
-  | { rejectUnauthorized: boolean; ca?: string } {
-  const mode = (process.env.POSTGRES_SSL ?? 'false').trim().toLowerCase();
-  if (mode === '' || mode === 'false') return false;
-  if (mode === 'verify') {
-    return { rejectUnauthorized: true, ca: process.env.POSTGRES_SSL_CA };
-  }
-  return { rejectUnauthorized: false };
+export function postgresSsl(): false | { rejectUnauthorized: boolean; ca?: string } {
+    const mode = (process.env.POSTGRES_SSL ?? 'false').trim().toLowerCase()
+    if (mode === '' || mode === 'false') return false
+    if (mode === 'verify') {
+        return { rejectUnauthorized: true, ca: process.env.POSTGRES_SSL_CA }
+    }
+    return { rejectUnauthorized: false }
 }

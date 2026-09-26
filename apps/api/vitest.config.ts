@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config'
 
 /**
  * Unit tests for the API's decision logic (billing state machine, tier
@@ -8,9 +8,9 @@ import { defineConfig } from 'vitest/config';
  * need emitDecoratorMetadata, which esbuild does not emit).
  */
 export default defineConfig({
-  test: {
-    environment: 'node',
-    include: ['test/**/*.test.ts'],
-    globals: false,
-  },
-});
+    test: {
+        environment: 'node',
+        include: ['test/**/*.test.ts'],
+        globals: false,
+    },
+})

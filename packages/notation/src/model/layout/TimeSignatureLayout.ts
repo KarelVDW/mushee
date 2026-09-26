@@ -1,4 +1,5 @@
-import { getGlyphWidth, getYForLine } from '../../components'
+import { getGlyphWidth } from '../../components/glyphUtils'
+import { getYForLine } from '../../components/noteUtils'
 import type { TimeSignature } from '../TimeSignature'
 
 export class TimeSignatureLayout {

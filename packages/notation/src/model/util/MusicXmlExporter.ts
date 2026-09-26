@@ -153,7 +153,8 @@ export class MusicXmlExporter {
             if (attributes.transpose.diatonic !== undefined) lines.push(`          <diatonic>${attributes.transpose.diatonic}</diatonic>`)
             lines.push(`          <chromatic>${attributes.transpose.chromatic}</chromatic>`)
             /* v8 ignore next -- ScoreSerializer never sets a transpose octave-change; the field is part of the MusicXML schema */
-            if (attributes.transpose.octaveChange) lines.push(`          <octave-change>${attributes.transpose.octaveChange}</octave-change>`)
+            if (attributes.transpose.octaveChange)
+                lines.push(`          <octave-change>${attributes.transpose.octaveChange}</octave-change>`)
             lines.push('        </transpose>')
         }
         lines.push('      </attributes>')
@@ -161,17 +162,21 @@ export class MusicXmlExporter {
     }
 
     // A direction requires a direction-type, so the tempo is written as the metronome
-    // marking the editor draws, with the machine-readable <sound tempo> alongside.
+    // marking the editor draws (in the meter's felt beat, e.g. dotted quarter in 6/8),
+    // with the machine-readable quarter-note <sound tempo> alongside.
     private directionXml(direction: MxmlDirection): string[] {
         const tempo = direction.sound?.tempo
         /* v8 ignore next -- ScoreSerializer only emits a direction when a tempo is present, so tempo is always defined */
         if (tempo === undefined) return []
+        /* v8 ignore next -- ScoreSerializer always writes the metronome mark alongside the sound tempo; the quarter fallback is for hand-built directions */
+        const mark = direction.metronome ?? { beatUnit: 'quarter', beatUnitDots: 0, perMinute: tempo }
         return [
             '      <direction placement="above">',
             '        <direction-type>',
             '          <metronome>',
-            '            <beat-unit>quarter</beat-unit>',
-            `            <per-minute>${tempo}</per-minute>`,
+            `            <beat-unit>${mark.beatUnit}</beat-unit>`,
+            ...Array.from({ length: mark.beatUnitDots }, () => '            <beat-unit-dot/>'),
+            `            <per-minute>${mark.perMinute}</per-minute>`,
             '          </metronome>',
             '        </direction-type>',
             `        <sound tempo="${tempo}"/>`,
@@ -189,11 +194,6 @@ export class MusicXmlExporter {
     }
 
     private static escape(value: string): string {
-        return value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;')
+        return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
     }
 }

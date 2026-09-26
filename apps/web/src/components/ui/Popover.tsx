@@ -102,7 +102,9 @@ export function PopoverOption({ active, onClick, ariaLabel, title, className, ch
                 'flex items-center rounded-md cursor-pointer border-0 shrink-0',
                 'transition-[background-color,color] duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-low text-on-surface hover:bg-surface-container',
+                active
+                    ? 'bg-primary-container text-on-primary-container'
+                    : 'bg-surface-container-low text-on-surface hover:bg-surface-container',
                 className ?? '',
             ]
                 .filter(Boolean)

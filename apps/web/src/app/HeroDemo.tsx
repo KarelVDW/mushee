@@ -226,9 +226,21 @@ export function HeroDemo() {
                     {NOTES.map((note, i) => (
                         <g key={note.x} style={animate ? loopAnim(`demo-note-${i}`) : undefined} opacity={animate ? 0 : 1}>
                             {note.ledger && (
-                                <line x1={note.x - 4} x2={note.x + 14.5} y1={105} y2={105} stroke="var(--color-on-surface)" strokeWidth={1} />
+                                <line
+                                    x1={note.x - 4}
+                                    x2={note.x + 14.5}
+                                    y1={105}
+                                    y2={105}
+                                    stroke="var(--color-on-surface)"
+                                    strokeWidth={1}
+                                />
                             )}
-                            <Glyph name={note.half ? 'noteheadHalf' : 'noteheadBlack'} x={note.x} y={note.cy} fill="var(--color-on-surface)" />
+                            <Glyph
+                                name={note.half ? 'noteheadHalf' : 'noteheadBlack'}
+                                x={note.x}
+                                y={note.cy}
+                                fill="var(--color-on-surface)"
+                            />
                             <line
                                 x1={note.x + 10.1}
                                 x2={note.x + 10.1}
@@ -264,11 +276,7 @@ export function HeroDemo() {
                             }}>
                             <span
                                 className="block w-full h-full origin-bottom rounded-full bg-primary-container"
-                                style={
-                                    animate
-                                        ? { animation: `demo-meter-sway ${900 + (i % 5) * 120}ms ease-in-out infinite` }
-                                        : undefined
-                                }
+                                style={animate ? { animation: `demo-meter-sway ${900 + (i % 5) * 120}ms ease-in-out infinite` } : undefined}
                             />
                         </span>
                     ))}

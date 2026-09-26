@@ -42,7 +42,12 @@ export function clef(type: ClefType = 'treble', beatPosition = 0): Clef {
 
 /** Convenience: a KeySignature attached to a throwaway measure (keys require a measure, like clefs). */
 export function key(fifths = 0, mode?: string, beatPosition = 0): KeySignature {
-    const measure = new Measure(new Score(), 'treble', new TimeSignature(4, 4), beatPosition === 0 ? { keyFifths: fifths, keyMode: mode } : undefined)
+    const measure = new Measure(
+        new Score(),
+        'treble',
+        new TimeSignature(4, 4),
+        beatPosition === 0 ? { keyFifths: fifths, keyMode: mode } : undefined,
+    )
     if (beatPosition === 0) return measure.keySignature
     measure.addKeySignature(beatPosition, fifths, mode)
     return measure.keyAtBeat(beatPosition) as KeySignature

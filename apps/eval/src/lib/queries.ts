@@ -37,8 +37,7 @@ export function useDeleteCorpus() {
 export function useUploadTake() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ clipId, take, trimSec }: { clipId: string; take: Blob; trimSec: number }) =>
-            api.uploadTake(clipId, take, trimSec),
+        mutationFn: ({ clipId, take, trimSec }: { clipId: string; take: Blob; trimSec: number }) => api.uploadTake(clipId, take, trimSec),
         onSuccess: (_result, { clipId }) => {
             void queryClient.invalidateQueries({ queryKey: ['clip', clipId] })
             void queryClient.invalidateQueries({ queryKey: ['corpus'] })
@@ -65,7 +64,10 @@ export function useReports() {
 export function useReportDetail(ref: { root: string; file: string } | null) {
     return useQuery({
         queryKey: ['report', ref?.root, ref?.file],
-        queryFn: () => api.reportDetail(ref!.root, ref!.file),
+        queryFn: () => {
+            if (!ref) throw new Error('report query ran without a ref')
+            return api.reportDetail(ref.root, ref.file)
+        },
         enabled: ref !== null,
         staleTime: 60_000,
     })

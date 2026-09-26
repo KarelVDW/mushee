@@ -13,17 +13,13 @@
  * it, never re-derive it.
  */
 
-import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event';
-
-import {
-  NoteExtractor,
-  type NoteExtractorOptions,
-} from '../../../src/recordings/pipeline/note-extractor';
-import { VOICE_OPTS } from '../../../src/recordings/pipeline/providers/crepe-provider';
-import { segmentNotes } from '../../../src/recordings/pipeline/providers/pitch-decoder';
-import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder';
-import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile';
-import type { CachedClip } from './trackCache';
+import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
+import { NoteExtractor, type NoteExtractorOptions } from '../../../src/recordings/pipeline/note-extractor'
+import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
+import { VOICE_OPTS } from '../../../src/recordings/pipeline/providers/crepe-provider'
+import { segmentNotes } from '../../../src/recordings/pipeline/providers/pitch-decoder'
+import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder'
+import type { CachedClip } from './trackCache'
 
 /**
  * Frame-count knob as production's provider would see it. The octave-down
@@ -33,7 +29,7 @@ import type { CachedClip } from './trackCache';
  * at-pitch bands' 4 frames at 20 ms.
  */
 export function frameCount(c: CachedClip, declared: number | undefined): number {
-  return (declared ?? 4) * (c.providerName === PITCHDOWN_PROVIDER_NAME ? 2 : 1);
+    return (declared ?? 4) * (c.providerName === PITCHDOWN_PROVIDER_NAME ? 2 : 1)
 }
 
 /**
@@ -42,60 +38,60 @@ export function frameCount(c: CachedClip, declared: number | undefined): number 
  * rebuilding the cache.
  */
 function voiceEnabled(): boolean {
-  return process.env.RECORDING_VOICE_DECODE !== '0';
+    return process.env.RECORDING_VOICE_DECODE !== '0'
 }
 
 /** Raw notes from the decode the clip's profile selects. */
 export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
-  const gate = {
-    confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
-    minFreqHz: c.profile.minFreqHz,
-    maxFreqHz: c.profile.maxFreqHz,
-  };
-  if (c.profile.isVoice && voiceEnabled()) {
-    return new VoiceNoteDecoder({
-      ...VOICE_OPTS,
-      ...gate,
-      minNoteSec: frameCount(c, c.profile.minFramesPerNote) * c.track.hopSec,
-    }).decode(c.track, c.energy);
-  }
-  return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
-    hopSize: 1,
-    sampleRate: 1 / c.track.hopSec,
-    ...gate,
-    minFramesPerNote: frameCount(c, c.profile.minFramesPerNote),
-    pitchBinToleranceCents: 50,
-    mode: c.profile.segmentMode === 'median' ? 'median' : 'semitone',
-    smoothFrames: frameCount(c, c.profile.smoothFrames),
-  });
+    const gate = {
+        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+        minFreqHz: c.profile.minFreqHz,
+        maxFreqHz: c.profile.maxFreqHz,
+    }
+    if (c.profile.isVoice && voiceEnabled()) {
+        return new VoiceNoteDecoder({
+            ...VOICE_OPTS,
+            ...gate,
+            minNoteSec: frameCount(c, c.profile.minFramesPerNote) * c.track.hopSec,
+        }).decode(c.track, c.energy)
+    }
+    return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
+        hopSize: 1,
+        sampleRate: 1 / c.track.hopSec,
+        ...gate,
+        minFramesPerNote: frameCount(c, c.profile.minFramesPerNote),
+        pitchBinToleranceCents: 50,
+        mode: c.profile.segmentMode === 'median' ? 'median' : 'semitone',
+        smoothFrames: frameCount(c, c.profile.smoothFrames),
+    })
 }
 
 /** The cleanup set the clip's profile selects — mirrors `AudioConverter.cleanupFor`. */
 export function cleanupAsProduction(c: CachedClip): NoteExtractorOptions {
-  // maxGridDivisor 4 everywhere: the MusicXML grid bottoms out at the 16th, so a
-  // finer snap is re-rounded by the round-trip and only shows up as onset error.
-  if (c.profile.isVoice && voiceEnabled()) {
+    // maxGridDivisor 4 everywhere: the MusicXML grid bottoms out at the 16th, so a
+    // finer snap is re-rounded by the round-trip and only shows up as onset error.
+    if (c.profile.isVoice && voiceEnabled()) {
+        return {
+            maxGridDivisor: 4,
+            steps: {
+                pitchOutliers: false,
+                merge: false,
+                transients: false,
+                monophonic: false,
+            },
+        }
+    }
     return {
-      maxGridDivisor: 4,
-      steps: {
-        pitchOutliers: false,
-        merge: false,
-        transients: false,
-        monophonic: false,
-      },
-    };
-  }
-  return {
-    maxGridDivisor: 4,
-    steps: { pitchOutliers: false, merge: false },
-    adaptiveFloorFraction: 0.3,
-  };
+        maxGridDivisor: 4,
+        steps: { pitchOutliers: false, merge: false },
+        adaptiveFloorFraction: 0.3,
+    }
 }
 
 /** Cleaned (performance-domain) notes — segmentation plus the profile's cleanup. */
 export function performanceAsProduction(c: CachedClip, bpm = 120): NoteEventTime[] {
-  return new NoteExtractor(cleanupAsProduction(c)).clean(segmentAsProduction(c), {
-    bpm,
-    onsetTimesSec: c.onsetTimesSec,
-  });
+    return new NoteExtractor(cleanupAsProduction(c)).clean(segmentAsProduction(c), {
+        bpm,
+        onsetTimesSec: c.onsetTimesSec,
+    })
 }

@@ -12,7 +12,7 @@ import {
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/components/types'
-import { Instrument, type Note, type Pitch } from '@mushee/notation/model'
+import { Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -34,7 +34,6 @@ import {
     MOVE_NEXT,
     MOVE_PREVIOUS,
     RAISE_PITCH,
-    REMOVE_NOTE,
     SET_ACCIDENTAL,
     SET_CLEF,
     SET_DURATION,
@@ -50,7 +49,9 @@ import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportCont
 import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { RecordingsMenu } from './RecordingsMenu'
 import { ScoreManipulator } from './ScoreManipulator'
+import { ShareMenu } from './ShareMenu'
 import { TitleInput } from './TitleInput'
 import { usePlayback } from './usePlayback'
 import { useRecording } from './useRecording'
@@ -211,6 +212,7 @@ export default function ScoreEditorPage() {
                     <TempoPopover
                         className={className}
                         initialBpm={attributePopover.bpm}
+                        timeSignature={score?.measures[attributePopover.measureIndex]?.timeSignature ?? DEFAULT_TIME_SIGNATURE}
                         onSubmit={(bpm) => {
                             manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
                             closeAttributePopover()
@@ -463,6 +465,8 @@ export default function ScoreEditorPage() {
                             <Icon name="keyboard" size={16} />
                         </ChipToggle>
                     )}
+                    <ShareMenu scoreId={id} shareToken={scoreDocument?.meta.shareToken ?? null} compact={isMobile} />
+                    <RecordingsMenu scoreId={id} compact={isMobile} />
                     <ExportMenu
                         score={score}
                         title={title}
@@ -515,7 +519,7 @@ export default function ScoreEditorPage() {
                                     closeSelectionMenu()
                                 }}
                                 onDelete={() => {
-                                    manipulator.run(REMOVE_NOTE)
+                                    manipulator.deleteSelection()
                                     closeSelectionMenu()
                                 }}
                                 // Stays open, like the OS menu: growing the selection is a step
@@ -629,6 +633,9 @@ export default function ScoreEditorPage() {
 }
 
 /** Space kept between an anchored attribute popover and the score wrapper's side edges. */
+/** Meter assumed for the in-score tempo popover when its measure is gone (the score reloaded underneath it). */
+const DEFAULT_TIME_SIGNATURE = new TimeSignature(4, 4)
+
 const POPOVER_EDGE_MARGIN = 8
 
 /**

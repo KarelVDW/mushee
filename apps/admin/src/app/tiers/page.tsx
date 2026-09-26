@@ -43,13 +43,19 @@ export default function TiersPage() {
                                         <span className="block font-mono text-[11px] leading-tight text-on-surface-variant">{tier.id}</span>
                                     </td>
                                     <td className="px-4 py-3 font-body text-[13px] text-on-surface">
-                                        {tier.dailyRecordingCredits === null ? 'Unlimited' : `${formatSeconds(tier.dailyRecordingCredits)} / day`}
+                                        {tier.dailyRecordingCredits === null
+                                            ? 'Unlimited'
+                                            : `${formatSeconds(tier.dailyRecordingCredits)} / day`}
                                     </td>
                                     <td className="px-4 py-3 font-body text-[13px] text-on-surface">
                                         {tier.maxScores === null ? 'No cap' : `${tier.maxScores} scores`}
                                     </td>
-                                    <td className="px-4 py-3 font-mono text-[13px] text-on-surface-variant">{formatCount(tier.userCount)}</td>
-                                    <td className="px-4 py-3">{tier.sellable ? <Pill tone="cyan">Sellable</Pill> : <Pill>Internal</Pill>}</td>
+                                    <td className="px-4 py-3 font-mono text-[13px] text-on-surface-variant">
+                                        {formatCount(tier.userCount)}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {tier.sellable ? <Pill tone="cyan">Sellable</Pill> : <Pill>Internal</Pill>}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

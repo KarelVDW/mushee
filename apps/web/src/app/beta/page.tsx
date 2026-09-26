@@ -55,8 +55,8 @@ export default function BetaWaitingPage() {
                         <ModalTitle>You&apos;re on the waitlist.</ModalTitle>
                         <SubHeadline>
                             Solkey is in a closed beta, so access is granted personally. We&apos;ll email{' '}
-                            <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is
-                            approved — usually within a day.
+                            <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is approved
+                            — usually within a day.
                         </SubHeadline>
 
                         <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">

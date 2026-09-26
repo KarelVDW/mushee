@@ -5,14 +5,15 @@ import { useParams } from 'next/navigation'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { EngravedScore } from '@/components/EngravedScore'
-import { Alert, Eyebrow, Pill } from '@/components/ui'
+import { Alert, Eyebrow, Pill, TertiaryButton } from '@/components/ui'
 import { type AdminScoreRecording, recordingAudioUrl } from '@/lib/api'
 import { formatDateTime, formatSeconds } from '@/lib/format'
-import { useScore } from '@/lib/queries'
+import { useRevokeShare, useScore } from '@/lib/queries'
 
 export default function ScoreDetailPage() {
     const { id } = useParams<{ id: string }>()
     const score = useScore(id)
+    const revokeShare = useRevokeShare(id)
 
     return (
         <AdminShell>
@@ -51,6 +52,27 @@ export default function ScoreDetailPage() {
                         </section>
                     )}
 
+                    <section className="bg-surface-container-lowest rounded-lg tonal-layer-glow px-5 py-4 mb-4 flex items-center gap-4 flex-wrap">
+                        <div className="flex flex-col gap-1 flex-1 min-w-60">
+                            <Eyebrow>Share link</Eyebrow>
+                            {score.data.shareToken ? (
+                                <span className="font-body text-[13px] text-on-surface">
+                                    On — anyone with <code className="font-mono text-[12px]">/s/{score.data.shareToken}</code> can view,
+                                    play and download this score.
+                                </span>
+                            ) : (
+                                <span className="font-body text-[13px] text-on-surface-variant">
+                                    Off — the score is private to its owner.
+                                </span>
+                            )}
+                        </div>
+                        {score.data.shareToken && (
+                            <TertiaryButton danger onClick={() => revokeShare.mutate()}>
+                                {revokeShare.isPending ? 'Turning off…' : 'Turn link off'}
+                            </TertiaryButton>
+                        )}
+                    </section>
+
                     <Recordings recordings={score.data.recordings} />
 
                     {score.data.document && (
@@ -86,9 +108,7 @@ function Recordings({ recordings }: { recordings: AdminScoreRecording[] }) {
                     <div
                         key={recording.id}
                         className="grid md:grid-cols-[12rem_6rem_auto_1fr] grid-cols-1 items-center gap-x-4 gap-y-2 rounded-md px-3 py-2.5 -mx-3 hover:bg-surface-container-high transition-colors duration-150 ease-solkey">
-                        <span className="font-body text-[13px] leading-none text-on-surface">
-                            {formatDateTime(recording.createdAt)}
-                        </span>
+                        <span className="font-body text-[13px] leading-none text-on-surface">{formatDateTime(recording.createdAt)}</span>
                         <span className="font-mono text-[12px] leading-none text-on-surface-variant">
                             {formatSeconds(recording.creditsSpent)}
                         </span>

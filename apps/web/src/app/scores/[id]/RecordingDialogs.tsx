@@ -7,17 +7,10 @@ import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
 import { usePlans } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
+import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 // Format seconds as S"s" under a minute, M:SS under an hour, then H"h".
-function fmtRecTime(sec: number): string {
-    const s = Math.max(0, Math.floor(sec))
-    if (s < 60) return `${s}s`
-    const m = Math.floor(s / 60)
-    if (m < 60) return `${m}:${String(s % 60).padStart(2, '0')}`
-    const h = Math.floor(m / 60)
-    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
-}
 
 function useEscape(onClose: () => void) {
     useEffect(() => {
@@ -54,7 +47,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     return (
         <DialogScrim onDismiss={onClose}>
             <DialogPanel
-                title={`You've used today's ${fmtRecTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
+                title={`You've used today's ${formatRecordingTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
                 subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
                 onClose={onClose}
                 width={480}
@@ -115,7 +108,10 @@ function WideSpectrumWalkthrough() {
             scene: (
                 <div className="relative w-20 h-24 rounded-[10px] bg-surface-container-lowest tonal-layer-glow">
                     <div className="absolute top-1.5 right-3 h-13 w-0.5 rounded-full bg-primary/30" />
-                    <div className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary" style={{ '--phase-delay': '0s' } as CSSProperties} />
+                    <div
+                        className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary"
+                        style={{ '--phase-delay': '0s' } as CSSProperties}
+                    />
                 </div>
             ),
         },
@@ -123,7 +119,9 @@ function WideSpectrumWalkthrough() {
             delay: '3s',
             caption: 'Tap Mic Mode',
             scene: (
-                <div className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3" style={{ '--phase-delay': '3s' } as CSSProperties}>
+                <div
+                    className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3"
+                    style={{ '--phase-delay': '3s' } as CSSProperties}>
                     <span className="w-8 h-8 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
                         <Icon name="mic" size={16} />
                     </span>
@@ -202,8 +200,8 @@ export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogPro
                     <WideSpectrumWalkthrough />
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                         Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes
-                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it
-                        now, come back, and your iPhone remembers the choice for this browser.
+                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it now,
+                        come back, and your iPhone remembers the choice for this browser.
                     </span>
                 </div>
             </DialogPanel>

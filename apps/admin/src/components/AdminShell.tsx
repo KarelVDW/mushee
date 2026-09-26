@@ -11,6 +11,7 @@ const NAV = [
     { href: '/', label: 'Dashboard', icon: 'grid' },
     { href: '/users', label: 'Users', icon: 'users' },
     { href: '/waitlist', label: 'Waitlist', icon: 'user-plus' },
+    { href: '/announcements', label: 'Announcements', icon: 'send' },
     { href: '/tiers', label: 'Tiers', icon: 'credit-card' },
 ] as const
 

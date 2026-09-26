@@ -1,11 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 
 /**
  * Hot cache for scores under active editing. The full JSON score structure
@@ -15,16 +8,16 @@ import {
 @Entity('cached_scores')
 @Index('IDX_cached_scores_updatedAt', ['updatedAt'])
 export class CachedScore {
-  /** References scores.id (ON DELETE CASCADE) — one cache row per score. */
-  @PrimaryColumn('uuid')
-  scoreId: string;
+    /** References scores.id (ON DELETE CASCADE) — one cache row per score. */
+    @PrimaryColumn('uuid')
+    scoreId: string
 
-  @Column({ type: 'jsonb' })
-  data: Record<string, unknown>;
+    @Column({ type: 'jsonb' })
+    data: Record<string, unknown>
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
+    @CreateDateColumn({ type: 'timestamptz' })
+    createdAt: Date
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
+    @UpdateDateColumn({ type: 'timestamptz' })
+    updatedAt: Date
 }

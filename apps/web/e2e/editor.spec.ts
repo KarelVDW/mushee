@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
 
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
@@ -278,4 +278,46 @@ test('navigates back to the library', async ({ page }) => {
     await page.getByRole('button', { name: 'Back to library' }).click()
     await expect(page).toHaveURL(/\/scores$/)
     await expect(page.getByRole('heading', { name: 'Your scores' })).toBeVisible()
+})
+
+test('takes menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Takes' }).click()
+    const panel = page.getByRole('dialog', { name: 'Takes' })
+    await expect(panel).toBeVisible()
+    const rows = panel.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    await expect(rows).toHaveCount(3)
+    await expect(rows.nth(0)).toContainText('0:42')
+    await expect(rows.nth(1)).toContainText('2:05')
+    // A take from before audio archiving cannot be played.
+    await expect(rows.nth(2).getByRole('button', { name: 'Play take' })).toBeDisabled()
+
+    // Delete asks first; "Keep" backs out without a request.
+    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    await rows.nth(0).getByRole('button', { name: 'Keep' }).click()
+    expect(apiMock.recordingDeletes).toEqual([])
+
+    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(rows).toHaveCount(2)
+    expect(apiMock.recordingDeletes).toEqual(['take-2'])
+    await expect(page.getByRole('status').first()).toContainText('Take deleted')
+
+    // Escape closes the panel.
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+})
+
+test('share menu turns the read-only link on, shows it, and turns it off again', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Share score' }).click()
+    const panel = page.getByRole('dialog', { name: 'Share score' })
+    await expect(panel).toBeVisible()
+    await panel.getByRole('button', { name: 'Turn on link' }).click()
+
+    const link = panel.getByRole('textbox', { name: 'Share link' })
+    await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+    expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
+
+    await panel.getByRole('button', { name: 'Turn off link' }).click()
+    await expect(panel.getByRole('button', { name: 'Turn on link' })).toBeVisible()
+    expect(apiMock.shareToken).toBeNull()
 })

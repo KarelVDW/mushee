@@ -6,6 +6,7 @@ import { type FormEvent, useState } from 'react'
 import { AuthCard, AuthShell } from '@/components/ui'
 import { getAccountDeletionStatus } from '@/lib/api'
 import { signIn } from '@/lib/auth-client'
+import { nextPathFrom } from '@/lib/nextPath'
 
 import { ReactivateAccountDialog } from './ReactivateAccountDialog'
 
@@ -31,8 +32,7 @@ export default function LoginPage() {
         // The auth middleware puts the originally requested path in ?next= so
         // deep links survive the login bounce. Same-origin paths only — a full
         // URL here would be an open redirect.
-        const next = new URLSearchParams(window.location.search).get('next')
-        router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/scores')
+        router.push(nextPathFrom(window.location.search))
     }
 
     function handleSubmit(e: FormEvent) {

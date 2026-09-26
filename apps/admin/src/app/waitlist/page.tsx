@@ -57,15 +57,7 @@ export default function WaitlistPage() {
     )
 }
 
-function SignupList({
-    title,
-    signups,
-    action,
-}: {
-    title: string
-    signups: BetaSignup[]
-    action: (signup: BetaSignup) => React.ReactNode
-}) {
+function SignupList({ title, signups, action }: { title: string; signups: BetaSignup[]; action: (signup: BetaSignup) => React.ReactNode }) {
     return (
         <section className="bg-surface-container-lowest rounded-lg tonal-layer-glow px-5 py-4 mb-4">
             <div className="flex items-center gap-2.5 mb-3">

@@ -1,9 +1,10 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { Score } from '@mushee/notation/model/Score'
+import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { makeScore } from '@mushee/notation/testing'
-import { describe, expect, it } from 'vitest'
-
 import { Metronome } from '@mushee/playback/Metronome'
 import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
+import { describe, expect, it } from 'vitest'
 
 function fakePlayer() {
     const scheduled: ScheduledNote[] = []
@@ -35,7 +36,8 @@ describe('Metronome', () => {
         // 4 beats in the measure => 4 clicks.
         expect(scheduled).toHaveLength(4)
         expect(scheduled.every((n) => n.instrument === Instrument.Woodblock)).toBe(true)
-        expect(scheduled.every((n) => n.midi === 96)).toBe(true)
+        // The downbeat is accented (higher pitch); the other beats share the plain click.
+        expect(scheduled.map((n) => n.midi)).toEqual([108, 96, 96, 96])
         // After the only measure is exhausted (measureIdx walks off), tick reports done.
         expect(done).toBe(true)
         // Default 90bpm => one click per 60/90 s.
@@ -186,5 +188,114 @@ describe('Metronome', () => {
         metro.tick()
         // No tempo marking => default 90bpm interval.
         expect(scheduled[1].startTime).toBeCloseTo(60 / 90, 5)
+    })
+
+    describe('meter-aware pulse', () => {
+        /** A score of `count` measures in the given meter, filled with rests (the meter is set before filling, so nothing rebars). */
+        function scoreIn(beatAmount: number, beatType: number, count = 1) {
+            const score = new Score()
+            for (let i = 0; i < count; i++) {
+                const measure = score.addMeasure()
+                if (i === 0) score.setTimeSignature(measure, new TimeSignature(beatAmount, beatType))
+                measure.complete()
+            }
+            return score
+        }
+
+        it('clicks twice a bar in 6/8 — on each dotted quarter, the first accented', () => {
+            const { player, scheduled, raw } = fakePlayer()
+            const metro = new Metronome(player)
+            metro.score = scoreIn(6, 8)
+            metro.reset()
+
+            raw.currentTime = 100
+            metro.tick()
+            // 90 quarter-bpm => a dotted quarter every 1s.
+            expect(scheduled.map((n) => n.startTime)).toEqual([0, 1])
+            expect(scheduled.map((n) => n.midi)).toEqual([108, 96])
+        })
+
+        it('clicks once per eighth in 7/8 and once per half in 2/2', () => {
+            const seven = fakePlayer()
+            const metro7 = new Metronome(seven.player)
+            metro7.score = scoreIn(7, 8)
+            metro7.reset()
+            seven.raw.currentTime = 100
+            metro7.tick()
+            expect(seven.scheduled).toHaveLength(7)
+            expect(seven.scheduled[1].startTime).toBeCloseTo(60 / 90 / 2, 5)
+
+            const two = fakePlayer()
+            const metro2 = new Metronome(two.player)
+            metro2.score = scoreIn(2, 2)
+            metro2.reset()
+            two.raw.currentTime = 100
+            metro2.tick()
+            expect(two.scheduled).toHaveLength(2)
+            expect(two.scheduled[1].startTime).toBeCloseTo((2 * 60) / 90, 5)
+        })
+
+        it('accents the downbeat of every measure across a multi-measure pass', () => {
+            const { player, scheduled, raw } = fakePlayer()
+            const metro = new Metronome(player)
+            metro.score = scoreIn(6, 8, 3)
+            metro.reset()
+
+            raw.currentTime = 100
+            metro.tick()
+            expect(scheduled.map((n) => n.midi)).toEqual([108, 96, 108, 96, 108, 96])
+        })
+
+        it('starting off the pulse grid waits for the next pulse instead of clicking at once', () => {
+            const { player, scheduled, raw } = fakePlayer()
+            const metro = new Metronome(player)
+            metro.score = scoreIn(6, 8, 2)
+            metro.startBeat = 1 // the third eighth of the first group — mid-pulse
+            metro.reset()
+
+            raw.currentTime = 100
+            metro.tick()
+            // Half a beat (0.5 quarter = 1/3 s at 90bpm) until the second dotted quarter, then the next bar's downbeat.
+            expect(scheduled[0].startTime).toBeCloseTo(1 / 3, 5)
+            expect(scheduled[0].midi).toBe(96)
+            expect(scheduled[1].startTime).toBeCloseTo(1 / 3 + 1, 5)
+            expect(scheduled[1].midi).toBe(108)
+        })
+
+        it('syncTo skips elapsed pulses so a mid-pass join schedules only upcoming clicks', () => {
+            const { player, scheduled, raw } = fakePlayer()
+            const metro = new Metronome(player)
+            metro.score = scoreIn(6, 8, 2)
+            metro.reset()
+            // 2.5s in: the clicks at 0, 1 and 2 have passed; the next is the second bar's second pulse at 3s.
+            metro.syncTo(2.5)
+
+            raw.currentTime = 100
+            metro.tick()
+            expect(scheduled.map((n) => n.startTime)).toEqual([3])
+            expect(scheduled[0].midi).toBe(96)
+        })
+
+        it('syncTo is a no-op without a score', () => {
+            const { player, scheduled } = fakePlayer()
+            const metro = new Metronome(player)
+            metro.syncTo(5)
+            expect(scheduled).toHaveLength(0)
+        })
+
+        it('a mid-measure tempo marking takes effect at its beat', () => {
+            const { player, scheduled, raw } = fakePlayer()
+            const metro = new Metronome(player)
+            const score = makeScore(1)
+            score.measures[0].setTempo(0, 60)
+            score.measures[0].addTempo(2, 120)
+            metro.score = score
+            metro.reset()
+
+            raw.currentTime = 100
+            metro.tick()
+            // Beats 0,1 at 60bpm (1s apart), beats 2,3 at 120bpm (0.5s apart).
+            expect(scheduled.map((n) => n.startTime)).toEqual([0, 1, 2, 2.5])
+        })
     })
 })

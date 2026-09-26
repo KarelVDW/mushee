@@ -53,7 +53,7 @@ describe('Note', () => {
         score.addMeasure().complete()
         const first = placeNote(score, 0, 'C', 4)
         const second = first.getNext() as Note
-        const [tied] = score.replace([second], [pitched('D', 4)])
+        const [tied] = score.replace([second], [pitched('C', 4)]) // same pitch: the only kind a tie can bind
 
         expect(tied.tiesBack).toBe(false)
 

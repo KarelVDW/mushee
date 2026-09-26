@@ -17,99 +17,99 @@
  * stdout is pipeline log noise the caller should ignore.
  */
 
-import { readFileSync } from 'fs';
-import { createInterface } from 'readline';
-import { resolve } from 'path';
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+import { createInterface } from 'readline'
 
-import type { MxmlMeasure } from '../../src/recordings/pipeline/mxml.types';
-import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver';
-import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry';
-import { RecordingPipeline } from '../../src/recordings/pipeline/recording-pipeline';
-import { type EstNote, type MatchOptions, scoreNotesBest, scoreOnsets } from './lib/metrics';
-import { measuresToNotes } from './lib/pipelineRun';
-import { segErrors } from './lib/segErrors';
-import type { GroundTruth } from './types';
+import type { MxmlMeasure } from '../../src/recordings/pipeline/mxml.types'
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { RecordingPipeline } from '../../src/recordings/pipeline/recording-pipeline'
+import { type EstNote, type MatchOptions, scoreNotesBest, scoreOnsets } from './lib/metrics'
+import { measuresToNotes } from './lib/pipelineRun'
+import { segErrors } from './lib/segErrors'
+import type { GroundTruth } from './types'
 
 interface Request {
-  id: number;
-  wavPath: string;
-  bpm: number;
-  beatsPerMeasure: number;
-  instrumentId?: string;
-  truth?: GroundTruth;
+    id: number
+    wavPath: string
+    bpm: number
+    beatsPerMeasure: number
+    instrumentId?: string
+    truth?: GroundTruth
 }
 
-const MATCH_OPTS: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 };
+const MATCH_OPTS: MatchOptions = { onsetTolSec: 0.1, timingTolSec: 0.3 }
 
 function respond(payload: unknown): void {
-  process.stdout.write('@@RES ' + JSON.stringify(payload) + '\n');
+    process.stdout.write('@@RES ' + JSON.stringify(payload) + '\n')
 }
 
 async function transcribe(
-  registry: ProviderRegistry,
-  resolver: ProfileResolver,
-  req: Request,
+    registry: ProviderRegistry,
+    resolver: ProfileResolver,
+    req: Request,
 ): Promise<{ notes: EstNote[]; measures: Record<number, MxmlMeasure> }> {
-  const audio = readFileSync(req.wavPath);
-  const pipeline = new RecordingPipeline(registry, resolver);
-  pipeline.setMeta({
-    bpm: req.bpm,
-    timeSignature: { beats: req.beatsPerMeasure, beatType: 4 },
-    chromaticTranspose: 0,
-    instrumentId: req.instrumentId,
-  });
-  const measures: Record<number, MxmlMeasure> = {};
-  pipeline.setOnUpdate((u) => {
-    for (const [k, v] of Object.entries(u.measures)) measures[Number(k)] = v;
-  });
-  const CHUNKS = 12;
-  const size = Math.ceil(audio.byteLength / CHUNKS);
-  for (let o = 0; o < audio.byteLength; o += size) {
-    pipeline.appendChunk(audio.subarray(o, Math.min(o + size, audio.byteLength)));
-  }
-  await pipeline.finalize();
-  return { notes: measuresToNotes(measures, req.beatsPerMeasure, req.bpm, 0), measures };
+    const audio = readFileSync(req.wavPath)
+    const pipeline = new RecordingPipeline(registry, resolver)
+    pipeline.setMeta({
+        bpm: req.bpm,
+        timeSignature: { beats: req.beatsPerMeasure, beatType: 4 },
+        chromaticTranspose: 0,
+        instrumentId: req.instrumentId,
+    })
+    const measures: Record<number, MxmlMeasure> = {}
+    pipeline.setOnUpdate((u) => {
+        for (const [k, v] of Object.entries(u.measures)) measures[Number(k)] = v
+    })
+    const CHUNKS = 12
+    const size = Math.ceil(audio.byteLength / CHUNKS)
+    for (let o = 0; o < audio.byteLength; o += size) {
+        pipeline.appendChunk(audio.subarray(o, Math.min(o + size, audio.byteLength)))
+    }
+    await pipeline.finalize()
+    return { notes: measuresToNotes(measures, req.beatsPerMeasure, req.bpm, 0), measures }
 }
 
 async function main(): Promise<void> {
-  const registry = new ProviderRegistry({
-    crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
-  });
-  await registry.initAll();
-  const resolver = new ProfileResolver();
-  process.stdout.write('@@READY\n');
+    const registry = new ProviderRegistry({
+        crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
+    })
+    await registry.initAll()
+    const resolver = new ProfileResolver()
+    process.stdout.write('@@READY\n')
 
-  // Serialize requests: the pipeline is CPU-bound, parallel takes just thrash.
-  let chain: Promise<void> = Promise.resolve();
-  const rl = createInterface({ input: process.stdin });
-  rl.on('line', (line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    chain = chain.then(async () => {
-      let req: Request | null = null;
-      try {
-        req = JSON.parse(trimmed) as Request;
-        const { notes, measures } = await transcribe(registry, resolver, req);
-        respond({
-          id: req.id,
-          ok: true,
-          notes,
-          measures,
-          metrics: req.truth ? scoreNotesBest(req.truth, notes, MATCH_OPTS) : undefined,
-          seg: req.truth ? segErrors(req.truth.notes, notes) : undefined,
-          onsetOnly: req.truth ? scoreOnsets(req.truth.notes, notes, MATCH_OPTS.onsetTolSec) : undefined,
-        });
-      } catch (err) {
-        respond({ id: req?.id ?? -1, ok: false, error: String(err) });
-      }
-    });
-  });
-  rl.on('close', () => {
-    void chain.then(() => process.exit(0));
-  });
+    // Serialize requests: the pipeline is CPU-bound, parallel takes just thrash.
+    let chain: Promise<void> = Promise.resolve()
+    const rl = createInterface({ input: process.stdin })
+    rl.on('line', (line) => {
+        const trimmed = line.trim()
+        if (!trimmed) return
+        chain = chain.then(async () => {
+            let req: Request | null = null
+            try {
+                req = JSON.parse(trimmed) as Request
+                const { notes, measures } = await transcribe(registry, resolver, req)
+                respond({
+                    id: req.id,
+                    ok: true,
+                    notes,
+                    measures,
+                    metrics: req.truth ? scoreNotesBest(req.truth, notes, MATCH_OPTS) : undefined,
+                    seg: req.truth ? segErrors(req.truth.notes, notes) : undefined,
+                    onsetOnly: req.truth ? scoreOnsets(req.truth.notes, notes, MATCH_OPTS.onsetTolSec) : undefined,
+                })
+            } catch (err) {
+                respond({ id: req?.id ?? -1, ok: false, error: String(err) })
+            }
+        })
+    })
+    rl.on('close', () => {
+        void chain.then(() => process.exit(0))
+    })
 }
 
 main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+    console.error(err)
+    process.exit(1)
+})

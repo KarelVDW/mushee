@@ -98,7 +98,9 @@ export default function UserDetailPage() {
                         </Card>
 
                         <Card title="Sessions">
-                            {user.data.sessions.length === 0 && <p className="font-body text-[13px] text-on-surface-variant m-0">No active sessions.</p>}
+                            {user.data.sessions.length === 0 && (
+                                <p className="font-body text-[13px] text-on-surface-variant m-0">No active sessions.</p>
+                            )}
                             {user.data.sessions.map((session) => (
                                 <FieldRow
                                     key={session.id}

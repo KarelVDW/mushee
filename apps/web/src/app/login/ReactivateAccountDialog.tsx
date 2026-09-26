@@ -24,9 +24,7 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
     const reactivation = useReactivateAccount()
     const [declining, setDeclining] = useState(false)
 
-    const purgeDate = purgeAfter
-        ? new Date(purgeAfter).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
-        : 'soon'
+    const purgeDate = purgeAfter ? new Date(purgeAfter).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'soon'
 
     const decline = async () => {
         if (declining || reactivation.isPending) return
@@ -55,8 +53,8 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
                     </>
                 }>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0 pb-4">
-                    You asked us to delete this account, and nothing is gone yet. Reactivate now and your scores,
-                    recordings, and settings will be exactly where you left them.
+                    You asked us to delete this account, and nothing is gone yet. Reactivate now and your scores, recordings, and settings
+                    will be exactly where you left them.
                 </p>
             </DialogPanel>
         </DialogScrim>

@@ -27,6 +27,27 @@ bug-fix logs were dropped; what remains is still-true reference material.
   `order.refunded`.
 - Unconfigured Polar degrades gracefully: `/billing/*` answers 503, the UI hides
   paid actions, free/beta tiers keep working.
+
+### Bulk e-mail to users (decided 2026-09-05)
+
+- **Service announcements** (beta ending, terms changes, downtime) go out from
+  the admin console's Announcements page: audience filter (plan, beta status,
+  signup window, recent activity, verified only; deletion-requested accounts
+  excluded by default) → test copy to yourself → send. Sent through our
+  transactional SendGrid integration as one personalization per recipient in
+  batches of 500 (SendGrid caps a request at 1,000; recipients never see each
+  other), `{{name}}` → first name, footer names the account as the reason;
+  every send is logged in `announcements` — including partial ones: a rejected
+  SendGrid batch does not abort the run, the row records reached vs. unreached
+  (with the addresses), and the history offers a resend to exactly the
+  unreached. These are service e-mail under the
+  privacy policy's "essential service email" — no unsubscribe link, so **never
+  use it for marketing**.
+- **Marketing-shaped mail** (newsletters, promotions, re-engagement): export
+  the same audience as CSV from that page and run it through SendGrid Marketing
+  Campaigns — that product owns contact lists, unsubscribe groups, templates
+  and stats, which a homegrown client would have to rebuild (and which the law
+  requires for marketing mail). Keep the transactional API key for the app.
 - Sandbox test before launch: checkout → webhook → tier flips in Settings;
   cancel → resume; plan switch (`POST /billing/change` updates the existing
   subscription with proration — never creates a second one).
@@ -40,7 +61,11 @@ bug-fix logs were dropped; what remains is still-true reference material.
   blockers.
 - Custom events emitted: `signup_completed`, `onboarding_completed`,
   `recording_started`, `checkout_started`, `plan_change_started`,
-  `subscription_cancel_started`, `landing_cta_clicked`.
+  `subscription_cancel_started`, `landing_cta_clicked` (locations incl.
+  `pricing-page`, `shared-score`), and since 2026-09-05 the share loop and
+  data surfaces: `share_link_created` / `share_link_copied` /
+  `share_link_removed`, `shared_score_viewed` (`authed`), `shared_score_played`, `shared_score_copied`,
+  `take_played` (`seconds`), `take_deleted`, `data_export_downloaded` (`scores`).
 
 ### Beta mode
 
@@ -70,8 +95,8 @@ bug-fix logs were dropped; what remains is still-true reference material.
   1039.906.118), Capucienenlaan 23, 9300 Aalst, Belgium. Not VAT-registered
   yet — revisit the pages (and Polar tax settings) if that changes.
   Governing law: Belgium. Lawyer review of both documents still outstanding.
-  *Rebranded Sheemu → Solkey on 2026-07-18; KBO/CBE commercial-name update
-  still pending.*
+  _Rebranded Sheemu → Solkey on 2026-07-18; KBO/CBE commercial-name update
+  still pending._
 - Canonical domain is **solkey.io** since the 2026-07-18 rebrand (apex; www
   308-redirects to it — the Vercel primary domain must stay the apex or CORS
   breaks). sheemu.com should 301 to solkey.io during the transition. Mail
@@ -85,7 +110,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 1. Topology `solkey.io` + `api.solkey.io`; `COOKIE_DOMAIN=.solkey.io`. The
    proxy accepts both `__Secure-` and plain cookie names, but the cookie must
-   *reach* it — same parent domain required. Smoke-test one real HTTPS login first.
+   _reach_ it — same parent domain required. Smoke-test one real HTTPS login first.
 2. `POSTGRES_SSL=require` (or `verify` + `POSTGRES_SSL_CA`) against managed
    Postgres; enable PITR/backups and rehearse one restore.
 3. Production `api-secrets` needs real Polar/beta/mail values; README
@@ -149,12 +174,12 @@ bug-fix logs were dropped; what remains is still-true reference material.
 - **Editor chrome**: in-flow bottom tool dock chosen over a left vertical rail —
   it keeps the horizontal controls and popovers-open-upward pattern and fixes
   the old overlap by construction. If tool count truly explodes, revisit the rail.
-- **Consent design** (two-tier since 2026-07-11, CONSENT_VERSION 2): base
+- **Consent design** (two-tier since 2026-07-11, CONSENT*VERSION 2): base
   tier for everyone is cookieless anonymous capture (in-memory persistence +
   `person_profiles: 'identified_only'` — nothing on the device, no identity,
   legitimate interest) so top-line traffic isn't consent-gated; the one
   `analytics` consent toggle upgrades to session replay + account-id-linked
-  events + the persistent ph_* cookie. Withdrawal calls `posthog.reset()`
+  events + the persistent ph*\* cookie. Withdrawal calls `posthog.reset()`
   (drops the cookie) and falls back to the anonymous tier — never to
   opt-out. `identify` is consent-gated and sends the account id only —
   policy says "pseudonymous". Server-side error reports run on legitimate
@@ -194,7 +219,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
   (`/beta/status`, `BetaApprovalGuard`, recording gateway).
 - **`RecordingSession` cap is wall-clock via the meter tick** — a socket that
   never sends audio is closed by the WS keepalive, not the cap. Fine, but know it.
-- **Editor `handleRecordToggle`**: if `cursorEl` is missing it bails *after*
+- **Editor `handleRecordToggle`**: if `cursorEl` is missing it bails _after_
   inserting the count-off measure. Cosmetic and rare (ref exists once the score
   renders); deliberately left alone.
 - **A tier added only in the DB** shows the free tier's display decoration
@@ -223,6 +248,11 @@ bug-fix logs were dropped; what remains is still-true reference material.
 
 Technical detail behind master-todo item 13 (the N-session load test — measure
 first, everything below except §1 came from code-reading, not measurement).
+The harness exists since 2026-09-05: `pnpm --filter @mushee/api load:recording`
+(`apps/api/scripts/load-test-recording.ts`; `SESSIONS`, `RAMP_MS`,
+`CREPE_INFERENCE_URL` for remote mode). First local in-process reading, 2
+sessions: pass p50 ~315 ms / p95 365 ms, first notes ~3.4 s, peak RSS 359 MB.
+Run it in remote mode against the inference service to size pods.
 The inference split already moved the TF forward pass off the API event loop;
 API replicas share state via Postgres and scale horizontally. What remains sets
 the practical per-pod ceiling, in priority order:

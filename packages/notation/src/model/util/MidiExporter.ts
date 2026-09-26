@@ -38,7 +38,19 @@ export class MidiExporter {
         const bytes = new Uint8Array(14 + 8 + track.length)
         // MThd: format 0, one track, TICKS_PER_QUARTER division
         bytes.set([0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, TICKS_PER_QUARTER >> 8, TICKS_PER_QUARTER & 0xff], 0)
-        bytes.set([0x4d, 0x54, 0x72, 0x6b, (track.length >>> 24) & 0xff, (track.length >>> 16) & 0xff, (track.length >>> 8) & 0xff, track.length & 0xff], 14)
+        bytes.set(
+            [
+                0x4d,
+                0x54,
+                0x72,
+                0x6b,
+                (track.length >>> 24) & 0xff,
+                (track.length >>> 16) & 0xff,
+                (track.length >>> 8) & 0xff,
+                track.length & 0xff,
+            ],
+            14,
+        )
         bytes.set(track, 22)
         return bytes
     }
@@ -63,7 +75,11 @@ export class MidiExporter {
             }
             for (const tempo of measure.tempos) {
                 if (measureStart + tempo.beatPosition === 0) hasOpeningTempo = true
-                events.push({ tick: MidiExporter.toTicks(measureStart + tempo.beatPosition), order: 0, data: MidiExporter.tempoMeta(tempo.bpm) })
+                events.push({
+                    tick: MidiExporter.toTicks(measureStart + tempo.beatPosition),
+                    order: 0,
+                    data: MidiExporter.tempoMeta(tempo.bpm),
+                })
             }
             for (const note of measure.notes) {
                 const start = position
@@ -71,12 +87,8 @@ export class MidiExporter {
                 // A note tying back already sounds as part of the note that started the tie chain.
                 if (!note.pitch || note.tiesBack) continue
                 let end = start + note.duration.effectiveBeats
-                let current = note
-                while (current.tiesForward) {
-                    const next = current.getNext()
-                    if (!next) break
-                    end += next.duration.effectiveBeats
-                    current = next
+                for (let partner = this.score.tiePartner(note); partner; partner = this.score.tiePartner(partner)) {
+                    end += partner.duration.effectiveBeats
                 }
                 const midi = Math.max(0, Math.min(127, note.pitch.toMidi() + instrument.chromaticTranspose))
                 events.push({ tick: MidiExporter.toTicks(start), order: 2, data: [0x90 | CHANNEL, midi, VELOCITY] })

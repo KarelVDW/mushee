@@ -4,8 +4,7 @@ import { type ReactNode, useId, useState } from 'react'
 
 import { Icon } from './Icon'
 
-const LABEL_CLASS =
-    'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant cursor-text'
+const LABEL_CLASS = 'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant cursor-text'
 
 interface TextFieldProps {
     label?: ReactNode

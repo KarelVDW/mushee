@@ -5,15 +5,22 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import {
     adjustCredits,
     approveBetaSignup,
+    type AudienceFilter,
+    getAudience,
     getScore,
     getStats,
     getUser,
+    listAnnouncements,
     listBetaSignups,
     listTiers,
     listUsers,
     listUserScores,
+    previewAnnouncement,
+    retryAnnouncement,
     revokeBetaSignup,
     revokeSessions,
+    revokeShare,
+    sendAnnouncement,
 } from './api'
 
 export const adminKeys = {
@@ -24,6 +31,9 @@ export const adminKeys = {
     score: (id: string) => ['score', id] as const,
     tiers: ['tiers'] as const,
     signups: ['signups'] as const,
+    audience: (filters: AudienceFilter) => ['audience', filters] as const,
+    announcements: ['announcements'] as const,
+    announcementPreview: (subject: string, body: string) => ['announcement-preview', subject, body] as const,
 }
 
 export function useStats() {
@@ -91,5 +101,57 @@ export function useRevokeSessions(userId: string) {
         mutationFn: () => revokeSessions(userId),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.user(userId) }),
         meta: { errorMessage: "Couldn't revoke the sessions. Please try again." },
+    })
+}
+
+export function useRevokeShare(scoreId: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: () => revokeShare(scoreId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.score(scoreId) }),
+        meta: { errorMessage: "Couldn't turn the share link off. Please try again." },
+    })
+}
+
+/** Who a filter reaches — refetched as the filter changes, kept while the next answer loads. */
+export function useAudience(filters: AudienceFilter) {
+    return useQuery({ queryKey: adminKeys.audience(filters), queryFn: () => getAudience(filters), placeholderData: (previous) => previous })
+}
+
+export function useAnnouncements() {
+    return useQuery({ queryKey: adminKeys.announcements, queryFn: listAnnouncements })
+}
+
+export function useSendAnnouncement() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: sendAnnouncement,
+        // Refresh the history on failure too: a run SendGrid rejected outright is
+        // still recorded, and a proxy timeout may mean the API is still sending.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
+        meta: {
+            errorMessage:
+                "The announcement couldn't be sent. Check the history below before retrying — a run that reached some accounts is recorded there.",
+        },
+    })
+}
+
+export function useRetryAnnouncement() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: retryAnnouncement,
+        onSettled: () => queryClient.invalidateQueries({ queryKey: adminKeys.announcements }),
+        meta: { errorMessage: "The resend didn't go through. Check the history before trying again." },
+    })
+}
+
+/** Rendered preview of a draft; the caller debounces the inputs. Empty drafts render nothing. */
+export function useAnnouncementPreview(subject: string, body: string) {
+    return useQuery({
+        queryKey: adminKeys.announcementPreview(subject, body),
+        queryFn: () => previewAnnouncement({ subject, body }),
+        enabled: subject.trim().length > 0 && body.trim().length > 0,
+        placeholderData: (previous) => previous,
+        staleTime: Infinity,
     })
 }

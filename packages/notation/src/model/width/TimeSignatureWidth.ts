@@ -1,4 +1,4 @@
-import { getGlyphWidth } from '../../components'
+import { getGlyphWidth } from '../../components/glyphUtils'
 import type { TimeSignature } from '../TimeSignature'
 import { PhysicalWidth } from './PhysicalWidth'
 

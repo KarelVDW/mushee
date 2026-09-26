@@ -21,7 +21,10 @@ function tied(note: Note, tie: TieType): Note {
 }
 
 function triplet(name: string, octave: number): Note {
-    return new Note({ duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name, octave }) })
+    return new Note({
+        duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
+        pitch: new Pitch({ name, octave }),
+    })
 }
 
 /** Compact readable form of a measure's notes: "C4:q", "r:8", "E4:h.:start". */
@@ -35,7 +38,9 @@ function shape(measure: Measure): string[] {
 /** The MusicXML <time> emitted for each measure (undefined = inherited, not re-emitted). */
 function emittedTimes(score: Score): Array<string | undefined> {
     return new ScoreSerializer(score).toInput().parts[0].measures.map((m) => {
-        const attributes = m.entries.find((e) => (e as { _type: string })._type === 'attributes') as { time?: [{ beats: string; beatType: string }] }
+        const attributes = m.entries.find((e) => (e as { _type: string })._type === 'attributes') as {
+            time?: [{ beats: string; beatType: string }]
+        }
         const time = attributes?.time?.[0]
         return time && `${time.beats}/${time.beatType}`
     })
@@ -81,7 +86,11 @@ describe('Score.setTimeSignature', () => {
             score.setTimeSignature(score.measures[1], new TimeSignature(3, 4))
             score.setTimeSignature(score.measures[1], new TimeSignature(4, 4))
             expect(score.measures.every((m) => m.timeSignature.equals(new TimeSignature(4, 4)))).toBe(true)
-            expect(emittedTimes(score).slice(1).every((t) => t === undefined)).toBe(true)
+            expect(
+                emittedTimes(score)
+                    .slice(1)
+                    .every((t) => t === undefined),
+            ).toBe(true)
         })
 
         it('setting the meter already in effect is a no-op', () => {
@@ -244,7 +253,14 @@ describe('Score.setTimeSignature', () => {
 
         it('a straddling tuplet note splits into tied pieces that keep the ratio', () => {
             const score = makeScore(1)
-            fill(score.measures[0], [pitched('C', 4, 'h'), pitched('D', 4, '8'), triplet('F', 4), triplet('G', 4), triplet('A', 4), rest('8')])
+            fill(score.measures[0], [
+                pitched('C', 4, 'h'),
+                pitched('D', 4, '8'),
+                triplet('F', 4),
+                triplet('G', 4),
+                triplet('A', 4),
+                rest('8'),
+            ])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
             expect(shape(score.measures[0])).toEqual(['C4:h', 'D4:8', 'F4:8', 'G4:16:start'])
             expect(shape(score.measures[1]).slice(0, 3)).toEqual(['G4:16:stop', 'A4:8', 'r:8'])
@@ -257,7 +273,15 @@ describe('Score.setTimeSignature', () => {
             const dotted = new Note({ duration: new Duration({ type: '8', dots: 1 }), pitch: new Pitch({ name: 'E', octave: 4 }) })
             // The barline at beat 3 cuts the F triplet a quarter beat in — written 0.375, which no
             // duration value expresses. Only a triplet 16th (1/6) fits; the residue must carry over.
-            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), dotted, triplet('F', 4), triplet('G', 4), triplet('A', 4), rest('16')])
+            fill(score.measures[0], [
+                pitched('C', 4),
+                pitched('D', 4),
+                dotted,
+                triplet('F', 4),
+                triplet('G', 4),
+                triplet('A', 4),
+                rest('16'),
+            ])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
             expect(shape(score.measures[0])).toEqual(['C4:q', 'D4:q', 'E4:8.', 'F4:16:start'])
             expect(shape(score.measures[1]).slice(0, 4)).toEqual(['F4:16:stop', 'G4:8', 'A4:8', 'r:16'])
@@ -277,7 +301,13 @@ describe('Score.setTimeSignature', () => {
             })
             // After the triplet 16th the measure has 1/12 beat left — nothing writable fits, so the
             // G lands intact at the start of the next measure rather than losing its tail.
-            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), new Note({ duration: new Duration({ type: '8', dots: 1 }), pitch: new Pitch({ name: 'E', octave: 4 }) }), sixteenthTriplet, pitched('G', 4)])
+            fill(score.measures[0], [
+                pitched('C', 4),
+                pitched('D', 4),
+                new Note({ duration: new Duration({ type: '8', dots: 1 }), pitch: new Pitch({ name: 'E', octave: 4 }) }),
+                sixteenthTriplet,
+                pitched('G', 4),
+            ])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
             expect(shape(score.measures[0])).toEqual(['C4:q', 'D4:q', 'E4:8.', 'F4:16'])
             expect(score.measures[0].notes[3]).toBe(sixteenthTriplet)

@@ -37,7 +37,12 @@
     "pnpm": {
         "overrides": {
             "@tensorflow/tfjs": "4.22.0",
-            "@tensorflow/tfjs-core": "4.22.0"
+            "@tensorflow/tfjs-core": "4.22.0",
+            "better-auth>next": "-",
+            "better-auth>vitest": "-",
+            "better-auth>mongodb": "-",
+            "@better-auth/mongo-adapter>mongodb": "-",
+            "typeorm>mongodb": "-"
         }
     }
 }

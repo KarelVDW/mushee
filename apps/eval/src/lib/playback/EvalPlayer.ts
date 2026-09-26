@@ -12,13 +12,13 @@
 
 import { Instrument } from '@mushee/notation/model/Instrument'
 import type { Score } from '@mushee/notation/model/Score'
-
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
-import { TakeRecorder } from './TakeRecorder'
 import type { Tickable } from '@mushee/playback/Ticker'
 import { Ticker } from '@mushee/playback/Ticker'
+
+import { TakeRecorder } from './TakeRecorder'
 
 export type EvalPlayerMode = 'idle' | 'playing' | 'recording'
 

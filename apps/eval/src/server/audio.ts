@@ -29,12 +29,17 @@ export async function transcodeToWav(input: Buffer, trimSec = 0): Promise<{ wav:
         writeFileSync(inPath, input)
         await execFileAsync(ffmpegPath, [
             '-hide_banner',
-            '-loglevel', 'error',
-            '-i', inPath,
+            '-loglevel',
+            'error',
+            '-i',
+            inPath,
             ...(trimSec > 0 ? ['-ss', trimSec.toFixed(3)] : []),
-            '-ac', '1',
-            '-ar', '48000',
-            '-c:a', 'pcm_s16le',
+            '-ac',
+            '1',
+            '-ar',
+            '48000',
+            '-c:a',
+            'pcm_s16le',
             outPath,
         ])
         const wav = readFileSync(outPath)

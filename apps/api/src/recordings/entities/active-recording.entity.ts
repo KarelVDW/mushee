@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm'
 
 /**
  * Cross-instance lock: at most one recording in flight per user. Rows are
@@ -7,17 +7,17 @@ import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
  */
 @Entity('active_recordings')
 export class ActiveRecording {
-  /** References user.id (ON DELETE CASCADE). */
-  @PrimaryColumn({ type: 'text' })
-  userId: string;
+    /** References user.id (ON DELETE CASCADE). */
+    @PrimaryColumn({ type: 'text' })
+    userId: string
 
-  /** Identifies the lock holder; heartbeat/release only touch their own row. */
-  @Column('uuid')
-  token: string;
+    /** Identifies the lock holder; heartbeat/release only touch their own row. */
+    @Column('uuid')
+    token: string
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  startedAt: Date;
+    @CreateDateColumn({ type: 'timestamptz' })
+    startedAt: Date
 
-  @Column({ type: 'timestamptz' })
-  heartbeatAt: Date;
+    @Column({ type: 'timestamptz' })
+    heartbeatAt: Date
 }

@@ -70,9 +70,7 @@ export function deleteCorpusFixtures(corpus: Pick<Corpus, 'id' | 'tier'>): void 
     // Refuse to remove anything that isn't shaped like one of our datasets.
     if (!existsSync(dir)) return
     const entries = readdirSync(dir)
-    const foreign = entries.filter(
-        (f) => !f.endsWith('__real.wav') && !f.endsWith('.truth.json') && f !== 'dataset.json',
-    )
+    const foreign = entries.filter((f) => !f.endsWith('__real.wav') && !f.endsWith('.truth.json') && f !== 'dataset.json')
     if (foreign.length) throw new Error(`refusing to delete ${dir}: unexpected files ${foreign.join(', ')}`)
     rmSync(dir, { recursive: true })
 }

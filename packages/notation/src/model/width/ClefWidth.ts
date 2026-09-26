@@ -1,5 +1,5 @@
-import { getGlyphWidth } from '../../components'
 import { CLEF_CONFIG } from '../../components/constants'
+import { getGlyphWidth } from '../../components/glyphUtils'
 import { Clef } from '../Clef'
 import { PhysicalWidth } from './PhysicalWidth'
 

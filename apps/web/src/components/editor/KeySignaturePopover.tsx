@@ -8,11 +8,7 @@ import { Pitch } from '@mushee/notation/model/Pitch'
 import { Popover, PopoverOption } from '@/components/ui'
 
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
-const KEY_ROWS: number[][] = [
-    [-7, -6, -5, -4, -3, -2, -1],
-    [0],
-    [1, 2, 3, 4, 5, 6, 7],
-]
+const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
 export const KEY_NAMES: Record<number, string> = {
     [-7]: 'C♭',
@@ -48,9 +44,19 @@ export function KeySignatureGlyph({ fifths, size = 30, color = 'currentColor' }:
     if (accidentals.length === 0) return <span style={{ fontSize: size * 0.5, lineHeight: 1, color }}>♮</span>
     const viewWidth = accidentals.length * GLYPH_ADVANCE + 4
     return (
-        <svg width={(size * viewWidth) / STAFF_VIEW_HEIGHT} height={size} viewBox={`0 ${STAFF_TOP} ${viewWidth} ${STAFF_VIEW_HEIGHT}`} aria-hidden>
+        <svg
+            width={(size * viewWidth) / STAFF_VIEW_HEIGHT}
+            height={size}
+            viewBox={`0 ${STAFF_TOP} ${viewWidth} ${STAFF_VIEW_HEIGHT}`}
+            aria-hidden>
             {accidentals.map((a, i) => (
-                <Glyph key={i} name={a.glyphName} x={2 + i * GLYPH_ADVANCE} y={getYForNote(new Pitch({ name: a.name, octave: a.octave }).line)} fill={color} />
+                <Glyph
+                    key={i}
+                    name={a.glyphName}
+                    x={2 + i * GLYPH_ADVANCE}
+                    y={getYForNote(new Pitch({ name: a.name, octave: a.octave }).line)}
+                    fill={color}
+                />
             ))}
         </svg>
     )

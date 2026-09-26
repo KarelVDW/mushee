@@ -33,7 +33,17 @@ export function StepProgress({ step, total }: { step: number; total: number }) {
     )
 }
 
-export function OptionCard({ active, onClick, title, body }: { active?: boolean; onClick?: () => void; title: ReactNode; body?: ReactNode }) {
+export function OptionCard({
+    active,
+    onClick,
+    title,
+    body,
+}: {
+    active?: boolean
+    onClick?: () => void
+    title: ReactNode
+    body?: ReactNode
+}) {
     return (
         <button
             onClick={onClick}
@@ -41,7 +51,9 @@ export function OptionCard({ active, onClick, title, body }: { active?: boolean;
             className={[
                 'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                active ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
+                active
+                    ? 'bg-primary-soft text-on-primary-soft'
+                    : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
             ].join(' ')}>
             <div className="flex flex-col gap-1">
                 <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>

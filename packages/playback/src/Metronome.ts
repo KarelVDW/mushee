@@ -6,14 +6,25 @@ import type { Tickable } from './Ticker'
 
 const DEFAULT_BPM = 90
 const LOOK_AHEAD = 0.05
+/** Regular click, and the higher-pitched one that marks the downbeat of every measure. */
 const CLICK_MIDI = 96 // C7
+const ACCENT_MIDI = 108 // C8, an octave up
 const CLICK_DURATION = 0.06
+/** Tolerance for beat arithmetic — dotted pulses (1.5) and eighths (0.5) sum exactly, but stay safe. */
+const EPSILON = 1e-6
 
+/**
+ * Clicks once per felt beat — the meter's pulse (`TimeSignature.pulse`): every
+ * quarter in 4/4, every dotted quarter in 6/8 (two clicks a bar), every half in
+ * 2/2 — with the first click of each measure accented. Beat positions and `bpm`
+ * are in quarter-note units like the rest of the model; the pulse only decides
+ * where the clicks fall.
+ */
 export class Metronome implements Tickable {
     score: Score | null = null
     /** Measure index to begin ticking from. Default 0 = start of score. */
     startMeasureIndex = 0
-    /** Beat within the start measure to begin ticking from. Default 0 = downbeat. */
+    /** Beat (quarter units) within the start measure to begin ticking from. Default 0 = downbeat. */
     startBeat = 0
 
     private midiPlayer: MidiPlayer
@@ -55,51 +66,58 @@ export class Metronome implements Tickable {
     syncTo(elapsed: number): void {
         if (!this.score) return
         while (this.nextClickTime <= elapsed) {
-            const measure = this.score.measures[this.measureIdx]
-            if (!measure) return
-            if (this.beat === 0) {
-                const tempo = measure.tempoAtBeat(0)
-                if (tempo) this.bpm = tempo.bpm
-            }
-            if (this.beat >= measure.maxBeats) {
-                this.measureIdx++
-                this.beat = 0
-                continue
-            }
-            this.beat++
-            this.nextClickTime += 60 / this.bpm
+            if (!this.step(false)) return
         }
     }
 
     tick(): boolean {
         if (!this.score) return true
-        const elapsed = this.midiPlayer.currentTime
-        while (this.nextClickTime <= elapsed + LOOK_AHEAD) {
-            const measure = this.score.measures[this.measureIdx]
-            if (!measure) return true
+        const horizon = this.midiPlayer.currentTime + LOOK_AHEAD
+        while (this.nextClickTime <= horizon) {
+            if (!this.step(true)) return true
+        }
+        return false
+    }
 
-            if (this.beat === 0) {
-                const tempo = measure.tempoAtBeat(0)
-                if (tempo) this.bpm = tempo.bpm
-            }
+    /**
+     * Advance the walk by one pulse: schedule the click due at `nextClickTime`
+     * (when `schedule`) and move on. Returns false once the score is exhausted.
+     */
+    private step(schedule: boolean): boolean {
+        const measure = this.score?.measures[this.measureIdx]
+        if (!measure) return false
 
-            if (this.beat >= measure.maxBeats) {
-                this.measureIdx++
-                this.beat = 0
-                continue
-            }
+        if (this.beat >= measure.maxBeats - EPSILON) {
+            this.measureIdx++
+            this.beat = 0
+            return true
+        }
 
+        const tempo = measure.tempoAtBeat(this.beat)
+        if (tempo) this.bpm = tempo.bpm
+
+        const pulse = measure.timeSignature.pulse.beats
+        const secondsPerBeat = 60 / this.bpm
+        // Playback from a note off the pulse grid (e.g. the second eighth of a 6/8
+        // group): wait for the next pulse so the clicks land where they belong.
+        const boundary = Math.ceil(this.beat / pulse - EPSILON) * pulse
+        if (boundary > this.beat + EPSILON) {
+            this.nextClickTime += (boundary - this.beat) * secondsPerBeat
+            this.beat = boundary
+            return true
+        }
+
+        if (schedule) {
             this.midiPlayer.schedule({
                 startTime: this.nextClickTime,
                 duration: CLICK_DURATION,
-                midi: CLICK_MIDI,
+                midi: this.beat < EPSILON ? ACCENT_MIDI : CLICK_MIDI,
                 instrument: Instrument.Woodblock,
             })
-
-            this.beat++
-            this.nextClickTime += 60 / this.bpm
         }
 
-        return false
+        this.beat += pulse
+        this.nextClickTime += pulse * secondsPerBeat
+        return true
     }
 }

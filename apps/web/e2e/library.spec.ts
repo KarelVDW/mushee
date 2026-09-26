@@ -1,3 +1,5 @@
+import type { FileChooser, Page } from '@playwright/test'
+
 import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
 
 /**
@@ -55,6 +57,38 @@ test('deletes a score after confirmation, then shows the first-score empty state
     await expect(page.getByText('No scores yet.')).toBeVisible()
     await page.getByRole('button', { name: 'New score' }).last().click()
     await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
+})
+
+test('duplicates a score from its row and lists the copy', async ({ page, apiMock }) => {
+    await page.goto('/scores')
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+
+    await page.getByRole('button', { name: `Duplicate ${MOCK_TITLE}` }).click()
+    await expect.poll(() => apiMock.duplicates).toEqual([MOCK_SCORE_ID])
+
+    // The copy appears as its own row; the original stays and the user stays in the library.
+    await expect(page.getByRole('button', { name: `${MOCK_TITLE} (copy)`, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+    await expect(page).toHaveURL(/\/scores$/)
+    expect(apiMock.creates).toHaveLength(0)
+})
+
+test('a failed duplicate surfaces an error toast', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/scores')
+    await expect(page.getByRole('button', { name: MOCK_TITLE, exact: true })).toBeVisible()
+
+    // Registered after the fixture mock, so it wins: the server refuses the copy.
+    await page.route(
+        (url) => url.pathname.endsWith('/duplicate'),
+        (route) =>
+            route.request().method() === 'POST'
+                ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' })
+                : route.fallback(),
+    )
+
+    await page.getByRole('button', { name: `Duplicate ${MOCK_TITLE}` }).click()
+    await expect(page.getByText('Could not duplicate the score. Please try again.')).toBeVisible()
 })
 
 test('the delete dialog can be declined, dismissed with Escape, and closed — nothing is deleted', async ({ page, apiMock }) => {
@@ -231,4 +265,56 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await expect(page).toHaveURL(/\/scores$/)
     await page.getByRole('button', { name: 'Account settings' }).click()
     await expect(page).toHaveURL(/\/settings$/)
+})
+
+/**
+ * Import through the visible button and the browser's file chooser, as a user would.
+ * Setting files straight on the hidden input never fired `change` on Linux WebKit in CI.
+ */
+async function pickImportFile(page: Page, file: Parameters<FileChooser['setFiles']>[0]): Promise<void> {
+    const chooser = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Import file' }).click()
+    await (await chooser).setFiles(file)
+}
+
+test('imports a MusicXML file: confirms title and instrument, reports simplifications, then creates the score', async ({
+    page,
+    apiMock,
+}) => {
+    await page.goto('/scores')
+    await pickImportFile(page, 'e2e/fixtures/import.musicxml')
+
+    const dialog = page.getByRole('dialog', { name: 'Import score' })
+    await expect(dialog).toBeVisible()
+    // The title comes from the file, the instrument from its part, and the reductions are listed.
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Imported Air')
+    await expect(dialog.getByText('2 bars · 3/4')).toBeVisible()
+    await expect(dialog.getByText('Lead instrument · Violin')).toBeVisible()
+    const adjusted = dialog.getByRole('status', { name: 'Adjusted on import' })
+    await expect(adjusted).toContainText('Only the first part (“Violin”) was imported; 1 other part was left out.')
+    await expect(adjusted).toContainText('Some note values were rewritten with the nearest supported ones.')
+
+    await page.getByLabel('Title', { exact: true }).fill('Imported Air (edit)')
+    await page.getByRole('button', { name: 'Create score' }).click()
+
+    await expect.poll(() => apiMock.creates.length).toBeGreaterThan(0)
+    const body = apiMock.creates[0] as {
+        title: string
+        score: { parts: Array<{ measures: unknown[] }>; partList: { scoreParts: Array<{ partName: string }> } }
+    }
+    expect(body.title).toBe('Imported Air (edit)')
+    expect(body.score.parts[0].measures).toHaveLength(2)
+    expect(body.score.partList.scoreParts[0].partName).toBe('Violin')
+
+    await expect(page).toHaveURL(/\/scores\/e2e-created-1$/)
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+})
+
+test('a file that is not a score is refused with a toast and no dialog', async ({ page, apiMock }) => {
+    await page.goto('/scores')
+    await pickImportFile(page, { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('just some text') })
+
+    await expect(page.getByText('This is not a score file.', { exact: false })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Import score' })).toHaveCount(0)
+    expect(apiMock.creates).toHaveLength(0)
 })

@@ -1,84 +1,80 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
-import type { Readable } from 'stream';
-import { DataSource } from 'typeorm';
+import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { InjectDataSource } from '@nestjs/typeorm'
+import type { Readable } from 'stream'
+import { DataSource } from 'typeorm'
 
-import { RecordingCreditsService } from '../recordings/recording-credits.service';
-import { ScoresService } from '../scores/scores.service';
-import { StorageService } from '../storage/storage.service';
+import { type AnnouncementRecipient, MailService } from '../mail/mail.service'
+import { RecordingCreditsService } from '../recordings/recording-credits.service'
+import { ScoresService } from '../scores/scores.service'
+import { StorageService } from '../storage/storage.service'
+import { AudienceFilterDto } from './dto/audience-filter.dto'
+import { SendAnnouncementDto } from './dto/send-announcement.dto'
 
 export interface AdminStats {
-  totals: {
-    users: number;
-    scores: number;
-    recordings: number;
-    recordingSeconds: number;
-    waitlistPending: number;
-    packSecondsOutstanding: number;
-    activeUsers7d: number;
-    newUsers7d: number;
-  };
-  tiers: Array<{ id: string; name: string; users: number }>;
-  /** Last 30 days, oldest first, missing days zero-filled. */
-  timeseries: Array<{
-    day: string;
-    signups: number;
-    scores: number;
-    recordingSeconds: number;
-  }>;
+    totals: {
+        users: number
+        scores: number
+        recordings: number
+        recordingSeconds: number
+        waitlistPending: number
+        packSecondsOutstanding: number
+        activeUsers7d: number
+        newUsers7d: number
+    }
+    tiers: Array<{ id: string; name: string; users: number }>
+    /** Last 30 days, oldest first, missing days zero-filled. */
+    timeseries: Array<{
+        day: string
+        signups: number
+        scores: number
+        recordingSeconds: number
+    }>
 }
 
 export interface AdminUserRow {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  createdAt: Date;
-  role: string;
-  betaStatus: string | null;
-  tierId: string;
-  tierName: string;
-  scoreCount: number;
-  lastActiveAt: Date | null;
-  deletionRequested: boolean;
+    id: string
+    name: string
+    email: string
+    emailVerified: boolean
+    createdAt: Date
+    role: string
+    betaStatus: string | null
+    tierId: string
+    tierName: string
+    scoreCount: number
+    lastActiveAt: Date | null
+    deletionRequested: boolean
 }
 
 export interface AdminUserList {
-  users: AdminUserRow[];
-  total: number;
-  page: number;
-  pageSize: number;
+    users: AdminUserRow[]
+    total: number
+    page: number
+    pageSize: number
 }
 
 export interface AdminCreditState {
-  tierId: string;
-  tierName: string;
-  dailyLimit: number | null;
-  usedToday: number;
-  remainingToday: number | null;
-  packSeconds: number;
+    tierId: string
+    tierName: string
+    dailyLimit: number | null
+    usedToday: number
+    remainingToday: number | null
+    packSeconds: number
 }
 
 /** Either a bucket URL the browser can fetch directly, or the bytes to relay. */
-export type RecordingAudio =
-  | { url: string }
-  | { stream: Readable; contentType: string };
+export type RecordingAudio = { url: string } | { stream: Readable; contentType: string }
 
 /** By archive extension — the write-side mapping lives in RecordingArchiver. */
 const AUDIO_CONTENT_TYPES: Record<string, string> = {
-  '.webm': 'audio/webm',
-  '.mp3': 'audio/mpeg',
-  '.ogg': 'audio/ogg',
-  '.wav': 'audio/wav',
-  '.flac': 'audio/flac',
-};
+    '.webm': 'audio/webm',
+    '.mp3': 'audio/mpeg',
+    '.ogg': 'audio/ogg',
+    '.wav': 'audio/wav',
+    '.flac': 'audio/flac',
+}
 
-const SIGNED_URL_TTL_SECONDS = 15 * 60;
+const SIGNED_URL_TTL_SECONDS = 15 * 60
 
 /**
  * Read(-mostly) queries behind the admin console. The `user`, `session` and
@@ -86,20 +82,30 @@ const SIGNED_URL_TTL_SECONDS = 15 * 60;
  * queries them with raw SQL instead of TypeORM entities. Everything else is
  * plain aggregation over the app's own tables.
  */
+export interface AnnouncementOutcome {
+    id: string
+    recipientCount: number
+    failedCount: number
+    errors: string[]
+    sentAt: Date
+    testTo: string | null
+}
+
 @Injectable()
 export class AdminService {
-  private readonly logger = new Logger(AdminService.name);
+    private readonly logger = new Logger(AdminService.name)
 
-  constructor(
-    @InjectDataSource() private readonly dataSource: DataSource,
-    private readonly scoresService: ScoresService,
-    private readonly recordingCredits: RecordingCreditsService,
-    private readonly storage: StorageService,
-  ) {}
+    constructor(
+        @InjectDataSource() private readonly dataSource: DataSource,
+        private readonly scoresService: ScoresService,
+        private readonly recordingCredits: RecordingCreditsService,
+        private readonly storage: StorageService,
+        private readonly mail: MailService,
+    ) {}
 
-  async stats(): Promise<AdminStats> {
-    const [totals]: Array<AdminStats['totals']> = await this.dataSource.query(
-      `SELECT
+    async stats(): Promise<AdminStats> {
+        const [totals]: Array<AdminStats['totals']> = await this.dataSource.query(
+            `SELECT
          (SELECT count(*)::int FROM "user") AS "users",
          (SELECT count(*)::int FROM scores) AS "scores",
          (SELECT count(*)::int FROM recordings) AS "recordings",
@@ -110,19 +116,19 @@ export class AdminService {
            WHERE "updatedAt" >= now() - interval '7 days') AS "activeUsers7d",
          (SELECT count(*)::int FROM "user"
            WHERE "createdAt" >= now() - interval '7 days') AS "newUsers7d"`,
-    );
+        )
 
-    const tiers: AdminStats['tiers'] = await this.dataSource.query(
-      `SELECT t.id, t.name, count(u.id)::int AS "users"
+        const tiers: AdminStats['tiers'] = await this.dataSource.query(
+            `SELECT t.id, t.name, count(u.id)::int AS "users"
        FROM "user" u
        LEFT JOIN user_subscriptions s ON s."userId" = u.id
        JOIN subscription_tiers t ON t.id = COALESCE(s."tierId", 'free')
        GROUP BY t.id, t.name, t."sortOrder"
        ORDER BY t."sortOrder"`,
-    );
+        )
 
-    const timeseries: AdminStats['timeseries'] = await this.dataSource.query(
-      `SELECT to_char(d.day, 'YYYY-MM-DD') AS "day",
+        const timeseries: AdminStats['timeseries'] = await this.dataSource.query(
+            `SELECT to_char(d.day, 'YYYY-MM-DD') AS "day",
               COALESCE(u.count, 0)::int AS "signups",
               COALESCE(s.count, 0)::int AS "scores",
               COALESCE(r.seconds, 0)::int AS "recordingSeconds"
@@ -134,24 +140,20 @@ export class AdminService {
        LEFT JOIN (SELECT day, sum("creditsUsed") AS seconds FROM recording_usage
                   WHERE day >= current_date - 29 GROUP BY 1) r ON r.day = d.day::date
        ORDER BY d.day`,
-    );
+        )
 
-    return { totals, tiers, timeseries };
-  }
+        return { totals, tiers, timeseries }
+    }
 
-  async listUsers(opts: {
-    search?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<AdminUserList> {
-    const page = clamp(Math.trunc(opts.page ?? 1), 1, 1_000_000);
-    const pageSize = clamp(Math.trunc(opts.pageSize ?? 25), 1, 100);
-    const search = (opts.search ?? '').trim();
-    // Escape LIKE wildcards so a search for "100%" matches literally.
-    const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+    async listUsers(opts: { search?: string; page?: number; pageSize?: number }): Promise<AdminUserList> {
+        const page = clamp(Math.trunc(opts.page ?? 1), 1, 1_000_000)
+        const pageSize = clamp(Math.trunc(opts.pageSize ?? 25), 1, 100)
+        const search = (opts.search ?? '').trim()
+        // Escape LIKE wildcards so a search for "100%" matches literally.
+        const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`
 
-    const users: AdminUserRow[] = await this.dataSource.query(
-      `SELECT u.id, u.name, u.email, u."emailVerified", u."createdAt", u.role, u."betaStatus",
+        const users: AdminUserRow[] = await this.dataSource.query(
+            `SELECT u.id, u.name, u.email, u."emailVerified", u."createdAt", u.role, u."betaStatus",
               COALESCE(s."tierId", 'free') AS "tierId",
               COALESCE(t.name, s."tierId", 'Free') AS "tierName",
               COALESCE(sc.count, 0)::int AS "scoreCount",
@@ -167,191 +169,351 @@ export class AdminService {
        WHERE ($1 = '' OR u.email ILIKE $2 OR u.name ILIKE $2)
        ORDER BY u."createdAt" DESC
        LIMIT $3 OFFSET $4`,
-      [search, pattern, pageSize, (page - 1) * pageSize],
-    );
+            [search, pattern, pageSize, (page - 1) * pageSize],
+        )
 
-    const [{ total }]: Array<{ total: number }> = await this.dataSource.query(
-      `SELECT count(*)::int AS total FROM "user" u
+        const [{ total }]: Array<{ total: number }> = await this.dataSource.query(
+            `SELECT count(*)::int AS total FROM "user" u
        WHERE ($1 = '' OR u.email ILIKE $2 OR u.name ILIKE $2)`,
-      [search, pattern],
-    );
+            [search, pattern],
+        )
 
-    return { users, total, page, pageSize };
-  }
+        return { users, total, page, pageSize }
+    }
 
-  async getUser(userId: string): Promise<Record<string, unknown>> {
-    const [user]: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, "betaStatus"
+    async getUser(userId: string): Promise<Record<string, unknown>> {
+        const [user]: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT id, name, email, "emailVerified", image, "createdAt", "updatedAt", role, "betaStatus"
        FROM "user" WHERE id = $1`,
-      [userId],
-    );
-    if (!user) throw new NotFoundException('User not found');
+            [userId],
+        )
+        if (!user) throw new NotFoundException('User not found')
 
-    const [subscription]: Array<Record<string, unknown>> =
-      await this.dataSource.query(
-        `SELECT s."tierId", t.name AS "tierName", s.status, s."currentPeriodEnd",
+        const [subscription]: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT s."tierId", t.name AS "tierName", s.status, s."currentPeriodEnd",
                 s."cancelAtPeriodEnd", s."polarCustomerId", s."polarSubscriptionId",
                 s."createdAt", s."updatedAt"
          FROM user_subscriptions s
          LEFT JOIN subscription_tiers t ON t.id = s."tierId"
          WHERE s."userId" = $1`,
-        [userId],
-      );
+            [userId],
+        )
 
-    const [counts]: Array<{
-      scoreCount: number;
-      recordingCount: number;
-      recordingSeconds: number;
-    }> = await this.dataSource.query(
-      `SELECT
+        const [counts]: Array<{
+            scoreCount: number
+            recordingCount: number
+            recordingSeconds: number
+        }> = await this.dataSource.query(
+            `SELECT
          (SELECT count(*)::int FROM scores WHERE "userId" = $1) AS "scoreCount",
          (SELECT count(*)::int FROM recordings WHERE "userId" = $1) AS "recordingCount",
          (SELECT COALESCE(sum("creditsUsed"), 0)::int FROM recording_usage
            WHERE "userId" = $1) AS "recordingSeconds"`,
-      [userId],
-    );
+            [userId],
+        )
 
-    const sessions: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT id, "createdAt", "updatedAt", "expiresAt", "ipAddress", "userAgent"
+        const sessions: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT id, "createdAt", "updatedAt", "expiresAt", "ipAddress", "userAgent"
        FROM session WHERE "userId" = $1
        ORDER BY "updatedAt" DESC LIMIT 10`,
-      [userId],
-    );
+            [userId],
+        )
 
-    const recordings: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT r.id, r."scoreId", sc.title AS "scoreTitle", r."creditsSpent",
+        const recordings: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT r.id, r."scoreId", sc.title AS "scoreTitle", r."creditsSpent",
               r."createdAt", r."endedAt"
        FROM recordings r
        LEFT JOIN scores sc ON sc.id = r."scoreId"
        WHERE r."userId" = $1
        ORDER BY r."createdAt" DESC LIMIT 10`,
-      [userId],
-    );
+            [userId],
+        )
 
-    const [onboarding]: Array<Record<string, unknown>> =
-      await this.dataSource.query(
-        `SELECT background, goal, instruments, source, "sourceDetail", "completedAt"
+        const [onboarding]: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT background, goal, instruments, source, "sourceDetail", "completedAt"
          FROM user_onboarding WHERE "userId" = $1`,
-        [userId],
-      );
+            [userId],
+        )
 
-    const [deletion]: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT "requestedAt", "purgeAfter" FROM account_deletions WHERE "userId" = $1`,
-      [userId],
-    );
+        const [deletion]: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT "requestedAt", "purgeAfter" FROM account_deletions WHERE "userId" = $1`,
+            [userId],
+        )
 
-    return {
-      user,
-      subscription: subscription ?? null,
-      credits: await this.creditState(userId),
-      counts,
-      sessions,
-      recordings,
-      onboarding: onboarding ?? null,
-      deletion: deletion ?? null,
-    };
-  }
+        return {
+            user,
+            subscription: subscription ?? null,
+            credits: await this.creditState(userId),
+            counts,
+            sessions,
+            recordings,
+            onboarding: onboarding ?? null,
+            deletion: deletion ?? null,
+        }
+    }
 
-  async listUserScores(userId: string): Promise<Array<Record<string, unknown>>> {
-    await this.requireUser(userId);
-    return this.dataSource.query(
-      `SELECT s.id, s.title, s."createdAt", s."updatedAt",
+    async listUserScores(userId: string): Promise<Array<Record<string, unknown>>> {
+        await this.requireUser(userId)
+        return this.dataSource.query(
+            `SELECT s.id, s.title, s."createdAt", s."updatedAt",
               (c."scoreId" IS NOT NULL) AS "hotEdits"
        FROM scores s
        LEFT JOIN cached_scores c ON c."scoreId" = s.id
        WHERE s."userId" = $1
        ORDER BY s."updatedAt" DESC`,
-      [userId],
-    );
-  }
-
-  /** Score metadata + the full document JSON, read through the same
-   *  cache-then-storage path the editor uses. Read-only. */
-  async getScore(scoreId: string): Promise<Record<string, unknown>> {
-    const score = await this.scoresService.findOneInternal(scoreId);
-    if (!score) throw new NotFoundException('Score not found');
-
-    const [owner]: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT id, name, email FROM "user" WHERE id = $1`,
-      [score.userId],
-    );
-
-    let document: Record<string, unknown> | null = null;
-    let documentError: string | null = null;
-    try {
-      document = await this.scoresService.load(score.userId, score.id);
-    } catch (err) {
-      // Surface broken storage instead of failing the whole page — the
-      // console is exactly where you want to see this.
-      documentError = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Admin load of score ${scoreId} failed: ${documentError}`);
+            [userId],
+        )
     }
 
-    const recordings: Array<Record<string, unknown>> = await this.dataSource.query(
-      `SELECT id, "creditsSpent", "createdAt", "endedAt",
+    /** Score metadata + the full document JSON, read through the same
+     *  cache-then-storage path the editor uses. Read-only. */
+    async getScore(scoreId: string): Promise<Record<string, unknown>> {
+        const score = await this.scoresService.findOneInternal(scoreId)
+        if (!score) throw new NotFoundException('Score not found')
+
+        const [owner]: Array<Record<string, unknown>> = await this.dataSource.query(`SELECT id, name, email FROM "user" WHERE id = $1`, [
+            score.userId,
+        ])
+
+        let document: Record<string, unknown> | null = null
+        let documentError: string | null = null
+        try {
+            document = await this.scoresService.load(score.userId, score.id)
+        } catch (err) {
+            // Surface broken storage instead of failing the whole page — the
+            // console is exactly where you want to see this.
+            documentError = err instanceof Error ? err.message : String(err)
+            this.logger.warn(`Admin load of score ${scoreId} failed: ${documentError}`)
+        }
+
+        const recordings: Array<Record<string, unknown>> = await this.dataSource.query(
+            `SELECT id, "creditsSpent", "createdAt", "endedAt",
               ("storagePath" IS NOT NULL) AS "hasAudio"
        FROM recordings
        WHERE "scoreId" = $1
        ORDER BY "createdAt" DESC`,
-      [scoreId],
-    );
+            [scoreId],
+        )
 
-    return {
-      id: score.id,
-      title: score.title,
-      userId: score.userId,
-      owner: owner ?? null,
-      storageKey: score.storageKey,
-      createdAt: score.createdAt,
-      updatedAt: score.updatedAt,
-      document,
-      documentError,
-      recordings,
-    };
-  }
-
-  /**
-   * The archived audio of a recording, for replay in the console. Prefers a
-   * time-limited URL straight to the bucket (the browser fetches it without
-   * the audio ever passing through the API); backends without URLs — and
-   * signing failures — fall back to streaming the object.
-   */
-  async recordingAudio(recordingId: string): Promise<RecordingAudio> {
-    const [recording]: Array<{ storagePath: string | null }> =
-      await this.dataSource.query(
-        `SELECT "storagePath" FROM recordings WHERE id = $1`,
-        [recordingId],
-      );
-    if (!recording) throw new NotFoundException('Recording not found');
-    if (!recording.storagePath) {
-      throw new NotFoundException('No audio was archived for this recording');
+        return {
+            id: score.id,
+            title: score.title,
+            userId: score.userId,
+            owner: owner ?? null,
+            storageKey: score.storageKey,
+            createdAt: score.createdAt,
+            updatedAt: score.updatedAt,
+            shareToken: score.shareToken ?? null,
+            document,
+            documentError,
+            recordings,
+        }
     }
 
-    // storagePath is the recording's base "directory"; the audio object's
-    // extension depends on what container the client sent (see
-    // RecordingArchiver.sniffContainer).
-    const keys = await this.storage.list(recording.storagePath);
-    const audioKey = keys.find((key) => key.split('/').pop()?.startsWith('audio.'));
-    if (!audioKey) {
-      throw new NotFoundException('The archived audio is missing from storage');
+    /** Turn a score's public share link off — the support lever for a reported link. */
+    async revokeShare(scoreId: string): Promise<{ shareToken: null }> {
+        await this.scoresService.revokeShare(scoreId)
+        return { shareToken: null }
     }
-    const extension = audioKey.slice(audioKey.lastIndexOf('.'));
-    const contentType = AUDIO_CONTENT_TYPES[extension] ?? 'application/octet-stream';
 
-    try {
-      const url = await this.storage.signedUrl(audioKey, SIGNED_URL_TTL_SECONDS);
-      if (url) return { url };
-    } catch (err) {
-      this.logger.warn(
-        `Signing audio URL for ${audioKey} failed, streaming instead: ${err instanceof Error ? err.message : String(err)}`,
-      );
+    /**
+     * The archived audio of a recording, for replay in the console. Prefers a
+     * time-limited URL straight to the bucket (the browser fetches it without
+     * the audio ever passing through the API); backends without URLs — and
+     * signing failures — fall back to streaming the object.
+     */
+    async recordingAudio(recordingId: string): Promise<RecordingAudio> {
+        const [recording]: Array<{ storagePath: string | null }> = await this.dataSource.query(
+            `SELECT "storagePath" FROM recordings WHERE id = $1`,
+            [recordingId],
+        )
+        if (!recording) throw new NotFoundException('Recording not found')
+        if (!recording.storagePath) {
+            throw new NotFoundException('No audio was archived for this recording')
+        }
+
+        // storagePath is the recording's base "directory"; the audio object's
+        // extension depends on what container the client sent (see
+        // RecordingArchiver.sniffContainer).
+        const keys = await this.storage.list(recording.storagePath)
+        const audioKey = keys.find((key) => key.split('/').pop()?.startsWith('audio.'))
+        if (!audioKey) {
+            throw new NotFoundException('The archived audio is missing from storage')
+        }
+        const extension = audioKey.slice(audioKey.lastIndexOf('.'))
+        const contentType = AUDIO_CONTENT_TYPES[extension] ?? 'application/octet-stream'
+
+        try {
+            const url = await this.storage.signedUrl(audioKey, SIGNED_URL_TTL_SECONDS)
+            if (url) return { url }
+        } catch (err) {
+            this.logger.warn(
+                `Signing audio URL for ${audioKey} failed, streaming instead: ${err instanceof Error ? err.message : String(err)}`,
+            )
+        }
+        return { stream: this.storage.createReadStream(audioKey), contentType }
     }
-    return { stream: this.storage.createReadStream(audioKey), contentType };
-  }
 
-  async listTiers(): Promise<Array<Record<string, unknown>>> {
-    return this.dataSource.query(
-      `SELECT t.id, t.name, t."dailyRecordingCredits", t."maxScores", t."sortOrder", t.sellable,
+    // --- Audience + announcements ---
+
+    /**
+     * SQL for "the accounts matching this filter": one WHERE fragment shared by
+     * the count/sample, the CSV export and the send, so what you previewed is
+     * exactly who receives it. Parameters are positional from $1.
+     */
+    private audienceWhere(filters: AudienceFilterDto): { where: string; params: unknown[] } {
+        const clauses: string[] = []
+        const params: unknown[] = []
+        const add = (clause: string, value: unknown) => {
+            params.push(value)
+            clauses.push(clause.replace('?', `$${params.length}`))
+        }
+        if (filters.tiers?.length) add(`COALESCE(s."tierId", 'free') = ANY(?)`, filters.tiers)
+        if (filters.betaStatus && filters.betaStatus !== 'any') {
+            if (filters.betaStatus === 'none') clauses.push(`u."betaStatus" IS NULL`)
+            else add(`u."betaStatus" = ?`, filters.betaStatus)
+        }
+        if (filters.signedUpAfter) add(`u."createdAt" >= ?`, new Date(filters.signedUpAfter))
+        if (filters.signedUpBefore) add(`u."createdAt" < ?`, new Date(filters.signedUpBefore))
+        if (filters.activeWithinDays) add(`se."lastActiveAt" >= now() - (? || ' days')::interval`, String(filters.activeWithinDays))
+        if (filters.verifiedOnly) clauses.push(`u."emailVerified" = true`)
+        if (!filters.includeDeletionRequested) clauses.push(`ad."userId" IS NULL`)
+        return { where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params }
+    }
+
+    private static readonly AUDIENCE_FROM = `FROM "user" u
+       LEFT JOIN user_subscriptions s ON s."userId" = u.id
+       LEFT JOIN (SELECT "userId", max("updatedAt") AS "lastActiveAt" FROM session GROUP BY 1) se ON se."userId" = u.id
+       LEFT JOIN account_deletions ad ON ad."userId" = u.id`
+
+    /** Who a filter reaches: the count plus a few addresses to eyeball. */
+    async audience(filters: AudienceFilterDto): Promise<{ total: number; sample: AnnouncementRecipient[] }> {
+        const { where, params } = this.audienceWhere(filters)
+        const [{ total }]: Array<{ total: number }> = await this.dataSource.query(
+            `SELECT count(*)::int AS total ${AdminService.AUDIENCE_FROM} ${where}`,
+            params,
+        )
+        const sample: AnnouncementRecipient[] = await this.dataSource.query(
+            `SELECT u.email, u.name ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC LIMIT 5`,
+            params,
+        )
+        return { total, sample }
+    }
+
+    private async audienceRecipients(filters: AudienceFilterDto): Promise<AnnouncementRecipient[]> {
+        const { where, params } = this.audienceWhere(filters)
+        return this.dataSource.query(`SELECT u.email, u.name ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC`, params)
+    }
+
+    /**
+     * The audience as CSV (email, name, tier, beta status, signed up, last
+     * active) — for anything marketing-shaped, which belongs in SendGrid
+     * Marketing Campaigns (contact lists, unsubscribe groups, stats) rather
+     * than in this console.
+     */
+    async audienceCsv(filters: AudienceFilterDto): Promise<string> {
+        const { where, params } = this.audienceWhere(filters)
+        const rows: Array<{
+            email: string
+            name: string
+            tier: string
+            betaStatus: string | null
+            createdAt: Date
+            lastActiveAt: Date | null
+        }> = await this.dataSource.query(
+            `SELECT u.email, u.name, COALESCE(s."tierId", 'free') AS tier, u."betaStatus", u."createdAt", se."lastActiveAt"
+       ${AdminService.AUDIENCE_FROM} ${where} ORDER BY u."createdAt" DESC`,
+            params,
+        )
+        const cell = (v: string | Date | null | undefined) => {
+            let s = v instanceof Date ? v.toISOString() : (v ?? '')
+            // Names are user-typed: a value starting with = + - @ would run as a formula when the
+            // file is opened in a spreadsheet. A leading apostrophe makes it plain text there.
+            if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+            return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+        }
+        const header = ['email', 'name', 'tier', 'betaStatus', 'signedUpAt', 'lastActiveAt']
+        return (
+            [
+                header.join(','),
+                ...rows.map((r) => [r.email, r.name, r.tier, r.betaStatus, r.createdAt, r.lastActiveAt].map(cell).join(',')),
+            ].join('\n') + '\n'
+        )
+    }
+
+    /**
+     * Send a service announcement to the audience — or, with `testTo`, one
+     * rendered copy to that address and nothing else. Every send is recorded.
+     */
+    /**
+     * Send (or test-send) an announcement and record the run. The record is
+     * written even when SendGrid rejected some or all batches — `recipientCount`
+     * is who actually got it, `failedCount`/`failedRecipients` who did not —
+     * because a partial send that left no trace is exactly what leads to
+     * double-sending on retry. Only a run that reached nobody is reported as an
+     * error.
+     */
+    async sendAnnouncement(dto: SendAnnouncementDto): Promise<AnnouncementOutcome> {
+        const recipients = dto.testTo ? [{ email: dto.testTo, name: 'Test Recipient' }] : await this.audienceRecipients(dto.filters)
+        if (!dto.testTo && recipients.length === 0) throw new BadRequestException('Nobody matches this audience.')
+        return this.deliverAnnouncement(recipients, dto.subject, dto.body, dto.filters, dto.testTo ?? null)
+    }
+
+    /**
+     * Send a recorded announcement again, to exactly the accounts its run did
+     * not reach. The retry is its own history row (filters `{ retryOf }`), and
+     * the original row hands its failed recipients over so a second click
+     * cannot resend to them twice.
+     */
+    async retryAnnouncement(id: string): Promise<AnnouncementOutcome> {
+        const [row]: Array<{ subject: string; body: string; failedRecipients: AnnouncementRecipient[] }> = await this.dataSource.query(
+            `SELECT subject, body, "failedRecipients" FROM announcements WHERE id = $1`,
+            [id],
+        )
+        if (!row) throw new NotFoundException('Announcement not found.')
+        if (!row.failedRecipients.length) throw new BadRequestException('Every recipient of this announcement was reached.')
+        await this.dataSource.query(`UPDATE announcements SET "failedRecipients" = '[]'::jsonb WHERE id = $1`, [id])
+        return this.deliverAnnouncement(row.failedRecipients, row.subject, row.body, { retryOf: id }, null)
+    }
+
+    private async deliverAnnouncement(
+        recipients: AnnouncementRecipient[],
+        subject: string,
+        body: string,
+        filters: unknown,
+        testTo: string | null,
+    ): Promise<AnnouncementOutcome> {
+        const outcome = await this.mail.sendAnnouncement(recipients, subject, body)
+        const [row]: Array<{ id: string; sentAt: Date }> = await this.dataSource.query(
+            `INSERT INTO announcements (subject, body, filters, "recipientCount", "failedCount", "failedRecipients", "testTo")
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, "sentAt"`,
+            [subject, body, JSON.stringify(filters), outcome.sent, outcome.failed, JSON.stringify(outcome.failedRecipients), testTo],
+        )
+        this.logger.log(
+            `Announcement "${subject}" sent to ${outcome.sent} recipient(s)${outcome.failed ? `, ${outcome.failed} not delivered` : ''}${testTo ? ` (test → ${testTo})` : ''}`,
+        )
+        if (outcome.sent === 0)
+            throw new BadGatewayException(`SendGrid rejected the announcement (${outcome.errors[0] ?? 'no batch went out'}).`)
+        return { id: row.id, recipientCount: outcome.sent, failedCount: outcome.failed, errors: outcome.errors, sentAt: row.sentAt, testTo }
+    }
+
+    /** Render for a sample recipient ("Ada") so the console can show the e-mail exactly as it will arrive. */
+    previewAnnouncement(subject: string, body: string): { subject: string; text: string; html: string } {
+        const rendered = MailService.renderAnnouncement(subject, body)
+        const fill = (s: string) => s.split('-firstName-').join('Ada')
+        return { subject: fill(rendered.subject), text: fill(rendered.text), html: fill(rendered.html) }
+    }
+
+    async listAnnouncements(): Promise<Array<Record<string, unknown>>> {
+        return this.dataSource.query(
+            `SELECT id, subject, body, filters, "recipientCount", "failedCount",
+                    jsonb_array_length("failedRecipients")::int AS "retryable", "testTo", "sentAt" FROM announcements ORDER BY "sentAt" DESC LIMIT 100`,
+        )
+    }
+
+    async listTiers(): Promise<Array<Record<string, unknown>>> {
+        return this.dataSource.query(
+            `SELECT t.id, t.name, t."dailyRecordingCredits", t."maxScores", t."sortOrder", t.sellable,
               COALESCE(u.count, 0)::int AS "userCount"
        FROM subscription_tiers t
        LEFT JOIN (SELECT COALESCE(s."tierId", 'free') AS tier, count(*) AS count
@@ -359,60 +521,57 @@ export class AdminService {
                   LEFT JOIN user_subscriptions s ON s."userId" = usr.id
                   GROUP BY 1) u ON u.tier = t.id
        ORDER BY t."sortOrder"`,
-    );
-  }
-
-  /**
-   * Support action: grant (positive) or claw back (negative) purchased-pack
-   * seconds. Rides the same balance the Polar order webhooks feed, so the
-   * recording meter picks it up immediately.
-   */
-  async adjustCredits(userId: string, seconds: number): Promise<AdminCreditState> {
-    if (!Number.isInteger(seconds) || seconds === 0) {
-      throw new BadRequestException('seconds must be a non-zero integer');
+        )
     }
-    await this.requireUser(userId);
-    if (seconds > 0) {
-      await this.recordingCredits.grantPackSeconds(userId, seconds);
-    } else {
-      await this.recordingCredits.revokePackSeconds(userId, -seconds);
+
+    /**
+     * Support action: grant (positive) or claw back (negative) purchased-pack
+     * seconds. Rides the same balance the Polar order webhooks feed, so the
+     * recording meter picks it up immediately.
+     */
+    async adjustCredits(userId: string, seconds: number): Promise<AdminCreditState> {
+        if (!Number.isInteger(seconds) || seconds === 0) {
+            throw new BadRequestException('seconds must be a non-zero integer')
+        }
+        await this.requireUser(userId)
+        if (seconds > 0) {
+            await this.recordingCredits.grantPackSeconds(userId, seconds)
+        } else {
+            await this.recordingCredits.revokePackSeconds(userId, -seconds)
+        }
+        this.logger.log(`Admin adjusted pack seconds for ${userId} by ${seconds}`)
+        return this.creditState(userId)
     }
-    this.logger.log(`Admin adjusted pack seconds for ${userId} by ${seconds}`);
-    return this.creditState(userId);
-  }
 
-  /** Support action: sign the user out everywhere by dropping their sessions. */
-  async revokeSessions(userId: string): Promise<{ revoked: number }> {
-    await this.requireUser(userId);
-    const [rows]: [Array<{ id: string }>, number] = await this.dataSource.query(
-      `DELETE FROM session WHERE "userId" = $1 RETURNING id`,
-      [userId],
-    );
-    this.logger.log(`Admin revoked ${rows.length} session(s) for ${userId}`);
-    return { revoked: rows.length };
-  }
+    /** Support action: sign the user out everywhere by dropping their sessions. */
+    async revokeSessions(userId: string): Promise<{ revoked: number }> {
+        await this.requireUser(userId)
+        const [rows]: [Array<{ id: string }>, number] = await this.dataSource.query(
+            `DELETE FROM session WHERE "userId" = $1 RETURNING id`,
+            [userId],
+        )
+        this.logger.log(`Admin revoked ${rows.length} session(s) for ${userId}`)
+        return { revoked: rows.length }
+    }
 
-  private async creditState(userId: string): Promise<AdminCreditState> {
-    const balance = await this.recordingCredits.balance(userId);
-    return {
-      tierId: balance.tier.id,
-      tierName: balance.tier.name,
-      dailyLimit: balance.tier.dailyRecordingCredits,
-      usedToday: balance.used,
-      remainingToday: balance.remaining,
-      packSeconds: balance.packSeconds,
-    };
-  }
+    private async creditState(userId: string): Promise<AdminCreditState> {
+        const balance = await this.recordingCredits.balance(userId)
+        return {
+            tierId: balance.tier.id,
+            tierName: balance.tier.name,
+            dailyLimit: balance.tier.dailyRecordingCredits,
+            usedToday: balance.used,
+            remainingToday: balance.remaining,
+            packSeconds: balance.packSeconds,
+        }
+    }
 
-  private async requireUser(userId: string): Promise<void> {
-    const rows: Array<{ id: string }> = await this.dataSource.query(
-      `SELECT id FROM "user" WHERE id = $1`,
-      [userId],
-    );
-    if (rows.length === 0) throw new NotFoundException('User not found');
-  }
+    private async requireUser(userId: string): Promise<void> {
+        const rows: Array<{ id: string }> = await this.dataSource.query(`SELECT id FROM "user" WHERE id = $1`, [userId])
+        if (rows.length === 0) throw new NotFoundException('User not found')
+    }
 }
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
+    return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min))
 }

@@ -6,7 +6,7 @@ import { REAL_ROOT, SYNTH_ROOT } from '@/server/paths'
 
 const ROOTS: Record<string, string> = { eval: SYNTH_ROOT, 'eval-real': REAL_ROOT }
 
-export async function GET(request: Request) {
+export function GET(request: Request) {
     const url = new URL(request.url)
     const root = url.searchParams.get('root') ?? ''
     const file = url.searchParams.get('file') ?? ''

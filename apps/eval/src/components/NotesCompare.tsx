@@ -127,7 +127,13 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                                     y={i * ROW_HEIGHT}
                                     width={plotWidth}
                                     height={ROW_HEIGHT}
-                                    fill={midi % 12 === 0 ? 'var(--color-surface-container-low)' : i % 2 ? 'var(--color-surface-container-lowest)' : 'transparent'}
+                                    fill={
+                                        midi % 12 === 0
+                                            ? 'var(--color-surface-container-low)'
+                                            : i % 2
+                                              ? 'var(--color-surface-container-lowest)'
+                                              : 'transparent'
+                                    }
                                 />
                                 <text
                                     x={LABEL_WIDTH - 5}
@@ -170,7 +176,11 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                 {hover && (
                     <div
                         className="absolute z-10 pointer-events-none bg-inverse-surface text-inverse-on-surface rounded-md px-2.5 py-1.5 whitespace-nowrap"
-                        style={{ left: `${(hover.x / width) * 100}%`, top: Math.max(0, (hover.y / height) * 100 - 8) + '%', transform: 'translate(-50%, -100%)' }}>
+                        style={{
+                            left: `${(hover.x / width) * 100}%`,
+                            top: Math.max(0, (hover.y / height) * 100 - 8) + '%',
+                            transform: 'translate(-50%, -100%)',
+                        }}>
                         <span className="font-mono text-[11px]">
                             {hover.series === 'expected' ? 'expected' : 'pipeline'} · {pitchName(hover.note.midi)} ·{' '}
                             {hover.note.onsetSec.toFixed(2)}s +{hover.note.durSec.toFixed(2)}s · {hover.matched ? 'matched' : 'unmatched'}

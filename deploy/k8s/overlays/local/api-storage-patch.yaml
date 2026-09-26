@@ -3,16 +3,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api
+    name: api
 spec:
-  template:
-    spec:
-      containers:
-        - name: api
-          volumeMounts:
-            - name: storage
-              mountPath: /data/storage
-      volumes:
-        - name: storage
-          persistentVolumeClaim:
-            claimName: api-storage
+    template:
+        spec:
+            containers:
+                - name: api
+                  volumeMounts:
+                      - name: storage
+                        mountPath: /data/storage
+            volumes:
+                - name: storage
+                  persistentVolumeClaim:
+                      claimName: api-storage

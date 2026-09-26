@@ -1,6 +1,5 @@
 import type { MxmlMeasure } from '@mushee/notation/components/types'
 import type { Score } from '@mushee/notation/model/Score'
-
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
@@ -146,10 +145,14 @@ export interface RecordingOptions {
      * score's instrument family; also the classifier-abstain fallback).
      * Arrives once per take, ~1.2 s in, when the server locks its profile.
      */
-    onSourceResolved?: (resolution: {
-        source: 'voice' | 'instrument'
-        decidedBy: 'explicit' | 'classifier' | 'prior'
-    }) => void
+    onSourceResolved?: (resolution: { source: 'voice' | 'instrument'; decidedBy: 'explicit' | 'classifier' | 'prior' }) => void
+    /**
+     * Transcription health from the server: `ok: false` when its inference
+     * backend stops answering (audio is still archived, credits are not metered
+     * meanwhile), `ok: true` when it recovers. Surface it — a take that shows
+     * waveform bars but never notes must not look like the user's fault.
+     */
+    onHealth?: (health: { ok: boolean }) => void
 }
 
 /**
@@ -163,6 +166,8 @@ export class RecordingEngine implements Tickable {
     private midiPlayer: MidiPlayer
     private bpm = DEFAULT_BPM
     private beatsPerMeasure = 4
+    /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
+    private pulseBeats = 1
     private countoffEndTime = 0
     private lastNewMeasureTriggeredFor: number | null = null
 
@@ -277,6 +282,7 @@ export class RecordingEngine implements Tickable {
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
         this.bpm = tempo?.bpm ?? DEFAULT_BPM
         this.beatsPerMeasure = measure.maxBeats
+        this.pulseBeats = measure.timeSignature?.pulse.beats ?? 1
 
         this.countoffEndTime = (this.beatsPerMeasure * 60) / this.bpm
         this.lastNewMeasureTriggeredFor = null
@@ -547,6 +553,7 @@ export class RecordingEngine implements Tickable {
                 usedSeconds?: number
                 source?: 'voice' | 'instrument'
                 decidedBy?: 'explicit' | 'classifier' | 'prior'
+                ok?: boolean
             }
             if (payload.type === 'score-update' && payload.measures) {
                 // Via the captured opts, not this.options: stop() nulls the
@@ -572,9 +579,10 @@ export class RecordingEngine implements Tickable {
                     source: payload.source,
                     decidedBy: payload.decidedBy ?? 'prior',
                 })
+            } else if (payload.type === 'recording-health' && typeof payload.ok === 'boolean') {
+                this.options?.onHealth?.({ ok: payload.ok })
             }
         })
-
     }
 
     /**
@@ -607,9 +615,7 @@ export class RecordingEngine implements Tickable {
                 // spelled on the singer's own tuning grid server-side, and the
                 // key breaks the remaining ties (F♯ vs G♭-territory notes sung
                 // between keys). The score is the one place that knows it.
-                keyFifths:
-                    this.options.score.measures[this.options.startMeasureIndex]
-                        ?.keySignature.fifths ?? null,
+                keyFifths: this.options.score.measures[this.options.startMeasureIndex]?.keySignature.fifths ?? null,
                 // `null` = the browser's default container; the server probes it.
                 mimeType: this.mimeType,
             }),
@@ -639,9 +645,7 @@ export class RecordingEngine implements Tickable {
         // connect() nulls the socket when the handshake failed and has already
         // reported it; starting a recorder with nowhere to send would just leak.
         if (!this.ws) return
-        this.mediaRecorder = this.mimeType
-            ? new MediaRecorder(this.stream, { mimeType: this.mimeType })
-            : new MediaRecorder(this.stream)
+        this.mediaRecorder = this.mimeType ? new MediaRecorder(this.stream, { mimeType: this.mimeType }) : new MediaRecorder(this.stream)
 
         this.sendMeta()
 
@@ -701,7 +705,7 @@ export class RecordingEngine implements Tickable {
      */
     private pulseCursor(elapsed: number): void {
         if (!this.options) return
-        const beatPhase = ((elapsed * this.bpm) / 60) % 1
+        const beatPhase = ((elapsed * this.bpm) / 60 / this.pulseBeats) % 1
         const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
         this.options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
     }
