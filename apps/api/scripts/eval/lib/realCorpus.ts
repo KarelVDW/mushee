@@ -36,7 +36,7 @@ import { join } from 'path'
 
 import type { SourceKind } from '../types'
 
-export type CorpusTier = 'benchmark' | 'context'
+export type CorpusTier = 'benchmark' | 'context' | 'synthetic'
 
 /**
  * What a human would say is being recorded — the axis the product's benchmark
@@ -154,7 +154,9 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
         derivedFrom: m.derivedFrom,
         // Legacy flat layout: infer the tier from the flags that were always the
         // pooling mechanism, so an un-migrated checkout behaves identically.
-        tier: tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),
+        // A manifest may name its tier outright (the realistic synthetic corpus under
+        // fixtures/eval-synth is flat and says `"tier": "synthetic"`).
+        tier: tier ?? m.tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),
         corpusSplit: m.corpusSplit,
         noteTruthDerived,
         pitchless: m.pitchless ?? false,

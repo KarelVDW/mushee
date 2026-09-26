@@ -1,0 +1,8 @@
+.venv/
+assets/
+work/
+out/
+bin/
+engines/
+__pycache__/
+*.pyc

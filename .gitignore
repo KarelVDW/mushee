@@ -41,6 +41,8 @@ apps/api/scripts/eval/.cache/
 apps/api/scripts/eval/.freesound-token
 apps/api/scripts/fixtures/eval/
 apps/api/scripts/fixtures/eval-real/
+# Realistic synthetic corpus export (hard links into synthetic-corpus/out, see its README)
+apps/api/scripts/fixtures/eval-synth/
 # Cached pitch trajectories for the eval harness — derived, large, and rebuilt on
 # demand by scripts/eval/lib/trackCache.ts (and, per acoustic condition, by
 # scripts/eval/lib/variantCache.ts).

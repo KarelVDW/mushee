@@ -9,6 +9,7 @@
  *                                     [--datasets a,b] [--quick]
  *   tsx scripts/eval/benchmark.ts compare <a.json> <b.json> [--split dev|test|all]
  *   tsx scripts/eval/benchmark.ts render [<result.json>]
+ *   (add --synth to any of them for the realistic synthetic corpus, fixtures/eval-synth)
  *
  * `run` drives `lib/evalRun.ts` exactly as `EVAL_REAL=1 EVAL_ADAPTIVE=1 run-eval.ts`
  * would (the number that corresponds to what a user hears: resolver, routing,
@@ -39,8 +40,15 @@ import { formatComparison, pairedDiffCI } from './lib/stats'
 import { printReport } from './run-eval'
 
 const BENCH_DIR = resolve(__dirname, 'benchmarks')
-const RESULTS_DIR = join(BENCH_DIR, 'results')
-const RESULTS_MD = join(BENCH_DIR, 'RESULTS.md')
+/**
+ * `--synth` scores the REALISTIC synthetic corpus (fixtures/eval-synth: every app
+ * instrument + eight voice types, rendered from real recordings with exact truth)
+ * instead of the real one. Its history is kept apart — results-synth/ and
+ * RESULTS-SYNTH.md — so the real benchmark's trend line never mixes corpora.
+ */
+const SYNTH = process.argv.includes('--synth')
+const RESULTS_DIR = join(BENCH_DIR, SYNTH ? 'results-synth' : 'results')
+const RESULTS_MD = join(BENCH_DIR, SYNTH ? 'RESULTS-SYNTH.md' : 'RESULTS.md')
 
 /** Display order: the product's inputs first, the special axis last. */
 const MATERIAL_ORDER: Material[] = ['singing', 'humming', 'whistling', 'instrument', 'vocal-percussion']
@@ -212,13 +220,21 @@ function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
 async function run(): Promise<void> {
     const quick = flag('quick')
     const label = (arg('label') ?? 'baseline').replace(/[^A-Za-z0-9._-]+/g, '-')
-    const conditions = list(arg('conditions')) ?? (quick ? ['real'] : conditionsFor(true).map((c) => c.id))
+    const conditions =
+        list(arg('conditions')) ??
+        (SYNTH
+            ? // what users' takes sound like; the dry render is a diagnostic reference, opt in with --conditions
+              conditionsFor(false, true).map((c) => c.id).filter((c) => c !== 'dry' && (!quick || c === 'home-phone'))
+            : quick
+              ? ['real']
+              : conditionsFor(true).map((c) => c.id))
     const started = Date.now()
     console.log(`benchmark: label=${label} conditions=${conditions.join(',')}`)
 
     const report = await runEval(
         defaultEvalOptions({
-            real: true,
+            real: !SYNTH,
+            synth: SYNTH,
             adaptive: true,
             label,
             conditionFilter: conditions,

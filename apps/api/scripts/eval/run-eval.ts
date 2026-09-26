@@ -13,6 +13,7 @@
  *
  * Env:
  *   EVAL_REAL         1 = the real recorded corpus (fixtures/eval-real), else synthetic
+ *   EVAL_SYNTH        1 = the REALISTIC synthetic corpus (fixtures/eval-synth, exported by synthetic-corpus/)
  *   EVAL_ADAPTIVE     1 = the production resolver + registry; else a fixed config:
  *   EVAL_PROVIDER     crepe-tiny | crepe-tiny-down1  (default crepe-tiny)
  *   EVAL_MIN_FREQ, EVAL_MAX_FREQ, EVAL_CONFIDENCE, EVAL_MIN_FRAMES, EVAL_HIGHPASS, EVAL_DENOISE
@@ -29,7 +30,7 @@ import { writeFileSync } from 'fs'
 import { join } from 'path'
 
 import type { PitchTranscribeOptions } from '../../src/recordings/pipeline/providers/pitch-provider'
-import { defaultEvalOptions, type EvalReport, REAL_ROOT, runEval, SYNTH_ROOT } from './lib/evalRun'
+import { defaultEvalOptions, type EvalReport, REAL_ROOT, runEval, SYNTH_REALISTIC_ROOT, SYNTH_ROOT } from './lib/evalRun'
 import { formatOnsetClasses } from './lib/onsetClasses'
 import { formatSegErrors } from './lib/segErrors'
 
@@ -187,6 +188,7 @@ export function printReport(report: EvalReport): void {
 async function main(): Promise<void> {
     const adaptive = boolEnv('EVAL_ADAPTIVE')
     const real = boolEnv('EVAL_REAL')
+    const synth = boolEnv('EVAL_SYNTH')
     const providerName = process.env.EVAL_PROVIDER ?? 'crepe-tiny'
     const pitchOptions: PitchTranscribeOptions = {
         minFreqHz: numEnv('EVAL_MIN_FREQ'),
@@ -194,11 +196,12 @@ async function main(): Promise<void> {
         confidenceThreshold: numEnv('EVAL_CONFIDENCE'),
         minFramesPerNote: numEnv('EVAL_MIN_FRAMES'),
     }
-    const outPath = process.env.EVAL_OUT ?? join(real ? REAL_ROOT : SYNTH_ROOT, 'report.json')
+    const outPath = process.env.EVAL_OUT ?? join(synth ? SYNTH_REALISTIC_ROOT : real ? REAL_ROOT : SYNTH_ROOT, 'report.json')
 
     const report = await runEval(
         defaultEvalOptions({
             real,
+            synth,
             adaptive,
             providerName,
             pitchOptions,

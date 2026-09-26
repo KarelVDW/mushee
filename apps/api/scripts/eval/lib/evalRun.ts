@@ -28,7 +28,7 @@ import { CrepeProvider } from '../../../src/recordings/pipeline/providers/crepe-
 import { LocalModelBackend } from '../../../src/recordings/pipeline/providers/local-model-backend'
 import type { PitchProvider, PitchTranscribeOptions } from '../../../src/recordings/pipeline/providers/pitch-provider'
 import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry'
-import { CONDITIONS, SCENARIOS } from '../scenarios'
+import { CONDITIONS, SCENARIOS, SYNTH_CONDITIONS } from '../scenarios'
 import type { Condition, GroundTruth, Scenario } from '../types'
 import { type EstNote, type MatchOptions, type Metrics, scoreNotesBest, scoreOnsets, type TimingStats, timingStats } from './metrics'
 import { addOnsetClassStats, emptyOnsetClassStats, type OnsetClassStats, onsetRecallByClass } from './onsetClasses'
@@ -40,6 +40,8 @@ const DETECT_SR = 16000
 
 export const SYNTH_ROOT = resolve(__dirname, '../../fixtures/eval')
 export const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real')
+/** The realistic synthetic corpus (exported from synthetic-corpus/, see its README). */
+export const SYNTH_REALISTIC_ROOT = resolve(__dirname, '../../fixtures/eval-synth')
 const MODELS = {
     crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 }
@@ -53,6 +55,12 @@ export const REAL_CONDITION: Condition = { id: 'real', label: 'real recording' }
 export interface EvalOptions {
     /** Real recorded corpus (fixtures/eval-real) vs the synthetic one. */
     real: boolean
+    /**
+     * The realistic synthetic corpus (fixtures/eval-synth) instead of either:
+     * every app instrument + voice types, real-recording timbres, measured
+     * acoustics, exact truth. Takes precedence over `real`.
+     */
+    synth?: boolean
     /** Run the production resolver + registry (the adaptive path) instead of a fixed config. */
     adaptive: boolean
     /** Fixed-config provider (ignored when adaptive). */
@@ -357,25 +365,27 @@ async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): Promise<
 }
 
 /** Which conditions a corpus can be scored under (real gets the `real` pseudo-condition first). */
-export function conditionsFor(real: boolean): Condition[] {
+export function conditionsFor(real: boolean, synth = false): Condition[] {
+    if (synth) return SYNTH_CONDITIONS
     return real ? [REAL_CONDITION, ...CONDITIONS.filter((c) => c.id !== 'clean')] : CONDITIONS
 }
 
 export async function runEval(o: EvalOptions): Promise<EvalReport> {
-    const evalRoot = o.real ? REAL_ROOT : SYNTH_ROOT
+    const discovered = o.real || !!o.synth
+    const evalRoot = o.synth ? SYNTH_REALISTIC_ROOT : o.real ? REAL_ROOT : SYNTH_ROOT
     const decoder = new AudioDecoder()
     const transcribe = await buildTranscriber(o, decoder)
 
-    const datasets = o.real ? discoverRealDatasets(evalRoot) : []
+    const datasets = discovered ? discoverRealDatasets(evalRoot) : []
     const derivedNoteTruth = new Set(datasets.filter((d) => d.noteTruthDerived).map((d) => d.id))
     const pitchlessIds = new Set(datasets.filter((d) => d.pitchless).map((d) => d.id))
     const constructedIds = new Set(datasets.filter((d) => d.constructedPerformance).map((d) => d.id))
     const pooled = (scenarioId: string): boolean =>
         o.includeUntrusted || (!derivedNoteTruth.has(scenarioId) && !pitchlessIds.has(scenarioId) && !constructedIds.has(scenarioId))
 
-    const allScenarios = o.real ? realScenarios(datasets) : syntheticScenarios()
+    const allScenarios = discovered ? realScenarios(datasets) : syntheticScenarios()
     const scenarios = allScenarios.filter((s) => !o.scenarioFilter || o.scenarioFilter.includes(s.id))
-    const conditions = conditionsFor(o.real).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id))
+    const conditions = conditionsFor(o.real, !!o.synth).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id))
 
     const results: ClipResult[] = []
     for (const scenario of scenarios) {

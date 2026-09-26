@@ -188,3 +188,20 @@ export const CONDITIONS: Condition[] = [
     { id: 'intonation-60c', label: 'Intonation ±60 ¢ per note', detuneCents: 60 },
     { id: 'intonation-80c', label: 'Intonation ±80 ¢ per note', detuneCents: 80 },
 ]
+
+/**
+ * Recording conditions of the REALISTIC synthetic corpus (fixtures/eval-synth,
+ * built by the standalone `synthetic-corpus/` project). Unlike `CONDITIONS`
+ * these are not ffmpeg recipes applied here: the corpus ships every clip already
+ * "recorded" — measured room impulse responses, measured phone-microphone
+ * responses, real noise beds and the browser's Opus codec — so each id only
+ * names a WAV variant (`<clip>__<id>.wav`). `dry` is the unrecorded render,
+ * kept as a reference; the other four are what a user's take sounds like.
+ */
+export const SYNTH_CONDITIONS: Condition[] = [
+    { id: 'dry', label: 'Dry render (reference, no room)' },
+    { id: 'studio', label: 'Close mic, treated room' },
+    { id: 'room', label: 'Good mic, ordinary room' },
+    { id: 'home-phone', label: 'Phone at home, browser Opus' },
+    { id: 'noisy-phone', label: 'Phone in a noisy place, browser Opus' },
+]
