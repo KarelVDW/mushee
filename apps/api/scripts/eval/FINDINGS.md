@@ -2244,6 +2244,18 @@ deepens sung vibrato's modulation, so the voice needs the deep dip most where th
 room is worst. The same mechanism, opposite answers by material, which is what
 `OnsetDetector.minTroughSec`'s doc comment predicted from the July reverb sweep.
 
+**Product benchmark** (`benchmark.ts run --quick`, `pre-onset-policy` =
+`ONSET_POLICY=legacy EXTRACTOR_COLLAPSE_COINCIDENT=0` vs `onset-policy`, both on
+d77db1d, 1,098 benchmark-grade clips): **+0.007 [+0.005, +0.008]\***, singing
++0.007\*, instruments +0.000, headline 0.766 → 0.770. Significant per dataset:
+annotated-vocalset +0.014, HUST +0.014, CSD +0.011, URMP cello +0.039 (n = 4);
+GuitarSet **−0.004** and n20emv2 **−0.003**. The policy leaves plucked
+instruments alone, so GuitarSet's loss is the collapse pass below (its fast runs
+put two real notes on one slot; see the quantiser null further down, which wins
+it back, +0.012). Synthetic (`benchmark.ts --synth`, v1.1 baseline → after):
+studio +0.017\*, room +0.031\*, home-phone +0.034\*, noisy-phone +0.024\*,
+singing +0.05…+0.10\*, instruments +0.01…+0.02\* in every condition.
+
 ### Two notes on one onset (shipped: `NoteExtractor.collapseCoincident`)
 
 Two onset-split fragments a few tens of ms apart can snap to the same grid slot:
@@ -2289,6 +2301,17 @@ snap), and GuitarSet is where to measure it.
   future tempo tracking.
 - **Thirty-second notes cannot come back out** (the notation grid bottoms out at the
   16th); the planner excludes them.
+- **Short sung notes are the voices' largest remaining error, and it is not the
+  audio.** After the changes above, 9 % of synthetic sung notes come out at a
+  wrong pitch, 138 of 174 of them shorter than 0.3 s (a quarter of all short
+  sung notes): sixteenth runs in an air, read a semitone off. Yet the dry audio
+  is on target: measured with SwiftF0 over the middle 60 % of each note, only
+  1 % of synthetic short notes sit > 50 c off their label (real singing: vocadito
+  12.5 %, HUST 17.6 %, n20emv2 17.8 %, CSD 29.6 %, part of that label error). So
+  the voice decode misreads clean fast runs; the lead is the decode's note-change
+  cost on short notes, to be measured on the real sets with fast notes (vocadito,
+  n20emv2) before anything else. It is also a corpus finding: the synthetic
+  voices sing fast notes too precisely (in-note spread 20 c vs 34–59 c real).
 - Open: synthetic voices are vowel-only (no consonant re-onsets); no humming or
   whistling synthesis; bagpipe drones not yet mixed; euphonium rendered from tuba
   samples (no permissive euphonium recording exists).

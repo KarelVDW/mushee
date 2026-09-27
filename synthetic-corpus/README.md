@@ -165,6 +165,100 @@ Reading it honestly:
   reported but not used as a gate.
 - Listen: `out/_showcase/` (20 clips, AAC) — the realism bar is ultimately yours.
 
+
+### How the app scores on it (baseline, before any app change)
+
+`benchmark.ts run --synth` (production path, adaptive), COnP @ ±100 ms:
+
+| condition | COnP | COnPOff |
+| --- | --- | --- |
+| studio | 0.860 | 0.589 |
+| room | 0.819 | 0.526 |
+| home-phone | 0.798 | 0.500 |
+| noisy-phone | 0.717 | 0.428 |
+
+Weakest datasets: alto flute and piccolo (0.65–0.66), the voices (0.68–0.77, and
+they drop hardest from studio to room), bagpipe, brass section, violin.
+
+**Error-profile realism** — the same pipeline on the synthetic `room` takes vs on
+the matching REAL corpus (from the committed real benchmark): scores land within
+~±0.1 of real for almost every instrument, i.e. the corpus is realistic in
+*difficulty*, not only in sound. The outlier is splitting on vibrato instruments
+(violin 27.5 vs 7.8 splits/100 notes, flute 20.5 vs 5.4): URMP is a near-anechoic
+studio recording, and the corpus found why that matters (next section).
+
+| instrument | real COnP | real split / merged per 100 | synthetic v1.1 `room` COnP | synthetic split / merged |
+| --- | --- | --- | --- | --- |
+| violin | 0.88 | 7.8 / 3.2 | 0.78 | 27.5 / 3.0 |
+| viola | 0.81 | 7.6 / 0.0 | 0.72 | 11.0 / 9.2 |
+| cello | 0.56 | 24.5 / 0.0 | 0.78 | 11.5 / 8.6 |
+| contrabass | 0.70 | 25.5 / 0.0 | 0.80 | 5.5 / 7.2 |
+| flute | 0.78 | 5.4 / 3.0 | 0.73 | 20.5 / 3.6 |
+| oboe | 0.85 | 4.8 / 0.0 | 0.80 | 12.0 / 7.3 |
+| clarinet | 0.88 | 2.7 / 0.0 | 0.84 | 4.7 / 8.7 |
+| alto sax | 0.85 | 2.9 / 0.7 | 0.91 | 6.2 / 5.2 |
+| bassoon | 0.86 | 3.1 / 0.0 | 0.84 | 12.7 / 7.6 |
+| trumpet | 0.93 | 2.8 / 0.0 | 0.86 | 6.2 / 5.9 |
+| french horn | 0.95 | 1.2 / 0.0 | 0.88 | 7.8 / 7.4 |
+| trombone | 0.90 | 1.7 / 0.9 | 0.82 | 17.7 / 6.6 |
+| tuba | 0.83 | 5.6 / 1.4 | 0.93 | 4.7 / 6.0 |
+| guitar | 0.82 | 1.7 / 6.3 | 0.93 | 1.6 / 2.1 |
+
+### What the corpus changed in the app
+
+Each change was found here and diagnosed clip by clip (`stages-synth.ts`). It was
+then accepted only if the REAL corpus agreed: paired bootstrap over clips, dev and
+test apart, including the harness's reverberant real conditions. Full record:
+`apps/api/scripts/eval/FINDINGS.md` ("Findings log (2026-09-27…)").
+
+1. **Vibrato in a room is not a re-attack.** The onset detector split held sung and
+   sustained-instrument notes on the vibrato's room-induced amplitude modulation.
+   Deeper dip for voice (0.35), and for sustained instruments 0.35 ramped back to
+   0.5 by the take's reverberance, because a heavy room fills tongued repeats.
+2. **One note per grid slot.** Split fragments snapping onto one slot became chords;
+   they are now folded (`collapseCoincident`).
+3. **Two real notes never share a slot.** The quantiser's coarse-grid prior pulled a
+   late sixteenth back onto the beat its predecessor held, so one of two correctly
+   heard notes was lost (pedal-point figures: B5-D5-C6-D5…).
+
+Result on this corpus, `benchmark.ts compare` v1.1 baseline → after (COnP,
+paired over the 463 clips, all CIs exclude zero; dev and test agree, room dev
++0.028*, test +0.035*):
+
+| condition | all | singing | instruments |
+| --- | --- | --- | --- |
+| studio | 0.860 → **0.877** (+0.017) | 0.813 → 0.860 (+0.046) | 0.870 → 0.881 (+0.011) |
+| room | 0.820 → **0.852** (+0.031) | 0.721 → 0.820 (+0.099) | 0.841 → 0.858 (+0.017) |
+| home-phone | 0.799 → **0.834** (+0.034) | 0.690 → 0.787 (+0.097) | 0.822 → 0.843 (+0.021) |
+| noisy-phone | 0.720 → **0.743** (+0.024) | 0.663 → 0.738 (+0.075) | 0.732 → 0.745 (+0.013) |
+
+Of the 180 dataset × condition cells, one declines significantly (harmonica on
+home-phone, −0.010, n = 10), about what chance produces. Per-note census on the
+`room` takes: notes right went from 74 % to 80 % (instruments) and 65 % to 76 %
+(voices). Right-but-split notes fell from 10 % to 5 % and from 18 % to 6 %.
+Merged repeats rose slightly, 4.7 % → 6.0 % for instruments, which is the
+trade-off. Wrong pitch (9 % of sung notes) is now the voices' largest error.
+
+On the REAL corpus (`benchmark.ts run --quick`, before → after, 1,098
+benchmark-grade clips, paired): **+0.007 [+0.005, +0.008]\***, singing +0.007\*
+(annotated-vocalset +0.014\*, HUST +0.014\*, CSD +0.011\*), instruments +0.000.
+URMP is near-anechoic, so the room effect this corpus found barely shows there.
+The reverberant real guard is in FINDINGS.md. Two small significant regressions:
+GuitarSet −0.004\* (the collapse pass drops one of two real notes in fast runs)
+and n20emv2 −0.003\*.
+
+Known realism gap (v1.2 work): the synthetic voices sing fast notes too
+precisely. Only 1 % of their notes under 0.25 s sit more than 50 cents off the
+label, against 12–30 % in real annotated singing (vocadito, HUST, n20emv2, CSD),
+and their in-note pitch spread is 20 c against 34–59 c.
+
+Caveat for reading per-timbre numbers: piccolo, one of the two weakest, renders
+from a single sample source (Apple) whose recorded vibrato is deep. Its amplitude
+modulation has a median of 7.3 dB, against 3.8–5.2 dB for the Philharmonia and Iowa
+flutes and 3.7 dB on real URMP flute notes. So even the dry render splits mid-note
+on that player's vibrato. With no real piccolo recording to check against, the app
+is not tuned for it.
+
 ### Findings that changed the corpus (worth knowing when reading eval numbers)
 
 - **Library metadata is unreliable** — every zone's pitch is measured; the
