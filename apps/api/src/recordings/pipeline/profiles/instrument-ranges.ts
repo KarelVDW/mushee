@@ -82,3 +82,15 @@ export function rangeForInstrument(id: string | undefined): FreqRange | undefine
     }
     return undefined
 }
+
+/**
+ * Instruments whose notes are struck or plucked and then decay. Their repeated notes
+ * are separated by the amplitude re-attack itself, so the onset detector keeps its
+ * default sensitivity for them (see `SUSTAINED_ONSET_DIP_RATIO`).
+ */
+const STRUCK_OR_PLUCKED = ['piano', 'guitar', 'bass-guitar', 'harp', 'banjo', 'mandolin', 'ukulele', 'koto', 'pipa', 'guzheng']
+
+export function isStruckOrPluckedInstrument(id: string | undefined): boolean {
+    if (!id) return false
+    return STRUCK_OR_PLUCKED.some((k) => id === k || id.includes(k))
+}

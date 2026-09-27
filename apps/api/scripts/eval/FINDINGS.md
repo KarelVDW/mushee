@@ -2160,3 +2160,135 @@ accompaniment-locking failure) and would read ~0.54 on the two solo corpora alon
 provisional on draft truth until the verification pass (`annotations/whistle-real/VERIFY-WORKLIST.md`).
 Vocal percussion has no pitched truth and its row reads "no data" — its number is the isolated
 onset-detector bench (F1 0.651).
+
+## Findings log (2026-09-27: the realistic synthetic corpus)
+
+A second synthetic tier, built by the standalone `synthetic-corpus/` project (its
+README is the method record): every app instrument (37 timbres) and eight voice
+types, **rendered from real recordings** (90 sample sources; VocalSet singers via
+TD-PSOLA), performed by a performer model along the app's click, and recorded
+through measured rooms, measured phone microphones, real noise and the browser's
+Opus round trip. Truth is exact by construction and every clip passed an
+independent-tracker label gate. Scored with `EVAL_SYNTH=1` / `benchmark.ts --synth`
+(its own history: `benchmarks/results-synth/`, `RESULTS-SYNTH.md`). Its per-
+instrument scores land within ~±0.1 of the real corpus's — realistic in difficulty,
+not only in sound.
+
+Baseline (v1.1, 463 clips): **studio 0.860, room 0.819, home-phone 0.798,
+noisy-phone 0.717** COnP. Diagnosis tools: `inspect-synth.ts` (one clip, production
+path vs truth), `stages-synth.ts` (onsets / provider raw / extractor deduced),
+`analyze-synth.ts` + `synthetic-corpus/synthcorpus/census.py` (per-note census
+joined with how each note was performed), `voice-exp.sh` / `inst-exp.sh` (A/B over
+synthetic + real in parallel).
+
+### The re-attack detector read vibrato in a room as re-articulation (shipped: per-family onset policy)
+
+Mechanism, seen clip by clip with `stages-synth.ts`: the provider's raw note is ONE
+correct held note; the `OnsetDetector` (dip to 0.5 × preceding peak, rise 1.8×) fires
+every ~0.2 s inside it, and `splitAtOnsets` shatters it into a chain of 16ths. The
+dips are physical: vibrato sweeps the partials through the room's modes, so the
+reverberant sound is amplitude-modulated at the vibrato rate (−6…−9 dB). The real
+corpus could not show it — URMP and most singing sets are near-anechoic — but real
+annotated-vocalset already split 16/100 notes. The synthetic voices' own loudness
+wobble is *below* real singing's (2.3–3.4 dB vs 3.9–5.7 dB), so this is not a
+rendering artefact.
+
+Fix (`profile-resolver.ts` `applyOnsetPolicy`, constants in `pipeline-profile.ts`):
+voice gets `onsetDipRatio` 0.35 (≈ −9 dB); sustained instruments get 0.35 on a dry
+take, rising to the detector default 0.5 with the take's `estimateReverberance`;
+struck/plucked instruments (`isStruckOrPluckedInstrument`: piano, guitar, bass…)
+keep 0.5. Kill-switch `ONSET_POLICY=legacy`. Production path, paired over clips,
+95 % CI:
+
+| change | synthetic | real |
+| --- | --- | --- |
+| voice 0.5 → 0.35 | **+0.068** [+0.059, +0.077]* (dev +0.063*, test +0.072*) | singing **+0.009** [+0.007, +0.011]* (dev +0.009*, test +0.009*) |
+| voice 0.35 → 0.25 | +0.013* | +0.001 (null; vocadito keeps sliding: 0.701 → 0.698 → 0.694) |
+| sustained instruments 0.5 → 0.35 | **+0.006** [+0.003, +0.009]* | URMP +0.005 [−0.001, +0.012] |
+| sustained instruments 0.5 → 0.35 ramped to 0.5 by reverberance | **+0.007** [+0.005, +0.009]* | URMP +0.004 [−0.002, +0.011] |
+| plucked/struck 0.5 → 0.35 | −0.006* | GuitarSet −0.008* → excluded from the policy |
+
+0.35 rather than 0.25 for voice: the synthetic voices sing vowels only, so they have
+no consonant re-onsets to lose — their extra gain at 0.25 is partly a property of the
+material, while real singing is flat there and vocadito (lyrics) declines.
+
+**The reverberant guard.** The real corpus is near-anechoic, so the policy was
+also run against the harness's own adverse rooms (`echoey-room` RT60 0.9 s,
+`distant-mic` RT60 1.3 s wet-dominant) over every real dataset with trustworthy
+note labels. Legacy (`ONSET_POLICY=legacy EXTRACTOR_COLLAPSE_COINCIDENT=0`) vs
+the change, both conditions pooled:
+
+| family | n | flat 0.35 for sustained | shipped (ramped) |
+| --- | --- | --- | --- |
+| singing (annotated-vocalset, vocadito) | 880 | **+0.024** [+0.021, +0.027]* | same (voice is not ramped) |
+| sustained instruments (URMP) | 96 | −0.001 [−0.016, +0.012] | **+0.004** [+0.001, +0.007]* over voice-only |
+| plucked (GuitarSet; policy leaves them alone) | 100 | **+0.005** [+0.004, +0.007]* (the collapse pass) | same |
+
+Flat 0.35 hid real damage inside that null mean. URMP horn "Für Elise" is eight
+repeated E3s: in the echoey room the 0.5 detector finds 4 of the 7 re-attacks,
+0.35 finds none (F1 0.86 → 0.40), and bassoon "Miserere", clarinet "Nocturne",
+trombone "Slavonic" and tuba "Arioso" lost 0.08–0.14 the same way. A
+tongued repeat leaves a short gap and a heavy room fills it, so the deep dip
+that stops vibrato splitting starts merging real repeats. `stages-synth.ts` now
+takes `STAGES_REAL=1` and degrades a real clip on the fly to show this. Ramping the
+sustained ratio back towards 0.5 with the take's measured reverberance recovers
+them (Elise 0.86 again, Miserere to within 0.02) while keeping part of the vibrato
+gains (violin, viola, oboe; not trumpet's), and it does not cost the synthetic corpus anything (+0.001 over
+flat, n.s.). On dry audio reverberance is ≈ 0, so the dry numbers are flat
+0.35's. The collapse pass is neutral or positive on every one of these clips.
+
+Voice is deliberately not ramped. Ramping it the same way costs synthetic voices
+**−0.052** [−0.063, −0.041]* and real singing in the two rooms **−0.020**
+[−0.022, −0.018]* (dev −0.023*, test −0.018*; vocadito +0.003, n.s.): a room
+deepens sung vibrato's modulation, so the voice needs the deep dip most where the
+room is worst. The same mechanism, opposite answers by material, which is what
+`OnsetDetector.minTroughSec`'s doc comment predicted from the July reverb sweep.
+
+### Two notes on one onset (shipped: `NoteExtractor.collapseCoincident`)
+
+Two onset-split fragments a few tens of ms apart can snap to the same grid slot:
+the deduced line then carries two notes at one instant — a chord in a single-voice
+staff. A final pass keeps one note per slot (same pitch → one note spanning both;
+different pitch → the longer). Synthetic voices **+0.012** [+0.010, +0.014]*, real
+singing **+0.0016** [+0.0010, +0.0023]*, never negative per dataset.
+Kill-switch `EXTRACTOR_COLLAPSE_COINCIDENT=0`.
+
+### Two real notes on one slot (measured null, not shipped)
+
+The other side of the collapse pass. `snapToGrid`'s preference for simple
+positions pulls a slightly late sixteenth back onto the beat its predecessor
+already holds. In a fast pedal-point figure (piccolo B5-D5-C6-D5-D6…, 92 bpm)
+the provider's raw notes are all correct, yet D5 and C6 land on one slot and the
+collapse keeps one of them. Letting the later note take the next grid slot was
+tried in three forms, each A/B'd over the synthetic corpus (room + home-phone,
+926 clips) and the real corpus (809 clips, URMP, GuitarSet, singing):
+
+| variant | synthetic | real |
+| --- | --- | --- |
+| push whenever onsets are ≥ ½ step apart | −0.008 [−0.010, −0.006]* | −0.001 (n.s.) |
+| … only into a slot the next note does not claim | −0.006 [−0.008, −0.004]* | −0.001 (n.s.) |
+| … and only if the earlier note is ≥ ¾ step long | +0.001 [−0.000, +0.002] | +0.001 [−0.000, +0.001] |
+
+Most collisions are not two real notes. They are a held note's tail fragment
+(cut off by `splitAtOnsets`) or a sung transition fragment against the next note.
+Pushing the second note then shifts the rest of the run a sixteenth late
+(clarinet −0.20 on one clip) or moves the real note off its beat (alto voice
+G4→C5). The guarded version is a wash: 60 clips better, 84 worse. The one real
+signal is GuitarSet, **+0.012 [+0.004, +0.023]*** (dev +0.010, test +0.014*), but
+the synthetic plucked sets hardly change (2 of 60 clips), so it has no second
+source. The lead is a joint quantiser (a DP over grid positions, not a greedy
+snap), and GuitarSet is where to measure it.
+
+### Findings about the material, not the pipeline
+
+- **Free-tempo takes lose ~0.1 COnP to quantisation by themselves.** The first
+  corpus version performed with phrase rubato and a random lead-in; the fixed-bpm
+  16th grid anchored at t = 0 then moves notes by up to half a step. The corpus now
+  plays along the click (whole-beat lead-in, jitter/drift/anticipation only). A
+  free-tempo tier (`Performer.perform(tempo='free')`) is the natural test of any
+  future tempo tracking.
+- **Thirty-second notes cannot come back out** (the notation grid bottoms out at the
+  16th); the planner excludes them.
+- Open: synthetic voices are vowel-only (no consonant re-onsets); no humming or
+  whistling synthesis; bagpipe drones not yet mixed; euphonium rendered from tuba
+  samples (no permissive euphonium recording exists).

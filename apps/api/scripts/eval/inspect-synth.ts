@@ -28,9 +28,7 @@ async function main(): Promise<void> {
     console.log(`\n${dsId}/${clip} [${cond}]  truth ${truth.notes.length}  est ${est.length}\n`)
     console.log('  TRUTH                          ESTIMATES overlapping it')
     for (const n of truth.notes) {
-        const ov = est
-            .map((e, i) => ({ e, i }))
-            .filter(({ e }) => e.onsetSec < n.onsetSec + n.durSec && e.onsetSec + e.durSec > n.onsetSec)
+        const ov = est.map((e, i) => ({ e, i })).filter(({ e }) => e.onsetSec < n.onsetSec + n.durSec && e.onsetSec + e.durSec > n.onsetSec)
         const hit = ov.find(({ e, i }) => !used.has(i) && e.midi === n.midi && Math.abs(e.onsetSec - n.onsetSec) <= 0.1)
         if (hit) used.add(hit.i)
         console.log(
@@ -38,8 +36,11 @@ async function main(): Promise<void> {
                 ov.map(({ e }) => `${e.onsetSec.toFixed(2)}+${e.durSec.toFixed(2)} ${name(e.midi)}`).join('  '),
         )
     }
-    const spurious = est.filter((e, i) => !used.has(i) && !truth.notes.some((n) => e.onsetSec < n.onsetSec + n.durSec && e.onsetSec + e.durSec > n.onsetSec))
-    if (spurious.length) console.log(`\n  outside any truth note: ${spurious.map((e) => `${e.onsetSec.toFixed(2)} ${name(e.midi)}`).join('  ')}`)
+    const spurious = est.filter(
+        (e, i) => !used.has(i) && !truth.notes.some((n) => e.onsetSec < n.onsetSec + n.durSec && e.onsetSec + e.durSec > n.onsetSec),
+    )
+    if (spurious.length)
+        console.log(`\n  outside any truth note: ${spurious.map((e) => `${e.onsetSec.toFixed(2)} ${name(e.midi)}`).join('  ')}`)
 }
 
 main().catch((e) => {

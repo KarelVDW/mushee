@@ -224,7 +224,9 @@ async function run(): Promise<void> {
         list(arg('conditions')) ??
         (SYNTH
             ? // what users' takes sound like; the dry render is a diagnostic reference, opt in with --conditions
-              conditionsFor(false, true).map((c) => c.id).filter((c) => c !== 'dry' && (!quick || c === 'home-phone'))
+              conditionsFor(false, true)
+                  .map((c) => c.id)
+                  .filter((c) => c !== 'dry' && (!quick || c === 'home-phone'))
             : quick
               ? ['real']
               : conditionsFor(true).map((c) => c.id))

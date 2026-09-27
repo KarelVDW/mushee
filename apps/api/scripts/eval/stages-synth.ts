@@ -3,10 +3,15 @@
  * error? Prints the resolved profile, the OnsetDetector's re-attacks, the
  * provider's raw notes and the extractor's deduced notes, next to the truth.
  *
+ * `STAGES_REAL=1` points it at the real corpus instead; a condition with no
+ * rendered file there (echoey-room, distant-mic, …) is degraded from the
+ * clip's `__real.wav` on the fly, exactly as run-eval does.
+ *
  * Run: pnpm --filter @mushee/api exec tsx scripts/eval/stages-synth.ts <dataset> <clip> [condition=room] [t0] [t1]
  */
 
-import { readFileSync } from 'fs'
+import { existsSync, mkdtempSync, readFileSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 
 import { AudioConverter } from '../../src/recordings/pipeline/audio-converter'
@@ -14,8 +19,10 @@ import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder'
 import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector'
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
-import { SYNTH_REALISTIC_ROOT } from './lib/evalRun'
+import { degrade } from './lib/degrade'
+import { REAL_ROOT, SYNTH_REALISTIC_ROOT } from './lib/evalRun'
 import { discoverRealDatasets } from './lib/realCorpus'
+import { CONDITIONS } from './scenarios'
 import type { GroundTruth } from './types'
 
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -25,37 +32,76 @@ async function main(): Promise<void> {
     const [dsId, clip, cond = 'room', t0s = '0', t1s = '1e9'] = process.argv.slice(2)
     const t0 = Number(t0s)
     const t1 = Number(t1s)
-    const ds = discoverRealDatasets(SYNTH_REALISTIC_ROOT).find((d) => d.id === dsId)
+    const ds = discoverRealDatasets(process.env.STAGES_REAL === '1' ? REAL_ROOT : SYNTH_REALISTIC_ROOT).find((d) => d.id === dsId)
     if (!ds) throw new Error(`unknown dataset ${dsId}`)
     const truth = JSON.parse(readFileSync(join(ds.dir, `${clip}.truth.json`), 'utf8')) as GroundTruth
-    const buf = readFileSync(join(ds.dir, `${clip}__${cond}.wav`))
+    const buf = readFileSync(clipAudio(ds.dir, clip, cond))
     const registry = new ProviderRegistry({ crepeTiny: join(process.cwd(), 'model-crepe-tiny') })
     await registry.initAll()
     const decoder = new AudioDecoder()
     const det = await decoder.decode(buf, 16000, { loudnorm: false, highpassHz: 30 })
-    const profile = new ProfileResolver().resolve(det.samples, 16000, { instrumentId: ds.instrumentId, sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument' })
-    const provider = registry.get(profile.providerName)
-    const decoded = await decoder.decode(buf, provider.sampleRate, { loudnorm: provider.normalizeLoudness, highpassHz: profile.highpassHz, denoise: profile.denoise })
-    console.log(`profile ${profile.id} provider ${profile.providerName} onsetDelay=${profile.onsetDelaySec ?? '-'} segmentMode=${profile.segmentMode ?? '-'}`)
-    const onsets = new OnsetDetector({ delaySec: profile.onsetDelaySec }).detect(decoded.samples, provider.sampleRate)
-    const inWin = (t: number) => t >= t0 && t <= t1
-    console.log(`\nonsets: ${onsets.filter(inWin).map((t) => t.toFixed(2)).join(' ')}`)
-    const out = await new AudioConverter(provider, { enableOnsetSplit: true, profile }).convert(decoded.samples, { bpm: truth.bpm }, undefined, {
-        minFreqHz: profile.minFreqHz,
-        maxFreqHz: profile.maxFreqHz,
-        confidenceThreshold: profile.confidenceThreshold,
-        minFramesPerNote: profile.minFramesPerNote,
-        segmentMode: profile.segmentMode,
-        smoothFrames: profile.smoothFrames,
+    const profile = new ProfileResolver().resolve(det.samples, 16000, {
+        instrumentId: ds.instrumentId,
+        sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
     })
+    const provider = registry.get(profile.providerName)
+    const decoded = await decoder.decode(buf, provider.sampleRate, {
+        loudnorm: provider.normalizeLoudness,
+        highpassHz: profile.highpassHz,
+        denoise: profile.denoise,
+    })
+    console.log(
+        `profile ${profile.id} provider ${profile.providerName} onsetDelay=${profile.onsetDelaySec ?? '-'} segmentMode=${profile.segmentMode ?? '-'}`,
+    )
+    const onsets = new OnsetDetector({
+        delaySec: profile.onsetDelaySec,
+        dipRatio: profile.onsetDipRatio,
+        minTroughSec: profile.onsetMinTroughSec,
+    }).detect(decoded.samples, provider.sampleRate)
+    const inWin = (t: number) => t >= t0 && t <= t1
+    console.log(
+        `\nonsets: ${onsets
+            .filter(inWin)
+            .map((t) => t.toFixed(2))
+            .join(' ')}`,
+    )
+    const out = await new AudioConverter(provider, { enableOnsetSplit: true, profile }).convert(
+        decoded.samples,
+        { bpm: truth.bpm },
+        undefined,
+        {
+            minFreqHz: profile.minFreqHz,
+            maxFreqHz: profile.maxFreqHz,
+            confidenceThreshold: profile.confidenceThreshold,
+            minFramesPerNote: profile.minFramesPerNote,
+            segmentMode: profile.segmentMode,
+            smoothFrames: profile.smoothFrames,
+        },
+    )
     const fmt = (ns: { startTimeSeconds: number; durationSeconds: number; pitchMidi: number }[]) =>
         ns
             .filter((n) => inWin(n.startTimeSeconds))
             .map((n) => `${n.startTimeSeconds.toFixed(2)}+${n.durationSeconds.toFixed(2)} ${name(n.pitchMidi)}`)
             .join('\n  ')
-    console.log(`\nTRUTH\n  ${truth.notes.filter((n) => inWin(n.onsetSec)).map((n) => `${n.onsetSec.toFixed(2)}+${n.durSec.toFixed(2)} ${name(n.midi)}`).join('\n  ')}`)
+    console.log(
+        `\nTRUTH\n  ${truth.notes
+            .filter((n) => inWin(n.onsetSec))
+            .map((n) => `${n.onsetSec.toFixed(2)}+${n.durSec.toFixed(2)} ${name(n.midi)}`)
+            .join('\n  ')}`,
+    )
     console.log(`\nRAW (provider)\n  ${fmt(out.raw)}`)
     console.log(`\nDEDUCED (extractor)\n  ${fmt(out.deduced)}`)
+}
+
+/** The clip's file for this condition, or a degraded copy of its `__real.wav` when none is rendered. */
+function clipAudio(dir: string, clip: string, cond: string): string {
+    const rendered = join(dir, `${clip}__${cond}.wav`)
+    if (existsSync(rendered)) return rendered
+    const condition = CONDITIONS.find((c) => c.id === cond)
+    if (!condition) throw new Error(`no ${clip}__${cond}.wav and no degradation condition '${cond}'`)
+    const out = join(mkdtempSync(join(tmpdir(), 'stages-')), `${clip}__${cond}.wav`)
+    degrade(join(dir, `${clip}__real.wav`), out, condition)
+    return out
 }
 
 main().catch((e) => {

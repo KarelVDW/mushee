@@ -8,7 +8,7 @@
 import { Logger } from '@nestjs/common'
 
 import { OnsetDetector } from '../onset-detector'
-import { isVoiceInstrument, rangeForInstrument } from './instrument-ranges'
+import { isStruckOrPluckedInstrument, isVoiceInstrument, rangeForInstrument } from './instrument-ranges'
 import {
     DEFAULT_PROFILE,
     GLOBAL_MIN_FREQ_HZ,
@@ -16,7 +16,9 @@ import {
     PITCHDOWN_MODEL_CEILING_HZ,
     PITCHDOWN_PROVIDER_NAME,
     PROFILE_BANDS,
+    SUSTAINED_ONSET_DIP_RATIO,
     TRAJECTORY_MODEL_CEILING_HZ,
+    VOICE_ONSET_DIP_RATIO,
     VOICE_OVERLAY,
 } from './pipeline-profile'
 import { scanPitch } from './pitch-scan'
@@ -63,6 +65,18 @@ const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0'
  * product exists for, and reverting it should not need a deploy.
  */
 const VOICE_DECODE = process.env.RECORDING_VOICE_DECODE !== '0'
+/**
+ * Onset-sensitivity policy (see `SUSTAINED_ONSET_DIP_RATIO`). Kill-switch:
+ * `ONSET_POLICY=legacy` restores the detector's default for every source. The
+ * numeric overrides and `SUSTAINED_ONSET_REVERB_RAMP=0` (flat sustained ratio)
+ * exist for A/B runs only.
+ */
+const ONSET_POLICY_LEGACY = process.env.ONSET_POLICY === 'legacy'
+const env = (k: string): number | undefined => (process.env[k] ? Number(process.env[k]) : undefined)
+const VOICE_DIP_OVERRIDE = env('VOICE_ONSET_DIP_RATIO')
+const SUSTAINED_DIP_OVERRIDE = env('ONSET_DIP_RATIO')
+const SUSTAINED_REVERB_RAMP = process.env.SUSTAINED_ONSET_REVERB_RAMP !== '0'
+const VOICE_ONSET_MIN_TROUGH_SEC = env('VOICE_ONSET_MIN_TROUGH_SEC')
 
 /** Env override with default — lets the eval sweep explore without code edits. */
 function envNum(key: string, fallback: number): number {
@@ -292,7 +306,30 @@ function applyVoice(base: PipelineProfile, isVoice: boolean): PipelineProfile {
     // territory, which the voice decode's literature and calibration explicitly
     // do not cover — and its cleanup set must not switch to the voice one either.
     if (!isVoice || !VOICE_DECODE || base.providerName === PITCHDOWN_PROVIDER_NAME) return base
-    return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice' }
+    const onsetMinTroughSec = VOICE_ONSET_MIN_TROUGH_SEC ?? base.onsetMinTroughSec
+    return { ...base, ...VOICE_OVERLAY, id: base.id + '+voice', ...(onsetMinTroughSec !== undefined ? { onsetMinTroughSec } : {}) }
+}
+
+/**
+ * Re-attack sensitivity per source family: sung and sustained-instrument takes need a
+ * deeper envelope dip before a re-attack counts (vibrato in a room is not one);
+ * struck / plucked instruments keep the detector's default. For sustained instruments
+ * the deeper dip gives way to the default as the take gets more reverberant, since a
+ * heavy room fills the short gap between tongued repeated notes. See
+ * `SUSTAINED_ONSET_DIP_RATIO` for the measurements.
+ */
+function applyOnsetPolicy(
+    base: PipelineProfile,
+    isVoice: boolean,
+    instrumentId: string | undefined,
+    reverberance: number,
+): PipelineProfile {
+    if (ONSET_POLICY_LEGACY || base.onsetDipRatio !== undefined) return base
+    if (isVoice) return { ...base, onsetDipRatio: VOICE_DIP_OVERRIDE ?? VOICE_ONSET_DIP_RATIO }
+    if (isStruckOrPluckedInstrument(instrumentId)) return base
+    const dry = SUSTAINED_DIP_OVERRIDE ?? SUSTAINED_ONSET_DIP_RATIO
+    if (!SUSTAINED_REVERB_RAMP) return { ...base, onsetDipRatio: dry }
+    return { ...base, onsetDipRatio: dry + (OnsetDetector.DEFAULT_DIP_RATIO - dry) * clamp(reverberance, 0, 1) }
 }
 
 function band(id: string): PipelineProfile {
@@ -344,7 +381,12 @@ export class ProfileResolver {
             // hint range if we have one. (With the harmonicity gate this is also
             // where pure-backdrop lead-ins land, instead of locking a garbage band.)
             const base = {
-                ...applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
+                ...applyOnsetPolicy(
+                    applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
+                    isVoice,
+                    hint?.instrumentId,
+                    reverberance,
+                ),
                 sourceBelief,
                 sourceDecidedBy,
             }
@@ -371,7 +413,12 @@ export class ProfileResolver {
         }
 
         const base = {
-            ...applyVoice(applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance), isVoice),
+            ...applyOnsetPolicy(
+                applyVoice(applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance), isVoice),
+                isVoice,
+                hint?.instrumentId,
+                reverberance,
+            ),
             sourceBelief,
             sourceDecidedBy,
         }

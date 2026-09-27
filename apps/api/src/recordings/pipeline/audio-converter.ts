@@ -36,7 +36,14 @@ export class AudioConverter {
         // Only providers without native onset detection (CREPE) need the
         // amplitude re-attack splitter; a note-level provider emits its own onsets, so adding
         // it there would double-split and hurt precision.
-        this.onsetDetector = enableOnsetSplit && !provider.hasNativeOnsets ? new OnsetDetector({ delaySec: profile?.onsetDelaySec }) : null
+        this.onsetDetector =
+            enableOnsetSplit && !provider.hasNativeOnsets
+                ? new OnsetDetector({
+                      delaySec: profile?.onsetDelaySec,
+                      dipRatio: profile?.onsetDipRatio,
+                      minTroughSec: profile?.onsetMinTroughSec,
+                  })
+                : null
     }
 
     /**

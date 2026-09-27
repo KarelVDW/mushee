@@ -69,6 +69,9 @@ const OUTLIER_PITCH_DIFF_SEMITONES = 7
  * `new NoteExtractor()` is unchanged; the eval harness overrides them to search
  * for settings that generalize across real and synthetic corpora.
  */
+/** Kill-switch (A/B only): `EXTRACTOR_COLLAPSE_COINCIDENT=0` restores the pre-2026-09-27 output. */
+const COLLAPSE_COINCIDENT = process.env.EXTRACTOR_COLLAPSE_COINCIDENT !== '0'
+
 export interface NoteExtractorOptions {
     /** Shortest note kept, in beats. Lower recovers brief notes (recall). */
     minDurationBeats?: number
@@ -199,7 +202,38 @@ export class NoteExtractor {
     }
 
     extract(raw: NoteEventTime[], options: ExtractOptions): ExtractedNotes {
-        return { raw, deduced: this.quantize(this.clean(raw, options), options.bpm) }
+        const deduced = this.quantize(this.clean(raw, options), options.bpm)
+        return { raw, deduced: COLLAPSE_COINCIDENT ? NoteExtractor.collapseCoincident(deduced) : deduced }
+    }
+
+    /**
+     * A monophonic line never has two notes starting at the same instant, but two
+     * cleaned notes can snap onto the same grid slot (e.g. two onset-split fragments
+     * a few tens of ms apart). Downstream that is a chord in a single-voice staff.
+     * Keep one note per slot: same pitch → one note spanning both; different
+     * pitch → the longer one (ties: the louder).
+     */
+    static collapseCoincident(notes: NoteEventTime[]): NoteEventTime[] {
+        const EPS = 1e-4
+        const sorted = [...notes].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds)
+        const out: NoteEventTime[] = []
+        for (const n of sorted) {
+            const prev = out[out.length - 1]
+            if (!prev || Math.abs(n.startTimeSeconds - prev.startTimeSeconds) > EPS) {
+                out.push({ ...n })
+                continue
+            }
+            if (n.pitchMidi === prev.pitchMidi) {
+                prev.durationSeconds = Math.max(prev.durationSeconds, n.durationSeconds)
+                prev.amplitude = Math.max(prev.amplitude, n.amplitude)
+            } else if (
+                n.durationSeconds > prev.durationSeconds ||
+                (n.durationSeconds === prev.durationSeconds && n.amplitude > prev.amplitude)
+            ) {
+                out[out.length - 1] = { ...n }
+            }
+        }
+        return out
     }
 
     /**

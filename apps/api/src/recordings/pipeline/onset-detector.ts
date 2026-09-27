@@ -97,6 +97,9 @@ export interface OnsetDetectorOptions {
 }
 
 export class OnsetDetector {
+    /** `dipRatio` when none is given: tuned on dry audio (see `SUSTAINED_ONSET_DIP_RATIO`). */
+    static readonly DEFAULT_DIP_RATIO = 0.5
+
     /** Frame hop for the envelope, in seconds (~10 ms by default). */
     readonly hopSec: number
     private readonly minIoiSec: number
@@ -110,7 +113,7 @@ export class OnsetDetector {
     constructor(opts: OnsetDetectorOptions = {}) {
         this.hopSec = opts.hopSec ?? 0.01
         this.minIoiSec = opts.minIoiSec ?? 0.09
-        this.dipRatio = opts.dipRatio ?? 0.5
+        this.dipRatio = opts.dipRatio ?? OnsetDetector.DEFAULT_DIP_RATIO
         this.riseRatio = opts.riseRatio ?? 1.8
         this.minTroughSec = opts.minTroughSec ?? 0
         this.delaySec = opts.delaySec ?? 0

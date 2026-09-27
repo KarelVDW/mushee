@@ -40,6 +40,16 @@ export interface PipelineProfile {
      */
     onsetDelaySec?: number
     /**
+     * OnsetDetector `dipRatio` for this profile (default 0.5: an onset needs the
+     * envelope to fall to half its preceding peak, −6 dB, before the re-attack).
+     * Sustained vibrato singing in a reverberant room crosses −6 dB with no
+     * re-articulation at all — the vibrato sweeps the partials through the room's
+     * modes — so the voice overlay can ask for a deeper dip.
+     */
+    onsetDipRatio?: number
+    /** OnsetDetector `minTroughSec` for this profile (default 0: any sag counts). */
+    onsetMinTroughSec?: number
+    /**
      * Which note segmentation the trajectory providers run.
      *
      * Until 2026-08 this was not on the profile at all — the pipeline could adapt
@@ -85,6 +95,42 @@ export const GLOBAL_MAX_FREQ_HZ = 4500
  * the octave-down wrapper (`CrepePitchdownProvider`), which hears to 2× this.
  */
 export const TRAJECTORY_MODEL_CEILING_HZ = 1900
+
+/**
+ * Re-attack detector sensitivity (`OnsetDetector.dipRatio`) by source family.
+ *
+ * The detector's default (0.5: the envelope must fall to half its preceding peak,
+ * −6 dB, before a re-attack) was tuned on dry audio. Held vibrato notes recorded in
+ * an ordinary room cross −6 dB with no re-articulation at all: the vibrato sweeps the
+ * partials through the room's modes, so the reverberant sound is amplitude-modulated
+ * at the vibrato rate and `splitAtOnsets` shatters one held note into fragments. The
+ * realistic synthetic corpus (fixtures/eval-synth, measured rooms + phone mics)
+ * exposed it; the real corpus could not, being near-anechoic. Measured 2026-09-27,
+ * production path, paired over clips (95 % CI):
+ *
+ *   voice 0.5 → 0.35      synthetic voices +0.068 [+0.059, +0.077]*,
+ *                         real singing +0.009 [+0.007, +0.011]* (dev and test alike),
+ *                         real singing in echoey-room / distant-mic +0.024 [+0.021, +0.027]*
+ *   sustained 0.5 → 0.35  synthetic +0.006*, real URMP dry +0.005 (n.s.) — but in a
+ *                         heavy room it COSTS on repeated notes: a tongued repeat's
+ *                         gap is exactly what the reverb fills (URMP horn "Für Elise",
+ *                         eight repeated E3s: 6 of 8 notes come out at 0.5, 2 at 0.35).
+ *   sustained, RAMPED     0.35 on a dry take rising to the detector default at full
+ *                         `estimateReverberance`: synthetic +0.007 [+0.005, +0.009]*,
+ *                         real URMP in echoey-room / distant-mic +0.004 [+0.001, +0.007]*
+ *                         over keeping 0.5 (flat 0.35 there: −0.007, n.s.), dry URMP
+ *                         unchanged from flat 0.35.
+ *   plucked/struck        a deeper dip COSTS (synthetic −0.006*, real GuitarSet −0.008*):
+ *                         their repeated notes are exactly what amplitude onsets find,
+ *                         so piano / guitar / bass keep the detector's default.
+ *
+ * Voice stays flat. Ramping it the same way was measured and COSTS: synthetic voices
+ * −0.052 [−0.063, −0.041]*, real singing in echoey-room / distant-mic −0.020
+ * [−0.022, −0.018]* (dev and test alike). A room deepens sung vibrato's modulation,
+ * so the voice needs the deep dip most exactly where the room is worst.
+ */
+export const SUSTAINED_ONSET_DIP_RATIO = 0.35
+export const VOICE_ONSET_DIP_RATIO = 0.35
 
 export const PITCHDOWN_PROVIDER_NAME = 'crepe-tiny-down1'
 /** The wrapper hears everything at half frequency: 2 × the CREPE ceiling. */
