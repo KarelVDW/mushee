@@ -112,7 +112,13 @@ Nothing here is redistributed or ships in the product; everything is internal ev
 
 ### Corpus (v1, 2026-09-27)
 
-_(counts filled from `out/` after the v1 build — see the log below)_
+**463 clips** — 382 instrument clips over the 37 timbres that cover every app
+instrument id (8–12 clips each, 1–5 real sample sources per timbre, 90 sources in
+all) + 81 sung clips over 8 voice types (soprano, mezzo, alto, tenor, baritone,
+bass, countertenor, child*) from 20 real singers; each clip = a `dry` render +
+`studio`, `room`, `home-phone`, `noisy-phone` recordings (2 315 WAVs, 48 kHz),
+6–26 s long, 8–85 notes. *child = formant-scaled female singers (flagged
+`derived_timbre`). Every clip passed the quality gate; rejects are logged.
 
 ### Realism (perceptual proxies, measured — no listeners overnight)
 
@@ -121,10 +127,28 @@ new corpus's `room` takes vs REAL recordings of the same instrument (URMP,
 TinySOL, GuitarSet; vocadito/N20EMv2/CSD/HUST for voice) vs the OLD toy corpus
 (`room-mic`). *P(class)* = the tagger's probability for the instrument's own
 AudioSet class; *KAD* = kernel distance to the real set (lower = closer;
-real↔real split = the noise floor). Measured on corpus v0 (same sources and
-renderer; v1 differs in timing and voice envelope only).
+real↔real split = the noise floor). Measured on corpus v1.1.
 
-<!-- REALISM_TABLE -->
+#### new `room` vs old `room-mic`
+
+| timbre | P(class) real | P(class) new | P(class) old | KAD new | KAD old | real↔real floor | windows real/new/old |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| violin | 0.70 | **0.79** | 0.86 | **16.69** | 29.03 | -1.28 | 36/67/6 |
+| viola | 0.60 | **0.58** | — | **13.01** | — | -0.67 | 36/51/0 |
+| cello | 0.61 | **0.28** | 0.61 | **74.45** | 55.53 | 8.38 | 24/69/6 |
+| contrabass | 0.63 | **0.49** | — | **64.44** | — | 9.74 | 18/53/0 |
+| flute | 0.60 | **0.72** | 0.35 | **9.61** | 27.17 | -0.78 | 36/61/6 |
+| oboe | 0.18 | **0.25** | 0.10 | **14.55** | 30.98 | 2.05 | 34/68/6 |
+| clarinet | 0.67 | **0.78** | 0.03 | **7.34** | 76.31 | -2.46 | 30/47/5 |
+| alto-sax | 0.25 | **0.17** | — | **19.70** | — | 1.09 | 23/63/0 |
+| tenor-sax | 0.25 | **0.35** | — | **16.02** | — | 1.09 | 23/80/0 |
+| bassoon | 0.32 | **0.19** | 0.20 | **36.80** | 23.48 | 3.59 | 11/89/6 |
+| trumpet | 0.79 | **0.58** | 0.90 | **46.98** | 48.86 | 0.84 | 24/72/6 |
+| french-horn | 0.70 | **0.36** | — | **50.31** | — | -1.14 | 24/69/0 |
+| trombone | 0.62 | **0.12** | 0.55 | **36.45** | 41.56 | 1.41 | 24/81/6 |
+| tuba | 0.32 | **0.70** | 0.61 | **39.34** | 15.18 | -1.82 | 18/80/6 |
+| guitar | 0.85 | **0.53** | — | **65.48** | — | -0.36 | 180/57/0 |
+| voice | 0.19 | **0.21** | 0.01 | **31.31** | 59.27 | -0.26 | 315/186/30 |
 
 Reading it honestly:
 - **Clearly better than the old corpus and on par with real recordings** for the

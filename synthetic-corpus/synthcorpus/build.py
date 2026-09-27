@@ -83,6 +83,10 @@ class ClipPlanner:
             p = rng.choice(pool)
             if p.id in seen or len(p.notes) < 8:
                 continue
+            # the app's notation grid bottoms out at the sixteenth: a thirty-second
+            # can never come back out, so such passages test the notation, not the ear
+            if min(n.dur for n in p.notes) < 0.25 - 1e-6:
+                continue
             if t.parts and style in ('chorale', 'polyphony', 'quartet', 'madrigal') and rng.random() < 0.8:
                 if not any(k.lower() in p.part.lower() for k in t.parts):
                     continue

@@ -7,3 +7,5 @@ engines/
 __pycache__/
 *.pyc
 out-v0/
+out-v1-instruments/
+out-v1-rejects.jsonl

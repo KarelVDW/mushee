@@ -409,6 +409,10 @@ class AudioSource:
             subprocess.run(['afconvert', '-f', 'WAVE', '-d', 'LEF32', path, str(tmp)], check=True, capture_output=True)
             x, sr = sf.read(str(tmp), dtype='float64', always_2d=True)
             tmp.unlink()
+        # MISC_MONO=left keeps one channel: folding a spaced-pair stereo recording to
+        # mono comb-filters it, and the notches sweep with vibrato into deep AM
+        if x.shape[1] > 1 and os.environ.get('MISC_MONO') == 'left':
+            return x[:, 0], sr
         return x.mean(axis=1), sr
 
     @classmethod

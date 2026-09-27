@@ -209,25 +209,31 @@ class MonoSampler:
         return z
 
     def _extended(self, z: Zone, zi: ZoneInfo, need: int) -> np.ndarray:
-        """Source frames from the trim point on, loop-extended to at least `need` frames."""
+        """Source frames from the trim point on, loop-extended to at least `need` frames.
+
+        Standard crossfade loop: each time playback reaches the loop end `hi`, the
+        last `xf` frames before `hi` are equal-power crossfaded into the `xf` frames
+        just BEFORE the loop start `lo`, and playback continues from `lo`. Both sides
+        of the fade are then the same phase of the (periodic) tone — the loop points
+        are period-aligned — so the seam neither clicks nor cancels."""
         x = self.s.audio(z)[zi.trim :]
         if len(x) >= need or zi.loop is None:
             if len(x) < need:
                 x = np.concatenate([x, np.zeros(need - len(x), np.float32)])
             return x
         lo, hi = zi.loop
-        seg = x[lo:hi]
-        xf = min(int(0.03 * self.s.sr), len(seg) // 3)
-        fade = np.sin(np.linspace(0, np.pi / 2, xf, dtype=np.float32)) ** 2
-        out = [x[:hi]]
+        xf = min(int(0.04 * self.s.sr), (hi - lo) // 3, lo)
+        if xf < 16:
+            return np.concatenate([x, np.zeros(max(0, need - len(x)), np.float32)])
+        t = np.linspace(0, np.pi / 2, xf, dtype=np.float32)
+        fin, fout = np.sin(t), np.cos(t)
+        seam = x[hi - xf : hi] * fout + x[lo - xf : lo] * fin
+        body = x[lo : hi - xf]
+        out = [x[: hi - xf], seam]
         total = hi
         while total < need:
-            # crossfade the loop start into the tail of what we have
-            prev = out[-1]
-            head = seg[:xf] * fade + prev[-xf:] * (1 - fade)
-            out[-1] = prev[:-xf]
-            out.append(np.concatenate([head, seg[xf:]]))
-            total += len(seg) - xf
+            out += [body, seam]
+            total += len(body) + xf
         return np.concatenate(out)
 
     # -------------------------------------------------------------- note
