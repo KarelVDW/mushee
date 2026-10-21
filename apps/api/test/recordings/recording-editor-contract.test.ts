@@ -72,8 +72,11 @@ describe('MxmlBuilder output loads into the editor model', () => {
         const rng = new Rng(seed)
         const [beats, beatType] = rng.pick(METERS)
         const bpm = rng.int(40, 200)
-        const builder = new MxmlBuilder({ bpm, beats, beatType, chromaticTranspose: rng.pick([0, -2, -9, 12]), keyFifths: rng.int(-7, 7) })
-        if (rng.next() < 0.4) builder.setVoiceSpelling(true)
+        // Drawn in the order the seeds were recorded with: transpose, key, then the voice-spelling coin.
+        const chromaticTranspose = rng.pick([0, -2, -9, 12])
+        const keyFifths = rng.int(-7, 7)
+        const voiceSpelling = rng.next() < 0.4
+        const builder = new MxmlBuilder({ bpm, beats, beatType, chromaticTranspose, keyFifths, voiceSpelling })
         const notes = take(rng, bpm)
         const last = notes[notes.length - 1]
         const measureCount = builder.measureIndexFor(last.startTimeSeconds + last.durationSeconds) + 1

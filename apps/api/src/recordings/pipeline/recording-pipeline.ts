@@ -159,12 +159,6 @@ export class RecordingPipeline {
     private chromaticTranspose = 0
     // Key signature at the recording start (fifths), for voice pitch spelling.
     private keyFifths: number | null = null
-    private builder = new MxmlBuilder({
-        bpm: this.bpm,
-        beats: this.beats,
-        beatType: this.beatType,
-        chromaticTranspose: this.chromaticTranspose,
-    })
 
     private processing = false
     private rerunRequested = false
@@ -187,6 +181,8 @@ export class RecordingPipeline {
     // ffmpeg input-format hint derived from the client's negotiated MIME type.
     // Undefined (unknown type / no meta) means ffmpeg probes the container.
     private inputFormat: string | undefined
+    // Declared after the meta and profile fields it is built from (see `createBuilder`).
+    private builder = this.createBuilder()
 
     constructor(
         private readonly registry: ProviderRegistry,
@@ -218,16 +214,24 @@ export class RecordingPipeline {
         if (typeof meta.mimeType === 'string') {
             this.inputFormat = AudioDecoder.inputFormatFor(meta.mimeType)
         }
-        this.builder = new MxmlBuilder({
+        this.builder = this.createBuilder()
+    }
+
+    /**
+     * The builder is configured from two sources that change independently: the
+     * take's meta (`setMeta`) and the routing decision — voice spelling on the
+     * take's own tuning grid — which belongs to the locked profile (`lockProfile`).
+     * Both rebuild it here, so neither can leave the other's half stale.
+     */
+    private createBuilder(): MxmlBuilder {
+        return new MxmlBuilder({
             bpm: this.bpm,
             beats: this.beats,
             beatType: this.beatType,
             chromaticTranspose: this.chromaticTranspose,
             keyFifths: this.keyFifths,
+            voiceSpelling: this.profile?.isVoice ?? false,
         })
-        // The builder is rebuilt on meta, but the routing decision (voice spelling
-        // on the take's own tuning grid) belongs to the locked profile.
-        this.builder.setVoiceSpelling(this.profile?.isVoice ?? false)
     }
 
     setOnUpdate(cb: (update: ScoreUpdate) => void): void {
@@ -450,8 +454,8 @@ export class RecordingPipeline {
         )
         // Sung takes are SPELLED on their own tuning grid at the notation layer
         // (voice-notation.ts); the flag lives on the builder, which setMeta may
-        // have created before the profile existed — so set it here too.
-        this.builder.setVoiceSpelling(profile.isVoice ?? false)
+        // have created before the profile existed — so rebuild it here too.
+        this.builder = this.createBuilder()
         // Tell the client what the pipeline believes it is hearing — the user is
         // the one observer who can tell us when this is wrong. `sourceBelief`, not
         // `isVoice`: belief is the observation, `isVoice` the routing outcome, and
@@ -523,11 +527,12 @@ export class RecordingPipeline {
     private emitAllMeasures(): void {
         this.reemitAll = false
         if (this.lastEmittedMeasure < 0) return
-        const measures: Record<number, MxmlMeasure> = {}
-        for (let m = 0; m <= this.lastEmittedMeasure; m += 1) {
-            measures[m] = this.builder.buildMeasure(m, this.emittedNotes)
-        }
-        this.onUpdate({ measures })
+        this.onUpdate({ measures: this.builder.buildMeasures(RecordingPipeline.barsThrough(this.lastEmittedMeasure), this.emittedNotes) })
+    }
+
+    /** Bar indices 0 … `last`, inclusive. */
+    private static barsThrough(last: number): number[] {
+        return Array.from({ length: last + 1 }, (_, m) => m)
     }
 
     /**
@@ -577,10 +582,10 @@ export class RecordingPipeline {
             for (let m = 0; m <= this.lastEmittedMeasure; m += 1) affected.add(m)
             this.reemitAll = false
         }
-        const measures: Record<number, MxmlMeasure> = {}
-        for (const idx of [...affected].sort((a, b) => a - b)) {
-            measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes)
-        }
+        const measures = this.builder.buildMeasures(
+            [...affected].sort((a, b) => a - b),
+            this.emittedNotes,
+        )
         if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now()
         this.onUpdate({ measures })
     }
@@ -675,7 +680,6 @@ export class RecordingPipeline {
 
         let scoreJson: string | undefined
         if (this.emittedNotes.length) {
-            const measures: Record<number, MxmlMeasure> = {}
             // The archive is a whole take, so it is every bar from the first to the last —
             // including bars that only carry a held note's continuation and bars the
             // performer rested through. Keying off note onsets (as this did) dropped both.
@@ -684,11 +688,7 @@ export class RecordingPipeline {
                 const [, last] = this.builder.measureRangeFor(n.startTimeSeconds, n.durationSeconds)
                 highest = Math.max(highest, last)
             }
-            const indices = new Set<number>()
-            for (let m = 0; m <= highest; m += 1) indices.add(m)
-            for (const idx of indices) {
-                measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes)
-            }
+            const measures = this.builder.buildMeasures(RecordingPipeline.barsThrough(highest), this.emittedNotes)
             scoreJson = JSON.stringify({ measures }, null, 2)
         }
 
