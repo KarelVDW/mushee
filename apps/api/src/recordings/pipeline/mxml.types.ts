@@ -1,8 +1,17 @@
+/**
+ * The MusicXML-JSON the recording pipeline emits: notes (pitched or rest) and
+ * one attributes entry with divisions and time — the recorder-emitted subset of
+ * the editor's wire format, packages/notation/src/model/io/MusicXml.ts (same
+ * names, fewer shapes and fields). Hand-kept because the API's CommonJS build
+ * cannot consume the notation package's TS source; the compile-time pin in
+ * test/recordings/recording-editor-contract.test.ts fails `tsc` if this drifts
+ * from being assignable to the editor's types. Replaced by a type import in the
+ * compiled-notation follow-up.
+ */
+
 export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
 export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th'
-export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none'
 export type MxmlStartStop = 'start' | 'stop'
-export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none'
 
 export interface MxmlPitch {
     step: MxmlStep
@@ -10,9 +19,8 @@ export interface MxmlPitch {
     octave: number
 }
 
-export interface MxmlRest {
-    measure?: boolean
-}
+/** `<rest/>` — emitted without attributes. */
+export type MxmlRest = Record<never, never>
 
 export interface MxmlTie {
     type: MxmlStartStop
@@ -29,49 +37,18 @@ export interface MxmlNote {
     dot?: number
 }
 
-export interface MxmlKey {
-    fifths: number
-    mode?: string
-}
-
 export interface MxmlTime {
     beats: string
     beatType: string
 }
 
-export interface MxmlClef {
-    sign: MxmlClefSign
-    line?: number
-    number?: number
-}
-
 export interface MxmlAttributes {
     _type: 'attributes'
     divisions?: number
-    key?: MxmlKey[]
     time?: MxmlTime[]
-    staves?: number
-    clef?: MxmlClef[]
 }
 
-export interface MxmlBarline {
-    _type: 'barline'
-    location?: 'left' | 'right' | 'middle'
-    barStyle?: MxmlBarStyle
-}
-
-export interface MxmlDirection {
-    _type: 'direction'
-    /** The written metronome mark (`♩. = 60`); `sound.tempo` carries the same tempo in quarter-note bpm. */
-    metronome?: {
-        beatUnit: MxmlNoteType
-        beatUnitDots: number
-        perMinute: number
-    }
-    sound?: { tempo?: number }
-}
-
-export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection
+export type MxmlMeasureEntry = MxmlNote | MxmlAttributes
 
 export interface MxmlMeasure {
     number: string
