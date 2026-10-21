@@ -484,11 +484,28 @@ interface Run {
     reonset?: boolean
 }
 
+/** The knobs with no default: absent means the mechanism is off, so they stay optional once resolved. */
+type OptionalKnob =
+    | 'registerCents'
+    | 'mergeGuard'
+    | 'wideChangeCost'
+    | 'keepShortLoudRatio'
+    | 'dropLongQuiet'
+    | 'voicedQuorum'
+    | 'fillUnvoicedGapSec'
+    | 'fillEnergyFloor'
+    | 'fillEnergyContextSec'
+    | 'candidates'
+    | 'intervalChange'
+    | 'silenceMemory'
+    | 'unvoicedChangeRelease'
+
 /**
  * The decoder's own defaults — the pYIN literature baseline the sweeps start
  * from, not what ships: production runs `SHIPPING_VOICE_OPTS` (below) over these.
+ * Typed against the options, so a new knob without a default fails to compile here.
  */
-const DEFAULTS = {
+const DEFAULTS: Required<Omit<VoiceDecodeOptions, OptionalKnob>> = {
     confidenceThreshold: 0.5,
     minFreqHz: 55,
     maxFreqHz: 2200,
@@ -496,7 +513,7 @@ const DEFAULTS = {
     sigmaAttackSemitones: 5,
     sigmaStableSemitones: 0.9,
     trust: 0.1,
-    transitionMode: 'direct' as VoiceTransitionMode,
+    transitionMode: 'direct',
     changeCost: 1.2,
     attackCost: 0.2,
     attackFrameCost: 0.175,
@@ -508,11 +525,11 @@ const DEFAULTS = {
     wideIntervalSemitones: 3,
     reonsetCost: Infinity,
     minNoteSec: 0.08,
-    pitchEstimator: 'trimmed-mean' as NonNullable<VoiceDecodeOptions['pitchEstimator']>,
+    pitchEstimator: 'trimmed-mean',
     slewTimeSec: 0.05,
     onePoleTauSec: 0.04,
-    pitchWindow: 'run' as 'run' | 'onset',
-    onsetAt: 'attack' as 'attack' | 'arrival' | 'stable' | 'mid',
+    pitchWindow: 'run',
+    onsetAt: 'attack',
     arrivalCents: 50,
     onsetShiftSec: 0.07,
     evidenceDiscount: 1,
@@ -556,44 +573,16 @@ export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
 }
 
 export class VoiceNoteDecoder {
-    /** Every knob resolved, except the eleven that are meaningfully absent. */
-    private readonly o: Required<
-        Omit<
-            VoiceDecodeOptions,
-            | 'registerCents'
-            | 'mergeGuard'
-            | 'wideChangeCost'
-            | 'keepShortLoudRatio'
-            | 'dropLongQuiet'
-            | 'voicedQuorum'
-            | 'fillUnvoicedGapSec'
-            | 'fillEnergyFloor'
-            | 'fillEnergyContextSec'
-            | 'candidates'
-            | 'intervalChange'
-            | 'silenceMemory'
-            | 'unvoicedChangeRelease'
-        >
-    > &
-        Pick<
-            VoiceDecodeOptions,
-            | 'registerCents'
-            | 'mergeGuard'
-            | 'wideChangeCost'
-            | 'keepShortLoudRatio'
-            | 'dropLongQuiet'
-            | 'voicedQuorum'
-            | 'fillUnvoicedGapSec'
-            | 'fillEnergyFloor'
-            | 'fillEnergyContextSec'
-            | 'candidates'
-            | 'intervalChange'
-            | 'silenceMemory'
-            | 'unvoicedChangeRelease'
-        >
+    /** Every knob resolved, except the `OptionalKnob`s. */
+    private readonly o: Required<Omit<VoiceDecodeOptions, OptionalKnob>> & Pick<VoiceDecodeOptions, OptionalKnob>
 
     constructor(opts: VoiceDecodeOptions = {}) {
         this.o = { ...DEFAULTS, ...stripUndefined(opts) }
+    }
+
+    /** The voicing gate: every voiced mask and dropout fill in this decoder applies it. */
+    private get gate(): { confidenceThreshold: number; minFreqHz: number; maxFreqHz: number } {
+        return { confidenceThreshold: this.o.confidenceThreshold, minFreqHz: this.o.minFreqHz, maxFreqHz: this.o.maxFreqHz }
     }
 
     /**
@@ -607,9 +596,7 @@ export class VoiceNoteDecoder {
 
         if (this.o.fillUnvoicedGapSec !== undefined) {
             track = track.fillDropouts({
-                confidenceThreshold: this.o.confidenceThreshold,
-                minFreqHz: this.o.minFreqHz,
-                maxFreqHz: this.o.maxFreqHz,
+                ...this.gate,
                 maxGapFrames: Math.max(1, Math.round(this.o.fillUnvoicedGapSec / track.hopSec)),
                 energy,
                 energyFloorRatio: this.o.fillEnergyFloor,
@@ -617,12 +604,7 @@ export class VoiceNoteDecoder {
             })
         }
 
-        const voiced = track.voicedMask({
-            confidenceThreshold: this.o.confidenceThreshold,
-            minFreqHz: this.o.minFreqHz,
-            maxFreqHz: this.o.maxFreqHz,
-            quorum: this.o.voicedQuorum,
-        })
+        const voiced = track.voicedMask({ ...this.gate, quorum: this.o.voicedQuorum })
 
         const grid = this.pitchGrid(track, voiced)
         if (!grid) return []
@@ -695,16 +677,7 @@ export class VoiceNoteDecoder {
      * HMM fix them?" and has to be measurable apart.
      */
     guardOnly(notes: NoteEventTime[], track: PitchTrack): NoteEventTime[] {
-        return this.applyMergeGuard(
-            notes,
-            track,
-            track.voicedMask({
-                confidenceThreshold: this.o.confidenceThreshold,
-                minFreqHz: this.o.minFreqHz,
-                maxFreqHz: this.o.maxFreqHz,
-                quorum: this.o.voicedQuorum,
-            }),
-        )
+        return this.applyMergeGuard(notes, track, track.voicedMask({ ...this.gate, quorum: this.o.voicedQuorum }))
     }
 
     /**
