@@ -111,6 +111,14 @@ describe('Pitch', () => {
         expect(Pitch.alterToAccidental(3)).toBeUndefined()
     })
 
+    it('spelledLike compares the written spelling — letter, alteration and octave', () => {
+        const cSharp4 = new Pitch({ name: 'C', alter: 1, octave: 4 })
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', alter: 1, octave: 4 }))).toBe(true)
+        expect(cSharp4.spelledLike(new Pitch({ name: 'D', alter: -1, octave: 4 }))).toBe(false) // enharmonic, sounds alike
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', octave: 4 }))).toBe(false)
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', alter: 1, octave: 5 }))).toBe(false)
+    })
+
     it('toMidi computes correct MIDI numbers', () => {
         // Middle C = 60, A4 = 69, C5 = 72
         expect(new Pitch({ name: 'C', octave: 4 }).toMidi()).toBe(60)

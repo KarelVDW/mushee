@@ -99,7 +99,7 @@ function randomPitch(rng: Rng): Pitch {
 }
 
 function samePitch(a: Pitch | undefined, b: Pitch | undefined): boolean {
-    return !!a && !!b && a.name === b.name && a.alter === b.alter && a.octave === b.octave
+    return !!a && !!b && a.spelledLike(b)
 }
 
 /** Written values filling exactly `maxBeats`, mixing plain and dotted values with whole triplet groups. */

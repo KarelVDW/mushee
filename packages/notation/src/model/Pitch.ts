@@ -81,6 +81,14 @@ export class Pitch {
         return Pitch.alterToAccidental(this.alter)
     }
 
+    /**
+     * Whether `other` is the same written note: same letter, alteration and octave. Enharmonic
+     * equivalents (C♯/D♭) sound alike but are spelled differently — compare `toMidi()` for sound.
+     */
+    spelledLike(other: Pitch): boolean {
+        return this.name === other.name && this.alter === other.alter && this.octave === other.octave
+    }
+
     toMidi(): number {
         return (this.octave + 1) * 12 + (SEMITONES[this.name] ?? 0) + this.alter
     }

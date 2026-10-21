@@ -129,7 +129,7 @@ export class MeasureRebar {
         if (!prev?.tiesForward) return false
         const a = prev.notes[0].pitch
         const b = note.pitch
-        if (!a || !b || a.name !== b.name || a.octave !== b.octave || a.alter !== b.alter) return false
+        if (!a || !b || !a.spelledLike(b)) return false
         return prev.notes[0].duration.sameRatioAs(note.duration)
     }
 
