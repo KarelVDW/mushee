@@ -1,6 +1,6 @@
 import { CLEF_CONFIG, clefOctaveMarker, NUM_STAFF_LINES } from '../../components/constants'
-import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForLine } from '../../components/noteUtils'
+import { Bravura } from '../../engraving/Bravura'
 import { Clef } from '../Clef'
 
 export class ClefLayout {
@@ -22,7 +22,7 @@ export class ClefLayout {
         this.octave = marker
             ? {
                   text: marker.text,
-                  x: clef.width.paddingLeft + getGlyphWidth(config.glyphName) / 2,
+                  x: clef.width.paddingLeft + Bravura.width(config.glyphName) / 2,
                   y: marker.above ? getYForLine(0) - 6 : getYForLine(NUM_STAFF_LINES - 1) + 13,
               }
             : undefined

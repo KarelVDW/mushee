@@ -1,4 +1,4 @@
-import { getGlyphWidth } from '../../components/glyphUtils'
+import { Bravura } from '../../engraving/Bravura'
 import type { KeyAccidental } from '../KeySignature'
 import { PhysicalWidth } from './PhysicalWidth'
 
@@ -23,7 +23,7 @@ export class KeySignatureWidth implements PhysicalWidth {
         }
         this.paddingLeft = 4
         this.paddingRight = 8
-        this.content = drawnAccidentals.reduce((sum, a) => sum + getGlyphWidth(a.glyphName) + ACCIDENTAL_GAP, 0)
+        this.content = drawnAccidentals.reduce((sum, a) => sum + Bravura.width(a.glyphName) + ACCIDENTAL_GAP, 0)
         this.total = this.paddingLeft + this.content + this.paddingRight
     }
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { getGlyphWidth, getYForLine, Glyph } from '@mushee/notation/components'
+import { getYForLine, Glyph } from '@mushee/notation/components'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -37,7 +38,7 @@ export function TimeSignatureGlyph({
     const rows = [
         { digits: String(beatAmount).split(''), y: getYForLine(1) },
         { digits: String(beatType).split(''), y: getYForLine(3) },
-    ].map((row) => ({ ...row, width: row.digits.reduce((total, digit) => total + getGlyphWidth(`timeSig${digit}`), 0) }))
+    ].map((row) => ({ ...row, width: row.digits.reduce((total, digit) => total + Bravura.width(`timeSig${digit}`), 0) }))
     const width = Math.max(...rows.map((row) => row.width)) + 4
     // Window over the staff band: the digits sit on lines 1 and 3, each spanning a space up and down.
     const top = getYForLine(0) - 2
@@ -48,7 +49,7 @@ export function TimeSignatureGlyph({
                 let x = (width - row.width) / 2
                 return row.digits.map((digit, i) => {
                     const glyph = <Glyph key={`${rowIndex}-${i}`} name={`timeSig${digit}`} x={x} y={row.y} fill={color} />
-                    x += getGlyphWidth(`timeSig${digit}`)
+                    x += Bravura.width(`timeSig${digit}`)
                     return glyph
                 })
             })}

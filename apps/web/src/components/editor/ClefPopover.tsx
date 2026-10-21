@@ -2,8 +2,8 @@
 
 import { Glyph } from '@mushee/notation/components'
 import { CLEF_CONFIG, CLEF_DEFS, clefOctaveMarker } from '@mushee/notation/components/constants'
-import { getGlyphWidth } from '@mushee/notation/components/glyphUtils'
 import { getYForLine } from '@mushee/notation/components/noteUtils'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
 import type { ClefType } from '@mushee/notation/model'
 
 import { Popover, PopoverOption } from '@/components/ui'
@@ -24,7 +24,7 @@ export function ClefGlyph({ type, size = 30, color = 'currentColor' }: { type: C
     const height = 92
     const width = 28
     const marker = clefOctaveMarker(type)
-    const markerX = 4 + getGlyphWidth(config.glyphName) / 2
+    const markerX = 4 + Bravura.width(config.glyphName) / 2
     const markerY = marker?.above ? getYForLine(0) - 6 : getYForLine(4) + 13
     return (
         <svg width={(size * width) / height} height={size} viewBox={`0 ${top} ${width} ${height}`} aria-hidden>

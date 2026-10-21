@@ -1,7 +1,9 @@
 'use client'
 
-import { CLEF_DEFS, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
+import { CLEF_DEFS, Glyph } from '@mushee/notation/components'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
+import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
 import { type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
@@ -28,7 +30,7 @@ function DurationIcon({ dur }: { dur: DurationType }) {
     const noteGlyph = dur === 'w' ? 'noteheadWhole' : dur === 'h' ? 'noteheadHalf' : 'noteheadBlack'
     const flagName = dur === '8' ? 'flag8thUp' : dur === '16' ? 'flag16thUp' : undefined
     const hasStem = dur !== 'w'
-    const nhWidth = getGlyphWidth(noteGlyph, GLYPH_SCALE)
+    const nhWidth = Bravura.width(noteGlyph, GLYPH_SCALE)
     const noteX = 1
     const noteY = 26
     const stemX = noteX + nhWidth
@@ -62,7 +64,7 @@ function TieIcon() {
 // --- Tuplet icon ---
 
 function TupletIcon() {
-    const numWidth = getGlyphWidth('timeSig3', TUPLET_NUMBER_SCALE)
+    const numWidth = Bravura.width('timeSig3', TUPLET_NUMBER_SCALE)
     const gap = numWidth / 2 + 3
     const y = 10
     return (

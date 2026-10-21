@@ -1,6 +1,6 @@
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../components/constants'
-import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForNote } from '../../components/noteUtils'
+import { Bravura } from '../../engraving/Bravura'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { NoteWidth } from '../width/NoteWidth'
@@ -36,7 +36,7 @@ export class NoteLayout {
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
         if (context.accidentalGlyph) {
             this.accidental = { x: cursorX, y: this.noteY, glyphName: context.accidentalGlyph }
-            cursorX += getGlyphWidth(context.accidentalGlyph) + width.gap
+            cursorX += Bravura.width(context.accidentalGlyph) + width.gap
         }
 
         // ledgerLines

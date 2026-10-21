@@ -1,5 +1,6 @@
-import { getGlyphWidth, getYForLine } from '@mushee/notation/components'
+import { getYForLine } from '@mushee/notation/components'
 import { NUM_STAFF_LINES } from '@mushee/notation/components/constants'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
 import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -44,7 +45,7 @@ describe('ClefLayout', () => {
         expect(octave.y).toBe(getYForLine(0) - 6)
         // Horizontally centred over the glyph.
         const c = clef('treble8va')
-        expect(octave.x).toBe(c.width.paddingLeft + getGlyphWidth('gClef') / 2)
+        expect(octave.x).toBe(c.width.paddingLeft + Bravura.width('gClef') / 2)
     })
 
     it('an 8vb clef draws an "8" marker below the staff', () => {

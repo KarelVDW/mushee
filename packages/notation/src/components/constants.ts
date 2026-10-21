@@ -1,3 +1,4 @@
+import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { ClefSign } from '../model/clefs'
 import { LINES_PER_OCTAVE } from '../model/staffLines'
 import type { ClefType } from '../model/types'
@@ -33,15 +34,6 @@ export const SPACE_ABOVE_STAFF = 4
 
 /** Number of horizontal staff lines */
 export const NUM_STAFF_LINES = 5
-
-/** Point size for notation glyphs (from VexFlow Tables.NOTATION_FONT_SCALE) */
-export const NOTATION_FONT_SCALE = 39
-
-/** Bravura font resolution (units per em) */
-export const FONT_RESOLUTION = 1000
-
-/** Scale factor to convert font units to SVG pixels */
-export const GLYPH_SCALE = (NOTATION_FONT_SCALE * 72) / (FONT_RESOLUTION * 100) // ≈ 0.02808
 
 /** Beam line thickness in pixels */
 export const BEAM_WIDTH = 5

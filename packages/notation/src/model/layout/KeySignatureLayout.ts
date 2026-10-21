@@ -1,5 +1,5 @@
-import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForNote } from '../../components/noteUtils'
+import { Bravura } from '../../engraving/Bravura'
 import type { Clef } from '../Clef'
 import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'
@@ -46,7 +46,7 @@ export class KeySignatureLayout {
         let x = context.width.paddingLeft
         this.accidentals = items.map((a, i) => {
             const glyphX = x
-            x += getGlyphWidth(a.glyphName) + ACCIDENTAL_GAP
+            x += Bravura.width(a.glyphName) + ACCIDENTAL_GAP
             return { glyphName: a.glyphName, x: glyphX, y: getYForNote(rawLines[i] + shift) }
         })
     }

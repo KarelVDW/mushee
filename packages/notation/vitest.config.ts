@@ -21,7 +21,7 @@ export default defineConfig({
             exclude: [
                 'src/**/*.d.ts',
                 'src/**/index.ts',
-                'src/components/fonts/**', // generated Bravura font data
+                'src/engraving/bravura_glyphs.ts', // generated Bravura font data
                 'src/testing/**', // test builders, exercised by the suites themselves
             ],
             reporter: ['text', 'json-summary', 'html'],

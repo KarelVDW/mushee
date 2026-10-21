@@ -1,5 +1,5 @@
 import { CLEF_CONFIG } from '../../components/constants'
-import { getGlyphWidth } from '../../components/glyphUtils'
+import { Bravura } from '../../engraving/Bravura'
 import { Clef } from '../Clef'
 import { PhysicalWidth } from './PhysicalWidth'
 
@@ -12,7 +12,7 @@ export class ClefWidth implements PhysicalWidth {
     constructor(clef: Clef) {
         const config = CLEF_CONFIG[clef.type]
         if (!config) throw new Error(`Unknown clef type: ${clef.type}`)
-        this.content = getGlyphWidth(config.glyphName)
+        this.content = Bravura.width(config.glyphName)
         this.total = this.paddingLeft + this.content + this.paddingRight
     }
 }
