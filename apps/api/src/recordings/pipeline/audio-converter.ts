@@ -14,7 +14,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  */
 export class AudioConverter {
     private readonly extractor: NoteExtractor
-    private readonly session: PitchSession | undefined
+    private readonly session: PitchSession
     private readonly onsetDetector: OnsetDetector | null
 
     constructor(

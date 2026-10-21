@@ -39,8 +39,6 @@ export class CrepePitchdownProvider implements PitchProvider {
     readonly sampleRate: number
     readonly normalizeLoudness = false
     readonly hasNativeOnsets = false
-    readonly cachesAcrossPasses = true
-    readonly windowAlignSamples = 1
 
     private readonly inner: CrepeProvider
 

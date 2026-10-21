@@ -91,7 +91,11 @@ const SEGMENT_OPTS: SegmentOptions = {
     smoothFrames: 4,
 }
 
-/** Per-recording state for the CREPE provider. */
+/**
+ * Per-recording state for the CREPE provider: CNN activations cached by absolute
+ * frame index, which is what makes re-passing the whole growing buffer
+ * incremental — and why it must never be fed a sliding window.
+ */
 class CrepeSession implements PitchSession {
     cachedFrames = 0
     activations: Float32Array = new Float32Array(0)
@@ -109,12 +113,6 @@ export class CrepeProvider implements PitchProvider {
     readonly sampleRate = SAMPLE_RATE
     readonly normalizeLoudness = false
     readonly hasNativeOnsets = false
-    // Caches CNN activations across passes in `CrepeSession`, keyed on absolute
-    // frame index, so the pipeline must feed it the whole growing buffer (never a
-    // sliding window) and the cache makes re-passing incremental.
-    readonly cachesAcrossPasses = true
-    // Never windowed (fed the whole buffer), so no alignment constraint applies.
-    readonly windowAlignSamples = 1
 
     private readonly logger = new Logger(CrepeProvider.name)
     private readonly centMapping: Float32Array = buildCentMapping()
