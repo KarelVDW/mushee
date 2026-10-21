@@ -1,4 +1,4 @@
-import type { DurationType } from './types'
+import type { DurationType, StemDirection } from './types'
 
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
 export const BEAT_EPSILON = 0.001
@@ -115,7 +115,7 @@ export class Duration {
         }
     }
 
-    flagGlyph(stemDirection: 'up' | 'down'): string | undefined {
+    flagGlyph(stemDirection: StemDirection): string | undefined {
         switch (this.type) {
             case '8':
                 return stemDirection === 'up' ? 'flag8thUp' : 'flag8thDown'

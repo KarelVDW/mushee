@@ -1,11 +1,11 @@
 import { BEAT_EPSILON } from '../Duration'
 import type { Measure } from '../Measure'
-import type { Note } from '../Note'
-import { STAFF_MIDDLE_LINE } from '../staffLines'
+import { Note } from '../Note'
+import type { StemDirection } from '../types'
 
 export interface BeamedRun {
     notes: Note[]
-    stemDir: 'up' | 'down'
+    stemDir: StemDirection
 }
 
 /**
@@ -26,8 +26,7 @@ export class BeamFinder {
         const flushGroup = () => {
             if (currentNotes.length >= 2) {
                 const avgLine = currentNotes.reduce((sum, n) => sum + n.line, 0) / currentNotes.length
-                const stemDir: 'up' | 'down' = avgLine >= STAFF_MIDDLE_LINE ? 'down' : 'up'
-                this.groups.push({ notes: currentNotes, stemDir })
+                this.groups.push({ notes: currentNotes, stemDir: Note.stemDirectionFor(avgLine) })
             }
             currentNotes = []
         }

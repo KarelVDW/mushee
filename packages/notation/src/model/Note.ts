@@ -6,7 +6,7 @@ import { NoteWidth } from './layout/NoteWidth'
 import type { Measure } from './Measure'
 import type { Pitch } from './Pitch'
 import { STAFF_MIDDLE_LINE } from './staffLines'
-import type { TieType } from './types'
+import type { StemDirection, TieType } from './types'
 
 /**
  * A note or rest. Content (duration, pitch, tie) is immutable — edits replace
@@ -109,9 +109,14 @@ export class Note {
         return previous !== null && this._measure.score.tiePartner(previous) === this
     }
 
-    get stemDir(): 'up' | 'down' {
+    /** The stem rule: a note (or a beamed run's average line) on or above the middle line stems down. */
+    static stemDirectionFor(line: number): StemDirection {
+        return line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
+    }
+
+    get stemDir(): StemDirection {
         if (this.isRest) return 'up'
-        return this.line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
+        return Note.stemDirectionFor(this.line)
     }
 
     // --- Navigation (thin delegates; the traversal lives on Score) ---

@@ -2,6 +2,7 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
+import { STAFF_MIDDLE_LINE } from '@mushee/notation/model/staffLines'
 import { clef, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
@@ -79,6 +80,12 @@ describe('Note', () => {
         it('low notes (line < 3) stem up', () => {
             const low = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
             expect(low.stemDir).toBe('up')
+        })
+
+        it('stemDirectionFor flips at the middle line — the rule beamed runs share', () => {
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE)).toBe('down')
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE + 0.5)).toBe('down')
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE - 0.25)).toBe('up') // e.g. a beamed run's average line
         })
     })
 

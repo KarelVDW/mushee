@@ -2,6 +2,7 @@ import { Bravura } from '../../engraving/Bravura'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
+import type { StemDirection } from '../types'
 import type { NoteWidth } from './NoteWidth'
 import { Staff } from './Staff'
 import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
@@ -88,7 +89,7 @@ export class NoteLayout {
         }
     }
 
-    getStem(stemDir: 'up' | 'down'): LayoutStem {
+    getStem(stemDir: StemDirection): LayoutStem {
         const stemX =
             stemDir === 'up' ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2 : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'
