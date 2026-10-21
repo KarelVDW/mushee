@@ -84,6 +84,13 @@ export interface PipelineProfile {
      * A mis-routed recording is only debuggable if this is recorded.
      */
     sourceDecidedBy?: 'explicit' | 'classifier' | 'prior'
+    /**
+     * No reliable pitch in the scanned audio: the resolver fell back to
+     * `DEFAULT_PROFILE`. Set there and carried through every overlay (each
+     * spreads its base), so the lock policy reads this fact rather than parsing
+     * the id — ids are labels for logs and archives.
+     */
+    fallback?: true
 }
 
 /** Absolute clamps for any resolved window. ~A0 to a hair above C8. */
@@ -240,6 +247,7 @@ export const DEFAULT_PROFILE: PipelineProfile = {
     minFreqHz: GLOBAL_MIN_FREQ_HZ,
     maxFreqHz: TRAJECTORY_MODEL_CEILING_HZ,
     confidenceThreshold: 0.5,
+    fallback: true,
 }
 
 /** Distinct provider keys any profile can select — what the registry pre-warms. */

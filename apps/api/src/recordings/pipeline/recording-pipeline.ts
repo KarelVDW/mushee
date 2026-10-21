@@ -8,7 +8,7 @@ import type { MxmlMeasure } from './mxml.types'
 import { MxmlBuilder, PendingNote } from './mxml-builder'
 import type { NoteEventTime } from './note-event'
 import { ExtractedNotes } from './note-extractor'
-import { DEFAULT_PROFILE, type PipelineProfile } from './profiles/pipeline-profile'
+import type { PipelineProfile } from './profiles/pipeline-profile'
 import { DETECT_DECODE, DETECT_SAMPLE_RATE, ProfileResolver } from './profiles/profile-resolver'
 import { ProviderRegistry } from './providers/provider-registry'
 import { RecordingDebugRenderer } from './recording-debug-renderer'
@@ -54,11 +54,6 @@ const DETECT_MAX_WAIT_SEC = envNumber('RECORDING_DETECT_MAX_WAIT_SEC', 8)
  * `probe-leadin.ts` harness measures, and production's rollback.
  */
 const FINAL_REROUTE = envFlag('RECORDING_FINAL_REROUTE')
-
-/** The resolver's "no reliable pitch in this audio" outcome, with or without a hint. */
-function isFallbackProfile(profile: PipelineProfile): boolean {
-    return profile.id === DEFAULT_PROFILE.id || profile.id.startsWith(`${DEFAULT_PROFILE.id}+`)
-}
 
 export interface ScoreUpdate {
     measures: Record<number, MxmlMeasure>
@@ -353,7 +348,7 @@ export class RecordingPipeline {
         // the user.
         if (!this.converter || !this.profile) {
             await this.resolveProfile(Buffer.concat(this.chunks), isFinal)
-        } else if (isFinal && FINAL_REROUTE && isFallbackProfile(this.profile) && this.streamDecoder) {
+        } else if (isFinal && FINAL_REROUTE && this.profile.fallback && this.streamDecoder) {
             // The take was locked on the unvoiced fallback (a lead-in longer than
             // DETECT_MAX_WAIT_SEC). Now that the whole take exists, ask the resolver
             // again — a real register band beats a blind window every time.
@@ -412,7 +407,7 @@ export class RecordingPipeline {
         // No reliable pitch yet (breath, a late start, speech): keep listening
         // rather than lock the blind fallback for the whole take. Nothing is lost by
         // waiting — there are no notes to emit before the first pitched audio.
-        if (!isFinal && isFallbackProfile(profile) && durationSec < DETECT_MAX_WAIT_SEC) {
+        if (!isFinal && profile.fallback && durationSec < DETECT_MAX_WAIT_SEC) {
             this.logger.debug(`No pitched audio in the first ${durationSec.toFixed(1)} s — profile lock deferred`)
             return false
         }
@@ -509,7 +504,7 @@ export class RecordingPipeline {
         const detected = await this.detectProfile(Buffer.concat(this.chunks), 0, 'Final re-resolve decode failed')
         if (!detected) return
         const { profile } = detected
-        if (isFallbackProfile(profile)) return // still nothing pitched — keep what we have
+        if (profile.fallback) return // still nothing pitched — keep what we have
 
         this.logger.log(
             `Final pass re-routes the take: ${this.profile?.id ?? 'none'} → ${profile.id} ` +
