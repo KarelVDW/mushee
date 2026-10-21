@@ -40,7 +40,9 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
     const hasSubscription = Boolean(state.status)
     const currentPlan = catalogue.byId(state.tierId) ?? plans[0]
     const nextPlan = catalogue.byId(selected) ?? plans[0]
-    const isSame = selected === state.tierId && (nextPlan.priceMonthly === 0 || billing === currentBilling)
+    // The tier the account is on, in the cadence it pays (a free tier has no cadence).
+    const isCurrentPlan = (p: PlanTier) => p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
+    const isSame = isCurrentPlan(nextPlan)
     const isDowngrade = nextPlan.priceMonthly < currentPlan.priceMonthly
     const isCancel = nextPlan.id === 'free' && hasSubscription
     const needsCheckout = nextPlan.priceMonthly > 0 && !hasSubscription
@@ -138,7 +140,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                             onBillingChange={setBilling}
                             selected={selected}
                             onSelect={setSelected}
-                            isCurrent={(p) => p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)}
+                            isCurrent={isCurrentPlan}
                         />
 
                         {onShowPacks && (
