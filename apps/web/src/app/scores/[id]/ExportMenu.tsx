@@ -1,6 +1,6 @@
 'use client'
 
-import { SCORE_WIDTH } from '@mushee/notation/components/constants'
+import { SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import type { Score } from '@mushee/notation/model'
 import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
 import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'

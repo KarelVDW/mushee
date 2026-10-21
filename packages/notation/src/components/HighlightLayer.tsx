@@ -1,6 +1,7 @@
+import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import type { Note } from '../model/Note'
 import type { Score } from '../model/Score'
-import { HIGHLIGHT_MAGENTA, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { HIGHLIGHT_MAGENTA } from './constants'
 
 /**
  * Transient emphasis over part of the score — the feedback layer for the pitch operations.

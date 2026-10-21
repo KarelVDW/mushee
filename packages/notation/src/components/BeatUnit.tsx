@@ -1,9 +1,10 @@
 'use client'
 
 import { Bravura } from '../engraving/Bravura'
+import { DOTTED_FLAG_SCALE } from '../engraving/constants'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Duration } from '../model/Duration'
-import { DOT_RADIUS, DOTTED_FLAG_SCALE, NOTATION_INK } from './constants'
+import { DOT_RADIUS, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 const STEM_HEIGHT = 14

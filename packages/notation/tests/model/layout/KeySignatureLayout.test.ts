@@ -1,5 +1,5 @@
 import { getYForLine } from '@mushee/notation/components'
-import { STAVE_LINE_DISTANCE } from '@mushee/notation/components/constants'
+import { STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'

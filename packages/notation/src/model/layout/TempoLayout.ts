@@ -1,4 +1,4 @@
-import { TEMPO_MARKING_Y } from '../../components/constants'
+import { TEMPO_MARKING_Y } from '../../engraving/constants'
 
 export class TempoLayout {
     readonly id = crypto.randomUUID()

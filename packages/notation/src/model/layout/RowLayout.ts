@@ -1,4 +1,4 @@
-import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../../components/constants'
+import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Measure } from '../Measure'
 import { Resizer, type Sizeable } from '../util/Resizer'
 import { availableRowWidth } from './rowWidth'

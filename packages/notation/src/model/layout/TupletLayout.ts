@@ -1,5 +1,5 @@
-import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../components/constants'
 import { Bravura } from '../../engraving/Bravura'
+import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../engraving/constants'
 import type { Note } from '../Note'
 import type { Tuplet } from '../Tuplet'
 import type { NoteLayout } from './NoteLayout'

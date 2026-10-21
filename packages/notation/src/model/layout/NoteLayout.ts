@@ -1,6 +1,6 @@
-import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../components/constants'
 import { getYForNote } from '../../components/noteUtils'
 import { Bravura } from '../../engraving/Bravura'
+import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { NoteWidth } from '../width/NoteWidth'

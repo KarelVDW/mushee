@@ -1,0 +1,56 @@
+// Engraving and packing metrics: the sizes the layout engine places notation with, and
+// that the renderer draws the staff with. Pixels unless noted.
+
+import { GLYPH_SCALE } from './GlyphScale'
+
+/** Pixels between adjacent staff lines */
+export const STAVE_LINE_DISTANCE = 10
+
+/** Staff lines of headroom above the top staff line */
+export const SPACE_ABOVE_STAFF = 4
+
+/** Number of horizontal staff lines */
+export const NUM_STAFF_LINES = 5
+
+/** Beam line thickness in pixels */
+export const BEAM_WIDTH = 5
+
+/** Maximum allowed beam slope */
+export const BEAM_MAX_SLOPE = 0.25
+
+/** Vertical stride between stacked beam levels (thickness * 1.5) */
+export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5
+
+/** Length of partial (orphaned) secondary beams */
+export const PARTIAL_BEAM_LENGTH = 10
+
+/** Thin barline width in pixels */
+export const BARLINE_THIN_WIDTH = 1
+
+/** Thick barline width in pixels (end barline) */
+export const BARLINE_THICK_WIDTH = 3
+
+/** Gap between double/end barline strokes */
+export const BARLINE_GAP = 3
+
+/** Vertical offset from stem tips / noteheads to bracket */
+export const TUPLET_OFFSET = 15
+
+/** Scale for tuplet number glyphs (3/5 of normal notation scale) */
+export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5)
+
+/** Y position of tempo markings within headroom above staff */
+export const TEMPO_MARKING_Y = 15
+
+/** Scale multiplier for flags on dotted notes (relative to GLYPH_SCALE) */
+export const DOTTED_FLAG_SCALE = GLYPH_SCALE * 0.7
+
+/** Vertical offset from notehead center to tie endpoint */
+export const TIE_Y_SHIFT = 7
+
+export const SCORE_WIDTH = 1000
+export const ROW_GAP = 16
+export const ROW_HEIGHT = 160
+export const MAX_MEASURES_PER_ROW = 4
+
+export const MEASURE_BUTTON_SPACING = 30

@@ -1,6 +1,6 @@
-import { CLEF_CONFIG } from '../../components/constants'
 import { Bravura } from '../../engraving/Bravura'
 import { Clef } from '../Clef'
+import { ClefLayout } from '../layout/ClefLayout'
 import { PhysicalWidth } from './PhysicalWidth'
 
 export class ClefWidth implements PhysicalWidth {
@@ -10,9 +10,7 @@ export class ClefWidth implements PhysicalWidth {
     readonly total: number
 
     constructor(clef: Clef) {
-        const config = CLEF_CONFIG[clef.type]
-        if (!config) throw new Error(`Unknown clef type: ${clef.type}`)
-        this.content = Bravura.width(config.glyphName)
+        this.content = Bravura.width(ClefLayout.glyphFor(clef.type).glyphName)
         this.total = this.paddingLeft + this.content + this.paddingRight
     }
 }

@@ -1,4 +1,4 @@
-import { MAX_MEASURES_PER_ROW, TIE_Y_SHIFT } from '@mushee/notation/components/constants'
+import { MAX_MEASURES_PER_ROW, TIE_Y_SHIFT } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import type { TieLayout } from '@mushee/notation/model/layout/TieLayout'
 import { Note } from '@mushee/notation/model/Note'

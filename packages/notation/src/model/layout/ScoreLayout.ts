@@ -1,6 +1,6 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH, TEMPO_MARKING_Y } from '../../components/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH, TEMPO_MARKING_Y } from '../../engraving/constants'
 import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'

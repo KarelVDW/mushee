@@ -1,4 +1,4 @@
-import { MAX_MEASURES_PER_ROW } from '@mushee/notation/components/constants'
+import { MAX_MEASURES_PER_ROW } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
 import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'

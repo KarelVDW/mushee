@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from 'react'
 
 import { Bravura } from '../engraving/Bravura'
+import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Measure as MeasureModel, Note } from '../model'
 import type { Clef as ClefModel } from '../model/Clef'
@@ -9,7 +10,7 @@ import type { TimeSignature as TimeSignatureModel } from '../model/TimeSignature
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
 import { Clef } from './Clef'
-import { INTERACTION_BLUE, INTERACTION_BLUE_BAND, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { INTERACTION_BLUE, INTERACTION_BLUE_BAND } from './constants'
 import { KeySignature } from './KeySignature'
 import { NoteGroup } from './NoteGroup'
 import { TimeSignature } from './TimeSignature'

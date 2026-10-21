@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { NUM_STAFF_LINES, SCORE_WIDTH, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
@@ -9,15 +10,7 @@ import { Note, Pitch, Score as ScoreModel } from '../model'
 import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
 import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
-import {
-    INTERACTION_BLUE,
-    MEASURE_BUTTON_GAP,
-    MEASURE_BUTTON_SIZE,
-    NUM_STAFF_LINES,
-    SCORE_WIDTH,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from './constants'
+import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { Measure } from './Measure'

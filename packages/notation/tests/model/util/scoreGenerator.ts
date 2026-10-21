@@ -1,4 +1,4 @@
-import { CLEF_DEFS } from '@mushee/notation/components/constants'
+import { CLEF_DEFS } from '@mushee/notation/model/clefs'
 import { BEAT_EPSILON, Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Measure } from '@mushee/notation/model/Measure'

@@ -1,10 +1,10 @@
 'use client'
 
 import { Glyph } from '@mushee/notation/components'
-import { CLEF_CONFIG, CLEF_DEFS, clefOctaveMarker } from '@mushee/notation/components/constants'
 import { getYForLine } from '@mushee/notation/components/noteUtils'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
-import type { ClefType } from '@mushee/notation/model'
+import { CLEF_DEFS, type ClefType } from '@mushee/notation/model'
+import { ClefLayout } from '@mushee/notation/model/layout/ClefLayout'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -17,13 +17,12 @@ const CLEF_FAMILIES: ClefType[][] = [
 
 /** A clef glyph (with any 8/15 octave marker) drawn in staff coordinates. */
 export function ClefGlyph({ type, size = 30, color = 'currentColor' }: { type: ClefType; size?: number; color?: string }) {
-    const config = CLEF_CONFIG[type]
-    if (!config) return null
+    const config = ClefLayout.glyphFor(type)
     // Window over the staff region (lines sit at y 40–80), padded so taller glyphs and octave markers fit.
     const top = 10
     const height = 92
     const width = 28
-    const marker = clefOctaveMarker(type)
+    const marker = ClefLayout.octaveMarker(type)
     const markerX = 4 + Bravura.width(config.glyphName) / 2
     const markerY = marker?.above ? getYForLine(0) - 6 : getYForLine(4) + 13
     return (

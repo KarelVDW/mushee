@@ -7,7 +7,7 @@ import {
     NUM_STAFF_LINES,
     SPACE_ABOVE_STAFF,
     STAVE_LINE_DISTANCE,
-} from '../../components/constants'
+} from '../../engraving/constants'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'

@@ -1,4 +1,4 @@
-import { CLEF_DEFS } from '../../components/constants'
+import { CLEF_DEFS } from '../clefs'
 import type { Duration } from '../Duration'
 import type { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'

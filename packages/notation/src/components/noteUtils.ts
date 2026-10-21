@@ -1,4 +1,4 @@
-import { SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 
 /**
  * Convert a note line value to a Y coordinate on the stave.

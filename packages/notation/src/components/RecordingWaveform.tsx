@@ -2,12 +2,13 @@
 
 import { useSyncExternalStore } from 'react'
 
+import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import type { Score as ScoreModel } from '../model'
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from './constants'
+import { HIGHLIGHT_MAGENTA, WAVEFORM_CYAN } from './constants'
 
-/** Brand accents (loud tier) — the live waveform is the one sanctioned use inside the canvas. */
-const BAR_COLORS = ['#00DBE9', '#FF2079']
+/** Brand accents (loud tier) — one of the two sanctioned brand-accent exceptions inside the canvas (see constants.ts). */
+const BAR_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA]
 const BAR_WIDTH = 2.5
 /** Tallest bar: half the staff height on either side of the middle line. */
 const MAX_RADIUS = (((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE * 2) / 2

@@ -5,7 +5,7 @@ import {
     NUM_STAFF_LINES,
     SPACE_ABOVE_STAFF,
     STAVE_LINE_DISTANCE,
-} from '@mushee/notation/components/constants'
+} from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import type { KeySignature } from '@mushee/notation/model/KeySignature'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'

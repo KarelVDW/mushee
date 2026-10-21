@@ -1,6 +1,6 @@
 import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 
-import { SCORE_WIDTH } from '../components/constants'
+import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
 import { MeasureSerializer } from './io/ScoreSerializer'

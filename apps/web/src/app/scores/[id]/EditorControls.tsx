@@ -1,10 +1,10 @@
 'use client'
 
-import { CLEF_DEFS, Glyph } from '@mushee/notation/components'
-import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
+import { Glyph } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
+import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
 import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
-import { type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
+import { CLEF_DEFS, type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'

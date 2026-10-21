@@ -1,6 +1,5 @@
-export { Duration, Measure, Note, Pitch, Score as ScoreModel } from '../model'
 export { BeatUnit, beatUnitWidth } from './BeatUnit'
-export { CLEF_DEFS, INTERACTION_BLUE, NOTATION_INK } from './constants'
+export { INTERACTION_BLUE, NOTATION_INK } from './constants'
 export { Glyph } from './Glyph'
 export type { ScoreHighlight } from './HighlightLayer'
 export { getLineForY, getYForLine, getYForNote } from './noteUtils'
