@@ -24,11 +24,12 @@ describe('Popover keyboard isolation', () => {
     function render(props: { onDismiss: () => void; onKeyDown?: (e: KeyboardEvent) => void }) {
         act(() => {
             root.render(
-                createElement(
-                    Popover,
-                    { ariaLabel: 'Select clef', title: 'Clef', ...props },
-                    createElement('button', { type: 'button' }, 'Treble'),
-                ),
+                createElement(Popover, {
+                    ariaLabel: 'Select clef',
+                    title: 'Clef',
+                    ...props,
+                    children: createElement('button', { type: 'button' }, 'Treble'),
+                }),
             )
         })
     }
