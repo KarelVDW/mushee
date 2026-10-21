@@ -137,6 +137,15 @@ export class Note {
         return this.measure.score.previousNote(this)
     }
 
+    /**
+     * This note moved one staff step up (+1) or down (−1), spelled in the key in effect here
+     * (an F stepped to in G major is F♯). A rest stays a rest. Returns a new note, as edits do.
+     */
+    steppedBy(direction: 1 | -1): Note {
+        const stepped = this.pitch && (direction > 0 ? this.pitch.raised() : this.pitch.lowered())
+        return this.clone({ pitch: stepped ? this.keySignature.spell(stepped) : undefined })
+    }
+
     clone(overrides: { duration?: Duration; pitch?: Pitch; tie?: TieType }) {
         return new Note({
             duration: overrides.duration || this.duration,

@@ -62,10 +62,7 @@ export const RAISE_PITCH: ScoreAction = {
     executeBulk: (score, notes) =>
         score.replace(
             notes,
-            notes.map((note) => {
-                const raised = note.pitch?.raised()
-                return note.clone({ pitch: raised ? note.keySignature.spell(raised) : undefined })
-            }),
+            notes.map((note) => note.steppedBy(1)),
         ),
 }
 
@@ -75,10 +72,7 @@ export const LOWER_PITCH: ScoreAction = {
     executeBulk: (score, notes) =>
         score.replace(
             notes,
-            notes.map((note) => {
-                const lowered = note.pitch?.lowered()
-                return note.clone({ pitch: lowered ? note.keySignature.spell(lowered) : undefined })
-            }),
+            notes.map((note) => note.steppedBy(-1)),
         ),
 }
 
@@ -186,16 +180,14 @@ export const TOGGLE_TUPLET: ScoreAction = {
 export const TOGGLE_TIE: ScoreAction = {
     id: 'toggle-tie',
     label: 'Toggle tie',
-    // Tying on is offered only where a tie can bind: the next note must sound the same pitch
-    // (a tie into a rest or another pitch would be a dangling mark). Untying is always allowed.
+    // Tying on is offered only where a tie can bind (Score.canTieForward) — a tie into a rest or
+    // another pitch would be a dangling mark. Untying is always allowed.
     executeBulk: (score, notes) =>
         score.replace(
             notes,
             notes.map((note) => {
                 if (note.tiesForward) return note.clone({ tie: undefined })
-                const next = note.getNext()
-                const canTie = !!note.pitch && !!next?.pitch && next.pitch.toMidi() === note.pitch.toMidi()
-                return canTie ? note.clone({ tie: 'start' as const }) : note
+                return score.canTieForward(note) ? note.clone({ tie: 'start' as const }) : note
             }),
         ),
 }

@@ -149,6 +149,27 @@ describe('a tie binds only notes that sound the same', () => {
         expect(intoRest.score.tiePartner(intoRest.a)?.pitch?.name).toBe('C')
     })
 
+    it('canTieForward holds exactly where a tie would bind, tie mark or not', () => {
+        const same = twoNotes(pitched('C', 5), pitched('C', 5))
+        expect(same.score.canTieForward(same.a)).toBe(true)
+        const enharmonic = twoNotes(
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', alter: 1, octave: 5 }) }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'D', alter: -1, octave: 5 }) }),
+        )
+        expect(enharmonic.score.canTieForward(enharmonic.a)).toBe(true)
+        const other = twoNotes(pitched('C', 5), pitched('D', 5))
+        expect(other.score.canTieForward(other.a)).toBe(false)
+        const intoRest = twoNotes(pitched('C', 5), rest('q'))
+        expect(intoRest.score.canTieForward(intoRest.a)).toBe(false)
+        const fromRest = twoNotes(rest('q'), pitched('C', 5))
+        expect(fromRest.score.canTieForward(fromRest.a)).toBe(false)
+        // The score's last note has nothing to tie into.
+        const lastNote = same.score.measures[0].lastNote
+        if (!lastNote) throw new Error('expected a last note')
+        const [last] = same.score.replace([lastNote], [pitched('C', 5)])
+        expect(same.score.canTieForward(last)).toBe(false)
+    })
+
     it('an imported explicit stop without a tying predecessor is an attack', () => {
         const { b } = twoNotes(pitched('C', 5), pitched('C', 5).clone({ tie: 'stop' }))
         expect(b.tiesBack).toBe(false)

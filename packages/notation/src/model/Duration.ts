@@ -69,6 +69,20 @@ export class Duration {
         return this.ratio.actualNotes === other.ratio.actualNotes && this.ratio.normalNotes === other.ratio.normalNotes
     }
 
+    /**
+     * Whether a value of `type` can take a dot. The sixteenth is the model's finest value: a
+     * dotted one would leave a thirty-second's worth of bar that no rest can fill, so the bar
+     * would come out short for good.
+     */
+    static canDot(type: DurationType): boolean {
+        return type !== '16'
+    }
+
+    /** Whether this value can take a dot — {@link Duration.canDot} for its type. */
+    get canDot(): boolean {
+        return Duration.canDot(this.type)
+    }
+
     get isBeamable(): boolean {
         return this.type === '8' || this.type === '16'
     }

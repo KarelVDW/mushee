@@ -54,6 +54,16 @@ describe('Duration', () => {
         })
     })
 
+    it('canDot for every value but the sixteenth (static by type, and on the instance)', () => {
+        expect(Duration.WRITABLE.filter((d) => d.dots === 0).map((d) => [d.type, Duration.canDot(d.type), d.canDot])).toEqual([
+            ['w', true, true],
+            ['h', true, true],
+            ['q', true, true],
+            ['8', true, true],
+            ['16', false, false],
+        ])
+    })
+
     it('isBeamable for 8th and 16th only', () => {
         expect(new Duration({ type: '8' }).isBeamable).toBe(true)
         expect(new Duration({ type: '16' }).isBeamable).toBe(true)

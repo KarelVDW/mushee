@@ -261,6 +261,37 @@ describe('Note', () => {
         })
     })
 
+    describe('steppedBy (staff-step entry)', () => {
+        const spelled = (note: Note) => (note.pitch ? `${note.pitch.name}${note.pitch.accidental ?? ''}${note.pitch.octave}` : 'rest')
+
+        it('moves one staff step up or down, spelled in the key in effect', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const e4 = placeNote(score, 0, 'E', 4)
+            expect(spelled(e4.steppedBy(1))).toBe('F4')
+            expect(spelled(e4.steppedBy(-1))).toBe('D4')
+            score.setKeySignature(e4, 1) // G major: the F stepped to is F♯
+            expect(spelled(e4.steppedBy(1))).toBe('F#4')
+        })
+
+        it('drops a written accidental: the step lands on the key-spelled neighbour', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const written = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', alter: 1, octave: 4 }) })
+            const [cSharp] = score.replace([score.measures[0].firstNote as Note], [written])
+            expect(spelled(cSharp.steppedBy(1))).toBe('D4')
+            expect(spelled(cSharp.steppedBy(-1))).toBe('B3')
+        })
+
+        it('keeps a rest a rest — as a new note, like every edit', () => {
+            const r = rest('h')
+            const stepped = r.steppedBy(1)
+            expect(stepped.isRest).toBe(true)
+            expect(stepped).not.toBe(r)
+            expect(stepped.duration).toBe(r.duration)
+        })
+    })
+
     describe('navigation', () => {
         it('getNext returns the following note within the same measure', () => {
             const score = new Score()
