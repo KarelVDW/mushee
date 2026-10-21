@@ -8,7 +8,7 @@ import { ProcessedWebhookEvent } from './entities/processed-webhook-event.entity
 import { PACK_SECONDS, packForProduct } from './polar/packs'
 import { tierForProduct } from './polar/products'
 import { patchFromCustomerState, patchFromSubscription, SubscriptionSnapshot } from './polar/subscription-state'
-import { validateEvent, WebhookVerificationError } from './polar/webhook-verify'
+import { type PolarWebhookEvent, validateEvent, WebhookVerificationError } from './polar/webhook-verify'
 
 /**
  * Inbound side of the Polar integration: verifies webhook deliveries, dedupes
@@ -44,7 +44,7 @@ export class PolarWebhookService {
         let applied = false
         await this.webhookEvents.manager.transaction(async (em) => {
             if (deliveryId && !(await this.markProcessed(deliveryId, em))) return
-            await this.applyEvent(event as { type: string; data: unknown }, em)
+            await this.applyEvent(event, em)
             applied = true
         })
         if (!applied) {
@@ -59,7 +59,7 @@ export class PolarWebhookService {
         return (result.identifiers?.length ?? 0) > 0
     }
 
-    private async applyEvent(event: { type: string; data: unknown }, em: EntityManager): Promise<void> {
+    private async applyEvent(event: PolarWebhookEvent, em: EntityManager): Promise<void> {
         switch (event.type) {
             case 'subscription.created':
             case 'subscription.active':
@@ -72,12 +72,12 @@ export class PolarWebhookService {
                     customer?: { externalId?: string | null }
                     metadata?: Record<string, unknown>
                 }
-                const userId = sub.customer?.externalId ?? (typeof sub.metadata?.userId === 'string' ? sub.metadata.userId : null)
+                const userId = this.externalUserId(sub)
                 if (!userId) {
                     this.logger.warn(`Webhook ${event.type} for subscription ${sub.id} has no external customer id — ignoring`)
                     return
                 }
-                const patch = patchFromSubscription(sub, (p) => tierForProduct(p))
+                const patch = patchFromSubscription(sub, tierForProduct)
                 if (!patch) {
                     this.logger.warn(`Webhook ${event.type}: product ${sub.productId} is not mapped to a tier — ignoring`)
                     return
@@ -104,7 +104,7 @@ export class PolarWebhookService {
                 }
                 if (!state.externalId) return
                 const row = await this.subscriptions.findForUser(state.externalId, em)
-                const patch = patchFromCustomerState(state, (p) => tierForProduct(p), row?.tierId)
+                const patch = patchFromCustomerState(state, tierForProduct, row?.tierId)
                 if (!patch) return
                 await this.subscriptions.upsert(state.externalId, patch, em)
                 this.logger.log(`customer.state_changed: user ${state.externalId} → tier ${patch.tierId}`)
@@ -141,7 +141,7 @@ export class PolarWebhookService {
 
             default:
                 // Benefits, other order states… — nothing to mirror yet.
-                this.logger.debug?.(`Ignoring webhook event ${event.type}`)
+                this.logger.debug(`Ignoring webhook event ${event.type}`)
         }
     }
 
@@ -158,7 +158,16 @@ export class PolarWebhookService {
         }
         return {
             productId: order.productId ?? order.product?.id ?? null,
-            userId: order.customer?.externalId ?? (typeof order.metadata?.userId === 'string' ? order.metadata.userId : null),
+            userId: this.externalUserId(order),
         }
+    }
+
+    /** Our user id on a subscription or order payload: the Polar customer's
+     *  external id, else the `userId` we put in the checkout metadata. */
+    private externalUserId(payload: {
+        customer?: { externalId?: string | null } | null
+        metadata?: Record<string, unknown>
+    }): string | null {
+        return payload.customer?.externalId ?? (typeof payload.metadata?.userId === 'string' ? payload.metadata.userId : null)
     }
 }

@@ -191,9 +191,8 @@ export class BillingService {
             // Not existing is fine (the user never checked out). Anything else must
             // fail the purge so the hourly cron retries — the privacy policy
             // promises we ask Polar to delete the customer record.
-            const status =
-                (err as { statusCode?: number; status?: number }).statusCode ?? (err as { statusCode?: number; status?: number }).status
-            if (status === 404) return
+            const { statusCode, status } = err as { statusCode?: number; status?: number }
+            if ((statusCode ?? status) === 404) return
             throw err
         }
     }
