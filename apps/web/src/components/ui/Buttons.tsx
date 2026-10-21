@@ -63,7 +63,7 @@ export function PrimaryButton({
                 big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
                 'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
                 palette,
                 popStyles,
@@ -95,7 +95,7 @@ export function SecondaryButton({ children, onClick, disabled, fullWidth }: Seco
                 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
                 fullWidth ? 'w-full' : '',
             ].join(' ')}>
@@ -119,7 +119,7 @@ export function TertiaryButton({ children, onClick, danger = false }: TertiaryBu
                 'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
                 'font-body font-medium text-[13px] leading-none',
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
+                'focus-ring rounded-sm',
                 danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
             ].join(' ')}>
             {children}
@@ -155,7 +155,7 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
                 idleClassName ?? 'bg-surface-container',
                 hoverPalette,
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
             ].join(' ')}
             style={{ width: size, height: size }}>
             <Icon name={icon} size={size <= 28 ? 14 : 16} />
@@ -180,7 +180,7 @@ export function ToggleButton({ active, tone = 'cyan', children, className, ...re
                 'inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
                 'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5 pointer-coarse:min-h-10',
                 'font-label font-semibold text-[12px] leading-none',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 active ? activePalette : 'bg-surface-container-low text-on-surface',
                 className ?? '',
             ].join(' ')}>

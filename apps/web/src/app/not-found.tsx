@@ -8,7 +8,7 @@ const capsule = [
     'inline-flex items-center justify-center whitespace-nowrap rounded-full',
     'font-label font-semibold text-[13px] leading-none px-4.5 py-2.25 pointer-coarse:py-3',
     'transition-colors duration-150 ease-solkey',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+    'focus-ring',
 ].join(' ')
 
 // Signed-out visitors rarely land here (the auth proxy bounces unknown private

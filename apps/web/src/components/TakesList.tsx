@@ -100,7 +100,7 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                                 'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
                                 'bg-surface-container-lowest text-on-surface disabled:opacity-40 disabled:cursor-not-allowed',
                                 'hover:bg-surface-container-high transition-colors duration-150 ease-solkey',
-                                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                'focus-ring',
                             ].join(' ')}>
                             <Icon name={playing === take.id ? 'pause' : 'play'} size={14} />
                         </button>
@@ -129,7 +129,7 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                                     'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
                                     'bg-transparent text-on-surface-variant hover:text-error hover:bg-surface-container-high',
                                     'transition-colors duration-150 ease-solkey',
-                                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                    'focus-ring',
                                 ].join(' ')}>
                                 <Icon name="trash-2" size={14} />
                             </button>

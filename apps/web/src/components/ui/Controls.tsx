@@ -54,7 +54,7 @@ export function Segmented<T extends string | undefined>({ options, value, onChan
                             'font-label font-semibold text-[14px] leading-none',
                             'inline-flex items-center justify-center',
                             'transition-[background-color,color] duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                            'focus-ring',
                             active
                                 ? 'bg-primary-container text-on-primary-container'
                                 : 'bg-transparent text-on-surface-variant hover:bg-surface-container-high',
@@ -96,7 +96,7 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled, pla
                 'inline-flex items-center justify-center',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                 'transition-[background-color,color] duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 active
                     ? 'bg-primary-container text-on-primary-container'
                     : plain
@@ -130,7 +130,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                 className={[
                     'rounded-full p-0 inline-flex items-center justify-center shrink-0',
                     'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    'focus-ring',
                     'border-[3px]',
                     active ? 'bg-error border-error' : 'bg-surface-container-lowest border-error-container',
                     'transition-[transform,background-color,border-color] duration-200 ease-solkey',
@@ -158,7 +158,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
                 className={[
                     'rounded-full p-0 inline-flex items-center justify-center shrink-0',
                     'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    'focus-ring',
                     'border-[3px] border-primary-container',
                     active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-lowest text-primary',
                     'transition-[transform,background-color,color] duration-200 ease-solkey',
@@ -178,7 +178,7 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
             className={[
                 'rounded-full border-0 inline-flex items-center justify-center shrink-0',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 'bg-surface-container-lowest enabled:hover:bg-surface-container-high',
                 active ? 'text-primary' : 'text-on-surface-variant',
                 'transition-[background-color,color] duration-150 ease-solkey',
@@ -207,7 +207,7 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
                 className={[
                     'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative',
                     'transition-colors duration-150 ease-solkey',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    'focus-ring',
                     checked ? 'bg-primary-container' : 'bg-surface-container-high',
                 ].join(' ')}>
                 <span

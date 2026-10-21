@@ -194,7 +194,7 @@ Phones get the same design language, restructured — never a shrunken desktop. 
 
 ### Focus
 
-Every interactive element carries the shared keyboard-focus ring: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary` — the dark teal reads on white and on both neon fills. Dialogs are built from `DialogScrim`/`DialogPanel`, which own the modal a11y contract (role/aria-modal/labelling, focus trap, Escape, focus restore). Anchored popovers (the clef / key / time / tempo pickers) are built from `Popover`/`PopoverOption`, which own the transient-surface contract (dialog role/labelling, Escape and outside-click dismissal, `aria-pressed` option cells).
+Every interactive element carries the shared keyboard-focus ring, the `focus-ring` utility (defined in `apps/web/src/app/globals.css`: a 2px `primary` outline at 2px offset, on `:focus-visible` only) — the dark teal reads on white and on both neon fills. Dialogs are built from `DialogScrim`/`DialogPanel`, which own the modal a11y contract (role/aria-modal/labelling, focus trap, Escape, focus restore). Anchored popovers (the clef / key / time / tempo pickers) are built from `Popover`/`PopoverOption`, which own the transient-surface contract (dialog role/labelling, Escape and outside-click dismissal, `aria-pressed` option cells).
 
 ### Hover & press states
 
