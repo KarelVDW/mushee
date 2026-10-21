@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { type ReactNode, useEffect, useState } from 'react'
 
-import { DialogPanel, DialogScrim, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
+import { DialogPanel, DialogScrim, Eyebrow, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
 import { getConsent, onConsentSettingsRequested, saveConsent } from '@/lib/consent'
 
 /**
@@ -57,9 +57,7 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
             aria-label="Cookie consent"
             className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-55 flex flex-col gap-1.5">
-                <span className="font-label font-semibold text-[11px] leading-none tracking-[0.14em] uppercase text-on-surface-variant">
-                    Cookies
-                </span>
+                <Eyebrow>Cookies</Eyebrow>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
                     Solkey uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
                     we&apos;d also use session replay to improve the editor — that&apos;s entirely up to you.{' '}
@@ -142,9 +140,7 @@ function CategoryTitle({ title, status }: { title: string; status: string }) {
     return (
         <div className="flex items-center justify-between gap-3">
             <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">{title}</span>
-            <span className="font-label font-semibold text-[10px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
-                {status}
-            </span>
+            <Eyebrow>{status}</Eyebrow>
         </div>
     )
 }
