@@ -6,10 +6,8 @@ into two layers with a deliberate boundary between them.
 ## Root: NestJS transport + persistence
 
 - `recordings.gateway.ts` — WebSocket gateway that receives audio chunks and
-  streams score updates back to the client. Frames to the client:
-  `score-update`, `recording-source`, `recording-health` (transcription
-  down/back — the session stops metering credits while it is down),
-  `recording-limit`, `recording-capped`, `recording-error`, `recording-complete`.
+  streams score updates back to the client. Every frame it sends is a member of
+  its `RecordingServerFrame` union, each documented there.
 - `recordings.controller.ts` — the owner's takes over HTTP: list per score,
   replay the archived audio (signed URL or stream), delete one (audio first,
   then the row).

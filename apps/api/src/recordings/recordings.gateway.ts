@@ -7,9 +7,10 @@ import type { RawData, WebSocket } from 'ws'
 import { auth } from '../auth/auth.config'
 import { BetaService } from '../beta/beta.service'
 import { ScoresService } from '../scores/scores.service'
-import type { RecordingMeta } from './pipeline/recording-pipeline'
+import { describeError } from './pipeline/describe-error'
+import type { RecordingMeta, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
 import type { RecordingCreditBalance } from './recording-credits.service'
-import type { RecordingSession } from './recording-session'
+import type { RecordingSession, SessionCapReason } from './recording-session'
 import { RecordingSessionsService } from './recording-sessions.service'
 
 /** The take's tempo, meter and source hints for the pipeline. */
@@ -28,6 +29,23 @@ type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage
 
 /** Reasons a recording connection is refused; the client maps these to dialogs. */
 type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
+
+/** Every frame the server sends on the recording socket — the wire protocol's server half. */
+type RecordingServerFrame =
+    /** Measures transcribed so far (deltas as notes settle, then the take's tail). */
+    | ({ type: 'score-update' } & ScoreUpdate)
+    /** What the pipeline decided is at the mic, and on what evidence. */
+    | ({ type: 'recording-source' } & SourceResolution)
+    /** Transcription down/back — the session stops metering credits while it is down. */
+    | { type: 'recording-health'; ok: boolean }
+    /** The day's budget (and pack seconds) ran out, before or during the take. */
+    | { type: 'recording-limit'; planId: string; planName: string; limitSeconds: number | null; usedSeconds: number }
+    /** A hard session cap (duration/bytes) stopped the take. */
+    | { type: 'recording-capped'; reason: SessionCapReason }
+    /** The connection was refused; sent just before the 1008 close. */
+    | { type: 'recording-error'; code: RecordingErrorCode }
+    /** The take's tail has been streamed after the client's `end`; the socket closes next. */
+    | { type: 'recording-complete' }
 
 /** Largest single WebSocket frame we accept (defense against memory abuse via
  *  oversized audio chunks). One ~1s PCM/Opus chunk is well under this. */
@@ -58,9 +76,8 @@ const WS_NORMAL_CLOSURE = 1000
 @WebSocketGateway({ path: '/recording', maxPayload: MAX_PAYLOAD_BYTES })
 export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGatewayDisconnect<WebSocket>, OnApplicationShutdown {
     private readonly logger = new Logger(RecordingsGateway.name)
-    private readonly sessions = new WeakMap<WebSocket, RecordingSession>()
-    /** Live sockets, tracked so shutdown can drain them (WeakMap can't iterate). */
-    private readonly clients = new Set<WebSocket>()
+    /** Every live socket and its session (`null` until setup resolves) — what messages route to and shutdown drains. */
+    private readonly connections = new Map<WebSocket, RecordingSession | null>()
 
     constructor(
         private readonly recordingSessions: RecordingSessionsService,
@@ -75,10 +92,9 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         // if the connection was rejected.
         const pending: Array<{ data: RawData; isBinary: boolean }> = []
         let pendingBytes = 0
-        let session: RecordingSession | null = null
         let closed = false
 
-        this.clients.add(client)
+        this.connections.set(client, null)
 
         // Keepalive: terminate peers that stop answering pings so their sessions
         // (and credit meters) don't outlive a silently-dead connection.
@@ -97,6 +113,7 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         })
 
         client.on('message', (data: RawData, isBinary: boolean) => {
+            const session = this.connections.get(client)
             if (session) {
                 this.handleMessage(client, session, data, isBinary)
             } else {
@@ -119,12 +136,13 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         void this.openSession(client, request)
             .then((created) => {
                 if (!created) return
+                // The socket may have gone while setup ran (handleDisconnect already
+                // dropped it): close the session instead of re-registering it.
                 if (closed || client.readyState !== client.OPEN) {
-                    void created.close()
+                    void this.closeQuietly(created, 'after early disconnect')
                     return
                 }
-                this.sessions.set(client, created)
-                session = created
+                this.connections.set(client, created)
 
                 for (const msg of pending) {
                     this.handleMessage(client, created, msg.data, msg.isBinary)
@@ -142,15 +160,9 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
     }
 
     handleDisconnect(client: WebSocket): void {
-        this.clients.delete(client)
-        const session = this.sessions.get(client)
-        this.sessions.delete(client)
-        if (session) {
-            void session.close().catch((err: unknown) => {
-                const message = err instanceof Error ? err.message : String(err)
-                this.logger.warn(`Session close on disconnect failed: ${message}`)
-            })
-        }
+        const session = this.connections.get(client)
+        this.connections.delete(client)
+        if (session) void this.closeQuietly(session, 'on disconnect')
         this.logger.log('Recording client disconnected')
     }
 
@@ -160,22 +172,14 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
      * of ffmpeg children dying with the cgroup mid-take.
      */
     async onApplicationShutdown(): Promise<void> {
-        if (!this.clients.size) return
-        this.logger.log(`Draining ${this.clients.size} recording connection(s)...`)
+        if (!this.connections.size) return
+        this.logger.log(`Draining ${this.connections.size} recording connection(s)...`)
         const closures: Promise<void>[] = []
-        for (const client of this.clients) {
-            const session = this.sessions.get(client)
-            this.sessions.delete(client)
-            if (session) {
-                closures.push(
-                    session.close().catch((err: unknown) => {
-                        this.logger.warn(`Session close on shutdown failed: ${err instanceof Error ? err.message : String(err)}`)
-                    }),
-                )
-            }
+        for (const [client, session] of this.connections) {
+            if (session) closures.push(this.closeQuietly(session, 'on shutdown'))
             client.close(WS_GOING_AWAY, 'Server shutting down')
         }
-        this.clients.clear()
+        this.connections.clear()
         await Promise.all(closures)
     }
 
@@ -217,28 +221,14 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         // A throw here (the session already closed itself) reaches handleConnection's
         // catch, which answers 1011.
         const opened = await this.recordingSessions.open(user.id, scoreId, {
-            onUpdate: (update) => {
-                if (client.readyState !== client.OPEN) return
-                client.send(JSON.stringify({ type: 'score-update', ...update }))
-            },
+            onUpdate: (update) => this.send(client, { type: 'score-update', ...update }),
             onLimitReached: (balance) => this.sendLimit(client, balance),
-            onSessionCap: (reason) => {
-                if (client.readyState !== client.OPEN) return
-                client.send(JSON.stringify({ type: 'recording-capped', reason }))
-            },
-            onSourceResolved: (resolution) => {
-                if (client.readyState !== client.OPEN) return
-                // What the pipeline decided is at the mic, and on what evidence — the
-                // client shows it so a wrong classification is user-visible feedback
-                // rather than a silently mangled transcription.
-                client.send(JSON.stringify({ type: 'recording-source', ...resolution }))
-            },
-            onHealth: (health) => {
-                if (client.readyState !== client.OPEN) return
-                // Transcription down/back. Only the state crosses the wire — the
-                // internal error text stays in the server log.
-                client.send(JSON.stringify({ type: 'recording-health', ok: health.ok }))
-            },
+            onSessionCap: (reason) => this.send(client, { type: 'recording-capped', reason }),
+            // The client shows the resolution so a wrong classification is
+            // user-visible feedback rather than a silently mangled transcription.
+            onSourceResolved: (resolution) => this.send(client, { type: 'recording-source', ...resolution }),
+            // Only the state crosses the wire — the internal error text stays in the server log.
+            onHealth: (health) => this.send(client, { type: 'recording-health', ok: health.ok }),
         })
         if ('rejected' in opened) {
             if (opened.rejected === 'concurrent-recording') {
@@ -260,24 +250,32 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         return url.searchParams.get('scoreId')
     }
 
+    /** Send one protocol frame; a socket that is no longer open is skipped. */
+    private send(client: WebSocket, frame: RecordingServerFrame): void {
+        if (client.readyState !== client.OPEN) return
+        client.send(JSON.stringify(frame))
+    }
+
     private reject(client: WebSocket, code: RecordingErrorCode): void {
-        if (client.readyState === client.OPEN) {
-            client.send(JSON.stringify({ type: 'recording-error', code }))
-        }
+        this.send(client, { type: 'recording-error', code })
         client.close(WS_POLICY_VIOLATION, code)
     }
 
     private sendLimit(client: WebSocket, balance: RecordingCreditBalance): void {
-        if (client.readyState !== client.OPEN) return
-        client.send(
-            JSON.stringify({
-                type: 'recording-limit',
-                planId: balance.tier.id,
-                planName: balance.tier.name,
-                limitSeconds: balance.tier.dailyRecordingCredits,
-                usedSeconds: balance.used,
-            }),
-        )
+        this.send(client, {
+            type: 'recording-limit',
+            planId: balance.tier.id,
+            planName: balance.tier.name,
+            limitSeconds: balance.tier.dailyRecordingCredits,
+            usedSeconds: balance.used,
+        })
+    }
+
+    /** Close a session where nothing is left to report a failure to: log it and carry on. */
+    private closeQuietly(session: RecordingSession, context: string): Promise<void> {
+        return session.close().catch((err: unknown) => {
+            this.logger.warn(`Session close ${context} failed: ${describeError(err)}`)
+        })
     }
 
     private async authenticate(request: IncomingMessage): Promise<{ id: string } | null> {
@@ -317,18 +315,10 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             // `score-update`s), acknowledge with `recording-complete`, and only
             // then close the socket — the client keeps it open until that ack so
             // the last moments of the take aren't lost.
-            void session
-                .close()
-                .catch((err: unknown) => {
-                    const message = err instanceof Error ? err.message : String(err)
-                    this.logger.warn(`Session close on end failed: ${message}`)
-                })
-                .then(() => {
-                    if (client.readyState === client.OPEN) {
-                        client.send(JSON.stringify({ type: 'recording-complete' }))
-                    }
-                    client.close(WS_NORMAL_CLOSURE, 'Recording complete')
-                })
+            void this.closeQuietly(session, 'on end').then(() => {
+                this.send(client, { type: 'recording-complete' })
+                client.close(WS_NORMAL_CLOSURE, 'Recording complete')
+            })
         }
     }
 
