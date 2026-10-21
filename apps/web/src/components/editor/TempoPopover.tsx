@@ -14,10 +14,7 @@ interface TempoPopoverProps {
     /** Receives the chosen tempo converted back to quarter-note bpm. */
     onSubmit: (bpm: number) => void
     onDismiss: () => void
-    /** Absolute position within the nearest positioned ancestor. Omit to position via `className` instead. */
-    x?: number
-    y?: number
-    /** Extra positioning/layout classes (e.g. `right-0 top-full`) when not using `x`/`y`. */
+    /** Extra positioning/layout classes (e.g. `right-0 top-full`). */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
     anchorRef?: { current: HTMLElement | null }
@@ -49,7 +46,7 @@ function beatsPerBarLabel(timeSignature: TimeSignature): string {
     return `${COUNT_WORDS[count] ?? count} per bar in ${timeSignature.beatAmount}/${timeSignature.beatType}`
 }
 
-export function TempoPopover({ x, y, initialBpm, timeSignature, onSubmit, onDismiss, className, anchorRef }: TempoPopoverProps) {
+export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, className, anchorRef }: TempoPopoverProps) {
     const inputRef = useRef<HTMLInputElement>(null)
     const [taps, setTaps] = useState<number[]>([])
     const [draft, setDraft] = useState(String(Math.round(timeSignature.pulseBpmOf(initialBpm))))
@@ -102,8 +99,6 @@ export function TempoPopover({ x, y, initialBpm, timeSignature, onSubmit, onDism
             title="Tempo"
             onDismiss={onDismiss}
             onKeyDown={handleKey}
-            x={x}
-            y={y}
             anchorRef={anchorRef}
             className={`w-90 gap-3${className ? ` ${className}` : ''}`}
             headerRight={

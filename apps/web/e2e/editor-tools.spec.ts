@@ -188,6 +188,23 @@ test('popovers and the export menu dismiss with Escape without touching the scor
     expect(apiMock.patches.length).toBe(before)
 })
 
+test('an open popover keeps editor shortcuts from firing behind it', async ({ page, apiMock }) => {
+    const before = apiMock.patches.length
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
+
+    await page.getByRole('button', { name: /^Clef:/ }).click()
+    await expect(page.getByRole('dialog', { name: 'Select clef' })).toBeVisible()
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
+    expect(apiMock.patches.length).toBe(before)
+
+    // Once the popover is gone the same key reaches the score again.
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Select clef' })).toHaveCount(0)
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('changing the instrument through the dialog updates the header chip', async ({ page }) => {
     await page.getByRole('button', { name: /^Change instrument/ }).click()
     const dialog = page.getByRole('dialog', { name: 'Change instrument' })
