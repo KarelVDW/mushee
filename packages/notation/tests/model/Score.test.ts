@@ -359,11 +359,6 @@ describe('Score', () => {
             expect(score.getPreviousMeasure(a)).toBeNull()
         })
 
-        it('getNextMeasure() with no arg returns first measure', () => {
-            const score = makeScore(2)
-            expect(score.getNextMeasure()).toBe(score.firstMeasure)
-        })
-
         it('getNextMeasure returns null for a measure not in the index map', () => {
             const score = makeScore(1)
             const stray = new Measure(score, 'treble', new TimeSignature(4, 4))

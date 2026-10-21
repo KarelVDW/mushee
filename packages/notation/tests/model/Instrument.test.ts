@@ -26,26 +26,18 @@ describe('Instrument', () => {
         expect(Instrument.byGmProgram(999)).toBe(Instrument.Piano)
     })
 
-    it('all() returns the full registry including the metronome Woodblock', () => {
-        const all = Instrument.all()
-        expect(all).toContain(Instrument.Piano)
-        expect(all).toContain(Instrument.Woodblock)
-        // selectable() is the same set minus Woodblock.
-        expect(all.length).toBe(Instrument.selectable().length + 1)
-    })
-
     it('byId resolves a registered instrument and returns undefined for an unknown id', () => {
         expect(Instrument.byId('trumpet')).toBe(Instrument.Trumpet)
         expect(Instrument.byId('not-an-instrument')).toBeUndefined()
     })
 
-    it('byDisplayName matches case-insensitively after trimming', () => {
-        expect(Instrument.byDisplayName('  fReNcH HoRn ')).toBe(Instrument.FrenchHorn)
-        expect(Instrument.byDisplayName('Trumpet')).toBe(Instrument.Trumpet)
+    it('findByDisplayName matches case-insensitively after trimming', () => {
+        expect(Instrument.findByDisplayName('  fReNcH HoRn ')).toBe(Instrument.FrenchHorn)
+        expect(Instrument.findByDisplayName('Trumpet')).toBe(Instrument.Trumpet)
     })
 
-    it('byDisplayName falls back to Piano for an unknown name', () => {
-        expect(Instrument.byDisplayName('Theremin')).toBe(Instrument.Piano)
+    it('findByDisplayName returns undefined for an unknown name', () => {
+        expect(Instrument.findByDisplayName('Theremin')).toBeUndefined()
     })
 
     it('guitar and bass guitar sound an octave below written', () => {

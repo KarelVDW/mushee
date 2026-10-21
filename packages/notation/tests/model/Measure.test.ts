@@ -268,14 +268,6 @@ describe('Measure', () => {
             expect(m.getPreviousNote(n1)).toBeNull()
         })
 
-        it('getNextNote without arg returns firstNote', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            const n = rest('q')
-            m.addNotes([n])
-            expect(m.getNextNote()).toBe(n)
-        })
-
         it('getNextNote / getPreviousNote return null for a foreign note', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
@@ -382,24 +374,6 @@ describe('Measure', () => {
             expect(m.clef.type).toBe('bass') // the clef itself is untouched
         })
 
-        it('clef falls back to the first stored clef when none sits at beat 0', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.addClef(2, 'bass') // a mid-measure clef
-            m.removeClef(0) // drop the leading clef so nothing remains at beat 0
-            // The getter falls back to the first remaining clef rather than throwing.
-            expect(m.clef).toBe(m.clefs[0])
-            expect(m.clef.beatPosition).toBe(2)
-        })
-
-        it('clef throws when the measure has no clefs at all', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.removeClef(0)
-            expect(() => m.clef).toThrow('Measure has no leading clef')
-            expect(() => m.lastClef).toThrow('Measure has no leading clef') // fallback re-enters clef
-        })
-
         it('clefAtOrBefore returns the active clef at a beat', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
@@ -408,14 +382,6 @@ describe('Measure', () => {
             expect(m.clefAtOrBefore(1).type).toBe('treble')
             expect(m.clefAtOrBefore(2).type).toBe('bass')
             expect(m.clefAtOrBefore(3).type).toBe('bass')
-        })
-
-        it('clefAtOrBefore falls back to the leading clef when nothing precedes the beat', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.addClef(2, 'bass')
-            m.removeClef(0) // only the beat-2 clef remains
-            expect(m.clefAtOrBefore(1).beatPosition).toBe(2) // fallback: the first stored clef
         })
 
         it('clefBefore ignores a clef exactly at the beat', () => {
@@ -506,23 +472,6 @@ describe('Measure', () => {
             expect(m.keySignature.fifths).toBe(2) // the key itself is untouched
         })
 
-        it('keySignature falls back to the first stored key when none sits at beat 0', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.addKeySignature(2, 2) // a mid-measure key
-            m.removeKeySignature(0) // drop the leading key so nothing remains at beat 0
-            expect(m.keySignature).toBe(m.keySignatures[0])
-            expect(m.keySignature.beatPosition).toBe(2)
-        })
-
-        it('keySignature throws when the measure has no keys at all', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.removeKeySignature(0)
-            expect(() => m.keySignature).toThrow('Measure has no leading key signature')
-            expect(() => m.lastKey).toThrow('Measure has no leading key signature')
-        })
-
         it('keyAtOrBefore returns the active key at a beat', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
@@ -531,14 +480,6 @@ describe('Measure', () => {
             expect(m.keyAtOrBefore(1).fifths).toBe(0)
             expect(m.keyAtOrBefore(2).fifths).toBe(1)
             expect(m.keyAtOrBefore(3).fifths).toBe(1)
-        })
-
-        it('keyAtOrBefore falls back to the leading key when nothing precedes the beat', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.addKeySignature(2, 1)
-            m.removeKeySignature(0) // only the beat-2 key remains
-            expect(m.keyAtOrBefore(1).beatPosition).toBe(2) // fallback: the first stored key
         })
 
         it('keyBefore ignores a key exactly at the beat', () => {

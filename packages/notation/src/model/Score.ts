@@ -200,8 +200,7 @@ export class Score {
 
     // --- Navigation (the single traversal implementation; Note/Measure delegate here) ---
 
-    getNextMeasure(measure?: Measure): Measure | null {
-        if (!measure) return this.firstMeasure
+    getNextMeasure(measure: Measure): Measure | null {
         const measureIndex = this._indexByMeasure.value.get(measure)
         if (measureIndex === undefined) return null
         return this.measures[measureIndex + 1] ?? null
@@ -614,8 +613,7 @@ export class Score {
         let durations = [new Duration({ type, dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {
-            /* v8 ignore next -- defensive: `note` came from this same tuplet, so getIndex always finds it */
-            const index = tuplet.getIndex(note) ?? 0
+            const index = tuplet.notes.indexOf(note)
             const remainder = sumBy(tuplet.notes.slice(index), (n) => n.duration.effectiveBeats)
             if (durations[0].effectiveBeats > remainder + BEAT_EPSILON) {
                 durations = index === 0 ? Duration.fromBeats(remainder) : Duration.fromBeats(remainder, ratio)

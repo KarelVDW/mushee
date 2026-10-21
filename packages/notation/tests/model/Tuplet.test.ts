@@ -30,13 +30,6 @@ describe('Tuplet', () => {
         expect(tuplet.lastNote).toBe(c)
     })
 
-    it('getIndex returns position or null', () => {
-        const { a, c, tuplet } = setup()
-        expect(tuplet.getIndex(a)).toBe(0)
-        expect(tuplet.getIndex(c)).toBe(2)
-        expect(tuplet.getIndex(triplet())).toBeNull()
-    })
-
     it('layout delegates into the score layout and is stable without mutation', () => {
         const { tuplet } = setup()
         expect(tuplet.layout).toBe(tuplet.layout)

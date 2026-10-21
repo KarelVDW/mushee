@@ -77,18 +77,6 @@ export class KeySignature {
         return this.measure.getPrevious()?.lastKey.fifths ?? 0
     }
 
-    /** Note names that are sharp in this key */
-    get sharps(): PitchStep[] {
-        if (this.fifths <= 0) return []
-        return SHARP_ORDER.slice(0, this.fifths)
-    }
-
-    /** Note names that are flat in this key */
-    get flats(): PitchStep[] {
-        if (this.fifths >= 0) return []
-        return FLAT_ORDER.slice(0, -this.fifths)
-    }
-
     /** The accidentals drawn for this key, in left-to-right order, with the pitch each occupies. */
     get accidentals(): KeyAccidental[] {
         return KeySignature.accidentalsForFifths(this.fifths)
