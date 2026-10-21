@@ -15,12 +15,14 @@
  * what's shown here (see lib/currency.ts).
  */
 
+import type { IconName } from '@/components/ui'
+
 import { type Currency, currencySymbol, formatMoney } from './currency'
 
 export interface PlanTier {
     id: 'free' | 'pro' | 'studio' | 'arranger'
     name: string
-    icon: string
+    icon: IconName
     tagline: string
     priceMonthly: number
     priceYearly: number
@@ -133,7 +135,7 @@ export const CREDIT_PACKS: CreditPack[] = [
 export const BETA_PLAN = {
     id: 'beta' as const,
     name: 'Beta',
-    icon: 'sparkles',
+    icon: 'sparkles' as const,
     tagline: 'Free while the beta runs',
     dailyRecordingSeconds: 1800,
     maxScores: null,

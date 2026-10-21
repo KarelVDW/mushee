@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 
 export interface ToastItem {
     id: number
     message: string
     tone: 'error' | 'info'
     /** Overrides the tone's default glyph (e.g. 'mic' for recording hints). */
-    icon?: string
+    icon?: IconName
 }
 
 const AUTO_DISMISS_MS = 6000
@@ -33,7 +33,7 @@ export function dismissToast(id: number) {
     emit()
 }
 
-export function showToast(message: string, tone: ToastItem['tone'] = 'error', icon?: string) {
+export function showToast(message: string, tone: ToastItem['tone'] = 'error', icon?: IconName) {
     // An identical visible toast just gets its timer reset — repeated failures
     // (e.g. a retrying auto-save) shouldn't stack into a wall of red.
     const existing = items.find((t) => t.message === message && t.tone === tone)

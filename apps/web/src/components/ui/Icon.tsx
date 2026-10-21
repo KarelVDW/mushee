@@ -10,7 +10,7 @@ import type { ReactElement } from 'react'
  * yet (transport, sharing, billing, status, …) so future features pull from
  * the same visual language instead of reaching for a foreign icon pack.
  */
-const GLYPHS: Record<string, ReactElement> = {
+const GLYPHS = {
     'alert-triangle': (
         <>
             <path d="M12 3 21.5 19.5H2.5L12 3Z" />
@@ -613,9 +613,16 @@ const GLYPHS: Record<string, ReactElement> = {
             <path d="M8 10.5h5" />
         </>
     ),
-}
+} satisfies Record<string, ReactElement>
 
-/** Crossed box — renders when an icon name has no glyph, so gaps are visible. */
+/** Every glyph the registry draws — call sites are type-checked against it. */
+export type IconName = keyof typeof GLYPHS
+
+/**
+ * Crossed box — renders when an icon name has no glyph, so gaps are visible.
+ * `IconName` keeps call sites honest at compile time; this guards names that
+ * slip past the type (casts, data from outside TypeScript).
+ */
 const FALLBACK = (
     <>
         <rect x="6.5" y="6.5" width="11" height="11" />
@@ -624,10 +631,10 @@ const FALLBACK = (
 )
 
 /** Every registered icon name — exposed for tests. */
-export const iconNames = Object.keys(GLYPHS)
+export const iconNames = Object.keys(GLYPHS) as IconName[]
 
 interface IconProps {
-    name: string
+    name: IconName
     /** Pixel size — used for both the glyph and the box. */
     size?: number
     className?: string

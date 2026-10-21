@@ -1,6 +1,6 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 
 type ButtonSize = 'md' | 'lg'
 
@@ -8,7 +8,7 @@ interface PrimaryButtonProps {
     children?: ReactNode
     onClick?: () => void
     size?: ButtonSize
-    icon?: string
+    icon?: IconName
     type?: 'button' | 'submit' | 'reset'
     disabled?: boolean
     emphasis?: 'flat' | 'pop'
@@ -119,7 +119,7 @@ export function TertiaryButton({ children, onClick, danger = false, type = 'butt
 }
 
 interface IconButtonProps {
-    icon: string
+    icon: IconName
     onClick?: () => void
     hoverTone?: 'cyan' | 'magenta'
     size?: number

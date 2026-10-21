@@ -4,7 +4,7 @@ export { IconButton, PrimaryButton, SecondaryButton, TertiaryButton, ToggleButto
 export { DialogPanel, DialogScrim, Footer, PageHeader, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
 export { Alert, ErrorScreen } from './Feedback'
-export { Icon } from './Icon'
+export { Icon, type IconName } from './Icon'
 export { Chip, TextArea, TextField } from './Inputs'
 export { PasswordStrength, scorePassword } from './PasswordStrength'
 export { Popover, PopoverOption } from './Popover'
