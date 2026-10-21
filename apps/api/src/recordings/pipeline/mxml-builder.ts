@@ -119,6 +119,7 @@ export class MxmlBuilder {
         // intonation tier, and does NOT ship: it recovers the actual key barely
         // half the time on short diatonic takes and nudges spelling the wrong way
         // when it misses — see the findings log and scripts/eval/research/design-take-key.md.
+        // The implementation was removed from voice-notation.ts; commit e16a3a7 holds it.
         const keyClasses = this.voiceSpelling && this.options.keyFifths != null ? keyPitchClasses(this.options.keyFifths) : null
         const offsetCents = this.voiceSpelling ? chooseNamingOffset(allNotes, estimateTuningOffsetCents(allNotes), keyClasses) : 0
         // The rhythm twin of the tuning offset: a take dragged uniformly behind
