@@ -4,6 +4,7 @@ import type { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
+import type { Tempo } from '../Tempo'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
 import { BarlineLayout } from './BarlineLayout'
@@ -15,6 +16,7 @@ import { NoteLayout } from './NoteLayout'
 import type { NoteWidth } from './NoteWidth'
 import type { PhysicalWidth } from './PhysicalWidth'
 import { Resizer, type Sizeable } from './Resizer'
+import { TempoLayout } from './TempoLayout'
 import { TupletLayout } from './TupletLayout'
 
 /** An element that occupies horizontal space within a measure. */
@@ -57,6 +59,7 @@ export class MeasureLayout {
     private readonly _noteLayouts = new Map<Note, NoteLayout>()
     private readonly _keyLayouts = new Map<KeySignature, KeySignatureLayout>()
     private readonly _tupletLayouts = new Map<Tuplet, TupletLayout>()
+    private readonly _tempoLayouts = new Map<Tempo, TempoLayout>()
     private readonly _beamByNote = new Map<Note, BeamLayout>()
 
     constructor(
@@ -175,6 +178,11 @@ export class MeasureLayout {
         for (const tuplet of measure.tuplets) {
             this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, beamContext))
         }
+
+        // --- Tempo markings, at their beat ---
+        for (const tempo of measure.tempos) {
+            this._tempoLayouts.set(tempo, new TempoLayout({ x: this.getXForBeat(tempo.beatPosition) }))
+        }
     }
 
     /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */
@@ -240,6 +248,12 @@ export class MeasureLayout {
     tupletLayoutFor(tuplet: Tuplet): TupletLayout {
         const layout = this._tupletLayouts.get(tuplet)
         if (!layout) throw new Error('Tuplet not part of this measure layout')
+        return layout
+    }
+
+    tempoLayoutFor(tempo: Tempo): TempoLayout {
+        const layout = this._tempoLayouts.get(tempo)
+        if (!layout) throw new Error('Tempo not part of this measure layout')
         return layout
     }
 

@@ -499,7 +499,7 @@ export const Score = memo(function Score({
                                 {measure.tempos.map((tempo, ti) => (
                                     <g
                                         key={`cursor-${tempo.id}`}
-                                        transform={`translate(${measure.layout.getXForBeat(tempo.beatPosition)}, 0)`}>
+                                        transform={`translate(${tempo.layout.x}, 0)`}>
                                         <TempoMarking
                                             key={`tempo-${ti}`}
                                             tempo={tempo}
@@ -511,8 +511,7 @@ export const Score = memo(function Score({
                                                         score.getIndexForMeasure(tempo.measure),
                                                         tempo.beatPosition,
                                                         tempo.bpm,
-                                                        row.getMeasureX(tempo.measure) +
-                                                            tempo.measure.layout.getXForBeat(tempo.beatPosition),
+                                                        row.getMeasureX(tempo.measure) + tempo.layout.x,
                                                         layout.getYForRow(row) + tempo.layout.y,
                                                     ))
                                             }

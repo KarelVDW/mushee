@@ -1,5 +1,5 @@
 import type { Duration } from './Duration'
-import { TempoLayout } from './layout/TempoLayout'
+import type { TempoLayout } from './layout/TempoLayout'
 import type { Measure } from './Measure'
 
 /**
@@ -7,11 +7,10 @@ import type { Measure } from './Measure'
  * (the unit playback, MIDI and the transcription grid run on); the marking is
  * *written* in the measure's felt beat — `♩ = 90` in 4/4, `♩. = 60` in 6/8,
  * `𝅗𝅥 = 45` in 2/2 — see `pulse`/`pulseBpm`. Immutable after construction; its
- * layout is a constant, so it is cached forever (context-free).
+ * layout (the marking's x at its beat) comes from the measure's layout.
  */
 export class Tempo {
     readonly id = crypto.randomUUID()
-    private _layout: TempoLayout | null = null
 
     constructor(
         readonly measure: Measure,
@@ -30,7 +29,6 @@ export class Tempo {
     }
 
     get layout(): TempoLayout {
-        this._layout ||= new TempoLayout()
-        return this._layout
+        return this.measure.layout.tempoLayoutFor(this)
     }
 }
