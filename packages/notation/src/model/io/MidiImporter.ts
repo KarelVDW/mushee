@@ -387,7 +387,7 @@ export class MidiImporter {
     private markKeys(score: Score, measureStarts: number[], keys: Timed<{ fifths: number; mode: string }>[]) {
         let previous: { fifths: number; mode: string } | undefined
         for (const key of keys) {
-            if (previous && previous.fifths === key.value.fifths && previous.mode === key.value.mode) continue
+            if (previous && KeySignature.same(previous, key.value.fifths, key.value.mode)) continue
             previous = key.value
             const beat = this.toBeats(key.tick)
             let index = measureStarts.findIndex((start) => start > beat + BEAT_EPSILON) - 1

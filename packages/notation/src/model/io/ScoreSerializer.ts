@@ -1,6 +1,6 @@
 import { CLEF_DEFS } from '../clefs'
 import type { Duration } from '../Duration'
-import type { KeySignature } from '../KeySignature'
+import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Score } from '../Score'
 import type { TimeSignature } from '../TimeSignature'
@@ -29,8 +29,7 @@ export class MeasureSerializer {
         const previousClefType = previousMeasure?.lastClef.type
         // Key/clef entering this measure is the one *leaving* the previous measure (its last one), so a
         // value carried forward isn't re-emitted as a redundant change. Before measure 1, key defaults to C (0).
-        const previousKeyFifths = previousMeasure?.lastKey.fifths ?? 0
-        const previousKeyMode = previousMeasure?.lastKey.mode
+        const previousKey = previousMeasure?.lastKey
         const previousTimeSignature = previousMeasure?.timeSignature
         // An explicit leading clef/key is a carry-forward boundary and must be emitted even when it equals
         // the carried-in value, or the boundary is lost on reload (it would deserialize as inherited).
@@ -38,8 +37,7 @@ export class MeasureSerializer {
         // The mode (major/minor, from imported files) is part of the key: C major and A minor share fifths=0.
         const keyChanged =
             this.measure.leadingKeyExplicit ||
-            previousKeyFifths !== this.measure.keySignature.fifths ||
-            previousKeyMode !== this.measure.keySignature.mode
+            !KeySignature.same(previousKey, this.measure.keySignature.fifths, this.measure.keySignature.mode)
         const timeSignatureChanged =
             previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
             previousTimeSignature?.beatType !== this.measure.timeSignature.beatType

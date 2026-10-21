@@ -12,6 +12,7 @@ import type { Tuplet } from './Tuplet'
 import type { BarlineType, ClefType } from './types'
 import { BeatPositionedList } from './util/BeatPositionedList'
 import { Derived } from './util/Derived'
+import { LeadingTrack } from './util/LeadingTrack'
 import { TupletFinder } from './util/TupletFinder'
 
 /**
@@ -27,16 +28,12 @@ export class Measure {
     readonly id = crypto.randomUUID()
     private _version = 0
     private _notes: Note[] = []
-    private _clefs: Clef[] = []
-    private _leadingClefExplicit: boolean
-    private _keySignatures: KeySignature[] = []
-    private _leadingKeyExplicit: boolean
+    private readonly _clefs: LeadingTrack<Clef>
+    private readonly _keys: LeadingTrack<KeySignature>
     private _tempos: Tempo[] = []
     private _timeSignature: TimeSignature
     private _endBarline?: BarlineType
 
-    private readonly _clefList = new BeatPositionedList<Clef>(() => this._clefs)
-    private readonly _keyList = new BeatPositionedList<KeySignature>(() => this._keySignatures)
     private readonly _tempoList = new BeatPositionedList<Tempo>(() => this._tempos)
 
     private readonly _beatData = new Derived(
@@ -74,10 +71,8 @@ export class Measure {
     ) {
         // The measure owns its clefs and key signatures (like its tempos): the leading one sits at beat 0,
         // further ones are mid-measure changes.
-        this._clefs = [new Clef(this, 0, clefType)]
-        this._leadingClefExplicit = value?.leadingClefExplicit ?? false
-        this._keySignatures = [new KeySignature(this, 0, value?.keyFifths ?? 0, value?.keyMode)]
-        this._leadingKeyExplicit = value?.leadingKeyExplicit ?? false
+        this._clefs = new LeadingTrack(new Clef(this, 0, clefType), value?.leadingClefExplicit ?? false)
+        this._keys = new LeadingTrack(new KeySignature(this, 0, value?.keyFifths ?? 0, value?.keyMode), value?.leadingKeyExplicit ?? false)
         this._timeSignature = timeSignature
         this._endBarline = value?.endBarline
     }
@@ -219,57 +214,57 @@ export class Measure {
     // --- Clefs (leading at beat 0 + optional mid-measure changes) ---
 
     get clefs(): Clef[] {
-        return this._clefs
+        return this._clefs.items
     }
 
     /** The leading clef shown at the start of the measure (the clef at beat 0). */
     get clef(): Clef {
-        const leading = this._clefList.leading
+        const leading = this._clefs.list.leading
         if (!leading) throw new Error('Measure has no leading clef')
         return leading
     }
 
     clefAtBeat(beatPosition: number): Clef | undefined {
-        return this._clefList.at(beatPosition)
+        return this._clefs.list.at(beatPosition)
     }
 
     /** The clef in effect at `beatPosition` within this measure — the latest at or before it. */
     clefAtOrBefore(beatPosition: number): Clef {
-        return this._clefList.atOrBefore(beatPosition) ?? this.clef
+        return this._clefs.list.atOrBefore(beatPosition) ?? this.clef
     }
 
     /** The last (highest-beat) clef in the measure — the one carried into the next measure. */
     get lastClef(): Clef {
-        return this._clefList.last ?? this.clef
+        return this._clefs.list.last ?? this.clef
     }
 
     /** The clef in effect just before `beatPosition` (ignoring any clef exactly at it). */
     clefBefore(beatPosition: number): Clef {
-        return this._clefList.before(beatPosition) ?? this.clef
+        return this._clefs.list.before(beatPosition) ?? this.clef
     }
 
     /**
      * Mid-measure clef changes that actually change the active clef, in beat order. A stored clef
      * equal to the one already in effect before it (e.g. left behind when the leading clef is set to
-     * the same type) is a no-op: it is kept in `_clefs` so the intent re-emerges if context changes,
+     * the same type) is a no-op: it is kept in `clefs` so the intent re-emerges if context changes,
      * but it is not drawn or serialized.
      */
     get midMeasureClefs(): Clef[] {
-        return this._clefList.midMeasureChanges((active, clef) => active.type !== clef.type)
+        return this._clefs.list.midMeasureChanges((active, clef) => active.type !== clef.type)
     }
 
     /** Whether the leading clef is an intentional change (a carry-forward boundary). */
     get leadingClefExplicit(): boolean {
-        return this._leadingClefExplicit
+        return this._clefs.leadingExplicit
     }
 
     addClef(beatPosition: number, type: ClefType) {
-        this._clefs.push(new Clef(this, beatPosition, type))
+        this._clefs.add(new Clef(this, beatPosition, type))
         this.touch()
     }
 
     removeClef(beatPosition: number) {
-        this._clefs = this._clefs.filter((c) => c.beatPosition !== beatPosition)
+        this._clefs.remove(beatPosition)
         this.touch()
     }
 
@@ -279,77 +274,71 @@ export class Measure {
      * Note: carry-forward into later measures is a Score responsibility (`Score.setClef`).
      */
     setClef(beatPosition: number, type: ClefType) {
-        this._clefs = this._clefs.filter((c) => c.beatPosition !== beatPosition)
-        if (beatPosition > 0 && this.clefBefore(beatPosition).type === type) {
-            // Redundant mid-measure change — leave the position governed by the preceding clef.
-        } else {
-            this._clefs.push(new Clef(this, beatPosition, type))
-            if (beatPosition === 0) this._leadingClefExplicit = true
-        }
+        this._clefs.set(new Clef(this, beatPosition, type), () => this.clefBefore(beatPosition).type === type)
         this.touch()
     }
 
     /** Demote the leading clef to inherited (no longer a carry-forward boundary). */
     makeLeadingClefInherited() {
-        this._leadingClefExplicit = false
+        this._clefs.demoteLeading()
         this.touch()
     }
 
     // --- Key signatures (parallels clefs: a leading key at beat 0 + optional mid-measure changes) ---
 
     get keySignatures(): KeySignature[] {
-        return this._keySignatures
+        return this._keys.items
     }
 
     /** The leading key signature at the start of the measure (the key at beat 0). */
     get keySignature(): KeySignature {
-        const leading = this._keyList.leading
+        const leading = this._keys.list.leading
         if (!leading) throw new Error('Measure has no leading key signature')
         return leading
     }
 
     keyAtBeat(beatPosition: number): KeySignature | undefined {
-        return this._keyList.at(beatPosition)
+        return this._keys.list.at(beatPosition)
     }
 
     /** The key signature in effect at `beatPosition` within this measure — the latest at or before it. */
     keyAtOrBefore(beatPosition: number): KeySignature {
-        return this._keyList.atOrBefore(beatPosition) ?? this.keySignature
+        return this._keys.list.atOrBefore(beatPosition) ?? this.keySignature
     }
 
     /** The last (highest-beat) key signature in the measure — the one carried into the next measure. */
     get lastKey(): KeySignature {
-        return this._keyList.last ?? this.keySignature
+        return this._keys.list.last ?? this.keySignature
     }
 
     /** The key signature in effect just before `beatPosition` (ignoring any key exactly at it). */
     keyBefore(beatPosition: number): KeySignature {
-        return this._keyList.before(beatPosition) ?? this.keySignature
+        return this._keys.list.before(beatPosition) ?? this.keySignature
     }
 
     /**
      * Mid-measure key changes that actually change the active key, in beat order. A stored key equal to
-     * the one already in effect before it is a no-op: kept in `_keySignatures` (so the intent re-emerges
+     * the one already in effect before it is a no-op: kept in `keySignatures` (so the intent re-emerges
      * if context changes) but not drawn or serialized.
      */
     get midMeasureKeySignatures(): KeySignature[] {
         // Mode counts: a mode-only change (C major → A minor, same fifths) carries forward via `lastKey`,
         // so it must be serialized too or the next bar's inherited key would not survive a reload.
-        return this._keyList.midMeasureChanges((active, key) => active.fifths !== key.fifths || active.mode !== key.mode)
+        return this._keys.list.midMeasureChanges((active, key) => !active.sameKeyAs(key.fifths, key.mode))
     }
 
     /** Whether the leading key signature is an intentional change (a carry-forward boundary). */
     get leadingKeyExplicit(): boolean {
-        return this._leadingKeyExplicit
+        return this._keys.leadingExplicit
     }
 
     addKeySignature(beatPosition: number, fifths: number, mode?: string) {
-        this._keySignatures.push(new KeySignature(this, beatPosition, fifths, mode))
+        this._keys.add(new KeySignature(this, beatPosition, fifths, mode))
         this.touch()
     }
 
     removeKeySignature(beatPosition: number) {
-        this._keySignatures = this._keySignatures.filter((k) => k.beatPosition !== beatPosition)
+        this._keys.remove(beatPosition)
         this.touch()
     }
 
@@ -359,28 +348,19 @@ export class Measure {
      * Note: carry-forward into later measures is a Score responsibility (`Score.setKeySignature`).
      */
     setKeySignature(beatPosition: number, fifths: number, mode?: string) {
-        this._keySignatures = this._keySignatures.filter((k) => k.beatPosition !== beatPosition)
-        const before = beatPosition > 0 ? this.keyBefore(beatPosition) : undefined
-        if (before && before.fifths === fifths && before.mode === mode) {
-            // Redundant mid-measure change — leave the position governed by the preceding key.
-        } else {
-            this._keySignatures.push(new KeySignature(this, beatPosition, fifths, mode))
-            if (beatPosition === 0) this._leadingKeyExplicit = true
-        }
+        this._keys.set(new KeySignature(this, beatPosition, fifths, mode), () => this.keyBefore(beatPosition).sameKeyAs(fifths, mode))
         this.touch()
     }
 
     /** Demote the leading key signature to inherited (no longer a carry-forward boundary). */
     makeLeadingKeyInherited() {
-        this._leadingKeyExplicit = false
+        this._keys.demoteLeading()
         this.touch()
     }
 
     /** Re-key every key signature in the measure by a (chromatic, diatonic) interval — for instrument transposition. */
     transposeKeySignatures(chromatic: number, diatonic: number) {
-        this._keySignatures = this._keySignatures.map(
-            (k) => new KeySignature(this, k.beatPosition, KeySignature.transposedFifths(k.fifths, chromatic, diatonic), k.mode),
-        )
+        this._keys.map((k) => new KeySignature(this, k.beatPosition, KeySignature.transposedFifths(k.fifths, chromatic, diatonic), k.mode))
         this.touch()
     }
 
@@ -391,15 +371,12 @@ export class Measure {
      * The version still moves (via the internal bump) so stale layouts rebuild.
      */
     applyInheritedClef(type: ClefType) {
-        if (this._leadingClefExplicit || this.clef.type === type) return
-        this._clefs = [new Clef(this, 0, type), ...this._clefs.filter((c) => c.beatPosition !== 0)]
-        this._version++
+        if (this._clefs.replaceLeadingInherited(() => new Clef(this, 0, type), () => this.clef.type === type)) this._version++
     }
 
     applyInheritedKey(fifths: number, mode?: string) {
-        if (this._leadingKeyExplicit || (this.keySignature.fifths === fifths && this.keySignature.mode === mode)) return
-        this._keySignatures = [new KeySignature(this, 0, fifths, mode), ...this._keySignatures.filter((k) => k.beatPosition !== 0)]
-        this._version++
+        const inherited = () => new KeySignature(this, 0, fifths, mode)
+        if (this._keys.replaceLeadingInherited(inherited, () => this.keySignature.sameKeyAs(fifths, mode))) this._version++
     }
 
     // --- Time signature & barline ---

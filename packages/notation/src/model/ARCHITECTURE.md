@@ -107,7 +107,9 @@ into measures, and there is no re-entrancy to guard against.
   constructor-computed derived state.
 - Layout classes: readonly fields for everything. Never lazily-computed internals.
 - Beat-positioned collections (clefs, keys, tempos) share `BeatPositionedList` for their
-  at/at-or-before/before/last/mid-measure queries — don't re-implement those loops.
+  at/at-or-before/before/last/mid-measure queries — don't re-implement those loops. Clefs and
+  keys also share their writes through `LeadingTrack` (redundant mid-measure changes,
+  explicit vs inherited leading item); its writes replace the array, never mutate it.
 - Keep dead members out: if a method has no production caller, delete it (tests alone don't
   justify keeping API surface).
 - Importing the model from an app: top-level classes, constants and types come from the

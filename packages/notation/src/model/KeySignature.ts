@@ -37,10 +37,11 @@ export interface KeyAccidental {
 
 /**
  * A key signature anchored in a measure, like a {@link Clef}: the leading key sits at beat 0,
- * further ones are mid-measure changes. Its identity for propagation is `fifths` (positive =
- * sharps, negative = flats); `mode` is carried for serialization but does not affect accidentals
- * or rendering. Its drawn form (cancellation naturals) depends on the *preceding* key, so its
- * layout is context-dependent and lives in the layout layer (delegated below).
+ * further ones are mid-measure changes. A key's identity is (fifths, mode) — see
+ * {@link sameKeyAs}: C major and A minor share fifths 0 yet are different keys to propagation,
+ * redundancy checks and serialization. Only `fifths` (positive = sharps, negative = flats)
+ * shapes accidentals and rendering. Its drawn form (cancellation naturals) depends on the
+ * *preceding* key, so its layout is context-dependent and lives in the layout layer (delegated below).
  */
 export class KeySignature {
     readonly id = crypto.randomUUID()
@@ -55,6 +56,19 @@ export class KeySignature {
     /** Delegates into the current ScoreLayout — context-dependent, never cached here. */
     get layout(): KeySignatureLayout {
         return this.measure.layout.keyLayoutFor(this)
+    }
+
+    /** Whether this is the key (fifths, mode) — a key's identity, mode included. */
+    sameKeyAs(fifths: number, mode?: string): boolean {
+        return KeySignature.same(this, fifths, mode)
+    }
+
+    /**
+     * {@link sameKeyAs} for a key that may be absent or a plain `{ fifths, mode }` value: no key
+     * at all is C major with no mode — what a score assumes before its first key signature.
+     */
+    static same(key: { fifths: number; mode?: string } | undefined, fifths: number, mode?: string): boolean {
+        return (key?.fifths ?? 0) === fifths && key?.mode === mode
     }
 
     /** Fifths of the key in effect immediately before this one — the previous measure's last key, or the key earlier in this measure. */

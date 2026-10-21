@@ -317,9 +317,7 @@ export class Score {
         this.propagateContext()
         for (const { measure, clefType, key, bpm } of successors) {
             if (measure.clef.type !== clefType) measure.setClef(0, clefType)
-            if (measure.keySignature.fifths !== key.fifths || measure.keySignature.mode !== key.mode) {
-                measure.setKeySignature(0, key.fifths, key.mode)
-            }
+            if (!measure.keySignature.sameKeyAs(key.fifths, key.mode)) measure.setKeySignature(0, key.fifths, key.mode)
             if (!measure.tempoAtBeat(0) && this.tempoEntering(measure) !== bpm) measure.setTempo(0, bpm)
         }
         this.propagateContext()
@@ -418,7 +416,7 @@ export class Score {
             const carried = this.getPreviousMeasure(measure)?.lastKey
             // Demote to inherited only when nothing changes; a relative major↔minor switch (same fifths,
             // different mode) is still a real boundary and must be kept explicit so the mode is preserved.
-            if (fifths === (carried?.fifths ?? 0) && mode === carried?.mode) measure.makeLeadingKeyInherited()
+            if (KeySignature.same(carried, fifths, mode)) measure.makeLeadingKeyInherited()
             else measure.setKeySignature(0, fifths, mode)
         } else measure.setKeySignature(beat, fifths, mode)
         this.propagateContext()

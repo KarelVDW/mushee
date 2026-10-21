@@ -51,6 +51,24 @@ describe('KeySignature', () => {
         expect(key(-7).flats).toEqual(['B', 'E', 'A', 'D', 'G', 'C', 'F'])
     })
 
+    describe('key identity (fifths, mode)', () => {
+        it('sameKeyAs compares fifths and mode — relative major and minor are different keys', () => {
+            expect(key(0).sameKeyAs(0)).toBe(true)
+            expect(key(0, 'minor').sameKeyAs(0, 'minor')).toBe(true)
+            expect(key(0).sameKeyAs(0, 'minor')).toBe(false)
+            expect(key(0, 'major').sameKeyAs(0)).toBe(false) // an explicit 'major' is not the same as no mode
+            expect(key(1).sameKeyAs(2)).toBe(false)
+        })
+
+        it('same takes plain values, and reads no key at all as C major with no mode', () => {
+            expect(KeySignature.same({ fifths: 2, mode: 'major' }, 2, 'major')).toBe(true)
+            expect(KeySignature.same({ fifths: 2, mode: 'major' }, 2, 'minor')).toBe(false)
+            expect(KeySignature.same(undefined, 0)).toBe(true)
+            expect(KeySignature.same(undefined, 0, 'major')).toBe(false)
+            expect(KeySignature.same(undefined, 1)).toBe(false)
+        })
+    })
+
     describe('accidentals (drawn glyphs)', () => {
         it('C major draws nothing', () => {
             expect(key(0).accidentals).toEqual([])
