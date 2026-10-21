@@ -624,7 +624,7 @@ export class RecordingPipeline {
                 // on the take's own tuning grid from it (voice-notation.ts). This copy
                 // is field-by-field, so forgetting the field here silently reverts
                 // voice spelling to absolute names; it did, once.
-                pitchMidiFloat: (n as PendingNote).pitchMidiFloat,
+                pitchMidiFloat: n.pitchMidiFloat,
             })
         }
         this.uncommittedFromSec = earliestUncommitted

@@ -1,3 +1,5 @@
+import type { NoteEventTime } from './note-event'
+
 /**
  * Notation-layer pitch SPELLING for sung takes.
  *
@@ -34,12 +36,8 @@
  * through untouched, so nothing here can move an instrument take.
  */
 
-/** Carried alongside `pitchMidi` by the voice decoder; survives the extractor
- *  because every note-rewriting step spread-copies (`{ ...note }`). */
-export interface FractionalPitch {
-    /** Unrounded MIDI (α-trimmed contour mean / 100 cents). */
-    pitchMidiFloat?: number
-}
+/** The fields tuning-aware spelling reads (see `NoteEventTime.pitchMidiFloat`). */
+type FractionalPitch = Pick<NoteEventTime, 'pitchMidiFloat' | 'durationSeconds'>
 
 /**
  * Deviation-from-nearest-key a note must exceed before key snapping may move
@@ -64,7 +62,7 @@ const MIN_NOTES_FOR_OFFSET = 4
  * fragments are not), and the mean angle is the offset. Circular because a
  * take straddling the ±50-cent seam must not average to nonsense.
  */
-export function estimateTuningOffsetCents(notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>): number {
+export function estimateTuningOffsetCents(notes: ReadonlyArray<FractionalPitch>): number {
     let re = 0
     let im = 0
     let weight = 0
@@ -128,7 +126,7 @@ const KEY_PROFILES: Record<KeyProfileName, { major: number[]; minor: number[] }>
  * relative major's pitch-class set — the set is all `spellMidi` consumes.
  */
 export function estimateTakeKeyClasses(
-    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
+    notes: ReadonlyArray<FractionalPitch>,
     offsetCents: number,
     profile: KeyProfileName = 'krumhansl',
 ): { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null {
@@ -206,7 +204,7 @@ export function estimateTakeKeyClasses(
  * weighted) is diatonic wins. Ties keep the minimal shift.
  */
 export function chooseNamingOffset(
-    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
+    notes: ReadonlyArray<FractionalPitch>,
     offsetCents: number,
     keyClasses: Set<number> | null,
 ): number {
@@ -273,7 +271,7 @@ export function estimateGridPhaseBeats(notes: ReadonlyArray<{ startTimeSeconds: 
  * The written MIDI for one note: normalize by the take offset, round, and let
  * the key vote only inside the ambiguity band.
  */
-export function spellMidi(note: FractionalPitch & { pitchMidi: number }, offsetCents: number, keyClasses: Set<number> | null): number {
+export function spellMidi(note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>, offsetCents: number, keyClasses: Set<number> | null): number {
     if (note.pitchMidiFloat === undefined) return note.pitchMidi
     const x = note.pitchMidiFloat - offsetCents / 100
     let midi = Math.round(x)

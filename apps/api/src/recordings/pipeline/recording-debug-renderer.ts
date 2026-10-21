@@ -1,8 +1,6 @@
-interface NoteSegment {
-    startTimeSeconds: number
-    durationSeconds: number
-    pitchMidi: number
-}
+import type { NoteEventTime } from './note-event'
+
+type NoteSegment = Pick<NoteEventTime, 'startTimeSeconds' | 'durationSeconds' | 'pitchMidi'>
 
 export interface DebugRenderOptions {
     rawNotes: NoteSegment[]

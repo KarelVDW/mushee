@@ -121,16 +121,13 @@ export class CrepePitchdownProvider implements PitchProvider {
     /** Model-domain notes (half speed, an octave low) → real-domain notes. */
     private unscale(notes: NoteEventTime[]): NoteEventTime[] {
         const k = this.factor
-        return notes.map((n) => {
-            // Not on the library type — the trajectory segmenters attach it (E1).
-            const float = (n as NoteEventTime & { pitchMidiFloat?: number }).pitchMidiFloat
-            return {
-                ...n,
-                startTimeSeconds: n.startTimeSeconds / k,
-                durationSeconds: n.durationSeconds / k,
-                pitchMidi: n.pitchMidi + this.semitones,
-                ...(float !== undefined && { pitchMidiFloat: float + this.semitones }),
-            } as NoteEventTime
-        })
+        return notes.map((n) => ({
+            ...n,
+            startTimeSeconds: n.startTimeSeconds / k,
+            durationSeconds: n.durationSeconds / k,
+            pitchMidi: n.pitchMidi + this.semitones,
+            // The trajectory segmenters attach the unrounded pitch (E1); it shifts with pitchMidi.
+            ...(n.pitchMidiFloat !== undefined && { pitchMidiFloat: n.pitchMidiFloat + this.semitones }),
+        }))
     }
 }

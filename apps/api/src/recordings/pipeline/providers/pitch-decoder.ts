@@ -266,7 +266,7 @@ export function segmentNotes(cents: Float32Array, confidence: Float32Array, fram
             // without touching pitchMidi or any scored number. Absolute (A=440).
             pitchMidiFloat: medianCents / 100,
             amplitude: runMaxConf,
-        } as NoteEventTime)
+        })
         runStart = -1
         runCents = []
         runMaxConf = 0
@@ -400,7 +400,7 @@ export function segmentNotesBySemitone(
                 pitchMidi: runMidi,
                 ...(runCents.length && { pitchMidiFloat: median(runCents) / 100 }),
                 amplitude: runMaxConf,
-            } as NoteEventTime)
+            })
         }
         runStart = -1
         runMidi = -2

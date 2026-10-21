@@ -1,3 +1,4 @@
+import type { NoteEventTime } from './note-event'
 import type { MxmlMeasure, MxmlMeasureEntry, MxmlNoteType, MxmlPitch, MxmlStep, MxmlTie } from './mxml.types'
 import { chooseNamingOffset, estimateGridPhaseBeats, estimateTuningOffsetCents, keyPitchClasses, spellMidi } from './voice-notation'
 
@@ -53,13 +54,8 @@ export interface BuilderOptions {
     keyFifths?: number | null
 }
 
-export interface PendingNote {
-    startTimeSeconds: number
-    durationSeconds: number
-    pitchMidi: number
-    /** Unrounded pitch from the voice decoder; absent for instrument takes. */
-    pitchMidiFloat?: number
-}
+/** A committed note as the builder lays it out; `pitchMidiFloat` drives voice spelling. */
+export type PendingNote = Pick<NoteEventTime, 'startTimeSeconds' | 'durationSeconds' | 'pitchMidi' | 'pitchMidiFloat'>
 
 export class MxmlBuilder {
     /**

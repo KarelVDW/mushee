@@ -648,7 +648,7 @@ export class VoiceNoteDecoder {
                 // is absolute — and extractor steps spread-copy, so the field survives.
                 pitchMidiFloat: cents / 100,
                 amplitude: this.peakConfidence(track, run),
-            } as NoteEventTime)
+            })
         }
         return this.applyMergeGuard(notes, track, voiced)
     }
@@ -1332,7 +1332,7 @@ export class VoiceNoteDecoder {
             })
             if (merged !== null) {
                 prev.pitchMidi = Math.round(merged / 100)
-                ;(prev as NoteEventTime & { pitchMidiFloat?: number }).pitchMidiFloat = merged / 100
+                prev.pitchMidiFloat = merged / 100
             }
         }
         return out
