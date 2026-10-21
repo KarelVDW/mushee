@@ -233,6 +233,15 @@ export class MxmlBuilder {
      * A span is emitted as ONE symbol only when it both matches a writable value and
      * begins on a position at least as strong as that value's own alignment — which is
      * what allows a dotted half at the start of a bar while forbidding one from beat 2.
+     *
+     * Twin of the editor's packages/notation/src/model/util/DurationSpeller.ts, which
+     * ports this speller (`spellDuration`/`spellSpan` ↔ `spell`/`spellUnits`). Two
+     * differences: this one counts 12 divisions per quarter where DurationSpeller
+     * counts 4 sixteenth units, and its no-interior-boundary fallback takes the
+     * largest value that fits without DurationSpeller's alignment check. Kept apart
+     * until the API can run the notation package; the table test in
+     * test/recordings/recording-editor-contract.test.ts pins them to the same
+     * spelling on the sixteenth grid.
      */
     private spellDuration(startBeatInMeasure: number, beats: number): StandardDuration[] {
         const divs = Math.round(beats * DIVISIONS_PER_QUARTER)
@@ -268,7 +277,8 @@ export class MxmlBuilder {
             }
         }
         // No interior boundary: the span sits inside one grid cell, so the best we can
-        // do is the largest writable value that fits, then whatever remains.
+        // do is the largest writable value that fits, then whatever remains. (Unlike
+        // DurationSpeller, the fit is not required to align — see `spellDuration`.)
         const fit = STANDARD_DURATIONS.find((d) => d.divisions <= divs)
         if (!fit) return []
         return [fit, ...this.spellSpan(start + fit.divisions, divs - fit.divisions)]
