@@ -3,10 +3,11 @@ import { loadSync } from '@grpc/proto-loader'
 import { PROTO_PATH } from '@mushee/inference-proto'
 import { Logger } from '@nestjs/common'
 
+import { envPositiveNumber } from '../env'
 import type { ModelBackend, ModelKey } from './model-backend'
 
 /** Per-call deadline; the forward pass is bounded so this is generous. */
-const CALL_TIMEOUT_MS = Number(process.env.INFERENCE_TIMEOUT_MS) || 15000
+const CALL_TIMEOUT_MS = envPositiveNumber('INFERENCE_TIMEOUT_MS', 15000)
 
 const PKG = 'mushee.inference.v1'
 

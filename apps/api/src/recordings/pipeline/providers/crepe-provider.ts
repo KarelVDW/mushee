@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common'
 
+import { envOptionalNumber } from '../env'
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
 import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
@@ -64,9 +65,7 @@ const RECOMPUTE_TAIL_FRAMES = 5
  * not what actually limits reverb recall. Set RECORDING_VITERBI_JUMP_FLOOR to
  * a negative number to experiment.
  */
-const JUMP_FLOOR_ENV = process.env.RECORDING_VITERBI_JUMP_FLOOR
-const VITERBI_JUMP_FLOOR =
-    JUMP_FLOOR_ENV !== undefined && JUMP_FLOOR_ENV !== '' && Number.isFinite(Number(JUMP_FLOOR_ENV)) ? Number(JUMP_FLOOR_ENV) : undefined
+const VITERBI_JUMP_FLOOR = envOptionalNumber('RECORDING_VITERBI_JUMP_FLOOR')
 
 const VITERBI_OPTS: ViterbiOptions = {
     numBins: NUM_BINS,

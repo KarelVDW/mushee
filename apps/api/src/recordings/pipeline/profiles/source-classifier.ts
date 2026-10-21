@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
 import { describeError } from '../describe-error'
+import { envFlag } from '../env'
 import { ensureWasmBackend, readModelArtifacts } from '../providers/tf-backend'
 
 /**
@@ -52,7 +53,7 @@ import { ensureWasmBackend, readModelArtifacts } from '../providers/tf-backend'
 const logger = new Logger('SourceClassifier')
 
 /** Kill-switch, mirroring RECORDING_VOICE_DECODE: `0` disables classification. */
-const CLASSIFY = process.env.RECORDING_SOURCE_CLASSIFY !== '0'
+const CLASSIFY = envFlag('RECORDING_SOURCE_CLASSIFY')
 
 const MODEL_DIR = process.env.YAMNET_MODEL_DIR ?? resolve(__dirname, '../../../../model-yamnet')
 

@@ -1,3 +1,4 @@
+import { envFlag } from './env'
 import type { NoteEventTime } from './note-event'
 
 /**
@@ -71,7 +72,7 @@ const OUTLIER_PITCH_DIFF_SEMITONES = 7
  * for settings that generalize across real and synthetic corpora.
  */
 /** Kill-switch (A/B only): `EXTRACTOR_COLLAPSE_COINCIDENT=0` restores the pre-2026-09-27 output. */
-const COLLAPSE_COINCIDENT = process.env.EXTRACTOR_COLLAPSE_COINCIDENT !== '0'
+const COLLAPSE_COINCIDENT = envFlag('EXTRACTOR_COLLAPSE_COINCIDENT')
 
 export interface NoteExtractorOptions {
     /** Shortest note kept, in beats. Lower recovers brief notes (recall). */

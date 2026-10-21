@@ -7,6 +7,7 @@
 
 import { Logger } from '@nestjs/common'
 
+import { envFlag, envNumber, envOptionalNumber, NOISE_ADAPT, VOICE_DECODE } from '../env'
 import { OnsetDetector } from '../onset-detector'
 import { isStruckOrPluckedInstrument, isVoiceInstrument, rangeForInstrument } from './instrument-ranges'
 import {
@@ -47,51 +48,30 @@ export interface ProfileHint {
 }
 
 /**
- * Noise-adaptation thresholds (tuned against the adverse tier of the eval
- * corpus — scripts/eval). A recording counts as noisy when either a
- * meaningful share of its energetic frames are broadband (wind gusts,
- * chatter) or its quiet frames sit close to its loud ones (steady backdrop).
- */
-/** A/B kill-switch shared with pitch-scan.ts: RECORDING_NOISE_ADAPT=0 = legacy. */
-const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0'
-/**
- * Kill-switch for voice routing: `RECORDING_VOICE_DECODE=0` sends singing back
- * through the shared semitone-run segmenter.
- *
- * Two jobs. In the eval harness it is the only way to get a clean A/B of the
- * voice decode over the *production* path — `EVAL_NO_HINT` also removes the
- * frequency-window hint, so it cannot isolate this. In production it is the
- * rollback: the decode is a large behavioural change on the one input class the
- * product exists for, and reverting it should not need a deploy.
- */
-const VOICE_DECODE = process.env.RECORDING_VOICE_DECODE !== '0'
-/**
  * Onset-sensitivity policy (see `SUSTAINED_ONSET_DIP_RATIO`). Kill-switch:
  * `ONSET_POLICY=legacy` restores the detector's default for every source. The
  * numeric overrides and `SUSTAINED_ONSET_REVERB_RAMP=0` (flat sustained ratio)
  * exist for A/B runs only.
  */
 const ONSET_POLICY_LEGACY = process.env.ONSET_POLICY === 'legacy'
-const env = (k: string): number | undefined => (process.env[k] ? Number(process.env[k]) : undefined)
-const VOICE_DIP_OVERRIDE = env('VOICE_ONSET_DIP_RATIO')
-const SUSTAINED_DIP_OVERRIDE = env('ONSET_DIP_RATIO')
-const SUSTAINED_REVERB_RAMP = process.env.SUSTAINED_ONSET_REVERB_RAMP !== '0'
-const VOICE_ONSET_MIN_TROUGH_SEC = env('VOICE_ONSET_MIN_TROUGH_SEC')
-
-/** Env override with default — lets the eval sweep explore without code edits. */
-function envNum(key: string, fallback: number): number {
-    const v = Number(process.env[key])
-    return Number.isFinite(v) ? v : fallback
-}
+const VOICE_DIP_OVERRIDE = envOptionalNumber('VOICE_ONSET_DIP_RATIO')
+const SUSTAINED_DIP_OVERRIDE = envOptionalNumber('ONSET_DIP_RATIO')
+const SUSTAINED_REVERB_RAMP = envFlag('SUSTAINED_ONSET_REVERB_RAMP')
+const VOICE_ONSET_MIN_TROUGH_SEC = envOptionalNumber('VOICE_ONSET_MIN_TROUGH_SEC')
 
 /**
- * A take counts as noisy when the measured signal-to-backdrop ratio drops
- * below this. Takes with no measurable backdrop (snrDb undefined — e.g.
- * wall-to-wall clean legato) are never flagged: absence of quiet frames is
- * not evidence of noise.
+ * Noise-adaptation thresholds (tuned against the adverse tier of the eval
+ * corpus — scripts/eval). A recording counts as noisy when either a
+ * meaningful share of its energetic frames are broadband (wind gusts,
+ * chatter) or its quiet frames sit close to its loud ones (steady backdrop).
+ *
+ * `NOISY_MAX_SNR_DB`: a take counts as noisy when the measured
+ * signal-to-backdrop ratio drops below this. Takes with no measurable
+ * backdrop (snrDb undefined — e.g. wall-to-wall clean legato) are never
+ * flagged: absence of quiet frames is not evidence of noise.
  */
-const NOISY_MAX_SNR_DB = envNum('RECORDING_NOISY_MAX_SNR_DB', 25)
-const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5)
+const NOISY_MAX_SNR_DB = envNumber('RECORDING_NOISY_MAX_SNR_DB', 25)
+const NOISY_MIN_NOISINESS = envNumber('RECORDING_NOISY_MIN_NOISINESS', 0.5)
 /**
  * Actions taken on a noisy take. ALL DEFAULT TO NO-OPS: the 2026-07 adverse
  * eval (scripts/eval, echoey-room/wind/street/distant conditions on both the
@@ -110,10 +90,10 @@ const NOISY_MIN_NOISINESS = envNum('RECORDING_NOISY_MIN_NOISINESS', 0.5)
  * because `snrDb`/`noisiness` are built for an additive stationary interferer
  * and reverberation is neither.
  */
-const NOISY_CONFIDENCE_BUMP = envNum('RECORDING_NOISY_CONF_BUMP', 0)
+const NOISY_CONFIDENCE_BUMP = envNumber('RECORDING_NOISY_CONF_BUMP', 0)
 const NOISY_CONFIDENCE_CAP = 0.75
-const NOISY_MIN_FRAMES_PER_NOTE = envNum('RECORDING_NOISY_MIN_FRAMES', 4)
-const NOISY_DENOISE = process.env.RECORDING_NOISY_DENOISE === '1'
+const NOISY_MIN_FRAMES_PER_NOTE = envNumber('RECORDING_NOISY_MIN_FRAMES', 4)
+const NOISY_DENOISE = envFlag('RECORDING_NOISY_DENOISE', false)
 
 function clamp(x: number, lo: number, hi: number): number {
     return Math.max(lo, Math.min(hi, x))
@@ -124,8 +104,8 @@ function clamp(x: number, lo: number, hi: number): number {
  * floor it may never go below. See `estimateReverberance` for why this is the
  * adaptation reverb actually wants.
  */
-const REVERB_CONFIDENCE_RELIEF = envNum('RECORDING_REVERB_CONF_RELIEF', 0.25)
-const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25)
+const REVERB_CONFIDENCE_RELIEF = envNumber('RECORDING_REVERB_CONF_RELIEF', 0.25)
+const REVERB_CONFIDENCE_FLOOR = envNumber('RECORDING_REVERB_CONF_FLOOR', 0.25)
 /**
  * `dipDepth` anchors for the reverberance ramp: the measured medians of the
  * clean (0.34) and reverberant (0.50–0.55) halves of the corpus. Below the low
@@ -134,8 +114,8 @@ const REVERB_CONFIDENCE_FLOOR = envNum('RECORDING_REVERB_CONF_FLOOR', 0.25)
  * because the feature is only weakly separating (see `estimateReverberance`) and
  * a hard threshold would mean applying the full relief to false positives.
  */
-const REVERB_DIP_DRY = envNum('RECORDING_REVERB_DIP_DRY', 0.36)
-const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52)
+const REVERB_DIP_DRY = envNumber('RECORDING_REVERB_DIP_DRY', 0.36)
+const REVERB_DIP_WET = envNumber('RECORDING_REVERB_DIP_WET', 0.52)
 /**
  * Minimum envelope modulation (coefficient of variation over above-silence
  * frames) for the fill measurement to mean anything.
@@ -152,7 +132,7 @@ const REVERB_DIP_WET = envNum('RECORDING_REVERB_DIP_WET', 0.52)
  * never fires on real material; a constant-amplitude synthetic tone measures
  * 0.027.
  */
-const REVERB_MIN_MODULATION = envNum('RECORDING_REVERB_MIN_MODULATION', 0.15)
+const REVERB_MIN_MODULATION = envNumber('RECORDING_REVERB_MIN_MODULATION', 0.15)
 
 /**
  * Blind reverberance of a take, 0 (dry) … 1 (heavily reverberant), from the

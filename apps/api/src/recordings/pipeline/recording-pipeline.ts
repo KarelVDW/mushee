@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common'
 import { AudioConverter } from './audio-converter'
 import { AudioDecoder, StreamingDecoder } from './audio-decoder'
 import { describeError } from './describe-error'
+import { envFlag, envNumber, envPositiveNumber } from './env'
 import type { MxmlMeasure } from './mxml.types'
 import { MxmlBuilder, PendingNote } from './mxml-builder'
 import type { NoteEventTime } from './note-event'
@@ -17,7 +18,7 @@ const DEFAULT_BEATS = 4
 const DEFAULT_BEAT_TYPE = 4
 // Pass cadence. Overridable so eval harnesses can drive many incremental passes
 // without waiting in real time; unset in production, where it stays 1 s.
-const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
+const DEBOUNCE_MS = envPositiveNumber('RECORDING_DEBOUNCE_MS', 1000)
 /**
  * OFFSET-confirmation margin (E5/R12): a note is committed once this much
  * audio exists past its END — the streaming analogue of Essentia Pitch2Midi's
@@ -29,7 +30,7 @@ const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
  * delay compensation does not apply either — we report measured note times,
  * not confirmation times; R7 calibrated the reported-time bias at 0.)
  */
-const STABLE_MARGIN_SEC = Number(process.env.RECORDING_STABLE_MARGIN_SEC) || 0.4
+const STABLE_MARGIN_SEC = envPositiveNumber('RECORDING_STABLE_MARGIN_SEC', 0.4)
 /** Sample rate / high-pass for the coarse detection decode that picks a profile. */
 const DETECT_SAMPLE_RATE = 16000
 const DETECT_HIGHPASS_HZ = 30
@@ -55,15 +56,7 @@ const DETECT_MAX_WAIT_SEC = envNumber('RECORDING_DETECT_MAX_WAIT_SEC', 8)
  * this reproduces the pre-2026-09 lock behaviour exactly — the A/B the
  * `probe-leadin.ts` harness measures, and production's rollback.
  */
-const FINAL_REROUTE = process.env.RECORDING_FINAL_REROUTE !== '0'
-
-/** Numeric env override; `0` is a legitimate value (unlike `Number(x) || d`). */
-function envNumber(key: string, fallback: number): number {
-    const raw = process.env[key]
-    if (raw === undefined || raw === '') return fallback
-    const v = Number(raw)
-    return Number.isFinite(v) ? v : fallback
-}
+const FINAL_REROUTE = envFlag('RECORDING_FINAL_REROUTE')
 
 /** The resolver's "no reliable pitch in this audio" outcome, with or without a hint. */
 function isFallbackProfile(profile: PipelineProfile): boolean {
