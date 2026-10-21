@@ -78,7 +78,7 @@ export class RecordingSessionsService implements OnModuleInit {
             this.recordingRepo,
             events,
             lock,
-            (recordingId) => new RecordingArchiver(this.storage, `recordings/${userId}/${scoreId}/${recordingId}`),
+            (recordingId) => new RecordingArchiver(this.storage, RecordingArchiver.folderFor(userId, scoreId, recordingId)),
         )
 
         // From here on the session (and its one-per-user lock) is live — every

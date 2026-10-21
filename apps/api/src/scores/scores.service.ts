@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain } from 'class-transformer'
 import { ILike, Repository } from 'typeorm'
 
+import { RecordingArchiver } from '../recordings/recording-archiver'
 import { StorageService } from '../storage/storage.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { ErrorReporter } from '../telemetry/error-reporter'
@@ -253,6 +254,11 @@ export class ScoresService {
     }
 
     private async removeScore(score: Score): Promise<void> {
+        // The score's takes: their rows go with the score row (FK ON DELETE
+        // CASCADE), their audio does not. Delete it first, as RecordingsService.remove
+        // does for one take — if storage fails, the score is still whole and its
+        // takes' audio still reachable through it.
+        await this.storageService.deletePrefix(RecordingArchiver.folderFor(score.userId, score.id))
         await this.editCache.deleteByScoreId(score.id)
 
         if (score.storageKey) {

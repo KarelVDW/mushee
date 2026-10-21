@@ -7,8 +7,8 @@ import { describeError } from './pipeline/describe-error'
 import type { DebugBundle, PipelineArchive } from './pipeline/recording-pipeline'
 
 /**
- * Archives one recording session to blob storage under
- * `recordings/<userId>/<scoreId>/<recordingId>/`:
+ * Archives one recording session to blob storage under its take folder
+ * (`folderFor`, `recordings/<userId>/<scoreId>/<recordingId>/`):
  *
  * - `audio.<ext>` — the encoded stream, uploaded chunk-by-chunk as it arrives
  *   so memory stays flat regardless of take length.
@@ -32,6 +32,17 @@ export class RecordingArchiver implements PipelineArchive {
         private readonly storage: StorageService,
         readonly basePath: string,
     ) {}
+
+    /** Where all of a user's take audio lives — what the account purge deletes. No trailing slash. */
+    static folderForUser(userId: string): string {
+        return `recordings/${userId}`
+    }
+
+    /** The folder of a user's takes in one score, or of one take when `recordingId` is given. No trailing slash. */
+    static folderFor(userId: string, scoreId: string, recordingId?: string): string {
+        const scoreFolder = `${RecordingArchiver.folderForUser(userId)}/${scoreId}`
+        return recordingId ? `${scoreFolder}/${recordingId}` : scoreFolder
+    }
 
     /**
      * The object key of the fully uploaded audio, known after `finalize()`.

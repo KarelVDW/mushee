@@ -7,7 +7,7 @@ import { Repository } from 'typeorm'
 import { StorageService } from '../storage/storage.service'
 import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
-import { audioContentTypeFor } from './recording-archiver'
+import { audioContentTypeFor, RecordingArchiver } from './recording-archiver'
 import { RecordingCreditsService } from './recording-credits.service'
 import { RecordingLocksService } from './recording-locks.service'
 
@@ -111,11 +111,13 @@ export class RecordingsService {
 
     /**
      * Delete all recording data for a user (account purge): archived audio,
-     * sessions, usage, lock. Storage goes first — if it fails the purge must
-     * report failure instead of dropping the rows that locate the audio.
+     * sessions, usage, lock. The user-level folder locates the audio, not the
+     * rows: by now the purge has deleted the user's scores, and their take rows
+     * with them (FK cascade). Storage still goes first, so a storage failure
+     * fails the purge before anything else is dropped.
      */
     async deleteAllForUser(userId: string): Promise<void> {
-        await this.storage.deletePrefix(`recordings/${userId}`)
+        await this.storage.deletePrefix(RecordingArchiver.folderForUser(userId))
         await this.recordingRepo.delete({ userId })
         await this.credits.deleteAllForUser(userId)
         await this.locks.deleteAllForUser(userId)
