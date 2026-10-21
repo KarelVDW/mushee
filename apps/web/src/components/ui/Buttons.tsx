@@ -150,7 +150,8 @@ interface TertiaryButtonProps {
 
 function tertiaryClasses({ danger }: { danger: boolean }) {
     return [
-        'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
+        // inline-block is a button's UA default; spelled out so the <Link> form's padding takes up space too.
+        'inline-block bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
         'font-body font-medium text-[13px] leading-none',
         'transition-colors duration-150 ease-solkey',
         'focus-ring rounded-sm',
