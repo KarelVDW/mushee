@@ -108,67 +108,45 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled, pla
     )
 }
 
+type TransportTone = 'neutral' | 'play' | 'record'
+
+/**
+ * Each tone's border (and padding), transition list and timing, hover scale and
+ * active/idle palette. Neutral stays borderless with a quick colour-only fade;
+ * play and record carry the 3px ring and grow slightly on hover.
+ */
+const TONE_CLASSES: Record<TransportTone, { look: string; active: string; idle: string }> = {
+    neutral: {
+        look: 'border-0 bg-surface-container-lowest enabled:hover:bg-surface-container-high transition-[background-color,color] duration-150 ease-solkey',
+        active: 'text-primary',
+        idle: 'text-on-surface-variant',
+    },
+    play: {
+        look: 'p-0 border-[3px] border-primary-container transition-[transform,background-color,color] duration-200 ease-solkey enabled:hover:scale-105',
+        active: 'bg-primary-container text-on-primary-container',
+        idle: 'bg-surface-container-lowest text-primary',
+    },
+    record: {
+        look: 'p-0 border-[3px] transition-[transform,background-color,border-color] duration-200 ease-solkey enabled:hover:scale-105',
+        active: 'bg-error border-error',
+        idle: 'bg-surface-container-lowest border-error-container',
+    },
+}
+
 interface TransportBtnProps {
     size: number
-    tone?: 'neutral' | 'play' | 'record'
+    tone?: TransportTone
     active?: boolean
     onClick?: () => void
     ariaLabel: string
-    children: ReactNode
+    /** The glyph; `record` draws its own dot instead. */
+    children?: ReactNode
     disabled?: boolean
 }
 
+/** A round transport control (stop, play, record, metronome, and the phone dock's nudges). */
 export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, children, disabled }: TransportBtnProps) {
-    if (tone === 'record') {
-        const dotSize = Math.round(size * 0.42)
-        return (
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                onClick={onClick}
-                disabled={disabled}
-                className={[
-                    'rounded-full p-0 inline-flex items-center justify-center shrink-0',
-                    'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                    'focus-ring',
-                    'border-[3px]',
-                    active ? 'bg-error border-error' : 'bg-surface-container-lowest border-error-container',
-                    'transition-[transform,background-color,border-color] duration-200 ease-solkey',
-                    'enabled:hover:scale-105',
-                ].join(' ')}
-                style={{ width: size, height: size }}>
-                <span
-                    className={[
-                        'rounded-full transition-[background-color] duration-200 ease-solkey',
-                        active ? 'bg-on-error shadow-none' : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
-                    ].join(' ')}
-                    style={{ width: dotSize, height: dotSize }}
-                />
-                <span className="hidden">{children}</span>
-            </button>
-        )
-    }
-    if (tone === 'play') {
-        return (
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                onClick={onClick}
-                disabled={disabled}
-                className={[
-                    'rounded-full p-0 inline-flex items-center justify-center shrink-0',
-                    'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                    'focus-ring',
-                    'border-[3px] border-primary-container',
-                    active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-lowest text-primary',
-                    'transition-[transform,background-color,color] duration-200 ease-solkey',
-                    'enabled:hover:scale-105',
-                ].join(' ')}
-                style={{ width: size, height: size }}>
-                {children}
-            </button>
-        )
-    }
+    const classes = TONE_CLASSES[tone]
     return (
         <button
             type="button"
@@ -176,16 +154,27 @@ export function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabe
             onClick={onClick}
             disabled={disabled}
             className={[
-                'rounded-full border-0 inline-flex items-center justify-center shrink-0',
+                'rounded-full inline-flex items-center justify-center shrink-0',
                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                 'focus-ring',
-                'bg-surface-container-lowest enabled:hover:bg-surface-container-high',
-                active ? 'text-primary' : 'text-on-surface-variant',
-                'transition-[background-color,color] duration-150 ease-solkey',
+                classes.look,
+                active ? classes.active : classes.idle,
             ].join(' ')}
             style={{ width: size, height: size }}>
-            {children}
+            {tone === 'record' ? <RecordDot size={Math.round(size * 0.42)} active={active} /> : children}
         </button>
+    )
+}
+
+function RecordDot({ size, active }: { size: number; active?: boolean }) {
+    return (
+        <span
+            className={[
+                'rounded-full transition-[background-color] duration-200 ease-solkey',
+                active ? 'bg-on-error shadow-none' : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
+            ].join(' ')}
+            style={{ width: size, height: size }}
+        />
     )
 }
 
