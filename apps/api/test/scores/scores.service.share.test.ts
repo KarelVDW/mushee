@@ -3,14 +3,15 @@ import 'reflect-metadata'
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { CacheService } from '../../src/cache/cache.service'
 import type { Score } from '../../src/scores/entities/score.entity'
+import type { ScoreEditCacheService } from '../../src/scores/score-edit-cache.service'
 import { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
+import { NoopErrorReporter } from '../../src/telemetry/error-reporter'
 
 vi.mock('../../src/scores/entities/score.entity', () => ({ Score: class Score {} }))
-vi.mock('../../src/cache/cache.service', () => ({ CacheService: class CacheService {} }))
+vi.mock('../../src/scores/score-edit-cache.service', () => ({ ScoreEditCacheService: class ScoreEditCacheService {} }))
 vi.mock('../../src/storage/storage.service', () => ({ StorageService: class StorageService {} }))
 
 /** Read-only share links: minting, idempotence, revocation, and the public lookup. */
@@ -25,9 +26,10 @@ function makeService(scores: Score[]) {
     const cache = { findByScoreId: vi.fn((id: string) => Promise.resolve({ scoreId: id, data: { cached: id } })), upsert: vi.fn() }
     const service = new ScoresService(
         repo as never,
-        cache as unknown as CacheService,
+        cache as unknown as ScoreEditCacheService,
         { read: vi.fn() } as unknown as StorageService,
         {} as SubscriptionsService,
+        new NoopErrorReporter(),
     )
     return { service, repo }
 }

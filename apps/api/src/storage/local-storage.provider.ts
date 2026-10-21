@@ -3,7 +3,7 @@ import { mkdir, readdir, readFile, rm, unlink, writeFile } from 'fs/promises'
 import { dirname, join, normalize, resolve, sep } from 'path'
 import type { Readable, Writable } from 'stream'
 
-import type { StorageProvider } from './storage-provider'
+import { storageFolder, type StorageProvider } from './storage-provider'
 
 /**
  * Filesystem backend for local development and docker-compose/k8s-local, where
@@ -24,6 +24,13 @@ export class LocalStorageProvider implements StorageProvider {
         if (path !== this.rootDir && !path.startsWith(this.rootDir + sep)) {
             throw new Error(`Storage key escapes root: ${key}`)
         }
+        return path
+    }
+
+    /** A folder's path; a folder that resolves to the root itself (`.`, `a/..`) is refused like an empty one. */
+    private folderPath(folder: string): string {
+        const path = this.pathFor(folder)
+        if (path === this.rootDir) throw new Error(`Refusing storage folder ${JSON.stringify(folder)}: it names the whole store`)
         return path
     }
 
@@ -50,10 +57,11 @@ export class LocalStorageProvider implements StorageProvider {
         return createReadStream(this.pathFor(key))
     }
 
-    async list(prefix: string): Promise<string[]> {
+    async list(folder: string): Promise<string[]> {
+        const dir = storageFolder(folder)
         try {
-            const entries = await readdir(this.pathFor(prefix), { withFileTypes: true })
-            return entries.filter((e) => e.isFile()).map((e) => `${prefix}/${e.name}`)
+            const entries = await readdir(this.folderPath(dir), { withFileTypes: true })
+            return entries.filter((e) => e.isFile()).map((e) => `${dir}/${e.name}`)
         } catch (err) {
             if ((err as NodeJS.ErrnoException).code === 'ENOENT') return []
             throw err
@@ -74,7 +82,7 @@ export class LocalStorageProvider implements StorageProvider {
         }
     }
 
-    async deletePrefix(prefix: string): Promise<void> {
-        await rm(this.pathFor(prefix), { recursive: true, force: true })
+    async deletePrefix(folder: string): Promise<void> {
+        await rm(this.folderPath(storageFolder(folder)), { recursive: true, force: true })
     }
 }

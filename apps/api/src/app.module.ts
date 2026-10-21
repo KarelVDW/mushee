@@ -7,7 +7,6 @@ import { AdminModule } from './admin/admin.module'
 import { AuthModule } from './auth/auth.module'
 import { BetaModule } from './beta/beta.module'
 import { BillingModule } from './billing/billing.module'
-import { CacheModule } from './cache/cache.module'
 import { CronModule } from './cron/cron.module'
 import { dataSourceOptions } from './database/data-source'
 import { HealthController } from './health/health.controller'
@@ -37,7 +36,6 @@ import { TelemetryModule } from './telemetry/telemetry.module'
         OnboardingModule,
         ScoresModule,
         SettingsModule,
-        CacheModule,
         StorageModule,
         CronModule,
         SubscriptionsModule,

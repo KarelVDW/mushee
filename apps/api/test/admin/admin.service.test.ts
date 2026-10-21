@@ -26,8 +26,8 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
             return Promise.resolve([])
         })
     const scoresService = {
-        findOneInternal: vi.fn(() => Promise.resolve(null)),
-        load: vi.fn(() => Promise.resolve({})),
+        findById: vi.fn(() => Promise.resolve(null)),
+        readDocument: vi.fn(() => Promise.resolve({})),
         ...overrides?.scores,
     }
     const recordingCredits = {
@@ -156,8 +156,8 @@ describe('AdminService.getScore', () => {
         const revokeShare = vi.fn(() => Promise.resolve())
         const { service } = makeService({
             scores: {
-                findOneInternal: vi.fn(() => Promise.resolve({ ...score, shareToken: 'abcdefghijklmnop' })),
-                load: vi.fn(() => Promise.resolve({ parts: [] })),
+                findById: vi.fn(() => Promise.resolve({ ...score, shareToken: 'abcdefghijklmnop' })),
+                readDocument: vi.fn(() => Promise.resolve({ parts: [] })),
                 revokeShare,
             } as unknown as Partial<ScoresService>,
         })
@@ -166,24 +166,28 @@ describe('AdminService.getScore', () => {
         expect(revokeShare).toHaveBeenCalledWith(score.id)
     })
 
-    it('returns the document loaded via the owner', async () => {
-        const load = vi.fn(() => Promise.resolve({ parts: [] }))
+    it('returns the document through the read-only path, without an editing load', async () => {
+        const readDocument = vi.fn(() => Promise.resolve({ parts: [] }))
+        const load = vi.fn(() => Promise.resolve({}))
         const { service } = makeService({
             scores: {
-                findOneInternal: vi.fn(() => Promise.resolve(score)),
+                findById: vi.fn(() => Promise.resolve(score)),
+                readDocument,
                 load,
             } as unknown as Partial<ScoresService>,
         })
         const result = await service.getScore(score.id)
-        expect(load).toHaveBeenCalledWith('u1', score.id)
+        expect(readDocument).toHaveBeenCalledWith(score)
+        // load() would prime the edit cache, which the flush cron then rewrites to storage for nothing.
+        expect(load).not.toHaveBeenCalled()
         expect(result).toMatchObject({ title: 'Nocturne', document: { parts: [] }, documentError: null })
     })
 
     it('surfaces a load failure instead of failing the request', async () => {
         const { service } = makeService({
             scores: {
-                findOneInternal: vi.fn(() => Promise.resolve(score)),
-                load: vi.fn(() => Promise.reject(new Error('storage object missing'))),
+                findById: vi.fn(() => Promise.resolve(score)),
+                readDocument: vi.fn(() => Promise.reject(new Error('storage object missing'))),
             } as unknown as Partial<ScoresService>,
         })
         const result = await service.getScore(score.id)
@@ -195,7 +199,7 @@ describe('AdminService.getScore', () => {
         const query = vi.fn((sql: string) => Promise.resolve(sql.includes('FROM recordings') ? rows : []))
         const { service } = makeService({
             query,
-            scores: { findOneInternal: vi.fn(() => Promise.resolve(score)) } as unknown as Partial<ScoresService>,
+            scores: { findById: vi.fn(() => Promise.resolve(score)) } as unknown as Partial<ScoresService>,
         })
         const result = await service.getScore(score.id)
         expect(result.recordings).toBe(rows)

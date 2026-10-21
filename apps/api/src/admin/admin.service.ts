@@ -266,9 +266,10 @@ export class AdminService {
     }
 
     /** Score metadata + the full document JSON, read through the same
-     *  cache-then-storage path the editor uses. Read-only. */
+     *  cache-then-storage path the editor uses. Read-only: never primes the
+     *  edit cache. */
     async getScore(scoreId: string): Promise<Record<string, unknown>> {
-        const score = await this.scoresService.findOneInternal(scoreId)
+        const score = await this.scoresService.findById(scoreId)
         if (!score) throw new NotFoundException('Score not found')
 
         const [owner]: Array<Record<string, unknown>> = await this.dataSource.query(`SELECT id, name, email FROM "user" WHERE id = $1`, [
@@ -278,7 +279,7 @@ export class AdminService {
         let document: Record<string, unknown> | null = null
         let documentError: string | null = null
         try {
-            document = await this.scoresService.load(score.userId, score.id)
+            document = await this.scoresService.readDocument(score)
         } catch (err) {
             // Surface broken storage instead of failing the whole page — the
             // console is exactly where you want to see this.

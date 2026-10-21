@@ -15,7 +15,7 @@ import { MxmlMeasureDto } from './mxml.dto'
  * Validates a Record<measureIndex, MxmlMeasure>. class-validator has no native
  * support for records with dynamic keys, so each value is validated against
  * MxmlMeasureDto here. Keys must be plain integer indices — they are spliced
- * into `jsonb_set` paths in raw SQL (cache.service.ts), so anything else
+ * into `jsonb_set` paths in raw SQL (score-edit-cache.service.ts), so anything else
  * would allow update-path/SQL injection.
  */
 @ValidatorConstraint({ name: 'isMeasureRecord', async: false })

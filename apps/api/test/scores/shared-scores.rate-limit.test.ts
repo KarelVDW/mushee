@@ -9,14 +9,9 @@ import {
     SHARED_RATE_LIMIT_MAX,
     SHARED_RATE_LIMIT_MAX_TRACKED,
     SharedScoreRateLimitGuard,
-    SharedScoresController,
-} from '../../src/scores/shared-scores.controller'
+} from '../../src/scores/shared-score-rate-limit.guard'
 
-vi.mock('../../src/scores/entities/score.entity', () => ({ Score: class Score {} }))
-vi.mock('../../src/cache/cache.service', () => ({ CacheService: class CacheService {} }))
-vi.mock('../../src/storage/storage.service', () => ({ StorageService: class StorageService {} }))
-
-/** Per-IP fixed-window limiter on the public share route. */
+/** Per-IP fixed-window limiter on the public share route. Its binding to the controller is tested in shared-scores.controller.test.ts. */
 
 function makeContext(ip: string | undefined) {
     const headers: Record<string, string> = {}
@@ -100,10 +95,5 @@ describe('SharedScoreRateLimitGuard', () => {
             guard.canActivate(makeContext(`10.${i >> 16}.${(i >> 8) & 255}.${i & 255}`).ctx)
         // The map was cleared somewhere in the flood, so the first client has a fresh window again.
         expect(guard.canActivate(first.ctx)).toBe(true)
-    })
-
-    it('is bound to the shared controller via @UseGuards', () => {
-        const guards = Reflect.getMetadata('__guards__', SharedScoresController) as unknown[]
-        expect(guards).toContain(SharedScoreRateLimitGuard)
     })
 })

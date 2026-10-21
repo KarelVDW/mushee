@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common'
 import { DataSource } from 'typeorm'
 
+import { ADVISORY_LOCKS } from './advisory-locks'
 import { dataSourceOptions } from './data-source'
 
 /**
@@ -19,13 +20,13 @@ export async function runMigrationsLocked(): Promise<void> {
     // (where they could land on different sessions and the unlock would no-op).
     const runner = dataSource.createQueryRunner()
     try {
-        await runner.query('SELECT pg_advisory_lock(727271)')
+        await runner.query('SELECT pg_advisory_lock($1)', [ADVISORY_LOCKS.migrations])
         const applied = await dataSource.runMigrations({ transaction: 'each' })
         if (applied.length > 0) {
             logger.log(`Applied ${applied.length} migration(s): ${applied.map((m) => m.name).join(', ')}`)
         }
     } finally {
-        await runner.query('SELECT pg_advisory_unlock(727271)').catch(() => {})
+        await runner.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCKS.migrations]).catch(() => {})
         await runner.release().catch(() => {})
         await dataSource.destroy()
     }

@@ -47,6 +47,24 @@ describe('LocalStorageProvider', () => {
         await expect(provider.read('recordings/u2/s3/r3/audio.webm')).resolves.toBe('z')
     })
 
+    it('deletes a folder given without a trailing slash, never a sibling that shares the string prefix', async () => {
+        await provider.write('recordings/u1/s1/r1/audio.webm', 'x')
+        await provider.write('recordings/u10/s2/r2/audio.webm', 'y')
+        await provider.deletePrefix('recordings/u1')
+        await expect(provider.read('recordings/u1/s1/r1/audio.webm')).rejects.toThrow()
+        await expect(provider.read('recordings/u10/s2/r2/audio.webm')).resolves.toBe('y')
+        await expect(provider.deletePrefix('recordings/nobody')).resolves.toBeUndefined()
+    })
+
+    it('refuses to list or delete the whole store', async () => {
+        await provider.write('scores/u1/a.musicxml', '{}')
+        for (const folder of ['', '/', '//', '.', 'scores/..']) {
+            await expect(provider.deletePrefix(folder)).rejects.toThrow(/whole store/)
+            await expect(provider.list(folder)).rejects.toThrow(/whole store/)
+        }
+        await expect(provider.read('scores/u1/a.musicxml')).resolves.toBe('{}')
+    })
+
     it('refuses keys that escape the root', async () => {
         await expect(provider.write('../outside.txt', 'x')).rejects.toThrow(/escapes root/)
     })
@@ -56,6 +74,12 @@ describe('LocalStorageProvider', () => {
         await provider.write('recordings/u/s/r/debug.json', '{}')
         await expect(provider.list('recordings/u/s/r')).resolves.toEqual(['recordings/u/s/r/audio.webm', 'recordings/u/s/r/debug.json'])
         await expect(provider.list('recordings/nobody')).resolves.toEqual([])
+    })
+
+    it('lists the same keys whether or not the folder has a trailing slash, and skips nested folders', async () => {
+        await provider.write('recordings/u/s/r/audio.webm', 'bytes')
+        await provider.write('recordings/u/s/r/nested/plot.svg', '<svg/>')
+        await expect(provider.list('recordings/u/s/r/')).resolves.toEqual(['recordings/u/s/r/audio.webm'])
     })
 
     it('reads back bytes through a read stream', async () => {

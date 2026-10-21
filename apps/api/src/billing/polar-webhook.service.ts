@@ -56,6 +56,17 @@ export class PolarWebhookService {
         return applied
     }
 
+    /**
+     * Delivery ids only need to outlive Polar's retries of a delivery (days);
+     * drop older ones so the dedupe table doesn't grow forever. Run daily by
+     * the cron.
+     */
+    async pruneProcessedWebhookEvents(olderThanDays = 90): Promise<void> {
+        await this.webhookEvents.query(`DELETE FROM processed_webhook_events WHERE "receivedAt" < now() - make_interval(days => $1)`, [
+            olderThanDays,
+        ])
+    }
+
     /** Insert the delivery id; false means we've already seen it. */
     private async markProcessed(deliveryId: string, em: EntityManager): Promise<boolean> {
         const result = await em.createQueryBuilder().insert().into(ProcessedWebhookEvent).values({ id: deliveryId }).orIgnore().execute()

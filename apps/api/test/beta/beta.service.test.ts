@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { BetaService } from '../../src/beta/beta.service'
 import type { MailService } from '../../src/mail/mail.service'
+import type { ErrorReporter } from '../../src/telemetry/error-reporter'
 
 /**
  * The fake mirrors the postgres driver's raw-query contract, which is the
@@ -20,8 +21,13 @@ function makeService(updateReturning: Array<{ email: string; name: string }>) {
     const mailService = {
         sendBetaApprovedEmail: vi.fn(() => Promise.resolve()),
     }
-    const service = new BetaService(dataSource as unknown as DataSource, mailService as unknown as MailService)
-    return { service, dataSource, mailService }
+    const reporter = { capture: vi.fn() }
+    const service = new BetaService(
+        dataSource as unknown as DataSource,
+        mailService as unknown as MailService,
+        reporter as unknown as ErrorReporter,
+    )
+    return { service, dataSource, mailService, reporter }
 }
 
 describe('BetaService.approve', () => {
@@ -41,10 +47,13 @@ describe('BetaService.approve', () => {
         expect(mailService.sendBetaApprovedEmail).not.toHaveBeenCalled()
     })
 
-    it('still returns the signup list when the approval email fails', async () => {
-        const { service, mailService } = makeService([{ email: 'ada@example.com', name: 'Ada' }])
-        mailService.sendBetaApprovedEmail.mockRejectedValueOnce(new Error('SendGrid down'))
+    it('still returns the signup list when the approval email fails, and reports the failure', async () => {
+        const { service, mailService, reporter } = makeService([{ email: 'ada@example.com', name: 'Ada' }])
+        const failure = new Error('SendGrid down')
+        mailService.sendBetaApprovedEmail.mockRejectedValueOnce(failure)
 
         await expect(service.approve('user-1')).resolves.toEqual([])
+        expect(reporter.capture).toHaveBeenCalledTimes(1)
+        expect(reporter.capture).toHaveBeenCalledWith(failure, { origin: 'beta', job: 'approval-email', userId: 'user-1' })
     })
 })

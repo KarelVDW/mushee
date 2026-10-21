@@ -1,7 +1,7 @@
 import { Bucket, Storage } from '@google-cloud/storage'
 import type { Readable, Writable } from 'stream'
 
-import type { StorageProvider } from './storage-provider'
+import { storageFolder, type StorageProvider } from './storage-provider'
 
 /**
  * Google Cloud Storage backend. Authenticates via Application Default
@@ -40,8 +40,11 @@ export class GcsStorageProvider implements StorageProvider {
         return this.bucket.file(key).createReadStream()
     }
 
-    async list(prefix: string): Promise<string[]> {
-        const [files] = await this.bucket.getFiles({ prefix })
+    async list(folder: string): Promise<string[]> {
+        // Object names are flat strings: the trailing slash keeps siblings that
+        // merely share the prefix out, and the delimiter stops at the folder's
+        // own objects — the same answer LocalStorageProvider's readdir gives.
+        const [files] = await this.bucket.getFiles({ prefix: `${storageFolder(folder)}/`, delimiter: '/' })
         return files.map((file) => file.name)
     }
 
@@ -61,7 +64,9 @@ export class GcsStorageProvider implements StorageProvider {
         await this.bucket.file(key).delete({ ignoreNotFound: true })
     }
 
-    async deletePrefix(prefix: string): Promise<void> {
-        await this.bucket.deleteFiles({ prefix })
+    async deletePrefix(folder: string): Promise<void> {
+        // A raw string prefix would let `recordings/u1` delete `recordings/u10/…`
+        // too; the trailing slash confines it to the folder, like Local's rm.
+        await this.bucket.deleteFiles({ prefix: `${storageFolder(folder)}/` })
     }
 }

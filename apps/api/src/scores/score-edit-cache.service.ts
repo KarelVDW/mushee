@@ -4,8 +4,14 @@ import { LessThan, Repository } from 'typeorm'
 
 import { CachedScore } from './entities/cached-score.entity'
 
+/**
+ * The `cached_scores` table: the live copy of a score under editing. The
+ * editor's saves patch it in place and ScoresService.flushIdleDocuments writes
+ * idle rows back to storage. Not a disposable cache — until a row is flushed it
+ * holds the only copy of the user's latest edits. Private to ScoresModule.
+ */
 @Injectable()
-export class CacheService {
+export class ScoreEditCacheService {
     constructor(
         @InjectRepository(CachedScore)
         private readonly cachedScoreRepo: Repository<CachedScore>,
@@ -21,11 +27,29 @@ export class CacheService {
         )
     }
 
+    /**
+     * Create the row only if there is none. Re-priming after a patch miss must
+     * not overwrite: a concurrent save may have primed and patched first, and
+     * replacing its row with the stored copy would silently drop that edit.
+     */
+    async primeIfAbsent(scoreId: string, data: Record<string, unknown>): Promise<void> {
+        await this.cachedScoreRepo.query(
+            `INSERT INTO cached_scores ("scoreId", data)
+       VALUES ($1, $2::jsonb)
+       ON CONFLICT ("scoreId") DO NOTHING`,
+            [scoreId, JSON.stringify(data)],
+        )
+    }
+
     async findByScoreId(scoreId: string): Promise<CachedScore | null> {
         return this.cachedScoreRepo.findOneBy({ scoreId })
     }
 
-    async updateMeasures(scoreId: string, measures: Record<string, Record<string, unknown>>): Promise<void> {
+    // The patch methods below report whether the row existed. A miss is not
+    // harmless: the edit landed nowhere (see ScoresService.patchDocument).
+    // The postgres driver resolves a raw UPDATE to [rows, affectedRowCount].
+
+    async updateMeasures(scoreId: string, measures: Record<string, Record<string, unknown>>): Promise<boolean> {
         // Chain jsonb_set calls so all measures update in one atomic statement.
         let expr = 'data'
         const params: unknown[] = [scoreId]
@@ -37,25 +61,31 @@ export class CacheService {
             params.push(JSON.stringify(measureData))
             expr = `jsonb_set(${expr}, '{parts,0,measures,${measureIndex}}', $${params.length}::jsonb)`
         }
-        await this.cachedScoreRepo.query(`UPDATE cached_scores SET data = ${expr}, "updatedAt" = now() WHERE "scoreId" = $1`, params)
+        const [, affected]: [unknown[], number] = await this.cachedScoreRepo.query(
+            `UPDATE cached_scores SET data = ${expr}, "updatedAt" = now() WHERE "scoreId" = $1`,
+            params,
+        )
+        return affected > 0
     }
 
-    async replaceAllMeasures(scoreId: string, measures: Record<string, unknown>[]): Promise<void> {
-        await this.cachedScoreRepo.query(
+    async replaceAllMeasures(scoreId: string, measures: Record<string, unknown>[]): Promise<boolean> {
+        const [, affected]: [unknown[], number] = await this.cachedScoreRepo.query(
             `UPDATE cached_scores
        SET data = jsonb_set(data, '{parts,0,measures}', $2::jsonb), "updatedAt" = now()
        WHERE "scoreId" = $1`,
             [scoreId, JSON.stringify(measures)],
         )
+        return affected > 0
     }
 
-    async updatePartList(scoreId: string, partList: Record<string, unknown>): Promise<void> {
-        await this.cachedScoreRepo.query(
+    async updatePartList(scoreId: string, partList: Record<string, unknown>): Promise<boolean> {
+        const [, affected]: [unknown[], number] = await this.cachedScoreRepo.query(
             `UPDATE cached_scores
        SET data = jsonb_set(data, '{partList}', $2::jsonb), "updatedAt" = now()
        WHERE "scoreId" = $1`,
             [scoreId, JSON.stringify(partList)],
         )
+        return affected > 0
     }
 
     async deleteByScoreId(scoreId: string): Promise<void> {

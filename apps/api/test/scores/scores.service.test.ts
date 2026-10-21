@@ -1,16 +1,19 @@
 import 'reflect-metadata'
 
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import type { Repository } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { CacheService } from '../../src/cache/cache.service'
 import type { CreateScoreDto } from '../../src/scores/dto/create-score.dto'
+import type { UpdateScoreDto } from '../../src/scores/dto/update-score.dto'
+import type { CachedScore } from '../../src/scores/entities/cached-score.entity'
 import type { Score } from '../../src/scores/entities/score.entity'
+import type { ScoreEditCacheService } from '../../src/scores/score-edit-cache.service'
 import { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
 import type { SubscriptionTier } from '../../src/subscriptions/entities/subscription-tier.entity'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
+import type { ErrorReporter } from '../../src/telemetry/error-reporter'
 
 // TypeORM entity decorators need emitDecoratorMetadata, which vitest's
 // esbuild transform doesn't emit — mock the entity module and the injected
@@ -18,8 +21,8 @@ import type { SubscriptionsService } from '../../src/subscriptions/subscriptions
 vi.mock('../../src/scores/entities/score.entity', () => ({
     Score: class Score {},
 }))
-vi.mock('../../src/cache/cache.service', () => ({
-    CacheService: class CacheService {},
+vi.mock('../../src/scores/score-edit-cache.service', () => ({
+    ScoreEditCacheService: class ScoreEditCacheService {},
 }))
 vi.mock('../../src/storage/storage.service', () => ({
     StorageService: class StorageService {},
@@ -53,20 +56,26 @@ function makeService(t: SubscriptionTier, existingScores: number, cached: Record
     const cache = {
         upsert: vi.fn(() => Promise.resolve()),
         findByScoreId: vi.fn(() => Promise.resolve(cached ? { scoreId: SOURCE.id, data: cached } : null)),
+        findStale: vi.fn(() => Promise.resolve([] as CachedScore[])),
+        deleteByScoreId: vi.fn(() => Promise.resolve()),
+        deleteIfNotUpdatedSince: vi.fn(() => Promise.resolve()),
     }
     const subscriptions = { tierFor: vi.fn(() => Promise.resolve(t)) }
 
     const storage = {
         read: vi.fn(() => Promise.resolve('{"partList":{},"parts":[],"stored":true}')),
+        write: vi.fn(() => Promise.resolve()),
     }
+    const reporter = { capture: vi.fn() }
 
     const service = new ScoresService(
         scoreRepo as unknown as Repository<Score>,
-        cache as unknown as CacheService,
+        cache as unknown as ScoreEditCacheService,
         storage as unknown as StorageService,
         subscriptions as unknown as SubscriptionsService,
+        reporter as unknown as ErrorReporter,
     )
-    return { service, scoreRepo, cache, storage }
+    return { service, scoreRepo, cache, storage, reporter }
 }
 
 const DTO = { title: 'Étude', score: {} } as unknown as CreateScoreDto
@@ -128,15 +137,17 @@ describe('duplicate', () => {
     })
 
     it('falls back to the stored file when the source is not in the edit cache', async () => {
-        const { service, cache, storage } = makeService(tier(null), 1, null)
+        const { service, cache, storage, scoreRepo } = makeService(tier(null), 1, null)
         await service.duplicate('u1', 'src')
         expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
-        // load() re-caches the source, then the copy is cached under the new id.
+        // Only the copy is cached: reading the source is read-only, and one owner lookup suffices.
+        expect(cache.upsert).toHaveBeenCalledTimes(1)
         expect(cache.upsert).toHaveBeenCalledWith('s1', {
             partList: {},
             parts: [],
             stored: true,
         })
+        expect(scoreRepo.findOneBy).toHaveBeenCalledTimes(1)
     })
 
     it('counts against the plan cap like a create', async () => {
@@ -164,5 +175,248 @@ describe('duplicate', () => {
         const copy = await service.duplicate('u1', 'src')
         expect(copy.title).toHaveLength(200)
         expect(copy.title.endsWith(' (copy)')).toBe(true)
+    })
+})
+
+describe('load / readDocument', () => {
+    it('an editing load primes the edit cache from storage', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1, null)
+        await expect(service.load('u1', 'src')).resolves.toEqual({ partList: {}, parts: [], stored: true })
+        expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
+        expect(cache.upsert).toHaveBeenCalledWith(SOURCE.id, { partList: {}, parts: [], stored: true })
+    })
+
+    it('a read-only load returns the same document without writing a cache row', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1, null)
+        await expect(service.readDocument({ ...SOURCE })).resolves.toEqual({ partList: {}, parts: [], stored: true })
+        expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
+        expect(cache.upsert).not.toHaveBeenCalled()
+    })
+
+    it('a read-only load prefers the edit cache, unsaved edits included', async () => {
+        const { service, storage } = makeService(tier(null), 1, { partList: {}, parts: [{ id: 'P1' }] })
+        await expect(service.readDocument({ ...SOURCE })).resolves.toEqual({ partList: {}, parts: [{ id: 'P1' }] })
+        expect(storage.read).not.toHaveBeenCalled()
+    })
+})
+
+describe('flushIdleDocuments', () => {
+    const idleRow = (scoreId: string, data: Record<string, unknown>) =>
+        ({ scoreId, data, createdAt: new Date(0), updatedAt: new Date('2026-09-05T10:00:00Z') }) as CachedScore
+
+    it('writes each idle document to its storage key, then deletes the row only if no edit landed since', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        const row = idleRow(SOURCE.id, { partList: {}, parts: [{ id: 'P1' }] })
+        cache.findStale.mockResolvedValueOnce([row])
+
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(1)
+
+        expect(cache.findStale).toHaveBeenCalledWith(10)
+        expect(storage.write).toHaveBeenCalledWith(SOURCE.storageKey, JSON.stringify(row.data))
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledWith(SOURCE.id, row.updatedAt)
+        // Storage first: a crash between the two leaves the row to be flushed again, never a lost document.
+        expect(storage.write.mock.invocationCallOrder[0]).toBeLessThan(cache.deleteIfNotUpdatedSince.mock.invocationCallOrder[0])
+    })
+
+    it('writes raw MusicXML back byte-for-byte rather than as JSON', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        cache.findStale.mockResolvedValueOnce([idleRow(SOURCE.id, { raw: '<score-partwise/>' })])
+        await service.flushIdleDocuments(10)
+        expect(storage.write).toHaveBeenCalledWith(SOURCE.storageKey, '<score-partwise/>')
+    })
+
+    it('drops the cache row of a score that no longer exists', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        cache.findStale.mockResolvedValueOnce([idleRow('gone', { parts: [] })])
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(0)
+        expect(cache.deleteByScoreId).toHaveBeenCalledWith('gone')
+        expect(storage.write).not.toHaveBeenCalled()
+    })
+
+    it('keeps the row of a document whose write failed, reports it, and carries on with the rest', async () => {
+        const { service, cache, storage, scoreRepo, reporter } = makeService(tier(null), 1)
+        const other = { ...SOURCE, id: 'other', storageKey: 'scores/u1/2.musicxml' } as Score
+        scoreRepo.findOneBy.mockImplementation(({ id }: { id: string }) =>
+            Promise.resolve(id === SOURCE.id ? { ...SOURCE } : id === other.id ? { ...other } : null),
+        )
+        cache.findStale.mockResolvedValueOnce([idleRow(SOURCE.id, { parts: [] }), idleRow(other.id, { parts: [] })])
+        const failure = new Error('bucket down')
+        storage.write.mockRejectedValueOnce(failure)
+
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(1)
+
+        expect(storage.write).toHaveBeenCalledTimes(2)
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledTimes(1)
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledWith(other.id, expect.any(Date))
+        expect(reporter.capture).toHaveBeenCalledTimes(1)
+        expect(reporter.capture).toHaveBeenCalledWith(failure, { origin: 'cron', job: 'flush-scores', scoreId: SOURCE.id })
+    })
+
+    it('logs one summary line per run, quiet runs included, so a run that found nothing is still visible', async () => {
+        const log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {})
+        try {
+            const { service } = makeService(tier(null), 1)
+            await service.flushIdleDocuments(10)
+            expect(log).toHaveBeenCalledWith('Flush run: 0 idle, 0 flushed, 0 failed')
+        } finally {
+            log.mockRestore()
+        }
+    })
+})
+
+describe('update', () => {
+    type Doc = { partList: Record<string, unknown>; parts: Array<{ measures: Array<Record<string, unknown>> }> }
+    const STORED: Doc = { partList: { stored: true }, parts: [{ measures: [{ n: 'stored-0' }, { n: 'stored-1' }] }] }
+
+    /** An in-memory cached_scores table with the real row semantics: a patch reports whether a row existed. */
+    function makeEditingService(rows = new Map<string, Doc>()) {
+        const scoreRepo = {
+            findOneBy: vi.fn(({ id }: { id: string }) => Promise.resolve(id === SOURCE.id ? { ...SOURCE } : null)),
+            save: vi.fn((score: Score) => Promise.resolve(score)),
+            update: vi.fn(() => Promise.resolve({ affected: 1 })),
+        }
+        const patchRow = (scoreId: string, apply: (doc: Doc) => void) => {
+            const doc = rows.get(scoreId)
+            if (doc) apply(doc)
+            return Promise.resolve(doc !== undefined)
+        }
+        const cache = {
+            updateMeasures: vi.fn((scoreId: string, measures: Record<string, Record<string, unknown>>) =>
+                patchRow(scoreId, (doc) => {
+                    for (const [index, measure] of Object.entries(measures)) doc.parts[0].measures[Number(index)] = measure
+                }),
+            ),
+            replaceAllMeasures: vi.fn((scoreId: string, measures: Array<Record<string, unknown>>) =>
+                patchRow(scoreId, (doc) => (doc.parts[0].measures = measures)),
+            ),
+            updatePartList: vi.fn((scoreId: string, partList: Record<string, unknown>) =>
+                patchRow(scoreId, (doc) => (doc.partList = partList)),
+            ),
+            primeIfAbsent: vi.fn((scoreId: string, data: Doc) => {
+                if (!rows.has(scoreId)) rows.set(scoreId, structuredClone(data))
+                return Promise.resolve()
+            }),
+            upsert: vi.fn(),
+        }
+        const storage = { read: vi.fn(() => Promise.resolve(JSON.stringify(STORED))) }
+        const service = new ScoresService(
+            scoreRepo as unknown as Repository<Score>,
+            cache as unknown as ScoreEditCacheService,
+            storage as unknown as StorageService,
+            {} as SubscriptionsService,
+            { capture: vi.fn() } as unknown as ErrorReporter,
+        )
+        return { service, rows, cache, storage, scoreRepo }
+    }
+
+    const measuresDto = (measures: Record<string, Record<string, unknown>>) => ({ measures }) as unknown as UpdateScoreDto
+
+    it('patches the live row without touching storage', async () => {
+        const { service, rows, storage } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        await service.update('u1', SOURCE.id, measuresDto({ 1: { n: 'edited' } }))
+        expect(rows.get(SOURCE.id)?.parts[0].measures).toEqual([{ n: 'stored-0' }, { n: 'edited' }])
+        expect(storage.read).not.toHaveBeenCalled()
+    })
+
+    it('re-primes a row the flush cron already dropped from storage, then applies the edit', async () => {
+        // No row: the score sat idle long enough to be flushed while the editor stayed open.
+        const { service, rows, cache, storage } = makeEditingService()
+        await service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))
+        expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
+        expect(cache.primeIfAbsent).toHaveBeenCalledWith(SOURCE.id, STORED)
+        expect(cache.upsert).not.toHaveBeenCalled()
+        expect(rows.get(SOURCE.id)).toEqual({ partList: { stored: true }, parts: [{ measures: [{ n: 'edited' }, { n: 'stored-1' }] }] })
+    })
+
+    it('re-primes for whole-part and part-list edits too', async () => {
+        const { service, rows } = makeEditingService()
+        await service.update('u1', SOURCE.id, {
+            allMeasures: [{ n: 'only' }],
+            partList: { renamed: true },
+        } as unknown as UpdateScoreDto)
+        expect(rows.get(SOURCE.id)).toEqual({ partList: { renamed: true }, parts: [{ measures: [{ n: 'only' }] }] })
+    })
+
+    it('moves updatedAt on a document-only edit, so the library shows and sorts by real editing', async () => {
+        const { service, scoreRepo } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        const before = new Date('2026-01-01T00:00:00Z')
+        scoreRepo.findOneBy.mockResolvedValueOnce({ ...SOURCE, updatedAt: before })
+
+        const updated = await service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))
+
+        expect(updated.updatedAt.getTime()).toBeGreaterThan(before.getTime())
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt })
+    })
+
+    it('saves a rename and a document edit in one row write', async () => {
+        const { service, scoreRepo, rows } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        const updated = await service.update('u1', SOURCE.id, {
+            title: 'Nocturne',
+            partList: { renamed: true },
+        } as unknown as UpdateScoreDto)
+        expect(updated.title).toBe('Nocturne')
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt, title: 'Nocturne' })
+        expect(rows.get(SOURCE.id)?.partList).toEqual({ renamed: true })
+    })
+
+    it('a rename alone writes the row and leaves the edit cache alone', async () => {
+        const { service, scoreRepo, cache } = makeEditingService()
+        await service.update('u1', SOURCE.id, { title: 'Nocturne' } as unknown as UpdateScoreDto)
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, expect.objectContaining({ title: 'Nocturne' }))
+        expect(cache.updateMeasures).not.toHaveBeenCalled()
+        expect(cache.primeIfAbsent).not.toHaveBeenCalled()
+    })
+
+    it('fails the save instead of answering success when the edit still lands nowhere', async () => {
+        const { service, cache, scoreRepo } = makeEditingService()
+        cache.primeIfAbsent.mockResolvedValueOnce(undefined) // the row never appears (e.g. a concurrent delete)
+        await expect(service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))).rejects.toBeInstanceOf(
+            ServiceUnavailableException,
+        )
+        expect(cache.updateMeasures).toHaveBeenCalledTimes(2)
+        expect(scoreRepo.update).not.toHaveBeenCalled() // a failed edit doesn't claim the score was updated
+    })
+
+    it('never writes back columns it did not change, so a share revoke mid-autosave stays revoked', async () => {
+        // The row was read with a share token that an admin or the owner revokes
+        // while this PATCH is in flight; writing the whole entity would restore it.
+        const { service, scoreRepo } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        scoreRepo.findOneBy.mockResolvedValueOnce({ ...SOURCE, shareToken: 'stale-token-0123' })
+
+        const updated = await service.update('u1', SOURCE.id, {
+            title: 'Nocturne',
+            measures: { 0: { n: 'edited' } },
+        } as unknown as UpdateScoreDto)
+
+        expect(scoreRepo.save).not.toHaveBeenCalled()
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        // An exact match: any shareToken (or other stale column) in the write fails it.
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt, title: 'Nocturne' })
+    })
+
+    it('a concurrent save that re-primed first keeps its edit', async () => {
+        const { service, rows, storage } = makeEditingService()
+        // Hold each save's storage read so both miss the row before either re-primes,
+        // then let A prime and patch completely before B re-primes.
+        let releaseA = () => {}
+        let releaseB = () => {}
+        const storedJson = JSON.stringify(STORED)
+        storage.read
+            .mockImplementationOnce(() => new Promise((resolve) => (releaseA = () => resolve(storedJson))))
+            .mockImplementationOnce(() => new Promise((resolve) => (releaseB = () => resolve(storedJson))))
+
+        const a = service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'from-a' } }))
+        await vi.waitFor(() => expect(storage.read).toHaveBeenCalledTimes(1))
+        const b = service.update('u1', SOURCE.id, measuresDto({ 1: { n: 'from-b' } }))
+        await vi.waitFor(() => expect(storage.read).toHaveBeenCalledTimes(2))
+
+        releaseA()
+        await a
+        releaseB()
+        await b
+
+        expect(rows.get(SOURCE.id)?.parts[0].measures).toEqual([{ n: 'from-a' }, { n: 'from-b' }])
     })
 })
