@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain } from 'class-transformer'
 import { ILike, Repository } from 'typeorm'
@@ -14,6 +14,8 @@ import { Score } from './entities/score.entity'
 
 @Injectable()
 export class ScoresService {
+    private readonly logger = new Logger(ScoresService.name)
+
     constructor(
         @InjectRepository(Score)
         private readonly scoreRepo: Repository<Score>,
@@ -116,7 +118,7 @@ export class ScoresService {
 
         // Read MusicXML from storage and convert to JSON
         const musicxml = await this.storageService.read(score.storageKey)
-        const scoreData = this.musicxmlToJson(musicxml)
+        const scoreData = this.decodeStored(musicxml)
 
         if (prime) await this.cacheService.upsert(score.id, scoreData)
 
@@ -225,11 +227,42 @@ export class ScoresService {
         await this.scoreRepo.remove(score)
     }
 
+    /**
+     * Write every edit-cache row idle for `idleMinutes` back to storage and drop
+     * it, returning how many were flushed. Storage is written before the row is
+     * deleted, and the delete only lands if no edit touched the row since it was
+     * read — such an edit keeps its row and is flushed on a later run. A failed
+     * score is logged and skipped so one bad document doesn't stall the rest.
+     */
+    async flushIdleDocuments(idleMinutes: number): Promise<number> {
+        const idle = await this.cacheService.findStale(idleMinutes)
+        let flushed = 0
+        for (const cached of idle) {
+            try {
+                const score = await this.findOneInternal(cached.scoreId)
+                if (!score) {
+                    this.logger.warn(`Score ${cached.scoreId} not found in DB, removing from cache`)
+                    await this.cacheService.deleteByScoreId(cached.scoreId)
+                    continue
+                }
+
+                await this.storageService.write(score.storageKey, this.encodeForStorage(cached.data))
+                await this.cacheService.deleteIfNotUpdatedSince(cached.scoreId, cached.updatedAt)
+                flushed++
+
+                this.logger.log(`Flushed score ${score.id} (${score.title}) to storage`)
+            } catch (error) {
+                this.logger.error(`Failed to flush score ${cached.scoreId}: ${String(error)}`)
+            }
+        }
+        return flushed
+    }
+
     // Storage format: the score's MusicXML-JSON is persisted verbatim under a
     // `.musicxml` key (a historical name — the bytes are JSON), and genuine
     // MusicXML found in storage is wrapped as { raw } untouched. The round trip
-    // must stay lossless: the flush cron deletes the cached copy after writing,
-    // so a lossy conversion would permanently destroy the score.
+    // must stay lossless: flushIdleDocuments deletes the cached copy after
+    // writing, so a lossy conversion would permanently destroy the score.
     //
     // Real MusicXML <-> JSON conversion exists since 2026-09 in
     // @mushee/notation (MusicXmlExporter / MusicXmlImporter, round-trip-tested
@@ -239,7 +272,7 @@ export class ScoresService {
     // the package a Node build (or bundling the API) and picking an XML parser
     // — a deliberate follow-up, not a quick change. The client already exports
     // real MusicXML (editor export menu, account data export).
-    musicxmlToJson(content: string): Record<string, unknown> {
+    private decodeStored(content: string): Record<string, unknown> {
         if (content.trimStart().startsWith('{')) {
             try {
                 return JSON.parse(content) as Record<string, unknown>
@@ -250,8 +283,8 @@ export class ScoresService {
         return { raw: content }
     }
 
-    jsonToMusicxml(json: Record<string, unknown>): string {
-        if (typeof json.raw === 'string') return json.raw
-        return JSON.stringify(json)
+    private encodeForStorage(document: Record<string, unknown>): string {
+        if (typeof document.raw === 'string') return document.raw
+        return JSON.stringify(document)
     }
 }

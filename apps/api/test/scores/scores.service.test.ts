@@ -5,6 +5,7 @@ import type { Repository } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { CacheService } from '../../src/cache/cache.service'
+import type { CachedScore } from '../../src/cache/entities/cached-score.entity'
 import type { CreateScoreDto } from '../../src/scores/dto/create-score.dto'
 import type { Score } from '../../src/scores/entities/score.entity'
 import { ScoresService } from '../../src/scores/scores.service'
@@ -53,11 +54,15 @@ function makeService(t: SubscriptionTier, existingScores: number, cached: Record
     const cache = {
         upsert: vi.fn(() => Promise.resolve()),
         findByScoreId: vi.fn(() => Promise.resolve(cached ? { scoreId: SOURCE.id, data: cached } : null)),
+        findStale: vi.fn(() => Promise.resolve([] as CachedScore[])),
+        deleteByScoreId: vi.fn(() => Promise.resolve()),
+        deleteIfNotUpdatedSince: vi.fn(() => Promise.resolve()),
     }
     const subscriptions = { tierFor: vi.fn(() => Promise.resolve(t)) }
 
     const storage = {
         read: vi.fn(() => Promise.resolve('{"partList":{},"parts":[],"stored":true}')),
+        write: vi.fn(() => Promise.resolve()),
     }
 
     const service = new ScoresService(
@@ -164,5 +169,55 @@ describe('duplicate', () => {
         const copy = await service.duplicate('u1', 'src')
         expect(copy.title).toHaveLength(200)
         expect(copy.title.endsWith(' (copy)')).toBe(true)
+    })
+})
+
+describe('flushIdleDocuments', () => {
+    const idleRow = (scoreId: string, data: Record<string, unknown>) =>
+        ({ scoreId, data, createdAt: new Date(0), updatedAt: new Date('2026-09-05T10:00:00Z') }) as CachedScore
+
+    it('writes each idle document to its storage key, then deletes the row only if no edit landed since', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        const row = idleRow(SOURCE.id, { partList: {}, parts: [{ id: 'P1' }] })
+        cache.findStale.mockResolvedValueOnce([row])
+
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(1)
+
+        expect(cache.findStale).toHaveBeenCalledWith(10)
+        expect(storage.write).toHaveBeenCalledWith(SOURCE.storageKey, JSON.stringify(row.data))
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledWith(SOURCE.id, row.updatedAt)
+        // Storage first: a crash between the two leaves the row to be flushed again, never a lost document.
+        expect(storage.write.mock.invocationCallOrder[0]).toBeLessThan(cache.deleteIfNotUpdatedSince.mock.invocationCallOrder[0])
+    })
+
+    it('writes raw MusicXML back byte-for-byte rather than as JSON', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        cache.findStale.mockResolvedValueOnce([idleRow(SOURCE.id, { raw: '<score-partwise/>' })])
+        await service.flushIdleDocuments(10)
+        expect(storage.write).toHaveBeenCalledWith(SOURCE.storageKey, '<score-partwise/>')
+    })
+
+    it('drops the cache row of a score that no longer exists', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1)
+        cache.findStale.mockResolvedValueOnce([idleRow('gone', { parts: [] })])
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(0)
+        expect(cache.deleteByScoreId).toHaveBeenCalledWith('gone')
+        expect(storage.write).not.toHaveBeenCalled()
+    })
+
+    it('keeps the row of a document whose write failed and carries on with the rest', async () => {
+        const { service, cache, storage, scoreRepo } = makeService(tier(null), 1)
+        const other = { ...SOURCE, id: 'other', storageKey: 'scores/u1/2.musicxml' } as Score
+        scoreRepo.findOneBy.mockImplementation(({ id }: { id: string }) =>
+            Promise.resolve(id === SOURCE.id ? { ...SOURCE } : id === other.id ? { ...other } : null),
+        )
+        cache.findStale.mockResolvedValueOnce([idleRow(SOURCE.id, { parts: [] }), idleRow(other.id, { parts: [] })])
+        storage.write.mockRejectedValueOnce(new Error('bucket down'))
+
+        await expect(service.flushIdleDocuments(10)).resolves.toBe(1)
+
+        expect(storage.write).toHaveBeenCalledTimes(2)
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledTimes(1)
+        expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledWith(other.id, expect.any(Date))
     })
 })
