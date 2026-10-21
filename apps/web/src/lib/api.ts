@@ -192,8 +192,7 @@ export function getAccountDeletionStatus(): Promise<AccountDeletionStatus> {
 }
 
 export function reactivateAccount(): Promise<AccountDeletionStatus> {
-    // Fastify rejects an empty body when Content-Type is application/json.
-    return api('/account/reactivate', { method: 'POST', body: '{}' })
+    return api('/account/reactivate', { method: 'POST' })
 }
 
 export interface OnboardingPatch {
@@ -300,7 +299,7 @@ export function createPackCheckout(packId: PackId): Promise<{ url: string }> {
 
 /** Returns the Polar-hosted customer portal URL (invoices, payment method). */
 export function createBillingPortalSession(): Promise<{ url: string }> {
-    return api('/billing/portal', { method: 'POST', body: '{}' })
+    return api('/billing/portal', { method: 'POST' })
 }
 
 /** Switch tier/cadence on an existing subscription (prorated by Polar). */
@@ -312,11 +311,11 @@ export function changePlan(tierId: PaidTierId, interval: BillingInterval): Promi
 }
 
 export function cancelSubscription(): Promise<BillingState> {
-    return api('/billing/cancel', { method: 'POST', body: '{}' })
+    return api('/billing/cancel', { method: 'POST' })
 }
 
 export function resumeSubscription(): Promise<BillingState> {
-    return api('/billing/resume', { method: 'POST', body: '{}' })
+    return api('/billing/resume', { method: 'POST' })
 }
 
 // ── Closed beta ─────────────────────────────────────────────────────────────

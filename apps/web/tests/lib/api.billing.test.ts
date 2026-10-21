@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { cancelSubscription, changePlan, createBillingPortalSession, createCheckout, getBetaStatus, getBillingState } from '@/lib/api'
+import {
+    cancelSubscription,
+    changePlan,
+    createBillingPortalSession,
+    createCheckout,
+    getBetaStatus,
+    getBillingState,
+    reactivateAccount,
+    resumeSubscription,
+} from '@/lib/api'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
@@ -52,13 +61,22 @@ describe('billing & beta api client', () => {
         expect(JSON.parse(init.body as string)).toEqual({ tierId: 'studio', interval: 'monthly' })
     })
 
-    it('portal and cancel send non-empty JSON bodies (fastify rejects empty)', async () => {
-        await createBillingPortalSession()
-        expect(lastCall()[1].body).toBe('{}')
-
-        fetchMock.mockClear()
-        await cancelSubscription()
-        expect(lastCall()[1].body).toBe('{}')
+    it('body-less POSTs (portal, cancel, resume, reactivate) send no body and claim no JSON content-type', async () => {
+        const cases: [() => Promise<unknown>, string][] = [
+            [createBillingPortalSession, '/billing/portal'],
+            [cancelSubscription, '/billing/cancel'],
+            [resumeSubscription, '/billing/resume'],
+            [reactivateAccount, '/account/reactivate'],
+        ]
+        for (const [call, path] of cases) {
+            fetchMock.mockClear()
+            await call()
+            const [url, init] = lastCall()
+            expect(url).toBe(`${BASE}${path}`)
+            expect(init.method).toBe('POST')
+            expect(init.body).toBeUndefined()
+            expect(init.headers).not.toHaveProperty('Content-Type')
+        }
     })
 
     it('getBetaStatus GETs /beta/status', async () => {
