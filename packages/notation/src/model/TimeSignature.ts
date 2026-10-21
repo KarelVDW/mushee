@@ -1,4 +1,4 @@
-import { Duration } from './Duration'
+import { BEAT_EPSILON, Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
 import { TimeSignatureWidth } from './layout/TimeSignatureWidth'
 
@@ -91,7 +91,7 @@ export class TimeSignature {
     fillRests(filledBeats: number): Duration[] {
         if (filledBeats >= this.maxBeats) return []
         const unitBeats = this.beatUnit.beats
-        const nextBoundary = Math.ceil((filledBeats - 1e-6) / unitBeats) * unitBeats
+        const nextBoundary = Math.ceil((filledBeats - BEAT_EPSILON) / unitBeats) * unitBeats
         const partial = Duration.fromBeats(nextBoundary - filledBeats)
         const fullUnits = Math.round((this.maxBeats - nextBoundary) / unitBeats)
         return [...partial, ...Array.from({ length: fullUnits }, () => this.beatUnit)]

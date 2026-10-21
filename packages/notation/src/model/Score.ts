@@ -484,7 +484,7 @@ export class Score {
         // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
         for (const measure of this.measures) {
             const visible = new Set(measure.midMeasureKeySignatures)
-            for (const key of measure.keySignatures) {
+            for (const key of [...measure.keySignatures]) {
                 if (key.beatPosition > 0 && !visible.has(key)) measure.setKeySignature(key.beatPosition, key.fifths, key.mode)
             }
         }

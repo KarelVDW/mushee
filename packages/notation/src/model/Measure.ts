@@ -165,8 +165,8 @@ export class Measure {
 
     replaceNotes(targets: Note[], values: Note[]) {
         if (!targets.length) throw new Error('Replace targets can not be empty')
-        if (targets.some((n) => n.measure.id !== this.id)) throw new Error('Cannot replace notes not belonging to this measure')
-        const startIndex = this.notes.findIndex((n) => n.id === targets[0].id)
+        if (targets.some((n) => n.measure !== this)) throw new Error('Cannot replace notes not belonging to this measure')
+        const startIndex = this._notes.indexOf(targets[0])
         if (startIndex < 0) throw new Error('Cannot find startIndex for replace')
         const diff = difference(this._notes, targets)
         this._notes = [...diff.slice(0, startIndex), ...values, ...diff.slice(startIndex)]
