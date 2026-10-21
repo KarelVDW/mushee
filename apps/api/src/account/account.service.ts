@@ -6,6 +6,7 @@ import { auth } from '../auth/auth.config'
 import { BillingService } from '../billing/billing.service'
 import { RecordingsService } from '../recordings/recordings.service'
 import { ScoresService } from '../scores/scores.service'
+import { ErrorReporter } from '../telemetry/error-reporter'
 import { AccountDeletion } from './entities/account-deletion.entity'
 
 export const DELETION_GRACE_PERIOD_DAYS = 7
@@ -26,6 +27,7 @@ export class AccountService {
         private readonly scoresService: ScoresService,
         private readonly recordingsService: RecordingsService,
         private readonly billingService: BillingService,
+        private readonly reporter: ErrorReporter,
     ) {}
 
     /**
@@ -111,8 +113,10 @@ export class AccountService {
                 purged++
                 this.logger.log(`Purged account ${userId} and all its data`)
             } catch (error) {
-                // Leave the row in place; the next run retries.
+                // Leave the row in place; the next run retries. Reported too: a
+                // purge that keeps failing breaks the privacy policy's promise.
                 this.logger.error(`Failed to purge account ${userId}: ${String(error)}`)
+                this.reporter.capture(error, { origin: 'cron', job: 'purge-accounts', userId })
             }
         }
         return purged

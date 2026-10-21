@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm'
 import { DataSource } from 'typeorm'
 
 import { MailService } from '../mail/mail.service'
+import { ErrorReporter } from '../telemetry/error-reporter'
 import type { BetaStatus } from './beta-config'
 import { isBetaMode } from './beta-config'
 
@@ -33,6 +34,7 @@ export class BetaService {
     constructor(
         @InjectDataSource() private readonly dataSource: DataSource,
         private readonly mailService: MailService,
+        private readonly reporter: ErrorReporter,
     ) {}
 
     /** Fresh read — bypasses the 5-minute session cookie cache, so the web app
@@ -80,6 +82,7 @@ export class BetaService {
             } catch (err) {
                 // The approval itself stands; the user still sees it in-app.
                 this.logger.error(`Approval email to ${rows[0].email} failed: ${String(err)}`)
+                this.reporter.capture(err, { origin: 'beta', job: 'approval-email', userId })
             }
         }
         return this.listSignups()

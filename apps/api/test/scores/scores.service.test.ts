@@ -12,6 +12,7 @@ import { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
 import type { SubscriptionTier } from '../../src/subscriptions/entities/subscription-tier.entity'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
+import type { ErrorReporter } from '../../src/telemetry/error-reporter'
 
 // TypeORM entity decorators need emitDecoratorMetadata, which vitest's
 // esbuild transform doesn't emit — mock the entity module and the injected
@@ -64,14 +65,16 @@ function makeService(t: SubscriptionTier, existingScores: number, cached: Record
         read: vi.fn(() => Promise.resolve('{"partList":{},"parts":[],"stored":true}')),
         write: vi.fn(() => Promise.resolve()),
     }
+    const reporter = { capture: vi.fn() }
 
     const service = new ScoresService(
         scoreRepo as unknown as Repository<Score>,
         cache as unknown as CacheService,
         storage as unknown as StorageService,
         subscriptions as unknown as SubscriptionsService,
+        reporter as unknown as ErrorReporter,
     )
-    return { service, scoreRepo, cache, storage }
+    return { service, scoreRepo, cache, storage, reporter }
 }
 
 const DTO = { title: 'Étude', score: {} } as unknown as CreateScoreDto
@@ -205,19 +208,22 @@ describe('flushIdleDocuments', () => {
         expect(storage.write).not.toHaveBeenCalled()
     })
 
-    it('keeps the row of a document whose write failed and carries on with the rest', async () => {
-        const { service, cache, storage, scoreRepo } = makeService(tier(null), 1)
+    it('keeps the row of a document whose write failed, reports it, and carries on with the rest', async () => {
+        const { service, cache, storage, scoreRepo, reporter } = makeService(tier(null), 1)
         const other = { ...SOURCE, id: 'other', storageKey: 'scores/u1/2.musicxml' } as Score
         scoreRepo.findOneBy.mockImplementation(({ id }: { id: string }) =>
             Promise.resolve(id === SOURCE.id ? { ...SOURCE } : id === other.id ? { ...other } : null),
         )
         cache.findStale.mockResolvedValueOnce([idleRow(SOURCE.id, { parts: [] }), idleRow(other.id, { parts: [] })])
-        storage.write.mockRejectedValueOnce(new Error('bucket down'))
+        const failure = new Error('bucket down')
+        storage.write.mockRejectedValueOnce(failure)
 
         await expect(service.flushIdleDocuments(10)).resolves.toBe(1)
 
         expect(storage.write).toHaveBeenCalledTimes(2)
         expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledTimes(1)
         expect(cache.deleteIfNotUpdatedSince).toHaveBeenCalledWith(other.id, expect.any(Date))
+        expect(reporter.capture).toHaveBeenCalledTimes(1)
+        expect(reporter.capture).toHaveBeenCalledWith(failure, { origin: 'cron', job: 'flush-scores', scoreId: SOURCE.id })
     })
 })

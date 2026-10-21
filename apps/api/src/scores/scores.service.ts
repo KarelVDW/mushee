@@ -8,6 +8,7 @@ import { ILike, Repository } from 'typeorm'
 import { CacheService } from '../cache/cache.service'
 import { StorageService } from '../storage/storage.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
+import { ErrorReporter } from '../telemetry/error-reporter'
 import { CreateScoreDto } from './dto/create-score.dto'
 import { UpdateScoreDto } from './dto/update-score.dto'
 import { Score } from './entities/score.entity'
@@ -22,6 +23,7 @@ export class ScoresService {
         private readonly cacheService: CacheService,
         private readonly storageService: StorageService,
         private readonly subscriptions: SubscriptionsService,
+        private readonly reporter: ErrorReporter,
     ) {}
 
     async create(userId: string, dto: CreateScoreDto): Promise<Score> {
@@ -252,7 +254,10 @@ export class ScoresService {
 
                 this.logger.log(`Flushed score ${score.id} (${score.title}) to storage`)
             } catch (error) {
+                // The row stays and the next run retries; reported because edits
+                // stuck in the cache are invisible in the logs alone.
                 this.logger.error(`Failed to flush score ${cached.scoreId}: ${String(error)}`)
+                this.reporter.capture(error, { origin: 'cron', job: 'flush-scores', scoreId: cached.scoreId })
             }
         }
         return flushed

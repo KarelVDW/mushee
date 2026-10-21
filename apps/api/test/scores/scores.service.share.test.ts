@@ -8,6 +8,7 @@ import type { Score } from '../../src/scores/entities/score.entity'
 import { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
+import { NoopErrorReporter } from '../../src/telemetry/error-reporter'
 
 vi.mock('../../src/scores/entities/score.entity', () => ({ Score: class Score {} }))
 vi.mock('../../src/cache/cache.service', () => ({ CacheService: class CacheService {} }))
@@ -28,6 +29,7 @@ function makeService(scores: Score[]) {
         cache as unknown as CacheService,
         { read: vi.fn() } as unknown as StorageService,
         {} as SubscriptionsService,
+        new NoopErrorReporter(),
     )
     return { service, repo }
 }
