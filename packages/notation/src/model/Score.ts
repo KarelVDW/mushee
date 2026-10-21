@@ -162,7 +162,7 @@ export class Score {
                     values.push(note.clone(note.pitch ? { pitch: note.pitch.transposed(deltaChromatic, deltaDiatonic) } : {}))
                 }
             }
-            if (targets.length > 0) this.replace(targets, values)
+            if (targets.length > 0) this.replaceNotes(targets, values)
             // Re-propagate the transposed key signatures forward (inherited leading keys follow the explicit ones).
             this.propagateContext()
         }
@@ -306,12 +306,13 @@ export class Score {
      */
     addMeasureAdoptingTempo(index: number): Measure {
         const displaced = this.measures[index]
-        const measure = this.addMeasure(index)
+        const measure = this.insertMeasure(index, this.createMeasure(index))
         const marking = displaced?.tempoAtBeat(0)
         if (displaced && marking) {
             displaced.removeTempo(0)
             measure.setTempo(0, marking.bpm)
         }
+        this.touch()
         return measure
     }
 
@@ -460,15 +461,22 @@ export class Score {
      * fewest accidentals under the keys now in effect, so the result is always cleanly
      * spelled — and matches what a preview built the same way shows.
      *
-     * Rewrites go through `replace`, so note identities change; the returned notes are the
-     * final replacements, index-aligned with the transposed notes in score order.
+     * Rewrites go through the `replace` path, so note identities change; the returned notes are
+     * the final replacements, index-aligned with the transposed notes in score order.
      */
     transpose(interval: Interval, notes?: Note[]): Note[] {
         const targets = notes ?? this.measures.flatMap((m) => m.notes)
         if (interval.isUnison) return targets
+        const transposed = this.transposeNotes(interval, targets, notes === undefined)
+        this.touch()
+        return transposed
+    }
+
+    /** {@link transpose}'s rewrite, without the touch. */
+    private transposeNotes(interval: Interval, targets: Note[], wholeScore: boolean): Note[] {
         // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
         const { chromatic, diatonic } = interval
-        if (!notes) {
+        if (wholeScore) {
             for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
             // A score that starts in inherited C major now carries a transposed leading key that
             // is still marked inherited — promote it to an explicit boundary before propagation,
@@ -489,7 +497,7 @@ export class Score {
             this.propagateContext()
         }
         if (!targets.length) return targets
-        const transposed = this.replace(
+        const transposed = this.replaceNotes(
             targets,
             targets.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
         )
@@ -502,11 +510,17 @@ export class Score {
      * ink over its notes; then every note is respelled enharmonically (A♭ ↔ G♯) to fit.
      * Applied to a selection, the key signatures stay and only those notes are respelled.
      *
-     * Respelled notes change identity (rewrites go through `replace`); the returned notes
-     * are the final ones, index-aligned with the input (or with all notes in score order).
+     * Respelled notes change identity (rewrites go through the `replace` path); the returned
+     * notes are the final ones, index-aligned with the input (or with all notes in score order).
      */
     minimizeAccidentals(notes?: Note[]): Note[] {
-        if (notes) return this.respell(notes)
+        const respelled = notes ? this.respell(notes) : this.minimizeWholeScore()
+        this.touch()
+        return respelled
+    }
+
+    /** {@link minimizeAccidentals} over the whole score — re-key every region, then respell every note — without the touch. */
+    private minimizeWholeScore(): Note[] {
         // A mid-measure key that merely restates the key in force is invisible, but it would
         // resurface as a boundary once a leading key moves — and a second pass would then carve
         // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
@@ -582,12 +596,12 @@ export class Score {
             new Set(notes),
             (note) => note.keySignature.fifths,
         )
-        // One single-note replace per respelled note: `replace` inserts its values at the first
+        // One single-note replace per respelled note: a replace inserts its values at the first
         // target's position, so scattered notes can't share one call without reordering the bar.
         return notes.map((note) => {
             const pitch = minimizer.respelled.get(note)
             /* v8 ignore next -- defensive: replace of one note for one equal-duration note always returns exactly that note */
-            return pitch ? (this.replace([note], [note.clone({ pitch })])[0] ?? note) : note
+            return pitch ? (this.replaceNotes([note], [note.clone({ pitch })])[0] ?? note) : note
         })
     }
 
@@ -666,7 +680,20 @@ export class Score {
         return this.replace([note], values)[0] ?? null
     }
 
-    replace(targets: Note[], values: Note[]) {
+    /**
+     * Write `values` over the consecutive notes `targets`, from the first target's position: a
+     * longer span takes in the notes that follow (appending a measure past the end), a shorter
+     * one is padded with rests, and values flow across barlines as tied pieces. Returns the
+     * written notes in score order.
+     */
+    replace(targets: Note[], values: Note[]): Note[] {
+        const written = this.replaceNotes(targets, values)
+        this.touch()
+        return written
+    }
+
+    /** {@link replace} without the touch — the building block of the composite mutators. */
+    private replaceNotes(targets: Note[], values: Note[]): Note[] {
         if (!targets.length) throw new Error('Replace targets can not be empty')
         if (!values.length) throw new Error('Replace values can not be empty')
         let targetBeats = sumBy(targets, (n) => n.duration.effectiveBeats)
@@ -675,7 +702,7 @@ export class Score {
         while (targetBeats < valueBeats - BEAT_EPSILON) {
             const lastTarget = targets[targets.length - 1]
             let nextNote = lastTarget.getNext()
-            if (!nextNote) this.addMeasure().complete()
+            if (!nextNote) this.insertMeasure(this.measures.length, this.createMeasure(this.measures.length)).complete()
             nextNote = lastTarget.getNext()
             /* v8 ignore next -- defensive: a measure was just appended and filled, so the next note always exists here */
             if (!nextNote) throw new Error('Trouble finding next note')
@@ -731,7 +758,6 @@ export class Score {
             replaceValues = [...remainderNotes, ...replaceValues]
             allNewNotes.push(...newNotes)
         }
-        this.touch()
         return allNewNotes
     }
 

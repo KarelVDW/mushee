@@ -1,12 +1,13 @@
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { Interval } from '@mushee/notation/model/Interval'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { fill, makeScore, p, pitched, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 describe('Score', () => {
@@ -34,6 +35,47 @@ describe('Score', () => {
         it('a score without an onChange callback mutates without error', () => {
             const score = new Score()
             expect(() => score.addMeasure()).not.toThrow()
+        })
+
+        describe('a composite mutator notifies exactly once', () => {
+            /** A two-bar score whose onChange count starts at zero once it is built. */
+            const counted = (notes: Note[]) => {
+                let calls = 0
+                const score = new Score(() => calls++)
+                score.addMeasure().complete()
+                score.addMeasure().complete()
+                fill(score, 0, notes)
+                calls = 0
+                return { score, calls: () => calls }
+            }
+            // Mis-spelled in C (G♯ and A♭ together, D♭ for C♯): every minimize or transpose respells several notes.
+            const misspelled = () => [q(p('G', 4, 1)), q(p('A', 4, -1)), q(p('D', 5, -1)), q()]
+            const cases: [string, Note[], (score: Score) => unknown][] = [
+                ['transpose (whole score)', misspelled(), (s) => s.transpose(Interval.fromParts(2, 'major'))],
+                ['transpose (selection)', misspelled(), (s) => s.transpose(Interval.fromParts(2, 'major'), s.measures[0].notes.slice(0, 3))],
+                ['minimizeAccidentals (whole score)', misspelled(), (s) => s.minimizeAccidentals()],
+                ['minimizeAccidentals (selection)', misspelled(), (s) => s.minimizeAccidentals(s.measures[0].notes.slice(0, 3))],
+                // E-major notes already spelled for E: the pass only re-keys, respelling nothing.
+                ['minimizeAccidentals (key only)', [q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))], (s) => s.minimizeAccidentals()],
+                ['setInstrument (transposing)', misspelled(), (s) => s.setInstrument(Instrument.Trumpet)],
+                ['setDuration', misspelled(), (s) => s.setDuration(s.measures[0].firstNote, { type: 'h' })],
+                ['toggleTuplet', misspelled(), (s) => s.toggleTuplet(s.measures[0].firstNote)],
+                ['addMeasureAdoptingTempo', misspelled(), (s) => s.addMeasureAdoptingTempo(0)],
+                ['replace', misspelled(), (s) => s.replace(s.measures[1].notes, [new Note({ duration: new Duration({ type: 'w' }) })])],
+            ]
+            it.each(cases)('%s', (_, notes, mutate) => {
+                const { score, calls } = counted(notes)
+                mutate(score)
+                expect(calls()).toBe(1)
+            })
+
+            it('the key-only minimize really re-keys without respelling', () => {
+                const { score } = counted([q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))])
+                const before = [...score.measures[0].notes]
+                score.minimizeAccidentals()
+                expect(score.measures[0].keySignature.fifths).toBe(4)
+                expect(score.measures[0].notes).toEqual(before)
+            })
         })
     })
 
