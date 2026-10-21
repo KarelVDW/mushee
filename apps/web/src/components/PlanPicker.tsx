@@ -3,8 +3,9 @@
 import { type ReactNode } from 'react'
 
 import { Eyebrow, Icon } from '@/components/ui'
+import type { BillingInterval } from '@/lib/api'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { type Billing, planFeatures, planPriceParts, type PlanTier } from '@/lib/plans'
+import { planFeatures, planPriceParts, type PlanTier } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 /**
@@ -22,8 +23,8 @@ export function PlanPicker({
     isCurrent,
 }: {
     plans: PlanTier[]
-    billing: Billing
-    onBillingChange: (b: Billing) => void
+    billing: BillingInterval
+    onBillingChange: (b: BillingInterval) => void
     selected: PlanTier['id']
     onSelect: (id: PlanTier['id']) => void
     /** Marks the user's current plan (settings); onboarding has none. */
@@ -63,7 +64,7 @@ export function PlanPicker({
     )
 }
 
-function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
+function BillingToggle({ value, onChange }: { value: BillingInterval; onChange: (v: BillingInterval) => void }) {
     return (
         <div role="radiogroup" aria-label="Billing cadence" className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
             {(
@@ -95,7 +96,7 @@ function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Bill
 
 interface TierCardProps {
     plan: PlanTier
-    billing: Billing
+    billing: BillingInterval
     currency: Currency
     active: boolean
     current?: boolean
@@ -134,7 +135,7 @@ function PriceBlock({
     size,
 }: {
     plan: PlanTier
-    billing: Billing
+    billing: BillingInterval
     currency: Currency
     active: boolean
     size: 'lg' | 'sm'

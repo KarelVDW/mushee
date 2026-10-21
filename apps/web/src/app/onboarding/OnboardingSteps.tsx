@@ -5,8 +5,9 @@ import { type Dispatch, type SetStateAction, useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
+import type { BillingInterval } from '@/lib/api'
 import { emailOtp } from '@/lib/auth-client'
-import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
+import { BETA_PLAN, planFeatures, type PlanTier } from '@/lib/plans'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { OptionCard, StepShell } from './OnboardingControls'
@@ -278,8 +279,8 @@ export function PlanStep({
     onTierChange,
 }: {
     plans: PlanTier[]
-    billing: Billing
-    onBillingChange: (b: Billing) => void
+    billing: BillingInterval
+    onBillingChange: (b: BillingInterval) => void
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {

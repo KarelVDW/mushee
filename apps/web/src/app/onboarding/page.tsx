@@ -5,10 +5,10 @@ import { useState } from 'react'
 
 import { Icon, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { setUserProperties, track } from '@/lib/analytics'
-import { type OnboardingPatch } from '@/lib/api'
+import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
-import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
+import { BETA_MODE, BETA_PLAN, isPaidTier, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
 import { useBetaGate, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
 
 import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES } from './onboarding-data'
@@ -76,7 +76,7 @@ export default function OnboardingPage() {
     const [source, setSource] = useState<string | null>(null)
     const [sourceDetail, setSourceDetail] = useState('')
     const [tier, setTier] = useState<PlanTier['id']>('pro')
-    const [billing, setBilling] = useState<Billing>('monthly')
+    const [billing, setBilling] = useState<BillingInterval>('monthly')
     const [done, setDone] = useState(false)
 
     const canAdvance = (() => {
@@ -156,7 +156,7 @@ export default function OnboardingPage() {
             })
             // Paid pick → straight into Polar checkout; on failure (or beta
             // mode, where plans can't be bought) fall through to the done screen.
-            if (!BETA_MODE && tier !== 'free') {
+            if (!BETA_MODE && isPaidTier(tier)) {
                 startCheckout.mutate({ tierId: tier, interval: billing }, { onError: () => setDone(true) })
                 return
             }

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
     ApiError,
+    type BillingInterval,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
@@ -23,6 +24,7 @@ import {
     listScores,
     loadScore,
     type OnboardingPatch,
+    type PackId,
     type PaidTierId,
     patchOnboarding,
     putKeyboardShortcuts,
@@ -276,7 +278,7 @@ export function useBillingState() {
 /** Creates a Polar checkout and sends the browser there. */
 export function useStartCheckout() {
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => createCheckout(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: BillingInterval }) => createCheckout(args.tierId, args.interval),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -287,7 +289,7 @@ export function useStartCheckout() {
 /** Checkout for a one-time minute pack; redirects to Polar like a plan checkout. */
 export function useStartPackCheckout() {
     return useMutation({
-        mutationFn: (packId: 'single' | 'ep' | 'album') => createPackCheckout(packId),
+        mutationFn: (packId: PackId) => createPackCheckout(packId),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -310,7 +312,7 @@ export function useBillingPortal() {
 export function useChangePlan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => changePlan(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: BillingInterval }) => changePlan(args.tierId, args.interval),
         onSuccess: (state) => queryClient.setQueryData(billingKeys.subscription, state),
         meta: { errorMessage: "Couldn't change the plan. Please try again." },
     })

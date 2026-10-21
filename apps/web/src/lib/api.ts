@@ -250,13 +250,21 @@ export function listPlans(): Promise<Plan[]> {
 
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
 
+/** The tiers Polar sells. */
+export type PaidTierId = 'pro' | 'studio' | 'arranger'
+/** Every tier an account can be on; 'beta' is assigned during the closed beta, never sold. */
+export type TierId = 'free' | PaidTierId | 'beta'
+export type BillingInterval = 'monthly' | 'yearly'
+/** The one-time recording-minute packs. */
+export type PackId = 'single' | 'ep' | 'album'
+
 export interface BillingState {
-    tierId: 'free' | 'pro' | 'studio' | 'arranger' | 'beta'
+    tierId: TierId
     tierName: string
     /** Polar subscription status ('active', 'trialing', …); null on free/beta. */
     status: string | null
     /** Billing cadence of the active subscription; null on free/beta. */
-    interval: 'monthly' | 'yearly' | null
+    interval: BillingInterval | null
     currentPeriodEnd: string | null
     cancelAtPeriodEnd: boolean
     billingConfigured: boolean
@@ -274,10 +282,8 @@ export function getBillingState(): Promise<BillingState> {
     return api('/billing/subscription')
 }
 
-export type PaidTierId = 'pro' | 'studio' | 'arranger'
-
 /** Returns the Polar-hosted checkout URL to redirect the browser to. */
-export function createCheckout(tierId: PaidTierId, interval: 'monthly' | 'yearly'): Promise<{ url: string }> {
+export function createCheckout(tierId: PaidTierId, interval: BillingInterval): Promise<{ url: string }> {
     return api('/billing/checkout', {
         method: 'POST',
         body: JSON.stringify({ tierId, interval }),
@@ -285,7 +291,7 @@ export function createCheckout(tierId: PaidTierId, interval: 'monthly' | 'yearly
 }
 
 /** Checkout URL for a one-time minute pack (no subscription involved). */
-export function createPackCheckout(packId: 'single' | 'ep' | 'album'): Promise<{ url: string }> {
+export function createPackCheckout(packId: PackId): Promise<{ url: string }> {
     return api('/billing/checkout/pack', {
         method: 'POST',
         body: JSON.stringify({ packId }),
@@ -298,7 +304,7 @@ export function createBillingPortalSession(): Promise<{ url: string }> {
 }
 
 /** Switch tier/cadence on an existing subscription (prorated by Polar). */
-export function changePlan(tierId: PaidTierId, interval: 'monthly' | 'yearly'): Promise<BillingState> {
+export function changePlan(tierId: PaidTierId, interval: BillingInterval): Promise<BillingState> {
     return api('/billing/change', {
         method: 'POST',
         body: JSON.stringify({ tierId, interval }),

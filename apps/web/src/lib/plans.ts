@@ -17,10 +17,12 @@
 
 import type { IconName } from '@/components/ui'
 
+import type { BillingInterval, PackId, PaidTierId, TierId } from './api'
 import { type Currency, currencySymbol, formatMoney } from './currency'
 
 export interface PlanTier {
-    id: 'free' | 'pro' | 'studio' | 'arranger'
+    /** Every tier but 'beta', which is assigned rather than picked (see BETA_PLAN). */
+    id: Exclude<TierId, 'beta'>
     name: string
     icon: IconName
     tagline: string
@@ -36,8 +38,6 @@ export interface PlanTier {
     /** Professional tiers render as a slim secondary card, not in the main grid. */
     professional?: boolean
 }
-
-export type Billing = 'monthly' | 'yearly'
 
 export const PLAN_TIERS: PlanTier[] = [
     {
@@ -95,7 +95,7 @@ export const PLAN_TIERS: PlanTier[] = [
  * once-in-a-while user, and every card says so out loud.
  */
 export interface CreditPack {
-    id: 'single' | 'ep' | 'album'
+    id: PackId
     name: string
     minutes: number
     price: number
@@ -150,6 +150,11 @@ export function planById(id: string | undefined | null): PlanTier {
     return PLAN_TIERS.find((p) => p.id === id) ?? PLAN_TIERS[0]
 }
 
+/** Whether a tier is one Polar sells — checkouts and plan changes only ever target these. */
+export function isPaidTier(id: TierId): id is PaidTierId {
+    return id !== 'free' && id !== 'beta'
+}
+
 /** Human line for a daily recording budget in seconds; null = unlimited. */
 export function recordingBudgetLabel(seconds: number | null): string {
     if (seconds === null) return 'Unlimited recording'
@@ -179,7 +184,7 @@ export function planFeatures(
     return [recordingBudgetLabel(dailyRecordingSeconds), scoreLimitLabel(maxScores), ...plan.features]
 }
 
-export function planPrice(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): string {
+export function planPrice(plan: PlanTier, billing: BillingInterval, currency: Currency = 'usd'): string {
     if (plan.priceMonthly === 0) return 'Free'
     if (billing === 'yearly') {
         const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
@@ -202,7 +207,7 @@ export interface PlanPriceParts {
     savings: number
 }
 
-export function planPriceParts(plan: PlanTier, billing: Billing, currency: Currency = 'usd'): PlanPriceParts {
+export function planPriceParts(plan: PlanTier, billing: BillingInterval, currency: Currency = 'usd'): PlanPriceParts {
     if (plan.priceMonthly === 0) return { amount: 'Free', cadence: 'forever', note: '', savings: 0 }
     const savings = plan.priceMonthly * 12 - plan.priceYearly
     if (billing === 'yearly') {

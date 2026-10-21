@@ -5,8 +5,8 @@ import { useState } from 'react'
 import { PlanPicker } from '@/components/PlanPicker'
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
-import type { BillingState } from '@/lib/api'
-import { type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
+import type { BillingInterval, BillingState } from '@/lib/api'
+import { isPaidTier, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
 import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
 
 type Phase = 'choose' | 'redirecting' | 'done'
@@ -25,9 +25,9 @@ interface ChangePlanDialogProps {
  * - paid → free: POST /billing/cancel (keeps access until the period ends).
  */
 export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: ChangePlanDialogProps) {
-    const currentBilling: Billing = state.interval ?? 'monthly'
+    const currentBilling: BillingInterval = state.interval ?? 'monthly'
     const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
-    const [billing, setBilling] = useState<Billing>(currentBilling)
+    const [billing, setBilling] = useState<BillingInterval>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
 
     const startCheckout = useStartCheckout()
@@ -60,24 +60,31 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
 
     const apply = () => {
         if (isSame || phase !== 'choose') return
-        setPhase('redirecting')
         if (isCancel) {
+            setPhase('redirecting')
             track('subscription_cancel_started')
             cancelSubscription.mutate(undefined, {
                 onSuccess: () => setPhase('done'),
                 onError: () => setPhase('choose'),
             })
-        } else if (needsCheckout) {
-            track('checkout_started', { tierId: nextPlan.id, interval: billing })
+            return
+        }
+        // Sketch is reached by cancelling (above): checkouts and plan changes
+        // only ever target a paid tier.
+        const tierId = nextPlan.id
+        if (!isPaidTier(tierId)) return
+        setPhase('redirecting')
+        if (needsCheckout) {
+            track('checkout_started', { tierId, interval: billing })
             startCheckout.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
+                { tierId, interval: billing },
                 // Success navigates away to Polar; only errors return here.
                 { onError: () => setPhase('choose') },
             )
         } else {
-            track('plan_change_started', { tierId: nextPlan.id, interval: billing })
+            track('plan_change_started', { tierId, interval: billing })
             changePlan.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
+                { tierId, interval: billing },
                 {
                     onSuccess: () => setPhase('done'),
                     onError: () => setPhase('choose'),
