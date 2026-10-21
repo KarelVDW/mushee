@@ -17,7 +17,11 @@ import { RecordingPipeline } from '../../src/recordings/pipeline/recording-pipel
  * not ffmpeg or the model, is what is under test.
  */
 
-const MID = PROFILE_BANDS.find((b) => b.id === 'mid')!
+const MID = ((): PipelineProfile => {
+    const band = PROFILE_BANDS.find((b) => b.id === 'mid')
+    if (!band) throw new Error('expected a "mid" profile band')
+    return band
+})()
 
 interface Harness {
     pipeline: RecordingPipeline
@@ -27,7 +31,8 @@ interface Harness {
 }
 
 function harness(): Harness {
-    const h: Partial<Harness> = { resolves: 0 }
+    // `pipeline` is assigned below and `next` by each test before anything resolves.
+    const h = { resolves: 0 } as Harness
     // Just enough provider for `AudioConverter`'s constructor; no audio ever flows.
     const registry = {
         get: () => ({
@@ -42,8 +47,8 @@ function harness(): Harness {
     }
     const resolver = {
         resolve: () => {
-            h.resolves! += 1
-            return h.next!.profile
+            h.resolves += 1
+            return h.next.profile
         },
     }
     const p = new RecordingPipeline(
@@ -52,14 +57,15 @@ function harness(): Harness {
     )
     // The detection decode is stubbed to report a duration and no samples.
     ;(p as unknown as { decoder: unknown }).decoder = {
-        decode: async () => ({
-            samples: new Float32Array(0),
-            duration: h.next!.durationSec,
-            sampleRate: 16000,
-        }),
+        decode: () =>
+            Promise.resolve({
+                samples: new Float32Array(0),
+                duration: h.next.durationSec,
+                sampleRate: 16000,
+            }),
     }
     h.pipeline = p
-    return h as Harness
+    return h
 }
 
 async function resolve(h: Harness, isFinal: boolean): Promise<boolean> {

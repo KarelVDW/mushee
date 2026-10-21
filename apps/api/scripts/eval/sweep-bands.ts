@@ -336,7 +336,8 @@ async function main(): Promise<void> {
         console.log(`  ran ${cfg.name}`)
     }
 
-    const base = perClip.get('SHIPPED')!
+    const base = perClip.get('SHIPPED')
+    if (!base) throw new Error('the SHIPPED config must run as the baseline')
     console.log('\n--- baseline (SHIPPED) mean COnP@0.1 per stratum ---')
     for (const s of strata) {
         const idx = clips.map((c, i) => (stratumOf(c) === s ? i : -1)).filter((i) => i >= 0)
@@ -346,7 +347,8 @@ async function main(): Promise<void> {
     console.log('\n--- paired Δ vs SHIPPED per band × path (* = 95% CI excludes 0) ---')
     for (const cfg of selected) {
         if (cfg.name === 'SHIPPED') continue
-        const f1s = perClip.get(cfg.name)!
+        const f1s = perClip.get(cfg.name)
+        if (!f1s) continue
         const parts: string[] = []
         for (const s of strata) {
             const idx = clips.map((c, i) => (stratumOf(c) === s ? i : -1)).filter((i) => i >= 0)

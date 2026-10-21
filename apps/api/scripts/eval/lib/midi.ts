@@ -169,8 +169,9 @@ export function parseMidiNotes(buf: Buffer): { notes: MidiNote[]; bpm: number } 
     for (const e of events) {
         if (e.on) {
             open.set(e.midi, e.tick)
-        } else if (open.has(e.midi)) {
-            const start = open.get(e.midi)!
+        } else {
+            const start = open.get(e.midi)
+            if (start === undefined) continue
             open.delete(e.midi)
             const onsetSec = secondsAt(start)
             notes.push({ onsetSec, durSec: Math.max(0.01, secondsAt(e.tick) - onsetSec), midi: e.midi })

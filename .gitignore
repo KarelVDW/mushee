@@ -4,6 +4,8 @@ dist/
 build/
 .next/
 .next-e2e/
+# Side-port verification builds (NEXT_DIST_DIR=.next-verify, see .claude/skills/verify)
+.next-verify/
 out/
 .eslintcache
 *.tsbuildinfo
@@ -16,6 +18,8 @@ playwright-report/
 .vscode/*
 !.vscode/settings.json
 .claude/worktrees/
+# Throwaway Playwright drivers the verify skill places next to apps/web/package.json
+*.tmp.mjs
 *~
 logs
 *.log
