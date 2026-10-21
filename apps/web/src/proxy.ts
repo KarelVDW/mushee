@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { withNext } from '@/lib/nextPath'
+
 const publicPathPrefixes = ['/login', '/signup', '/reset-password', '/pricing', '/privacy', '/terms', '/contact', '/s']
 
 // better-auth prefixes the cookie with __Secure- when its baseURL is HTTPS,
@@ -27,11 +29,7 @@ export function proxy(request: NextRequest) {
     if (!hasSession) {
         // Carry the destination along so sign-in can return the user to the
         // deep link they followed instead of the scores list.
-        const login = new URL('/login', request.url)
-        if (pathname !== '/scores') {
-            login.searchParams.set('next', pathname + request.nextUrl.search)
-        }
-        return NextResponse.redirect(login)
+        return NextResponse.redirect(new URL(withNext('/login', pathname + request.nextUrl.search), request.url))
     }
 
     return NextResponse.next()

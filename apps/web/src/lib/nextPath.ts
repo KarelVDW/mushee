@@ -1,10 +1,13 @@
+/** The signed-in home: where auth lands when there is nowhere better to go. */
+export const LIBRARY_PATH = '/scores'
+
 /**
  * The in-app path a visitor was heading for before auth got in the way
  * (`?next=`), accepted only when it is a same-origin absolute path — a bare
  * `/…`, never `//host` or a full URL — so it can't be used to bounce users
  * elsewhere. Falls back to the library.
  */
-export function nextPathFrom(search: string, fallback = '/scores'): string {
+export function nextPathFrom(search: string, fallback = LIBRARY_PATH): string {
     const next = new URLSearchParams(search).get('next')
     if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return fallback
     // Let the platform parser have the final word: browsers turn backslashes into
@@ -20,5 +23,5 @@ export function nextPathFrom(search: string, fallback = '/scores'): string {
 
 /** `?next=<path>` for a link, or an empty string when the destination is just the fallback. */
 export function withNext(path: string, next: string | null | undefined): string {
-    return next && next !== '/scores' ? `${path}?next=${encodeURIComponent(next)}` : path
+    return next && next !== LIBRARY_PATH ? `${path}?next=${encodeURIComponent(next)}` : path
 }

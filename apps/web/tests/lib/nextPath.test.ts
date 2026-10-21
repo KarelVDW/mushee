@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { nextPathFrom, withNext } from '@/lib/nextPath'
+import { LIBRARY_PATH, nextPathFrom, withNext } from '@/lib/nextPath'
 
 describe('nextPathFrom', () => {
     it('accepts only same-origin absolute paths', () => {
@@ -20,5 +20,7 @@ describe('withNext', () => {
         expect(withNext('/signup', '/s/abc')).toBe('/signup?next=%2Fs%2Fabc')
         expect(withNext('/onboarding', '/scores')).toBe('/onboarding')
         expect(withNext('/onboarding', null)).toBe('/onboarding')
+        // Only the bare library is implied; a filtered library view is a real destination.
+        expect(withNext('/login', `${LIBRARY_PATH}?q=bach`)).toBe('/login?next=%2Fscores%3Fq%3Dbach')
     })
 })
