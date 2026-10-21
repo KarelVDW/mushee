@@ -71,12 +71,10 @@ describe('MidiPlayer', () => {
 
     it('currentTime is measured relative to the start offset', () => {
         const player = new MidiPlayer()
-        const ctx = FakeAudioContext
         player.start() // offset = ctx.currentTime (0)
         const live = FakeAudioContext.created[0]
         live.currentTime = 3.5
         expect(player.currentTime).toBeCloseTo(3.5, 5)
-        void ctx
     })
 
     it('start() resets the offset on a subsequent call', () => {
@@ -120,10 +118,8 @@ describe('MidiPlayer', () => {
     it('schedule() starts the note at startOffset + startTime when loaded', async () => {
         const player = new MidiPlayer()
         await player.loadInstruments([Instrument.Piano])
-        player.start()
         const ctx = FakeAudioContext.created[0]
-        ctx.currentTime = 2 // offset becomes 2 at start()? start() already ran with currentTime 0.
-        // Re-seed offset deterministically.
+        ctx.currentTime = 2
         player.start() // offset = 2
         player.schedule({ startTime: 0.5, duration: 1, midi: 64, instrument: Instrument.Piano })
         const sf = soundfontInstances[0]

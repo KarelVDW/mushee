@@ -31,9 +31,10 @@ function scoreWithNotes(...measuresNotes: Note[][]): Score {
 }
 
 describe('ScoreScheduler', () => {
-    it('tick() returns true (done) when no score is set', () => {
+    it('with no score, reset() is safe and tick() reports done', () => {
         const { player } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
+        expect(() => scheduler.reset()).not.toThrow()
         expect(scheduler.tick()).toBe(true)
     })
 
@@ -196,12 +197,11 @@ describe('ScoreScheduler', () => {
         expect(scheduler.entries).toHaveLength(2)
     })
 
-    it('getTiedAudioDuration stops at the end of the chain when no next note exists', () => {
+    it('a lone tie-start note sounds for its own length', () => {
         const { player, scheduled, raw } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
         const score = new Score()
         const m = score.addMeasure(0)
-        // A lone tie-start note with no following note: the while loop breaks at getNext()===null.
         const lonely = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
         m.addNotes([lonely])
         scheduler.score = score
@@ -263,14 +263,6 @@ describe('ScoreScheduler', () => {
         raw.currentTime = 60 / 90
         scheduler.tick()
         expect(scheduled.length).toBeGreaterThan(afterFirst)
-    })
-
-    it('reset() is a no-op tempo-wise when no score is set', () => {
-        const { player } = fakePlayer()
-        const scheduler = new ScoreScheduler(player)
-        expect(() => scheduler.reset()).not.toThrow()
-        // Stays at default bpm; tick() is immediately done with no score.
-        expect(scheduler.tick()).toBe(true)
     })
 
     it('reset() handles an empty score with no first measure', () => {
