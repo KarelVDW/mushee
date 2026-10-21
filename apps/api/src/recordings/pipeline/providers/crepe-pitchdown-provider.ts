@@ -1,5 +1,6 @@
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
+import { PITCHDOWN_PROVIDER_NAME } from '../profiles/pipeline-profile'
 import { CrepeProvider } from './crepe-provider'
 import type { ModelBackend } from './model-backend'
 import type { PitchSession, PitchTranscribeOptions, TrajectoryProvider } from './pitch-provider'
@@ -42,7 +43,7 @@ export class CrepePitchdownProvider implements TrajectoryProvider {
 
     private readonly inner: CrepeProvider
 
-    constructor(backend: ModelBackend, name = 'crepe-tiny-down1') {
+    constructor(backend: ModelBackend, name: string = PITCHDOWN_PROVIDER_NAME) {
         this.name = name
         this.inner = new CrepeProvider(backend, name)
         this.sampleRate = this.inner.sampleRate * this.factor

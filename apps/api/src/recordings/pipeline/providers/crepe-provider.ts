@@ -119,7 +119,7 @@ export class CrepeProvider implements TrajectoryProvider {
 
     constructor(
         private readonly backend: ModelBackend,
-        name = 'crepe',
+        name: string,
     ) {
         this.name = name
         this.logger.log(`${name} provider ready`)

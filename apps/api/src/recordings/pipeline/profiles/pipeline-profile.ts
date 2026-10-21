@@ -14,8 +14,8 @@
 
 export interface PipelineProfile {
     id: string
-    /** Provider key understood by the ProviderRegistry. */
-    providerName: string
+    /** Which registered provider runs this profile (`ProviderRegistry.get`). */
+    providerName: ProviderName
     /** Decoder high-pass cutoff (Hz). Sits below the lowest expected fundamental. */
     highpassHz: number
     minFreqHz: number
@@ -132,7 +132,13 @@ export const TRAJECTORY_MODEL_CEILING_HZ = 1900
 export const SUSTAINED_ONSET_DIP_RATIO = 0.35
 export const VOICE_ONSET_DIP_RATIO = 0.35
 
+/**
+ * The two providers the registry holds, both on the crepe-tiny checkpoint: at
+ * pitch, and an octave down (`CrepePitchdownProvider`) for the very-high band.
+ */
+export const AT_PITCH_PROVIDER_NAME = 'crepe-tiny'
 export const PITCHDOWN_PROVIDER_NAME = 'crepe-tiny-down1'
+export type ProviderName = typeof AT_PITCH_PROVIDER_NAME | typeof PITCHDOWN_PROVIDER_NAME
 /** The wrapper hears everything at half frequency: 2 × the CREPE ceiling. */
 export const PITCHDOWN_MODEL_CEILING_HZ = TRAJECTORY_MODEL_CEILING_HZ * 2
 
@@ -152,7 +158,7 @@ export const PITCHDOWN_MODEL_CEILING_HZ = TRAJECTORY_MODEL_CEILING_HZ * 2
 export const PROFILE_BANDS: PipelineProfile[] = [
     {
         id: 'low', // bass voice, tuba, cello, bassoon
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 40,
         minFreqHz: 55,
         maxFreqHz: 700,
@@ -163,7 +169,7 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     },
     {
         id: 'mid', // trumpet, clarinet, tenor/alto voice, harmonica
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 70,
         minFreqHz: 90,
         maxFreqHz: 1300,
@@ -171,7 +177,7 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     },
     {
         id: 'high', // flute, oboe, violin, soprano voice
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 120,
         minFreqHz: 200,
         maxFreqHz: 1900,
@@ -229,7 +235,7 @@ export const VOICE_OVERLAY = {
  */
 export const DEFAULT_PROFILE: PipelineProfile = {
     id: 'default-wide',
-    providerName: 'crepe-tiny',
+    providerName: AT_PITCH_PROVIDER_NAME,
     highpassHz: 55,
     minFreqHz: GLOBAL_MIN_FREQ_HZ,
     maxFreqHz: TRAJECTORY_MODEL_CEILING_HZ,
@@ -237,6 +243,6 @@ export const DEFAULT_PROFILE: PipelineProfile = {
 }
 
 /** Distinct provider keys any profile can select — what the registry pre-warms. */
-export function usedProviderNames(): string[] {
+export function usedProviderNames(): ProviderName[] {
     return [...new Set([DEFAULT_PROFILE.providerName, ...PROFILE_BANDS.map((b) => b.providerName)])]
 }
