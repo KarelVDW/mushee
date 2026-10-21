@@ -1,4 +1,5 @@
 import type { ClefSign } from '../model/clefs'
+import { LINES_PER_OCTAVE } from '../model/staffLines'
 import type { ClefType } from '../model/types'
 
 /**
@@ -131,8 +132,6 @@ export const CLEF_DEFS: Record<ClefType, ClefDef> = {
 const CLEF_GLYPH: Record<ClefSign, string> = { G: 'gClef', F: 'fClef', C: 'cClef' }
 // Treble-formula staff line of each clef's reference pitch: G clef → G4, F clef → F3, C clef → C4.
 const CLEF_REF_LINE: Record<ClefSign, number> = { G: 2, F: -2, C: 0 }
-// One octave = 7 diatonic steps = 3.5 line units.
-const OCTAVE_IN_LINES = 3.5
 
 /** Clef glyph name and the staff-line index (0 = top line) the glyph anchors on. */
 export const CLEF_CONFIG = Object.fromEntries(
@@ -145,7 +144,7 @@ export const CLEF_CONFIG = Object.fromEntries(
  * whole octaves). Derived: (line − reference line) − octaveChange × 3.5.
  */
 export const CLEF_LINE_OFFSET = Object.fromEntries(
-    Object.entries(CLEF_DEFS).map(([type, def]) => [type, def.line - CLEF_REF_LINE[def.sign] - def.octaveChange * OCTAVE_IN_LINES]),
+    Object.entries(CLEF_DEFS).map(([type, def]) => [type, def.line - CLEF_REF_LINE[def.sign] - def.octaveChange * LINES_PER_OCTAVE]),
 ) as Record<ClefType, number>
 
 /** The octave marker ("8" or "15", above or below) shown on a clef, if it transposes. */

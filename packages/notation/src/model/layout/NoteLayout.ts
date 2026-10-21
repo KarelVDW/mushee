@@ -2,6 +2,7 @@ import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../components/constan
 import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForNote } from '../../components/noteUtils'
 import type { Note } from '../Note'
+import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { NoteWidth } from '../width/NoteWidth'
 import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 
@@ -42,8 +43,8 @@ export class NoteLayout {
         const ledgerLinePositions: number[] = []
         if (note.pitch) {
             const noteLine = note.line
-            for (let l = 0; l >= noteLine; l--) ledgerLinePositions.push(getYForNote(l))
-            for (let l = 6; l <= noteLine; l++) ledgerLinePositions.push(getYForNote(l))
+            for (let l = STAFF_BOTTOM_LINE - 1; l >= noteLine; l--) ledgerLinePositions.push(getYForNote(l))
+            for (let l = STAFF_TOP_LINE + 1; l <= noteLine; l++) ledgerLinePositions.push(getYForNote(l))
         }
         this.ledgerLines = ledgerLinePositions.map((ly) => ({
             x1: cursorX,

@@ -4,6 +4,7 @@ import type { KeySignature } from './KeySignature'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
+import { STAFF_MIDDLE_LINE } from './staffLines'
 import type { TieType } from './types'
 import { NoteWidth } from './width/NoteWidth'
 
@@ -112,7 +113,7 @@ export class Note {
 
     get stemDir(): 'up' | 'down' {
         if (this.isRest) return 'up'
-        return this.line >= 3 ? 'down' : 'up'
+        return this.line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
     }
 
     // --- Navigation (thin delegates; the traversal lives on Score) ---

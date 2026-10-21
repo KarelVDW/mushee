@@ -2,6 +2,7 @@ import { CLEF_LINE_OFFSET } from '../components/constants'
 import { ClefLayout } from './layout/ClefLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
+import { LINES_PER_OCTAVE, STAFF_MIDDLE_LINE } from './staffLines'
 import type { ClefType } from './types'
 import { ClefWidth } from './width/ClefWidth'
 
@@ -51,10 +52,6 @@ export class Clef {
         if (!pitches.length) return 0
         const lines = pitches.map((p) => this.lineFor(p)).sort((a, b) => a - b)
         const median = lines[Math.floor((lines.length - 1) / 2)]
-        // The staff spans lines 1..5; one octave is 3.5 lines.
         return Math.round((STAFF_MIDDLE_LINE - median) / LINES_PER_OCTAVE)
     }
 }
-
-const STAFF_MIDDLE_LINE = 3
-const LINES_PER_OCTAVE = 3.5

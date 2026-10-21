@@ -1,6 +1,7 @@
 import { BEAT_EPSILON } from '../Duration'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
+import { STAFF_MIDDLE_LINE } from '../staffLines'
 
 export interface BeamGroup {
     notes: Note[]
@@ -25,7 +26,7 @@ export class BeamFinder {
         const flushGroup = () => {
             if (currentNotes.length >= 2) {
                 const avgLine = currentNotes.reduce((sum, n) => sum + n.line, 0) / currentNotes.length
-                const stemDir: 'up' | 'down' = avgLine >= 3 ? 'down' : 'up'
+                const stemDir: 'up' | 'down' = avgLine >= STAFF_MIDDLE_LINE ? 'down' : 'up'
                 this.groups.push({ notes: currentNotes, stemDir })
             }
             currentNotes = []
