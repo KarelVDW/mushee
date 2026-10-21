@@ -8,6 +8,7 @@ import { WsAdapter } from '@nestjs/platform-ws'
 import type { FastifyRequest } from 'fastify'
 
 import { AppModule } from './app.module'
+import { DEV_WEB_ORIGIN } from './config/app-urls'
 import { runMigrationsLocked } from './database/run-migrations'
 import { seedDemoData } from './database/seed/demo-seed'
 import { ErrorReporter, monitorProcessErrors } from './telemetry/error-reporter'
@@ -86,7 +87,7 @@ async function bootstrap() {
     /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 
     app.enableCors({
-        origin: process.env.CORS_ORIGIN ?? 'http://localhost:3200',
+        origin: process.env.CORS_ORIGIN ?? DEV_WEB_ORIGIN,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     })

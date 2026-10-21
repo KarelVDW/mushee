@@ -3,6 +3,7 @@ import { emailOTP } from 'better-auth/plugins/email-otp'
 import { Pool } from 'pg'
 
 import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
+import { DEV_WEB_ORIGIN } from '../config/app-urls'
 import { postgresSsl } from '../database/postgres-ssl'
 import { mailService } from '../mail/mail.service'
 import { signupCaptchaPlugins } from './captcha-config'
@@ -25,7 +26,7 @@ const trustedOrigins = [
     ...(process.env.TRUSTED_ORIGINS?.split(',')
         .map((s) => s.trim())
         .filter(Boolean) ?? []),
-    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3200'] : []),
+    ...(process.env.NODE_ENV !== 'production' ? [DEV_WEB_ORIGIN] : []),
 ]
 
 export const auth = betterAuth({

@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUna
 import type { Polar } from '@polar-sh/sdk'
 
 import { isBetaMode } from '../beta/beta-config'
+import { webAppUrl } from '../config/app-urls'
 import { RecordingCreditsService } from '../recordings/recording-credits.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { isBillingConfigured, polarClient } from './polar/client'
@@ -131,7 +132,7 @@ export class BillingService {
             externalCustomerId: user.id,
             customerEmail: user.email,
             customerIpAddress: customerIp,
-            successUrl: `${this.webAppUrl()}/settings?${opts.successQuery}`,
+            successUrl: `${webAppUrl()}/settings?${opts.successQuery}`,
             metadata: opts.metadata,
         })
         return { url: checkout.url }
@@ -142,7 +143,7 @@ export class BillingService {
         const polar = this.requirePolar()
         const session = await polar.customerSessions.create({
             externalCustomerId: userId,
-            returnUrl: `${this.webAppUrl()}/settings`,
+            returnUrl: `${webAppUrl()}/settings`,
         })
         return { url: session.customerPortalUrl }
     }
@@ -224,9 +225,5 @@ export class BillingService {
             throw new ServiceUnavailableException('Billing is not configured on this environment.')
         }
         return polar
-    }
-
-    private webAppUrl(): string {
-        return (process.env.WEB_APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3200').replace(/\/$/, '')
     }
 }
