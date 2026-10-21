@@ -1,4 +1,4 @@
-import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
+import { last, sumBy } from 'lodash-es'
 
 import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
@@ -700,11 +700,13 @@ export class Score {
         while (targetBeats < valueBeats - BEAT_EPSILON) {
             const lastTarget = targets[targets.length - 1]
             let nextNote = lastTarget.getNext()
-            if (!nextNote) this.insertMeasure(this.measures.length, this.createMeasure(this.measures.length)).complete()
-            nextNote = lastTarget.getNext()
+            if (!nextNote) {
+                this.insertMeasure(this.measures.length, this.createMeasure(this.measures.length)).complete()
+                nextNote = lastTarget.getNext()
+            }
             /* v8 ignore next -- defensive: a measure was just appended and filled, so the next note always exists here */
             if (!nextNote) throw new Error('Trouble finding next note')
-            targets = compact([...targets, nextNote])
+            targets = [...targets, nextNote]
             targetBeats += nextNote.duration.effectiveBeats
         }
         if (targetBeats > valueBeats + BEAT_EPSILON) {
@@ -719,15 +721,15 @@ export class Score {
             values = [...values, ...(exact ?? fills[2]).map((d) => new Note({ duration: d }))]
             valueBeats += gap
         }
-        const measuresById = keyBy(
-            targets.map((n) => n.measure),
-            (m) => m.id,
-        )
-        const targetsByMeasure = groupBy(targets, (n) => n.measure.id)
+        const targetsByMeasure = new Map<Measure, Note[]>()
+        for (const note of targets) {
+            const group = targetsByMeasure.get(note.measure)
+            if (group) group.push(note)
+            else targetsByMeasure.set(note.measure, [note])
+        }
         let replaceValues = [...values]
         const allNewNotes = []
-        for (const [measureId, notes] of Object.entries(targetsByMeasure)) {
-            const measure = measuresById[measureId]
+        for (const [measure, notes] of targetsByMeasure) {
             const newNotes = []
             let freeBeats = sumBy(notes, (n) => n.duration.effectiveBeats)
             let remainderNotes: Note[] = []
@@ -745,7 +747,7 @@ export class Score {
                     freeBeats = 0
                     const remainderDurations = Duration.fromBeats(remainderBeats)
                     remainderNotes = remainderDurations.map(
-                        (d, i) => new Note({ duration: d, pitch: note.pitch, ...(i != remainderDurations.length - 1 && { tie: 'start' }) }),
+                        (d, i) => new Note({ duration: d, pitch: note.pitch, ...(i !== remainderDurations.length - 1 && { tie: 'start' }) }),
                     )
                 }
             }
