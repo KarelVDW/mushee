@@ -30,10 +30,6 @@ let initialized = false
 /** The signed-in user, remembered so a consent grant can identify retroactively. */
 let currentUserId: string | null = null
 
-export function isAnalyticsEnabled(): boolean {
-    return initialized
-}
-
 export function initAnalytics(): void {
     if (initialized || !KEY || typeof window === 'undefined') return
     initialized = true
@@ -88,12 +84,12 @@ export function track(event: string, properties?: Record<string, unknown>): void
 /** Tie events to the signed-in account — only once the user consented, and
  *  id only, never email/name: the privacy policy describes replays/analytics
  *  as pseudonymous, so the profile must not carry direct identifiers. */
-export function identifyUser(user: { id: string; email?: string; name?: string }): void {
+export function identifyUser(userId: string): void {
     if (!initialized) return
-    currentUserId = user.id
+    currentUserId = userId
     if (!hasAnalyticsConsent()) return
-    if (posthog.get_distinct_id() === user.id) return
-    posthog.identify(user.id)
+    if (posthog.get_distinct_id() === userId) return
+    posthog.identify(userId)
 }
 
 /** Set person properties on the account profile — consent-gated like

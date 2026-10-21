@@ -242,9 +242,6 @@ importers:
       '@mushee/playback':
         specifier: workspace:^
         version: link:../../packages/playback
-      '@polar-sh/sdk':
-        specifier: ^0.47.1
-        version: 0.47.1
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.3)

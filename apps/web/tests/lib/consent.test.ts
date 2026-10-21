@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-    clearConsent,
     CONSENT_VERSION,
     type ConsentRecord,
     getConsent,
     hasAnalyticsConsent,
     onConsentChange,
+    onConsentSettingsRequested,
+    requestConsentSettings,
     saveConsent,
 } from '@/lib/consent'
 
 describe('consent store', () => {
     beforeEach(() => {
-        clearConsent()
+        window.localStorage.removeItem('solkey:consent')
     })
 
     it('starts undecided', () => {
@@ -63,10 +64,24 @@ describe('consent store', () => {
         saveConsent(true)
         expect(listener).toHaveBeenCalledTimes(2)
     })
+})
 
-    it('clearConsent forgets the decision', () => {
+describe('consent settings requests', () => {
+    it('reach every subscriber until it unsubscribes', () => {
+        const listener = vi.fn<() => void>()
+        const unsubscribe = onConsentSettingsRequested(listener)
+
+        requestConsentSettings()
+        expect(listener).toHaveBeenCalledTimes(1)
+
+        unsubscribe()
+        requestConsentSettings()
+        expect(listener).toHaveBeenCalledTimes(1)
+    })
+
+    it('leave the stored decision alone', () => {
         saveConsent(true)
-        clearConsent()
-        expect(getConsent()).toBeNull()
+        requestConsentSettings()
+        expect(getConsent()?.analytics).toBe(true)
     })
 })

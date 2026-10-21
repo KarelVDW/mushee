@@ -17,6 +17,7 @@ describe('isEurozone', () => {
         expect(isEurozone(['nl-BE'])).toBe(true)
         expect(isEurozone(['de-DE', 'en-US'])).toBe(true)
         expect(isEurozone(['fr-FR'])).toBe(true)
+        expect(isEurozone(['bg-BG'])).toBe(true)
         expect(isEurozone(['en-US'])).toBe(false)
     })
 

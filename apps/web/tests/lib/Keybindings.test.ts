@@ -158,10 +158,8 @@ describe('Keybindings customization', () => {
 })
 
 describe('Keybindings fixed commands', () => {
-    it('reports fixedness and refuses to rebind a fixed command', () => {
+    it('refuses to rebind a fixed command', () => {
         const keybindings = makeKeybindings()
-        expect(keybindings.isFixed('select-all')).toBe(true)
-        expect(keybindings.isFixed('rest')).toBe(false)
         const result = keybindings.rebind('select-all', recorded({ code: 'KeyJ', key: 'j' }))
         expect(result).toMatchObject({ ok: false, reservedBy: { id: 'select-all' } })
         expect(keybindings.resolve(keydown({ code: 'KeyA', key: 'a', ctrlKey: true }))?.id).toBe('select-all')

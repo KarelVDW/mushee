@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
 
+import { requestConsentSettings } from '@/lib/consent'
+
 import { ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
 import { PrimaryButton } from './Buttons'
 import { Icon } from './Icon'
@@ -134,8 +136,7 @@ export function Footer({ width = 'app' }: FooterProps) {
                     </Link>
                     <button
                         type="button"
-                        // Same event CookieConsent listens on (see openCookieSettings).
-                        onClick={() => window.dispatchEvent(new Event('solkey:cookie-settings'))}
+                        onClick={() => requestConsentSettings()}
                         className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}>
                         Cookie settings
                     </button>

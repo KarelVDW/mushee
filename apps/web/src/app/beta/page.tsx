@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, Wordmark } from '@/components/ui'
 import { signOut, useSession } from '@/lib/auth-client'
 import { BETA_PLAN } from '@/lib/plans'
-import { useBetaStatus } from '@/lib/queries'
+import { useBetaGate } from '@/lib/queries'
 
 /**
  * Closed-beta waiting room. Pending users land here after signup; the page
@@ -15,9 +15,10 @@ import { useBetaStatus } from '@/lib/queries'
 export default function BetaWaitingPage() {
     const router = useRouter()
     const { data: session, isPending: sessionPending } = useSession()
-    const status = useBetaStatus({ poll: true, enabled: !!session?.user })
+    const gate = useBetaGate({ poll: true, enabled: !!session?.user })
 
-    const approved = status.data ? status.data.status !== 'pending' || !status.data.betaMode : false
+    // Stay on the waitlist copy until the server has answered.
+    const approved = gate.isResolved && !gate.awaitingApproval
 
     useEffect(() => {
         if (!sessionPending && !session?.user) router.replace('/login')
@@ -83,8 +84,8 @@ export default function BetaWaitingPage() {
                         </div>
 
                         <div className="flex items-center gap-4 flex-wrap">
-                            <PrimaryButton onClick={() => void status.refetch()} disabled={status.isFetching} icon="refresh-cw">
-                                {status.isFetching ? 'Checking…' : 'Check my status'}
+                            <PrimaryButton onClick={() => void gate.refetch()} disabled={gate.isFetching} icon="refresh-cw">
+                                {gate.isFetching ? 'Checking…' : 'Check my status'}
                             </PrimaryButton>
                             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                                 This page checks automatically every 30 seconds. Questions?{' '}

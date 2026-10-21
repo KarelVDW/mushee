@@ -25,11 +25,13 @@ export function formatMoney(amount: number, currency: Currency): string {
     return `${currencySymbol(currency)}${amount}`
 }
 
-/** The 20 eurozone members (2026). Other EU/European countries (SE, DK, PL,
- *  CZ, HU, RO, BG, CH, GB, NO…) don't pay in euro and stay on USD display. */
+/** The 21 eurozone members (Bulgaria joined 2026-01-01). Other EU/European
+ *  countries (SE, DK, PL, CZ, HU, RO, CH, GB, NO…) don't pay in euro and stay
+ *  on USD display. */
 const EUROZONE = new Set([
     'AT',
     'BE',
+    'BG',
     'HR',
     'CY',
     'EE',
@@ -69,6 +71,7 @@ const EUROZONE_TIMEZONES = new Set([
     'Europe/Paris',
     'Europe/Riga',
     'Europe/Rome',
+    'Europe/Sofia',
     'Europe/Tallinn',
     'Europe/Vatican',
     'Europe/Vienna',

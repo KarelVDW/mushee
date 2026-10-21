@@ -60,16 +60,21 @@ export function saveConsent(analytics: boolean): ConsentRecord {
     return record
 }
 
-/** Forget the decision — the banner shows again on next load. */
-export function clearConsent(): void {
-    try {
-        window.localStorage.removeItem(STORAGE_KEY)
-    } catch {
-        // Nothing stored anyway.
-    }
-}
-
 export function onConsentChange(listener: Listener): () => void {
     listeners.add(listener)
     return () => listeners.delete(listener)
+}
+
+const settingsListeners = new Set<() => void>()
+
+/** Ask the consent UI to reopen the preferences dialog (the footer's
+ *  'Cookie settings' link). */
+export function requestConsentSettings(): void {
+    for (const listener of settingsListeners) listener()
+}
+
+/** Subscribe to requestConsentSettings(); returns the unsubscribe. */
+export function onConsentSettingsRequested(listener: () => void): () => void {
+    settingsListeners.add(listener)
+    return () => settingsListeners.delete(listener)
 }
