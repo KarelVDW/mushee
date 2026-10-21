@@ -268,9 +268,57 @@ export class NoteExtractor {
      * `bpm` and give each a writable note value. Pure function of the performance
      * and the tempo, so a tempo estimator can be swapped in (or swept) without
      * touching detection.
+     *
+     * Each note's start snaps to the beat grid (with a coarseness bias) and its
+     * length to one of the standard durations. A legato note whose sounding end
+     * falls just short of (or just past) the next onset is extended to meet it,
+     * since that small gap is the provider's early release rather than a rest;
+     * otherwise the length is floor-snapped and trimmed so it can't collide with
+     * the next note's snapped start.
      */
-    quantize(performed: NoteEventTime[], bpm: number): NoteEventTime[] {
-        return this.alignAndQuantize(performed, bpm)
+    quantize(notes: NoteEventTime[], bpm: number): NoteEventTime[] {
+        const beatsPerSecond = bpm / 60
+        const result: NoteEventTime[] = []
+
+        for (let i = 0; i < notes.length; i++) {
+            const note = notes[i]
+            const startBeat = note.startTimeSeconds * beatsPerSecond
+            const endBeat = (note.startTimeSeconds + note.durationSeconds) * beatsPerSecond
+
+            const snapStart = this.snapToGrid(startBeat)
+            const soundingBeats = Math.max(this.minDurationBeats, endBeat - snapStart)
+
+            let maxAvailable = Number.POSITIVE_INFINITY
+            const next = notes[i + 1]
+            if (next) {
+                const nextStartBeat = next.startTimeSeconds * beatsPerSecond
+                maxAvailable = Math.max(0, this.snapToGrid(nextStartBeat) - snapStart)
+            }
+
+            // Legato seam-fill: when the note sounds up to within SEAM_FILL_BEATS of
+            // the next onset (or overruns it), end it exactly there — the gap is the
+            // provider's early release, not a rest. maxAvailable is a grid distance,
+            // so the filled length stays grid-aligned. Genuine rests (larger gaps)
+            // fall through to the floor-snap, preserving existing behavior.
+            let durationBeats: number
+            if (
+                Number.isFinite(maxAvailable) &&
+                maxAvailable >= this.minDurationBeats &&
+                maxAvailable - soundingBeats <= this.seamFillBeats
+            ) {
+                durationBeats = maxAvailable
+            } else {
+                durationBeats = this.snapToStandardDuration(Math.min(soundingBeats, maxAvailable))
+            }
+            if (durationBeats < this.minDurationBeats) continue
+
+            result.push({
+                ...note,
+                startTimeSeconds: snapStart / beatsPerSecond,
+                durationSeconds: durationBeats / beatsPerSecond,
+            })
+        }
+        return result
     }
 
     /**
@@ -500,59 +548,6 @@ export class NoteExtractor {
             }
         }
         return best
-    }
-
-    /**
-     * Snap each note's start to the beat grid (with a coarseness bias) and its
-     * length to one of the standard durations. A legato note whose sounding end
-     * falls just short of (or just past) the next onset is extended to meet it,
-     * since that small gap is the provider's early release rather than a rest;
-     * otherwise the length is floor-snapped and trimmed so it can't collide with
-     * the next note's snapped start.
-     */
-    private alignAndQuantize(notes: NoteEventTime[], bpm: number): NoteEventTime[] {
-        const beatsPerSecond = bpm / 60
-        const result: NoteEventTime[] = []
-
-        for (let i = 0; i < notes.length; i++) {
-            const note = notes[i]
-            const startBeat = note.startTimeSeconds * beatsPerSecond
-            const endBeat = (note.startTimeSeconds + note.durationSeconds) * beatsPerSecond
-
-            const snapStart = this.snapToGrid(startBeat)
-            const soundingBeats = Math.max(this.minDurationBeats, endBeat - snapStart)
-
-            let maxAvailable = Number.POSITIVE_INFINITY
-            const next = notes[i + 1]
-            if (next) {
-                const nextStartBeat = next.startTimeSeconds * beatsPerSecond
-                maxAvailable = Math.max(0, this.snapToGrid(nextStartBeat) - snapStart)
-            }
-
-            // Legato seam-fill: when the note sounds up to within SEAM_FILL_BEATS of
-            // the next onset (or overruns it), end it exactly there — the gap is the
-            // provider's early release, not a rest. maxAvailable is a grid distance,
-            // so the filled length stays grid-aligned. Genuine rests (larger gaps)
-            // fall through to the floor-snap, preserving existing behavior.
-            let durationBeats: number
-            if (
-                Number.isFinite(maxAvailable) &&
-                maxAvailable >= this.minDurationBeats &&
-                maxAvailable - soundingBeats <= this.seamFillBeats
-            ) {
-                durationBeats = maxAvailable
-            } else {
-                durationBeats = this.snapToStandardDuration(Math.min(soundingBeats, maxAvailable))
-            }
-            if (durationBeats < this.minDurationBeats) continue
-
-            result.push({
-                ...note,
-                startTimeSeconds: snapStart / beatsPerSecond,
-                durationSeconds: durationBeats / beatsPerSecond,
-            })
-        }
-        return result
     }
 
     private snapToGrid(beats: number): number {
