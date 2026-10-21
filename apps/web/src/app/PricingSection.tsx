@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { type Currency, formatMoney } from '@/lib/currency'
 import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
@@ -154,11 +154,7 @@ function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currenc
             ].join(' ')}>
             <div className="flex justify-between items-start">
                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
-                {emphasis && (
-                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-soft text-on-secondary-soft px-2.5 py-1.5 rounded-full">
-                        Best value
-                    </span>
-                )}
+                {emphasis && <Badge tone="secondary">Best value</Badge>}
             </div>
             <div className="flex items-baseline gap-1.5">
                 <span className="font-display font-bold text-[40px] tracking-[-0.03em]">
