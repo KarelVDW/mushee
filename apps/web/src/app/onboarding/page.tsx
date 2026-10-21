@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { Icon, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
+import { FunnelShell } from '@/components/FunnelShell'
+import { Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { setUserProperties, track } from '@/lib/analytics'
 import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
@@ -154,72 +155,60 @@ export default function OnboardingPage() {
     const finish = () => leave()
 
     return (
-        <main className="min-h-dvh bg-surface flex flex-col items-center px-6 py-8">
-            <header className="w-full max-w-180 flex justify-between items-center">
-                <Wordmark size={26} />
-                {!done && step > 0 ? <TertiaryButton onClick={skip}>Skip for now</TertiaryButton> : <span />}
-            </header>
+        <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip for now</TertiaryButton>}>
+            {!done && <StepProgress step={step} total={STEP_COUNT} />}
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-6 py-8 sm:px-12 sm:py-10 flex flex-col gap-7">
-                {!done && <StepProgress step={step} total={STEP_COUNT} />}
+            {!done && step === 0 && (
+                <VerifyStep userEmail={userEmail} sessionEmail={sessionEmail} verified={verified} onVerified={refetch} />
+            )}
 
-                {!done && step === 0 && (
-                    <VerifyStep userEmail={userEmail} sessionEmail={sessionEmail} verified={verified} onVerified={refetch} />
-                )}
+            {!done && step === 1 && <MicStep micState={micState} setMicState={setMicState} />}
 
-                {!done && step === 1 && <MicStep micState={micState} setMicState={setMicState} />}
+            {!done && step === 2 && <NameStep value={name} onChange={setName} />}
 
-                {!done && step === 2 && <NameStep value={name} onChange={setName} />}
+            {!done && step === 3 && <BackgroundStep value={background} onChange={setBackground} />}
 
-                {!done && step === 3 && <BackgroundStep value={background} onChange={setBackground} />}
+            {!done && step === 4 && <GoalStep value={goal} onChange={setGoal} />}
 
-                {!done && step === 4 && <GoalStep value={goal} onChange={setGoal} />}
+            {!done && step === 5 && <InstrumentsStep value={instruments} onChange={setInstruments} />}
 
-                {!done && step === 5 && <InstrumentsStep value={instruments} onChange={setInstruments} />}
+            {!done && step === 6 && (
+                <SourceStep source={source} onSourceChange={setSource} sourceDetail={sourceDetail} onSourceDetailChange={setSourceDetail} />
+            )}
 
-                {!done && step === 6 && (
-                    <SourceStep
-                        source={source}
-                        onSourceChange={setSource}
-                        sourceDetail={sourceDetail}
-                        onSourceDetailChange={setSourceDetail}
-                    />
-                )}
+            {!done && step === 7 && !BETA_MODE && (
+                <PlanStep plans={plans.sellable} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
+            )}
 
-                {!done && step === 7 && !BETA_MODE && (
-                    <PlanStep plans={plans.sellable} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
-                )}
+            {!done && step === 7 && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
 
-                {!done && step === 7 && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
+            {done && (
+                <DoneStep
+                    name={name}
+                    awaitingApproval={awaitingApproval}
+                    betaPlanName={plans.beta.name}
+                    planName={BETA_MODE ? plans.beta.name : plans.byId(tier)?.name}
+                    onFinish={finish}
+                />
+            )}
 
-                {done && (
-                    <DoneStep
-                        name={name}
-                        awaitingApproval={awaitingApproval}
-                        betaPlanName={plans.beta.name}
-                        planName={BETA_MODE ? plans.beta.name : plans.byId(tier)?.name}
-                        onFinish={finish}
-                    />
-                )}
-
-                {!done && (
-                    <div className="flex justify-between items-center pt-3">
-                        {step > 0 ? (
-                            <TertiaryButton onClick={back}>
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Icon name="arrow-left" size={13} />
-                                    Back
-                                </span>
-                            </TertiaryButton>
-                        ) : (
-                            <span />
-                        )}
-                        <PrimaryButton disabled={!canAdvance} icon="arrow-right" emphasis="pop" onClick={next}>
-                            {step === STEP_COUNT - 1 ? 'Finish' : 'Continue'}
-                        </PrimaryButton>
-                    </div>
-                )}
-            </div>
-        </main>
+            {!done && (
+                <div className="flex justify-between items-center pt-3">
+                    {step > 0 ? (
+                        <TertiaryButton onClick={back}>
+                            <span className="inline-flex items-center gap-1.5">
+                                <Icon name="arrow-left" size={13} />
+                                Back
+                            </span>
+                        </TertiaryButton>
+                    ) : (
+                        <span />
+                    )}
+                    <PrimaryButton disabled={!canAdvance} icon="arrow-right" emphasis="pop" onClick={next}>
+                        {step === STEP_COUNT - 1 ? 'Finish' : 'Continue'}
+                    </PrimaryButton>
+                </div>
+            )}
+        </FunnelShell>
     )
 }

@@ -3,10 +3,11 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, Wordmark } from '@/components/ui'
+import { BetaPlanCard } from '@/components/BetaPlanCard'
+import { FunnelShell } from '@/components/FunnelShell'
+import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton } from '@/components/ui'
 import { signOut, useSession } from '@/lib/auth-client'
-import { BETA_PLAN } from '@/lib/plans'
-import { useBetaGate } from '@/lib/queries'
+import { useBetaGate, usePlanCatalogue } from '@/lib/queries'
 
 /**
  * Closed-beta waiting room. Pending users land here after signup; the page
@@ -16,6 +17,7 @@ export default function BetaWaitingPage() {
     const router = useRouter()
     const { data: session, isPending: sessionPending } = useSession()
     const gate = useBetaGate({ poll: true, enabled: !!session?.user })
+    const betaPlan = usePlanCatalogue().beta
 
     // Stay on the waitlist copy until the server has answered.
     const approved = gate.isResolved && !gate.awaitingApproval
@@ -30,73 +32,45 @@ export default function BetaWaitingPage() {
     }
 
     return (
-        <main className="min-h-dvh bg-surface flex flex-col items-center px-6 py-8">
-            <header className="w-full max-w-180 flex justify-between items-center">
-                <Wordmark size={26} />
-                <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
-            </header>
+        <FunnelShell gap={6} action={<TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>}>
+            {approved ? (
+                <>
+                    <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                        <Icon name="check" size={28} />
+                    </div>
+                    <ModalTitle>You&apos;re in.</ModalTitle>
+                    <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
+                    <div>
+                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores">
+                            Open my library
+                        </PrimaryButton>
+                    </div>
+                </>
+            ) : (
+                <>
+                    <Eyebrow className="text-secondary">Closed beta</Eyebrow>
+                    <ModalTitle>You&apos;re on the waitlist.</ModalTitle>
+                    <SubHeadline>
+                        Solkey is in a closed beta, so access is granted personally. We&apos;ll email{' '}
+                        <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is approved —
+                        usually within a day.
+                    </SubHeadline>
 
-            <div className="w-full max-w-180 mt-12 bg-surface-container-lowest rounded-xl editorial-shadow px-6 py-8 sm:px-12 sm:py-10 flex flex-col gap-6">
-                {approved ? (
-                    <>
-                        <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
-                            <Icon name="check" size={28} />
-                        </div>
-                        <ModalTitle>You&apos;re in.</ModalTitle>
-                        <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
-                        <div>
-                            <PrimaryButton emphasis="pop" icon="arrow-right" onClick={() => router.push('/scores')}>
-                                Open my library
-                            </PrimaryButton>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <Eyebrow className="text-secondary">Closed beta</Eyebrow>
-                        <ModalTitle>You&apos;re on the waitlist.</ModalTitle>
-                        <SubHeadline>
-                            Solkey is in a closed beta, so access is granted personally. We&apos;ll email{' '}
-                            <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is approved
-                            — usually within a day.
-                        </SubHeadline>
+                    <BetaPlanCard plan={betaPlan} title={<>Waiting for you: the {betaPlan.name} plan</>} />
 
-                        <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                            <span className="w-12 h-12 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
-                                <Icon name={BETA_PLAN.icon} size={22} />
-                            </span>
-                            <div className="flex flex-col gap-1.5">
-                                <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
-                                    Waiting for you: the {BETA_PLAN.name} plan
-                                </span>
-                                <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                                    {BETA_PLAN.features.map((f) => (
-                                        <li
-                                            key={f}
-                                            className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                                            <span className="mt-px opacity-80">
-                                                <Icon name="check" size={14} />
-                                            </span>
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <PrimaryButton onClick={() => void gate.refetch()} disabled={gate.isFetching} icon="refresh-cw">
-                                {gate.isFetching ? 'Checking…' : 'Check my status'}
-                            </PrimaryButton>
-                            <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                This page checks automatically every 30 seconds. Questions?{' '}
-                                <a href="mailto:support@solkey.io" className="text-primary underline">
-                                    support@solkey.io
-                                </a>
-                            </span>
-                        </div>
-                    </>
-                )}
-            </div>
-        </main>
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <PrimaryButton onClick={() => void gate.refetch()} disabled={gate.isFetching} icon="refresh-cw">
+                            {gate.isFetching ? 'Checking…' : 'Check my status'}
+                        </PrimaryButton>
+                        <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            This page checks automatically every 30 seconds. Questions?{' '}
+                            <a href="mailto:support@solkey.io" className="text-primary underline">
+                                support@solkey.io
+                            </a>
+                        </span>
+                    </div>
+                </>
+            )}
+        </FunnelShell>
     )
 }

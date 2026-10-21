@@ -3,11 +3,12 @@
 import { Instrument } from '@mushee/notation/model'
 import { type Dispatch, type SetStateAction, useState } from 'react'
 
+import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
 import { emailOtp } from '@/lib/auth-client'
-import { BETA_PLAN, type BetaPlan, planFeatures, type PlanTier } from '@/lib/plans'
+import type { BetaPlan, PlanTier } from '@/lib/plans'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { OptionCard, StepShell } from './OnboardingControls'
@@ -297,28 +298,14 @@ export function BetaPlanStep({ betaPlan, awaitingApproval }: { betaPlan: BetaPla
         <StepShell
             title="You're on the Beta plan."
             subtitle="During the closed beta there's nothing to pick and nothing to pay — every account gets the same plan.">
-            <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                <span className="w-12 h-12 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
-                    <Icon name={BETA_PLAN.icon} size={22} />
-                </span>
-                <div className="flex flex-col gap-1.5">
-                    <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+            <BetaPlanCard
+                plan={betaPlan}
+                title={
+                    <>
                         {betaPlan.name} — {betaPlan.tagline.toLowerCase()}
-                    </span>
-                    <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                        {planFeatures(betaPlan).map((f) => (
-                            <li
-                                key={f}
-                                className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                                <span className="mt-px opacity-80">
-                                    <Icon name="check" size={14} />
-                                </span>
-                                {f}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
+                    </>
+                }
+            />
             {awaitingApproval && (
                 <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3.5 font-body font-normal text-[13px] leading-normal">
                     One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you the moment
