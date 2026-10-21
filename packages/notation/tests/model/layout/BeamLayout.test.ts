@@ -1,15 +1,8 @@
 import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '@mushee/notation/engraving/constants'
-import { Duration } from '@mushee/notation/model/Duration'
-import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import type { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
+import { pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
-
-/** An eighth note at the given pitch (used to form beam groups). */
-const eighth = (name = 'C', octave = 4) => new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })
-
-/** A sixteenth note at the given pitch (forms secondary beams). */
-const sixteenth = (name = 'C', octave = 4) => new Note({ duration: new Duration({ type: '16' }), pitch: new Pitch({ name, octave }) })
 
 /** Build a fresh single-measure score, add the notes, and return the (single) beam plus its members. */
 function beamFrom(notes: Note[]) {
@@ -24,7 +17,7 @@ function beamFrom(notes: Note[]) {
 describe('BeamLayout', () => {
     it('builds a primary beam with positive thickness for an upward (low) beam', () => {
         // Two low eighths (C4, line 0) → stems up.
-        const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
         expect(beam.stemDir).toBe('up')
 
         const { primary } = beam
@@ -36,7 +29,7 @@ describe('BeamLayout', () => {
 
     it('builds a primary beam with negative thickness for a downward (high) beam', () => {
         // Two high eighths (E5, line 4) → stems down.
-        const { beam } = beamFrom([eighth('E', 5), eighth('E', 5)])
+        const { beam } = beamFrom([pitched('E', 5, '8'), pitched('E', 5, '8')])
         expect(beam.stemDir).toBe('down')
 
         const { primary } = beam
@@ -46,7 +39,7 @@ describe('BeamLayout', () => {
     })
 
     it('primary beam x endpoints match the first/last stem x positions', () => {
-        const { measure, beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
+        const { measure, beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
         const { primary } = beam
 
         const first = beam.firstNote
@@ -62,14 +55,14 @@ describe('BeamLayout', () => {
     })
 
     it('a level beam (equal pitches) has zero slope: primary y1 === y2', () => {
-        const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
         const { primary } = beam
         expect(primary.y2).toBeCloseTo(primary.y1)
     })
 
     it('a rising beam (up stems) produces a non-zero, clamped slope', () => {
         // First note low (C4), second higher (A4) → with up stems the beam tilts.
-        const { beam } = beamFrom([eighth('C', 4), eighth('A', 4)])
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('A', 4, '8')])
         expect(beam.stemDir).toBe('up')
         const { primary } = beam
 
@@ -82,7 +75,7 @@ describe('BeamLayout', () => {
 
     it('clamps a steep pitch jump to the maximum beam slope', () => {
         // An extreme jump (C4 → C6, both up-stemmable region) would over-tilt without clamping.
-        const { beam } = beamFrom([eighth('C', 4), eighth('B', 4)])
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('B', 4, '8')])
         const { primary } = beam
         const dx = primary.x2 - primary.x1
         const slope = Math.abs((primary.y2 - primary.y1) / dx)
@@ -90,7 +83,7 @@ describe('BeamLayout', () => {
     })
 
     it('getStem returns repositioned stems whose y2 lies on the beam line', () => {
-        const { measure, beam } = beamFrom([eighth('C', 4), eighth('A', 4)])
+        const { measure, beam } = beamFrom([pitched('C', 4, '8'), pitched('A', 4, '8')])
         const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
 
@@ -110,13 +103,13 @@ describe('BeamLayout', () => {
     })
 
     it('getStem returns undefined for a note not in the beam', () => {
-        const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
-        expect(beam.getStem(eighth('C', 4))).toBeUndefined()
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
+        expect(beam.getStem(pitched('C', 4, '8'))).toBeUndefined()
     })
 
     it('raises an up-beam so every stem reaches it (no stem pokes above the beam)', () => {
         // A descending up-stem group forces the beamFirstY adjustment branch (stemDir up).
-        const { measure, beam } = beamFrom([eighth('A', 4), eighth('C', 4)])
+        const { measure, beam } = beamFrom([pitched('A', 4, '8'), pitched('C', 4, '8')])
         expect(beam.stemDir).toBe('up')
         const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
@@ -134,7 +127,7 @@ describe('BeamLayout', () => {
     it('lowers a down-beam so every stem reaches it (no stem pokes below the beam)', () => {
         // A descending down-stem group: the later (lower) note's natural stem tip sits below
         // the halved-slope beam line, forcing the beamFirstY downward adjustment (stemDir down).
-        const { measure, beam } = beamFrom([eighth('E', 5), eighth('C', 5)])
+        const { measure, beam } = beamFrom([pitched('E', 5, '8'), pitched('C', 5, '8')])
         expect(beam.stemDir).toBe('down')
         const { primary } = beam
         const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
@@ -151,7 +144,7 @@ describe('BeamLayout', () => {
 
     describe('secondary (sixteenth) beams', () => {
         it('two sixteenths produce one full secondary beam offset from the primary', () => {
-            const { beam } = beamFrom([sixteenth('C', 4), sixteenth('C', 4)])
+            const { beam } = beamFrom([pitched('C', 4, '16'), pitched('C', 4, '16')])
             const { primary, secondaries } = beam
             expect(secondaries).toHaveLength(1)
 
@@ -166,7 +159,7 @@ describe('BeamLayout', () => {
         })
 
         it('down-beam secondary sits above the primary by one level stride', () => {
-            const { beam } = beamFrom([sixteenth('E', 5), sixteenth('E', 5)])
+            const { beam } = beamFrom([pitched('E', 5, '16'), pitched('E', 5, '16')])
             expect(beam.stemDir).toBe('down')
             const { primary, secondaries } = beam
             expect(secondaries).toHaveLength(1)
@@ -177,7 +170,7 @@ describe('BeamLayout', () => {
         it('eighth then sixteenth: a trailing partial beam points left from the last stem', () => {
             // [8, 16] within one beat: only the second note has a secondary beam, and it is
             // not the first note (i !== 0) → partial stub points left (partialDir = -1).
-            const { beam } = beamFrom([eighth('C', 4), sixteenth('C', 4)])
+            const { beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '16')])
             expect(beam.notes).toHaveLength(2)
             const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
@@ -190,7 +183,7 @@ describe('BeamLayout', () => {
         it('sixteenth then eighth: a leading partial beam points right from the first stem', () => {
             // [16, 8] within one beat: only the first note has a secondary beam, and it IS
             // the first note (i === 0) → partial stub points right (partialDir = +1).
-            const { beam } = beamFrom([sixteenth('C', 4), eighth('C', 4)])
+            const { beam } = beamFrom([pitched('C', 4, '16'), pitched('C', 4, '8')])
             expect(beam.notes).toHaveLength(2)
             const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
@@ -201,7 +194,7 @@ describe('BeamLayout', () => {
 
         it('partial-beam y endpoints follow the beam slope', () => {
             // A sloped group with a trailing partial: stub y2 offset = partialDir * length * slope.
-            const { beam } = beamFrom([eighth('C', 4), sixteenth('G', 4)])
+            const { beam } = beamFrom([pitched('C', 4, '8'), pitched('G', 4, '16')])
             const { primary, secondaries } = beam
             const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
             expect(secondaries).toHaveLength(1)
@@ -213,7 +206,7 @@ describe('BeamLayout', () => {
         it('mixed group [16,16,8] produces a full secondary over the two sixteenths only', () => {
             // First two notes have secondary beams and are adjacent → one full segment; the
             // eighth ends the run. segStart !== stemX so the else-branch (full segment) is taken.
-            const { measure, beam } = beamFrom([sixteenth('C', 4), sixteenth('C', 4), eighth('C', 4)])
+            const { measure, beam } = beamFrom([pitched('C', 4, '16'), pitched('C', 4, '16'), pitched('C', 4, '8')])
             expect(beam.notes).toHaveLength(3)
             const { secondaries } = beam
             expect(secondaries).toHaveLength(1)
@@ -232,7 +225,7 @@ describe('BeamLayout', () => {
         })
 
         it('eighth notes alone produce no secondary beams', () => {
-            const { beam } = beamFrom([eighth('C', 4), eighth('C', 4)])
+            const { beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
             expect(beam.secondaries).toHaveLength(0)
         })
     })

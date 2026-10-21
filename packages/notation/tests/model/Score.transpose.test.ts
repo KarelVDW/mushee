@@ -1,20 +1,6 @@
-import { Duration } from '@mushee/notation/model/Duration'
-import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
-import { makeScore } from '@mushee/notation/testing'
+import { fill, makeScore, p, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
-
-const q = (pitch?: Pitch, tie?: 'start' | 'stop') => new Note({ duration: new Duration({ type: 'q' }), pitch, tie })
-
-const p = (name: string, octave: number, alter = 0) => new Pitch({ name, octave, alter })
-
-/** Replace a 4/4 measure's four rests with the given four notes. */
-function fill(score: Score, measureIndex: number, notes: Note[]) {
-    const measure = score.measures[measureIndex]
-    score.replace(measure.notes, notes)
-    return measure
-}
 
 const spellingsIn = (score: Score, measureIndex: number) =>
     score.measures[measureIndex].notes.map((n) =>

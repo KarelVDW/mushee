@@ -1,10 +1,5 @@
-import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
-import type { Score } from '@mushee/notation/model/Score'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { makeScore, pitched, roundTrip } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
-
-const roundTrip = (score: Score) => new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
 
 describe('clef serialization round-trip', () => {
     it('preserves a non-treble leading clef', () => {
@@ -13,7 +8,7 @@ describe('clef serialization round-trip', () => {
         if (!m) throw new Error('expected firstMeasure')
         score.setClef(m.firstNote, 'bass')
 
-        const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+        const restored = roundTrip(score)
         const rm = restored.firstMeasure
         if (!rm) throw new Error('expected restored firstMeasure')
         expect(rm.clef.type).toBe('bass')
@@ -25,7 +20,7 @@ describe('clef serialization round-trip', () => {
         if (!m) throw new Error('expected firstMeasure')
         score.setClef(m.noteAtBeat(2), 'alto')
 
-        const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+        const restored = roundTrip(score)
         const rm = restored.firstMeasure
         if (!rm) throw new Error('expected restored firstMeasure')
         expect(rm.clef.type).toBe('treble')
@@ -39,7 +34,7 @@ describe('clef serialization round-trip', () => {
         score.setClef(m0.firstNote, 'bass')
         score.setClef(m1.firstNote, 'alto')
 
-        const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+        const restored = roundTrip(score)
         expect(restored.measures[0].clef.type).toBe('bass')
         expect(restored.measures[1].clef.type).toBe('alto')
     })
@@ -48,7 +43,7 @@ describe('clef serialization round-trip', () => {
         const score = makeScore(2)
         score.setClef(score.measures[0].firstNote, 'tenor')
 
-        const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+        const restored = roundTrip(score)
         expect(restored.measures[0].clef.type).toBe('tenor')
         expect(restored.measures[1].clef.type).toBe('tenor') // carried forward, not re-declared
     })
@@ -57,7 +52,7 @@ describe('clef serialization round-trip', () => {
         for (const clef of ['treble8vb', 'bass15ma', 'soprano', 'baritoneF'] as const) {
             const score = makeScore(1)
             score.setClef(score.firstMeasure?.firstNote, clef)
-            const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+            const restored = roundTrip(score)
             expect(restored.firstMeasure?.clef.type).toBe(clef)
         }
     })

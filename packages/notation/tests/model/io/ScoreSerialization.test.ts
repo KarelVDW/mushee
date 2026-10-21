@@ -8,11 +8,10 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { makeScore, pitched, roundTrip } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 const toInput = (score: Score): ScorePartwise => new ScoreSerializer(score).toInput()
-const roundTrip = (score: Score): Score => new ScoreDeserializer(toInput(score)).toScore()
 
 /** Read the serialized note entries (in order) of measure `mi`. */
 const noteEntries = (input: ScorePartwise, mi = 0) => input.parts[0].measures[mi].entries.filter((e) => e._type === 'note')

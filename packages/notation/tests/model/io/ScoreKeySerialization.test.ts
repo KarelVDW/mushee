@@ -1,10 +1,5 @@
-import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
-import type { Score } from '@mushee/notation/model/Score'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { makeScore, pitched, roundTrip } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
-
-const roundTrip = (score: Score) => new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
 
 describe('key signature serialization round-trip', () => {
     it('preserves a non-C leading key', () => {

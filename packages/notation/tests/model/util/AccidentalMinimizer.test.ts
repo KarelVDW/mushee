@@ -1,25 +1,11 @@
-import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
-import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 import { AccidentalMinimizer } from '@mushee/notation/model/util/AccidentalMinimizer'
-import { makeScore } from '@mushee/notation/testing'
+import { fill, makeScore, p, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 import { describeScore, soundingEvents } from '../../support/scoreObservations'
-
-/** A quarter note (or rest without `pitch`). */
-const q = (pitch?: Pitch, tie?: 'start' | 'stop') => new Note({ duration: new Duration({ type: 'q' }), pitch, tie })
-
-const p = (name: string, octave: number, alter = 0) => new Pitch({ name, octave, alter })
-
-/** Replace a 4/4 measure's four rests with the given four notes. */
-function fill(score: Score, measureIndex: number, notes: Note[]) {
-    const measure = score.measures[measureIndex]
-    score.replace(measure.notes, notes)
-    return measure
-}
 
 /** Run the minimizer over every note of the score, all of them respellable. */
 function minimize(score: Score) {

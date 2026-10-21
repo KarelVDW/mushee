@@ -1,8 +1,9 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
-import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 import { describe, expect, it } from 'vitest'
+
+import { describeNotes } from '../../support/scoreObservations'
 
 const PART_LIST = '<part-list><score-part id="P1"><part-name>Flute</part-name></score-part></part-list>'
 const ATTRIBUTES = '<attributes><divisions>12</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
@@ -27,20 +28,12 @@ function rest(type: string, duration: number, extra = ''): string {
 
 const QUARTER_REST = rest('quarter', 12)
 
-function describeNotes(notes: readonly Note[]): string[] {
-    return notes.map((n) => {
-        const value = `${n.duration.type}${'.'.repeat(n.duration.dots)}${n.inTuplet ? `(${n.duration.ratio.actualNotes}:${n.duration.ratio.normalNotes})` : ''}`
-        const pitch = n.pitch ? `${n.pitch.name}${n.pitch.accidental ?? ''}${n.pitch.octave}` : 'r'
-        return `${pitch}:${value}${n.tie ? `~${n.tie}` : ''}`
-    })
-}
-
 function load(xml: string) {
     return new MusicXmlImporter(xml).toScore()
 }
 
 function measureNotes(score: Score, index = 0): string[] {
-    return describeNotes(score.measures[index].notes)
+    return describeNotes(score.measures[index].notes, { tupletRatio: true })
 }
 
 describe('MusicXmlImporter', () => {

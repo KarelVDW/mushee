@@ -1,8 +1,9 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
-import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 import { describe, expect, it } from 'vitest'
+
+import { describeNotes } from '../../support/scoreObservations'
 
 // --- Standard MIDI File byte builders ---
 
@@ -56,14 +57,6 @@ function melody(notes: Array<number | null>, ...prelude: number[][]): number[] {
         pendingDelta = 0
     }
     return track(...events, END)
-}
-
-function describeNotes(notes: readonly Note[]): string[] {
-    return notes.map((n) => {
-        const value = `${n.duration.type}${'.'.repeat(n.duration.dots)}`
-        const pitch = n.pitch ? `${n.pitch.name}${n.pitch.accidental ?? ''}${n.pitch.octave}` : 'r'
-        return `${pitch}:${value}${n.tie ? `~${n.tie}` : ''}`
-    })
 }
 
 const bars = (score: Score) => score.measures.map((m) => describeNotes(m.notes))

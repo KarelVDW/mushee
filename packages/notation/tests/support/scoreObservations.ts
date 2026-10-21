@@ -14,6 +14,19 @@ export function describeNote(note: Note): string {
     return `${pitch}:${note.duration.type}${'.'.repeat(note.duration.dots)}${ratio}${note.tiesForward ? '~' : ''}${note.tiesBack ? '_' : ''}`
 }
 
+/**
+ * Compact note views for importer assertions — "F#4:q.", "r:8", "C4:q~start" — with the
+ * tuplet ratio appended ("E4:8(3:2)") when `tupletRatio` is set; MIDI imports never carry one.
+ */
+export function describeNotes(notes: readonly Note[], { tupletRatio = false } = {}): string[] {
+    return notes.map((n) => {
+        const ratio = tupletRatio && n.inTuplet ? `(${n.duration.ratio.actualNotes}:${n.duration.ratio.normalNotes})` : ''
+        const value = `${n.duration.type}${'.'.repeat(n.duration.dots)}${ratio}`
+        const pitch = n.pitch ? `${n.pitch.name}${n.pitch.accidental ?? ''}${n.pitch.octave}` : 'r'
+        return `${pitch}:${value}${n.tie ? `~${n.tie}` : ''}`
+    })
+}
+
 /** Everything the notation persists, in a shape `toEqual` diffs readably. */
 export function describeScore(score: Score) {
     return {
