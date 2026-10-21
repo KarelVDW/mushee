@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { emailOTP } from 'better-auth/plugins/email-otp'
 import { Pool } from 'pg'
 
-import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
+import { adminEmails, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
 import { DEV_WEB_ORIGIN } from '../config/app-urls'
 import { postgresSsl, postgresUrl } from '../database/postgres-connection'
 import { mailService } from '../mail/mail.service'
@@ -85,7 +85,7 @@ export const auth = betterAuth({
                 // send the waitlist emails. Failures here must never block signup.
                 after: async (user) => {
                     try {
-                        const tierId = isAdminEmail(user.email) ? 'studio' : signupTierId()
+                        const tierId = signupTierId(user.email)
                         await pool.query(
                             `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, $2)
                ON CONFLICT ("userId") DO NOTHING`,

@@ -31,14 +31,14 @@ describe('beta switches', () => {
         process.env.BETA_MODE = 'false'
         delete process.env.ADMIN_EMAILS
         expect(signupUserFields('user@example.com')).toEqual({ role: 'user', betaStatus: null })
-        expect(signupTierId()).toBe('free')
+        expect(signupTierId('user@example.com')).toBe('free')
     })
 
     it('stamps beta signups: beta tier + pending status', () => {
         process.env.BETA_MODE = 'true'
         delete process.env.ADMIN_EMAILS
         expect(signupUserFields('user@example.com')).toEqual({ role: 'user', betaStatus: 'pending' })
-        expect(signupTierId()).toBe('beta')
+        expect(signupTierId('user@example.com')).toBe('beta')
     })
 
     it('auto-approves admins and grants the admin role', () => {
@@ -48,5 +48,13 @@ describe('beta switches', () => {
 
         process.env.BETA_MODE = 'false'
         expect(signupUserFields('karel@example.com')).toEqual({ role: 'admin', betaStatus: null })
+    })
+
+    it('starts admins on Studio, in and out of the beta', () => {
+        process.env.ADMIN_EMAILS = 'karel@example.com'
+        process.env.BETA_MODE = 'true'
+        expect(signupTierId('Karel@Example.com')).toBe('studio')
+        process.env.BETA_MODE = 'false'
+        expect(signupTierId('karel@example.com')).toBe('studio')
     })
 })

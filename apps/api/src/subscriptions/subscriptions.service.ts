@@ -63,8 +63,10 @@ export class SubscriptionsService {
     }
 
     /**
-     * Create or update the user's subscription row. Used by the beta signup
-     * hook (tier 'beta') and by the Polar webhook handler (paid tiers).
+     * Create or update the user's subscription row. Used by plan changes and
+     * cancellations (BillingService) and by the Polar webhook handler
+     * (PolarWebhookService); signup inserts its row through better-auth's pool
+     * instead (auth.config.ts).
      *
      * A single INSERT … ON CONFLICT DO UPDATE — concurrent webhook deliveries
      * for a user with no row must not race into a duplicate-key error. Pass
