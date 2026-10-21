@@ -11,8 +11,9 @@ const DEFAULT_MIN_DURATION_BEATS = 0.25
 
 /**
  * When two notes overlap, the new one only displaces the active one if it's
- * this much louder. Smaller overlaps just get dropped, so a quiet ghost note
- * doesn't carve a real one in two.
+ * this much more salient (higher peak confidence — see `NoteEventTime.amplitude`).
+ * Smaller overlaps just get dropped, so a low-confidence ghost note doesn't
+ * carve a real one in two.
  */
 const AMPLITUDE_OVERRIDE_RATIO = 1.5
 
@@ -41,7 +42,7 @@ const MERGE_MAX_OVERLAP_BEATS = 0.1
  * two different ways, and in binary floating point they routinely differ:
  * 0.34 + 0.14 evaluates to 0.48000000000000004, which is greater than 0.48. Read
  * as a real overlap, that made `selectMonophonic` discard the later note unless it
- * was 1.5× louder — silently dropping roughly every other note of any contiguous
+ * was 1.5× more salient — silently dropping roughly every other note of any contiguous
  * run. Half an analysis frame is comfortably larger than the error and far smaller
  * than any overlap that means something musically.
  */
@@ -168,7 +169,7 @@ export interface ExtractedNotes {
  * Provider-agnostic post-processor. Takes the raw note events emitted by a
  * `PitchProvider` and produces a monophonic stream whose starts and lengths
  * fit the front-end's score model:
- *   - one note at a time (overlap resolved by amplitude)
+ *   - one note at a time (overlap resolved by salience)
  *   - starts biased to integer beats, falling through halves/quarters/etc.
  *   - lengths snapped to {whole, dotted half, half, dotted quarter, quarter,
  *     dotted eighth, eighth, sixteenth}
@@ -211,7 +212,7 @@ export class NoteExtractor {
      * cleaned notes can snap onto the same grid slot (e.g. two onset-split fragments
      * a few tens of ms apart). Downstream that is a chord in a single-voice staff.
      * Keep one note per slot: same pitch → one note spanning both; different
-     * pitch → the longer one (ties: the louder).
+     * pitch → the longer one (ties: the more salient, i.e. higher peak confidence).
      */
     static collapseCoincident(notes: NoteEventTime[]): NoteEventTime[] {
         const EPS = 1e-4
@@ -268,9 +269,57 @@ export class NoteExtractor {
      * `bpm` and give each a writable note value. Pure function of the performance
      * and the tempo, so a tempo estimator can be swapped in (or swept) without
      * touching detection.
+     *
+     * Each note's start snaps to the beat grid (with a coarseness bias) and its
+     * length to one of the standard durations. A legato note whose sounding end
+     * falls just short of (or just past) the next onset is extended to meet it,
+     * since that small gap is the provider's early release rather than a rest;
+     * otherwise the length is floor-snapped and trimmed so it can't collide with
+     * the next note's snapped start.
      */
-    quantize(performed: NoteEventTime[], bpm: number): NoteEventTime[] {
-        return this.alignAndQuantize(performed, bpm)
+    quantize(notes: NoteEventTime[], bpm: number): NoteEventTime[] {
+        const beatsPerSecond = bpm / 60
+        const result: NoteEventTime[] = []
+
+        for (let i = 0; i < notes.length; i++) {
+            const note = notes[i]
+            const startBeat = note.startTimeSeconds * beatsPerSecond
+            const endBeat = (note.startTimeSeconds + note.durationSeconds) * beatsPerSecond
+
+            const snapStart = this.snapToGrid(startBeat)
+            const soundingBeats = Math.max(this.minDurationBeats, endBeat - snapStart)
+
+            let maxAvailable = Number.POSITIVE_INFINITY
+            const next = notes[i + 1]
+            if (next) {
+                const nextStartBeat = next.startTimeSeconds * beatsPerSecond
+                maxAvailable = Math.max(0, this.snapToGrid(nextStartBeat) - snapStart)
+            }
+
+            // Legato seam-fill: when the note sounds up to within SEAM_FILL_BEATS of
+            // the next onset (or overruns it), end it exactly there — the gap is the
+            // provider's early release, not a rest. maxAvailable is a grid distance,
+            // so the filled length stays grid-aligned. Genuine rests (larger gaps)
+            // fall through to the floor-snap, preserving existing behavior.
+            let durationBeats: number
+            if (
+                Number.isFinite(maxAvailable) &&
+                maxAvailable >= this.minDurationBeats &&
+                maxAvailable - soundingBeats <= this.seamFillBeats
+            ) {
+                durationBeats = maxAvailable
+            } else {
+                durationBeats = this.snapToStandardDuration(Math.min(soundingBeats, maxAvailable))
+            }
+            if (durationBeats < this.minDurationBeats) continue
+
+            result.push({
+                ...note,
+                startTimeSeconds: snapStart / beatsPerSecond,
+                durationSeconds: durationBeats / beatsPerSecond,
+            })
+        }
+        return result
     }
 
     /**
@@ -364,8 +413,9 @@ export class NoteExtractor {
 
     /**
      * Greedy left-to-right selection: a new note displaces the previous one only
-     * if it starts after the previous ended OR is meaningfully louder. Otherwise
-     * it's discarded. Very short notes are dropped as noise.
+     * if it starts after the previous ended OR is meaningfully more salient
+     * (higher peak confidence). Otherwise it's discarded. Very short notes are
+     * dropped as noise.
      */
     private selectMonophonic(notes: NoteEventTime[], bpm: number): NoteEventTime[] {
         const beatsPerSecond = bpm / 60
@@ -389,7 +439,7 @@ export class NoteExtractor {
                 result.push({ ...note })
                 continue
             }
-            // Overlap. Accept only when meaningfully louder.
+            // Overlap. Accept only when meaningfully more salient.
             if (note.amplitude > prev.amplitude * AMPLITUDE_OVERRIDE_RATIO) {
                 prev.durationSeconds = Math.max(0, note.startTimeSeconds - prev.startTimeSeconds)
                 if (prev.durationSeconds <= 0) result.pop()
@@ -455,10 +505,11 @@ export class NoteExtractor {
             }
 
             const mergedEnd = Math.max(prevEnd, note.startTimeSeconds + note.durationSeconds)
-            const louderIsNote = note.amplitude > prev.amplitude
+            // The more salient (higher peak confidence) fragment names the pitch.
+            const noteMoreSalient = note.amplitude > prev.amplitude
             const merged: NoteEventTime = {
                 ...prev,
-                pitchMidi: louderIsNote ? note.pitchMidi : prev.pitchMidi,
+                pitchMidi: noteMoreSalient ? note.pitchMidi : prev.pitchMidi,
                 amplitude: Math.max(prev.amplitude, note.amplitude),
                 durationSeconds: mergedEnd - prev.startTimeSeconds,
             }
@@ -500,59 +551,6 @@ export class NoteExtractor {
             }
         }
         return best
-    }
-
-    /**
-     * Snap each note's start to the beat grid (with a coarseness bias) and its
-     * length to one of the standard durations. A legato note whose sounding end
-     * falls just short of (or just past) the next onset is extended to meet it,
-     * since that small gap is the provider's early release rather than a rest;
-     * otherwise the length is floor-snapped and trimmed so it can't collide with
-     * the next note's snapped start.
-     */
-    private alignAndQuantize(notes: NoteEventTime[], bpm: number): NoteEventTime[] {
-        const beatsPerSecond = bpm / 60
-        const result: NoteEventTime[] = []
-
-        for (let i = 0; i < notes.length; i++) {
-            const note = notes[i]
-            const startBeat = note.startTimeSeconds * beatsPerSecond
-            const endBeat = (note.startTimeSeconds + note.durationSeconds) * beatsPerSecond
-
-            const snapStart = this.snapToGrid(startBeat)
-            const soundingBeats = Math.max(this.minDurationBeats, endBeat - snapStart)
-
-            let maxAvailable = Number.POSITIVE_INFINITY
-            const next = notes[i + 1]
-            if (next) {
-                const nextStartBeat = next.startTimeSeconds * beatsPerSecond
-                maxAvailable = Math.max(0, this.snapToGrid(nextStartBeat) - snapStart)
-            }
-
-            // Legato seam-fill: when the note sounds up to within SEAM_FILL_BEATS of
-            // the next onset (or overruns it), end it exactly there — the gap is the
-            // provider's early release, not a rest. maxAvailable is a grid distance,
-            // so the filled length stays grid-aligned. Genuine rests (larger gaps)
-            // fall through to the floor-snap, preserving existing behavior.
-            let durationBeats: number
-            if (
-                Number.isFinite(maxAvailable) &&
-                maxAvailable >= this.minDurationBeats &&
-                maxAvailable - soundingBeats <= this.seamFillBeats
-            ) {
-                durationBeats = maxAvailable
-            } else {
-                durationBeats = this.snapToStandardDuration(Math.min(soundingBeats, maxAvailable))
-            }
-            if (durationBeats < this.minDurationBeats) continue
-
-            result.push({
-                ...note,
-                startTimeSeconds: snapStart / beatsPerSecond,
-                durationSeconds: durationBeats / beatsPerSecond,
-            })
-        }
-        return result
     }
 
     private snapToGrid(beats: number): number {

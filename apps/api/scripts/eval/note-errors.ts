@@ -122,7 +122,7 @@ async function main(): Promise<void> {
                 confidenceThreshold: profile.confidenceThreshold,
                 segmentMode: segMode,
             }
-            const raw = await provider.transcribe(decoded.samples, opts, undefined, provider.createSession())
+            const raw = await provider.transcribe(decoded.samples, opts, provider.createSession())
             const bpm = bpmFromOnsets(truth.notes.map((n) => n.onsetSec))
             const deduced = new NoteExtractor(ext).extract(raw, { bpm, onsetTimesSec }).deduced
             tally(

@@ -4,7 +4,7 @@ import type { PitchTrack } from './pitch-track'
 /**
  * Note decoding **for the human voice**.
  *
- * The shipping decoder (`providers/pitch-decoder.ts`, `segmentNotesBySemitone`)
+ * The instrument decoder (`semitone-segmenter.ts`, `segmentNotesBySemitone`)
  * rounds each frame to a semitone, median-smooths, and emits a note per run of
  * equal semitone. That is a good decoder for instruments and a poor one for
  * singing, and the corpus says so: on studio singing it emits ~1.9 notes for every
@@ -484,7 +484,28 @@ interface Run {
     reonset?: boolean
 }
 
-const DEFAULTS = {
+/** The knobs with no default: absent means the mechanism is off, so they stay optional once resolved. */
+type OptionalKnob =
+    | 'registerCents'
+    | 'mergeGuard'
+    | 'wideChangeCost'
+    | 'keepShortLoudRatio'
+    | 'dropLongQuiet'
+    | 'voicedQuorum'
+    | 'fillUnvoicedGapSec'
+    | 'fillEnergyFloor'
+    | 'fillEnergyContextSec'
+    | 'candidates'
+    | 'intervalChange'
+    | 'silenceMemory'
+    | 'unvoicedChangeRelease'
+
+/**
+ * The decoder's own defaults — the pYIN literature baseline the sweeps start
+ * from, not what ships: production runs `SHIPPING_VOICE_OPTS` (below) over these.
+ * Typed against the options, so a new knob without a default fails to compile here.
+ */
+const DEFAULTS: Required<Omit<VoiceDecodeOptions, OptionalKnob>> = {
     confidenceThreshold: 0.5,
     minFreqHz: 55,
     maxFreqHz: 2200,
@@ -492,7 +513,7 @@ const DEFAULTS = {
     sigmaAttackSemitones: 5,
     sigmaStableSemitones: 0.9,
     trust: 0.1,
-    transitionMode: 'direct' as VoiceTransitionMode,
+    transitionMode: 'direct',
     changeCost: 1.2,
     attackCost: 0.2,
     attackFrameCost: 0.175,
@@ -504,11 +525,11 @@ const DEFAULTS = {
     wideIntervalSemitones: 3,
     reonsetCost: Infinity,
     minNoteSec: 0.08,
-    pitchEstimator: 'trimmed-mean' as NonNullable<VoiceDecodeOptions['pitchEstimator']>,
+    pitchEstimator: 'trimmed-mean',
     slewTimeSec: 0.05,
     onePoleTauSec: 0.04,
-    pitchWindow: 'run' as 'run' | 'onset',
-    onsetAt: 'attack' as 'attack' | 'arrival' | 'stable' | 'mid',
+    pitchWindow: 'run',
+    onsetAt: 'attack',
     arrivalCents: 50,
     onsetShiftSec: 0.07,
     evidenceDiscount: 1,
@@ -522,45 +543,46 @@ const DEFAULTS = {
     pitchTrim: 0.3,
 }
 
+/**
+ * The voice decode's shipping configuration, chosen by `scripts/eval/sweep-voice.ts`
+ * on `EVAL_SPLIT=dev` and confirmed once on `test` (COnP 0.570 → 0.668,
+ * +0.123 [+0.102, +0.144], paired over 289 clips).
+ *
+ * Why these values and not `DEFAULTS`:
+ *
+ *  - `changeCost: 2.5` with `transitionMode: 'direct'` rather than `'via-silence'`.
+ *    The sweep showed the decode saturates at cost ≥ 2.5 — c2.5/c3/c4/c6 score
+ *    identically to three decimals, i.e. the direct jump is never taken and the
+ *    model has already chosen mandatory-silence on its own. Keeping the transition
+ *    in the state space costs nothing and leaves the *evidence discount* able to
+ *    re-open it exactly where a dip argues for a slurred boundary, which is what
+ *    Dynamic HumTrans's structure cannot express.
+ *  - `evidenceDiscount: 0.35`: a boundary backed by a volume decay or a pitch dip
+ *    costs 0.88 nats instead of 2.5. This is what recovers legato transitions
+ *    (transition recall 0.62 → 0.65) without re-admitting vibrato splits.
+ *  - `trust: 0.7` rather than pYIN's 0.1. pYIN decodes a *probabilistic* pYIN
+ *    contour; we decode CREPE's Viterbi-smoothed trajectory, which is already
+ *    smoothed once, so trusting the per-frame pitch this little merges real notes
+ *    (measured: t0.1 → 0.627, t0.7 → 0.684 on dev).
+ */
+export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
+    transitionMode: 'direct',
+    changeCost: 2.5,
+    evidenceDiscount: 0.35,
+    trust: 0.7,
+}
+
 export class VoiceNoteDecoder {
-    /** Every knob resolved, except the eleven that are meaningfully absent. */
-    private readonly o: Required<
-        Omit<
-            VoiceDecodeOptions,
-            | 'registerCents'
-            | 'mergeGuard'
-            | 'wideChangeCost'
-            | 'keepShortLoudRatio'
-            | 'dropLongQuiet'
-            | 'voicedQuorum'
-            | 'fillUnvoicedGapSec'
-            | 'fillEnergyFloor'
-            | 'fillEnergyContextSec'
-            | 'candidates'
-            | 'intervalChange'
-            | 'silenceMemory'
-            | 'unvoicedChangeRelease'
-        >
-    > &
-        Pick<
-            VoiceDecodeOptions,
-            | 'registerCents'
-            | 'mergeGuard'
-            | 'wideChangeCost'
-            | 'keepShortLoudRatio'
-            | 'dropLongQuiet'
-            | 'voicedQuorum'
-            | 'fillUnvoicedGapSec'
-            | 'fillEnergyFloor'
-            | 'fillEnergyContextSec'
-            | 'candidates'
-            | 'intervalChange'
-            | 'silenceMemory'
-            | 'unvoicedChangeRelease'
-        >
+    /** Every knob resolved, except the `OptionalKnob`s. */
+    private readonly o: Required<Omit<VoiceDecodeOptions, OptionalKnob>> & Pick<VoiceDecodeOptions, OptionalKnob>
 
     constructor(opts: VoiceDecodeOptions = {}) {
         this.o = { ...DEFAULTS, ...stripUndefined(opts) }
+    }
+
+    /** The voicing gate: every voiced mask and dropout fill in this decoder applies it. */
+    private get gate(): { confidenceThreshold: number; minFreqHz: number; maxFreqHz: number } {
+        return { confidenceThreshold: this.o.confidenceThreshold, minFreqHz: this.o.minFreqHz, maxFreqHz: this.o.maxFreqHz }
     }
 
     /**
@@ -574,9 +596,7 @@ export class VoiceNoteDecoder {
 
         if (this.o.fillUnvoicedGapSec !== undefined) {
             track = track.fillDropouts({
-                confidenceThreshold: this.o.confidenceThreshold,
-                minFreqHz: this.o.minFreqHz,
-                maxFreqHz: this.o.maxFreqHz,
+                ...this.gate,
                 maxGapFrames: Math.max(1, Math.round(this.o.fillUnvoicedGapSec / track.hopSec)),
                 energy,
                 energyFloorRatio: this.o.fillEnergyFloor,
@@ -584,12 +604,7 @@ export class VoiceNoteDecoder {
             })
         }
 
-        const voiced = track.voicedMask({
-            confidenceThreshold: this.o.confidenceThreshold,
-            minFreqHz: this.o.minFreqHz,
-            maxFreqHz: this.o.maxFreqHz,
-            quorum: this.o.voicedQuorum,
-        })
+        const voiced = track.voicedMask({ ...this.gate, quorum: this.o.voicedQuorum })
 
         const grid = this.pitchGrid(track, voiced)
         if (!grid) return []
@@ -648,7 +663,7 @@ export class VoiceNoteDecoder {
                 // is absolute — and extractor steps spread-copy, so the field survives.
                 pitchMidiFloat: cents / 100,
                 amplitude: this.peakConfidence(track, run),
-            } as NoteEventTime)
+            })
         }
         return this.applyMergeGuard(notes, track, voiced)
     }
@@ -662,16 +677,7 @@ export class VoiceNoteDecoder {
      * HMM fix them?" and has to be measurable apart.
      */
     guardOnly(notes: NoteEventTime[], track: PitchTrack): NoteEventTime[] {
-        return this.applyMergeGuard(
-            notes,
-            track,
-            track.voicedMask({
-                confidenceThreshold: this.o.confidenceThreshold,
-                minFreqHz: this.o.minFreqHz,
-                maxFreqHz: this.o.maxFreqHz,
-                quorum: this.o.voicedQuorum,
-            }),
-        )
+        return this.applyMergeGuard(notes, track, track.voicedMask({ ...this.gate, quorum: this.o.voicedQuorum }))
     }
 
     /**
@@ -1332,7 +1338,7 @@ export class VoiceNoteDecoder {
             })
             if (merged !== null) {
                 prev.pitchMidi = Math.round(merged / 100)
-                ;(prev as NoteEventTime & { pitchMidiFloat?: number }).pitchMidiFloat = merged / 100
+                prev.pitchMidiFloat = merged / 100
             }
         }
         return out

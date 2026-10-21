@@ -46,11 +46,10 @@ export interface PitchScan {
     /**
      * Quiet-frame level relative to the loudest frame, in dB (p15 of frame
      * energies / max). Clean takes with gaps sit far below (≈ -35 dB); steady
-     * backdrops (wind, chatter, HVAC) push it toward 0.
+     * backdrops (wind, chatter, HVAC) push it toward 0. Telemetry only: it is
+     * printed in the resolver's debug line, and no adaptation reads it.
      */
     noiseFloorDb: number
-    /** Median tonality (best/median candidate score) of the voted frames. */
-    harmonicityMedian: number
 }
 
 const FFT_SIZE = 4096 // ~3.9 Hz bins at 16 kHz; ~256 ms window
@@ -282,7 +281,6 @@ export function scanPitch(samples: Float32Array, sampleRate: number): PitchScan 
             p90Hz: 0,
             noisiness: 0,
             noiseFloorDb: 0,
-            harmonicityMedian: 0,
         }
     }
 
@@ -292,7 +290,6 @@ export function scanPitch(samples: Float32Array, sampleRate: number): PitchScan 
     const maxEnergy = Math.max(...energies)
     const gate = maxEnergy * 0.15
     const f0s: number[] = []
-    const votedHarmonicity: number[] = []
     const votedSnrs: number[] = []
     let counted = 0
     let nonTonal = 0
@@ -304,7 +301,6 @@ export function scanPitch(samples: Float32Array, sampleRate: number): PitchScan 
         if (energies[i] < gate) continue
         if (tonal) {
             f0s.push(frameF0[i])
-            votedHarmonicity.push(frameHarmonicity[i])
             votedSnrs.push(frameSnrDb[i])
         }
     }
@@ -334,10 +330,8 @@ export function scanPitch(samples: Float32Array, sampleRate: number): PitchScan 
             snrDb,
             noisiness,
             noiseFloorDb,
-            harmonicityMedian: 0,
         }
     }
-    votedHarmonicity.sort((a, b) => a - b)
     f0s.sort((a, b) => a - b)
     return {
         voiced: true,
@@ -348,6 +342,5 @@ export function scanPitch(samples: Float32Array, sampleRate: number): PitchScan 
         snrDb,
         noisiness,
         noiseFloorDb,
-        harmonicityMedian: percentile(votedHarmonicity, 0.5),
     }
 }

@@ -2,18 +2,10 @@ import { Logger } from '@nestjs/common'
 
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
-import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../voice-note-decoder'
+import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
+import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
+import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
 import type { ModelBackend } from './model-backend'
-import {
-    frameEnergy,
-    localCentsFromPath,
-    normalizeFrame,
-    segmentNotes,
-    type SegmentOptions,
-    topKCandidates,
-    viterbi,
-    type ViterbiOptions,
-} from './pitch-decoder'
 import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
 
 /** CREPE was trained on 16 kHz mono audio. */
@@ -100,35 +92,10 @@ const SEGMENT_OPTS: SegmentOptions = {
 }
 
 /**
- * The voice decode's shipping configuration, chosen by `scripts/eval/sweep-voice.ts`
- * on `EVAL_SPLIT=dev` and confirmed once on `test` (COnP 0.570 → 0.668,
- * +0.123 [+0.102, +0.144], paired over 289 clips).
- *
- * Why these three values and not the class defaults:
- *
- *  - `changeCost: 2.5` with `transitionMode: 'direct'` rather than `'via-silence'`.
- *    The sweep showed the decode saturates at cost ≥ 2.5 — c2.5/c3/c4/c6 score
- *    identically to three decimals, i.e. the direct jump is never taken and the
- *    model has already chosen mandatory-silence on its own. Keeping the transition
- *    in the state space costs nothing and leaves the *evidence discount* able to
- *    re-open it exactly where a dip argues for a slurred boundary, which is what
- *    Dynamic HumTrans's structure cannot express.
- *  - `evidenceDiscount: 0.35`: a boundary backed by a volume decay or a pitch dip
- *    costs 0.88 nats instead of 2.5. This is what recovers legato transitions
- *    (transition recall 0.62 → 0.65) without re-admitting vibrato splits.
- *  - `trust: 0.7` rather than pYIN's 0.1. pYIN decodes a *probabilistic* pYIN
- *    contour; we decode CREPE's Viterbi-smoothed trajectory, which is already
- *    smoothed once, so trusting the per-frame pitch this little merges real notes
- *    (measured: t0.1 → 0.627, t0.7 → 0.684 on dev).
+ * Per-recording state for the CREPE provider: CNN activations cached by absolute
+ * frame index, which is what makes re-passing the whole growing buffer
+ * incremental — and why it must never be fed a sliding window.
  */
-export const VOICE_OPTS: VoiceDecodeOptions = {
-    transitionMode: 'direct',
-    changeCost: 2.5,
-    evidenceDiscount: 0.35,
-    trust: 0.7,
-}
-
-/** Per-recording state for the CREPE provider. */
 class CrepeSession implements PitchSession {
     cachedFrames = 0
     activations: Float32Array = new Float32Array(0)
@@ -146,12 +113,6 @@ export class CrepeProvider implements PitchProvider {
     readonly sampleRate = SAMPLE_RATE
     readonly normalizeLoudness = false
     readonly hasNativeOnsets = false
-    // Caches CNN activations across passes in `CrepeSession`, keyed on absolute
-    // frame index, so the pipeline must feed it the whole growing buffer (never a
-    // sliding window) and the cache makes re-passing incremental.
-    readonly cachesAcrossPasses = true
-    // Never windowed (fed the whole buffer), so no alignment constraint applies.
-    readonly windowAlignSamples = 1
 
     private readonly logger = new Logger(CrepeProvider.name)
     private readonly centMapping: Float32Array = buildCentMapping()
@@ -172,23 +133,12 @@ export class CrepeProvider implements PitchProvider {
         return new CrepeSession()
     }
 
-    async transcribe(
-        samples: Float32Array,
-        options?: PitchTranscribeOptions,
-        onProgress?: (rawNotes: NoteEventTime[]) => void,
-        session?: PitchSession,
-    ): Promise<NoteEventTime[]> {
+    async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {
         const track = await this.track(samples, session)
-        if (!track) {
-            onProgress?.([])
-            return []
-        }
-        const notes =
-            options?.segmentMode === 'voice'
-                ? this.decodeVoice(track, samples, options)
-                : segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(options))
-        onProgress?.(notes)
-        return notes
+        if (!track) return []
+        return options?.segmentMode === 'voice'
+            ? this.decodeVoice(track, samples, options)
+            : segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(options))
     }
 
     /**
@@ -201,7 +151,7 @@ export class CrepeProvider implements PitchProvider {
     private decodeVoice(track: PitchTrack, samples: Float32Array, options: PitchTranscribeOptions): NoteEventTime[] {
         const energy = frameEnergy(samples, SAMPLE_RATE, track.hopSec, track.frames)
         return new VoiceNoteDecoder({
-            ...VOICE_OPTS,
+            ...SHIPPING_VOICE_OPTS,
             confidenceThreshold: options.confidenceThreshold ?? SEGMENT_OPTS.confidenceThreshold,
             minFreqHz: options.minFreqHz ?? SEGMENT_OPTS.minFreqHz,
             maxFreqHz: options.maxFreqHz ?? SEGMENT_OPTS.maxFreqHz,

@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
 import { describeError } from '../describe-error'
-import { ensureWasmBackend } from '../providers/tf-backend'
+import { ensureWasmBackend, readModelArtifacts } from '../providers/tf-backend'
 
 /**
  * Training-free voice/instrument source classification from the recording's
@@ -222,24 +222,7 @@ async function loadModel(): Promise<LoadedModel | null> {
         return null
     }
     await ensureWasmBackend()
-    const modelJson = JSON.parse(readFileSync(join(MODEL_DIR, 'model.json'), 'utf8')) as io.ModelJSON
-    const weightSpecs = modelJson.weightsManifest.flatMap((e) => e.weights)
-    const shards = modelJson.weightsManifest.flatMap((e) => e.paths)
-    const buffers = shards.map((p) => readFileSync(join(MODEL_DIR, p)))
-    const total = buffers.reduce((n, b) => n + b.byteLength, 0)
-    const weightData = new Uint8Array(total)
-    let off = 0
-    for (const b of buffers) {
-        weightData.set(new Uint8Array(b.buffer, b.byteOffset, b.byteLength), off)
-        off += b.byteLength
-    }
-    const model = await loadGraphModel(
-        io.fromMemory({
-            modelTopology: modelJson.modelTopology,
-            weightSpecs,
-            weightData: weightData.buffer,
-        }),
-    )
+    const model = await loadGraphModel(io.fromMemory(await readModelArtifacts(MODEL_DIR)))
     const classNames = parseClassMap(readFileSync(join(MODEL_DIR, 'yamnet_class_map.csv'), 'utf8'))
     logger.log('YAMNet source classifier ready')
     return { model, classNames }
@@ -256,11 +239,6 @@ export class SourceClassifier {
                     return null
                 })
         }
-    }
-
-    /** Whether classification can ever produce a verdict in this process. */
-    get enabled(): boolean {
-        return CLASSIFY
     }
 
     /** Resolves once the model has loaded (or failed). For tests and warm-up. */

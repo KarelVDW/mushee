@@ -39,8 +39,6 @@ export class CrepePitchdownProvider implements PitchProvider {
     readonly sampleRate: number
     readonly normalizeLoudness = false
     readonly hasNativeOnsets = false
-    readonly cachesAcrossPasses = true
-    readonly windowAlignSamples = 1
 
     private readonly inner: CrepeProvider
 
@@ -58,12 +56,7 @@ export class CrepePitchdownProvider implements PitchProvider {
         return this.inner.createSession()
     }
 
-    async transcribe(
-        samples: Float32Array,
-        options?: PitchTranscribeOptions,
-        onProgress?: (rawNotes: NoteEventTime[]) => void,
-        session?: PitchSession,
-    ): Promise<NoteEventTime[]> {
+    async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {
         const k = this.factor
         const scaled: PitchTranscribeOptions = {
             ...options,
@@ -87,13 +80,7 @@ export class CrepePitchdownProvider implements PitchProvider {
             // let it run on slowed audio it was never measured on.
             segmentMode: options?.segmentMode === 'voice' ? 'semitone' : options?.segmentMode,
         }
-        const raw = await this.inner.transcribe(
-            samples,
-            scaled,
-            onProgress ? (notes) => onProgress(this.unscale(notes)) : undefined,
-            session,
-        )
-        return this.unscale(raw)
+        return this.unscale(await this.inner.transcribe(samples, scaled, session))
     }
 
     /**
@@ -121,16 +108,15 @@ export class CrepePitchdownProvider implements PitchProvider {
     /** Model-domain notes (half speed, an octave low) → real-domain notes. */
     private unscale(notes: NoteEventTime[]): NoteEventTime[] {
         const k = this.factor
-        return notes.map((n) => {
-            // Not on the library type — the trajectory segmenters attach it (E1).
-            const float = (n as NoteEventTime & { pitchMidiFloat?: number }).pitchMidiFloat
-            return {
-                ...n,
-                startTimeSeconds: n.startTimeSeconds / k,
-                durationSeconds: n.durationSeconds / k,
-                pitchMidi: n.pitchMidi + this.semitones,
-                ...(float !== undefined && { pitchMidiFloat: float + this.semitones }),
-            } as NoteEventTime
-        })
+        return notes.map((n) => ({
+            ...n,
+            startTimeSeconds: n.startTimeSeconds / k,
+            durationSeconds: n.durationSeconds / k,
+            pitchMidi: n.pitchMidi + this.semitones,
+            // The trajectory segmenters attach the unrounded pitch (E1); it shifts with
+            // pitchMidi. Never read on this band: voice is not routed here, and only
+            // voice-routed takes are spelled.
+            ...(n.pitchMidiFloat !== undefined && { pitchMidiFloat: n.pitchMidiFloat + this.semitones }),
+        }))
     }
 }

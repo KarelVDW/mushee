@@ -156,7 +156,7 @@ async function main(): Promise<void> {
             }
 
             for (const c of CONFIGS) {
-                const raw = await provider.transcribe(decoded.samples, { ...baseOpts, ...c.seg }, undefined, session)
+                const raw = await provider.transcribe(decoded.samples, { ...baseOpts, ...c.seg }, session)
                 const bpm = c.bpm === 'gt' ? gtBpm : 120
                 const onsetTimesSec = new OnsetDetector(c.onset).detect(decoded.samples, provider.sampleRate)
                 const extracted = new NoteExtractor(c.ext).extract(raw, { bpm, onsetTimesSec })

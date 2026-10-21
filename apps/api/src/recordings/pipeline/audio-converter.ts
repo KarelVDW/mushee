@@ -1,5 +1,4 @@
-import type { NoteEventTime } from './note-event'
-import { ExtractedNotes, ExtractOptions, NoteExtractor, type NoteExtractorOptions } from './note-extractor'
+import { ExtractedNotes, NoteExtractor, type NoteExtractorOptions } from './note-extractor'
 import { OnsetDetector } from './onset-detector'
 import type { PipelineProfile } from './profiles/pipeline-profile'
 import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './providers/pitch-provider'
@@ -7,9 +6,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
 /**
  * Provider-agnostic audio → notes pipeline. Hands the PCM samples to the
  * configured `PitchProvider`, then runs the result through `NoteExtractor`'s
- * monophonic + beat-grid post-processing. Wires the provider's progress
- * callback through to the caller so partial results stream out as the
- * provider works.
+ * monophonic + beat-grid post-processing.
  *
  * One converter is created per recording, so it owns the provider's
  * session-scoped state. The session lets incremental providers (e.g. CREPE)
@@ -17,7 +14,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  */
 export class AudioConverter {
     private readonly extractor: NoteExtractor
-    private readonly session: PitchSession | undefined
+    private readonly session: PitchSession
     private readonly onsetDetector: OnsetDetector | null
 
     constructor(
@@ -136,26 +133,10 @@ export class AudioConverter {
         return this.provider.init()
     }
 
-    async convert(
-        samples: Float32Array,
-        options: ExtractOptions,
-        onPartial?: (extracted: ExtractedNotes) => void,
-        pitchOptions?: PitchTranscribeOptions,
-    ): Promise<ExtractedNotes> {
-        // Onsets depend only on the audio, so compute once per pass and reuse
-        // across the streaming progress callbacks.
+    /** One pass: transcribe `samples`, then clean and beat-quantize the notes at `bpm`. */
+    async convert(samples: Float32Array, bpm: number, pitchOptions?: PitchTranscribeOptions): Promise<ExtractedNotes> {
         const onsetTimesSec = this.onsetDetector?.detect(samples, this.provider.sampleRate)
-        const extractOptions: ExtractOptions = { ...options, onsetTimesSec }
-
-        let final: ExtractedNotes = { raw: [], deduced: [] }
-        const handle = (raw: NoteEventTime[]): void => {
-            final = this.extractor.extract(raw, extractOptions)
-            onPartial?.(final)
-        }
-        const finalRaw = await this.provider.transcribe(samples, pitchOptions, handle, this.session)
-        // Ensure we always end on the truly-final raw set even if the provider
-        // skipped its last in-progress callback.
-        handle(finalRaw)
-        return final
+        const raw = await this.provider.transcribe(samples, pitchOptions, this.session)
+        return this.extractor.extract(raw, { bpm, onsetTimesSec })
     }
 }

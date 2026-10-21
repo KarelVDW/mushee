@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { PitchTrack } from '../../src/recordings/pipeline/pitch-track'
-import { VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
+import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 
 /**
  * The decoder reads only a frame-level contour, so the contour IS the fixture —
@@ -54,13 +54,10 @@ function contour(spec: NoteSpec[]): { track: PitchTrack; energy: Float32Array } 
     }
 }
 
-/** The shipping configuration (mirrors `CrepeProvider`'s `VOICE_OPTS`). */
+/** The shipping configuration (`SHIPPING_VOICE_OPTS`) behind a fixed voicing gate. */
 function decoder(over = {}): VoiceNoteDecoder {
     return new VoiceNoteDecoder({
-        transitionMode: 'direct',
-        changeCost: 2.5,
-        evidenceDiscount: 0.35,
-        trust: 0.7,
+        ...SHIPPING_VOICE_OPTS,
         confidenceThreshold: 0.5,
         minFreqHz: 55,
         maxFreqHz: 1100,

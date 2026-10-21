@@ -16,8 +16,8 @@
 import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
 import { NoteExtractor, type NoteExtractorOptions } from '../../../src/recordings/pipeline/note-extractor'
 import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
-import { VOICE_OPTS } from '../../../src/recordings/pipeline/providers/crepe-provider'
-import { segmentNotes } from '../../../src/recordings/pipeline/providers/pitch-decoder'
+import { segmentNotes } from '../../../src/recordings/pipeline/semitone-segmenter'
+import { SHIPPING_VOICE_OPTS } from '../../../src/recordings/pipeline/voice-note-decoder'
 import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder'
 import type { CachedClip } from './trackCache'
 
@@ -50,7 +50,7 @@ export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
     }
     if (c.profile.isVoice && voiceEnabled()) {
         return new VoiceNoteDecoder({
-            ...VOICE_OPTS,
+            ...SHIPPING_VOICE_OPTS,
             ...gate,
             minNoteSec: frameCount(c, c.profile.minFramesPerNote) * c.track.hopSec,
         }).decode(c.track, c.energy)

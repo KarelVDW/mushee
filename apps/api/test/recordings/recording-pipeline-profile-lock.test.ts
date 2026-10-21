@@ -40,8 +40,6 @@ function harness(): Harness {
             sampleRate: 16000,
             normalizeLoudness: false,
             hasNativeOnsets: false,
-            cachesAcrossPasses: true,
-            windowAlignSamples: 1,
             createSession: () => ({}),
         }),
     }

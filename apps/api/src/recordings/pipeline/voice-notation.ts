@@ -1,3 +1,5 @@
+import type { NoteEventTime } from './note-event'
+
 /**
  * Notation-layer pitch SPELLING for sung takes.
  *
@@ -29,17 +31,14 @@
  *     confidently-sung accidental must survive (users do sing chromatic
  *     lines on purpose).
  *
- * Both act on the FRACTIONAL pitch (`pitchMidiFloat`) the voice decoder
- * attaches to its notes; notes without it pass
- * through untouched, so nothing here can move an instrument take.
+ * Both act on the FRACTIONAL pitch (`pitchMidiFloat`) set by `VoiceNoteDecoder`,
+ * and `MxmlBuilder` runs them only when the locked profile routes voice; notes
+ * without the field pass through untouched. (The instrument segmenters attach
+ * it as well, but instrument takes are not spelled today.)
  */
 
-/** Carried alongside `pitchMidi` by the voice decoder; survives the extractor
- *  because every note-rewriting step spread-copies (`{ ...note }`). */
-export interface FractionalPitch {
-    /** Unrounded MIDI (α-trimmed contour mean / 100 cents). */
-    pitchMidiFloat?: number
-}
+/** The fields tuning-aware spelling reads (see `NoteEventTime.pitchMidiFloat`). */
+type FractionalPitch = Pick<NoteEventTime, 'pitchMidiFloat' | 'durationSeconds'>
 
 /**
  * Deviation-from-nearest-key a note must exceed before key snapping may move
@@ -64,7 +63,7 @@ const MIN_NOTES_FOR_OFFSET = 4
  * fragments are not), and the mean angle is the offset. Circular because a
  * take straddling the ±50-cent seam must not average to nonsense.
  */
-export function estimateTuningOffsetCents(notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>): number {
+export function estimateTuningOffsetCents(notes: ReadonlyArray<FractionalPitch>): number {
     let re = 0
     let im = 0
     let weight = 0
@@ -91,109 +90,6 @@ export function keyPitchClasses(fifths: number): Set<number> {
     return new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12))
 }
 
-/** Key-profile templates (E8/R2). The profile is a parameter, not a constant
- *  (Essentia ships fourteen and defaults away from Krumhansl — §7.3). */
-export type KeyProfileName = 'krumhansl' | 'temperley' | 'diatonic'
-
-const KEY_PROFILES: Record<KeyProfileName, { major: number[]; minor: number[] }> = {
-    // Krumhansl–Kessler probe-tone ratings (1982).
-    krumhansl: {
-        major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
-        minor: [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17],
-    },
-    // Temperley's modified profiles (2001).
-    temperley: {
-        major: [5.0, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 4.5, 2.0, 3.5, 1.5, 4.0],
-        minor: [5.0, 2.0, 3.5, 4.5, 2.0, 4.0, 2.0, 4.5, 3.5, 2.0, 1.5, 4.0],
-    },
-    // Binary diatonic membership — the crudest sensible template.
-    diatonic: {
-        major: [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
-        minor: [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0],
-    },
-}
-
-/**
- * Estimate the TAKE's key from its own notes (E8/R2, research/design-take-key.md in
- * scripts/eval): duration-weighted pitch-class histogram over the
- * offset-normalised fractional pitch, Pearson-correlated against 24
- * major/minor rotations of the chosen profile — with the ALL-ZEROS profile
- * competing as the incumbent (libKeyFinder §8.2, Pearson score 0), so a key is
- * returned only if it beats "no key at all". A chromatic or modal take
- * abstains (null) and spelling behaves exactly as today.
- *
- * This is the SPELLING-side fallback mask only (TalentedHack's two-mask
- * correction, §12.3): it is consulted when the score carries no key signature
- * and never overrides a present `keyFifths`. A minor winner contributes its
- * relative major's pitch-class set — the set is all `spellMidi` consumes.
- */
-export function estimateTakeKeyClasses(
-    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
-    offsetCents: number,
-    profile: KeyProfileName = 'krumhansl',
-): { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null {
-    const hist = new Array<number>(12).fill(0)
-    let counted = 0
-    for (const n of notes) {
-        if (n.pitchMidiFloat === undefined) continue
-        const midi = Math.round(n.pitchMidiFloat - offsetCents / 100)
-        hist[((midi % 12) + 12) % 12] += Math.max(0.05, n.durationSeconds)
-        counted += 1
-    }
-    if (counted < MIN_NOTES_FOR_OFFSET) return null
-
-    const pearson = (template: number[], rot: number): number => {
-        let ma = 0
-        let mb = 0
-        for (let i = 0; i < 12; i += 1) {
-            ma += hist[i]
-            mb += template[i]
-        }
-        ma /= 12
-        mb /= 12
-        let num = 0
-        let da = 0
-        let db = 0
-        for (let i = 0; i < 12; i += 1) {
-            const a = hist[i] - ma
-            const b = template[(i - rot + 12) % 12] - mb
-            num += a * b
-            da += a * a
-            db += b * b
-        }
-        return da > 0 && db > 0 ? num / Math.sqrt(da * db) : 0
-    }
-
-    const { major, minor } = KEY_PROFILES[profile]
-    // The abstain profile is the incumbent: score 0 is the bar to beat.
-    let best: { classes: Set<number>; tonic: number; mode: 'major' | 'minor'; score: number } | null = null
-    let bestScore = 0
-    for (let tonic = 0; tonic < 12; tonic += 1) {
-        const sMaj = pearson(major, tonic)
-        if (sMaj > bestScore) {
-            bestScore = sMaj
-            best = {
-                classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + d) % 12)),
-                tonic,
-                mode: 'major',
-                score: sMaj,
-            }
-        }
-        const sMin = pearson(minor, tonic)
-        if (sMin > bestScore) {
-            bestScore = sMin
-            // Relative major's set (tonic + 3 semitones) — the signature's set.
-            best = {
-                classes: new Set([0, 2, 4, 5, 7, 9, 11].map((d) => (tonic + 3 + d) % 12)),
-                tonic,
-                mode: 'minor',
-                score: sMin,
-            }
-        }
-    }
-    return best
-}
-
 /**
  * Break the ±1-semitone NAMING ambiguity of a reference-free take.
  *
@@ -205,11 +101,7 @@ export function estimateTakeKeyClasses(
  * let the key choose: the naming under which more of the take (duration-
  * weighted) is diatonic wins. Ties keep the minimal shift.
  */
-export function chooseNamingOffset(
-    notes: ReadonlyArray<FractionalPitch & { durationSeconds: number }>,
-    offsetCents: number,
-    keyClasses: Set<number> | null,
-): number {
+export function chooseNamingOffset(notes: ReadonlyArray<FractionalPitch>, offsetCents: number, keyClasses: Set<number> | null): number {
     if (!keyClasses || Math.abs(offsetCents) <= 30) return offsetCents
     const other = offsetCents - 100 * Math.sign(offsetCents)
     const inKeyWeight = (off: number): number => {
@@ -273,7 +165,11 @@ export function estimateGridPhaseBeats(notes: ReadonlyArray<{ startTimeSeconds: 
  * The written MIDI for one note: normalize by the take offset, round, and let
  * the key vote only inside the ambiguity band.
  */
-export function spellMidi(note: FractionalPitch & { pitchMidi: number }, offsetCents: number, keyClasses: Set<number> | null): number {
+export function spellMidi(
+    note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>,
+    offsetCents: number,
+    keyClasses: Set<number> | null,
+): number {
     if (note.pitchMidiFloat === undefined) return note.pitchMidi
     const x = note.pitchMidiFloat - offsetCents / 100
     let midi = Math.round(x)

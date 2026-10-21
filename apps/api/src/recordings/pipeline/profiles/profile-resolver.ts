@@ -430,6 +430,7 @@ export class ProfileResolver {
                 `conf=${profile.confidenceThreshold?.toFixed(2) ?? 'n/a'} ` +
                 `(scan p10/med/p90=${scan.p10Hz.toFixed(0)}/${scan.medianHz.toFixed(0)}/${scan.p90Hz.toFixed(0)}Hz, ` +
                 `frames=${scan.voicedFrames}, snr=${scan.snrDb?.toFixed(0) ?? 'n/a'}dB, ` +
+                `noiseFloor=${scan.noiseFloorDb.toFixed(0)}dB, ` +
                 `noisiness=${scan.noisiness.toFixed(2)}${noisy ? ' NOISY' : ''}, ` +
                 `reverberance=${reverberance.toFixed(2)}, ` +
                 `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +

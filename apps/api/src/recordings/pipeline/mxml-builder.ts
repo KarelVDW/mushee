@@ -1,4 +1,5 @@
 import type { MxmlMeasure, MxmlMeasureEntry, MxmlNoteType, MxmlPitch, MxmlStep, MxmlTie } from './mxml.types'
+import type { NoteEventTime } from './note-event'
 import { chooseNamingOffset, estimateGridPhaseBeats, estimateTuningOffsetCents, keyPitchClasses, spellMidi } from './voice-notation'
 
 const DIVISIONS_PER_QUARTER = 12
@@ -53,13 +54,8 @@ export interface BuilderOptions {
     keyFifths?: number | null
 }
 
-export interface PendingNote {
-    startTimeSeconds: number
-    durationSeconds: number
-    pitchMidi: number
-    /** Unrounded pitch from the voice decoder; absent for instrument takes. */
-    pitchMidiFloat?: number
-}
+/** A committed note as the builder lays it out; `pitchMidiFloat` drives voice spelling. */
+export type PendingNote = Pick<NoteEventTime, 'startTimeSeconds' | 'durationSeconds' | 'pitchMidi' | 'pitchMidiFloat'>
 
 export class MxmlBuilder {
     /**
@@ -123,6 +119,7 @@ export class MxmlBuilder {
         // intonation tier, and does NOT ship: it recovers the actual key barely
         // half the time on short diatonic takes and nudges spelling the wrong way
         // when it misses — see the findings log and scripts/eval/research/design-take-key.md.
+        // The implementation was removed from voice-notation.ts; commit e16a3a7 holds it.
         const keyClasses = this.voiceSpelling && this.options.keyFifths != null ? keyPitchClasses(this.options.keyFifths) : null
         const offsetCents = this.voiceSpelling ? chooseNamingOffset(allNotes, estimateTuningOffsetCents(allNotes), keyClasses) : 0
         // The rhythm twin of the tuning offset: a take dragged uniformly behind

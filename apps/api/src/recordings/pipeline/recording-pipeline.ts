@@ -1,6 +1,5 @@
 import { Logger } from '@nestjs/common'
 
-import type { RecordingArchiver } from '../recording-archiver'
 import { AudioConverter } from './audio-converter'
 import { AudioDecoder, StreamingDecoder } from './audio-decoder'
 import { describeError } from './describe-error'
@@ -23,9 +22,8 @@ const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
 /**
  * OFFSET-confirmation margin (E5/R12): a note is committed once this much
  * audio exists past its END — the streaming analogue of Essentia Pitch2Midi's
- * note-off confirmation (its default is 200 ms; ours has been 400 ms). The
- * same margin bounds how far a later window may reach back, so it is the
- * commit-latency knob. Env-overridable so `check-streaming.ts` can measure
+ * note-off confirmation (its default is 200 ms; ours has been 400 ms). It is
+ * the commit-latency knob. Env-overridable so `check-streaming.ts` can measure
  * where paced-feed commits start to contradict the whole-buffer result.
  * (R12's asymmetric ONSET confirmation has no analogue here: our commit unit
  * is a whole note, so an onset is never committed before its offset. And its
@@ -33,16 +31,6 @@ const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
  * not confirmation times; R7 calibrated the reported-time bias at 0.)
  */
 const STABLE_MARGIN_SEC = Number(process.env.RECORDING_STABLE_MARGIN_SEC) || 0.4
-/**
- * Lead-in of already-seen audio prepended to each windowed transcription pass
- * (stateless providers only). basic-pitch — removed 2026-08-22 but the seam
- * stays for any future note-level provider — ran 2 s analysis windows internally,
- * so a region's notes match a whole-buffer run only when enough real audio
- * precedes it; combined with snapping the window start to the provider's block
- * grid (`windowAlignSamples`), 3.5 s reproduces the whole-buffer result on the
- * eval corpus. Committed notes sit inside this lead-in.
- */
-const CONTEXT_SEC = 3.5
 /** Sample rate / high-pass for the coarse detection decode that picks a profile. */
 const DETECT_SAMPLE_RATE = 16000
 const DETECT_HIGHPASS_HZ = 30
@@ -87,15 +75,37 @@ export interface ScoreUpdate {
     measures: Record<number, MxmlMeasure>
 }
 
+/** Transcription health: `ok: false` after a failed pass (with the internal error for the log), `ok: true` once a pass succeeds again. */
+export type PipelineHealth = { ok: true } | { ok: false; message: string }
+
+/** The debug artifacts archived beside a take's audio once it ends. */
+export interface DebugBundle {
+    /** Raw vs committed notes over time (`RecordingDebugRenderer`). */
+    plotSvg?: string
+    /** Every bar of the take as the builder writes it. */
+    scoreJson?: string
+    /** Routing, timings and the note lists, for diagnosing a take after the fact. */
+    sessionMeta?: object
+}
+
+/**
+ * Where a session's audio and debug bundle are archived. Declared here, by its
+ * consumer, so `pipeline/` never imports the persistence layer above it;
+ * `RecordingArchiver` implements it over the `StorageService`.
+ */
+export interface PipelineArchive {
+    /** One encoded chunk, forwarded as it arrives. */
+    appendAudio(chunk: Buffer): void
+    /** Close the audio upload and write the bundle. Called once, after the last chunk. */
+    finalize(bundle: DebugBundle): Promise<void>
+}
+
 /**
  * How the locked profile decided what is at the microphone. Emitted once per
  * session so the client can show the user what the pipeline believes it is
  * hearing — a mis-routed take is invisible otherwise, and the user is the one
  * person who knows the truth.
  */
-/** Transcription health: `ok: false` after a failed pass (with the internal error for the log), `ok: true` once a pass succeeds again. */
-export type PipelineHealth = { ok: true } | { ok: false; message: string }
-
 export interface SourceResolution {
     source: 'voice' | 'instrument'
     decidedBy: 'explicit' | 'classifier' | 'prior'
@@ -108,11 +118,10 @@ export interface SourceResolution {
  * Periodically it runs the configured `AudioConverter` and emits MxmlMeasure
  * deltas as notes settle.
  *
- * Per-pass transcription is bounded too: stateless providers (none currently) are
- * fed only a trailing window of PCM — committed audio is never re-sent — while
- * providers that cache across passes (CREPE) get the whole buffer and stay
- * incremental internally. Together this makes per-pass work proportional to the
- * new audio, not the total recording length.
+ * Per-pass transcription is bounded too: every pass hands the provider the whole
+ * decoded buffer, and the provider's `PitchSession` keeps it incremental (CREPE
+ * caches activations by absolute frame). Together this makes per-pass work
+ * proportional to the new audio, not the total recording length.
  */
 export class RecordingPipeline {
     private readonly logger = new Logger(RecordingPipeline.name)
@@ -127,14 +136,11 @@ export class RecordingPipeline {
     private archivePromise: Promise<void> | null = null
     // Set by the session once its recording row exists; archives the encoded
     // audio (streamed chunk-by-chunk) and the debug bundle to blob storage.
-    private archiver: RecordingArchiver | null = null
+    private archiver: PipelineArchive | null = null
 
     // Long-lived decode for this session, spawned once the profile (and thus the
     // sample rate / high-pass / loudnorm) is locked. Null until then.
     private streamDecoder: StreamingDecoder | null = null
-    // Watermark (absolute seconds): notes ending before this are already emitted
-    // and frozen, so windowed passes never need to reprocess audio before it.
-    private committedSec = 0
     // Highest measure index emitted so far, and the first index never emitted — used
     // to fill in bars the performer rested through (see affectedMeasures).
     private lastEmittedMeasure = -1
@@ -143,10 +149,6 @@ export class RecordingPipeline {
     // emitted so far came from the wrong profile, so the final emission must
     // rebuild every measure — including ones that end up empty.
     private reemitAll = false
-    // Earliest onset (absolute seconds) of a note seen last pass that wasn't yet
-    // committed (still within the stable margin or extending past it). The next
-    // window backs up to include it so a long sustained note's onset is never cut.
-    private uncommittedFromSec = Infinity
 
     private readonly timings = {
         firstChunkAt: 0,
@@ -261,7 +263,7 @@ export class RecordingPipeline {
         this.onHealth = cb
     }
 
-    setArchiver(archiver: RecordingArchiver): void {
+    setArchiver(archiver: PipelineArchive): void {
         this.archiver = archiver
     }
 
@@ -386,48 +388,10 @@ export class RecordingPipeline {
 
         const duration = full.length / provider.sampleRate
 
-        // Stateless providers reprocess whatever they're handed, so feed only a
-        // trailing window: back to `CONTEXT_SEC` before the committed watermark and
-        // before any still-open note's onset, so committed audio is never re-sent yet
-        // boundary notes keep full context. Providers that cache across passes get
-        // the whole buffer and stay incremental internally.
-        let windowStartSec = 0
-        let windowSamples = full
-        if (!provider.cachesAcrossPasses) {
-            const anchorSec = Math.min(this.committedSec, this.uncommittedFromSec)
-            const rawStart = Math.max(0, Math.floor((anchorSec - CONTEXT_SEC) * provider.sampleRate))
-            // Snap to the provider's analysis-block grid so the window's framing (and
-            // thus its note timing) matches a whole-buffer run; this only moves the
-            // start earlier, never cutting into the needed context.
-            const align = Math.max(1, provider.windowAlignSamples)
-            const startSample = Math.floor(rawStart / align) * align
-            windowStartSec = startSample / provider.sampleRate
-            windowSamples = full.subarray(startSample)
-        }
-
-        // Recomputed from this pass's notes below; reset so a pass that finds nothing
-        // uncommitted doesn't inherit a stale onset and keep the window wide forever.
-        this.uncommittedFromSec = Infinity
-        let emitMs = 0
-        let emitCount = 0
-        await converter.convert(
-            windowSamples,
-            { bpm: this.bpm },
-            (extracted) => {
-                const t0 = Date.now()
-                this.emitFromExtracted(extracted, duration, windowStartSec, isFinal)
-                emitMs += Date.now() - t0
-                emitCount += 1
-            },
-            this.pitchOptions(profile),
-        )
+        const extracted = await converter.convert(full, this.bpm, this.pitchOptions(profile))
+        const tConvert = Date.now()
+        this.emitFromExtracted(extracted, duration, isFinal)
         const tEnd = Date.now()
-
-        // Everything ending before the stable margin is now frozen; the next window
-        // may start from here. (The final pass commits to the very end.)
-        if (!isFinal) {
-            this.committedSec = Math.max(this.committedSec, duration - STABLE_MARGIN_SEC)
-        }
 
         // A re-routed final pass that found no notes at all still owes the client a
         // rebuild: the measures it emitted under the wrong profile must be cleared.
@@ -435,11 +399,10 @@ export class RecordingPipeline {
 
         this.logger.debug(
             `Pass timings: decode-wait=${tDecode - tStart}ms, ` +
-                `convert=${tEnd - tDecode - emitMs}ms, ` +
-                `emit=${emitMs}ms (${emitCount}x), ` +
+                `convert=${tConvert - tDecode}ms, ` +
+                `emit=${tEnd - tConvert}ms, ` +
                 `total=${tEnd - tStart}ms ` +
                 `(audioDur=${duration.toFixed(2)}s, ` +
-                `window=${windowStartSec.toFixed(2)}-${duration.toFixed(2)}s, ` +
                 `samples=${full.length}, final=${isFinal})`,
         )
     }
@@ -524,8 +487,8 @@ export class RecordingPipeline {
      * and, if a real register band comes back, transcribe the take again under it.
      *
      * Everything emitted so far came from a profile chosen without hearing a single
-     * pitched frame, so it is discarded: the emitted-note set and the commit
-     * watermark reset, a fresh decoder is seeded from the retained encoded stream
+     * pitched frame, so it is discarded: the emitted-note set and its dedup keys
+     * reset, a fresh decoder is seeded from the retained encoded stream
      * (the new profile may change the sample rate, high-pass or denoise chain), and
      * `reemitAll` makes the final emission rebuild every measure — including bars
      * that are now empty. The cost is one extra full-take inference at stop, paid
@@ -561,8 +524,6 @@ export class RecordingPipeline {
         this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
         this.emittedNotes.length = 0
         this.emittedKeys.clear()
-        this.committedSec = 0
-        this.uncommittedFromSec = Infinity
         this.reemitAll = true
     }
 
@@ -591,43 +552,35 @@ export class RecordingPipeline {
     }
 
     /**
-     * Fold one pass's extracted notes into the emitted set. Note times come in
-     * relative to the transcribed window, so `offsetSec` (the window's absolute
-     * start) is added to every time before comparing against the absolute stable
-     * cutoff and the dedup keys. Tracks the earliest still-uncommitted onset so the
-     * next window can back up far enough to keep a long open note's onset in view.
+     * Fold one pass's extracted notes into the emitted set: a note is committed
+     * once it ends `STABLE_MARGIN_SEC` before the decoded audio does (the final
+     * pass commits to the very end), and is emitted once, keyed on onset + pitch.
      */
-    private emitFromExtracted(extracted: ExtractedNotes, duration: number, offsetSec: number, isFinal: boolean): void {
+    private emitFromExtracted(extracted: ExtractedNotes, duration: number, isFinal: boolean): void {
         const { raw, deduced } = extracted
         if (!raw.length && !deduced.length) return
 
-        this.lastRawNotes = offsetSec ? raw.map((n) => ({ ...n, startTimeSeconds: n.startTimeSeconds + offsetSec })) : raw
+        this.lastRawNotes = raw
         this.lastDuration = duration
         const cutoff = duration - (isFinal ? 0 : STABLE_MARGIN_SEC)
 
-        let earliestUncommitted = Infinity
         const newNotes: PendingNote[] = []
         for (const n of deduced) {
-            const startSec = n.startTimeSeconds + offsetSec
-            if (startSec + n.durationSeconds > cutoff) {
-                earliestUncommitted = Math.min(earliestUncommitted, startSec)
-                continue
-            }
-            const key = `${Math.round(startSec * 1000)}_${n.pitchMidi}`
+            if (n.startTimeSeconds + n.durationSeconds > cutoff) continue
+            const key = `${Math.round(n.startTimeSeconds * 1000)}_${n.pitchMidi}`
             if (this.emittedKeys.has(key)) continue
             this.emittedKeys.add(key)
             newNotes.push({
-                startTimeSeconds: startSec,
+                startTimeSeconds: n.startTimeSeconds,
                 durationSeconds: n.durationSeconds,
                 pitchMidi: n.pitchMidi,
                 // The voice decoder's unrounded pitch — the builder spells sung takes
                 // on the take's own tuning grid from it (voice-notation.ts). This copy
                 // is field-by-field, so forgetting the field here silently reverts
                 // voice spelling to absolute names; it did, once.
-                pitchMidiFloat: (n as PendingNote).pitchMidiFloat,
+                pitchMidiFloat: n.pitchMidiFloat,
             })
         }
-        this.uncommittedFromSec = earliestUncommitted
         if (!newNotes.length) return
 
         this.emittedNotes.push(...newNotes)
@@ -722,7 +675,14 @@ export class RecordingPipeline {
 
     private async doArchive(): Promise<void> {
         if (!this.archiver) return
+        await this.archiver.finalize(this.debugBundle())
+    }
 
+    /**
+     * The take's debug bundle as of now: the pitch plot, every bar of the emitted
+     * score and the session metadata. Pure assembly — writing it is the archive's job.
+     */
+    debugBundle(): DebugBundle {
         let plotSvg: string | undefined
         if (this.lastDuration > 0 || this.lastRawNotes.length) {
             plotSvg = new RecordingDebugRenderer().render({
@@ -753,7 +713,7 @@ export class RecordingPipeline {
             scoreJson = JSON.stringify({ measures }, null, 2)
         }
 
-        await this.archiver.finalize({
+        return {
             plotSvg,
             scoreJson,
             sessionMeta: {
@@ -785,6 +745,6 @@ export class RecordingPipeline {
                 emittedNotes: this.emittedNotes,
                 timings: this.timings,
             },
-        })
+        }
     }
 }

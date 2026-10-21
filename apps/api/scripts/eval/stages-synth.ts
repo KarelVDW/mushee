@@ -65,19 +65,14 @@ async function main(): Promise<void> {
             .map((t) => t.toFixed(2))
             .join(' ')}`,
     )
-    const out = await new AudioConverter(provider, { enableOnsetSplit: true, profile }).convert(
-        decoded.samples,
-        { bpm: truth.bpm },
-        undefined,
-        {
-            minFreqHz: profile.minFreqHz,
-            maxFreqHz: profile.maxFreqHz,
-            confidenceThreshold: profile.confidenceThreshold,
-            minFramesPerNote: profile.minFramesPerNote,
-            segmentMode: profile.segmentMode,
-            smoothFrames: profile.smoothFrames,
-        },
-    )
+    const out = await new AudioConverter(provider, { enableOnsetSplit: true, profile }).convert(decoded.samples, truth.bpm, {
+        minFreqHz: profile.minFreqHz,
+        maxFreqHz: profile.maxFreqHz,
+        confidenceThreshold: profile.confidenceThreshold,
+        minFramesPerNote: profile.minFramesPerNote,
+        segmentMode: profile.segmentMode,
+        smoothFrames: profile.smoothFrames,
+    })
     const fmt = (ns: { startTimeSeconds: number; durationSeconds: number; pitchMidi: number }[]) =>
         ns
             .filter((n) => inWin(n.startTimeSeconds))

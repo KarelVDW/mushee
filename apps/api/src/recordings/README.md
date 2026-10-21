@@ -20,8 +20,9 @@ into two layers with a deliberate boundary between them.
   accounting (per subscription tier) and the one-recording-per-user lock.
 - `recording-session.ts` — bridges one live session to the pipeline and
   persists results via the TypeORM `Recording` repository.
-- `recording-archiver.ts` — archives raw session audio through the
-  `StorageService`.
+- `recording-archiver.ts` — archives raw session audio and the debug bundle
+  through the `StorageService`; implements the pipeline's `PipelineArchive`
+  port, so the dependency runs root → pipeline only.
 - `entities/` — TypeORM entities (registered in `database/data-source.ts`).
 
 ## `pipeline/`: pure audio → notes DSP

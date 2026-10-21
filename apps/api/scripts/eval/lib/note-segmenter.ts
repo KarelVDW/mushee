@@ -1,66 +1,6 @@
-import type { NoteEventTime } from './note-event'
-import type { PitchTrack } from './pitch-track'
+import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
+import type { PitchTrack } from '../../../src/recordings/pipeline/pitch-track'
 
-/**
- * Turn a frame-level pitch trajectory into discrete notes by Viterbi decoding a
- * note-level HMM, following the model pYIN uses for its note transcription
- * (Mauch et al., *Computer-aided Melody Note Transcription Using the Tony
- * Software*, TENOR 2015) — the tool built specifically for hand-annotating solo
- * singing, which is our hardest input.
- *
- * ## Why not round each frame to the nearest semitone?
- *
- * That is what the pipeline did (round, median-filter, emit a note per run of
- * equal semitone) and it over-segments badly: measured 18 notes emitted for 7
- * actually sung on studio singing. Three causes, none of them fixable locally:
- *
- *  - **Vibrato.** Trained singers swing ±50–100 cents at 5–7 Hz. A note centred
- *    near a semitone boundary flips between two semitones for its whole duration,
- *    and the median of a coin-flip is a coin-flip.
- *  - **Portamento.** Sliding C4→E4 dwells ~40 ms each on C♯ and D♯. Those frames
- *    genuinely *are* those pitches; nothing local can tell travel from arrival.
- *  - **Onset transients.** Singers scoop into notes — a real take was measured
- *    starting 55 cents flat and arriving only ~150 ms later.
- *
- * ## The three ideas that fix it
- *
- * 1. **A note-change cost.** Every boundary costs `changeCost` nats, so a brief
- *    vibrato excursion must pay it twice — leaving and returning — and loses to
- *    staying put however confidently those frames read as the neighbour. A real
- *    note pays once and wins easily. The decision is duration- and
- *    evidence-weighted over the whole take rather than a local threshold that must
- *    be either too strict (eats short notes) or too loose (lets flutter through).
- *
- * 2. **Sub-semitone states.** States sit every 1/`stepsPerSemitone` of a semitone,
- *    not on semitones, so a note sung consistently 40 cents flat has a state that
- *    actually fits it and does not have to keep choosing between two poor ones.
- *
- * 3. **Attack states with a much wider variance than sustain states.** Each pitch
- *    has an `attack` and a `stable` phase; attack tolerates σ≈5 semitones of
- *    deviation while stable tolerates σ≈0.9. This is what absorbs scoops and
- *    glides *into* the note they belong to instead of spawning notes for the
- *    pitches passed through — reported as the single most important reason pYIN
- *    survives expressive singing.
- *
- * A note's reported pitch is the **median of the underlying contour** over its
- * span, not the state index: the states exist to find boundaries, and the contour
- * is the better pitch estimate once the boundaries are known.
- *
- * ## ⚠ NOT on the shipping path — and why it is kept anyway
- *
- * Measured against the semitone-run segmenter it replaces, **every** configuration
- * of this model scored worse on the real corpus (−0.06 to −0.16 F1@0.1, all 22
- * configs, every confidence interval excluding zero). It wins only on vocadito in
- * isolation, which is already at its human inter-annotator ceiling and therefore the
- * least valuable place to win. `CrepeProvider` still uses `segmentNotes`.
- *
- * It is retained because the *diagnosis* is informative and the fix is identified:
- * the datasets want opposite `changeCost` values — sustained vibrato-heavy singing
- * needs a high cost, fast humming a low one — so a single global setting provably
- * cannot serve both. The next step is a two-pass **adaptive** cost, scaled from the
- * take's own measured note density and vibrato extent. See the findings log in
- * `scripts/eval/README.md` for the numbers. Exercised by `scripts/eval/sweep-segmenter.ts`.
- */
 export interface NoteSegmenterOptions {
     /** Voicing gate on the track's per-frame confidence. */
     confidenceThreshold?: number
@@ -151,6 +91,69 @@ interface Run {
     state: number
 }
 
+/**
+ * Turn a frame-level pitch trajectory into discrete notes by Viterbi decoding a
+ * note-level HMM, following the model pYIN uses for its note transcription
+ * (Mauch et al., *Computer-aided Melody Note Transcription Using the Tony
+ * Software*, TENOR 2015) — the tool built specifically for hand-annotating solo
+ * singing, which is our hardest input.
+ *
+ * ## Why not round each frame to the nearest semitone?
+ *
+ * That is what the pipeline did (round, median-filter, emit a note per run of
+ * equal semitone) and it over-segments badly: measured 18 notes emitted for 7
+ * actually sung on studio singing. Three causes, none of them fixable locally:
+ *
+ *  - **Vibrato.** Trained singers swing ±50–100 cents at 5–7 Hz. A note centred
+ *    near a semitone boundary flips between two semitones for its whole duration,
+ *    and the median of a coin-flip is a coin-flip.
+ *  - **Portamento.** Sliding C4→E4 dwells ~40 ms each on C♯ and D♯. Those frames
+ *    genuinely *are* those pitches; nothing local can tell travel from arrival.
+ *  - **Onset transients.** Singers scoop into notes — a real take was measured
+ *    starting 55 cents flat and arriving only ~150 ms later.
+ *
+ * ## The three ideas that fix it
+ *
+ * 1. **A note-change cost.** Every boundary costs `changeCost` nats, so a brief
+ *    vibrato excursion must pay it twice — leaving and returning — and loses to
+ *    staying put however confidently those frames read as the neighbour. A real
+ *    note pays once and wins easily. The decision is duration- and
+ *    evidence-weighted over the whole take rather than a local threshold that must
+ *    be either too strict (eats short notes) or too loose (lets flutter through).
+ *
+ * 2. **Sub-semitone states.** States sit every 1/`stepsPerSemitone` of a semitone,
+ *    not on semitones, so a note sung consistently 40 cents flat has a state that
+ *    actually fits it and does not have to keep choosing between two poor ones.
+ *
+ * 3. **Attack states with a much wider variance than sustain states.** Each pitch
+ *    has an `attack` and a `stable` phase; attack tolerates σ≈5 semitones of
+ *    deviation while stable tolerates σ≈0.9. This is what absorbs scoops and
+ *    glides *into* the note they belong to instead of spawning notes for the
+ *    pitches passed through — reported as the single most important reason pYIN
+ *    survives expressive singing.
+ *
+ * A note's reported pitch is the **median of the underlying contour** over its
+ * span, not the state index: the states exist to find boundaries, and the contour
+ * is the better pitch estimate once the boundaries are known.
+ *
+ * ## ⚠ NOT on the shipping path — a frozen research baseline
+ *
+ * Measured against the semitone-run segmenter it replaces, **every** configuration
+ * of this model scored worse on the real corpus (−0.06 to −0.16 F1@0.1, all 22
+ * configs, every confidence interval excluding zero). It wins only on vocadito in
+ * isolation, which is already at its human inter-annotator ceiling and therefore the
+ * least valuable place to win. Its shipping descendant is `VoiceNoteDecoder`
+ * (src/recordings/pipeline/voice-note-decoder.ts), which carries the ideas that did
+ * survive; the instrument path uses `segmentNotes`. It lives under scripts/eval so
+ * the sweeps can still reproduce it, and its internals stay frozen for that reason.
+ *
+ * It is retained because the *diagnosis* is informative and the fix is identified:
+ * the datasets want opposite `changeCost` values — sustained vibrato-heavy singing
+ * needs a high cost, fast humming a low one — so a single global setting provably
+ * cannot serve both. The next step is a two-pass **adaptive** cost, scaled from the
+ * take's own measured note density and vibrato extent. See the findings log in
+ * `scripts/eval/README.md` for the numbers. Exercised by `scripts/eval/sweep-segmenter.ts`.
+ */
 export class NoteSegmenter {
     private readonly confidenceThreshold: number
     private readonly minFreqHz: number
