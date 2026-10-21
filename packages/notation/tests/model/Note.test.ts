@@ -51,6 +51,13 @@ describe('Note', () => {
         expect(new Note({ duration: new Duration() }).tiesBack).toBe(false)
     })
 
+    it('canToggleTuplet: a tuplet note can always collapse; a plain one only when a shorter value exists', () => {
+        const tripletSixteenth = new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 3, normalNotes: 2 } }) })
+        expect(tripletSixteenth.canToggleTuplet).toBe(true)
+        expect(new Note({ duration: new Duration({ type: 'q' }) }).canToggleTuplet).toBe(true)
+        expect(new Note({ duration: new Duration({ type: '16' }) }).canToggleTuplet).toBe(false)
+    })
+
     it('tieFor turns back/forward tie flags into the tie mark', () => {
         expect(Note.tieFor(false, false)).toBeUndefined()
         expect(Note.tieFor(false, true)).toBe('start')

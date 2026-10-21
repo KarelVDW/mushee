@@ -64,6 +64,11 @@ export class Note {
         return this.duration.isTuplet
     }
 
+    /** Whether the triplet toggle can act here: collapse the group it is in, or split it into a triplet. */
+    get canToggleTuplet(): boolean {
+        return this.inTuplet || !!this.duration.tripletDivision()
+    }
+
     /**
      * Render this note as if under `clef`, bypassing measure resolution. Used for
      * detached preview notes (the editor's ghost note), which aren't part of a
