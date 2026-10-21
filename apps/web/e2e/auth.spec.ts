@@ -19,12 +19,16 @@ test('login: password visibility toggles and Enter submits into the library', as
     await page.getByLabel('Email').fill('e2e@example.com')
     await password.fill('hunter2hunter2')
 
-    // The eye toggle flips the input to plain text and back.
+    // The eye toggle flips the input to plain text and back. It keeps one name and reports
+    // its state through aria-pressed.
+    const showPassword = page.getByRole('button', { name: 'Show password' })
     await expect(password).toHaveAttribute('type', 'password')
-    await page.getByRole('button', { name: 'Toggle password visibility' }).click()
+    await showPassword.click()
     await expect(password).toHaveAttribute('type', 'text')
-    await page.getByRole('button', { name: 'Toggle password visibility' }).click()
+    await expect(showPassword).toHaveAttribute('aria-pressed', 'true')
+    await showPassword.click()
     await expect(password).toHaveAttribute('type', 'password')
+    await expect(showPassword).toHaveAttribute('aria-pressed', 'false')
 
     // Enter submits the form; the mocked sign-in succeeds into /scores.
     await password.press('Enter')
