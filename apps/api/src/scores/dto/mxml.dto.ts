@@ -20,11 +20,16 @@ import {
 } from 'class-validator'
 
 /**
- * MusicXML-JSON wire format produced by the web app's ScoreSerializer
- * (apps/web/src/model/util/ScoreSerializer.ts) and mirrored by the types in
- * apps/web/src/components/notation/types.ts. Only entry kinds the serializer
- * actually emits are accepted (note, attributes, direction, barline) — backup,
- * forward, stems and beams can be added once MusicXML import produces them.
+ * MusicXML-JSON wire format written by @mushee/notation's ScoreSerializer
+ * (packages/notation/src/model/io/ScoreSerializer.ts) and typed in
+ * packages/notation/src/model/io/MusicXml.ts. Only entry kinds the serializer
+ * actually emits are accepted (note, attributes, direction, barline): MusicXML
+ * import normalises backup, forward, stems and beams away (a forward becomes
+ * rests), so the stored subset never contains them.
+ *
+ * A third hand-kept copy of the format is the API's own TS mirror,
+ * recordings/pipeline/mxml.types.ts, which MxmlBuilder emits for a transcribed
+ * take; these DTOs, that mirror and MusicXml.ts must change in step.
  */
 
 const MXML_STEPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const
