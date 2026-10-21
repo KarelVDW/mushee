@@ -8,7 +8,7 @@ import { AuthCard, AuthShell } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { emailOtp, signUp } from '@/lib/auth-client'
 import { nextPathFrom, withNext } from '@/lib/nextPath'
-import { BETA_MODE } from '@/lib/plans'
+import { BETA_MODE, requestedPlanFrom, withPlan } from '@/lib/plans'
 
 export default function SignupPage() {
     const router = useRouter()
@@ -48,8 +48,10 @@ export default function SignupPage() {
                     // The account exists at this point — never strand the user on a
                     // frozen form. Onboarding's verify-email step can re-send the
                     // code, so a failed initial send proceeds all the same.
-                    // A visitor who came from somewhere specific (a shared score) gets back there after onboarding.
-                    const goToOnboarding = () => router.push(withNext('/onboarding', nextPathFrom(window.location.search)))
+                    // A visitor who came from somewhere specific (a shared score) gets back there after onboarding,
+                    // and one who picked a pricing card finds that tier preselected in its plan step.
+                    const search = window.location.search
+                    const goToOnboarding = () => router.push(withPlan(withNext('/onboarding', nextPathFrom(search)), requestedPlanFrom(search)))
                     void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
                 }
             })

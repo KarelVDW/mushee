@@ -100,7 +100,7 @@ function ProfessionalCard({ tier, currency, ctaLocation }: { tier: PlanTier; cur
                     / month · {formatMoney(tier.priceYearly, currency)}/yr
                 </span>
             </div>
-            <GetStartedButton location={ctaLocation} variant="secondary">{`Go ${tier.name}`}</GetStartedButton>
+            <GetStartedButton location={ctaLocation} plan={tier.id} variant="secondary">{`Go ${tier.name}`}</GetStartedButton>
         </div>
     )
 }
@@ -180,7 +180,7 @@ function PricingCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency
                 ))}
             </ul>
             <div className="mt-auto pt-2">
-                <GetStartedButton location={ctaLocation} variant={emphasis ? 'primary' : 'secondary'} fullWidth>
+                <GetStartedButton location={ctaLocation} plan={tier.id} variant={emphasis ? 'primary' : 'secondary'} fullWidth>
                     {cta}
                 </GetStartedButton>
             </div>

@@ -56,6 +56,13 @@ describe('GetStartedButton', () => {
         expect(hrefOf(html({ location: 'shared-score', next: '/s/abc' }))).toBe('/scores')
     })
 
+    it('takes the tier a pricing card names to signup, or to the plan dialog when signed in', () => {
+        expect(hrefOf(html({ location: 'pricing', plan: 'studio', children: 'Go Studio' }))).toBe('/signup?plan=studio')
+        expect(hrefOf(html({ location: 'pricing', plan: 'pro', next: '/s/abc' }))).toBe(`/signup?next=${encodeURIComponent('/s/abc')}&plan=pro`)
+        visitor.authed = true
+        expect(hrefOf(html({ location: 'pricing', plan: 'arranger', children: 'Go Arranger' }))).toBe('/settings?plan=arranger')
+    })
+
     it('lets children replace the label and its arrow; secondary keeps the link', () => {
         const generic = html({ location: 'nav' })
         const named = html({ location: 'pricing', children: 'Go Studio' })

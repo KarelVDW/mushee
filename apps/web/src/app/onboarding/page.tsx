@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { FunnelShell } from '@/components/FunnelShell'
 import { Icon, PrimaryButton, StepProgress, TertiaryButton } from '@/components/ui'
@@ -9,7 +9,7 @@ import { setUserProperties, track } from '@/lib/analytics'
 import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
-import { BETA_MODE, isPaidTier, type PlanTier } from '@/lib/plans'
+import { BETA_MODE, isPaidTier, type PlanTier, requestedPlanFrom } from '@/lib/plans'
 import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
 
 import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES, type StepName } from './onboarding-data'
@@ -58,6 +58,13 @@ export default function OnboardingPage() {
     const [tier, setTier] = useState<PlanTier['id']>('pro')
     const [billing, setBilling] = useState<BillingInterval>('monthly')
     const [done, setDone] = useState(false)
+
+    // A visitor who came from a pricing card (signup forwards its ?plan=) finds that tier
+    // preselected. Read after mount: the page prerenders, where there is no URL to read.
+    useEffect(() => {
+        const requested = requestedPlanFrom(window.location.search)
+        if (requested) setTier(requested)
+    }, [])
 
     const canAdvance = (() => {
         switch (stepName) {

@@ -24,6 +24,7 @@ import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
+import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
 import { billingKeys, useAllRecordings, useScores } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
@@ -63,10 +64,18 @@ export default function SettingsPage() {
         }
     }
 
-    // Coming back from a successful Polar checkout: land on the account tab.
+    // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan dialog.
+    const [requestedPlan, setRequestedPlan] = useState<PlanTier['id'] | null>(null)
+
+    // Coming back from a successful Polar checkout, or from a pricing card: land on the account tab.
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        if (params.get('checkout') === 'success') {
+        const plan = requestedPlanFrom(window.location.search)
+        if (plan) {
+            setTab('account')
+            setRequestedPlan(plan)
+            window.history.replaceState(null, '', '/settings')
+        } else if (params.get('checkout') === 'success') {
             setTab('account')
             showToast('Payment confirmed — welcome to your new plan!', 'info')
             window.history.replaceState(null, '', '/settings')
@@ -143,7 +152,7 @@ export default function SettingsPage() {
 
                         {tab === 'account' && (
                             <>
-                                <BillingSection />
+                                <BillingSection requestedPlan={requestedPlan} />
                                 <SettingsSection title="Password" subtitle="Update the password you use to sign in.">
                                     <div>
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
