@@ -5,31 +5,22 @@ import {
     NUM_STAFF_LINES,
     SPACE_ABOVE_STAFF,
     STAVE_LINE_DISTANCE,
-} from '@mushee/notation/components/constants'
-import { Duration } from '@mushee/notation/model/Duration'
+} from '@mushee/notation/engraving/constants'
 import type { KeySignature } from '@mushee/notation/model/KeySignature'
+import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
+import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
 import { Measure } from '@mushee/notation/model/Measure'
-import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import type { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { KeySignatureWidth } from '@mushee/notation/model/width/KeySignatureWidth'
-import type { NoteWidth } from '@mushee/notation/model/width/NoteWidth'
-import { makeScore, pitched, rest } from '@mushee/notation/testing'
+import { makeScore, pitched, rest, triplet } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** A registered measure inside a fresh score (no notes unless added). */
 function registeredMeasure(): { score: Score; m: Measure } {
     const score = new Score()
     return { score, m: score.addMeasure() }
-}
-
-function tripletEighth(): Note {
-    return new Note({
-        duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
-        pitch: new Pitch({ name: 'C', octave: 4 }),
-    })
 }
 
 describe('MeasureLayout', () => {
@@ -230,6 +221,11 @@ describe('MeasureLayout', () => {
             expect(MeasureLayout.barlineWidth('end')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH)
             expect(MeasureLayout.barlineWidth(undefined)).toBe(BARLINE_THIN_WIDTH)
         })
+
+        it('draws end and double barlines wider than a single one', () => {
+            expect(MeasureLayout.barlineWidth('end')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+            expect(MeasureLayout.barlineWidth('double')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+        })
     })
 
     describe('mid-measure elements', () => {
@@ -328,13 +324,13 @@ describe('MeasureLayout', () => {
 
         it('tupletLayoutFor returns the tuplet layout and throws for strangers', () => {
             const { m } = registeredMeasure()
-            m.addNotes([tripletEighth(), tripletEighth(), tripletEighth()])
+            m.addNotes([triplet(), triplet(), triplet()])
             const tuplet = m.tuplets[0]
             if (!tuplet) throw new Error('expected a tuplet')
             expect(m.layout.tupletLayoutFor(tuplet)).toBe(tuplet.layout)
 
             const { m: other } = registeredMeasure()
-            other.addNotes([tripletEighth(), tripletEighth(), tripletEighth()])
+            other.addNotes([triplet(), triplet(), triplet()])
             const strangerTuplet = other.tuplets[0]
             if (!strangerTuplet) throw new Error('expected a tuplet')
             expect(() => m.layout.tupletLayoutFor(strangerTuplet)).toThrow('Tuplet not part of this measure layout')

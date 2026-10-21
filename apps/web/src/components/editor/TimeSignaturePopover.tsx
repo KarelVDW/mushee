@@ -1,6 +1,7 @@
 'use client'
 
-import { getGlyphWidth, getYForLine, Glyph } from '@mushee/notation/components'
+import { Glyph, Staff } from '@mushee/notation/components'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -35,20 +36,20 @@ export function TimeSignatureGlyph({
     color?: string
 }) {
     const rows = [
-        { digits: String(beatAmount).split(''), y: getYForLine(1) },
-        { digits: String(beatType).split(''), y: getYForLine(3) },
-    ].map((row) => ({ ...row, width: row.digits.reduce((total, digit) => total + getGlyphWidth(`timeSig${digit}`), 0) }))
+        { digits: String(beatAmount).split(''), y: Staff.yForStaffLine(1) },
+        { digits: String(beatType).split(''), y: Staff.yForStaffLine(3) },
+    ].map((row) => ({ ...row, width: row.digits.reduce((total, digit) => total + Bravura.width(`timeSig${digit}`), 0) }))
     const width = Math.max(...rows.map((row) => row.width)) + 4
     // Window over the staff band: the digits sit on lines 1 and 3, each spanning a space up and down.
-    const top = getYForLine(0) - 2
-    const height = getYForLine(4) + 2 - top
+    const top = Staff.yForStaffLine(0) - 2
+    const height = Staff.yForStaffLine(4) + 2 - top
     return (
         <svg width={(size * width) / height} height={size} viewBox={`0 ${top} ${width} ${height}`} aria-hidden>
             {rows.map((row, rowIndex) => {
                 let x = (width - row.width) / 2
                 return row.digits.map((digit, i) => {
                     const glyph = <Glyph key={`${rowIndex}-${i}`} name={`timeSig${digit}`} x={x} y={row.y} fill={color} />
-                    x += getGlyphWidth(`timeSig${digit}`)
+                    x += Bravura.width(`timeSig${digit}`)
                     return glyph
                 })
             })}

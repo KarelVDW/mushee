@@ -1,5 +1,5 @@
-import type { MxmlMeasure } from '@mushee/notation/components/types'
-import type { Score } from '@mushee/notation/model/Score'
+import type { Score } from '@mushee/notation/model'
+import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 

@@ -1,5 +1,5 @@
+import type { LayoutLine } from '../model/layout/types'
 import { NOTATION_INK } from './constants'
-import type { LayoutLine } from './types'
 
 interface StaffLinesProps {
     lines: LayoutLine[]

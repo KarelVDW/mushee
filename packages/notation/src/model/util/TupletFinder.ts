@@ -1,6 +1,6 @@
 import { BEAT_EPSILON } from '../Duration'
-import { Measure } from '../Measure'
-import { Note } from '../Note'
+import type { Measure } from '../Measure'
+import type { Note } from '../Note'
 import { Tuplet } from '../Tuplet'
 
 export class TupletFinder {

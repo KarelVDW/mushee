@@ -1,8 +1,9 @@
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, SCORE_WIDTH } from '@mushee/notation/components/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
+import { pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -14,8 +15,6 @@ import { describe, expect, it } from 'vitest'
  * historical trigger and asserts the layout resolves without throwing and
  * within the row budgets.
  */
-
-const sixteenth = (octave = 4) => new Note({ duration: new Duration({ type: '16' }), pitch: new Pitch({ name: 'C', octave }) })
 
 const sixteenthSharp = (octave = 4) =>
     new Note({
@@ -41,7 +40,7 @@ describe('ResizeError regressions', () => {
             const score = new Score()
             const m = score.addMeasure()
             const notes: Note[] = []
-            for (let i = 0; i < 16; i++) notes.push(sixteenth())
+            for (let i = 0; i < 16; i++) notes.push(pitched('C', 4, '16'))
             m.addNotes(notes)
             expect(() => layOutAllRows(score)).not.toThrow()
         })
@@ -51,7 +50,7 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < MAX_MEASURES_PER_ROW; i++) {
                 const m = score.addMeasure()
                 const notes: Note[] = []
-                for (let j = 0; j < 16; j++) notes.push(sixteenth())
+                for (let j = 0; j < 16; j++) notes.push(pitched('C', 4, '16'))
                 m.addNotes(notes)
             }
             expect(() => layOutAllRows(score)).not.toThrow()

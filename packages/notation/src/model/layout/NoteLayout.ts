@@ -1,8 +1,10 @@
-import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../components/constants'
-import { getGlyphWidth } from '../../components/glyphUtils'
-import { getYForNote } from '../../components/noteUtils'
+import { Bravura } from '../../engraving/Bravura'
+import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Note } from '../Note'
-import type { NoteWidth } from '../width/NoteWidth'
+import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
+import type { NoteWidth } from './NoteWidth'
+import { Staff } from './Staff'
+import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 
 /**
  * The geometry of a single note: notehead, stem, flag, ledger lines,
@@ -16,16 +18,16 @@ export class NoteLayout {
     readonly noteY: number
     readonly glyphName: string
     readonly width: NoteWidth
-    readonly flag: { glyphName: string; x: number; y: number; scale?: number } | undefined
-    readonly stem: { x: number; y1: number; y2: number } | undefined
-    readonly ledgerLines: { x1: number; y1: number; x2: number; y2: number }[]
-    readonly accidental: { x: number; y: number; glyphName: string } | undefined
+    readonly flag: LayoutGlyph | undefined
+    readonly stem: LayoutStem | undefined
+    readonly ledgerLines: LayoutLine[]
+    readonly accidental: LayoutGlyph | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
     constructor(note: Note, context: { accidentalGlyph: string | undefined; width: NoteWidth }) {
         const width = context.width
         this.width = width
-        this.noteY = getYForNote(note.line)
+        this.noteY = Staff.yForNoteLine(note.line)
         this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
@@ -34,15 +36,15 @@ export class NoteLayout {
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
         if (context.accidentalGlyph) {
             this.accidental = { x: cursorX, y: this.noteY, glyphName: context.accidentalGlyph }
-            cursorX += getGlyphWidth(context.accidentalGlyph) + width.gap
+            cursorX += Bravura.width(context.accidentalGlyph) + width.gap
         }
 
         // ledgerLines
         const ledgerLinePositions: number[] = []
         if (note.pitch) {
             const noteLine = note.line
-            for (let l = 0; l >= noteLine; l--) ledgerLinePositions.push(getYForNote(l))
-            for (let l = 6; l <= noteLine; l++) ledgerLinePositions.push(getYForNote(l))
+            for (let l = STAFF_BOTTOM_LINE - 1; l >= noteLine; l--) ledgerLinePositions.push(Staff.yForNoteLine(l))
+            for (let l = STAFF_TOP_LINE + 1; l <= noteLine; l++) ledgerLinePositions.push(Staff.yForNoteLine(l))
         }
         this.ledgerLines = ledgerLinePositions.map((ly) => ({
             x1: cursorX,
@@ -86,7 +88,7 @@ export class NoteLayout {
         }
     }
 
-    getStem(stemDir: 'up' | 'down') {
+    getStem(stemDir: 'up' | 'down'): LayoutStem {
         const stemX =
             stemDir === 'up' ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2 : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'

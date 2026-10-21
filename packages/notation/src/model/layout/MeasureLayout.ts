@@ -1,29 +1,24 @@
 import { sumBy } from 'lodash-es'
 
-import {
-    BARLINE_GAP,
-    BARLINE_THICK_WIDTH,
-    BARLINE_THIN_WIDTH,
-    NUM_STAFF_LINES,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from '../../components/constants'
-import type { BarlineType, LayoutBarline } from '../../components/types'
+import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '../../engraving/constants'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
-import { BeamFinder } from '../util/BeamFinder'
-import { Resizer, type Sizeable } from '../util/Resizer'
-import type { KeySignatureWidth } from '../width/KeySignatureWidth'
-import type { NoteWidth } from '../width/NoteWidth'
-import type { PhysicalWidth } from '../width/PhysicalWidth'
+import type { BarlineType } from '../types'
+import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
+import type { KeySignatureWidth } from './KeySignatureWidth'
 import { NoteLayout } from './NoteLayout'
+import type { NoteWidth } from './NoteWidth'
+import type { PhysicalWidth } from './PhysicalWidth'
+import { Resizer, type Sizeable } from './Resizer'
+import { Staff } from './Staff'
 import { TupletLayout } from './TupletLayout'
+import type { LayoutBarline } from './types'
 
 /** An element that occupies horizontal space within a measure. */
 export type MeasureElement = Clef | KeySignature | TimeSignature | Note
@@ -160,11 +155,10 @@ export class MeasureLayout {
         if (barlineType === 'none') {
             this.barline = null
         } else {
-            const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
             this.barline = {
                 x: context.width - MeasureLayout.barlineWidth(measure.endBarline),
-                y: headroom,
-                height: (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE,
+                y: Staff.TOP_Y,
+                height: Staff.HEIGHT,
                 type: barlineType,
             }
         }

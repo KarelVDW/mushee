@@ -2,32 +2,25 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
-import { Note, Pitch, Score as ScoreModel } from '../model'
+import type { Note, Pitch, Score as ScoreModel } from '../model'
 import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
+import { Staff } from '../model/layout/Staff'
+import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
-import {
-    INTERACTION_BLUE,
-    MEASURE_BUTTON_GAP,
-    MEASURE_BUTTON_SIZE,
-    NUM_STAFF_LINES,
-    SCORE_WIDTH,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from './constants'
+import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
-import { getLineForY } from './noteUtils'
 import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
 import { Tie } from './Tie'
-import type { ClefType } from './types'
 
 /** Vertical offset from the reference Y to the teardrop tip */
 const CURSOR_Y_OFFSET = 15
@@ -183,7 +176,7 @@ export const Score = memo(function Score({
         let lowestY = selectedNote.layout.noteY
         const stem = selectedNote.layout.stem
         if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
-        const bottomStaffY = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
+        const bottomStaffY = Staff.TOP_Y + Staff.HEIGHT
         const y = Math.max(bottomStaffY, lowestY) + CURSOR_Y_OFFSET
         return { x, y }
     }, [selectedNote, selectedNote?.layout.id])
@@ -278,7 +271,7 @@ export const Score = memo(function Score({
         [svgToContainer, onTempoClick],
     )
 
-    const staffTopY = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
+    const staffTopY = Staff.TOP_Y
 
     const handleClefClick = useCallback(
         (measureIndex: number, clef: ClefType, svgX: number, svgY: number) => {
@@ -359,7 +352,7 @@ export const Score = memo(function Score({
             // Hover-to-pitch preview is a mouse affordance; a finger can't hover, and on
             // touch the ghost would flash under every tap.
             if (e.pointerType !== 'mouse') return
-            const hoverLine = getLineForY(localY)
+            const hoverLine = Staff.noteLineForY(localY)
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
             if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
@@ -438,9 +431,9 @@ export const Score = memo(function Score({
                         ref={playbackCursorRef}
                         data-export-exclude
                         display="none"
-                        y={SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 5}
+                        y={Staff.TOP_Y - 5}
                         width={3}
-                        height={(NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 10}
+                        height={Staff.HEIGHT + 10}
                         fill={INTERACTION_BLUE}
                         rx={1.5}
                     />

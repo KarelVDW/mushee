@@ -1,13 +1,12 @@
-import type { TieType } from '@mushee/notation/components/types'
 import { Duration } from '@mushee/notation/model/Duration'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
-import { makeScore, pitched, rest } from '@mushee/notation/testing'
+import type { TieType } from '@mushee/notation/model/types'
+import { makeScore, pitched, rest, roundTrip, triplet } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Swap a measure's content for an exact note list (tests may leave measures under-full). */
@@ -18,13 +17,6 @@ function fill(measure: Measure, notes: Note[]) {
 
 function tied(note: Note, tie: TieType): Note {
     return note.clone({ tie })
-}
-
-function triplet(name: string, octave: number): Note {
-    return new Note({
-        duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
-        pitch: new Pitch({ name, octave }),
-    })
 }
 
 /** Compact readable form of a measure's notes: "C4:q", "r:8", "E4:h.:start". */
@@ -243,7 +235,7 @@ describe('Score.setTimeSignature', () => {
     describe('tuplets', () => {
         it('a tuplet group that fits flows intact, keeping note identities', () => {
             const score = makeScore(1)
-            const group = [triplet('F', 4), triplet('G', 4), triplet('A', 4)]
+            const group = [triplet('8', 'F', 4), triplet('8', 'G', 4), triplet('8', 'A', 4)]
             fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('E', 4), ...group])
             score.setTimeSignature(score.measures[0], new TimeSignature(2, 4))
             expect(score.measures[1].notes.slice(1)).toEqual(group)
@@ -256,9 +248,9 @@ describe('Score.setTimeSignature', () => {
             fill(score.measures[0], [
                 pitched('C', 4, 'h'),
                 pitched('D', 4, '8'),
-                triplet('F', 4),
-                triplet('G', 4),
-                triplet('A', 4),
+                triplet('8', 'F', 4),
+                triplet('8', 'G', 4),
+                triplet('8', 'A', 4),
                 rest('8'),
             ])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
@@ -277,9 +269,9 @@ describe('Score.setTimeSignature', () => {
                 pitched('C', 4),
                 pitched('D', 4),
                 dotted,
-                triplet('F', 4),
-                triplet('G', 4),
-                triplet('A', 4),
+                triplet('8', 'F', 4),
+                triplet('8', 'G', 4),
+                triplet('8', 'A', 4),
                 rest('16'),
             ])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
@@ -316,8 +308,8 @@ describe('Score.setTimeSignature', () => {
 
         it('changing back coalesces the split tuplet note and restores the group', () => {
             const score = makeScore(1)
-            const [f, a] = [triplet('F', 4), triplet('A', 4)]
-            fill(score.measures[0], [pitched('C', 4, 'h'), pitched('D', 4, '8'), f, triplet('G', 4), a, rest('8')])
+            const [f, a] = [triplet('8', 'F', 4), triplet('8', 'A', 4)]
+            fill(score.measures[0], [pitched('C', 4, 'h'), pitched('D', 4, '8'), f, triplet('8', 'G', 4), a, rest('8')])
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
             score.setTimeSignature(score.measures[0], new TimeSignature(4, 4))
             expect(shape(score.measures[0])).toEqual(['C4:h', 'D4:8', 'F4:8', 'G4:8', 'A4:8', 'r:8'])
@@ -370,9 +362,9 @@ describe('Score.setTimeSignature', () => {
 
         it('a tie from a tuplet into a plain note stays split', () => {
             const score = makeScore(2)
-            const last = tied(triplet('E', 4), 'start')
+            const last = tied(triplet('8', 'E', 4), 'start')
             const first = pitched('E', 4)
-            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('F', 4), triplet('E', 4), triplet('E', 4), last])
+            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('F', 4), triplet('8', 'E', 4), triplet('8', 'E', 4), last])
             fill(score.measures[1], [first, rest('q'), rest('h')])
             score.setTimeSignature(score.measures[0], new TimeSignature(2, 4))
             expect(score.measures[1].notes).toContain(last)
@@ -381,12 +373,12 @@ describe('Score.setTimeSignature', () => {
 
         it('a tie between different tuplet ratios stays split', () => {
             const score = makeScore(2)
-            const last = tied(triplet('E', 4), 'start')
+            const last = tied(triplet('8', 'E', 4), 'start')
             const first = new Note({
                 duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 4 } }),
                 pitch: new Pitch({ name: 'E', octave: 4 }),
             })
-            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('F', 4), triplet('E', 4), triplet('E', 4), last])
+            fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('F', 4), triplet('8', 'E', 4), triplet('8', 'E', 4), last])
             fill(score.measures[1], [first])
             score.setTimeSignature(score.measures[0], new TimeSignature(2, 4))
             expect(score.measures[1].notes).toContain(last)
@@ -504,7 +496,7 @@ describe('Score.setTimeSignature', () => {
             const score = makeScore(3)
             fill(score.measures[0], [pitched('C', 4), pitched('D', 4), pitched('E', 4, 'h')])
             score.setTimeSignature(score.measures[1], new TimeSignature(3, 4))
-            const restored = new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
+            const restored = roundTrip(score)
             expect(restored.measures).toHaveLength(score.measures.length)
             expect(restored.measures.map((m) => m.timeSignature.maxBeats)).toEqual(score.measures.map((m) => m.timeSignature.maxBeats))
             restored.measures.forEach((m, i) => expect(shape(m)).toEqual(shape(score.measures[i])))

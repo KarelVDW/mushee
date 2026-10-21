@@ -1,8 +1,5 @@
 import { vi } from 'vitest'
 
-// Mock the glyph utilities so building Scores in tests never loads the large
-// Bravura font data (same mock the notation and web suites use).
-vi.mock('@mushee/notation/components/glyphUtils', () => ({
-    getGlyphWidth: () => 8,
-    outlineToSvgPath: () => '',
-}))
+// Building Scores in tests must never load the large Bravura font data: glyph metrics
+// come from the shared width table (the same double the notation and web suites use).
+vi.mock('@mushee/notation/engraving/Bravura', () => import('@mushee/notation/testing/glyphMetricsMock'))

@@ -1,7 +1,7 @@
-import type { ScorePartwise } from '@mushee/notation/components/types'
 import type { Score } from '@mushee/notation/model'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 
 /** A note's place as positions — the identity that survives a snapshot round-trip. */
 export interface NoteAddress {

@@ -1,4 +1,4 @@
-import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@mushee/notation/components/constants'
+import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Measure } from '@mushee/notation/model/Measure'

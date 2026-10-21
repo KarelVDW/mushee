@@ -9,8 +9,10 @@
         "./model/*": "./src/model/*.ts",
         "./components": "./src/components/index.ts",
         "./components/*": "./src/components/*.ts",
+        "./engraving/*": "./src/engraving/*.ts",
         "./lib/*": "./src/lib/*.ts",
-        "./testing": "./src/testing/index.ts"
+        "./testing": "./src/testing/index.ts",
+        "./testing/*": "./src/testing/*.ts"
     },
     "scripts": {
         "type-check": "tsc --noEmit",

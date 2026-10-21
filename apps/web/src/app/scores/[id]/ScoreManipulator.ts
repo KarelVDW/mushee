@@ -1,5 +1,4 @@
-import type { ClefType } from '@mushee/notation/components'
-import type { Instrument, Measure, Note, Score } from '@mushee/notation/model'
+import type { ClefType, Instrument, Measure, Note, Score } from '@mushee/notation/model'
 import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'

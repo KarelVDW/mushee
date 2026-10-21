@@ -1,11 +1,12 @@
-import type { TieType } from '../components/types'
 import type { Clef } from './Clef'
-import { Duration } from './Duration'
+import type { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { NoteLayout } from './layout/NoteLayout'
+import { NoteWidth } from './layout/NoteWidth'
 import type { Measure } from './Measure'
-import { Pitch } from './Pitch'
-import { NoteWidth } from './width/NoteWidth'
+import type { Pitch } from './Pitch'
+import { STAFF_MIDDLE_LINE } from './staffLines'
+import type { TieType } from './types'
 
 /**
  * A note or rest. Content (duration, pitch, tie) is immutable — edits replace
@@ -112,7 +113,7 @@ export class Note {
 
     get stemDir(): 'up' | 'down' {
         if (this.isRest) return 'up'
-        return this.line >= 3 ? 'down' : 'up'
+        return this.line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
     }
 
     // --- Navigation (thin delegates; the traversal lives on Score) ---

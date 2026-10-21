@@ -1,22 +1,16 @@
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
+import { triplet } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
-
-const tripletEighth = () =>
-    new Note({
-        duration: new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 2 } }),
-        pitch: new Pitch({ name: 'C', octave: 4 }),
-    })
 
 describe('Tuplet', () => {
     function setup() {
         const score = new Score()
         const m = score.addMeasure()
-        const a = tripletEighth()
-        const b = tripletEighth()
-        const c = tripletEighth()
+        const a = triplet()
+        const b = triplet()
+        const c = triplet()
         m.addNotes([a, b, c])
         // TupletFinder derives the group lazily from the measure's notes.
         const tuplet = m.tuplets[0]
@@ -40,7 +34,7 @@ describe('Tuplet', () => {
         const { a, c, tuplet } = setup()
         expect(tuplet.getIndex(a)).toBe(0)
         expect(tuplet.getIndex(c)).toBe(2)
-        expect(tuplet.getIndex(tripletEighth())).toBeNull()
+        expect(tuplet.getIndex(triplet())).toBeNull()
     })
 
     it('layout delegates into the score layout and is stable without mutation', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import type { MxmlMeasure } from '@mushee/notation/components/types'
+import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useMemo, useState } from 'react'

@@ -1,7 +1,8 @@
 import { memo } from 'react'
 
+import { TUPLET_NUMBER_SCALE } from '../engraving/constants'
 import type { Tuplet } from '../model'
-import { NOTATION_INK, TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP, TUPLET_NUMBER_SCALE } from './constants'
+import { NOTATION_INK, TUPLET_BRACKET_HEIGHT, TUPLET_NUMBER_GAP } from './constants'
 import { Glyph } from './Glyph'
 
 export const TupletBracket = memo(function TupletBracket({ tuplet }: { tuplet: Tuplet; layoutId: string }) {

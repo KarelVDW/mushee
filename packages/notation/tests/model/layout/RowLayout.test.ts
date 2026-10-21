@@ -5,7 +5,7 @@ import {
     SCORE_WIDTH,
     SPACE_ABOVE_STAFF,
     STAVE_LINE_DISTANCE,
-} from '@mushee/notation/components/constants'
+} from '@mushee/notation/engraving/constants'
 import { RowLayout, type RowLayoutContext } from '@mushee/notation/model/layout/RowLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'

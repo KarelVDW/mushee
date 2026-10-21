@@ -1,5 +1,4 @@
-import type { ClefType, DurationType } from '@mushee/notation/components'
-import { Note, Pitch, type Score } from '@mushee/notation/model'
+import { type ClefType, type DurationType, Note, Pitch, type Score } from '@mushee/notation/model'
 import type { ReactNode } from 'react'
 
 /**

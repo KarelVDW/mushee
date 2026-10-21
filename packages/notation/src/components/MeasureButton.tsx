@@ -1,3 +1,5 @@
+import { MEASURE_BUTTON_FILL, MEASURE_BUTTON_LABEL, MEASURE_BUTTON_STROKE } from './constants'
+
 export function MeasureButton({
     x,
     y,
@@ -22,7 +24,16 @@ export function MeasureButton({
             }}
             style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
             opacity={disabled ? 0.3 : 1}>
-            <rect x={x} y={y} width={size} height={size} rx={2} fill="white" stroke="#dbdddd" strokeWidth={0.75} />
+            <rect
+                x={x}
+                y={y}
+                width={size}
+                height={size}
+                rx={2}
+                fill={MEASURE_BUTTON_FILL}
+                stroke={MEASURE_BUTTON_STROKE}
+                strokeWidth={0.75}
+            />
             <text
                 x={x + size / 2}
                 y={y + size / 2}
@@ -31,7 +42,7 @@ export function MeasureButton({
                 fontSize={size * 0.7}
                 fontFamily="system-ui, sans-serif"
                 fontWeight={500}
-                fill="#5a5c5c"
+                fill={MEASURE_BUTTON_LABEL}
                 style={{ userSelect: 'none' }}>
                 {label}
             </text>

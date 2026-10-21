@@ -1,9 +1,9 @@
-import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../components/constants'
-import { getGlyphWidth } from '../../components/glyphUtils'
-import type { LayoutGlyph } from '../../components/types'
+import { Bravura } from '../../engraving/Bravura'
+import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../engraving/constants'
 import type { Note } from '../Note'
 import type { Tuplet } from '../Tuplet'
 import type { NoteLayout } from './NoteLayout'
+import type { LayoutGlyph } from './types'
 
 /**
  * The bracket and ratio number above (or below) a tuplet group. Built by
@@ -39,14 +39,14 @@ export class TupletLayout {
             .split('')
             .map((d) => `timeSig${d}`)
         const scale = TUPLET_NUMBER_SCALE
-        const totalWidth = glyphNames.reduce((sum, name) => sum + getGlyphWidth(name, scale), 0)
+        const totalWidth = glyphNames.reduce((sum, name) => sum + Bravura.width(name, scale), 0)
         let x = (this.x1 + this.x2) / 2 - totalWidth / 2
         const y = this.y
         const glyphs: LayoutGlyph[] = []
         // Numerator digits
         for (const name of glyphNames) {
             glyphs.push({ glyphName: name, x, y })
-            x += getGlyphWidth(name, scale)
+            x += Bravura.width(name, scale)
         }
         this.numberGlyphs = glyphs
     }

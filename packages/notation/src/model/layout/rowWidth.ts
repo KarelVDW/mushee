@@ -1,4 +1,4 @@
-import { MEASURE_BUTTON_SPACING } from '../../components/constants'
+import { MEASURE_BUTTON_SPACING } from '../../engraving/constants'
 
 /**
  * Horizontal budget available to a row's measures within a score laid out

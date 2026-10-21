@@ -1,5 +1,4 @@
-import { Instrument } from '@mushee/notation/model/Instrument'
-import type { Score } from '@mushee/notation/model/Score'
+import { Instrument, type Score } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

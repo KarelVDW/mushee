@@ -1,7 +1,6 @@
 'use client'
 
-import { Instrument } from '@mushee/notation/model/Instrument'
-import type { Score } from '@mushee/notation/model/Score'
+import { Instrument, type Score } from '@mushee/notation/model'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Transport } from '@/lib/Transport'

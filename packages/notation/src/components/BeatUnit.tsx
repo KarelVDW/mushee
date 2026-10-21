@@ -1,9 +1,11 @@
 'use client'
 
+import { Bravura } from '../engraving/Bravura'
+import { DOTTED_FLAG_SCALE } from '../engraving/constants'
+import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Duration } from '../model/Duration'
-import { DOT_RADIUS, DOTTED_FLAG_SCALE, GLYPH_SCALE, NOTATION_INK } from './constants'
+import { DOT_RADIUS, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
-import { getGlyphWidth } from './glyphUtils'
 
 const STEM_HEIGHT = 14
 const STEM_WIDTH = 1.2
@@ -11,9 +13,9 @@ const DOT_GAP = 3
 
 /** Horizontal extent of `BeatUnit` for `duration`, so text can follow the glyph. */
 export function beatUnitWidth(duration: Duration): number {
-    const notehead = getGlyphWidth(duration.noteheadGlyph, GLYPH_SCALE)
+    const notehead = Bravura.width(duration.noteheadGlyph, GLYPH_SCALE)
     const flag = duration.flagGlyph('up')
-    const flagWidth = flag ? getGlyphWidth(flag, duration.dots > 0 ? DOTTED_FLAG_SCALE : GLYPH_SCALE) : 0
+    const flagWidth = flag ? Bravura.width(flag, duration.dots > 0 ? DOTTED_FLAG_SCALE : GLYPH_SCALE) : 0
     return Math.max(notehead, flagWidth) + duration.dots * (DOT_GAP + 2 * DOT_RADIUS)
 }
 
@@ -23,7 +25,7 @@ export function beatUnitWidth(duration: Duration): number {
  * the score's glyph scale; wrap it in a translated `<g>` or a sized `<svg>`.
  */
 export function BeatUnit({ duration, fill = NOTATION_INK }: { duration: Duration; fill?: string }) {
-    const noteheadWidth = getGlyphWidth(duration.noteheadGlyph, GLYPH_SCALE)
+    const noteheadWidth = Bravura.width(duration.noteheadGlyph, GLYPH_SCALE)
     const stemX = noteheadWidth - STEM_WIDTH / 2
     const stemTop = -STEM_HEIGHT
     const flag = duration.flagGlyph('up')

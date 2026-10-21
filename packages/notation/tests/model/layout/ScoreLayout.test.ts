@@ -5,7 +5,7 @@ import {
     ROW_HEIGHT,
     SCORE_WIDTH,
     TEMPO_MARKING_Y,
-} from '@mushee/notation/components/constants'
+} from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'

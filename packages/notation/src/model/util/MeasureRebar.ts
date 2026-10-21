@@ -1,11 +1,11 @@
 import { sumBy } from 'lodash-es'
 
-import type { BarlineType, TieType } from '../../components/types'
 import { BEAT_EPSILON, Duration } from '../Duration'
 import { Measure } from '../Measure'
 import { Note } from '../Note'
 import type { Score } from '../Score'
 import type { TimeSignature } from '../TimeSignature'
+import type { BarlineType, TieType } from '../types'
 
 // One reflowable span of time: a single source note, or the tied chain the old barlines split it into.
 interface Unit {

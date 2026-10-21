@@ -1,4 +1,4 @@
-import { TUPLET_OFFSET } from '@mushee/notation/components/constants'
+import { TUPLET_OFFSET } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'

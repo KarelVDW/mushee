@@ -1,6 +1,6 @@
-import type { ImportedScore } from '@mushee/notation/model/util/ImportedScore'
-import { MidiImporter } from '@mushee/notation/model/util/MidiImporter'
-import { MusicXmlImporter } from '@mushee/notation/model/util/MusicXmlImporter'
+import type { ImportedScore } from '@mushee/notation/model/io/ImportedScore'
+import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
+import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
 
 import { MxlArchive } from './MxlArchive'
 

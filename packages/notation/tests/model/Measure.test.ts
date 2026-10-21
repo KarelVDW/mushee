@@ -1,21 +1,20 @@
-import type { ClefType } from '@mushee/notation/components/types'
 import { Clef } from '@mushee/notation/model/Clef'
 import { Duration } from '@mushee/notation/model/Duration'
 import { KeySignature } from '@mushee/notation/model/KeySignature'
-import { MeasureLayout } from '@mushee/notation/model/layout/MeasureLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { defaults, makeScore, pitched, rest } from '@mushee/notation/testing'
+import type { ClefType } from '@mushee/notation/model/types'
+import { makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 describe('Measure', () => {
     describe('construction', () => {
         it('attaches the leading clef and stores the time signature', () => {
             const score = new Score()
-            const { clefType, timeSignature } = defaults()
+            const clefType: ClefType = 'treble'
+            const timeSignature = new TimeSignature(4, 4)
             const m = new Measure(score, clefType, timeSignature)
             expect(m.clef.measure).toBe(m)
             expect(m.clef.type).toBe(clefType)
@@ -24,7 +23,7 @@ describe('Measure', () => {
 
         it('starts with no notes, no tempos, no tuplets', () => {
             const score = new Score()
-            const m = new Measure(score, ...(Object.values(defaults()) as [ClefType, TimeSignature]))
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(m.notes).toEqual([])
             expect(m.tempos).toEqual([])
             expect(m.tuplets).toEqual([])
@@ -32,8 +31,7 @@ describe('Measure', () => {
 
         it('exposes the leading key signature and end barline', () => {
             const score = new Score()
-            const { clefType, timeSignature } = defaults()
-            const m = new Measure(score, clefType, timeSignature, { keyFifths: 2, endBarline: 'end' })
+            const m = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 2, endBarline: 'end' })
             expect(m.keySignature.fifths).toBe(2)
             expect(m.keySignature.beatPosition).toBe(0)
             expect(m.endBarline).toBe('end')
@@ -41,11 +39,11 @@ describe('Measure', () => {
 
         it('honours explicit leading clef/key flags from the constructor', () => {
             const score = new Score()
-            const { clefType, timeSignature } = defaults()
-            const plain = new Measure(score, clefType, timeSignature)
+            const timeSignature = new TimeSignature(4, 4)
+            const plain = new Measure(score, 'treble', timeSignature)
             expect(plain.leadingClefExplicit).toBe(false)
             expect(plain.leadingKeyExplicit).toBe(false)
-            const explicit = new Measure(score, clefType, timeSignature, { leadingClefExplicit: true, leadingKeyExplicit: true })
+            const explicit = new Measure(score, 'treble', timeSignature, { leadingClefExplicit: true, leadingKeyExplicit: true })
             expect(explicit.leadingClefExplicit).toBe(true)
             expect(explicit.leadingKeyExplicit).toBe(true)
         })
@@ -110,21 +108,6 @@ describe('Measure', () => {
             const score = makeScore(1)
             const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
             expect(() => stray.layout).toThrow('Measure not part of this score layout')
-        })
-    })
-
-    describe('barline width (MeasureLayout.barlineWidth)', () => {
-        it('returns 0 for none', () => {
-            expect(MeasureLayout.barlineWidth('none')).toBe(0)
-        })
-
-        it('end barline is wider than single, double wider than single', () => {
-            expect(MeasureLayout.barlineWidth('end')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
-            expect(MeasureLayout.barlineWidth('double')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
-        })
-
-        it('defaults to single barline width when unset', () => {
-            expect(MeasureLayout.barlineWidth(undefined)).toBe(MeasureLayout.barlineWidth('single'))
         })
     })
 
@@ -750,63 +733,6 @@ describe('Measure', () => {
             score.toggleTuplet(placed)
             expect(m.tuplets[0]).toBe(m.tuplets[0])
             expect(m.tuplets).toBe(m.tuplets) // derived per version, not rebuilt per read
-        })
-    })
-
-    describe('beams (via layout)', () => {
-        it('beamFor returns the beam group of a beamed note, undefined otherwise', () => {
-            const score = makeScore(1)
-            const m = score.measures[0]
-            const first = m.firstNote
-            if (!first) throw new Error('expected firstNote')
-            // Two consecutive eighths beam together.
-            score.replace([first], [pitched('C', 5, '8'), pitched('D', 5, '8')])
-            const [a, b] = m.notes
-            const beam = m.layout.beamFor(a)
-            expect(beam).toBeDefined()
-            expect(beam?.notes).toContain(a)
-            expect(beam?.notes).toContain(b)
-            expect(m.layout.beams).toContain(beam)
-            // A rest is not beamed.
-            const lastRest = m.lastNote
-            if (!lastRest) throw new Error('expected rest')
-            expect(m.layout.beamFor(lastRest)).toBeUndefined()
-        })
-    })
-
-    describe('displayed accidentals across a mid-measure key change (via layout)', () => {
-        it('clears carried accidentals when a new key takes effect mid-bar', () => {
-            const score = makeScore(1)
-            const m = score.measures[0]
-            // F# (explicit accidental) in C major, then a mid-measure switch to a key, then F again.
-            const fSharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, octave: 5 }) })
-            const a = pitched('A', 4, 'q')
-            const fAfterKey = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 0, octave: 5 }) })
-            const b = pitched('B', 4, 'q')
-            m.replaceNotes(m.notes, [fSharp, a, fAfterKey, b])
-            m.addKeySignature(2, 1) // G major at beat 2: F is sharp by key
-            // First F shows a sharp (differs from C-major natural).
-            expect(fSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
-            // The key change at beat 2 resets the carried sharp; the natural F after it now differs
-            // from the G-major key (which expects F#), so it shows a natural.
-            expect(fAfterKey.layout.accidental?.glyphName).toBe('accidentalNatural')
-        })
-    })
-
-    describe('shows flags (computed by the layout)', () => {
-        it('the first measure shows clef and time signature', () => {
-            const score = makeScore(2)
-            expect(score.measures[0].layout.showsClef).toBe(true)
-            expect(score.measures[0].layout.showsTimeSignature).toBe(true)
-            // The second measure repeats nothing.
-            expect(score.measures[1].layout.showsTimeSignature).toBe(false)
-        })
-
-        it('a time signature change makes the measure show it again', () => {
-            const score = makeScore(2)
-            const m1 = score.measures[1]
-            m1.setTimeSignature(new TimeSignature(3, 4))
-            expect(m1.layout.showsTimeSignature).toBe(true)
         })
     })
 

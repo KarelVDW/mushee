@@ -3,7 +3,7 @@ import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { DurationSpeller } from '@mushee/notation/model/util/DurationSpeller'
 import { describe, expect, it } from 'vitest'
 
-import { Rng } from './scoreGenerator'
+import { Rng } from '../../support/scoreGenerator'
 
 /**
  * The speller (imports, recording gaps) must write exactly the span it is given:

@@ -1,10 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
-
-import { GLYPH_SCALE, NOTATION_INK } from './constants'
-import { BravuraFont } from './fonts/bravura_glyphs'
-import { outlineToSvgPath } from './glyphUtils'
+import { Bravura } from '../engraving/Bravura'
+import { GLYPH_SCALE } from '../engraving/GlyphScale'
+import { NOTATION_INK } from './constants'
 
 interface GlyphProps {
     name: string
@@ -15,12 +13,7 @@ interface GlyphProps {
 }
 
 export function Glyph({ name, x, y, scale = GLYPH_SCALE, fill = NOTATION_INK }: GlyphProps) {
-    const d = useMemo(() => {
-        const glyph = BravuraFont.glyphs[name as keyof typeof BravuraFont.glyphs]
-        if (!glyph) return ''
-        return outlineToSvgPath(glyph.o, scale)
-    }, [name, scale])
-
+    const d = Bravura.svgPath(name, scale)
     if (!d) return null
 
     return <path d={d} transform={`translate(${x},${y})`} fill={fill} />

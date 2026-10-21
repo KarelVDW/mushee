@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { BEAT_EPSILON } from '../../../../packages/notation/src/model/Duration'
+import { ScoreDeserializer } from '../../../../packages/notation/src/model/io/ScoreDeserializer'
 import { Score } from '../../../../packages/notation/src/model/Score'
 import { TimeSignature } from '../../../../packages/notation/src/model/TimeSignature'
-import { ScoreDeserializer } from '../../../../packages/notation/src/model/util/ScoreDeserializer'
 import { MxmlBuilder, type PendingNote } from '../../src/recordings/pipeline/mxml-builder'
 
 /**

@@ -1,5 +1,5 @@
-import type { ClefType } from '@mushee/notation/components/types'
 import { Pitch } from '@mushee/notation/model/Pitch'
+import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

@@ -1,4 +1,4 @@
-import { TIE_Y_SHIFT } from '../../components/constants'
+import { TIE_Y_SHIFT } from '../../engraving/constants'
 import type { Note } from '../Note'
 
 export interface TieSegment {

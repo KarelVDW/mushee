@@ -1,14 +1,8 @@
-import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '../../components/constants'
-import { Note } from '../Note'
+import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '../../engraving/constants'
+import type { Note } from '../Note'
+import type { BeamedRun } from './BeamFinder'
 import type { NoteLayout } from './NoteLayout'
-
-interface LayoutBeamSegment {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    thickness: number
-}
+import type { LayoutBeamSegment, LayoutStem } from './types'
 
 /**
  * A beamed group and its geometry: which notes are beamed (from BeamFinder),
@@ -22,12 +16,9 @@ export class BeamLayout {
     readonly stemDir: 'up' | 'down'
     readonly primary: LayoutBeamSegment
     readonly secondaries: LayoutBeamSegment[]
-    private _stemByNote: Map<Note, { x: number; y1: number; y2: number }>
+    private _stemByNote: Map<Note, LayoutStem>
 
-    constructor(
-        group: { notes: Note[]; stemDir: 'up' | 'down' },
-        context: { xOf: (note: Note) => number; layoutOf: (note: Note) => NoteLayout },
-    ) {
+    constructor(group: BeamedRun, context: { xOf: (note: Note) => number; layoutOf: (note: Note) => NoteLayout }) {
         this.notes = group.notes
         this.stemDir = group.stemDir
         const firstNote = group.notes[0]

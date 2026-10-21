@@ -110,3 +110,8 @@ into measures, and there is no re-entrancy to guard against.
   at/at-or-before/before/last/mid-measure queries — don't re-implement those loops.
 - Keep dead members out: if a method has no production caller, delete it (tests alone don't
   justify keeping API surface).
+- Importing the model from an app: top-level classes, constants and types come from the
+  `@mushee/notation/model` barrel; deep paths are only for `io/`, `util/` and `layout/` modules.
+  Two deliberate exceptions: `packages/playback` deep-imports the classes it needs so it never
+  loads the layout and font graph, and apps/api's `recording-editor-contract.test.ts` imports
+  the source by relative path (the API does not depend on `@mushee/notation`).

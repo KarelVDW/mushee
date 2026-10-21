@@ -1,14 +1,11 @@
-import { getGlyphWidth } from '../../components/glyphUtils'
-import { getYForNote } from '../../components/noteUtils'
+import { Bravura } from '../../engraving/Bravura'
 import type { Clef } from '../Clef'
 import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'
-import type { KeySignatureWidth } from '../width/KeySignatureWidth'
-
-/** One octave in staff-line units (7 diatonic steps ÷ 2). */
-const OCTAVE_LINES = 3.5
-/** Horizontal gap between adjacent accidentals (matches KeySignatureWidth). */
-const ACCIDENTAL_GAP = 2
+import { LINES_PER_OCTAVE, STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
+import { ACCIDENTAL_GAP, type KeySignatureWidth } from './KeySignatureWidth'
+import { Staff } from './Staff'
+import type { LayoutGlyph } from './types'
 
 /**
  * Positions a key signature's drawn accidentals on the staff. Context — the
@@ -17,14 +14,14 @@ const ACCIDENTAL_GAP = 2
  */
 export class KeySignatureLayout {
     readonly id = crypto.randomUUID()
-    readonly accidentals: { glyphName: string; x: number; y: number }[]
+    readonly accidentals: LayoutGlyph[]
 
     constructor(context: { clef: Clef; drawnAccidentals: KeyAccidental[]; width: KeySignatureWidth }) {
         // Position each accidental on the line of the note it alters, under the clef in effect at this key's beat.
         const items = context.drawnAccidentals
         const rawLines = items.map((a) => context.clef.lineFor(new Pitch({ name: a.name, octave: a.octave })))
 
-        // Shift the whole accidental block by whole octaves so it sits on the staff (lines 1–5). Anchoring
+        // Shift the whole accidental block by whole octaves so it sits on the staff (bottom to top line). Anchoring
         // only the first accidental lets the zig-zag tail fall off-staff under tenor/C clefs, so instead
         // pick the octave shift whose [min, max] span pokes least outside the staff (preferring higher on a tie,
         // matching the convention of the first accidental sitting near the top). Treble needs no shift.
@@ -34,8 +31,8 @@ export class KeySignatureLayout {
             const max = Math.max(...rawLines)
             let bestOverflow = Infinity
             for (let k = 4; k >= -4; k--) {
-                const s = k * OCTAVE_LINES
-                const overflow = Math.max(0, max + s - 5) + Math.max(0, 1 - (min + s))
+                const s = k * LINES_PER_OCTAVE
+                const overflow = Math.max(0, max + s - STAFF_TOP_LINE) + Math.max(0, STAFF_BOTTOM_LINE - (min + s))
                 if (overflow < bestOverflow) {
                     bestOverflow = overflow
                     shift = s
@@ -46,8 +43,8 @@ export class KeySignatureLayout {
         let x = context.width.paddingLeft
         this.accidentals = items.map((a, i) => {
             const glyphX = x
-            x += getGlyphWidth(a.glyphName) + ACCIDENTAL_GAP
-            return { glyphName: a.glyphName, x: glyphX, y: getYForNote(rawLines[i] + shift) }
+            x += Bravura.width(a.glyphName) + ACCIDENTAL_GAP
+            return { glyphName: a.glyphName, x: glyphX, y: Staff.yForNoteLine(rawLines[i] + shift) }
         })
     }
 }

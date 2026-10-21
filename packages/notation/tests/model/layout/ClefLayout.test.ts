@@ -1,6 +1,7 @@
-import { getGlyphWidth, getYForLine } from '@mushee/notation/components'
-import { NUM_STAFF_LINES } from '@mushee/notation/components/constants'
-import type { ClefType } from '@mushee/notation/components/types'
+import { Bravura } from '@mushee/notation/engraving/Bravura'
+import { NUM_STAFF_LINES } from '@mushee/notation/engraving/constants'
+import { Staff } from '@mushee/notation/model/layout/Staff'
+import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
@@ -41,10 +42,10 @@ describe('ClefLayout', () => {
         if (!octave) throw new Error('expected an octave marker')
         expect(octave.text).toBe('8')
         // Above the staff → marker y sits above the top staff line.
-        expect(octave.y).toBe(getYForLine(0) - 6)
+        expect(octave.y).toBe(Staff.yForStaffLine(0) - 6)
         // Horizontally centred over the glyph.
         const c = clef('treble8va')
-        expect(octave.x).toBe(c.width.paddingLeft + getGlyphWidth('gClef') / 2)
+        expect(octave.x).toBe(c.width.paddingLeft + Bravura.width('gClef') / 2)
     })
 
     it('an 8vb clef draws an "8" marker below the staff', () => {
@@ -53,7 +54,7 @@ describe('ClefLayout', () => {
         if (!octave) throw new Error('expected an octave marker')
         expect(octave.text).toBe('8')
         // Below the staff → marker y sits below the bottom staff line.
-        expect(octave.y).toBe(getYForLine(NUM_STAFF_LINES - 1) + 13)
+        expect(octave.y).toBe(Staff.yForStaffLine(NUM_STAFF_LINES - 1) + 13)
     })
 
     it('a 15ma clef draws a "15" marker above the staff', () => {
@@ -61,7 +62,7 @@ describe('ClefLayout', () => {
         const octave = layout.octave
         if (!octave) throw new Error('expected an octave marker')
         expect(octave.text).toBe('15')
-        expect(octave.y).toBe(getYForLine(0) - 6)
+        expect(octave.y).toBe(Staff.yForStaffLine(0) - 6)
     })
 
     it('a 15mb clef draws a "15" marker below the staff', () => {
@@ -69,6 +70,6 @@ describe('ClefLayout', () => {
         const octave = layout.octave
         if (!octave) throw new Error('expected an octave marker')
         expect(octave.text).toBe('15')
-        expect(octave.y).toBe(getYForLine(NUM_STAFF_LINES - 1) + 13)
+        expect(octave.y).toBe(Staff.yForStaffLine(NUM_STAFF_LINES - 1) + 13)
     })
 })

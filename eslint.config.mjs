@@ -83,6 +83,16 @@ export default tseslint.config(
         },
     },
 
+    // Notation: type-only imports say so, so the source import graph shows only the runtime
+    // dependencies (no apparent Clef↔ClefLayout or Score↔ScoreSerializer cycles). Scoped to the
+    // package: in apps/api a type import of a constructor-injected class would drop its DI metadata.
+    {
+        files: ['packages/notation/**/*.ts', 'packages/notation/**/*.tsx'],
+        rules: {
+            '@typescript-eslint/consistent-type-imports': 'error',
+        },
+    },
+
     // JS files: turn off typed linting
     {
         files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
