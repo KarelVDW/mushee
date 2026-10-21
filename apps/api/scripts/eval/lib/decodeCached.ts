@@ -16,7 +16,7 @@
 import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
 import { NoteExtractor, type NoteExtractorOptions } from '../../../src/recordings/pipeline/note-extractor'
 import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
-import { segmentNotes } from '../../../src/recordings/pipeline/providers/pitch-decoder'
+import { segmentNotes } from '../../../src/recordings/pipeline/semitone-segmenter'
 import { SHIPPING_VOICE_OPTS } from '../../../src/recordings/pipeline/voice-note-decoder'
 import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder'
 import type { CachedClip } from './trackCache'

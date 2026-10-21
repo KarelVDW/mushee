@@ -35,7 +35,7 @@
 import { resolve } from 'path'
 
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor'
-import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
+import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
 import { SHIPPING_VOICE_OPTS } from '../../src/recordings/pipeline/voice-note-decoder'
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { frameCount } from './lib/decodeCached'

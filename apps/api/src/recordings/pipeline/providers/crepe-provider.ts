@@ -2,18 +2,10 @@ import { Logger } from '@nestjs/common'
 
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
+import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
+import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
 import type { ModelBackend } from './model-backend'
-import {
-    frameEnergy,
-    localCentsFromPath,
-    normalizeFrame,
-    segmentNotes,
-    type SegmentOptions,
-    topKCandidates,
-    viterbi,
-    type ViterbiOptions,
-} from './pitch-decoder'
 import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
 
 /** CREPE was trained on 16 kHz mono audio. */

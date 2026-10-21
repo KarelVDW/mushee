@@ -31,8 +31,8 @@
 import { resolve } from 'path'
 
 import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor'
-import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
 import { type EstNote, scoreNotes } from './lib/metrics'
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
 import { type CachedClip, TrackCache } from './lib/trackCache'

@@ -14,7 +14,7 @@ runnable standalone too.
     crepe-tiny-viterbi  same activations, decoded the way the pipeline actually decodes
                         them: banded-Gaussian Viterbi (sigma 12 bins, band 48) then the
                         same local weighted mean — a port of
-                        src/recordings/pipeline/providers/pitch-decoder.ts.
+                        src/recordings/pipeline/providers/crepe-decoding.ts.
     swiftf0             lars76/swift-f0, bundled 398 KB ONNX, reference read-out
                         (the read-out is inside the ONNX graph; no activation map is
                         exposed, so it cannot be given the Viterbi decode).
@@ -328,7 +328,7 @@ def crepe_cent_map() -> np.ndarray:
 
 
 def local_cents_from_path(act: np.ndarray, path: np.ndarray, cent_map: np.ndarray) -> np.ndarray:
-    """Port of localCentsFromPath (pitch-decoder.ts)."""
+    """Port of localCentsFromPath (crepe-decoding.ts)."""
     frames = act.shape[0]
     out = np.empty(frames)
     for t in range(frames):
@@ -342,7 +342,7 @@ def local_cents_from_path(act: np.ndarray, path: np.ndarray, cent_map: np.ndarra
 
 
 def viterbi_path(act: np.ndarray) -> np.ndarray:
-    """Port of viterbi() (pitch-decoder.ts): banded Gaussian transitions, no jump floor."""
+    """Port of viterbi() (crepe-decoding.ts): banded Gaussian transitions, no jump floor."""
     frames, bins = act.shape
     band = VITERBI_BAND_BINS
     d = np.arange(-band, band + 1)

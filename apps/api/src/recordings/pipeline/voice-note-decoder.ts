@@ -4,7 +4,7 @@ import type { PitchTrack } from './pitch-track'
 /**
  * Note decoding **for the human voice**.
  *
- * The shipping decoder (`providers/pitch-decoder.ts`, `segmentNotesBySemitone`)
+ * The instrument decoder (`semitone-segmenter.ts`, `segmentNotesBySemitone`)
  * rounds each frame to a semitone, median-smooths, and emits a note per run of
  * equal semitone. That is a good decoder for instruments and a poor one for
  * singing, and the corpus says so: on studio singing it emits ~1.9 notes for every
