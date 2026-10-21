@@ -19,9 +19,10 @@ interface PrimaryButtonProps {
 }
 
 /**
- * Filled cyan/magenta button. With `emphasis="pop"`, gains the signature magenta
- * drop-shadow that grows from 3px to 5px on hover, paired with a -2px translate.
- * Hover/disabled states are pure CSS — no JS state.
+ * Filled cyan capsule (red with `danger`). With `emphasis="pop"` it gains the
+ * magenta offset shadow that grows from 3px to 5px on hover, paired with a -2px
+ * lift; disabled, it holds still at 3px. Hover/disabled states are pure CSS — no
+ * JS state.
  */
 export function PrimaryButton({
     children,
@@ -44,7 +45,11 @@ export function PrimaryButton({
         ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error'
         : 'bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary'
 
-    const popStyles = pop ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px]' : ''
+    // The disabled freeze lives here too: outside `pop` it would paint the magenta
+    // shadow onto disabled flat/danger buttons on hover.
+    const popStyles = pop
+        ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px] disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)'
+        : ''
 
     return (
         <button
@@ -60,7 +65,6 @@ export function PrimaryButton({
                 'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
-                'disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)',
                 palette,
                 popStyles,
                 fullWidth ? 'w-full' : '',
