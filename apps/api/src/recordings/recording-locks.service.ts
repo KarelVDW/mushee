@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { Repository } from 'typeorm'
 
 import { ActiveRecording } from './entities/active-recording.entity'
+import { describeError } from './pipeline/describe-error'
 
 /** How often a held lock refreshes its heartbeat. */
 const HEARTBEAT_INTERVAL_MS = 5000
@@ -79,7 +80,7 @@ export class RecordingLock {
             await this.repo.delete({ userId: this.userId, token: this.token })
         } catch (err) {
             // The row goes stale and gets taken over after the TTL; just log.
-            this.logger.warn(`Failed to release recording lock: ${describe(err)}`)
+            this.logger.warn(`Failed to release recording lock: ${describeError(err)}`)
         }
     }
 
@@ -88,11 +89,7 @@ export class RecordingLock {
         try {
             await this.repo.update({ userId: this.userId, token: this.token }, { heartbeatAt: new Date() })
         } catch (err) {
-            this.logger.warn(`Recording lock heartbeat failed: ${describe(err)}`)
+            this.logger.warn(`Recording lock heartbeat failed: ${describeError(err)}`)
         }
     }
-}
-
-function describe(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
 }

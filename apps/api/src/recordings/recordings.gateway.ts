@@ -161,8 +161,7 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             .catch((err: unknown) => {
                 // Session setup failed unexpectedly (e.g. transient DB error). Contain
                 // it here — an unhandled rejection would take down the whole process.
-                const message = err instanceof Error ? err.message : String(err)
-                this.logger.error(`Recording connection setup failed: ${message}`)
+                this.logger.error(`Recording connection setup failed: ${describeError(err)}`)
                 pending.length = 0
                 client.close(WS_INTERNAL_ERROR, 'Recording session failed')
             })
@@ -294,8 +293,7 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             })
             return session?.user ?? null
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err)
-            this.logger.warn(`Recording session lookup failed: ${message}`)
+            this.logger.warn(`Recording session lookup failed: ${describeError(err)}`)
             return null
         }
     }
