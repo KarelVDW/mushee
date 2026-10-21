@@ -81,7 +81,8 @@ export default function RootLayout({
             <body className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
                 <HydrationMarker />
                 <Providers>
-                    <AuthGate>{children}</AuthGate>
+                    {children}
+                    <AuthGate />
                 </Providers>
             </body>
         </html>

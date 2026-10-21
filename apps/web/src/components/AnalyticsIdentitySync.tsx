@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { identifyUser, initAnalytics, resetAnalyticsIdentity } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
@@ -8,9 +8,9 @@ import { useSession } from '@/lib/auth-client'
 /**
  * Boots PostHog (consent-gated inside initAnalytics) and keeps the analytics
  * identity in sync with the auth session: identify on sign-in, reset on
- * sign-out.
+ * sign-out. Effects only — it provides no context and renders nothing.
  */
-export function AnalyticsProvider({ children }: { children: ReactNode }) {
+export function AnalyticsIdentitySync() {
     const { data: session, isPending } = useSession()
     const lastUserId = useRef<string | null>(null)
 
@@ -30,5 +30,5 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         }
     }, [session, isPending])
 
-    return <>{children}</>
+    return null
 }

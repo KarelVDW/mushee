@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { type ReactNode, useEffect } from 'react'
+import { useEffect } from 'react'
 
 import { useSession } from '@/lib/auth-client'
 import { useBetaGate } from '@/lib/queries'
@@ -9,7 +9,12 @@ import { isBetaAllowedPath, isPublicPath } from '@/lib/routes'
 
 const ONBOARDING_PATH = '/onboarding'
 
-export function AuthGate({ children }: { children: ReactNode }) {
+/**
+ * Client-side counterpart of the edge proxy: sends signed-in users who still
+ * owe a step (email verification, beta approval) to where they can take it.
+ * Effects only — it wraps nothing and renders nothing.
+ */
+export function AuthGate() {
     const router = useRouter()
     const pathname = usePathname()
     const { data: session, isPending } = useSession()
@@ -35,5 +40,5 @@ export function AuthGate({ children }: { children: ReactNode }) {
         }
     }, [isPending, session, pathname, router, isPublic, awaitingApproval])
 
-    return <>{children}</>
+    return null
 }
