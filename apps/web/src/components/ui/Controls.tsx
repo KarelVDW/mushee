@@ -77,6 +77,10 @@ interface ChipToggleProps {
     plain?: boolean
 }
 
+/**
+ * Pressed-state toggle for editor chrome and header menus (primary-container when
+ * active); for form option choice use Chip.
+ */
 export function ChipToggle({ active, onClick, ariaLabel, children, disabled, plain }: ChipToggleProps) {
     return (
         <button

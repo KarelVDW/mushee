@@ -120,7 +120,11 @@ interface ChipProps {
     size?: 'sm' | 'md'
 }
 
-/** Selectable identity chip. Hover only fires when interactive (has `onClick`). */
+/**
+ * Choice chip for picking options inside forms and onboarding (secondary-soft
+ * when selected); for editor-chrome toggles use ChipToggle. Without `onClick` it
+ * renders display-only, with no hover.
+ */
 export function Chip({ active, onClick, children, ariaLabel, size = 'sm' }: ChipProps) {
     const interactive = !!onClick
     const palette = active
