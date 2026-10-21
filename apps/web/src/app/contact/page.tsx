@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { PublicPageShell } from '@/components/PublicPageShell'
+import { Eyebrow } from '@/components/ui'
 
 export const metadata: Metadata = {
     title: 'Contact',
@@ -25,9 +26,7 @@ export default function ContactPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose m-0 mb-8">
                 {CHANNELS.map((c) => (
                     <div key={c.label} className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 flex flex-col gap-2">
-                        <span className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
-                            {c.label}
-                        </span>
+                        <Eyebrow>{c.label}</Eyebrow>
                         <a
                             href={`mailto:${c.email}`}
                             className="font-headline font-semibold text-[18px] leading-[1.2] text-primary no-underline">

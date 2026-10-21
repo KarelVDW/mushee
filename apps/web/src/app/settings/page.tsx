@@ -8,6 +8,7 @@ import { TakesList } from '@/components/TakesList'
 import {
     Alert,
     Avatar,
+    Eyebrow,
     Footer,
     Icon,
     type IconName,
@@ -124,9 +125,7 @@ export default function SettingsPage() {
                                 </div>
                                 <TextField label="Display name" value={name} onChange={setName} />
                                 <div className="flex flex-col gap-1.5">
-                                    <span className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
-                                        Email
-                                    </span>
+                                    <Eyebrow>Email</Eyebrow>
                                     <span className="font-body font-normal text-[14px] leading-none text-on-surface py-1">
                                         {session?.user?.email ?? '—'}
                                     </span>
