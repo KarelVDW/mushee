@@ -4,11 +4,8 @@ import { LessThanOrEqual, Repository } from 'typeorm'
 
 import { auth } from '../auth/auth.config'
 import { BillingService } from '../billing/billing.service'
-import { OnboardingService } from '../onboarding/onboarding.service'
 import { RecordingsService } from '../recordings/recordings.service'
 import { ScoresService } from '../scores/scores.service'
-import { SettingsService } from '../settings/settings.service'
-import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { AccountDeletion } from './entities/account-deletion.entity'
 
 export const DELETION_GRACE_PERIOD_DAYS = 7
@@ -28,9 +25,6 @@ export class AccountService {
         private readonly deletionRepo: Repository<AccountDeletion>,
         private readonly scoresService: ScoresService,
         private readonly recordingsService: RecordingsService,
-        private readonly subscriptionsService: SubscriptionsService,
-        private readonly onboardingService: OnboardingService,
-        private readonly settingsService: SettingsService,
         private readonly billingService: BillingService,
     ) {}
 
@@ -81,9 +75,10 @@ export class AccountService {
     }
 
     /**
-     * Permanently delete every account whose grace period has passed: all the
-     * user's data first, then the better-auth user itself (sessions, credential
-     * accounts, user row).
+     * Permanently delete every account whose grace period has passed: the data
+     * that lives outside Postgres first (score and recording blobs, the Polar
+     * customer), then the better-auth user itself (sessions, credential
+     * accounts, user row), then the verification rows that have no FK to it.
      */
     async purgeExpired(): Promise<number> {
         const due = await this.deletionRepo.find({
@@ -100,10 +95,10 @@ export class AccountService {
                 await this.scoresService.removeAllForUser(userId)
                 await this.recordingsService.deleteAllForUser(userId)
                 await this.billingService.deletePolarCustomer(userId)
-                await this.subscriptionsService.deleteForUser(userId)
-                await this.onboardingService.deleteForUser(userId)
-                await this.settingsService.deleteForUser(userId)
 
+                // Subscriptions, onboarding, settings, credits and this
+                // account_deletions row go with the user row (ON DELETE CASCADE);
+                // only data with a footprint outside Postgres needs deleting above.
                 await ctx.internalAdapter.deleteUser(userId)
 
                 // The better-auth `verification` table (OTP codes, reset tokens) has
@@ -113,7 +108,6 @@ export class AccountService {
                     await this.deletionRepo.manager.query(`DELETE FROM "verification" WHERE identifier LIKE '%' || $1 || '%'`, [user.email])
                 }
 
-                await this.deletionRepo.delete({ userId })
                 purged++
                 this.logger.log(`Purged account ${userId} and all its data`)
             } catch (error) {

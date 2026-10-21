@@ -91,9 +91,4 @@ export class SubscriptionsService {
         }
         return row
     }
-
-    /** Remove the user's subscription row (account purge). */
-    async deleteForUser(userId: string): Promise<void> {
-        await this.repo.delete({ userId })
-    }
 }
