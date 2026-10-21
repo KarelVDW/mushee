@@ -35,8 +35,9 @@ export interface PitchScan {
      * Harmonic-to-residual ratio in dB, the noise-adaptation signal: within each
      * voted frame, the energy in the picked fundamental's harmonic bins versus
      * everything else in the analysis band (wind, chatter, hiss, reverb wash of
-     * other notes), median across voted frames. Needs no gaps, so it works on
-     * wall-to-wall legato. Undefined only when nothing was voted.
+     * other notes), 75th percentile across voted frames (breathy and consonant
+     * frames would drag a median down). Needs no gaps, so it works on
+     * wall-to-wall legato. Undefined when fewer than three frames were voted.
      */
     snrDb?: number
     /**

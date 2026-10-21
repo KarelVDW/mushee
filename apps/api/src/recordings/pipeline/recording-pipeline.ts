@@ -161,9 +161,12 @@ export class RecordingPipeline {
     private onHealth: (health: PipelineHealth) => void = () => {}
     private consecutiveFailures = 0
 
-    // Resolved once, from the first ~1.2 s of audio (or on finalize), then locked
-    // for the session: which provider runs and with what frequency window /
-    // high-pass / thresholds. `converter` is built to match the chosen provider.
+    // Which provider runs and with what frequency window / high-pass / thresholds.
+    // Locked once the scanned prefix (≥ DETECT_MIN_SEC) holds pitch — deferred up
+    // to DETECT_MAX_WAIT_SEC while it does not, or taken on the final pass — and
+    // kept for the session, except that a take locked on the fallback is
+    // re-resolved over the whole audio on the final pass (`rerouteFinal`).
+    // `converter` is built to match the chosen provider.
     private profile: PipelineProfile | null = null
     private converter: AudioConverter | null = null
     private instrumentHint: string | undefined

@@ -94,10 +94,12 @@ class CrepeSession implements PitchSession {
 }
 
 /**
- * Monophonic pitch transcriber backed by a real CREPE model loaded via TF.js.
- * Resamples audio to 16 kHz, slides 1024-sample windows, runs the CNN to get
- * per-frame activations, decodes a smooth pitch trajectory via Viterbi, then
- * segments runs of stable pitch into `NoteEventTime[]`.
+ * Monophonic pitch transcriber on the crepe-tiny CREPE model, whose forward pass
+ * runs through a `ModelBackend` (in-process TF.js or the remote gRPC service).
+ * Takes 16 kHz audio (its declared `sampleRate` — the decoder resamples), slides
+ * 1024-sample windows, runs the CNN to get per-frame activations, decodes a
+ * smooth pitch trajectory via Viterbi, then segments it into `NoteEventTime[]`
+ * (runs of stable pitch, or the voice decode when the profile routes voice).
  */
 export class CrepeProvider implements TrajectoryProvider {
     readonly name: string

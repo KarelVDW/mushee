@@ -160,9 +160,12 @@ const REVERB_CONFIDENCE_FLOOR = envNumber('RECORDING_REVERB_CONF_FLOOR', 0.25)
  *
  * ### It survives the production profile lock, which is the real constraint
  *
- * `RecordingPipeline.resolveProfile` locks the profile from the first
- * `DETECT_MIN_SEC` = 1.2 s of audio and never revisits it, so the estimate that
- * ships is made from a ~1.5 s prefix, not a whole take. Re-measured that way:
+ * `RecordingPipeline.resolveProfile` locks the profile as soon as the scanned
+ * prefix — at least `DETECT_MIN_SEC` = 1.2 s — holds pitch (deferring up to
+ * `DETECT_MAX_WAIT_SEC` = 8 s while it does not), and only a take locked on the
+ * fallback is re-resolved, on the final pass (`rerouteFinal`). So for a take
+ * that starts pitched, the estimate that ships is made from a ~1.5 s prefix, not
+ * a whole take. Re-measured that way:
  *
  * ```
  *                     clean                    echoey-room   distant-mic
@@ -175,8 +178,9 @@ const REVERB_CONFIDENCE_FLOOR = envNumber('RECORDING_REVERB_CONF_FLOOR', 0.25)
  * test), because a short prefix is a noisier estimate and produces more false
  * positives. **Follow-up worth taking:** re-estimate reverberance on the FINAL
  * pass, where the whole take is available (full-clip estimate: dry -0.002 dev /
- * -0.000 test, same reverb gain). That needs `recording-pipeline.ts`, which
- * re-resolves nothing today.
+ * -0.000 test, same reverb gain). The plumbing for a final-pass re-resolve now
+ * exists (`RecordingPipeline.rerouteFinal`), but it re-resolves fallback takes
+ * only; re-estimating reverberance over the whole of a pitched take is still open.
  *
  * The ramp dominates every fixed value: it buys the reverb gain of a 0.25–0.30
  * gate while costing what a 0.40 gate costs on dry audio (which is nothing

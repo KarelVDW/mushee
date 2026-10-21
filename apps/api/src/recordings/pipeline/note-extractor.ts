@@ -191,9 +191,8 @@ export class NoteExtractor {
         this.mergeMaxGapBeats = opts.mergeMaxGapBeats ?? 0.25
         this.seamFillBeats = opts.seamFillBeats ?? 0.3
         this.vibratoMaxSec = opts.vibratoMaxSec ?? 0.15
-        // Off by default: thorough evaluation showed the floor helps sustained
-        // singing only marginally while costing fast humming and sustained
-        // instruments more, so it ships as an opt-in tunable rather than a default.
+        // Class default 0 (off); both shipping cleanup sets enable 0.3 — see
+        // `AudioConverter.cleanupFor` for the measurements behind each.
         this.adaptiveFloorFraction = opts.adaptiveFloorFraction ?? 0
         this.steps = { ...ALL_STEPS, ...opts.steps }
         // Default caps onset snapping at the quarter-beat (16th-note) grid the
@@ -257,7 +256,7 @@ export class NoteExtractor {
         // Remove pitch-transient artifacts (wide-vibrato flutter and portamento
         // glide notes) before merging/quantizing — see suppressTransients.
         if (s.transients) notes = this.suppressTransients(notes, options.bpm)
-        // Optional adaptive noise floor (off by default).
+        // Adaptive noise floor (class default off; both shipping sets enable it).
         const floorSec = this.adaptiveFloorSec(notes)
         if (floorSec > 0) notes = notes.filter((n) => n.durationSeconds >= floorSec)
         if (s.merge) notes = this.mergeAdjacent(notes, options.bpm)

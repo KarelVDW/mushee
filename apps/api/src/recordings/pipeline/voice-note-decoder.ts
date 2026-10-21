@@ -59,6 +59,12 @@ import type { PitchTrack } from './pitch-track'
  * pair to act on), `reonsetCost`/`accentBonus` (Ryynänen's accent needs to be
  * band-wise; broadband RMS cannot discriminate), `wideChangeCost` (works, but the
  * split/merge trade is a flat repair-time frontier), `pitchWindow: 'onset'`.
+ * Also defaulted off (see each option's docstring, and the findings log for the
+ * measurements): `candidates`,
+ * `intervalChange`, `silenceMemory`, `unvoicedChangeRelease`, `voicedQuorum`, the
+ * unvoiced-gap fill (`fillUnvoicedGapSec`/`fillEnergyFloor`/`fillEnergyContextSec`),
+ * `keepShortLoudRatio`, `dropLongQuiet`, `transitionMode: 'via-silence'`, and the
+ * non-default `pitchEstimator` and `onsetAt` values.
  *
  * ⚠ Deliberately voice-only. The global-config version of this model family was
  * measured at −0.06…−0.16 F1 across the whole corpus (see the findings log in
