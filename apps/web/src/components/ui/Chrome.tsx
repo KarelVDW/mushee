@@ -212,7 +212,7 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90vh] flex flex-col"
+            className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90dvh] flex flex-col"
             style={{ width }}>
             <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                 <div className="flex flex-col gap-1.5">
@@ -234,7 +234,9 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
                     </button>
                 )}
             </header>
-            <div className="px-7 flex-1 min-h-0 flex flex-col">{children}</div>
+            {/* The body scrolls when the content outgrows the panel (tall dialogs on phones) so the
+                header and footer stay put; -my-1/py-1 keeps focus rings at its edges unclipped. */}
+            <div className="px-7 -my-1 py-1 flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain">{children}</div>
             {footer && <footer className="px-7 py-5 flex justify-end items-center gap-3">{footer}</footer>}
         </div>
     )
