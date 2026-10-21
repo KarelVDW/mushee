@@ -7,45 +7,14 @@ import type { RawData, WebSocket } from 'ws'
 import { auth } from '../auth/auth.config'
 import { BetaService } from '../beta/beta.service'
 import { ScoresService } from '../scores/scores.service'
+import type { RecordingMeta } from './pipeline/recording-pipeline'
 import type { RecordingCreditBalance } from './recording-credits.service'
 import type { RecordingSession } from './recording-session'
 import { RecordingSessionsService } from './recording-sessions.service'
 
-interface RecordingMetaMessage {
+/** The take's tempo, meter and source hints for the pipeline. */
+interface RecordingMetaMessage extends RecordingMeta {
     type: 'meta'
-    bpm: number
-    timeSignature: { beats: number; beatType: number } | null
-    /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
-    chromaticTranspose?: number
-    /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
-     *  adaptive profile's frequency window; auto-detection stays authoritative. */
-    instrumentId?: string
-    /**
-     * Explicit declaration of what is being recorded. Unlike `instrumentId` this
-     * is NOT just a window hint: singing and playing want different note
-     * segmentation (see `VoiceNoteDecoder`), and the choice is worth ~0.10 COnP
-     * on real singing.
-     *
-     * Since the audio source classifier (`SourceClassifier`, 2026-08) the web
-     * client no longer sends this — absent means "classify from the audio, fall
-     * back to the score's instrument family on abstain". Kept as an accepted
-     * field because an explicit declaration still wins outright when a caller
-     * (the eval harness, a future API client) genuinely knows the source.
-     */
-    sourceKind?: 'voice' | 'instrument' | null
-    /**
-     * The score's key signature at the recording start, in fifths (positive =
-     * sharps). Sung takes are spelled on the singer's own tuning grid, and for
-     * the notes still ambiguous after that normalization the key gets a vote —
-     * a user recording into a D-major score almost certainly means F♯, not the
-     * F they sang 40 cents flat. Optional: without it, spelling still
-     * normalizes, it just cannot key-snap.
-     */
-    keyFifths?: number | null
-    /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
-     *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
-     *  the browser default was used and ffmpeg probes the container. */
-    mimeType?: string | null
 }
 
 /** The client stopped capturing and has flushed its last audio chunk. The
@@ -339,15 +308,8 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         }
 
         if (parsed.type === 'meta') {
-            session.setMeta({
-                bpm: parsed.bpm,
-                timeSignature: parsed.timeSignature,
-                chromaticTranspose: parsed.chromaticTranspose,
-                instrumentId: parsed.instrumentId,
-                sourceKind: parsed.sourceKind,
-                keyFifths: parsed.keyFifths,
-                mimeType: parsed.mimeType,
-            })
+            const { type: _type, ...meta } = parsed
+            session.setMeta(meta)
         } else if (parsed.type === 'end') {
             // The client stopped capturing and is waiting for the take's tail.
             // Close the session (releases the per-user slot right away, then runs

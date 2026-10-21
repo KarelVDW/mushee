@@ -3,7 +3,7 @@ import { Repository } from 'typeorm'
 
 import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
-import type { PipelineHealth, RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
+import type { PipelineHealth, RecordingMeta, RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
 import type { RecordingArchiver } from './recording-archiver'
 import type { RecordingCreditBalance } from './recording-credits.service'
 import { RecordingCreditsService } from './recording-credits.service'
@@ -118,7 +118,7 @@ export class RecordingSession {
         })
     }
 
-    setMeta(meta: Parameters<RecordingPipeline['setMeta']>[0]): void {
+    setMeta(meta: RecordingMeta): void {
         this.pipeline.setMeta(meta)
     }
 
