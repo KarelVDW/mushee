@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common'
 import { Client } from 'pg'
 
 import { auth } from '../../auth/auth.config'
+import { ADVISORY_LOCKS } from '../advisory-locks'
 import { postgresSsl, postgresUrl } from '../postgres-connection'
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, DEMO_SCORES } from './demo-data'
 
@@ -25,7 +26,7 @@ export async function seedDemoData(): Promise<void> {
     try {
         // One seeder at a time; replicas that lose the race wait, then find the
         // rows already present and no-op.
-        await client.query('SELECT pg_advisory_lock(727272)')
+        await client.query('SELECT pg_advisory_lock($1)', [ADVISORY_LOCKS.demoSeed])
         for (const account of DEMO_ACCOUNTS) {
             const userId = await ensureUser(client, account.email, account.name, account.role)
             await client.query(
@@ -46,7 +47,7 @@ export async function seedDemoData(): Promise<void> {
         }
         logger.log(`Demo data ready — log in with any of ${DEMO_ACCOUNTS.map((a) => a.email).join(', ')} / ${DEMO_PASSWORD}`)
     } finally {
-        await client.query('SELECT pg_advisory_unlock(727272)').catch(() => {})
+        await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCKS.demoSeed]).catch(() => {})
         await client.end()
     }
 }
