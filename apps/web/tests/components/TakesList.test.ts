@@ -76,9 +76,14 @@ describe('TakesList playback', () => {
 
     const rowButton = (row: number) => container.querySelectorAll('li')[row]?.querySelector<HTMLButtonElement>('button')
     const labels = () => [0, 1].map((row) => rowButton(row)?.getAttribute('aria-label'))
-    const click = async (row: number) => {
-        await act(async () => rowButton(row)?.click())
+    /** Runs `fn` inside act and lets the play() rejections it triggers settle. */
+    const settle = async (fn: () => void) => {
+        await act(async () => {
+            fn()
+            await Promise.resolve()
+        })
     }
+    const click = (row: number) => settle(() => rowButton(row)?.click())
 
     it('switching takes keeps the new row playing despite the old AbortError', async () => {
         await click(0)
@@ -102,21 +107,21 @@ describe('TakesList playback', () => {
 
     it('a real play failure on the current take resets the row and toasts', async () => {
         await click(0)
-        await act(async () => FakeAudio.instances[0]?.failPlay('NotAllowedError'))
+        await settle(() => FakeAudio.instances[0]?.failPlay('NotAllowedError'))
         expect(labels()).toEqual(['Play take', 'Play take'])
         expect(showToast).toHaveBeenCalledWith("This take's audio couldn't be played.")
     })
 
     it('a load error on the current take resets the row and toasts', async () => {
         await click(1)
-        await act(async () => FakeAudio.instances[0]?.onerror?.())
+        await settle(() => FakeAudio.instances[0]?.onerror?.())
         expect(labels()).toEqual(['Play take', 'Play take'])
         expect(showToast).toHaveBeenCalledWith("This take's audio couldn't be loaded.")
     })
 
     it('ending the current take resets its row', async () => {
         await click(0)
-        await act(async () => FakeAudio.instances[0]?.onended?.())
+        await settle(() => FakeAudio.instances[0]?.onended?.())
         expect(labels()).toEqual(['Play take', 'Play take'])
     })
 })

@@ -25,7 +25,17 @@ type PrimaryButtonProps = {
     ariaLabel?: string
 } & ButtonOrLink<{ type?: 'button' | 'submit' | 'reset'; disabled?: boolean }>
 
-function primaryClasses({ size, emphasis, danger, fullWidth }: { size: ButtonSize; emphasis: 'flat' | 'pop'; danger: boolean; fullWidth: boolean }) {
+function primaryClasses({
+    size,
+    emphasis,
+    danger,
+    fullWidth,
+}: {
+    size: ButtonSize
+    emphasis: 'flat' | 'pop'
+    danger: boolean
+    fullWidth: boolean
+}) {
     // Destructive variant: red fill, no magenta pop — the signature lift is reserved
     // for actions you want the user to tap, not for ones you want them to think twice about.
     const pop = emphasis === 'pop' && !danger
