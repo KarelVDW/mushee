@@ -6,7 +6,7 @@ import { Eyebrow, Footer } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { BetaPricing, Pricing } from '../PricingSection'
-import { PRICING_FAQ } from './faq'
+import { PRICING_FAQ_SHOWN } from './faq'
 
 /**
  * The dedicated pricing route: the same tier cards as the landing page's
@@ -39,7 +39,16 @@ export function PricingPage() {
                 <section className="py-16 sm:py-20 px-5 sm:px-8">
                     <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
                         <h2 className="font-display font-bold text-[32px] sm:text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0">
-                            Start with Sketch. <em className="font-serif font-normal">Upgrade when your ideas do.</em>
+                            {/* Sketch and upgrades aren't on offer in the beta; the closing line names neither. */}
+                            {BETA_MODE ? (
+                                <>
+                                    Join the beta. <em className="font-serif font-normal">Get that melody on the page.</em>
+                                </>
+                            ) : (
+                                <>
+                                    Start with Sketch. <em className="font-serif font-normal">Upgrade when your ideas do.</em>
+                                </>
+                            )}
                         </h2>
                         <GetStartedButton location="pricing-footer" size="lg" emphasis="pop" />
                         <Link href="/contact" className="font-body font-normal text-[14px] text-on-surface-variant underline">
@@ -64,7 +73,7 @@ function PricingFaq() {
                     Questions, answered.
                 </h2>
                 <dl className="m-0 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                    {PRICING_FAQ.map((item) => (
+                    {PRICING_FAQ_SHOWN.map((item) => (
                         <div key={item.question} className="flex flex-col gap-2">
                             <dt className="font-headline font-semibold text-[17px] leading-[1.3] tracking-[-0.005em] text-on-surface">
                                 {item.question}
