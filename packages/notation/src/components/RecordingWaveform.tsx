@@ -35,9 +35,8 @@ export function RecordingWaveform({ store, score }: { store: RecordingWaveformSt
             {bars.map((bar) => {
                 const measure = score.measures[bar.measureIndex]
                 if (!measure) return null
-                const row = score.layout.rowFor(measure)
-                const x = row.getMeasureX(measure) + measure.layout.getXForBeat(bar.beat)
-                const y = score.layout.getYForRow(row) + Staff.MIDDLE_Y
+                const { x, rowY } = score.layout.pointAtBeat(measure, bar.beat)
+                const y = rowY + Staff.MIDDLE_Y
                 const radius = Math.max(MIN_RADIUS, bar.amp * MAX_RADIUS)
                 // The exit grows the bar to the full staff height before fading.
                 const burstScale = MAX_RADIUS / radius

@@ -55,14 +55,14 @@ export function HighlightLayer({ score, highlight }: { score: Score; highlight: 
     for (const row of layout.rows) {
         const y = layout.getYForRow(row) + BAND_Y
         for (const measure of row.measures) {
-            const measureX = row.getMeasureX(measure)
             if (!included) {
-                extend(measureX, y, measure.layout.measureWidth)
+                extend(row.getMeasureX(measure), y, measure.layout.measureWidth)
                 continue
             }
             for (const note of measure.notes) {
                 if (!included.has(note)) continue
-                extend(measureX + measure.layout.getXForElement(note), y, measure.layout.getAllottedWidth(note))
+                const span = layout.noteSpan(note)
+                extend(span.x, y, span.width)
             }
         }
     }

@@ -115,6 +115,50 @@ describe('ScoreLayout', () => {
         })
     })
 
+    describe('pointAtBeat', () => {
+        it("is the beat's x in its measure, offset by the measure's place in the row, at the row's top", () => {
+            const score = makeScore(5) // rows of 4 + 1
+            const m = score.measures[2]
+            const row = score.layout.rowFor(m)
+            expect(score.layout.pointAtBeat(m, 1.5)).toEqual({
+                x: row.getMeasureX(m) + m.layout.getXForBeat(1.5),
+                rowY: score.layout.getYForRow(row),
+            })
+        })
+
+        it("puts a later row's beats at that row's y offset", () => {
+            const score = makeScore(5)
+            expect(score.layout.pointAtBeat(score.measures[4], 0)).toEqual({ x: score.measures[4].layout.getXForBeat(0), rowY: ROW_HEIGHT + ROW_GAP })
+        })
+
+        it('throws for a measure that is not part of the score (callers guard a missing measure)', () => {
+            const score = makeScore(1)
+            const stranger = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
+            expect(() => score.layout.pointAtBeat(stranger, 0)).toThrow('Measure not part of a row')
+        })
+    })
+
+    describe('noteSpan', () => {
+        it("is the note's row and its slot there: row-local x and allotted width", () => {
+            const score = makeScore(5)
+            const m = score.measures[1]
+            const note = m.notes[2]
+            const row = score.layout.rowFor(m)
+            expect(score.layout.noteSpan(note)).toEqual({
+                row,
+                x: row.getMeasureX(m) + m.layout.getXForElement(note),
+                width: m.layout.getAllottedWidth(note),
+            })
+        })
+
+        it("reports a later row's note on that row", () => {
+            const score = makeScore(5)
+            const note = score.measures[4].notes[0]
+            expect(score.layout.noteSpan(note).row).toBe(score.layout.rows[1])
+            expect(score.layout.noteSpan(note).x).toBe(score.measures[4].layout.getXForElement(note))
+        })
+    })
+
     describe('selectionMenuAnchor', () => {
         /** The selected span of `notes` within one row: slot start of the first to slot end of the last. */
         function span(score: Score, notes: Note[]): { start: number; end: number } {

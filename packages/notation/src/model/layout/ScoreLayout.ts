@@ -167,23 +167,20 @@ export class ScoreLayout {
     }
 
     private tieContextFor(note: Note, nextNote: Note): TieLayoutContext {
-        const startMeasure = note.measure
-        const endMeasure = nextNote.measure
-        const startRow = this.rowFor(startMeasure)
-        const endRow = this.rowFor(endMeasure)
-        const startLayout = this.measureLayoutFor(startMeasure)
-        const endLayout = this.measureLayoutFor(endMeasure)
+        const startLayout = this.measureLayoutFor(note.measure)
+        const start = this.noteSpan(note)
+        const end = this.noteSpan(nextNote)
         const startNoteLayout = startLayout.noteLayoutFor(note)
-        const endNoteLayout = endLayout.noteLayoutFor(nextNote)
+        const endNoteLayout = this.measureLayoutFor(nextNote.measure).noteLayoutFor(nextNote)
         const stemDir = startLayout.beamFor(note)?.stemDir ?? note.stemDir
         return {
             direction: stemDir === 'up' ? 1 : -1,
-            startRowIndex: startRow.index,
-            endRowIndex: endRow.index,
-            startRowWidth: startRow.width,
-            startX: startRow.getMeasureX(startMeasure) + startLayout.getXForElement(note) + startNoteLayout.noteRightX,
+            startRowIndex: start.row.index,
+            endRowIndex: end.row.index,
+            startRowWidth: start.row.width,
+            startX: start.x + startNoteLayout.noteRightX,
             startY: startNoteLayout.noteY,
-            endX: endRow.getMeasureX(endMeasure) + endLayout.getXForElement(nextNote) + endNoteLayout.noteX,
+            endX: end.x + endNoteLayout.noteX,
             endY: endNoteLayout.noteY,
         }
     }
@@ -280,6 +277,27 @@ export class ScoreLayout {
     }
 
     /**
+     * Where `beat` of `measure` sits on the page: its row-local x (interpolated
+     * through the note slots) and the top of its row, in layout coordinates — the
+     * anchor the playback and recording cursors and the recording waveform share.
+     */
+    pointAtBeat(measure: Measure, beat: number): { x: number; rowY: number } {
+        const row = this.rowFor(measure)
+        return { x: row.getMeasureX(measure) + this.measureLayoutFor(measure).getXForBeat(beat), rowY: this.getYForRow(row) }
+    }
+
+    /** The row `note` is on, and its slot there: row-local x and the width allotted to it. */
+    noteSpan(note: Note): { row: RowLayout; x: number; width: number } {
+        const row = this.rowFor(note.measure)
+        const measureLayout = this.measureLayoutFor(note.measure)
+        return {
+            row,
+            x: row.getMeasureX(note.measure) + measureLayout.getXForElement(note),
+            width: measureLayout.getAllottedWidth(note),
+        }
+    }
+
+    /**
      * Where the selection-actions menu hovers, in layout coordinates: horizontally the
      * center of the selected span on the topmost selected row (the span the selection
      * bands paint — note slots, measured with their allotted widths), vertically at that
@@ -297,10 +315,9 @@ export class ScoreLayout {
         let end = -Infinity
         for (const note of notes) {
             if (this._rowByMeasure.get(note.measure) !== row) continue
-            const measureLayout = this.measureLayoutFor(note.measure)
-            const x = row.getMeasureX(note.measure) + measureLayout.getXForElement(note)
-            start = Math.min(start, x)
-            end = Math.max(end, x + measureLayout.getAllottedWidth(note))
+            const span = this.noteSpan(note)
+            start = Math.min(start, span.x)
+            end = Math.max(end, span.x + span.width)
         }
         return { x: (start + end) / 2, y: this.getYForRow(row) + TEMPO_MARKING_Y }
     }
