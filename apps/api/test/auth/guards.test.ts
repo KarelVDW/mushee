@@ -1,11 +1,14 @@
 import type { ExecutionContext } from '@nestjs/common'
-import { UnauthorizedException } from '@nestjs/common'
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthGuard } from '../../src/auth/auth.guard'
+import type { BetaService } from '../../src/beta/beta.service'
+import { BetaApprovalGuard } from '../../src/beta/beta-approval.guard'
 
 // The real auth.config builds a better-auth instance backed by a pg Pool at
-// import time; the guards only need its getSession.
+// import time. AuthGuard only needs getSession; BetaApprovalGuard only needs
+// BetaService (faked per test below).
 const getSession = vi.fn()
 vi.mock('../../src/auth/auth.config', () => ({
     auth: {
@@ -44,5 +47,31 @@ describe('AuthGuard', () => {
         await expect(new AuthGuard().canActivate(contextFor(request))).resolves.toBe(true)
         expect(request.user).toBe(session.user)
         expect(request.session).toBe(session.session)
+    })
+})
+
+describe('BetaApprovalGuard', () => {
+    function guardFor(awaitingApproval: boolean) {
+        const betaService = { isAwaitingApproval: vi.fn(() => Promise.resolve(awaitingApproval)) }
+        return { guard: new BetaApprovalGuard(betaService as unknown as BetaService), betaService }
+    }
+
+    it('denies requests that AuthGuard has not stamped with a user', async () => {
+        const { guard, betaService } = guardFor(false)
+        await expect(guard.canActivate(contextFor({}))).resolves.toBe(false)
+        expect(betaService.isAwaitingApproval).not.toHaveBeenCalled()
+    })
+
+    it("answers 403 'beta-pending' while the user's signup awaits approval", async () => {
+        const { guard, betaService } = guardFor(true)
+        const error = await guard.canActivate(contextFor({ user: { id: 'u1' } })).catch((e: unknown) => e)
+        expect(error).toBeInstanceOf(ForbiddenException)
+        expect((error as ForbiddenException).getResponse()).toMatchObject({ code: 'beta-pending' })
+        expect(betaService.isAwaitingApproval).toHaveBeenCalledWith('u1')
+    })
+
+    it('lets approved and pre-beta users through', async () => {
+        const { guard } = guardFor(false)
+        await expect(guard.canActivate(contextFor({ user: { id: 'u1' } }))).resolves.toBe(true)
     })
 })
