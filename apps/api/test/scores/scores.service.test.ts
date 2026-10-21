@@ -136,15 +136,17 @@ describe('duplicate', () => {
     })
 
     it('falls back to the stored file when the source is not in the edit cache', async () => {
-        const { service, cache, storage } = makeService(tier(null), 1, null)
+        const { service, cache, storage, scoreRepo } = makeService(tier(null), 1, null)
         await service.duplicate('u1', 'src')
         expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
-        // load() re-caches the source, then the copy is cached under the new id.
+        // Only the copy is cached: reading the source is read-only, and one owner lookup suffices.
+        expect(cache.upsert).toHaveBeenCalledTimes(1)
         expect(cache.upsert).toHaveBeenCalledWith('s1', {
             partList: {},
             parts: [],
             stored: true,
         })
+        expect(scoreRepo.findOneBy).toHaveBeenCalledTimes(1)
     })
 
     it('counts against the plan cap like a create', async () => {

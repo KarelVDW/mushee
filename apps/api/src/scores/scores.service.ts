@@ -39,7 +39,7 @@ export class ScoresService {
     async duplicate(userId: string, id: string): Promise<Score> {
         const source = await this.findOne(userId, id)
         await this.assertBelowScoreCap(userId)
-        const document = await this.load(userId, source.id)
+        const document = await this.readDocument(source)
         return this.insert(userId, this.copyTitle(source.title), document)
     }
 
