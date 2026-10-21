@@ -3,6 +3,8 @@ import { join } from 'node:path'
 
 import { ImageResponse } from 'next/og'
 
+import { BRAND } from '@/lib/brandColors'
+
 export const alt = 'Solkey — the fastest way to get a melody on the page'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -25,8 +27,8 @@ export default async function OpengraphImage() {
                 flexDirection: 'column',
                 justifyContent: 'center',
                 padding: '80px',
-                background: '#f6f6f6',
-                color: '#2d2f2f',
+                background: BRAND.surface,
+                color: BRAND.onSurface,
                 fontFamily: 'Space Grotesk',
                 position: 'relative',
             }}>
@@ -84,13 +86,13 @@ export default async function OpengraphImage() {
                             fontStyle: 'italic',
                             fontWeight: 400,
                             letterSpacing: 0,
-                            color: '#005359',
+                            color: BRAND.onPrimaryContainer,
                         }}>
                         on the page.
                     </span>
                 </span>
             </div>
-            <div style={{ fontFamily: 'Manrope', fontSize: 30, marginTop: 32, color: '#5a5c5c', display: 'flex' }}>
+            <div style={{ fontFamily: 'Manrope', fontSize: 30, marginTop: 32, color: BRAND.onSurfaceVariant, display: 'flex' }}>
                 Play or sing — watch the sheet music appear, live.
             </div>
         </div>,

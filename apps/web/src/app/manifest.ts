@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next'
 
+import { BRAND } from '@/lib/brandColors'
+
 export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'Solkey',
@@ -7,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'The fastest way to get a melody on the page — live audio-to-notation sheet music editing.',
         start_url: '/scores',
         display: 'standalone',
-        background_color: '#f6f6f6',
-        theme_color: '#f6f6f6',
+        background_color: BRAND.surface,
+        theme_color: BRAND.surface,
         icons: [
             { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
             { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

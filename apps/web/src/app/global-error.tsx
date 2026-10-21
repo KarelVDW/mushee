@@ -3,14 +3,15 @@
 import { useEffect } from 'react'
 
 import { captureException } from '@/lib/analytics'
+import { BRAND } from '@/lib/brandColors'
 
 /**
  * Last-resort boundary: catches errors thrown by the root layout itself.
  * Must render its own <html>/<body> and cannot rely on app CSS being intact
  * (globals.css is imported by the layout that just failed), so styling is
- * intentionally self-contained: the palette hexes below are the design tokens
- * `surface`, `on-surface`, `on-surface-variant`, `primary-container`,
- * `on-primary-container` and `surface-container-low` spelled out by hand.
+ * intentionally self-contained: inline styles, with the palette taken from
+ * BRAND (lib/brandColors), the JS mirror of the design tokens — a module
+ * import, so it doesn't depend on the stylesheet.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
     useEffect(() => {
@@ -42,8 +43,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: '#f6f6f6',
-                    color: '#2d2f2f',
+                    background: BRAND.surface,
+                    color: BRAND.onSurface,
                     fontFamily: 'system-ui, sans-serif',
                     textAlign: 'center',
                 }}>
@@ -54,15 +55,15 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
                         Solkey
                     </p>
                     <h1 style={{ fontSize: '1.75rem', lineHeight: 1.2, margin: '0 0 0.75rem' }}>Something went wrong</h1>
-                    <p style={{ fontSize: 14, lineHeight: 1.5, color: '#5a5c5c', margin: '0 0 1.5rem' }}>
+                    <p style={{ fontSize: 14, lineHeight: 1.5, color: BRAND.onSurfaceVariant, margin: '0 0 1.5rem' }}>
                         An unexpected error stopped Solkey from loading. Your scores are safe — try again, and if it keeps happening, come
                         back in a few minutes.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                        <button type="button" onClick={reset} style={{ ...capsule, background: '#00dbe9', color: '#005359' }}>
+                        <button type="button" onClick={reset} style={{ ...capsule, background: BRAND.primaryContainer, color: BRAND.onPrimaryContainer }}>
                             Try again
                         </button>
-                        <a href="/" style={{ ...capsule, background: '#f0f1f1', color: '#2d2f2f' }}>
+                        <a href="/" style={{ ...capsule, background: BRAND.surfaceContainerLow, color: BRAND.onSurface }}>
                             Go home
                         </a>
                     </div>
