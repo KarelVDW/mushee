@@ -21,7 +21,7 @@ test('unauthed landing: sign-in and the hero CTA route to the auth pages', async
     await page.goto('/')
 
     await expect(page.getByRole('link', { name: 'Start free' }).first()).toBeVisible()
-    await page.getByRole('button', { name: 'Sign in' }).click()
+    await page.getByRole('link', { name: 'Sign in' }).click()
     await expect(page).toHaveURL(/\/login$/)
 
     await page.goBack()

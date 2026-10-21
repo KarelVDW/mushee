@@ -1,27 +1,19 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Eyebrow, Footer, Icon, type IconName, TertiaryButton, Wordmark } from '@/components/ui'
-import { useSession } from '@/lib/auth-client'
+import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { SignInLink } from '@/components/marketing/SignInLink'
+import { Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
 import { BetaPricing, Pricing } from './PricingSection'
 
+/** The landing page. Static apart from its client islands: the CTAs, sign-in links, demo and pricing. */
 export function LandingPage() {
-    const router = useRouter()
-    const { data: session } = useSession()
-    const authed = !!session?.user
-
-    const onSignIn = () => router.push('/login')
-
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <LandingNav authed={authed} onSignIn={onSignIn} />
+            <MarketingNav sectionLinks />
             <main className="flex-1">
-                <Hero authed={authed} onSignIn={onSignIn} />
+                <Hero />
                 <HowItWorks />
                 <FeatureGrid />
                 {BETA_MODE ? <BetaPricing /> : <Pricing ctaLocation="pricing" />}
@@ -32,31 +24,7 @@ export function LandingPage() {
     )
 }
 
-function LandingNav({ authed, onSignIn }: { authed: boolean; onSignIn: () => void }) {
-    const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
-    return (
-        <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
-            <div className="max-w-320 mx-auto px-4 sm:px-8 py-4 sm:py-5 flex justify-between items-center gap-3">
-                <Wordmark size={28} />
-                <div className="flex items-center gap-4 sm:gap-6">
-                    <a href="#how" className={`${navLinkClass} max-md:hidden`}>
-                        How it works
-                    </a>
-                    <a href="#features" className={`${navLinkClass} max-md:hidden`}>
-                        Features
-                    </a>
-                    <a href="/pricing" className={`${navLinkClass} max-md:hidden`}>
-                        Pricing
-                    </a>
-                    {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
-                    <GetStartedButton location="nav" />
-                </div>
-            </div>
-        </nav>
-    )
-}
-
-function Hero({ authed, onSignIn }: { authed: boolean; onSignIn: () => void }) {
+function Hero() {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
@@ -73,7 +41,7 @@ function Hero({ authed, onSignIn }: { authed: boolean; onSignIn: () => void }) {
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
                         <GetStartedButton location="hero" size="lg" emphasis="pop" />
-                        {!authed && <TertiaryButton onClick={onSignIn}>Already have an account?</TertiaryButton>}
+                        <SignInLink>Already have an account?</SignInLink>
                     </div>
                     {BETA_MODE && (
                         <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">

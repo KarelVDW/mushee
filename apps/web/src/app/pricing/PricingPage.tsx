@@ -1,11 +1,8 @@
-'use client'
-
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Eyebrow, Footer, TertiaryButton, Wordmark } from '@/components/ui'
-import { useSession } from '@/lib/auth-client'
+import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { Eyebrow, Footer } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { BetaPricing, Pricing } from '../PricingSection'
@@ -15,25 +12,12 @@ import { PRICING_FAQ } from './faq'
  * The dedicated pricing route: the same tier cards as the landing page's
  * #pricing section, framed with a page heading, the pricing FAQ and a closing
  * CTA. A page of its own so it can be linked, indexed and shared directly.
+ * Static apart from its client islands (the CTAs, sign-in, the tier cards).
  */
 export function PricingPage() {
-    const router = useRouter()
-    const { data: session } = useSession()
-    const authed = !!session?.user
-
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
-                <div className="max-w-320 mx-auto px-4 sm:px-8 py-4 sm:py-5 flex justify-between items-center gap-3">
-                    <Link href="/" className="no-underline" aria-label="Solkey home">
-                        <Wordmark size={28} />
-                    </Link>
-                    <div className="flex items-center gap-4 sm:gap-6">
-                        {!authed && <TertiaryButton onClick={() => router.push('/login')}>Sign in</TertiaryButton>}
-                        <GetStartedButton location="pricing-nav" />
-                    </div>
-                </div>
-            </nav>
+            <MarketingNav ctaLocation="pricing-nav" />
 
             <header className="pt-14 sm:pt-20 px-5 sm:px-8">
                 <div className="max-w-190 mx-auto text-center flex flex-col gap-4 items-center">
