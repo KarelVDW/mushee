@@ -1,5 +1,6 @@
 import { memo } from 'react'
 
+import { STEM_WIDTH } from '../engraving/constants'
 import type { Note } from '../model'
 import type { BeamLayout } from '../model/layout/BeamLayout'
 import { DOT_RADIUS, NOTATION_INK } from './constants'
@@ -13,7 +14,7 @@ interface NoteGroupProps {
 }
 
 export const NoteGroup = memo(function NoteGroup({ note, beam, color }: NoteGroupProps) {
-    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines, width } = note.layout
+    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
     const beamStem = beam?.getStem(note)
     const stem = beamStem ?? originalStem
     return (
@@ -27,7 +28,7 @@ export const NoteGroup = memo(function NoteGroup({ note, beam, color }: NoteGrou
             {accidental && <Glyph name={accidental.glyphName} x={accidental.x} y={accidental.y} />}
 
             {/* Stem */}
-            {stem && <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke={NOTATION_INK} strokeWidth={width.stemWidth} />}
+            {stem && <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke={NOTATION_INK} strokeWidth={STEM_WIDTH} />}
 
             {/* Flag (8th, 16th notes) */}
             {!beam && flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}

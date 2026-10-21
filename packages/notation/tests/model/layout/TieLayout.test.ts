@@ -54,6 +54,19 @@ function crossRowTie(): { score: Score; tie: TieLayout } {
 }
 
 describe('TieLayout', () => {
+    it('leaves a whole note from its whole notehead’s right edge', () => {
+        const score = makeScore(2)
+        const [m0, m1] = score.measures
+        const whole = (tie?: 'start') => new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie })
+        const [start] = score.replace(m0.notes, [whole('start')])
+        score.replace(m1.notes, [whole()])
+        const seg = tieStartingAt(score, start).segments[0]
+        const row = score.layout.rowFor(m0)
+        // Mock widths: noteheadWhole 14 (a black notehead would be 10).
+        expect(start.layout.noteRightX).toBe(start.layout.noteX + 14)
+        expect(seg.startX).toBeCloseTo(row.getMeasureX(m0) + m0.layout.getXForElement(start) + start.layout.noteX + 14)
+    })
+
     it('draws a single segment in the start row when both notes share a row', () => {
         const { tie } = sameRowTie()
         expect(tie.segments).toHaveLength(1)

@@ -183,11 +183,7 @@ export class ScoreLayout {
             startRowIndex: startRow.index,
             endRowIndex: endRow.index,
             startRowWidth: startRow.width,
-            startX:
-                startRow.getMeasureX(startMeasure) +
-                startLayout.getXForElement(note) +
-                startNoteLayout.noteX +
-                startNoteLayout.width.noteHeadWidth,
+            startX: startRow.getMeasureX(startMeasure) + startLayout.getXForElement(note) + startNoteLayout.noteRightX,
             startY: startNoteLayout.noteY,
             endX: endRow.getMeasureX(endMeasure) + endLayout.getXForElement(nextNote) + endNoteLayout.noteX,
             endY: endNoteLayout.noteY,

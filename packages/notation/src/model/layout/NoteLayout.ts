@@ -1,5 +1,13 @@
 import { Bravura } from '../../engraving/Bravura'
-import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
+import {
+    DOT_SPACING,
+    DOTTED_FLAG_SCALE,
+    LEDGER_LINE_EXTENSION,
+    NOTE_ELEMENT_GAP,
+    STAVE_LINE_DISTANCE,
+    STEM_HEIGHT,
+    STEM_WIDTH,
+} from '../../engraving/constants'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { StemDirection } from '../types'
@@ -16,6 +24,8 @@ import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 export class NoteLayout {
     readonly id = crypto.randomUUID()
     readonly noteX: number
+    /** x of the notehead's right edge — where a tie leaves and a tuplet bracket ends. */
+    readonly noteRightX: number
     readonly noteY: number
     readonly glyphName: string
     readonly width: NoteWidth
@@ -29,7 +39,7 @@ export class NoteLayout {
         const width = context.width
         this.width = width
         this.noteY = Staff.yForNoteLine(note.line)
-        this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
+        this.glyphName = width.headGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
         let cursorX = width.paddingLeft
@@ -37,7 +47,7 @@ export class NoteLayout {
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
         if (context.accidentalGlyph) {
             this.accidental = { x: cursorX, y: this.noteY, glyphName: context.accidentalGlyph }
-            cursorX += Bravura.width(context.accidentalGlyph) + width.gap
+            cursorX += Bravura.width(context.accidentalGlyph) + NOTE_ELEMENT_GAP
         }
 
         // ledgerLines
@@ -50,12 +60,13 @@ export class NoteLayout {
         this.ledgerLines = ledgerLinePositions.map((ly) => ({
             x1: cursorX,
             y1: ly,
-            x2: cursorX + width.noteHeadWidth + 2 * width.ledgerLineExtension,
+            x2: cursorX + width.noteHeadWidth + 2 * LEDGER_LINE_EXTENSION,
             y2: ly,
         }))
-        cursorX += width.ledgerLineExtension
+        cursorX += LEDGER_LINE_EXTENSION
 
         this.noteX = cursorX
+        this.noteRightX = cursorX + width.noteHeadWidth
 
         // stem
         if (hasStem) {
@@ -66,13 +77,13 @@ export class NoteLayout {
                 this.flag = {
                     glyphName: flagName,
                     x: this.stem.x,
-                    y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * width.stemHeight,
+                    y: this.noteY + (note.stemDir === 'up' ? -1 : 1) * STEM_HEIGHT,
                     scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
                 }
             }
         }
 
-        cursorX += width.noteHeadWidth + width.ledgerLineExtension + width.gap
+        cursorX += width.noteHeadWidth + LEDGER_LINE_EXTENSION + NOTE_ELEMENT_GAP
 
         // dots
         const numDots = note.duration.dots
@@ -82,7 +93,7 @@ export class NoteLayout {
             const dotY = onLine ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
             this.dots = []
             for (let i = 0; i < numDots; i++) {
-                const offset = width.gap + width.dotSpacing
+                const offset = NOTE_ELEMENT_GAP + DOT_SPACING
                 this.dots.push({ x: cursorX + offset, y: dotY })
                 cursorX += offset
             }
@@ -90,10 +101,8 @@ export class NoteLayout {
     }
 
     getStem(stemDir: StemDirection): LayoutStem {
-        const stemX =
-            stemDir === 'up' ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2 : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'
-            ? { x: stemX, y1: this.noteY, y2: this.noteY - this.width.stemHeight }
-            : { x: stemX, y1: this.noteY, y2: this.noteY + this.width.stemHeight }
+            ? { x: this.noteRightX - STEM_WIDTH / 2, y1: this.noteY, y2: this.noteY - STEM_HEIGHT }
+            : { x: this.noteX + STEM_WIDTH / 2, y1: this.noteY, y2: this.noteY + STEM_HEIGHT }
     }
 }

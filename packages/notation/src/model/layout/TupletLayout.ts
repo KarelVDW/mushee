@@ -25,7 +25,7 @@ export class TupletLayout {
         const firstLayout = context.layoutOf(tuplet.firstNote)
         const lastLayout = context.layoutOf(tuplet.lastNote)
         this.x1 = context.xOf(tuplet.firstNote) + firstLayout.noteX
-        this.x2 = context.xOf(tuplet.lastNote) + lastLayout.noteX + lastLayout.width.noteHeadWidth
+        this.x2 = context.xOf(tuplet.lastNote) + lastLayout.noteRightX
         const stemTips = tuplet.notes.map((n) => {
             const layout = context.layoutOf(n)
             return layout.stem?.y2 ?? layout.noteY

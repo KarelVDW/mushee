@@ -1,4 +1,4 @@
-import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
+import { DOTTED_FLAG_SCALE, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { NoteLayout } from '@mushee/notation/model/layout/NoteLayout'
 import { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
@@ -35,16 +35,16 @@ describe('NoteLayout', () => {
     it('a stem-up flag sits above the notehead', () => {
         // C4 is at line 0 (< 3) → stem up → flag pulled up from the notehead.
         const n = new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
-        expect(n.layout.stem?.y2).toBe(n.layout.noteY - n.layout.width.stemHeight)
-        expect(n.layout.flag?.y).toBe(n.layout.noteY - n.layout.width.stemHeight)
+        expect(n.layout.stem?.y2).toBe(n.layout.noteY - STEM_HEIGHT)
+        expect(n.layout.flag?.y).toBe(n.layout.noteY - STEM_HEIGHT)
     })
 
     it('a stem-down flag sits below the notehead', () => {
         // D5 is at line 4 (>= 3) → stem down → flag pushed down from the notehead.
         const n = new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name: 'D', octave: 5 }) })
         expect(n.stemDir).toBe('down')
-        expect(n.layout.stem?.y2).toBe(n.layout.noteY + n.layout.width.stemHeight)
-        expect(n.layout.flag?.y).toBe(n.layout.noteY + n.layout.width.stemHeight)
+        expect(n.layout.stem?.y2).toBe(n.layout.noteY + STEM_HEIGHT)
+        expect(n.layout.flag?.y).toBe(n.layout.noteY + STEM_HEIGHT)
     })
 
     it('an undotted flag has no scale override', () => {
@@ -125,6 +125,16 @@ describe('NoteLayout', () => {
         expect(Number.isInteger(n.line)).toBe(false)
         expect(n.line).toBeLessThan(1)
         expect(n.layout.ledgerLines).toHaveLength(1)
+    })
+
+    it('a whole note’s ledger line spans its whole notehead plus the extension on each side', () => {
+        // C4 sits on the first ledger line below the staff; mock noteheadWhole width = 14.
+        const n = new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        const [ledger] = n.layout.ledgerLines
+        expect(n.layout.ledgerLines).toHaveLength(1)
+        expect(ledger.x2 - ledger.x1).toBe(14 + 2 * LEDGER_LINE_EXTENSION)
+        expect(ledger.x1).toBe(n.layout.noteX - LEDGER_LINE_EXTENSION)
+        expect(n.layout.noteRightX).toBe(n.layout.noteX + 14)
     })
 
     it('no ledger lines for a note inside the staff', () => {

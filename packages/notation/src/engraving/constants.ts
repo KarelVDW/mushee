@@ -24,6 +24,21 @@ export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5
 /** Length of partial (orphaned) secondary beams */
 export const PARTIAL_BEAM_LENGTH = 10
 
+/** Stem length from the notehead's centre line to the tip */
+export const STEM_HEIGHT = 35
+
+/** Stem stroke width */
+export const STEM_WIDTH = 1.5
+
+/** How far a ledger line reaches past the notehead on each side */
+export const LEDGER_LINE_EXTENSION = 4
+
+/** Horizontal gap between a note's parts: accidental, notehead, dots */
+export const NOTE_ELEMENT_GAP = 1
+
+/** Horizontal room reserved per augmentation dot */
+export const DOT_SPACING = 4
+
 /** Thin barline width in pixels */
 export const BARLINE_THIN_WIDTH = 1
 
