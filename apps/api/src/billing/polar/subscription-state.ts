@@ -7,6 +7,8 @@
  * set to the Solkey user id at checkout.
  */
 
+import { isPaidTierId } from './products'
+
 export interface SubscriptionSnapshot {
     id: string
     status: string
@@ -40,7 +42,7 @@ export function isEntitledStatus(status: string): boolean {
 
 /**
  * Compute the row patch for a subscription lifecycle event.
- * `resolveTier` maps a Polar product id to a tier id ('pro' | 'studio').
+ * `resolveTier` maps a Polar product id to a tier id (a PaidTierId).
  * Returns null when the product isn't one of ours (e.g. a stray sandbox
  * product) — the event should then be acknowledged but ignored.
  */
@@ -100,7 +102,7 @@ export function patchFromCustomerState(
 
     // No active paid subscription. Only downgrade users who currently hold a
     // paid tier — never touch 'beta' (waitlist users can't buy) or 'free'.
-    if (currentTierId === 'pro' || currentTierId === 'studio') {
+    if (currentTierId && isPaidTierId(currentTierId)) {
         return {
             tierId: 'free',
             polarCustomerId: state.id,
