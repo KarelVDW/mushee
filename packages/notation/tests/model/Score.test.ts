@@ -834,6 +834,33 @@ describe('Score', () => {
             expect(m.keySignature.fifths).toBe(2)
         })
 
+        it('gives a fresh score (inherited C) an explicit written key', () => {
+            const score = makeScore(2)
+            fill(score, 0, [q(p('C', 5)), q(), q(), q()])
+            score.setInstrument(Instrument.Trumpet)
+            const [first, second] = score.measures
+            expect(first.leadingKeyExplicit).toBe(true)
+            expect(first.keySignature.fifths).toBe(2)
+            expect(second.keySignature.fifths).toBe(2) // carried forward
+            expect(first.firstNote?.pitch?.name).toBe('D')
+        })
+
+        it('folds an undrawable written key to its enharmonic and respells the notes for it', () => {
+            const score = makeScore(1)
+            fill(score, 0, [q(p('B', 4)), q(p('D', 5, 1)), q(p('F', 5, 1)), q(p('A', 5, 1))])
+            score.setKeySignature(score.measures[0].firstNote, 5) // B major
+            const sounding = () => score.measures[0].notes.map((n) => n.pitch && n.pitch.toMidi() + score.instrument.chromaticTranspose)
+            const before = sounding()
+            score.setInstrument(Instrument.AltoSaxophone) // up a major sixth: G♯ major (+8) on paper
+            const m = score.measures[0]
+            expect(m.keySignature.fifths).toBe(-4) // A♭ major
+            expect(sounding()).toEqual(before)
+            // Every note sits in A♭ major, so none draws an accidental.
+            const notes = m.notes.flatMap((n) => (n.pitch ? [n.pitch] : []))
+            expect(notes.map((pitch) => pitch.name)).toEqual(['A', 'C', 'E', 'G'])
+            expect(notes.every((pitch) => pitch.alter === m.keySignature.alterForNote(pitch.name))).toBe(true)
+        })
+
         it('does nothing when switching to the same instrument', () => {
             const score = makeScore(1)
             const m = score.firstMeasure

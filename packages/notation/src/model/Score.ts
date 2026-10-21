@@ -142,30 +142,17 @@ export class Score {
      * B♭4) becomes a flute written B♭4 (still sounds B♭4) — the audience hears
      * the same music; the trumpeter's "do" becomes the flutist's "si bémol".
      *
-     * The note rewrite goes through `replace` so tie tracking stays consistent.
-     * Note identities change — callers holding a Note ref (e.g. the editor's
-     * active note) need to re-resolve by position.
+     * The rewrite is {@link transpose}'s whole-score path: keys land in the drawable
+     * range (B major for alto sax is written in A♭, not G♯) and the notes are
+     * respelled for them. Note identities change — callers holding a Note ref
+     * (e.g. the editor's active note) need to re-resolve by position.
      */
     setInstrument(instrument: Instrument) {
         if (this._instrument === instrument) return
 
         const deltaChromatic = this._instrument.chromaticTranspose - instrument.chromaticTranspose
         const deltaDiatonic = this._instrument.diatonicTranspose - instrument.diatonicTranspose
-
-        if (deltaChromatic !== 0 || deltaDiatonic !== 0) {
-            const targets: Note[] = []
-            const values: Note[] = []
-            for (const measure of this.measures) {
-                measure.transposeKeySignatures(deltaChromatic, deltaDiatonic)
-                for (const note of measure.notes) {
-                    targets.push(note)
-                    values.push(note.clone(note.pitch ? { pitch: note.pitch.transposed(deltaChromatic, deltaDiatonic) } : {}))
-                }
-            }
-            if (targets.length > 0) this.replaceNotes(targets, values)
-            // Re-propagate the transposed key signatures forward (inherited leading keys follow the explicit ones).
-            this.propagateContext()
-        }
+        if (deltaChromatic !== 0 || deltaDiatonic !== 0) this.transposeWholeScore(deltaChromatic, deltaDiatonic)
 
         this._instrument = instrument
         this._instrumentDirty = true
@@ -465,41 +452,52 @@ export class Score {
      * the final replacements, index-aligned with the transposed notes in score order.
      */
     transpose(interval: Interval, notes?: Note[]): Note[] {
-        const targets = notes ?? this.measures.flatMap((m) => m.notes)
-        if (interval.isUnison) return targets
-        const transposed = this.transposeNotes(interval, targets, notes === undefined)
+        if (interval.isUnison) return notes ?? this.measures.flatMap((m) => m.notes)
+        // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
+        const { chromatic, diatonic } = interval
+        const transposed = notes ? this.transposeNotes(notes, chromatic, diatonic) : this.transposeWholeScore(chromatic, diatonic)
         this.touch()
         return transposed
     }
 
-    /** {@link transpose}'s rewrite, without the touch. */
-    private transposeNotes(interval: Interval, targets: Note[], wholeScore: boolean): Note[] {
-        // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
-        const { chromatic, diatonic } = interval
-        if (wholeScore) {
-            for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
-            // A score that starts in inherited C major now carries a transposed leading key that
-            // is still marked inherited — promote it to an explicit boundary before propagation,
-            // or propagateContext would reset it to the default C.
-            const first = this.firstMeasure
-            if (first && !first.leadingKeyExplicit && first.keySignature.fifths !== 0) {
-                first.setKeySignature(0, first.keySignature.fifths, first.keySignature.mode)
-            }
-            // Fold overflowed keys to their enharmonic equivalent. Inherited leading keys are
-            // skipped: propagation below re-derives them from the explicit boundaries.
-            for (const measure of this.measures) {
-                for (const key of [...measure.keySignatures]) {
-                    if (key.beatPosition === 0 && !measure.leadingKeyExplicit) continue
-                    const normalized = KeySignature.normalizedFifths(key.fifths)
-                    if (normalized !== key.fifths) measure.setKeySignature(key.beatPosition, normalized, key.mode)
-                }
-            }
-            this.propagateContext()
+    /**
+     * The whole-score rewrite {@link transpose} and {@link setInstrument} share: every key is
+     * re-keyed (an inherited leading key promoted so it survives propagation, overflow folded to
+     * the enharmonic key), then every note moves and is respelled for the keys now in effect.
+     * No touch — the calling mutator owns it.
+     */
+    private transposeWholeScore(chromatic: number, diatonic: number): Note[] {
+        for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
+        // A score that starts in inherited C major now carries a transposed leading key that
+        // is still marked inherited — promote it to an explicit boundary before propagation,
+        // or propagateContext would reset it to the default C.
+        const first = this.firstMeasure
+        if (first && !first.leadingKeyExplicit && first.keySignature.fifths !== 0) {
+            first.setKeySignature(0, first.keySignature.fifths, first.keySignature.mode)
         }
-        if (!targets.length) return targets
+        // Fold overflowed keys to their enharmonic equivalent. Inherited leading keys are
+        // skipped: propagation below re-derives them from the explicit boundaries.
+        for (const measure of this.measures) {
+            for (const key of [...measure.keySignatures]) {
+                if (key.beatPosition === 0 && !measure.leadingKeyExplicit) continue
+                const normalized = KeySignature.normalizedFifths(key.fifths)
+                if (normalized !== key.fifths) measure.setKeySignature(key.beatPosition, normalized, key.mode)
+            }
+        }
+        this.propagateContext()
+        return this.transposeNotes(
+            this.measures.flatMap((m) => m.notes),
+            chromatic,
+            diatonic,
+        )
+    }
+
+    /** Move `notes` by (chromatic, diatonic) and respell them for the keys in effect. No touch. */
+    private transposeNotes(notes: Note[], chromatic: number, diatonic: number): Note[] {
+        if (!notes.length) return notes
         const transposed = this.replaceNotes(
-            targets,
-            targets.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
+            notes,
+            notes.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
         )
         return this.respell(transposed)
     }
