@@ -1,13 +1,12 @@
 import { sumBy } from 'lodash-es'
 
-import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '../../engraving/constants'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
-import type { BarlineType } from '../types'
+import { BarlineLayout } from './BarlineLayout'
 import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
@@ -16,9 +15,7 @@ import { NoteLayout } from './NoteLayout'
 import type { NoteWidth } from './NoteWidth'
 import type { PhysicalWidth } from './PhysicalWidth'
 import { Resizer, type Sizeable } from './Resizer'
-import { Staff } from './Staff'
 import { TupletLayout } from './TupletLayout'
-import type { LayoutBarline } from './types'
 
 /** An element that occupies horizontal space within a measure. */
 export type MeasureElement = Clef | KeySignature | TimeSignature | Note
@@ -53,7 +50,7 @@ export class MeasureLayout {
     readonly showsClef: boolean
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
-    readonly barline: LayoutBarline | null
+    readonly barline: BarlineLayout | null
     readonly beams: BeamLayout[]
     readonly reuseSignature: string
 
@@ -106,7 +103,7 @@ export class MeasureLayout {
         // width proportionally to their beats; mid-measure elements ride along as zero-allotted
         // children of the preceding note (notes shift to make room via the minimum). ---
         const totalBeats = sumBy(measure.notes, (n) => n.duration.effectiveBeats)
-        const contentWidth = context.width - MeasureLayout.barlineWidth(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
+        const contentWidth = context.width - BarlineLayout.widthOf(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
         const widthByBeat = contentWidth / totalBeats
 
         const sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }> = []
@@ -152,16 +149,7 @@ export class MeasureLayout {
 
         // --- Barline geometry ---
         const barlineType = measure.endBarline ?? 'single'
-        if (barlineType === 'none') {
-            this.barline = null
-        } else {
-            this.barline = {
-                x: context.width - MeasureLayout.barlineWidth(measure.endBarline),
-                y: Staff.TOP_Y,
-                height: Staff.HEIGHT,
-                type: barlineType,
-            }
-        }
+        this.barline = barlineType === 'none' ? null : new BarlineLayout(barlineType, context.width - BarlineLayout.widthOf(barlineType))
 
         // --- Note layouts ---
         for (const note of measure.notes) {
@@ -203,19 +191,6 @@ export class MeasureLayout {
             lastSizeable.children.push(el)
         } else {
             leading.push(el)
-        }
-    }
-
-    static barlineWidth(type: BarlineType | undefined): number {
-        switch (type ?? 'single') {
-            case 'none':
-                return 0
-            case 'single':
-                return BARLINE_THIN_WIDTH
-            case 'double':
-                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH
-            case 'end':
-                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH
         }
     }
 

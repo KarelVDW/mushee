@@ -7,7 +7,6 @@ import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
 import type { Note, Pitch, Score as ScoreModel } from '../model'
-import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
 import { Staff } from '../model/layout/Staff'
 import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
@@ -393,7 +392,7 @@ export const Score = memo(function Score({
         if (!barline) return null
         const measureX = lastRow.getMeasureX(lastMeasure)
         const staffCenterY = barline.y + barline.height / 2
-        const x = measureX + barline.x + MeasureLayoutModel.barlineWidth(lastMeasure.endBarline) + 10
+        const x = measureX + lastMeasure.layout.measureWidth + 10
         const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
         const topY = staffCenterY - btnTotalHeight / 2
         return { x, topY }

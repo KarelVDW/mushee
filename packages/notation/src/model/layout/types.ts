@@ -1,7 +1,5 @@
 // The layout engine's output primitives: positions pre-computed for the renderer.
 
-import type { BarlineType } from '../types'
-
 export interface LayoutGlyph {
     glyphName: string
     x: number
@@ -25,10 +23,3 @@ export interface LayoutStem {
 
 /** A beam line and its thickness, signed by stem direction (positive for stems up). */
 export type LayoutBeamSegment = LayoutLine & { thickness: number }
-
-export interface LayoutBarline {
-    x: number
-    y: number
-    height: number
-    type: BarlineType
-}

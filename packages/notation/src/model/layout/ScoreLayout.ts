@@ -5,6 +5,7 @@ import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import type { Score } from '../Score'
+import { BarlineLayout } from './BarlineLayout'
 import { DisplayedAccidentals } from './DisplayedAccidentals'
 import { KeySignatureWidth } from './KeySignatureWidth'
 import { MeasureLayout } from './MeasureLayout'
@@ -210,7 +211,7 @@ export class ScoreLayout {
                 sumBy(measure.midMeasureClefs, (clef) => clef.width.total) +
                 sumBy(midKeyPairs, ([, width]) => width.total) +
                 sumBy(notePairs, ([, width]) => width.total) +
-                MeasureLayout.barlineWidth(measure.endBarline)
+                BarlineLayout.widthOf(measure.endBarline)
             const base: MeasureFlags = {
                 showsClef: previousClefType === undefined || previousClefType !== measure.clef.type,
                 showsKeySignature: previousKeyFifths === undefined || previousKeyFifths !== measure.keySignature.fifths,

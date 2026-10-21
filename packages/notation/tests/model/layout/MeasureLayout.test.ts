@@ -1,12 +1,6 @@
-import {
-    BARLINE_GAP,
-    BARLINE_THICK_WIDTH,
-    BARLINE_THIN_WIDTH,
-    NUM_STAFF_LINES,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from '@mushee/notation/engraving/constants'
+import { BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import type { KeySignature } from '@mushee/notation/model/KeySignature'
+import { BarlineLayout } from '@mushee/notation/model/layout/BarlineLayout'
 import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
 import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
@@ -109,7 +103,7 @@ describe('MeasureLayout', () => {
             }
             // The final slot runs all the way to the end barline.
             const slotEnd = layout.getXForElement(lastNote) + layout.getAllottedWidth(lastNote)
-            expect(slotEnd).toBeCloseTo(layout.measureWidth - MeasureLayout.barlineWidth(m.endBarline))
+            expect(slotEnd).toBeCloseTo(layout.measureWidth - BarlineLayout.widthOf(m.endBarline))
         })
 
         it('throws "Element not spaced in measure" for unknown elements', () => {
@@ -209,22 +203,7 @@ describe('MeasureLayout', () => {
             const bar = m.layout.barline
             if (!bar) throw new Error('expected barline')
             expect(bar.type).toBe('double')
-            expect(bar.x).toBeCloseTo(m.layout.measureWidth - MeasureLayout.barlineWidth('double'))
-        })
-    })
-
-    describe('barlineWidth', () => {
-        it('maps each barline type to its drawn width', () => {
-            expect(MeasureLayout.barlineWidth('none')).toBe(0)
-            expect(MeasureLayout.barlineWidth('single')).toBe(BARLINE_THIN_WIDTH)
-            expect(MeasureLayout.barlineWidth('double')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH)
-            expect(MeasureLayout.barlineWidth('end')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH)
-            expect(MeasureLayout.barlineWidth(undefined)).toBe(BARLINE_THIN_WIDTH)
-        })
-
-        it('draws end and double barlines wider than a single one', () => {
-            expect(MeasureLayout.barlineWidth('end')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
-            expect(MeasureLayout.barlineWidth('double')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+            expect(bar.x).toBeCloseTo(m.layout.measureWidth - BarlineLayout.widthOf('double'))
         })
     })
 
