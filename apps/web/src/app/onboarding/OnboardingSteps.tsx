@@ -1,7 +1,7 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
-import { type Dispatch, type SetStateAction, useState } from 'react'
+import { type Dispatch, type ReactNode, type SetStateAction, useState } from 'react'
 
 import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { PlanPicker } from '@/components/PlanPicker'
@@ -11,7 +11,6 @@ import { emailOtp } from '@/lib/auth-client'
 import type { BetaPlan, PlanTier } from '@/lib/plans'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
-import { OptionCard, StepShell } from './OnboardingControls'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
@@ -354,5 +353,45 @@ export function DoneStep({
                 </PrimaryButton>
             </div>
         </div>
+    )
+}
+
+// Building blocks of the steps above
+
+function StepShell({ title, subtitle, children }: { title: ReactNode; subtitle: ReactNode; children: ReactNode }) {
+    return (
+        <div className="flex flex-col gap-5">
+            <ModalTitle>{title}</ModalTitle>
+            <SubHeadline>{subtitle}</SubHeadline>
+            {children}
+        </div>
+    )
+}
+
+function OptionCard({ active, onClick, title, body }: { active?: boolean; onClick?: () => void; title: ReactNode; body?: ReactNode }) {
+    return (
+        <button
+            onClick={onClick}
+            type="button"
+            className={[
+                'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-solkey',
+                'focus-ring',
+                active
+                    ? 'bg-primary-soft text-on-primary-soft'
+                    : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
+            ].join(' ')}>
+            <div className="flex flex-col gap-1">
+                <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>
+                {body && (
+                    <span
+                        className={[
+                            'font-body font-normal text-[13px] leading-[1.4] opacity-85',
+                            active ? 'text-on-primary-soft' : 'text-on-surface-variant',
+                        ].join(' ')}>
+                        {body}
+                    </span>
+                )}
+            </div>
+        </button>
     )
 }

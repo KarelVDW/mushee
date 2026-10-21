@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { FunnelShell } from '@/components/FunnelShell'
-import { Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { Icon, PrimaryButton, StepProgress, TertiaryButton } from '@/components/ui'
 import { setUserProperties, track } from '@/lib/analytics'
 import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
@@ -12,8 +12,7 @@ import { nextPathFrom } from '@/lib/nextPath'
 import { BETA_MODE, isPaidTier, type PlanTier } from '@/lib/plans'
 import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
 
-import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES } from './onboarding-data'
-import { StepProgress } from './OnboardingControls'
+import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES, type StepName } from './onboarding-data'
 import {
     BackgroundStep,
     BetaPlanStep,
@@ -42,6 +41,8 @@ export default function OnboardingPage() {
     const { awaitingApproval } = useBetaGate({ enabled: !!session?.user })
 
     const [step, setStep] = useState(0)
+    // Steps are addressed by name; the index only orders them.
+    const stepName = STEP_NAMES[step]
 
     // Mic permission state lives here (not in MicStep): canAdvance reads it,
     // and it must survive navigating away from the step and back.
@@ -59,42 +60,41 @@ export default function OnboardingPage() {
     const [done, setDone] = useState(false)
 
     const canAdvance = (() => {
-        switch (step) {
-            case 0:
+        switch (stepName) {
+            case 'verify':
                 return verified
-            case 1:
+            case 'mic':
                 // Denied still advances: the editor works fine without a mic
                 // (recording asks again later), and a desktop user with no
                 // microphone must not be walled out of the rest of onboarding.
                 return micState === 'granted' || micState === 'denied'
-            case 2:
+            case 'name':
                 return name.trim().length > 0
-            case 3:
+            case 'background':
                 return !!background
-            case 4:
+            case 'goal':
                 return !!goal
-            case 5:
+            case 'instruments':
                 return instruments.length > 0
-            case 6:
-                return !!source
-            case 7:
+            case 'source':
+                // Optional, as the step tells the user: without a pick nothing is saved.
                 return true
-            default:
+            case 'plan':
                 return true
         }
     })()
 
-    const patchForStep = (s: number): OnboardingPatch | null => {
+    const patchForStep = (s: StepName): OnboardingPatch | null => {
         switch (s) {
-            case 3:
+            case 'background':
                 return background ? { background } : null
-            case 4:
+            case 'goal':
                 return goal ? { goal } : null
-            case 5:
+            case 'instruments':
                 return { instruments }
-            case 6:
+            case 'source':
                 return source ? { source, sourceDetail: sourceDetail.trim() } : null
-            case 7:
+            case 'plan':
                 return { completedAt: new Date().toISOString() }
             default:
                 return null
@@ -102,13 +102,13 @@ export default function OnboardingPage() {
     }
 
     const next = () => {
-        const patch = patchForStep(step)
+        const patch = patchForStep(stepName)
         // Persistence is best-effort and never blocks progress; a failure
         // surfaces as a toast through the global mutation error handler.
         if (patch) patchMutation.mutate(patch)
         track('onboarding_step_completed', {
-            step: STEP_NAMES[step],
-            ...(step === 1 ? { mic_permission: micState } : {}),
+            step: stepName,
+            ...(stepName === 'mic' ? { mic_permission: micState } : {}),
         })
         if (step === STEP_COUNT - 1) {
             // Categorical answers only — sourceDetail and name are free text
@@ -149,7 +149,7 @@ export default function OnboardingPage() {
     // visitor was heading before signup (a shared score they want to keep) — the library by default.
     const leave = () => router.push(awaitingApproval ? '/beta' : nextPathFrom(window.location.search))
     const skip = () => {
-        track('onboarding_skipped', { step: STEP_NAMES[step] })
+        track('onboarding_skipped', { step: stepName })
         leave()
     }
     const finish = () => leave()
@@ -158,29 +158,29 @@ export default function OnboardingPage() {
         <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip for now</TertiaryButton>}>
             {!done && <StepProgress step={step} total={STEP_COUNT} />}
 
-            {!done && step === 0 && (
+            {!done && stepName === 'verify' && (
                 <VerifyStep userEmail={userEmail} sessionEmail={sessionEmail} verified={verified} onVerified={refetch} />
             )}
 
-            {!done && step === 1 && <MicStep micState={micState} setMicState={setMicState} />}
+            {!done && stepName === 'mic' && <MicStep micState={micState} setMicState={setMicState} />}
 
-            {!done && step === 2 && <NameStep value={name} onChange={setName} />}
+            {!done && stepName === 'name' && <NameStep value={name} onChange={setName} />}
 
-            {!done && step === 3 && <BackgroundStep value={background} onChange={setBackground} />}
+            {!done && stepName === 'background' && <BackgroundStep value={background} onChange={setBackground} />}
 
-            {!done && step === 4 && <GoalStep value={goal} onChange={setGoal} />}
+            {!done && stepName === 'goal' && <GoalStep value={goal} onChange={setGoal} />}
 
-            {!done && step === 5 && <InstrumentsStep value={instruments} onChange={setInstruments} />}
+            {!done && stepName === 'instruments' && <InstrumentsStep value={instruments} onChange={setInstruments} />}
 
-            {!done && step === 6 && (
+            {!done && stepName === 'source' && (
                 <SourceStep source={source} onSourceChange={setSource} sourceDetail={sourceDetail} onSourceDetailChange={setSourceDetail} />
             )}
 
-            {!done && step === 7 && !BETA_MODE && (
+            {!done && stepName === 'plan' && !BETA_MODE && (
                 <PlanStep plans={plans.sellable} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
             )}
 
-            {!done && step === 7 && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
+            {!done && stepName === 'plan' && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
 
             {done && (
                 <DoneStep

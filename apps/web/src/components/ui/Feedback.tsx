@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react'
 
-import { Wordmark } from './Brand'
+import { Eyebrow, Wordmark } from './Brand'
 import { PrimaryButton, SecondaryButton } from './Buttons'
 import { Icon } from './Icon'
 
@@ -73,6 +73,31 @@ export function ErrorScreen({ title, message, onRetry, onBack, backLabel = 'Go b
                     {onBack && <SecondaryButton onClick={onBack}>{backLabel}</SecondaryButton>}
                 </div>
             </div>
+        </div>
+    )
+}
+
+/**
+ * A multi-step flow's position: one segment per step, filled up to the
+ * current one, and an "n of total" label. Segments cap at 48px so a long flow
+ * stays compact; `fill` stretches them across the row instead.
+ */
+export function StepProgress({ step, total, fill = false }: { step: number; total: number; fill?: boolean }) {
+    return (
+        <div className={`flex items-center ${fill ? 'gap-2' : 'gap-1.5'}`}>
+            {Array.from({ length: total }).map((_, i) => (
+                <div
+                    key={i}
+                    className={[
+                        'h-1 rounded-sm flex-1 transition-colors duration-200 ease-solkey',
+                        fill ? '' : 'max-w-12',
+                        i <= step ? 'bg-primary-container' : 'bg-surface-container',
+                    ].join(' ')}
+                />
+            ))}
+            <Eyebrow className="ml-2">
+                {Math.min(step + 1, total)} of {total}
+            </Eyebrow>
         </div>
     )
 }

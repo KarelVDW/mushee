@@ -36,4 +36,5 @@ export const REFERRAL_SOURCES: [string, string][] = [
 // Steps in order: verify email, mic permission, name, background, goal, instruments, source, tier.
 // The names are the `step` property on onboarding funnel events — keep them stable.
 export const STEP_NAMES = ['verify', 'mic', 'name', 'background', 'goal', 'instruments', 'source', 'plan'] as const
+export type StepName = (typeof STEP_NAMES)[number]
 export const STEP_COUNT = STEP_NAMES.length
