@@ -1,15 +1,4 @@
-import Link from 'next/link'
-
-import { Wordmark } from '@/components/ui'
-
-// Shared capsule styles mirror PrimaryButton / SecondaryButton — those render a
-// <button>, and a navigation belongs in a real <Link>.
-const capsule = [
-    'inline-flex items-center justify-center whitespace-nowrap rounded-full',
-    'font-label font-semibold text-[13px] leading-none px-4.5 py-2.25 pointer-coarse:py-3',
-    'transition-colors duration-150 ease-solkey',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-].join(' ')
+import { PrimaryButton, SecondaryButton, Wordmark } from '@/components/ui'
 
 // Signed-out visitors rarely land here (the auth proxy bounces unknown private
 // paths to /login first), so the primary way out is the library; the home link
@@ -24,14 +13,8 @@ export default function NotFound() {
                     The link may be old, or the address was mistyped. Your scores are safe.
                 </p>
                 <div className="flex items-center gap-3 mt-2">
-                    <Link
-                        href="/scores"
-                        className={`${capsule} bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary`}>
-                        Back to your library
-                    </Link>
-                    <Link href="/" className={`${capsule} bg-surface-container-low text-on-surface hover:bg-surface-container`}>
-                        Go home
-                    </Link>
+                    <PrimaryButton href="/scores">Back to your library</PrimaryButton>
+                    <SecondaryButton href="/">Go home</SecondaryButton>
                 </div>
             </div>
         </main>

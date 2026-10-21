@@ -1,41 +1,41 @@
+import Link from 'next/link'
 import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 
 type ButtonSize = 'md' | 'lg'
 
-interface PrimaryButtonProps {
+/**
+ * `href` renders the button as a next/link `<Link>` with the same look — real
+ * navigation (middle-click, prefetch) instead of a button that pushes a route.
+ * `onClick` still fires on the link (e.g. for tracking). A link can't be typed
+ * or disabled, so those props are button-only.
+ */
+type ButtonOrLink<ButtonOnly> = ({ href?: undefined } & ButtonOnly) | ({ href: string } & { [K in keyof ButtonOnly]?: never })
+
+type PrimaryButtonProps = {
     children?: ReactNode
     onClick?: () => void
     size?: ButtonSize
-    icon?: string
-    type?: 'button' | 'submit' | 'reset'
-    disabled?: boolean
+    icon?: IconName
     emphasis?: 'flat' | 'pop'
     danger?: boolean
     fullWidth?: boolean
     /** Accessible name — required when rendering icon-only (no children). */
     ariaLabel?: string
-}
+} & ButtonOrLink<{ type?: 'button' | 'submit' | 'reset'; disabled?: boolean }>
 
-/**
- * Filled cyan/magenta button. With `emphasis="pop"`, gains the signature magenta
- * drop-shadow that grows from 3px to 5px on hover, paired with a -2px translate.
- * Hover/disabled states are pure CSS — no JS state.
- */
-export function PrimaryButton({
-    children,
-    onClick,
-    size = 'md',
-    icon,
-    type = 'button',
-    disabled,
-    emphasis = 'flat',
-    danger = false,
-    fullWidth = false,
-    ariaLabel,
-}: PrimaryButtonProps) {
-    const big = size === 'lg'
+function primaryClasses({
+    size,
+    emphasis,
+    danger,
+    fullWidth,
+}: {
+    size: ButtonSize
+    emphasis: 'flat' | 'pop'
+    danger: boolean
+    fullWidth: boolean
+}) {
     // Destructive variant: red fill, no magenta pop — the signature lift is reserved
     // for actions you want the user to tap, not for ones you want them to think twice about.
     const pop = emphasis === 'pop' && !danger
@@ -44,51 +44,97 @@ export function PrimaryButton({
         ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error'
         : 'bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary'
 
-    const popStyles = pop ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px]' : ''
+    // The disabled freeze lives here too: outside `pop` it would paint the magenta
+    // shadow onto disabled flat/danger buttons on hover.
+    const popStyles = pop
+        ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px] disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)'
+        : ''
 
-    return (
-        <button
-            type={type}
-            disabled={disabled}
-            onClick={onClick}
-            aria-label={ariaLabel}
-            className={[
-                'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
-                'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
-                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
-                'leading-none',
-                'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                'disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)',
-                palette,
-                popStyles,
-                fullWidth ? 'w-full' : '',
-            ].join(' ')}>
+    return [
+        'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+        'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
+        size === 'lg' ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
+        'leading-none',
+        'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
+        'focus-ring',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        palette,
+        popStyles,
+        fullWidth ? 'w-full' : '',
+    ].join(' ')
+}
+
+/**
+ * Filled cyan capsule (red with `danger`). With `emphasis="pop"` it gains the
+ * magenta offset shadow that grows from 3px to 5px on hover, paired with a -2px
+ * lift; disabled, it holds still at 3px. Hover/disabled states are pure CSS — no
+ * JS state.
+ */
+export function PrimaryButton({
+    children,
+    onClick,
+    size = 'md',
+    icon,
+    href,
+    type = 'button',
+    disabled,
+    emphasis = 'flat',
+    danger = false,
+    fullWidth = false,
+    ariaLabel,
+}: PrimaryButtonProps) {
+    const className = primaryClasses({ size, emphasis, danger, fullWidth })
+    const content = (
+        <>
             {children != null && <span>{children}</span>}
-            {icon && <Icon name={icon} size={big ? 18 : 16} />}
+            {icon && <Icon name={icon} size={size === 'lg' ? 18 : 16} />}
+        </>
+    )
+    if (href != null) {
+        return (
+            <Link href={href} onClick={onClick} aria-label={ariaLabel} className={className}>
+                {content}
+            </Link>
+        )
+    }
+    return (
+        <button type={type} disabled={disabled} onClick={onClick} aria-label={ariaLabel} className={className}>
+            {content}
         </button>
     )
 }
 
-export function SecondaryButton({ children, onClick, size = 'md', type = 'button', disabled, fullWidth }: PrimaryButtonProps) {
-    const big = size === 'lg'
+type SecondaryButtonProps = {
+    children?: ReactNode
+    onClick?: () => void
+    fullWidth?: boolean
+} & ButtonOrLink<{ disabled?: boolean }>
+
+function secondaryClasses({ fullWidth }: { fullWidth: boolean }) {
+    return [
+        'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
+        'border-0 rounded-full font-label font-semibold',
+        'bg-surface-container-low text-on-surface hover:bg-surface-container',
+        'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
+        'leading-none',
+        'transition-colors duration-150 ease-solkey',
+        'focus-ring',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        fullWidth ? 'w-full' : '',
+    ].join(' ')
+}
+
+export function SecondaryButton({ children, onClick, href, disabled, fullWidth = false }: SecondaryButtonProps) {
+    const className = secondaryClasses({ fullWidth })
+    if (href != null) {
+        return (
+            <Link href={href} onClick={onClick} className={className}>
+                {children}
+            </Link>
+        )
+    }
     return (
-        <button
-            type={type}
-            disabled={disabled}
-            onClick={onClick}
-            className={[
-                'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
-                'border-0 rounded-full font-label font-semibold',
-                'bg-surface-container-low text-on-surface hover:bg-surface-container',
-                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
-                'leading-none',
-                'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                fullWidth ? 'w-full' : '',
-            ].join(' ')}>
+        <button type="button" disabled={disabled} onClick={onClick} className={className}>
             {children}
         </button>
     )
@@ -98,55 +144,76 @@ interface TertiaryButtonProps {
     children?: ReactNode
     onClick?: () => void
     danger?: boolean
-    type?: 'button' | 'submit'
+    /** Renders a next/link `<Link>` with the same look (see ButtonOrLink). */
+    href?: string
 }
 
-export function TertiaryButton({ children, onClick, danger = false, type = 'button' }: TertiaryButtonProps) {
+function tertiaryClasses({ danger }: { danger: boolean }) {
+    return [
+        // inline-block is a button's UA default; spelled out so the <Link> form's padding takes up space too.
+        'inline-block bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
+        'font-body font-medium text-[13px] leading-none',
+        'transition-colors duration-150 ease-solkey',
+        'focus-ring rounded-sm',
+        danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
+    ].join(' ')
+}
+
+export function TertiaryButton({ children, onClick, danger = false, href }: TertiaryButtonProps) {
+    const className = tertiaryClasses({ danger })
+    if (href != null) {
+        return (
+            <Link href={href} onClick={onClick} className={className}>
+                {children}
+            </Link>
+        )
+    }
     return (
-        <button
-            type={type}
-            onClick={onClick}
-            className={[
-                'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
-                'font-body font-medium text-[13px] leading-none',
-                'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
-                danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
-            ].join(' ')}>
+        <button type="button" onClick={onClick} className={className}>
             {children}
         </button>
     )
 }
 
 interface IconButtonProps {
-    icon: string
+    icon: IconName
     onClick?: () => void
-    hoverTone?: 'cyan' | 'magenta'
+    /** Hover fill: cyan (default), magenta for destructive actions, neutral for a quiet tonal step. */
+    hoverTone?: 'cyan' | 'magenta' | 'neutral'
     size?: number
     ariaLabel?: string
+    /** Native tooltip — e.g. why the button is disabled. */
+    title?: string
+    disabled?: boolean
     /** Override the idle background — useful when a row already darkens on hover. */
     idleClassName?: string
 }
 
-export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaLabel, idleClassName }: IconButtonProps) {
-    const hoverPalette =
-        hoverTone === 'magenta'
-            ? 'hover:bg-secondary-container hover:text-on-secondary'
-            : 'hover:bg-primary-container hover:text-on-primary-container'
+const ICON_BUTTON_HOVER: Record<NonNullable<IconButtonProps['hoverTone']>, string> = {
+    cyan: 'hover:bg-primary-container hover:text-on-primary-container',
+    magenta: 'hover:bg-secondary-container hover:text-on-secondary',
+    neutral: 'hover:bg-surface-container-high',
+}
+
+export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaLabel, title, disabled, idleClassName }: IconButtonProps) {
     return (
         <button
             type="button"
             aria-label={ariaLabel}
+            title={title}
+            disabled={disabled}
             onClick={onClick}
             className={[
-                'inline-flex items-center justify-center cursor-pointer border-0 rounded-full',
+                // shrink-0: the box is a fixed circle — in a crowded flex row it must not squash.
+                'inline-flex items-center justify-center shrink-0 cursor-pointer border-0 rounded-full',
                 // Touch: extend the hit area past the visual circle (small sizes stay tappable).
                 'relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 pointer-coarse:after:content-[""] pointer-coarse:after:rounded-full',
                 'text-on-surface',
                 idleClassName ?? 'bg-surface-container',
-                hoverPalette,
+                ICON_BUTTON_HOVER[hoverTone],
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
+                'disabled:opacity-40 disabled:cursor-not-allowed',
             ].join(' ')}
             style={{ width: size, height: size }}>
             <Icon name={icon} size={size <= 28 ? 14 : 16} />
@@ -154,6 +221,37 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
     )
 }
 
+interface CloseButtonProps {
+    onClick: () => void
+    ariaLabel?: string
+    /** `sm` (14px glyph) for toasts and banners, `md` (20px) for dialog headers. */
+    size?: 'sm' | 'md'
+}
+
+/**
+ * The bare × that dismisses a toast, banner or dialog. Plain CSS only — no
+ * opacity-modified colours, transforms or shadows — because BrowserSupportBanner
+ * renders it on the browsers below the CSS floor.
+ */
+export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: CloseButtonProps) {
+    return (
+        <button
+            type="button"
+            aria-label={ariaLabel}
+            onClick={onClick}
+            className={[
+                'bg-transparent border-0 cursor-pointer inline-flex shrink-0 rounded-full',
+                size === 'md' ? 'p-1' : 'p-1.5',
+                'text-on-surface-variant hover:text-on-surface transition-colors duration-150 ease-solkey',
+                'focus-ring',
+            ].join(' ')}>
+            <Icon name="x" size={size === 'md' ? 20 : 14} />
+        </button>
+    )
+}
+
+// Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
+// and this file is the copy the shared kit is extracted from.
 interface ToggleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     active?: boolean
     tone?: 'cyan' | 'rec'
@@ -169,7 +267,7 @@ export function ToggleButton({ active, tone = 'cyan', children, className, ...re
                 'inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
                 'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5 pointer-coarse:min-h-10',
                 'font-label font-semibold text-[12px] leading-none',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 active ? activePalette : 'bg-surface-container-low text-on-surface',
                 className ?? '',
             ].join(' ')}>

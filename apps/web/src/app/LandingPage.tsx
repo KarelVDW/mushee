@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 
-import { Eyebrow, Footer, Icon, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
+import { Eyebrow, Footer, Icon, type IconName, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
 import { BETA_MODE } from '@/lib/plans'
@@ -156,7 +156,7 @@ function HowItWorks() {
 }
 
 function FeatureGrid() {
-    const features: [string, string, string][] = [
+    const features: [IconName, string, string][] = [
         [
             'mic',
             'Live transcription',

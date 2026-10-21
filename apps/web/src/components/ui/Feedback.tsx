@@ -8,8 +8,9 @@ import { Icon } from './Icon'
 
 interface AlertProps {
     children: ReactNode
-    /** Label for the retry affordance; omit to hide it. */
+    /** Shows a retry affordance; omit to hide it. */
     onRetry?: () => void
+    /** Its label. */
     retryLabel?: string
 }
 
@@ -44,7 +45,6 @@ interface ErrorScreenProps {
     message: string
     /** Primary action, e.g. retry. */
     onRetry?: () => void
-    retryLabel?: string
     /** Secondary escape hatch, e.g. back to the library. */
     onBack?: () => void
     backLabel?: string
@@ -54,7 +54,7 @@ interface ErrorScreenProps {
  * Full-page error state for when a page's primary data can't load at all —
  * worst case, the API server itself is unreachable.
  */
-export function ErrorScreen({ title, message, onRetry, retryLabel = 'Try again', onBack, backLabel = 'Go back' }: ErrorScreenProps) {
+export function ErrorScreen({ title, message, onRetry, onBack, backLabel = 'Go back' }: ErrorScreenProps) {
     return (
         <div className="min-h-dvh bg-surface flex items-center justify-center">
             <div className="text-center flex flex-col items-center gap-4 max-w-md px-8">
@@ -67,7 +67,7 @@ export function ErrorScreen({ title, message, onRetry, retryLabel = 'Try again',
                 <div className="flex items-center gap-3 mt-2">
                     {onRetry && (
                         <PrimaryButton icon="refresh-cw" onClick={onRetry}>
-                            {retryLabel}
+                            Try again
                         </PrimaryButton>
                     )}
                     {onBack && <SecondaryButton onClick={onBack}>{backLabel}</SecondaryButton>}

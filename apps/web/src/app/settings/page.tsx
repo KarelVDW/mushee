@@ -9,6 +9,7 @@ import {
     Alert,
     Footer,
     Icon,
+    type IconName,
     PageHeader,
     PrimaryButton,
     SecondaryButton,
@@ -401,7 +402,7 @@ function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; 
 }
 
 function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
-    const items: [Tab, string, string][] = [
+    const items: [Tab, string, IconName][] = [
         ['profile', 'Profile', 'user'],
         ['account', 'Account', 'shield'],
     ]

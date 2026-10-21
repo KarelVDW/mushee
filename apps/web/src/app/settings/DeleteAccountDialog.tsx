@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DialogPanel, DialogScrim, Eyebrow, Icon, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
+import { DialogPanel, DialogScrim, Eyebrow, Icon, type IconName, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { useRequestAccountDeletion } from '@/lib/queries'
 
@@ -14,7 +14,7 @@ interface DeleteAccountDialogProps {
 
 const PHRASE = 'delete my account'
 
-const LOSS_ITEMS: [icon: string, text: string][] = [
+const LOSS_ITEMS: [icon: IconName, text: string][] = [
     ['music', 'All your scores and recordings'],
     ['download', 'All MIDI and PDF exports'],
     ['link', 'Share links — they stop working once deletion completes'],

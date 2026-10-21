@@ -1,7 +1,4 @@
-'use client'
-
-import type { CSSProperties, ReactNode } from 'react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 
 interface WordmarkProps {
     size?: number
@@ -18,93 +15,11 @@ export function Wordmark({ size = 28, className }: WordmarkProps) {
     )
 }
 
-interface AppIconProps {
-    size?: number
-    rounded?: boolean
-    background?: string
-    className?: string
-}
+/** The small-caps label voice — shared by Eyebrow and the kit's field labels. */
+export const EYEBROW_CLASS = 'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant'
 
-// The Solkey "S" with a single offset secondary-container drop-shadow behind the letter.
-// We measure the letter's ink bbox in a layout effect so the combined letter+shadow is
-// optically centred — em-box centring drifts because display-italic glyphs have
-// asymmetric sidebearings.
-export function AppIcon({ size = 96, rounded = true, background, className }: AppIconProps) {
-    const vb = 100
-    const unit = vb * 0.045
-    const italicNudge = vb * 0.04
-    const letterRef = useRef<SVGTextElement | null>(null)
-    const [transform, setTransform] = useState('')
-
-    useLayoutEffect(() => {
-        const el = letterRef.current
-        if (!el) return
-        const apply = () => {
-            try {
-                const b = el.getBBox()
-                const cx = b.x + b.width / 2
-                const cy = b.y + b.height / 2
-                setTransform(`translate(${vb / 2 - cx - italicNudge} ${vb / 2 - cy})`)
-            } catch {
-                /* font not ready */
-            }
-        }
-        apply()
-        if (typeof document !== 'undefined' && document.fonts) {
-            void document.fonts.ready.then(apply)
-        }
-    }, [size, italicNudge])
-
-    return (
-        <span
-            aria-label="Solkey app icon"
-            role="img"
-            className={`inline-flex shrink-0 overflow-hidden ${className ?? ''}`}
-            style={{
-                width: size,
-                height: size,
-                background: background ?? 'var(--color-surface-container-lowest)',
-                borderRadius: rounded ? Math.round(size * 0.22) : 0,
-            }}>
-            <svg viewBox={`0 0 ${vb} ${vb}`} width={size} height={size} className="block" aria-hidden>
-                <g transform={transform}>
-                    <text
-                        x={unit / 2}
-                        y={unit / 2}
-                        fontFamily="var(--font-display)"
-                        fontStyle="italic"
-                        fontWeight={700}
-                        fontSize={vb * 0.86}
-                        letterSpacing="-0.04em"
-                        fill="var(--color-secondary-container)">
-                        S
-                    </text>
-                    <text
-                        ref={letterRef}
-                        x={-unit / 2}
-                        y={-unit / 2}
-                        fontFamily="var(--font-display)"
-                        fontStyle="italic"
-                        fontWeight={700}
-                        fontSize={vb * 0.86}
-                        letterSpacing="-0.04em"
-                        fill="var(--color-primary-container)">
-                        S
-                    </text>
-                </g>
-            </svg>
-        </span>
-    )
-}
-
-export function Eyebrow({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-    return (
-        <span
-            className={`font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant ${className ?? ''}`}
-            style={style}>
-            {children}
-        </span>
-    )
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+    return <span className={`${EYEBROW_CLASS} ${className ?? ''}`}>{children}</span>
 }
 
 // Space Grotesk by default; `italic` keeps Space Grotesk italic for in-app titles.
@@ -130,6 +45,8 @@ export function SubHeadline({ children }: { children: ReactNode }) {
     return <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant m-0">{children}</p>
 }
 
+// Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
+// and this file is the copy the shared kit is extracted from.
 interface PillProps {
     children: ReactNode
     tone?: 'neutral' | 'cyan' | 'magenta'

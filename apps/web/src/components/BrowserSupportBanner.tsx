@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { Icon } from '@/components/ui'
+import { CloseButton, Icon } from '@/components/ui'
 
 const DISMISS_KEY = 'solkey:unsupported-browser-dismissed'
 
@@ -64,13 +64,7 @@ export function BrowserSupportBanner() {
                 This browser is older than Solkey supports, so pages may not display correctly. For the full experience — including
                 recording — use a recent Chrome, Edge, Firefox, or Safari.
             </p>
-            <button
-                type="button"
-                aria-label="Dismiss"
-                onClick={dismiss}
-                className="bg-transparent border-0 p-1.5 cursor-pointer text-on-surface-variant hover:text-on-surface inline-flex shrink-0">
-                <Icon name="x" size={14} />
-            </button>
+            <CloseButton ariaLabel="Dismiss" onClick={dismiss} />
         </div>
     )
 }

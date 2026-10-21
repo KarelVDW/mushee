@@ -63,7 +63,7 @@ export function PlanPicker({
     )
 }
 
-export function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
+function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
     return (
         <div role="radiogroup" aria-label="Billing cadence" className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
             {(
@@ -82,6 +82,7 @@ export function BillingToggle({ value, onChange }: { value: Billing; onChange: (
                         onClick={() => onChange(k)}
                         className={[
                             'border-0 px-3.5 py-1.75 rounded-full cursor-pointer font-label font-semibold text-[12px] leading-none transition-all duration-150 ease-solkey',
+                            'focus-ring',
                             active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
                         ].join(' ')}>
                         {label}
@@ -104,7 +105,7 @@ interface TierCardProps {
 function cardShell(active: boolean): string {
     return [
         'relative text-left border-0 rounded-lg cursor-pointer transition-all duration-150 ease-solkey',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+        'focus-ring',
         active
             ? 'bg-primary-soft text-on-primary-soft'
             : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
@@ -163,7 +164,7 @@ function PriceBlock({
     )
 }
 
-export function TierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function TierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}
@@ -205,7 +206,7 @@ export function TierCard({ plan, billing, currency, active, current, onSelect }:
 
 /** The professional tier as a selectable row: enough to anchor the ladder,
  *  slim enough not to compete with the consumer cards above. */
-export function ProfessionalTierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function ProfessionalTierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}

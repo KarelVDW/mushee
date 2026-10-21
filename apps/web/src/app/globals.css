@@ -93,6 +93,16 @@ body {
     font-family: var(--font-body);
 }
 
+/* The keyboard focus contract (DESIGN.md): a 2px primary ring, 2px out, on
+   :focus-visible only. An @utility rather than a plain class so it lands in
+   Tailwind's utilities layer and composes with variants like any utility. */
+@utility focus-ring {
+    &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
+
 /* Atmospheric Shadows — tinted with on_surface, never black. */
 .tonal-layer-glow {
     box-shadow: var(--shadow-tonal);
