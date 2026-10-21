@@ -1,10 +1,12 @@
 import { Duration } from '@mushee/notation/model/Duration'
 import { DisplayedAccidentals } from '@mushee/notation/model/layout/DisplayedAccidentals'
+import { NoteLayout } from '@mushee/notation/model/layout/NoteLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { type Accidental, Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 const q = (name: PitchStep, octave: number, accidental?: Accidental) =>
@@ -103,6 +105,7 @@ describe('accidental display (full measure-aware)', () => {
 
     it('a detached note draws no accidental (no measure context to resolve one in)', () => {
         const fSharp = q('F', 4, '#')
-        expect(fSharp.layout.accidental).toBeUndefined()
+        expect(new DisplayedAccidentals(bar([])).byNote.get(fSharp)).toBeUndefined()
+        expect(NoteLayout.preview(fSharp, clef('treble')).accidental).toBeUndefined()
     })
 })

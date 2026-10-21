@@ -3,18 +3,21 @@ import { memo } from 'react'
 import { STEM_WIDTH } from '../engraving/constants'
 import type { Note } from '../model'
 import type { BeamLayout } from '../model/layout/BeamLayout'
+import type { NoteLayout } from '../model/layout/NoteLayout'
 import { DOT_RADIUS, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {
     note: Note
+    /** Draw this layout instead of the note's own — the ghost note's NoteLayout.preview. */
+    layout?: NoteLayout
     beam?: BeamLayout
     color?: string
     layoutId: string
 }
 
-export const NoteGroup = memo(function NoteGroup({ note, beam, color }: NoteGroupProps) {
-    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = note.layout
+export const NoteGroup = memo(function NoteGroup({ note, layout, beam, color }: NoteGroupProps) {
+    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = layout ?? note.layout
     const beamStem = beam?.getStem(note)
     const stem = beamStem ?? originalStem
     return (

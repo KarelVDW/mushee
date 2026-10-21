@@ -154,7 +154,7 @@ export class MeasureLayout {
         for (const note of measure.notes) {
             this._noteLayouts.set(
                 note,
-                new NoteLayout(note, { width: widthOf(note) as NoteWidth }),
+                new NoteLayout(note, { line: note.line, width: widthOf(note) as NoteWidth }),
             )
         }
 

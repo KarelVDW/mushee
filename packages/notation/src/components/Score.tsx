@@ -6,7 +6,8 @@ import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
-import type { Note, Pitch, Score as ScoreModel } from '../model'
+import type { Clef, Note, Pitch, Score as ScoreModel } from '../model'
+import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
 import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
@@ -145,7 +146,10 @@ export const Score = memo(function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
-    const [ghostNote, setGhostNote] = useState<Note | null>(null)
+    // The hover-to-pitch preview: a detached clone of the selected note at the hovered line, under its clef.
+    const [ghost, setGhost] = useState<{ note: Note; clef: Clef } | null>(null)
+    const ghostNote = ghost?.note ?? null
+    const ghostLayout = useMemo(() => ghost && NoteLayout.preview(ghost.note, ghost.clef), [ghost])
     const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
 
     useObservedWidth(
@@ -333,7 +337,7 @@ export const Score = memo(function Score({
             if (!hit) {
                 gestures.pointerMove(e, null)
                 if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhostNote(null)
+                if (ghostNote) setGhost(null)
                 return
             }
             const { note, localY } = hit
@@ -344,7 +348,7 @@ export const Score = memo(function Score({
             // press note leaves the ghost intact so a press + release in place still commits a
             // pitch change (below).
             if (gestures.pressed()) {
-                if (gestures.dragged() && ghostNote) setGhostNote(null)
+                if (gestures.dragged() && ghostNote) setGhost(null)
                 return
             }
 
@@ -354,8 +358,8 @@ export const Score = memo(function Score({
             const hoverLine = Staff.noteLineForY(localY)
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
-            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
-            else setGhostNote(note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }).previewUnder(note.clef))
+            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhost(null)
+            else setGhost({ note: note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }), clef: note.clef })
         },
         [resolveHit, gestures, hoveredNote, ghostNote, selectedNote],
     )
@@ -370,7 +374,7 @@ export const Score = memo(function Score({
 
     const handlePointerLeave = useCallback(() => {
         setHoveredNote(null)
-        setGhostNote(null)
+        setGhost(null)
     }, [])
 
     const handleClick = useCallback(() => {
@@ -378,7 +382,7 @@ export const Score = memo(function Score({
         if (gestures.clickSuppressed()) return
         // Clicking the active note at a different staff line commits the previewed (ghost) pitch.
         if (ghostNote?.pitch && selectedNote && onNoteChange) {
-            setGhostNote(null)
+            setGhost(null)
             onNoteChange(selectedNote, ghostNote.pitch)
         }
     }, [gestures, ghostNote, selectedNote, onNoteChange])
@@ -483,9 +487,9 @@ export const Score = memo(function Score({
                                         key={`cursor-${selectedNote.id}`}
                                         data-export-exclude
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
-                                        {ghostNote && (
+                                        {ghostNote && ghostLayout && (
                                             <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup note={ghostNote} layoutId={ghostNote.layout.id} />
+                                                <NoteGroup note={ghostNote} layout={ghostLayout} layoutId={ghostLayout.id} />
                                             </g>
                                         )}
                                         <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
