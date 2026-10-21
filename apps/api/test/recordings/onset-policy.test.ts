@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { OnsetDetector } from '../../src/recordings/pipeline/onset-detector'
 import { isStruckOrPluckedInstrument } from '../../src/recordings/pipeline/profiles/instrument-ranges'
 import { SUSTAINED_ONSET_DIP_RATIO, VOICE_ONSET_DIP_RATIO } from '../../src/recordings/pipeline/profiles/pipeline-profile'
-import { estimateReverberance, ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { estimateReverberance } from '../../src/recordings/pipeline/profiles/reverberance'
 
 const SR = 16000
 
