@@ -74,6 +74,8 @@
 
     /* Motion */
     --ease-solkey: cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* animate-solkey-spin — the busy spinner (BusyNotice); keyframes below. */
+    --animate-solkey-spin: solkey-spin 700ms linear infinite;
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      Values reference the next/font CSS variables that layout.tsx sets on <body>.

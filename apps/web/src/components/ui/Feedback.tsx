@@ -78,6 +78,21 @@ export function ErrorScreen({ title, message, onRetry, onBack, backLabel = 'Go b
 }
 
 /**
+ * A spinner over a one-line caption — what a dialog shows while it waits on a
+ * redirect or a round trip it cannot skip (e.g. Polar's checkout).
+ */
+export function BusyNotice({ children }: { children: ReactNode }) {
+    return (
+        <div className="flex flex-col items-center gap-3.5 px-4 py-6">
+            <span className="w-10 h-10 rounded-full border-[3px] border-surface-container border-t-primary animate-solkey-spin" />
+            <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
+                {children}
+            </span>
+        </div>
+    )
+}
+
+/**
  * A multi-step flow's position: one segment per step, filled up to the
  * current one, and an "n of total" label. Segments cap at 48px so a long flow
  * stays compact; `fill` stretches them across the row instead.
