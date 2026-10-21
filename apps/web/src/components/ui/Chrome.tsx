@@ -1,13 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { requestConsentSettings } from '@/lib/consent'
 
 import { Avatar, PageTitle, SubHeadline, Wordmark } from './Brand'
 import { PrimaryButton } from './Buttons'
+
+const NAV_ITEMS = [
+    { label: 'Library', href: '/scores' },
+    { label: 'Settings', href: '/settings' },
+] as const
 
 interface TopNavProps {
     user?: string
@@ -16,11 +21,6 @@ interface TopNavProps {
 
 export function TopNav({ user, onCreate }: TopNavProps) {
     const pathname = usePathname()
-    const router = useRouter()
-    const items: { label: string; href: string; match: (p: string) => boolean }[] = [
-        { label: 'Library', href: '/scores', match: (p) => p === '/scores' || p === '/' },
-        { label: 'Settings', href: '/settings', match: (p) => p.startsWith('/settings') },
-    ]
 
     return (
         <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
@@ -30,12 +30,13 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                         <Wordmark size={28} />
                     </Link>
                     <div className="flex items-center gap-4 sm:gap-5.5 sm:ml-4">
-                        {items.map((n) => {
-                            const active = n.match(pathname ?? '')
+                        {NAV_ITEMS.map((n) => {
+                            const active = pathname.startsWith(n.href)
                             return (
                                 <Link
                                     key={n.label}
                                     href={n.href}
+                                    aria-current={active ? 'page' : undefined}
                                     className={[
                                         'no-underline cursor-pointer font-body font-medium text-[14px] leading-none pb-1',
                                         'transition-colors duration-150 ease-solkey',
@@ -63,18 +64,18 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                             </span>
                         </>
                     )}
-                    <button
-                        onClick={() => router.push('/settings')}
+                    <Link
+                        href="/settings"
                         title={user}
                         aria-label="Account settings"
-                        className="inline-flex border-0 bg-transparent p-0 rounded-full cursor-pointer focus-ring">
+                        className="inline-flex no-underline rounded-full focus-ring">
                         <Avatar
                             name={user ?? 'You'}
                             size="sm"
                             tone="neutral"
                             className="hover:bg-surface-container-highest transition-colors duration-150 ease-solkey"
                         />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>

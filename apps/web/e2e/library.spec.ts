@@ -258,12 +258,13 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
     await page.keyboard.press('Escape')
 
-    // Settings nav link and the account button both lead to /settings.
-    await page.getByRole('link', { name: 'Settings' }).click()
+    // The Settings nav link and the account avatar link both lead to /settings. (exact: the
+    // avatar's name, 'Account settings', also contains 'Settings'.)
+    await page.getByRole('link', { name: 'Settings', exact: true }).click()
     await expect(page).toHaveURL(/\/settings$/)
     await page.getByRole('link', { name: 'Library' }).click()
     await expect(page).toHaveURL(/\/scores$/)
-    await page.getByRole('button', { name: 'Account settings' }).click()
+    await page.getByRole('link', { name: 'Account settings' }).click()
     await expect(page).toHaveURL(/\/settings$/)
 })
 
