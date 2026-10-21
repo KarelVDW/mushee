@@ -217,7 +217,11 @@ export class TakeSpelling {
      * The written MIDI for one note: normalize by the take offset, round, and let
      * the key vote only inside the ambiguity band.
      */
-    static spellMidi(note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>, offsetCents: number, keyClasses: Set<number> | null): number {
+    static spellMidi(
+        note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>,
+        offsetCents: number,
+        keyClasses: Set<number> | null,
+    ): number {
         if (note.pitchMidiFloat === undefined) return note.pitchMidi
         const x = note.pitchMidiFloat - offsetCents / 100
         let midi = Math.round(x)

@@ -63,7 +63,9 @@ export interface SegmentOptions {
  * The frame counts are in provider frames: a provider whose frames cover less
  * real time (the octave-down wrapper) scales them from here.
  */
-export const SEGMENT_DEFAULTS: Required<Pick<SegmentOptions, 'confidenceThreshold' | 'minFramesPerNote' | 'pitchBinToleranceCents' | 'mode' | 'smoothFrames'>> = {
+export const SEGMENT_DEFAULTS: Required<
+    Pick<SegmentOptions, 'confidenceThreshold' | 'minFramesPerNote' | 'pitchBinToleranceCents' | 'mode' | 'smoothFrames'>
+> = {
     confidenceThreshold: 0.5,
     minFramesPerNote: 4, // ≈ 80 ms at the at-pitch CREPE hop (20 ms)
     pitchBinToleranceCents: 50,
