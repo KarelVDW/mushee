@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useId, useState } from 'react'
+import { type ReactNode, useId } from 'react'
 
 import { EYEBROW_CLASS } from './Brand'
 import { Icon, type IconName } from './Icon'
@@ -23,10 +23,9 @@ interface TextFieldProps {
 
 /**
  * Text input on a `surface-container-low` fill with a 2px cyan bottom stroke
- * that animates in from the centre on focus. Focused state is JS-driven (rather
- * than CSS `:focus-within`) because the stroke needs to slide both `left` and
- * `right` from 50% → 0/100% simultaneously, which can't be expressed with a
- * single pseudo-element transition.
+ * that grows from the centre on focus (CSS `peer-focus`, both edges transition).
+ * `peer-focus` rather than `focus-within`, so a focused `rightSlot` button (the
+ * password toggle) doesn't light the stroke.
  */
 export function TextField({
     label,
@@ -41,7 +40,6 @@ export function TextField({
     onKeyDown,
     inputRef,
 }: TextFieldProps) {
-    const [focused, setFocused] = useState(false)
     const id = useId()
     return (
         <div className="flex flex-col gap-1.5">
@@ -68,16 +66,11 @@ export function TextField({
                     placeholder={placeholder}
                     autoFocus={autoFocus}
                     onChange={(e) => onChange?.(e.target.value)}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
                     onKeyDown={onKeyDown}
-                    className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-on-surface font-body font-normal text-[14px] leading-none py-3 px-1"
+                    className="peer flex-1 min-w-0 bg-transparent border-0 outline-0 text-on-surface font-body font-normal text-[14px] leading-none py-3 px-1"
                 />
                 {rightSlot}
-                <div
-                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey"
-                    style={focused ? { left: 0, right: 0 } : { left: '50%', right: '50%' }}
-                />
+                <div className="absolute bottom-0 left-1/2 right-1/2 peer-focus:left-0 peer-focus:right-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey" />
             </div>
             {hint && <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{hint}</span>}
         </div>
@@ -94,8 +87,8 @@ interface TextAreaProps {
     rows?: number
 }
 
+/** Multi-line sibling of TextField, with the same `peer-focus` centre-out stroke. */
 export function TextArea({ label, value, onChange, placeholder, rows = 4 }: TextAreaProps) {
-    const [focused, setFocused] = useState(false)
     const id = useId()
     return (
         <div className="flex flex-col gap-1.5">
@@ -111,14 +104,9 @@ export function TextArea({ label, value, onChange, placeholder, rows = 4 }: Text
                     placeholder={placeholder}
                     rows={rows}
                     onChange={(e) => onChange?.(e.target.value)}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    className="w-full bg-transparent border-0 outline-0 resize-y text-on-surface font-body font-normal text-[14px] leading-[1.55] py-3 box-border"
+                    className="peer w-full bg-transparent border-0 outline-0 resize-y text-on-surface font-body font-normal text-[14px] leading-[1.55] py-3 box-border"
                 />
-                <div
-                    className="absolute bottom-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey"
-                    style={focused ? { left: 0, right: 0 } : { left: '50%', right: '50%' }}
-                />
+                <div className="absolute bottom-0 left-1/2 right-1/2 peer-focus:left-0 peer-focus:right-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey" />
             </div>
         </div>
     )

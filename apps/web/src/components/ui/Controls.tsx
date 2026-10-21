@@ -207,8 +207,10 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
                     checked ? 'bg-primary-container' : 'bg-surface-container-high',
                 ].join(' ')}>
                 <span
-                    className="block w-4.5 h-4.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-solkey"
-                    style={{ transform: checked ? 'translateX(18px)' : 'translateX(0)' }}
+                    className={[
+                        'block w-4.5 h-4.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-solkey',
+                        checked ? 'translate-x-4.5' : 'translate-x-0',
+                    ].join(' ')}
                 />
             </button>
         </label>
