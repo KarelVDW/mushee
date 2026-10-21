@@ -5,7 +5,7 @@ import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google
 
 import { AuthGate } from '@/components/AuthGate'
 import { HydrationMarker } from '@/components/HydrationMarker'
-import { SITE_URL } from '@/lib/siteUrl'
+import { SITE_URL } from '@/lib/env'
 
 import { Providers } from './providers'
 

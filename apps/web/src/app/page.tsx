@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
-import { SITE_URL } from '@/lib/siteUrl'
+import { SITE_URL } from '@/lib/env'
 
 import { LandingPage } from './LandingPage'
 

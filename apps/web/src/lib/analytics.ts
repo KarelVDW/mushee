@@ -1,6 +1,7 @@
 import posthog from 'posthog-js'
 
 import { hasAnalyticsConsent, onConsentChange } from './consent'
+import { POSTHOG_HOST, POSTHOG_KEY } from './env'
 
 /**
  * PostHog wiring — product analytics, web analytics, session replay, and
@@ -22,21 +23,18 @@ import { hasAnalyticsConsent, onConsentChange } from './consent'
  * blockers don't silently blind us.
  */
 
-const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
-const UI_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com'
-
 let initialized = false
 
 /** The signed-in user, remembered so a consent grant can identify retroactively. */
 let currentUserId: string | null = null
 
 export function initAnalytics(): void {
-    if (initialized || !KEY || typeof window === 'undefined') return
+    if (initialized || !POSTHOG_KEY || typeof window === 'undefined') return
     initialized = true
 
-    posthog.init(KEY, {
+    posthog.init(POSTHOG_KEY, {
         api_host: '/ingest',
-        ui_host: UI_HOST.replace('.i.posthog.com', '.posthog.com'),
+        ui_host: POSTHOG_HOST.replace('.i.posthog.com', '.posthog.com'),
         defaults: '2026-05-30',
         // Base tier: capture for everyone, but cookieless (nothing on the
         // device) and anonymous (no person profile until identify).

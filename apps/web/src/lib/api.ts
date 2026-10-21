@@ -1,6 +1,5 @@
+import { API_URL } from './env'
 import type { StoredShortcuts } from './Keybindings'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
 /** The server responded, but with an error status. */
 export class ApiError extends Error {

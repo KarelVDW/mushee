@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
-import { SITE_URL } from '@/lib/siteUrl'
+import { SITE_URL } from '@/lib/env'
 
 import { PRICING_FAQ } from './faq'
 import { PricingPage } from './PricingPage'

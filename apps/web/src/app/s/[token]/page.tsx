@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 
+import { API_URL } from '@/lib/env'
+
 import { SharedScorePage } from './SharedScorePage'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
-    // Module scope: logged once per server, not per request. Without the URL every shared page
-    // pays a failed fetch and falls back to the generic title, with nothing else to diagnose it.
+    // Module scope of a server component: logged once per server, not per request, and never in
+    // a browser — which is why it lives here and not in the side-effect-free lib/env. Without the
+    // URL every shared page pays a failed fetch and falls back to the generic title, with nothing
+    // else to diagnose it.
     console.warn('NEXT_PUBLIC_API_URL is not set: shared-page titles and Open Graph cards fall back to the generic text.')
 }
 

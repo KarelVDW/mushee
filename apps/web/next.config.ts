@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next'
 
+// A relative path, not '@/lib/env': the config loads before the app's path aliases apply.
+import { POSTHOG_HOST } from './src/lib/env'
+
 // PostHog ingestion is reverse-proxied through /ingest so ad blockers don't
-// silently drop analytics. EU cloud by default (GDPR: data stays in the EU).
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com'
+// silently drop analytics.
 const POSTHOG_ASSETS_HOST = POSTHOG_HOST.replace('.i.posthog.com', '-assets.i.posthog.com')
 
 // Baseline security headers. No CSP yet: Next's hydration scripts and

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-import { SITE_URL } from '@/lib/siteUrl'
+import { SITE_URL } from '@/lib/env'
 
 /**
  * Crawl policy for the marketing site. Everything behind login, the share
