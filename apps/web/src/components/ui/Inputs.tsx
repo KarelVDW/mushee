@@ -83,6 +83,8 @@ export function TextField({
     )
 }
 
+// Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
+// and this file is the copy the shared kit is extracted from.
 interface TextAreaProps {
     label?: ReactNode
     value: string

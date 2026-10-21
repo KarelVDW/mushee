@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { Icon, type IconName } from './Icon'
 
-export interface ToastItem {
+interface ToastItem {
     id: number
     message: string
     tone: 'error' | 'info'
@@ -25,7 +25,7 @@ function emit() {
     for (const listener of listeners) listener(items)
 }
 
-export function dismissToast(id: number) {
+function dismissToast(id: number) {
     const timer = timers.get(id)
     if (timer) clearTimeout(timer)
     timers.delete(id)

@@ -63,7 +63,7 @@ export function PlanPicker({
     )
 }
 
-export function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
+function BillingToggle({ value, onChange }: { value: Billing; onChange: (v: Billing) => void }) {
     return (
         <div role="radiogroup" aria-label="Billing cadence" className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
             {(
@@ -163,7 +163,7 @@ function PriceBlock({
     )
 }
 
-export function TierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function TierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}
@@ -205,7 +205,7 @@ export function TierCard({ plan, billing, currency, active, current, onSelect }:
 
 /** The professional tier as a selectable row: enough to anchor the ladder,
  *  slim enough not to compete with the consumer cards above. */
-export function ProfessionalTierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function ProfessionalTierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}
