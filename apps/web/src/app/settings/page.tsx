@@ -253,20 +253,21 @@ function RecordingsInventory() {
     )
 }
 
+const TABS: readonly { readonly id: Tab; readonly label: string; readonly icon: IconName }[] = [
+    { id: 'profile', label: 'Profile', icon: 'user' },
+    { id: 'account', label: 'Account', icon: 'shield' },
+]
+
 function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
-    const items: [Tab, string, IconName][] = [
-        ['profile', 'Profile', 'user'],
-        ['account', 'Account', 'shield'],
-    ]
     return (
         <nav className="flex flex-row md:flex-col gap-1 md:sticky md:top-24">
-            {items.map(([k, label, icon]) => {
-                const active = tab === k
+            {TABS.map(({ id, label, icon }) => {
+                const active = tab === id
                 return (
                     <button
-                        key={k}
+                        key={id}
                         type="button"
-                        onClick={() => onTab(k)}
+                        onClick={() => onTab(id)}
                         className={[
                             'border-0 rounded-md px-3.5 py-2.5 text-left cursor-pointer',
                             'flex items-center gap-2.5',

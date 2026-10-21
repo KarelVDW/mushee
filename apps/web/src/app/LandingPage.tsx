@@ -55,24 +55,58 @@ function Hero() {
     )
 }
 
+const HOW_STEPS: readonly { readonly num: string; readonly title: string; readonly body: string }[] = [
+    {
+        num: '01',
+        title: 'Press record',
+        body: 'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
+    },
+    {
+        num: '02',
+        title: 'Play or sing',
+        body: 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.',
+    },
+    {
+        num: '03',
+        title: 'Polish & keep',
+        body: "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go.",
+    },
+]
+
+const FEATURES: readonly { readonly icon: IconName; readonly title: string; readonly body: string }[] = [
+    {
+        icon: 'mic',
+        title: 'Live transcription',
+        body: 'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
+    },
+    {
+        icon: 'music',
+        title: 'Real engraving',
+        body: 'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
+    },
+    {
+        icon: 'keyboard',
+        title: 'Keyboard-first editing',
+        body: 'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
+    },
+    {
+        icon: 'audio-lines',
+        title: 'Hear it back',
+        body: 'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
+    },
+    {
+        icon: 'cloud',
+        title: 'Saved as you go',
+        body: 'Every change is stored instantly. Close the tab mid-phrase and pick up on another device without losing a note.',
+    },
+    {
+        icon: 'shield',
+        title: 'Yours, privately',
+        body: 'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
+    },
+]
+
 function HowItWorks() {
-    const steps: [string, string, string][] = [
-        [
-            '01',
-            'Press record',
-            'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
-        ],
-        [
-            '02',
-            'Play or sing',
-            'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.',
-        ],
-        [
-            '03',
-            'Polish & keep',
-            "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go.",
-        ],
-    ]
     return (
         <section id="how" className="py-14 sm:py-22 px-5 sm:px-8">
             <div className="max-w-320 mx-auto">
@@ -83,7 +117,7 @@ function HowItWorks() {
                     </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {steps.map(([num, title, body]) => (
+                    {HOW_STEPS.map(({ num, title, body }) => (
                         <div key={num} className="flex flex-col gap-3">
                             <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
                             <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
@@ -99,38 +133,6 @@ function HowItWorks() {
 }
 
 function FeatureGrid() {
-    const features: [IconName, string, string][] = [
-        [
-            'mic',
-            'Live transcription',
-            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
-        ],
-        [
-            'music',
-            'Real engraving',
-            'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
-        ],
-        [
-            'keyboard',
-            'Keyboard-first editing',
-            'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
-        ],
-        [
-            'audio-lines',
-            'Hear it back',
-            'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
-        ],
-        [
-            'cloud',
-            'Saved as you go',
-            'Every change is stored instantly. Close the tab mid-phrase and pick up on another device without losing a note.',
-        ],
-        [
-            'shield',
-            'Yours, privately',
-            'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
-        ],
-    ]
     return (
         <section id="features" className="py-14 sm:py-22 px-5 sm:px-8 bg-surface-container-lowest">
             <div className="max-w-320 mx-auto">
@@ -141,7 +143,7 @@ function FeatureGrid() {
                     Everything you need to catch an idea before it evaporates.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {features.map(([icon, title, body]) => (
+                    {FEATURES.map(({ icon, title, body }) => (
                         <div key={title} className="bg-surface rounded-lg p-6 flex flex-col gap-3">
                             <div className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                                 <Icon name={icon} size={22} />
