@@ -1,6 +1,5 @@
 import { Logger } from '@nestjs/common'
 
-import type { RecordingArchiver } from '../recording-archiver'
 import { AudioConverter } from './audio-converter'
 import { AudioDecoder, StreamingDecoder } from './audio-decoder'
 import { describeError } from './describe-error'
@@ -87,15 +86,37 @@ export interface ScoreUpdate {
     measures: Record<number, MxmlMeasure>
 }
 
+/** Transcription health: `ok: false` after a failed pass (with the internal error for the log), `ok: true` once a pass succeeds again. */
+export type PipelineHealth = { ok: true } | { ok: false; message: string }
+
+/** The debug artifacts archived beside a take's audio once it ends. */
+export interface DebugBundle {
+    /** Raw vs committed notes over time (`RecordingDebugRenderer`). */
+    plotSvg?: string
+    /** Every bar of the take as the builder writes it. */
+    scoreJson?: string
+    /** Routing, timings and the note lists, for diagnosing a take after the fact. */
+    sessionMeta?: object
+}
+
+/**
+ * Where a session's audio and debug bundle are archived. Declared here, by its
+ * consumer, so `pipeline/` never imports the persistence layer above it;
+ * `RecordingArchiver` implements it over the `StorageService`.
+ */
+export interface PipelineArchive {
+    /** One encoded chunk, forwarded as it arrives. */
+    appendAudio(chunk: Buffer): void
+    /** Close the audio upload and write the bundle. Called once, after the last chunk. */
+    finalize(bundle: DebugBundle): Promise<void>
+}
+
 /**
  * How the locked profile decided what is at the microphone. Emitted once per
  * session so the client can show the user what the pipeline believes it is
  * hearing — a mis-routed take is invisible otherwise, and the user is the one
  * person who knows the truth.
  */
-/** Transcription health: `ok: false` after a failed pass (with the internal error for the log), `ok: true` once a pass succeeds again. */
-export type PipelineHealth = { ok: true } | { ok: false; message: string }
-
 export interface SourceResolution {
     source: 'voice' | 'instrument'
     decidedBy: 'explicit' | 'classifier' | 'prior'
@@ -127,7 +148,7 @@ export class RecordingPipeline {
     private archivePromise: Promise<void> | null = null
     // Set by the session once its recording row exists; archives the encoded
     // audio (streamed chunk-by-chunk) and the debug bundle to blob storage.
-    private archiver: RecordingArchiver | null = null
+    private archiver: PipelineArchive | null = null
 
     // Long-lived decode for this session, spawned once the profile (and thus the
     // sample rate / high-pass / loudnorm) is locked. Null until then.
@@ -261,7 +282,7 @@ export class RecordingPipeline {
         this.onHealth = cb
     }
 
-    setArchiver(archiver: RecordingArchiver): void {
+    setArchiver(archiver: PipelineArchive): void {
         this.archiver = archiver
     }
 
@@ -722,7 +743,14 @@ export class RecordingPipeline {
 
     private async doArchive(): Promise<void> {
         if (!this.archiver) return
+        await this.archiver.finalize(this.debugBundle())
+    }
 
+    /**
+     * The take's debug bundle as of now: the pitch plot, every bar of the emitted
+     * score and the session metadata. Pure assembly — writing it is the archive's job.
+     */
+    debugBundle(): DebugBundle {
         let plotSvg: string | undefined
         if (this.lastDuration > 0 || this.lastRawNotes.length) {
             plotSvg = new RecordingDebugRenderer().render({
@@ -753,7 +781,7 @@ export class RecordingPipeline {
             scoreJson = JSON.stringify({ measures }, null, 2)
         }
 
-        await this.archiver.finalize({
+        return {
             plotSvg,
             scoreJson,
             sessionMeta: {
@@ -785,6 +813,6 @@ export class RecordingPipeline {
                 emittedNotes: this.emittedNotes,
                 timings: this.timings,
             },
-        })
+        }
     }
 }

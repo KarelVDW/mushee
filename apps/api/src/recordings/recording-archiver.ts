@@ -4,6 +4,7 @@ import { finished } from 'stream/promises'
 
 import type { StorageService } from '../storage/storage.service'
 import { describeError } from './pipeline/describe-error'
+import type { DebugBundle, PipelineArchive } from './pipeline/recording-pipeline'
 
 /**
  * Archives one recording session to blob storage under
@@ -18,7 +19,7 @@ import { describeError } from './pipeline/describe-error'
  * archive, never to a failed recording — every failure lands in the log and
  * the session carries on.
  */
-export class RecordingArchiver {
+export class RecordingArchiver implements PipelineArchive {
     private readonly logger = new Logger(RecordingArchiver.name)
 
     private audioStream: Writable | null = null
@@ -69,7 +70,7 @@ export class RecordingArchiver {
      * Close the audio upload and write the debug artifacts. Call exactly once,
      * after the last chunk.
      */
-    async finalize(bundle: { plotSvg?: string; scoreJson?: string; sessionMeta?: object }): Promise<void> {
+    async finalize(bundle: DebugBundle): Promise<void> {
         if (this.audioStream && !this.audioFailed) {
             try {
                 this.audioStream.end()

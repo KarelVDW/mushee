@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 
-import type { PipelineHealth, RecordingPipeline, ScoreUpdate, SourceResolution } from '../../src/recordings/pipeline/recording-pipeline'
+import type {
+    PipelineArchive,
+    PipelineHealth,
+    RecordingPipeline,
+    ScoreUpdate,
+    SourceResolution,
+} from '../../src/recordings/pipeline/recording-pipeline'
 import type { RecordingArchiver } from '../../src/recordings/recording-archiver'
 import type { RecordingCreditBalance, RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { RecordingLock } from '../../src/recordings/recording-locks.service'
@@ -22,7 +28,7 @@ class FakePipeline {
     setOnHealth(cb: (health: PipelineHealth) => void) {
         this.health = cb
     }
-    setArchiver(_archiver: RecordingArchiver) {}
+    setArchiver(_archiver: PipelineArchive) {}
     setMeta() {}
     appendChunk(_buffer: Buffer) {}
     finalize() {
