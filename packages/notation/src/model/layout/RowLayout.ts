@@ -1,6 +1,6 @@
 import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES } from '../../engraving/constants'
 import type { Measure } from '../Measure'
-import { Resizer, type Sizeable } from '../util/Resizer'
+import { Resizer, type Sizeable } from './Resizer'
 import { availableRowWidth } from './rowWidth'
 import { Staff } from './Staff'
 import type { LayoutBarline, LayoutLine } from './types'

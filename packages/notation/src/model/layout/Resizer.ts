@@ -12,17 +12,15 @@ export type Sizeable = {
 }
 
 export class Resizer<T extends Sizeable> {
-    private _sizeMap: Map<T, number> = new Map()
-    constructor(
-        private elements: T[],
-        options?: { width?: number; maximumWidth?: number },
-    ) {
+    private readonly sizes: Map<T, number>
+
+    constructor(elements: T[], options?: { width?: number; maximumWidth?: number }) {
         const allotted: Map<T, number> = new Map()
         const deficits: Map<T, number> = new Map()
         const reserves: Map<T, number> = new Map()
 
-        const totalDefaults = sumBy(this.elements, (el) => el.default)
-        const totalMinimums = sumBy(this.elements, (el) => el.minimum)
+        const totalDefaults = sumBy(elements, (el) => el.default)
+        const totalMinimums = sumBy(elements, (el) => el.minimum)
 
         let totalWidth: number
         if (typeof options?.width === 'number') totalWidth = options.width
@@ -32,12 +30,12 @@ export class Resizer<T extends Sizeable> {
 
         if (totalMinimums - 0.0001 > totalWidth) throw new ResizeError()
 
-        const correction = this.elements.length > 0 ? (totalWidth - totalDefaults) / this.elements.length : 0
-        for (const sizeable of this.elements) {
-            const allotedWidth = sizeable.default + correction
-            allotted.set(sizeable, allotedWidth)
-            if (allotedWidth < sizeable.minimum) deficits.set(sizeable, sizeable.minimum - allotedWidth)
-            if (allotedWidth > sizeable.minimum) reserves.set(sizeable, allotedWidth - sizeable.minimum)
+        const correction = elements.length > 0 ? (totalWidth - totalDefaults) / elements.length : 0
+        for (const sizeable of elements) {
+            const allottedWidth = sizeable.default + correction
+            allotted.set(sizeable, allottedWidth)
+            if (allottedWidth < sizeable.minimum) deficits.set(sizeable, sizeable.minimum - allottedWidth)
+            if (allottedWidth > sizeable.minimum) reserves.set(sizeable, allottedWidth - sizeable.minimum)
         }
 
         if (deficits.size) {
@@ -52,11 +50,11 @@ export class Resizer<T extends Sizeable> {
                 allotted.set(el, allotted.get(el)! - take)
             }
         }
-        this._sizeMap = allotted
+        this.sizes = allotted
     }
 
     getSize(element: T) {
-        const size = this._sizeMap.get(element)
+        const size = this.sizes.get(element)
         if (typeof size !== 'number') throw new Error('Element not spaced in container')
         return size
     }

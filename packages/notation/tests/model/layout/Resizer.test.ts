@@ -1,4 +1,4 @@
-import { Resizer, type Sizeable } from '@mushee/notation/model/util/Resizer'
+import { Resizer, type Sizeable } from '@mushee/notation/model/layout/Resizer'
 import { describe, expect, it } from 'vitest'
 
 const sz = (def: number, min = 0): Sizeable => ({ default: def, minimum: min })

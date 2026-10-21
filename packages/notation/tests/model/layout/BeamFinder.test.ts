@@ -1,10 +1,10 @@
 import { Duration } from '@mushee/notation/model/Duration'
+import { BeamFinder } from '@mushee/notation/model/layout/BeamFinder'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { BeamFinder } from '@mushee/notation/model/util/BeamFinder'
 import { describe, expect, it } from 'vitest'
 
 const eighth = (name = 'C', octave = 4) => new Note({ duration: new Duration({ type: '8' }), pitch: new Pitch({ name, octave }) })

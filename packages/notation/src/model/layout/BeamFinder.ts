@@ -1,9 +1,9 @@
 import { BEAT_EPSILON } from '../Duration'
-import { Measure } from '../Measure'
-import { Note } from '../Note'
+import type { Measure } from '../Measure'
+import type { Note } from '../Note'
 import { STAFF_MIDDLE_LINE } from '../staffLines'
 
-export interface BeamGroup {
+export interface BeamedRun {
     notes: Note[]
     stemDir: 'up' | 'down'
 }
@@ -16,9 +16,9 @@ export interface BeamGroup {
  * eighths fall in threes. Pure grouping — the geometry is BeamLayout's job.
  */
 export class BeamFinder {
-    readonly groups: BeamGroup[] = []
+    readonly groups: BeamedRun[] = []
 
-    constructor(private measure: Measure) {
+    constructor(measure: Measure) {
         let currentNotes: Note[] = []
         let beat = 0
         const unit = measure.timeSignature.beamUnit
@@ -32,7 +32,7 @@ export class BeamFinder {
             currentNotes = []
         }
 
-        for (const note of this.measure.notes) {
+        for (const note of measure.notes) {
             if (!note.duration.isBeamable || note.isRest) {
                 flushGroup()
                 beat += note.duration.effectiveBeats
