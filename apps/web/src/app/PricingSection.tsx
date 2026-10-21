@@ -8,14 +8,20 @@ import { type Currency, formatMoney } from '@/lib/currency'
 import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
+interface PricingProps {
+    /** The tier cards' `location` on landing_cta_clicked. */
+    ctaLocation: string
+    /** The section's own eyebrow + headline; off when the page already frames it (the /pricing hero). */
+    intro?: boolean
+}
+
 /**
  * The pricing section — the tier cards, the professional tier, the one-time
  * packs teaser — shared by the landing page (#pricing) and the /pricing route.
  * Renders straight from the static plan catalogue so both pages work without
  * the API; in-app surfaces use the DB-driven `usePlanCatalogue()` instead.
  */
-/** `intro` — the section's own eyebrow + headline; off when a page already frames it (the /pricing hero). */
-export function Pricing({ ctaLocation, intro = true }: { ctaLocation: string; intro?: boolean }) {
+export function Pricing({ ctaLocation, intro = true }: PricingProps) {
     const currency = useDisplayCurrency()
     return (
         <section id="pricing" className={intro ? 'py-14 sm:py-22 px-5 sm:px-8' : 'pt-10 pb-14 sm:pt-12 sm:pb-22 px-5 sm:px-8'}>
@@ -58,7 +64,8 @@ export function Pricing({ ctaLocation, intro = true }: { ctaLocation: string; in
 /** The pricing section while the closed beta runs: the tier ladder and all
  *  prices stay hidden — they may still change as real costs surface — so the
  *  section only says what the beta costs (nothing) and that pricing follows
- *  at launch. Keeps the #pricing anchor the nav and terms page link to. */
+ *  at launch. Keeps the section's id="pricing", so a /#pricing link still
+ *  lands on it (the site's own links go to /pricing). */
 export function BetaPricing() {
     return (
         <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
