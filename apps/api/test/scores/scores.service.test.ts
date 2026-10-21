@@ -175,6 +175,28 @@ describe('duplicate', () => {
     })
 })
 
+describe('load / readDocument', () => {
+    it('an editing load primes the edit cache from storage', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1, null)
+        await expect(service.load('u1', 'src')).resolves.toEqual({ partList: {}, parts: [], stored: true })
+        expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
+        expect(cache.upsert).toHaveBeenCalledWith(SOURCE.id, { partList: {}, parts: [], stored: true })
+    })
+
+    it('a read-only load returns the same document without writing a cache row', async () => {
+        const { service, cache, storage } = makeService(tier(null), 1, null)
+        await expect(service.readDocument({ ...SOURCE })).resolves.toEqual({ partList: {}, parts: [], stored: true })
+        expect(storage.read).toHaveBeenCalledWith(SOURCE.storageKey)
+        expect(cache.upsert).not.toHaveBeenCalled()
+    })
+
+    it('a read-only load prefers the edit cache, unsaved edits included', async () => {
+        const { service, storage } = makeService(tier(null), 1, { partList: {}, parts: [{ id: 'P1' }] })
+        await expect(service.readDocument({ ...SOURCE })).resolves.toEqual({ partList: {}, parts: [{ id: 'P1' }] })
+        expect(storage.read).not.toHaveBeenCalled()
+    })
+})
+
 describe('flushIdleDocuments', () => {
     const idleRow = (scoreId: string, data: Record<string, unknown>) =>
         ({ scoreId, data, createdAt: new Date(0), updatedAt: new Date('2026-09-05T10:00:00Z') }) as CachedScore

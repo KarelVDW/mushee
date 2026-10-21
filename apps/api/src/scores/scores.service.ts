@@ -87,7 +87,8 @@ export class ScoresService {
         return this.scoreRepo.find({ where, order: { updatedAt: 'DESC' } })
     }
 
-    async findOneInternal(id: string): Promise<Score | null> {
+    /** A score by id with no owner check — for admin and maintenance callers only. */
+    async findById(id: string): Promise<Score | null> {
         return this.scoreRepo.findOneBy({ id })
     }
 
@@ -104,6 +105,15 @@ export class ScoresService {
      */
     async load(userId: string, id: string): Promise<Record<string, unknown>> {
         return this.loadDocument(await this.findOne(userId, id))
+    }
+
+    /**
+     * The read-only counterpart of load(): the same live document, without
+     * priming the edit cache. For every reader that won't edit (share page,
+     * admin console, duplicate's source).
+     */
+    async readDocument(score: Score): Promise<Record<string, unknown>> {
+        return this.loadDocument(score, { prime: false })
     }
 
     /**
@@ -170,7 +180,7 @@ export class ScoresService {
         if (!ScoresService.isShareToken(token)) throw new NotFoundException('Score not found')
         const score = await this.scoreRepo.findOneBy({ shareToken: token })
         if (!score) throw new NotFoundException('Score not found')
-        return { id: score.id, title: score.title, updatedAt: score.updatedAt, document: await this.loadDocument(score, { prime: false }) }
+        return { id: score.id, title: score.title, updatedAt: score.updatedAt, document: await this.readDocument(score) }
     }
 
     /** The shape share() mints — anything else is rejected before touching the database. */
@@ -241,7 +251,7 @@ export class ScoresService {
         let flushed = 0
         for (const cached of idle) {
             try {
-                const score = await this.findOneInternal(cached.scoreId)
+                const score = await this.findById(cached.scoreId)
                 if (!score) {
                     this.logger.warn(`Score ${cached.scoreId} not found in DB, removing from cache`)
                     await this.editCache.deleteByScoreId(cached.scoreId)
