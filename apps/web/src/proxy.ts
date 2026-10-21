@@ -1,8 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-// '/' must match exactly — as a prefix it would match every path and turn
-// this gate into a no-op.
-const publicExactPaths = ['/']
 const publicPathPrefixes = ['/login', '/signup', '/reset-password', '/pricing', '/privacy', '/terms', '/contact', '/s']
 
 // better-auth prefixes the cookie with __Secure- when its baseURL is HTTPS,
@@ -12,7 +9,9 @@ const sessionCookieNames = ['__Secure-better-auth.session_token', 'better-auth.s
 // Prefix matches stop at path-segment boundaries so e.g. a future
 // '/contact-sales' route isn't silently public because of '/contact'.
 function isPublic(pathname: string): boolean {
-    if (publicExactPaths.includes(pathname)) return true
+    // '/' must match exactly — as a prefix it would match every path and turn
+    // this gate into a no-op.
+    if (pathname === '/') return true
     return publicPathPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
@@ -40,7 +39,9 @@ export function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        // Skip static assets, SEO files, and the PostHog ingest proxy.
-        '/((?!_next/static|_next/image|favicon.ico|icon.svg|api|ingest|sitemap.xml|robots.txt|manifest.webmanifest|opengraph-image).*)',
+        // Skip Next internals, the PostHog ingest proxy, the root OG image, and
+        // any path with a file extension (public/ icons, favicon.ico,
+        // apple-icon.png, sitemap.xml, robots.txt, manifest.webmanifest).
+        '/((?!_next/|ingest/|opengraph-image|.*\\..*).*)',
     ],
 }

@@ -29,6 +29,15 @@ test('unauthed landing: sign-in and the hero CTA route to the auth pages', async
     await expect(page).toHaveURL(/\/signup$/)
 })
 
+test('unauthed visitors get the brand icons, not a login redirect', async ({ request }) => {
+    // The PWA manifest icons and the iOS home-screen icon are fetched without a
+    // session; the auth proxy must not bounce them to /login.
+    for (const path of ['/icon-192.png', '/apple-icon.png']) {
+        const response = await request.get(path, { maxRedirects: 0 })
+        expect(response.status(), path).toBe(200)
+    }
+})
+
 test('cookie banner: "Essential only" saves and stays dismissed across a reload', async ({ page }) => {
     await stayLocal(page)
     await page.goto('/')
