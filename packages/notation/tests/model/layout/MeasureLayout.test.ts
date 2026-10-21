@@ -273,6 +273,33 @@ describe('MeasureLayout', () => {
         })
     })
 
+    describe('attributes', () => {
+        it('lists every drawn clef, key and time signature left to right with its x and width', () => {
+            const score = makeScore(1)
+            const m = score.measures[0]
+            score.setKeySignature(m.firstNote, 2)
+            m.setClef(2, 'bass')
+            m.setKeySignature(3, 1)
+            const midClef = m.clefAtBeat(2)
+            const midKey = m.keyAtBeat(3)
+            if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
+            const layout = m.layout
+            expect(layout.attributes.map((a) => a.element)).toEqual([m.clef, m.keySignature, m.timeSignature, midClef, midKey])
+            for (const { element, x } of layout.attributes) expect(x).toBe(layout.getXForElement(element))
+            expect(layout.attributes[0].width).toBe(m.clef.layout.width.total)
+            expect(layout.attributes[2].width).toBe(m.timeSignature.layout.width.total)
+            expect(layout.attributes[3].width).toBe(midClef.layout.width.total)
+            expect(layout.attributes[1].width).toBe(m.keySignature.layout.width.total)
+        })
+
+        it('leaves out what the measure does not draw (a mid-row measure, a C-major key)', () => {
+            const score = makeScore(2)
+            expect(score.measures[1].layout.attributes).toEqual([])
+            const first = score.measures[0]
+            expect(first.layout.attributes.map((a) => a.element)).toEqual([first.clef, first.timeSignature])
+        })
+    })
+
     describe('note, key, and tuplet layout lookups', () => {
         it('noteLayoutFor returns the note layout that Note.layout delegates to', () => {
             const score = makeScore(1)

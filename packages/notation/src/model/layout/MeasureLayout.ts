@@ -22,6 +22,13 @@ import { TupletLayout } from './TupletLayout'
 /** An element that occupies horizontal space within a measure. */
 export type MeasureElement = Clef | KeySignature | TimeSignature | Note
 
+/** A drawn clef, key signature or time signature: its measure-local x and the width it occupies. */
+export interface MeasureAttribute {
+    element: Clef | KeySignature | TimeSignature
+    x: number
+    width: number
+}
+
 export interface MeasureLayoutContext {
     /** x of this measure within its row (row-local). */
     x: number
@@ -52,6 +59,8 @@ export class MeasureLayout {
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
     readonly barline: BarlineLayout | null
+    /** Every attribute glyph drawn in this measure, left to right: the leading run, then mid-measure changes. */
+    readonly attributes: ReadonlyArray<MeasureAttribute>
     readonly beams: BeamLayout[]
     readonly reuseSignature: string
 
@@ -91,7 +100,7 @@ export class MeasureLayout {
 
         // --- Element order: leading context, then notes merged with mid-measure changes by beat
         // (at equal beats: clefs before keys before the note). ---
-        const leading: MeasureElement[] = []
+        const leading: Array<Clef | KeySignature | TimeSignature> = []
         if (context.showsClef) leading.push(measure.clef)
         if (context.showsKeySignature && measure.keySignature.drawnAccidentals.length > 0) leading.push(measure.keySignature)
         if (context.showsTimeSignature) leading.push(measure.timeSignature)
@@ -130,9 +139,11 @@ export class MeasureLayout {
 
         const resizer = new Resizer(sizeables)
 
+        const attributes: MeasureAttribute[] = []
         let cursorX = 0
         for (const el of leading) {
             this._xMap.set(el, { x: cursorX, allottedWidth: widthOf(el).total })
+            attributes.push({ element: el, x: cursorX, width: widthOf(el).total })
             cursorX += widthOf(el).total
         }
         for (const el of sizeables) {
@@ -144,10 +155,12 @@ export class MeasureLayout {
                 cursorX -= totalChildWidth
                 for (const child of el.children) {
                     this._xMap.set(child, { x: cursorX, allottedWidth: 0 })
+                    attributes.push({ element: child, x: cursorX, width: widthOf(child).total })
                     cursorX += widthOf(child).total
                 }
             }
         }
+        this.attributes = attributes
 
         // --- Barline geometry ---
         const barlineType = measure.endBarline ?? 'single'
@@ -188,7 +201,7 @@ export class MeasureLayout {
     /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */
     private foldIntoPrevious(
         sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }>,
-        leading: MeasureElement[],
+        leading: Array<Clef | KeySignature | TimeSignature>,
         el: Clef | KeySignature,
         widthOf: (el: MeasureElement) => PhysicalWidth,
     ) {
