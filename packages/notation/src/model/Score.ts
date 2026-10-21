@@ -619,7 +619,10 @@ export class Score {
      * and is clipped to the group's end — freed slot space is padded with tuplet
      * rests by `replace` — so the group's span never changes. A change that covers
      * the whole group from its first slot reads better as plain notation, so it
-     * leaves tuplet space. Returns the note to select next, or null without a note.
+     * leaves tuplet space. A clip may need several tied values (half a subdivided
+     * group from its second slot). Returns the note to select next, or null without
+     * a note, for a value that can't be dotted, or when the clipped span can't be
+     * written at all (a sixth of a beat left by a lone 16th-triplet).
      */
     setDuration(note: Note | null | undefined, value: { type?: DurationType; dots?: number }): Note | null {
         if (!note) return null
@@ -637,9 +640,7 @@ export class Score {
                 durations = index === 0 ? Duration.fromBeats(remainder) : Duration.fromBeats(remainder, ratio)
             }
         }
-        /* v8 ignore next -- defensive: durations starts with one element and is only re-decomposed from a positive remainder, so it is never empty */
         if (!durations.length) return null
-        /* v8 ignore next -- the tie-spread branch never fires: a tuplet clip always reduces to a single written duration (durations.length === 1) */
         const values = durations.map((d, i) =>
             note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
         )
@@ -651,7 +652,8 @@ export class Score {
      * Toggle the note between plain and triplet notation. A plain note becomes three
      * notes of the next-shorter value (3:2) — its pitch on the first, rests after. A
      * note inside a tuplet collapses the whole group back to plain notes of the same
-     * total length, carrying the selected note's pitch. Returns the note to select
+     * total length, carrying the selected note's pitch — tied across several values
+     * when an incomplete group's length needs them. Returns the note to select
      * next, or null when nothing changed (no shorter value exists, or the group's
      * length isn't representable in plain notes).
      */
@@ -661,9 +663,7 @@ export class Score {
         if (tuplet) {
             const totalBeats = sumBy(tuplet.notes, (n) => n.duration.effectiveBeats)
             const durations = Duration.fromBeats(totalBeats)
-            /* v8 ignore next -- defensive: a tuplet group always spans 2× a plain note value, which decomposes exactly, so the sum always matches */
             if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
-            /* v8 ignore next 3 -- the tie-spread branch never fires: the collapsed group total is a single written duration (durations.length === 1) */
             const values = durations.map(
                 (d, i) =>
                     new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),

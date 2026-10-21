@@ -7,8 +7,17 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import type { DurationType } from '@mushee/notation/model/types'
 import { fill, makeScore, p, pitched, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
+
+/** A C4 written under a 3:2 ratio. */
+const tripletC = (type: DurationType, dots = 0) =>
+    new Note({ duration: new Duration({ type, dots, ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+
+/** Each note's written value: type, dots as '.', 't' inside a tuplet, '~start' when it ties on. */
+const writtenShape = (notes: Note[]) =>
+    notes.map((n) => `${n.duration.type}${'.'.repeat(n.duration.dots)}${n.duration.isTuplet ? 't' : ''}${n.tie === 'start' ? '~start' : ''}`)
 
 describe('Score', () => {
     describe('version & onChange', () => {
@@ -616,6 +625,25 @@ describe('Score', () => {
             const score = makeScore(1)
             expect(score.setDuration(null, { type: 'q' })).toBeNull()
         })
+
+        it('clipping inside a subdivided tuplet ties the remainder', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('16'), tripletC('8', 1), tripletC('8'), pitched('C', 4), pitched('C', 4), pitched('C', 4)])
+            // Half a triplet group is left from the second slot: a quarter and a 16th in tuplet space.
+            const next = m.score.setDuration(m.notes[1], { type: 'h', dots: 0 })
+            expect(writtenShape(m.notes.slice(0, 3))).toEqual(['16t', 'qt~start', '16t'])
+            expect(next).toBe(m.notes[1])
+            expect(m.score.tiePartner(m.notes[1])).toBe(m.notes[2])
+        })
+
+        it('a clip too short to write returns null', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('16'), pitched('C', 4), pitched('C', 4), pitched('C', 4)])
+            const before = [...m.notes]
+            // A lone 16th-triplet leaves a sixth of a beat, which no plain value spells.
+            expect(m.score.setDuration(m.notes[0], { type: 'q' })).toBeNull()
+            expect(m.notes).toEqual(before)
+        })
     })
 
     describe('toggleTuplet', () => {
@@ -684,6 +712,25 @@ describe('Score', () => {
         it('returns null without a note', () => {
             const score = makeScore(1)
             expect(score.toggleTuplet(null)).toBeNull()
+        })
+
+        it('collapsing an incomplete group ties across plain values', () => {
+            const m = new Score().addMeasure()
+            const dottedQuarter = new Note({ duration: new Duration({ type: 'q', dots: 1 }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            m.addNotes([tripletC('h'), tripletC('q'), tripletC('8'), tripletC('16'), dottedQuarter])
+            // The group spans two and a half beats: a half tied into an eighth.
+            const next = m.score.toggleTuplet(m.notes[0])
+            expect(writtenShape(m.notes)).toEqual(['h~start', '8', 'q.'])
+            expect(next).toBe(m.notes[0])
+        })
+
+        it('an incomplete group not writable in plain values returns null', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('8'), tripletC('8'), pitched('C', 4)])
+            const before = [...m.notes]
+            // Two eighth-triplets span two thirds of a beat, which no plain values spell.
+            expect(m.score.toggleTuplet(m.notes[0])).toBeNull()
+            expect(m.notes).toEqual(before)
         })
     })
 
