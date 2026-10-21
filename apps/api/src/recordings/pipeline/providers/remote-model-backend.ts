@@ -42,9 +42,10 @@ function bytesToF32(bytes: Buffer, count: number): Float32Array {
 
 /**
  * Runs a single model's forward pass in a remote inference service over gRPC.
- * One instance serves exactly one model (its own service + channel); the
- * pipeline composes per-model backends (see `createModelBackend`). The proto
- * contract is in `@mushee/inference-proto`.
+ * One instance serves exactly one model (its own service + channel);
+ * `createModelBackend` picks Local or Remote from env, and a second model would
+ * come back through `CompositeModelBackend`. The proto contract is in
+ * `@mushee/inference-proto`.
  */
 export class RemoteModelBackend implements ModelBackend {
     private readonly logger = new Logger(RemoteModelBackend.name)
