@@ -4,12 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { DialogPanel, DialogScrim, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
-import { getConsent, saveConsent } from '@/lib/consent'
-
-/** Reopens the cookie preferences dialog (e.g. from the footer link). */
-export function openCookieSettings(): void {
-    window.dispatchEvent(new Event('solkey:cookie-settings'))
-}
+import { getConsent, onConsentSettingsRequested, saveConsent } from '@/lib/consent'
 
 /**
  * GDPR consent banner + preferences dialog, mounted app-wide in Providers.
@@ -28,12 +23,11 @@ export function CookieConsent() {
         setDecided(consent !== null)
         setAnalyticsChoice(consent?.analytics ?? false)
 
-        const openSettings = () => {
+        // Re-read on every request: the stored choice may have changed since mount.
+        return onConsentSettingsRequested(() => {
             setAnalyticsChoice(getConsent()?.analytics ?? false)
             setSettingsOpen(true)
-        }
-        window.addEventListener('solkey:cookie-settings', openSettings)
-        return () => window.removeEventListener('solkey:cookie-settings', openSettings)
+        })
     }, [])
 
     const decide = (analytics: boolean) => {
