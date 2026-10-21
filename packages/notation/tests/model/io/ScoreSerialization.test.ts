@@ -1,6 +1,6 @@
-import type { MxmlMeasure, ScorePartwise } from '@mushee/notation/components/types'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
+import type { MxmlMeasure, ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { Measure } from '@mushee/notation/model/Measure'

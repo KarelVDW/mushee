@@ -7,17 +7,4 @@ export type { ScoreHighlight } from './HighlightLayer'
 export { getLineForY, getYForLine, getYForNote } from './noteUtils'
 export type { ClefClickEvent, KeySignatureClickEvent, SelectionMenuEvent, TempoClickEvent, TimeSignatureClickEvent } from './Score'
 export { Score } from './Score'
-export type {
-    ClefType,
-    DurationType,
-    MxmlAttributes,
-    MxmlBarline,
-    MxmlDirection,
-    MxmlMeasure,
-    MxmlMeasureEntry,
-    MxmlNote,
-    MxmlPart,
-    MxmlPartList,
-    MxmlScorePart,
-    ScorePartwise,
-} from './types'
+export type { ClefType, DurationType } from './types'

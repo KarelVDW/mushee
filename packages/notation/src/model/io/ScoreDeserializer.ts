@@ -1,15 +1,5 @@
 import { CLEF_DEFS } from '../../components/constants'
-import type {
-    BarlineType,
-    ClefType,
-    DurationType,
-    MxmlBarStyle,
-    MxmlMeasure,
-    MxmlNote,
-    MxmlNoteType,
-    ScorePartwise,
-    TieType,
-} from '../../components/types'
+import type { BarlineType, ClefType, TieType } from '../../components/types'
 import { Duration } from '../Duration'
 import { Instrument } from '../Instrument'
 import { Measure } from '../Measure'
@@ -17,6 +7,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+import { DURATION_TYPE, type MxmlBarStyle, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
 
 /** Default staff line per clef sign when MusicXML omits <line>. */
 const DEFAULT_CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 }
@@ -184,25 +175,13 @@ export class ScoreDeserializer {
         const tie = ScoreDeserializer.mxmlTieToTieType(entry.tie)
         return new Note({
             duration: new Duration({
-                type: entry.type ? ScoreDeserializer.mxmlNoteTypeToDurationType(entry.type) : 'q',
+                type: entry.type ? DURATION_TYPE[entry.type] : 'q',
                 dots: entry.dot,
                 ratio,
             }),
             pitch,
             tie,
         })
-    }
-
-    private static readonly NOTE_TYPE_MAP: Record<MxmlNoteType, DurationType> = {
-        whole: 'w',
-        half: 'h',
-        quarter: 'q',
-        eighth: '8',
-        '16th': '16',
-    }
-
-    private static mxmlNoteTypeToDurationType(type: MxmlNoteType): DurationType {
-        return ScoreDeserializer.NOTE_TYPE_MAP[type]
     }
 
     private static alterToAccidental(alter: number | undefined): string | undefined {

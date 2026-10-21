@@ -1,4 +1,4 @@
-import type { ScorePartwise } from '@mushee/notation/components/types'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 

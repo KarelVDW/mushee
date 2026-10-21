@@ -1,13 +1,5 @@
-import type {
-    MxmlAttributes,
-    MxmlBarline,
-    MxmlDirection,
-    MxmlMeasure,
-    MxmlMeasureEntry,
-    MxmlNote,
-    ScorePartwise,
-} from '../../components/types'
 import type { Score } from '../Score'
+import type { MxmlAttributes, MxmlBarline, MxmlDirection, MxmlMeasure, MxmlMeasureEntry, MxmlNote, ScorePartwise } from './MusicXml'
 import { ScoreSerializer } from './ScoreSerializer'
 
 /**

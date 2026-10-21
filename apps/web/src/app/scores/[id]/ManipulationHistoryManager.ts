@@ -1,5 +1,5 @@
-import type { ScorePartwise } from '@mushee/notation/components/types'
 import type { Score } from '@mushee/notation/model'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 

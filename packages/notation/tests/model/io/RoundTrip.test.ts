@@ -1,7 +1,7 @@
-import type { ScorePartwise } from '@mushee/notation/components/types'
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
 import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
 import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
 import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'

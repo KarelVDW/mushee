@@ -11,8 +11,8 @@ import {
     type TempoClickEvent,
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
-import type { ScorePartwise } from '@mushee/notation/components/types'
 import { Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'

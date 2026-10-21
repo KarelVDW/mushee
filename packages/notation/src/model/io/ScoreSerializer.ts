@@ -1,24 +1,22 @@
 import { CLEF_DEFS } from '../../components/constants'
-import type {
-    BarlineType,
-    ClefType,
-    DurationType,
-    MxmlBarStyle,
-    MxmlClefSign,
-    MxmlMeasureEntry,
-    MxmlNoteType,
-    MxmlStep,
-    ScorePartwise,
-    TieType,
-} from '../../components/types'
-
-const DIVISIONS = 12 // divisions per quarter note
-
+import type { BarlineType, ClefType, TieType } from '../../components/types'
+import type { Duration } from '../Duration'
 import type { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
-import { Note } from '../Note'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+import {
+    DIVISIONS,
+    MXML_NOTE_TYPE,
+    type MxmlBarStyle,
+    type MxmlClefSign,
+    type MxmlMeasureEntry,
+    type MxmlNote,
+    type MxmlPitch,
+    type MxmlStep,
+    type MxmlTie,
+    type ScorePartwise,
+} from './MusicXml'
 
 export class MeasureSerializer {
     constructor(readonly measure: Measure) {}
@@ -84,36 +82,19 @@ export class MeasureSerializer {
                 entries.push({
                     _type: 'direction' as const,
                     metronome: {
-                        beatUnit: MeasureSerializer.durationTypeToMxmlNoteType(tempoAtBeat.pulse.type),
+                        beatUnit: MXML_NOTE_TYPE[tempoAtBeat.pulse.type],
                         beatUnitDots: tempoAtBeat.pulse.dots,
                         perMinute: tempoAtBeat.pulseBpm,
                     },
                     sound: { tempo: tempoAtBeat.bpm },
                 })
             }
-            entries.push({
-                _type: 'note' as const,
-                ...(note.pitch
-                    ? {
-                          pitch: {
-                              step: note.pitch.name as MxmlStep,
-                              ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
-                              octave: note.pitch.octave,
-                          },
-                      }
-                    : { rest: {} }),
-                duration: MeasureSerializer.computeDivisions(note),
-                voice: '1',
-                type: MeasureSerializer.durationTypeToMxmlNoteType(note.duration.type),
-                ...(note.duration.dots > 0 && { dot: note.duration.dots }),
-                ...(note.tie && { tie: MeasureSerializer.tieTypeToMxmlTie(note.tie) }),
-                ...(note.inTuplet && {
-                    timeModification: {
-                        actualNotes: note.duration.ratio.actualNotes,
-                        normalNotes: note.duration.ratio.normalNotes,
-                    },
-                }),
-            })
+            const pitch: MxmlPitch | undefined = note.pitch && {
+                step: note.pitch.name as MxmlStep,
+                ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
+                octave: note.pitch.octave,
+            }
+            entries.push(ScoreSerializer.noteEntry(note.duration, pitch, note.tie && MeasureSerializer.tieTypeToMxmlTie(note.tie)))
         }
         // Clef/key changes past the last note's beat still carry into the next measure — emit them so they round-trip.
         while (nextClef < midClefs.length) emitClef(midClefs[nextClef++].type)
@@ -128,18 +109,6 @@ export class MeasureSerializer {
         }
 
         return { number: String(this.measure.score.getIndexForMeasure(this.measure) + 1), entries }
-    }
-
-    private static readonly DURATION_TYPE_MAP: Record<DurationType, MxmlNoteType> = {
-        w: 'whole',
-        h: 'half',
-        q: 'quarter',
-        '8': 'eighth',
-        '16': '16th',
-    }
-
-    private static durationTypeToMxmlNoteType(type: DurationType): MxmlNoteType {
-        return MeasureSerializer.DURATION_TYPE_MAP[type]
     }
 
     private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number; clefOctaveChange?: number } {
@@ -169,7 +138,7 @@ export class MeasureSerializer {
         return { beats: String(ts.beatAmount), beatType: String(ts.beatType) }
     }
 
-    private static tieTypeToMxmlTie(tie: TieType): Array<{ type: 'start' | 'stop' }> {
+    private static tieTypeToMxmlTie(tie: TieType): MxmlTie[] {
         switch (tie) {
             case 'start':
                 return [{ type: 'start' }]
@@ -179,18 +148,31 @@ export class MeasureSerializer {
                 return [{ type: 'stop' }, { type: 'start' }]
         }
     }
-
-    private static computeDivisions(note: Note): number {
-        const base: Record<DurationType, number> = { w: 48, h: 24, q: 12, '8': 6, '16': 3 }
-        let dur = base[note.duration.type]
-        if (note.duration.dots > 0) dur = dur * (2 - 1 / Math.pow(2, note.duration.dots))
-        if (note.inTuplet) dur = dur * (note.duration.ratio.normalNotes / note.duration.ratio.actualNotes)
-        return Math.round(dur)
-    }
 }
 
 export class ScoreSerializer {
     constructor(readonly score: Score) {}
+
+    /**
+     * One `<note>` entry of the wire format — shared by the serializer and the MusicXML
+     * importer, so both write a note value the same way. Keys are in the order saved
+     * documents have always had them, keeping re-saved JSON byte-identical.
+     */
+    static noteEntry(duration: Duration, pitch: MxmlPitch | undefined, tie?: MxmlTie[]): MxmlNote {
+        const { actualNotes, normalNotes } = duration.ratio
+        return {
+            _type: 'note',
+            ...(pitch ? { pitch } : { rest: {} }),
+            // effectiveBeats × DIVISIONS, multiplied in this order so a value that falls between
+            // divisions (a double-dotted 16th triplet is 3.5) rounds the way saved documents have it.
+            duration: Math.round(duration.beats * DIVISIONS * (normalNotes / actualNotes)),
+            voice: '1',
+            type: MXML_NOTE_TYPE[duration.type],
+            ...(duration.dots > 0 && { dot: duration.dots }),
+            ...(tie && { tie }),
+            ...(actualNotes !== 1 && { timeModification: { actualNotes, normalNotes } }),
+        }
+    }
 
     toInput(): ScorePartwise {
         const measures = this.score.measures.map((measure) => new MeasureSerializer(measure).serialize())

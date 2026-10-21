@@ -1,17 +1,3 @@
-import type {
-    DurationType,
-    MxmlAttributes,
-    MxmlBarStyle,
-    MxmlClefSign,
-    MxmlMeasure,
-    MxmlMeasureEntry,
-    MxmlNote,
-    MxmlNoteType,
-    MxmlPartList,
-    MxmlPitch,
-    MxmlStep,
-    ScorePartwise,
-} from '../../components/types'
 import { BEAT_EPSILON, Duration } from '../Duration'
 import type { Measure } from '../Measure'
 import { Pitch } from '../Pitch'
@@ -19,9 +5,23 @@ import type { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
 import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
+import {
+    DURATION_TYPE,
+    type MxmlAttributes,
+    type MxmlBarStyle,
+    type MxmlClefSign,
+    type MxmlMeasure,
+    type MxmlMeasureEntry,
+    type MxmlNote,
+    type MxmlNoteType,
+    type MxmlPartList,
+    type MxmlPitch,
+    type MxmlStep,
+    type ScorePartwise,
+} from './MusicXml'
 import { ScoreDeserializer } from './ScoreDeserializer'
+import { ScoreSerializer } from './ScoreSerializer'
 
-const DIVISIONS = 12 // divisions per quarter note in the JSON handed to ScoreDeserializer
 /**
  * Longest single note or forward we accept, in quarter-note beats (16 whole notes).
  * A garbled `<duration>` or a tiny `<divisions>` can make one note span millions of
@@ -29,8 +29,6 @@ const DIVISIONS = 12 // divisions per quarter note in the JSON handed to ScoreDe
  */
 const MAX_NOTE_BEATS = 64
 
-const NOTE_TYPES: Record<string, DurationType> = { whole: 'w', half: 'h', quarter: 'q', eighth: '8', '16th': '16' }
-const MXML_TYPES: Record<DurationType, MxmlNoteType> = { w: 'whole', h: 'half', q: 'quarter', '8': 'eighth', '16': '16th' }
 /** Quarter-note beats of every MusicXML note-type value — for metronome marks in other units. */
 const TYPE_BEATS: Record<string, number> = {
     maxima: 32,
@@ -295,7 +293,9 @@ export class MusicXmlImporter {
                 ? { actualNotes, normalNotes }
                 : undefined
 
-        const type = NOTE_TYPES[this.text(element, 'type') ?? '']
+        // Foreign values ('32nd', 'breve') have no model note value and are left to simplify().
+        const typeText = this.text(element, 'type')
+        const type = typeText && Object.hasOwn(DURATION_TYPE, typeText) ? DURATION_TYPE[typeText as MxmlNoteType] : undefined
         const dots = this.children(element, 'dot').length
         let durations: Duration[]
         if (type) {
@@ -312,7 +312,7 @@ export class MusicXmlImporter {
                 pitch && (back || forward)
                     ? [...(back ? [{ type: 'stop' as const }] : []), ...(forward ? [{ type: 'start' as const }] : [])]
                     : undefined
-            return { ...this.noteEntry(written, pitch), ...(tie && { tie }) }
+            return ScoreSerializer.noteEntry(written, pitch, tie)
         })
         this.entries.push(...pieces)
         this.lastNote = pieces
@@ -325,7 +325,7 @@ export class MusicXmlImporter {
         const duration = this.number(element, 'duration')
         if (!duration || duration <= 0 || duration / this.divisions > MAX_NOTE_BEATS) return
         const rests = new DurationSpeller(this.timeSignature).spell(this.fill, duration / this.divisions)
-        this.entries.push(...rests.map((written) => this.noteEntry(written, undefined)))
+        this.entries.push(...rests.map((written) => ScoreSerializer.noteEntry(written, undefined)))
         this.lastNote = []
         this.fill += rests.reduce((sum, d) => sum + d.effectiveBeats, 0)
     }
@@ -367,18 +367,6 @@ export class MusicXmlImporter {
     private simplify(beats: number, ratio: { actualNotes: number; normalNotes: number } | undefined): Duration[] {
         this.warn(WARN_SIMPLIFIED)
         return ratio ? Duration.fromBeats(beats, ratio) : new DurationSpeller(this.timeSignature).spell(this.fill, beats)
-    }
-
-    private noteEntry(written: Duration, pitch: MxmlPitch | undefined): MxmlNote {
-        return {
-            _type: 'note',
-            ...(pitch ? { pitch } : { rest: {} }),
-            duration: Math.round(written.effectiveBeats * DIVISIONS),
-            voice: '1',
-            type: MXML_TYPES[written.type],
-            ...(written.dots > 0 && { dot: written.dots }),
-            ...(written.ratio.actualNotes !== 1 && { timeModification: written.ratio }),
-        }
     }
 
     private static midiOf(pitch: MxmlPitch): number {
