@@ -6,7 +6,8 @@ import { Wordmark } from '@/components/ui'
 import { GetStartedButton } from './GetStartedButton'
 import { SignInLink } from './SignInLink'
 
-const SECTION_LINK_CLASS = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap max-md:hidden'
+const SECTION_LINK_CLASS =
+    'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap max-md:hidden'
 
 interface MarketingNavProps {
     /** The landing page's own links: its How it works and Features sections, and the pricing page. */

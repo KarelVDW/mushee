@@ -39,7 +39,16 @@ interface GetStartedButtonProps {
  * landing_cta_clicked on the way. A client island, so the pages around it
  * don't need the session themselves.
  */
-export function GetStartedButton({ location, size, emphasis, variant = 'primary', fullWidth, next, plan, children }: GetStartedButtonProps) {
+export function GetStartedButton({
+    location,
+    size,
+    emphasis,
+    variant = 'primary',
+    fullWidth,
+    next,
+    plan,
+    children,
+}: GetStartedButtonProps) {
     const { data: session } = useSession()
     const authed = !!session?.user
 

@@ -60,7 +60,10 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
                         back in a few minutes.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                        <button type="button" onClick={reset} style={{ ...capsule, background: BRAND.primaryContainer, color: BRAND.onPrimaryContainer }}>
+                        <button
+                            type="button"
+                            onClick={reset}
+                            style={{ ...capsule, background: BRAND.primaryContainer, color: BRAND.onPrimaryContainer }}>
                             Try again
                         </button>
                         <a href="/" style={{ ...capsule, background: BRAND.surfaceContainerLow, color: BRAND.onSurface }}>

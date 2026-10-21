@@ -22,7 +22,8 @@ export const metadata: Metadata = BETA_MODE
           alternates: { canonical: '/pricing' },
           openGraph: {
               title: 'Solkey pricing — free while the beta runs',
-              description: 'Every beta account gets the full editor, live audio-to-notation and playback, free of charge. Paid plans arrive at launch.',
+              description:
+                  'Every beta account gets the full editor, live audio-to-notation and playback, free of charge. Paid plans arrive at launch.',
           },
       }
     : {

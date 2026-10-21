@@ -51,7 +51,8 @@ export default function SignupPage() {
                     // A visitor who came from somewhere specific (a shared score) gets back there after onboarding,
                     // and one who picked a pricing card finds that tier preselected in its plan step.
                     const search = window.location.search
-                    const goToOnboarding = () => router.push(withPlan(withNext('/onboarding', nextPathFrom(search)), requestedPlanFrom(search)))
+                    const goToOnboarding = () =>
+                        router.push(withPlan(withNext('/onboarding', nextPathFrom(search)), requestedPlanFrom(search)))
                     void emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).then(goToOnboarding, goToOnboarding)
                 }
             })

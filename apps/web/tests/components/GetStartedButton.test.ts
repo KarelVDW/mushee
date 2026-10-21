@@ -58,7 +58,9 @@ describe('GetStartedButton', () => {
 
     it('takes the tier a pricing card names to signup, or to the plan dialog when signed in', () => {
         expect(hrefOf(html({ location: 'pricing', plan: 'studio', children: 'Go Studio' }))).toBe('/signup?plan=studio')
-        expect(hrefOf(html({ location: 'pricing', plan: 'pro', next: '/s/abc' }))).toBe(`/signup?next=${encodeURIComponent('/s/abc')}&plan=pro`)
+        expect(hrefOf(html({ location: 'pricing', plan: 'pro', next: '/s/abc' }))).toBe(
+            `/signup?next=${encodeURIComponent('/s/abc')}&plan=pro`,
+        )
         visitor.authed = true
         expect(hrefOf(html({ location: 'pricing', plan: 'arranger', children: 'Go Arranger' }))).toBe('/settings?plan=arranger')
     })

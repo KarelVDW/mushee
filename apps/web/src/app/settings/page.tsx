@@ -167,7 +167,9 @@ export default function SettingsPage() {
                                             <Icon name="mail" size={16} />
                                             support@solkey.io
                                         </a>
-                                        <Link href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        <Link
+                                            href="/contact"
+                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
                                             All contact options
                                         </Link>
                                     </div>
