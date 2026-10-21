@@ -79,8 +79,13 @@ export class Shortcut {
 
     /** Canonical identity (also the storage format) — equal ids fire on the same keystroke. */
     get id(): string {
-        const mods = [this.ctrl && 'Ctrl', this.alt && 'Alt', this.shift && 'Shift', this.meta && 'Meta'].filter(Boolean)
-        return [...mods, this.code].join('+')
+        return Shortcut.idOf(this.ctrl, this.alt, this.shift, this.meta, this.code)
+    }
+
+    /** The id format shared by physical-key ids and character ids: fixed modifier order, then the key. */
+    static idOf(ctrl: boolean, alt: boolean, shift: boolean, meta: boolean, key: string): string {
+        const mods = [ctrl && 'Ctrl', alt && 'Alt', shift && 'Shift', meta && 'Meta'].filter(Boolean)
+        return [...mods, key].join('+')
     }
 
     /**
@@ -158,7 +163,7 @@ export class Keybindings<C extends BindableCommand> {
     readonly isMac: boolean
     private readonly storageKey: string
     private readonly defaults = new Map<string, Shortcut | null>()
-    private readonly fixedIds = new Set<string>()
+    private readonly byId = new Map<string, C>()
     private readonly overrides = new Map<string, Shortcut | null>()
     private byShortcut = new Map<string, C>()
     /** Fixed (OS-convention) commands, indexed by character identity instead of physical key. */
@@ -181,7 +186,7 @@ export class Keybindings<C extends BindableCommand> {
         this.storageKey = options.storageKey ?? 'solkey:shortcuts'
         for (const command of commands) {
             this.defaults.set(command.id, command.defaultShortcut ? Shortcut.parse(command.defaultShortcut, this.isMac) : null)
-            if (command.fixed) this.fixedIds.add(command.id)
+            if (!this.byId.has(command.id)) this.byId.set(command.id, command)
         }
         this.load()
         this.reindex()
@@ -223,8 +228,7 @@ export class Keybindings<C extends BindableCommand> {
 
     /** Character identity for OS-convention matching: modifiers plus the character a key produces. */
     private static charId(ctrl: boolean, alt: boolean, shift: boolean, meta: boolean, key: string): string {
-        const mods = [ctrl && 'Ctrl', alt && 'Alt', shift && 'Shift', meta && 'Meta'].filter(Boolean)
-        return [...mods, key.toLowerCase()].join('+')
+        return Shortcut.idOf(ctrl, alt, shift, meta, key.toLowerCase())
     }
 
     /** A shortcut's character identity — from its recorded label, else its Key* code — or null for non-letter keys. */
@@ -235,8 +239,8 @@ export class Keybindings<C extends BindableCommand> {
     }
 
     /** Whether a command's shortcut is an OS convention that can never be changed. */
-    isFixed(commandId: string): boolean {
-        return this.fixedIds.has(commandId)
+    private isFixed(commandId: string): boolean {
+        return this.byId.get(commandId)?.fixed === true
     }
 
     /**
@@ -246,8 +250,8 @@ export class Keybindings<C extends BindableCommand> {
      * command's keystroke can't be given away.
      */
     rebind(commandId: string, shortcut: Shortcut): RebindResult<C> {
-        const self = this.commands.find((command) => command.id === commandId)
-        if (self?.fixed) return { ok: false, reservedBy: self }
+        const self = this.byId.get(commandId)
+        if (self && this.isFixed(commandId)) return { ok: false, reservedBy: self }
         // A keystroke that produces a fixed convention's character is reserved, whatever
         // physical key it sits on — it would be shadowed at resolve time anyway.
         const charId = this.charIdFor(shortcut)
@@ -264,14 +268,14 @@ export class Keybindings<C extends BindableCommand> {
 
     /** Remove a command's shortcut entirely (no-op for fixed commands). */
     unbind(commandId: string): void {
-        if (this.fixedIds.has(commandId)) return
+        if (this.isFixed(commandId)) return
         this.override(commandId, null)
         this.commit()
     }
 
     /** Put a command back on its default, unbinding whichever command holds that shortcut now. */
     reset(commandId: string): void {
-        if (this.fixedIds.has(commandId)) return
+        if (this.isFixed(commandId)) return
         const fallback = this.defaults.get(commandId)
         if (fallback) {
             const holder = this.byShortcut.get(fallback.id)
@@ -306,10 +310,7 @@ export class Keybindings<C extends BindableCommand> {
         } catch {
             /* malformed data — whatever applied before the bad entry stands */
         }
-        this.reindex()
-        this.persist()
-        this._version++
-        for (const listener of this.listeners) listener()
+        this.publish()
     }
 
     /** Record an override, dropping it when it lands back on the command's own default. */
@@ -320,12 +321,18 @@ export class Keybindings<C extends BindableCommand> {
         else this.overrides.set(commandId, shortcut)
     }
 
+    /** A user-made change: publish it, then report it for account sync. */
     private commit(): void {
+        this.publish()
+        this.onDidChange?.(this.toStored())
+    }
+
+    /** Make the current override set live: reindex, persist, and notify subscribers. */
+    private publish(): void {
         this.reindex()
         this.persist()
         this._version++
         for (const listener of this.listeners) listener()
-        this.onDidChange?.(this.toStored())
     }
 
     private reindex(): void {
@@ -370,7 +377,7 @@ export class Keybindings<C extends BindableCommand> {
     private applyStored(stored: StoredShortcuts | null): void {
         for (const [id, entry] of Object.entries(stored?.overrides ?? {})) {
             if (!this.defaults.has(id)) continue // the command no longer exists
-            if (this.fixedIds.has(id)) continue // stale override on a command that became fixed
+            if (this.isFixed(id)) continue // stale override on a command that became fixed
             if (entry === null) this.overrides.set(id, null)
             else if (typeof entry.keys === 'string') this.overrides.set(id, Shortcut.parse(entry.keys, this.isMac, entry.label))
         }
