@@ -1,6 +1,7 @@
+import { Logger } from '@nestjs/common'
 import { spawn } from 'child_process'
 import ffmpegPath from 'ffmpeg-static'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { AudioDecoder, StreamingDecoder } from '../../src/recordings/pipeline/audio-decoder'
 
@@ -118,5 +119,33 @@ describe('decoding with an input-format hint (real ffmpeg)', () => {
         })
         expect(decoded.samples.length).toBeGreaterThan(0)
         expect(decoded.duration).toBeLessThan(TONE_SEC)
+    })
+})
+
+describe('StreamingDecoder failure reporting (real ffmpeg)', () => {
+    it("logs ffmpeg's stderr when the stream cannot be decoded", async () => {
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
+        try {
+            const decoder = new StreamingDecoder(SAMPLE_RATE, { inputFormat: 'webm' })
+            decoder.write(Buffer.from('not a webm stream at all'.repeat(64)))
+            const samples = await decoder.finalize()
+            expect(samples.length).toBe(0)
+            expect(warn).toHaveBeenCalledTimes(1)
+            expect(warn.mock.calls[0][0]).toMatch(/^Streaming ffmpeg exited with \d+: \S/)
+        } finally {
+            warn.mockRestore()
+        }
+    })
+
+    it('stays quiet on a clean decode', async () => {
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
+        try {
+            const decoder = new StreamingDecoder(SAMPLE_RATE, { inputFormat: 'webm' })
+            decoder.write(await encodeTone(['-c:a', 'libopus', '-f', 'webm']))
+            expect((await decoder.finalize()).length).toBeGreaterThan(0)
+            expect(warn).not.toHaveBeenCalled()
+        } finally {
+            warn.mockRestore()
+        }
     })
 })

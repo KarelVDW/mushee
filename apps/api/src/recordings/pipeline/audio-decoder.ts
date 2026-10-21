@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process'
 import ffmpegPath from 'ffmpeg-static'
 
@@ -25,12 +26,15 @@ const DENOISE_FILTER = process.env.RECORDING_DENOISE_FILTER ?? 'afftdn=nr=12:nf=
 
 /**
  * Build the ffmpeg audio-filter chain shared by the one-shot and streaming
- * decoders. High-pass first (causal IIR, clears sub-bass rumble), then the
- * optional denoiser (fed rumble-free audio), then optional `loudnorm` (which
- * then normalizes the DENOISED level). See `DecodeOptions` for why `loudnorm`
- * is opt-out.
+ * decoders, applying `DecodeOptions`' defaults in this one place. High-pass
+ * first (causal IIR, clears sub-bass rumble that the onset head otherwise
+ * misreads as low-pitch onsets; its output prefix is stable across re-runs with
+ * longer inputs), then the optional denoiser (fed rumble-free audio), then
+ * optional `loudnorm` (which then normalizes the DENOISED level). See
+ * `DecodeOptions` for why `loudnorm` is opt-in.
  */
-function buildFilterChain(highpassHz: number, loudnorm: boolean, denoise: boolean): string {
+function buildFilterChain(opts: DecodeOptions = {}): string {
+    const { highpassHz = 80, loudnorm = false, denoise = false } = opts
     const filters = [`highpass=f=${highpassHz}`]
     if (denoise) filters.push(DENOISE_FILTER)
     if (loudnorm) filters.push('loudnorm=I=-16:TP=-3')
@@ -83,8 +87,8 @@ export interface DecodeOptions {
      * Stabilizes amplitude for downstream consumers that care, but DEPENDS ON
      * THE FULL INPUT — re-decoding a longer prefix of the same stream will
      * change earlier output samples, breaking any per-frame caching the
-     * provider does. Disable when the caller needs prefix-stable output.
-     * Defaults to true.
+     * provider does. Enable only when the caller does not need prefix-stable
+     * output. Defaults to false.
      */
     loudnorm?: boolean
 
@@ -135,12 +139,7 @@ export class AudioDecoder {
     }
 
     decode(buffer: Buffer, targetSampleRate: number, opts?: DecodeOptions): Promise<DecodedAudio> {
-        // High-pass clears sub-bass rumble that the onset head otherwise misreads
-        // as low-pitch onsets. It's a causal IIR, so the prefix of its output is
-        // stable across re-runs with longer inputs. loudnorm is optional because
-        // it's a look-ahead filter and breaks that property.
-        const highpassHz = opts?.highpassHz ?? 80
-        const filterChain = buildFilterChain(highpassHz, opts?.loudnorm ?? true, opts?.denoise ?? false)
+        const filterChain = buildFilterChain(opts)
 
         return new Promise<DecodedAudio>((resolve, reject) => {
             const proc = spawn(this.ffmpeg, decodeArgs(filterChain, targetSampleRate, opts?.inputFormat))
@@ -193,8 +192,10 @@ export class AudioDecoder {
  * view into it — is left intact).
  */
 export class StreamingDecoder {
+    private readonly logger = new Logger(StreamingDecoder.name)
     private readonly proc: ChildProcessWithoutNullStreams
-    private readonly errChunks: Buffer[] = []
+    /** The last `STDERR_TAIL_CHARS` of ffmpeg's stderr, logged if it exits with an error. */
+    private stderrTail = ''
     private readonly closed: Promise<void>
     private buf: Float32Array
     private len = 0
@@ -206,20 +207,28 @@ export class StreamingDecoder {
         readonly sampleRate: number,
         opts?: DecodeOptions,
     ) {
-        const filterChain = buildFilterChain(opts?.highpassHz ?? 80, opts?.loudnorm ?? true, opts?.denoise ?? false)
+        const filterChain = buildFilterChain(opts)
         this.buf = new Float32Array(sampleRate * 8) // ~8 s initial, grows as needed
         this.proc = spawn(resolveFfmpeg(), decodeArgs(filterChain, sampleRate, opts?.inputFormat))
 
         this.proc.stdout.on('data', (c: Buffer) => this.ingest(c))
-        this.proc.stderr.on('data', (c: Buffer) => this.errChunks.push(c))
+        // Always drained (a full stderr pipe would stall ffmpeg); only the tail is kept.
+        this.proc.stderr.on('data', (c: Buffer) => this.keepStderr(c.toString('utf8')))
         this.proc.stdin.on('error', (err: NodeJS.ErrnoException) => {
             // EPIPE is expected if ffmpeg exits before we finish writing; ignore it.
-            if (err.code !== 'EPIPE') this.errChunks.push(Buffer.from(String(err)))
+            if (err.code !== 'EPIPE') this.keepStderr(String(err))
         })
 
+        // Resolves on any exit — the PCM decoded so far is still the take — but a
+        // failing exit is logged with its stderr, or the decode would fail silently.
         this.closed = new Promise<void>((resolve, reject) => {
             this.proc.on('error', reject)
-            this.proc.on('close', () => resolve())
+            this.proc.on('close', (code, signal) => {
+                if (code !== 0) {
+                    this.logger.warn(`Streaming ffmpeg exited with ${code ?? signal}: ${this.stderrTail.trim() || 'no stderr'}`)
+                }
+                resolve()
+            })
         })
     }
 
@@ -255,6 +264,10 @@ export class StreamingDecoder {
         return this.samples()
     }
 
+    private keepStderr(text: string): void {
+        this.stderrTail = (this.stderrTail + text).slice(-STDERR_TAIL_CHARS)
+    }
+
     private ingest(chunk: Buffer): void {
         const data = this.carry.length ? Buffer.concat([this.carry, chunk]) : chunk
         const fullBytes = data.length - (data.length % 4)
@@ -281,3 +294,5 @@ export class StreamingDecoder {
 }
 
 const EMPTY = Buffer.alloc(0)
+/** How much of a streaming ffmpeg's stderr is kept for the failure log (~4 KB). */
+const STDERR_TAIL_CHARS = 4096
