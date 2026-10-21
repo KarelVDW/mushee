@@ -1,10 +1,10 @@
-import type { TieType } from '../components/types'
 import type { Clef } from './Clef'
 import { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
+import type { TieType } from './types'
 import { NoteWidth } from './width/NoteWidth'
 
 /**

@@ -1,8 +1,8 @@
 import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../../components/constants'
-import type { LayoutBarline, LayoutLine } from '../../components/types'
 import type { Measure } from '../Measure'
 import { Resizer, type Sizeable } from '../util/Resizer'
 import { availableRowWidth } from './rowWidth'
+import type { LayoutBarline, LayoutLine } from './types'
 
 export interface RowLayoutContext {
     index: number

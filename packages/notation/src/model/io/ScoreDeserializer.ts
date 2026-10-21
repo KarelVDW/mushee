@@ -1,5 +1,4 @@
 import { CLEF_DEFS } from '../../components/constants'
-import type { BarlineType, ClefType, TieType } from '../../components/types'
 import { Duration } from '../Duration'
 import { Instrument } from '../Instrument'
 import { Measure } from '../Measure'
@@ -7,6 +6,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+import type { BarlineType, ClefType, TieType } from '../types'
 import { BARLINE_TYPE, DURATION_TYPE, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
 
 /** Default staff line per clef sign when MusicXML omits <line>. */

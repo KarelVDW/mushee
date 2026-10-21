@@ -1,4 +1,3 @@
-import type { TieType } from '../../components/types'
 import { BEAT_EPSILON } from '../Duration'
 import { Instrument } from '../Instrument'
 import { KeySignature } from '../KeySignature'
@@ -7,6 +6,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+import type { TieType } from '../types'
 import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 

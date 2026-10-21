@@ -8,13 +8,13 @@ import {
     SPACE_ABOVE_STAFF,
     STAVE_LINE_DISTANCE,
 } from '../../components/constants'
-import type { BarlineType, LayoutBarline } from '../../components/types'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
+import type { BarlineType } from '../types'
 import { BeamFinder } from '../util/BeamFinder'
 import { Resizer, type Sizeable } from '../util/Resizer'
 import type { KeySignatureWidth } from '../width/KeySignatureWidth'
@@ -24,6 +24,7 @@ import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
 import { NoteLayout } from './NoteLayout'
 import { TupletLayout } from './TupletLayout'
+import type { LayoutBarline } from './types'
 
 /** An element that occupies horizontal space within a measure. */
 export type MeasureElement = Clef | KeySignature | TimeSignature | Note

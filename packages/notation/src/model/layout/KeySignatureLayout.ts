@@ -4,6 +4,7 @@ import type { Clef } from '../Clef'
 import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'
 import type { KeySignatureWidth } from '../width/KeySignatureWidth'
+import type { LayoutGlyph } from './types'
 
 /** One octave in staff-line units (7 diatonic steps ÷ 2). */
 const OCTAVE_LINES = 3.5
@@ -17,7 +18,7 @@ const ACCIDENTAL_GAP = 2
  */
 export class KeySignatureLayout {
     readonly id = crypto.randomUUID()
-    readonly accidentals: { glyphName: string; x: number; y: number }[]
+    readonly accidentals: LayoutGlyph[]
 
     constructor(context: { clef: Clef; drawnAccidentals: KeyAccidental[]; width: KeySignatureWidth }) {
         // Position each accidental on the line of the note it alters, under the clef in effect at this key's beat.

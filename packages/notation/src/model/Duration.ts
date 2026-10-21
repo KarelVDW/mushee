@@ -1,4 +1,4 @@
-import type { DurationType } from '../components/types'
+import type { DurationType } from './types'
 
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
 export const BEAT_EPSILON = 0.001

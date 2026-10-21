@@ -1,5 +1,5 @@
+import type { LayoutBarline } from '../model/layout/types'
 import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH, NOTATION_INK } from './constants'
-import type { LayoutBarline } from './types'
 
 interface BarlineProps {
     layout: LayoutBarline

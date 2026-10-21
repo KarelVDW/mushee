@@ -4,7 +4,7 @@ import { Glyph } from '@mushee/notation/components'
 import { CLEF_CONFIG, CLEF_DEFS, clefOctaveMarker } from '@mushee/notation/components/constants'
 import { getGlyphWidth } from '@mushee/notation/components/glyphUtils'
 import { getYForLine } from '@mushee/notation/components/noteUtils'
-import type { ClefType } from '@mushee/notation/components/types'
+import type { ClefType } from '@mushee/notation/model'
 
 import { Popover, PopoverOption } from '@/components/ui'
 

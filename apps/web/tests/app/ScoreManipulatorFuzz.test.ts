@@ -1,5 +1,4 @@
-import type { ClefType, DurationType } from '@mushee/notation/components/types'
-import { Note, Pitch } from '@mushee/notation/model'
+import { type ClefType, type DurationType, Note, Pitch } from '@mushee/notation/model'
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'

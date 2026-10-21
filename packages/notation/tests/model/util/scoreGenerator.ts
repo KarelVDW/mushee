@@ -1,5 +1,4 @@
 import { CLEF_DEFS } from '@mushee/notation/components/constants'
-import type { BarlineType, ClefType, DurationType } from '@mushee/notation/components/types'
 import { BEAT_EPSILON, Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Measure } from '@mushee/notation/model/Measure'
@@ -7,6 +6,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import type { BarlineType, ClefType, DurationType } from '@mushee/notation/model/types'
 
 /**
  * Seeded random scores for property tests: every meter, clef and key the model

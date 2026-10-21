@@ -7,6 +7,7 @@ import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
 import { Note, Pitch, Score as ScoreModel } from '../model'
 import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
+import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
 import {
     INTERACTION_BLUE,
@@ -27,7 +28,6 @@ import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { TempoMarking } from './TempoMarking'
 import { Tie } from './Tie'
-import type { ClefType } from './types'
 
 /** Vertical offset from the reference Y to the teardrop tip */
 const CURSOR_Y_OFFSET = 15

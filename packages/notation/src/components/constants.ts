@@ -1,4 +1,5 @@
-import type { ClefSign, ClefType } from './types'
+import type { ClefSign } from '../model/clefs'
+import type { ClefType } from '../model/types'
 
 /**
  * Canvas ink — the sanctuary charcoal from DESIGN.md. Notation is drawn in this, never pure

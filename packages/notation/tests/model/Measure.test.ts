@@ -1,4 +1,3 @@
-import type { ClefType } from '@mushee/notation/components/types'
 import { Clef } from '@mushee/notation/model/Clef'
 import { Duration } from '@mushee/notation/model/Duration'
 import { KeySignature } from '@mushee/notation/model/KeySignature'
@@ -8,6 +7,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import type { ClefType } from '@mushee/notation/model/types'
 import { defaults, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

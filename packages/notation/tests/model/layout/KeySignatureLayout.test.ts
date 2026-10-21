@@ -1,10 +1,10 @@
 import { getYForLine } from '@mushee/notation/components'
 import { STAVE_LINE_DISTANCE } from '@mushee/notation/components/constants'
-import type { ClefType } from '@mushee/notation/components/types'
 import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import type { ClefType } from '@mushee/notation/model/types'
 import { KeySignatureWidth } from '@mushee/notation/model/width/KeySignatureWidth'
 import { describe, expect, it } from 'vitest'
 

@@ -3,6 +3,7 @@ import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForNote } from '../../components/noteUtils'
 import type { Note } from '../Note'
 import type { NoteWidth } from '../width/NoteWidth'
+import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 
 /**
  * The geometry of a single note: notehead, stem, flag, ledger lines,
@@ -16,10 +17,10 @@ export class NoteLayout {
     readonly noteY: number
     readonly glyphName: string
     readonly width: NoteWidth
-    readonly flag: { glyphName: string; x: number; y: number; scale?: number } | undefined
-    readonly stem: { x: number; y1: number; y2: number } | undefined
-    readonly ledgerLines: { x1: number; y1: number; x2: number; y2: number }[]
-    readonly accidental: { x: number; y: number; glyphName: string } | undefined
+    readonly flag: LayoutGlyph | undefined
+    readonly stem: LayoutStem | undefined
+    readonly ledgerLines: LayoutLine[]
+    readonly accidental: LayoutGlyph | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
     constructor(note: Note, context: { accidentalGlyph: string | undefined; width: NoteWidth }) {
@@ -86,7 +87,7 @@ export class NoteLayout {
         }
     }
 
-    getStem(stemDir: 'up' | 'down') {
+    getStem(stemDir: 'up' | 'down'): LayoutStem {
         const stemX =
             stemDir === 'up' ? this.noteX + this.width.noteHeadWidth - this.width.stemWidth / 2 : this.noteX + this.width.stemWidth / 2
         return stemDir === 'up'

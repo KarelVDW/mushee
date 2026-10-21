@@ -1,8 +1,8 @@
 import { CLEF_LINE_OFFSET } from '../components/constants'
-import type { ClefType } from '../components/types'
 import { ClefLayout } from './layout/ClefLayout'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
+import type { ClefType } from './types'
 import { ClefWidth } from './width/ClefWidth'
 
 /**

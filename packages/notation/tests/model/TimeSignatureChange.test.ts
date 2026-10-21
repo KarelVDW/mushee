@@ -1,4 +1,3 @@
-import type { TieType } from '@mushee/notation/components/types'
 import { Duration } from '@mushee/notation/model/Duration'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
@@ -7,6 +6,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import type { TieType } from '@mushee/notation/model/types'
 import { makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

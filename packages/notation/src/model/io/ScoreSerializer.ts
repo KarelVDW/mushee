@@ -1,10 +1,10 @@
 import { CLEF_DEFS } from '../../components/constants'
-import type { ClefType, TieType } from '../../components/types'
 import type { Duration } from '../Duration'
 import type { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
+import type { ClefType, TieType } from '../types'
 import {
     BAR_STYLE,
     DIVISIONS,

@@ -1,6 +1,6 @@
-import type { DurationType } from '../../components/types'
 import { Duration } from '../Duration'
 import type { TimeSignature } from '../TimeSignature'
+import type { DurationType } from '../types'
 
 /** A writable value in sixteenth-note units. Coarsest first, so lookups pick the largest fit. */
 interface WrittenValue {

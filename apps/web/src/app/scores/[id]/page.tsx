@@ -2,8 +2,6 @@
 
 import {
     type ClefClickEvent,
-    type ClefType,
-    type DurationType,
     type KeySignatureClickEvent,
     Score as ScoreView,
     type ScoreHighlight,
@@ -11,7 +9,7 @@ import {
     type TempoClickEvent,
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
-import { Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
+import { type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'

@@ -1,6 +1,6 @@
 import { getGlyphWidth, getYForLine } from '@mushee/notation/components'
 import { NUM_STAFF_LINES } from '@mushee/notation/components/constants'
-import type { ClefType } from '@mushee/notation/components/types'
+import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

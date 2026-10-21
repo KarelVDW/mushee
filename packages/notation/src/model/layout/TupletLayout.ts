@@ -1,9 +1,9 @@
 import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '../../components/constants'
 import { getGlyphWidth } from '../../components/glyphUtils'
-import type { LayoutGlyph } from '../../components/types'
 import type { Note } from '../Note'
 import type { Tuplet } from '../Tuplet'
 import type { NoteLayout } from './NoteLayout'
+import type { LayoutGlyph } from './types'
 
 /**
  * The bracket and ratio number above (or below) a tuplet group. Built by

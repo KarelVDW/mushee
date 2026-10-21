@@ -1,12 +1,13 @@
 import { getGlyphWidth } from '../../components/glyphUtils'
 import { getYForLine } from '../../components/noteUtils'
 import type { TimeSignature } from '../TimeSignature'
+import type { LayoutGlyph } from './types'
 
 export class TimeSignatureLayout {
     readonly id = crypto.randomUUID()
     readonly x: number
-    readonly topDigits: { glyphName: string; x: number; y: number }[]
-    readonly bottomDigits: { glyphName: string; x: number; y: number }[]
+    readonly topDigits: LayoutGlyph[]
+    readonly bottomDigits: LayoutGlyph[]
 
     constructor(timeSignature: TimeSignature) {
         this.x = timeSignature.width.paddingLeft

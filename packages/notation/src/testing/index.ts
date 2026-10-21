@@ -1,4 +1,3 @@
-import type { ClefType, DurationType } from '../components/types'
 import { Clef } from '../model/Clef'
 import { Duration } from '../model/Duration'
 import { KeySignature } from '../model/KeySignature'
@@ -7,6 +6,7 @@ import { Note } from '../model/Note'
 import { Pitch } from '../model/Pitch'
 import { Score } from '../model/Score'
 import { TimeSignature } from '../model/TimeSignature'
+import type { ClefType, DurationType } from '../model/types'
 
 /** Build a fresh Score with `count` measures. Each measure is filled to maxBeats. */
 export function makeScore(count = 1): Score {

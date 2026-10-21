@@ -5,7 +5,7 @@
  * the product uses.
  */
 
-import type { ClefType } from '@mushee/notation/components/types'
+import type { ClefType } from '@mushee/notation/model'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'

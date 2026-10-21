@@ -1,8 +1,8 @@
 'use client'
 
-import { CLEF_DEFS, type ClefType, type DurationType, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
+import { CLEF_DEFS, getGlyphWidth, Glyph, GLYPH_SCALE } from '@mushee/notation/components'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/components/constants'
-import { type Note, type Score, TimeSignature } from '@mushee/notation/model'
+import { type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'

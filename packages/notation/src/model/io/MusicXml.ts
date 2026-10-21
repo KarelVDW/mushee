@@ -4,7 +4,7 @@
  * `_type` naming the entry element); ScoreSerializer writes it, ScoreDeserializer
  * reads it, and the file codecs translate it to and from real MusicXML.
  */
-import type { BarlineType, DurationType } from '../../components/types'
+import type { BarlineType, DurationType } from '../types'
 
 /** Divisions per quarter note in every document the editor writes. */
 export const DIVISIONS = 12
