@@ -35,8 +35,4 @@ export class SubscriptionTier {
     /** Whether the tier appears in plan pickers; beta is assigned, never sold. */
     @Column({ type: 'boolean', default: true })
     sellable: boolean
-
-    get hasUnlimitedRecording(): boolean {
-        return this.dailyRecordingCredits === null
-    }
 }

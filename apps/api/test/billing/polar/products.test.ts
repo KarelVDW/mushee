@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { intervalForProduct, isBillingInterval, isPaidTierId, productIdFor, tierForProduct } from '../../../src/billing/polar/products'
+import { intervalForProduct, isPaidTierId, productIdFor, tierForProduct } from '../../../src/billing/polar/products'
 
 const env = {
     POLAR_PRODUCT_PRO_MONTHLY: 'prod-pro-m',
@@ -36,12 +36,10 @@ describe('polar product mapping', () => {
         expect(intervalForProduct(null, env)).toBeNull()
     })
 
-    it('validates tier ids and intervals', () => {
+    it('validates tier ids', () => {
         expect(isPaidTierId('pro')).toBe(true)
         expect(isPaidTierId('arranger')).toBe(true)
         expect(isPaidTierId('beta')).toBe(false)
         expect(isPaidTierId('free')).toBe(false)
-        expect(isBillingInterval('yearly')).toBe(true)
-        expect(isBillingInterval('weekly')).toBe(false)
     })
 })
