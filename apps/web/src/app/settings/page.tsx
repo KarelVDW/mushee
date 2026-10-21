@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { TakesList } from '@/components/TakesList'
 import {
     Alert,
+    Avatar,
     Footer,
     Icon,
     type IconName,
@@ -119,7 +120,7 @@ export default function SettingsPage() {
                         {tab === 'profile' && (
                             <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
                                 <div className="flex items-center gap-4">
-                                    <Avatar name={name || 'You'} />
+                                    <Avatar name={name || 'You'} size="lg" />
                                 </div>
                                 <TextField label="Display name" value={name} onChange={setName} />
                                 <div className="flex flex-col gap-1.5">
@@ -273,19 +274,5 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                 )
             })}
         </nav>
-    )
-}
-
-function Avatar({ name }: { name: string }) {
-    const initials = name
-        .split(' ')
-        .map((s) => s[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    return (
-        <div className="w-16 h-16 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center font-label font-semibold text-[22px] leading-none">
-            {initials}
-        </div>
     )
 }

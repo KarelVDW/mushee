@@ -6,7 +6,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 're
 
 import { requestConsentSettings } from '@/lib/consent'
 
-import { ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
+import { Avatar, ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
 import { PrimaryButton } from './Buttons'
 import { Icon } from './Icon'
 
@@ -18,12 +18,6 @@ interface TopNavProps {
 export function TopNav({ user, onCreate }: TopNavProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const initials = (user ?? 'You')
-        .split(' ')
-        .map((s) => s[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
     const items: { label: string; href: string; match: (p: string) => boolean }[] = [
         { label: 'Library', href: '/scores', match: (p) => p === '/scores' || p === '/' },
         { label: 'Settings', href: '/settings', match: (p) => p.startsWith('/settings') },
@@ -74,12 +68,13 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                         onClick={() => router.push('/settings')}
                         title={user}
                         aria-label="Account settings"
-                        className={[
-                            'bg-surface-container text-on-surface border-0 rounded-full w-9 h-9 cursor-pointer',
-                            'font-label font-semibold text-[13px] leading-none inline-flex items-center justify-center',
-                            'hover:bg-surface-container-highest transition-colors duration-150 ease-solkey',
-                        ].join(' ')}>
-                        {initials}
+                        className="inline-flex border-0 bg-transparent p-0 rounded-full cursor-pointer">
+                        <Avatar
+                            name={user ?? 'You'}
+                            size="sm"
+                            tone="neutral"
+                            className="hover:bg-surface-container-highest transition-colors duration-150 ease-solkey"
+                        />
                     </button>
                 </div>
             </div>
