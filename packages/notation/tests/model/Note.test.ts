@@ -1,12 +1,12 @@
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { clef, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Replace a measure's leading rest with a pitched note and return the live note that lands at beat 0. */
-function placeNote(score: Score, measureIndex: number, name: string, octave: number): Note {
+function placeNote(score: Score, measureIndex: number, name: PitchStep, octave: number): Note {
     const measure = score.measures[measureIndex]
     const target = measure.firstNote as Note
     const [placed] = score.replace([target], [pitched(name, octave)])

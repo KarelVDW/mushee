@@ -1,4 +1,7 @@
-const NOTE_INDEX: Record<string, number> = {
+/** A pitch's letter name — MusicXML's `<step>`. */
+export type PitchStep = 'C' | 'D' | 'E' | 'F' | 'G' | 'A' | 'B'
+
+const NOTE_INDEX: Record<PitchStep, number> = {
     C: 0,
     D: 1,
     E: 2,
@@ -8,9 +11,9 @@ const NOTE_INDEX: Record<string, number> = {
     B: 6,
 }
 
-const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
+const SEMITONES: Record<PitchStep, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
-const INDEX_TO_NOTE = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+const INDEX_TO_NOTE: readonly PitchStep[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
 /** An accidental token, as the editor names an alteration: sharp, flat, their doubles, and natural. */
 export type Accidental = '#' | 'b' | '##' | 'bb' | 'n'
@@ -30,11 +33,11 @@ const ACCIDENTALS: ReadonlyArray<{ token: Accidental; alter: number; glyph: stri
  * pitch: the layout layer decides that in context (key, earlier notes in the bar).
  */
 export class Pitch {
-    readonly name: string
+    readonly name: PitchStep
     readonly alter: number
     readonly octave: number
 
-    constructor(value: { name: string; alter?: number; octave: number }) {
+    constructor(value: { name: PitchStep; alter?: number; octave: number }) {
         this.name = value.name
         this.alter = value.alter ?? 0
         this.octave = value.octave
@@ -90,6 +93,8 @@ export class Pitch {
     }
 
     toMidi(): number {
+        // The fallback (and transposed's throw) stay although the type rules an unknown step
+        // out: stored score JSON reaches Pitch without runtime validation.
         return (this.octave + 1) * 12 + (SEMITONES[this.name] ?? 0) + this.alter
     }
 

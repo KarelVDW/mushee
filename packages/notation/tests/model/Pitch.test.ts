@@ -1,4 +1,4 @@
-import { type Accidental, Pitch } from '@mushee/notation/model/Pitch'
+import { type Accidental, Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { describe, expect, it } from 'vitest'
 
 describe('Pitch', () => {
@@ -128,8 +128,9 @@ describe('Pitch', () => {
     })
 
     it('toMidi treats an unknown step name as zero semitones from the octave base', () => {
-        // SEMITONES has no entry for 'X', so it contributes 0 — (4+1)*12 = 60.
-        expect(new Pitch({ name: 'X', octave: 4 }).toMidi()).toBe(60)
+        // The type forbids it, but unvalidated stored JSON can still deliver one. SEMITONES has
+        // no entry for 'X', so it contributes 0 — (4+1)*12 = 60.
+        expect(new Pitch({ name: 'X' as PitchStep, octave: 4 }).toMidi()).toBe(60)
     })
 
     it('fromLine round-trips with line for natural notes', () => {
@@ -176,7 +177,7 @@ describe('Pitch', () => {
         })
 
         it('throws for an unknown step name', () => {
-            expect(() => new Pitch({ name: 'H', octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
+            expect(() => new Pitch({ name: 'H' as PitchStep, octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
         })
 
         it('transposes C5 down by a major 2nd to B♭4 (trumpet writes C, sounds B♭)', () => {

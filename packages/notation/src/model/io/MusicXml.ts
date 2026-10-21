@@ -4,6 +4,7 @@
  * `_type` naming the entry element); ScoreSerializer writes it, ScoreDeserializer
  * reads it, and the file codecs translate it to and from real MusicXML.
  */
+import type { PitchStep } from '../Pitch'
 import type { BarlineType, DurationType } from '../types'
 
 /** Divisions per quarter note in every document the editor writes. */
@@ -11,7 +12,8 @@ export const DIVISIONS = 12
 
 // --- MusicXML JSON types (input/output format, the subset Solkey stores) ---
 
-export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
+/** `<step>` — the model's own letter names. */
+export type MxmlStep = PitchStep
 export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th'
 export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none'
 export type MxmlStartStop = 'start' | 'stop'

@@ -1,16 +1,16 @@
 import type { KeySignatureLayout } from './layout/KeySignatureLayout'
 import type { Measure } from './Measure'
-import { Pitch } from './Pitch'
+import { Pitch, type PitchStep } from './Pitch'
 
 /** Order of sharps and flats in key signatures */
-const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'] as const
-const FLAT_ORDER = ['B', 'E', 'A', 'D', 'G', 'C', 'F'] as const
+const SHARP_ORDER: readonly PitchStep[] = ['F', 'C', 'G', 'D', 'A', 'E', 'B']
+const FLAT_ORDER: readonly PitchStep[] = ['B', 'E', 'A', 'D', 'G', 'C', 'F']
 
 /**
  * Canonical pitch (name + octave) each sharp/flat occupies in a treble-clef key signature.
  * KeySignatureLayout positions them via the active clef and normalizes by octaves into the staff.
  */
-const SHARP_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
+const SHARP_PITCHES: ReadonlyArray<{ name: PitchStep; octave: number }> = [
     { name: 'F', octave: 5 },
     { name: 'C', octave: 5 },
     { name: 'G', octave: 5 },
@@ -19,7 +19,7 @@ const SHARP_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
     { name: 'E', octave: 5 },
     { name: 'B', octave: 4 },
 ]
-const FLAT_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
+const FLAT_PITCHES: ReadonlyArray<{ name: PitchStep; octave: number }> = [
     { name: 'B', octave: 4 },
     { name: 'E', octave: 5 },
     { name: 'A', octave: 4 },
@@ -31,7 +31,7 @@ const FLAT_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
 
 export interface KeyAccidental {
     glyphName: 'accidentalSharp' | 'accidentalFlat' | 'accidentalNatural'
-    name: string
+    name: PitchStep
     octave: number
 }
 
@@ -64,15 +64,15 @@ export class KeySignature {
     }
 
     /** Note names that are sharp in this key */
-    get sharps(): string[] {
+    get sharps(): PitchStep[] {
         if (this.fifths <= 0) return []
-        return SHARP_ORDER.slice(0, this.fifths) as unknown as string[]
+        return SHARP_ORDER.slice(0, this.fifths)
     }
 
     /** Note names that are flat in this key */
-    get flats(): string[] {
+    get flats(): PitchStep[] {
         if (this.fifths >= 0) return []
-        return FLAT_ORDER.slice(0, -this.fifths) as unknown as string[]
+        return FLAT_ORDER.slice(0, -this.fifths)
     }
 
     /** The accidentals drawn for this key, in left-to-right order, with the pitch each occupies. */
@@ -100,14 +100,14 @@ export class KeySignature {
     }
 
     /** Semitone alteration this key signature applies to the given note name (+1 sharp, −1 flat, 0 natural). */
-    alterForNote(noteName: string): number {
+    alterForNote(noteName: PitchStep): number {
         return KeySignature.alterInKey(this.fifths, noteName)
     }
 
     /** Semitone alteration a key of `fifths` applies to a note name — {@link alterForNote} without an instance. */
-    static alterInKey(fifths: number, noteName: string): number {
-        if (fifths > 0 && SHARP_ORDER.indexOf(noteName as (typeof SHARP_ORDER)[number]) < fifths) return 1
-        if (fifths < 0 && FLAT_ORDER.indexOf(noteName as (typeof FLAT_ORDER)[number]) < -fifths) return -1
+    static alterInKey(fifths: number, noteName: PitchStep): number {
+        if (fifths > 0 && SHARP_ORDER.indexOf(noteName) < fifths) return 1
+        if (fifths < 0 && FLAT_ORDER.indexOf(noteName) < -fifths) return -1
         return 0
     }
 

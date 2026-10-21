@@ -1,4 +1,4 @@
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -85,7 +85,7 @@ describe('Clef', () => {
     })
 
     describe('octavesToCenter (octave normalization for recorded audio)', () => {
-        const pitches = (...specs: Array<[string, number]>) => specs.map(([name, octave]) => new Pitch({ name, octave }))
+        const pitches = (...specs: Array<[PitchStep, number]>) => specs.map(([name, octave]) => new Pitch({ name, octave }))
 
         it('returns 0 for an empty list', () => {
             expect(clef('treble').octavesToCenter([])).toBe(0)

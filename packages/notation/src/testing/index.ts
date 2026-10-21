@@ -5,7 +5,7 @@ import { ScoreSerializer } from '../model/io/ScoreSerializer'
 import type { KeySignature } from '../model/KeySignature'
 import { Measure } from '../model/Measure'
 import { Note } from '../model/Note'
-import { Pitch } from '../model/Pitch'
+import { Pitch, type PitchStep } from '../model/Pitch'
 import { Score } from '../model/Score'
 import { TimeSignature } from '../model/TimeSignature'
 import type { ClefType, DurationType, TieType } from '../model/types'
@@ -25,12 +25,12 @@ export function rest(type: DurationType = 'q'): Note {
 }
 
 /** Convenience: a pitched note. */
-export function pitched(name: string, octave: number, type: DurationType = 'q'): Note {
+export function pitched(name: PitchStep, octave: number, type: DurationType = 'q'): Note {
     return new Note({ duration: new Duration({ type }), pitch: new Pitch({ name, octave }) })
 }
 
 /** Convenience: one note of a 3:2 triplet (an eighth by default). */
-export function triplet(type: DurationType = '8', name = 'C', octave = 4): Note {
+export function triplet(type: DurationType = '8', name: PitchStep = 'C', octave = 4): Note {
     return new Note({ duration: new Duration({ type, ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name, octave }) })
 }
 
@@ -45,7 +45,7 @@ export function q(pitch?: Pitch, tie?: TieType): Note {
 }
 
 /** Convenience: a pitch with an explicit alteration. */
-export function p(name: string, octave: number, alter = 0): Pitch {
+export function p(name: PitchStep, octave: number, alter = 0): Pitch {
     return new Pitch({ name, octave, alter })
 }
 

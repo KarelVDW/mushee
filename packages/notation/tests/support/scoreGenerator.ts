@@ -89,7 +89,7 @@ export interface GeneratorOptions {
 }
 
 function randomPitch(rng: Rng): Pitch {
-    const name = rng.pick(['C', 'D', 'E', 'F', 'G', 'A', 'B'])
+    const name = rng.pick(['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const)
     const roll = rng.next()
     const alter = roll < 0.6 ? 0 : roll < 0.8 ? 1 : roll < 0.95 ? -1 : rng.pick([2, -2])
     // An unused draw (it once picked a stored accidental token Pitch no longer has), kept so every

@@ -52,7 +52,7 @@ class Rng {
 
 const DURATIONS: DurationType[] = ['w', 'h', 'q', '8', '16']
 const CLEFS: ClefType[] = ['treble', 'bass', 'alto', 'tenor', 'treble8vb']
-const NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+const NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const
 
 function startingScore(rng: Rng) {
     const score = makeScore(rng.int(1, 3))

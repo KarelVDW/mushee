@@ -2,12 +2,12 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { DisplayedAccidentals } from '@mushee/notation/model/layout/DisplayedAccidentals'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
-import { type Accidental, Pitch } from '@mushee/notation/model/Pitch'
+import { type Accidental, Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { describe, expect, it } from 'vitest'
 
-const q = (name: string, octave: number, accidental?: Accidental) =>
+const q = (name: PitchStep, octave: number, accidental?: Accidental) =>
     new Note({
         duration: new Duration({ type: 'q' }),
         pitch: new Pitch({ name, octave, alter: Pitch.accidentalToAlter(accidental) }),

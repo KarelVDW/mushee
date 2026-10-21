@@ -13,7 +13,6 @@ import {
     type MxmlMeasureEntry,
     type MxmlNote,
     type MxmlPitch,
-    type MxmlStep,
     type MxmlTie,
     type ScorePartwise,
 } from './MusicXml'
@@ -90,7 +89,7 @@ export class MeasureSerializer {
                 })
             }
             const pitch: MxmlPitch | undefined = note.pitch && {
-                step: note.pitch.name as MxmlStep,
+                step: note.pitch.name,
                 ...(note.pitch.alter !== 0 && { alter: note.pitch.alter }),
                 octave: note.pitch.octave,
             }
