@@ -100,8 +100,9 @@ async function bootstrap() {
         }),
     )
 
-    // Local/dev only: provision the demo accounts once migrations have run
-    // (module init above), so a fresh stack is usable straight after boot.
+    // Local/dev only: provision the demo accounts once runMigrationsLocked()
+    // above has brought the schema up to date, so a fresh stack is usable
+    // straight after boot.
     // Never in production — the demo password is public and the main demo
     // account has unlimited recording.
     if (process.env.SEED_DEMO_DATA === 'true') {
