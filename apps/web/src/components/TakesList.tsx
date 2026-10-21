@@ -25,6 +25,63 @@ export function formatTakeDate(iso: string, now = new Date()): string {
     return `${day}, ${time}`
 }
 
+interface TakePlayer {
+    /** Id of the take whose audio is playing, if any. */
+    playing: string | null
+    /** Plays `take`, or stops it when it is the one playing. */
+    toggle(take: RecordingSummary): void
+    stop(): void
+}
+
+/**
+ * One Audio element for the whole list (the cookie rides same-site). Every async
+ * callback first checks that its element is still the current one: a replaced
+ * take's late `error`, or the AbortError its pending `play()` rejects with when
+ * paused, must not clear the row now playing or raise a false toast. Unmounting
+ * stops whatever was playing.
+ */
+function useTakePlayer(): TakePlayer {
+    const [playing, setPlaying] = useState<string | null>(null)
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => () => audioRef.current?.pause(), [])
+
+    const stop = () => {
+        const audio = audioRef.current
+        if (audio) {
+            audio.onended = audio.onerror = null
+            audio.pause()
+        }
+        audioRef.current = null
+        setPlaying(null)
+    }
+
+    const toggle = (take: RecordingSummary) => {
+        if (playing === take.id) return stop()
+        stop()
+        const audio = new Audio(recordingAudioUrl(take.id))
+        const isCurrent = () => audioRef.current === audio
+        audio.onended = () => {
+            if (isCurrent()) setPlaying(null)
+        }
+        audio.onerror = () => {
+            if (!isCurrent()) return
+            setPlaying(null)
+            showToast("This take's audio couldn't be loaded.")
+        }
+        audioRef.current = audio
+        setPlaying(take.id)
+        track('take_played', { seconds: take.seconds })
+        void audio.play().catch((err: unknown) => {
+            if (!isCurrent() || (err instanceof DOMException && err.name === 'AbortError')) return
+            setPlaying(null)
+            showToast("This take's audio couldn't be played.")
+        })
+    }
+
+    return { playing, toggle, stop }
+}
+
 interface TakesListProps {
     takes: readonly RecordingSummary[]
     /** A second line per row (the score's title on cross-score lists). */
@@ -34,44 +91,18 @@ interface TakesListProps {
 }
 
 /**
- * Rows of takes with replay (one Audio element for the list; the cookie rides
- * same-site) and a two-step inline delete. Shared by the editor's Takes panel
- * and Settings → Your data. Unmounting stops whatever was playing.
+ * Rows of takes with replay (useTakePlayer) and a two-step inline delete.
+ * Shared by the editor's Takes panel and Settings → Your data.
  */
 export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps) {
     const remove = useDeleteRecording()
+    const player = useTakePlayer()
     const [confirming, setConfirming] = useState<string | null>(null)
-    const [playing, setPlaying] = useState<string | null>(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
-
-    const stopAudio = () => {
-        audioRef.current?.pause()
-        audioRef.current = null
-        setPlaying(null)
-    }
-    useEffect(() => () => audioRef.current?.pause(), [])
-
-    const togglePlay = (take: RecordingSummary) => {
-        if (playing === take.id) return stopAudio()
-        stopAudio()
-        const audio = new Audio(recordingAudioUrl(take.id))
-        audio.onended = () => setPlaying((current) => (current === take.id ? null : current))
-        audio.onerror = () => {
-            setPlaying(null)
-            showToast("This take's audio couldn't be loaded.")
-        }
-        audioRef.current = audio
-        setPlaying(take.id)
-        track('take_played', { seconds: take.seconds })
-        void audio.play().catch(() => {
-            setPlaying(null)
-            showToast("This take's audio couldn't be played.")
-        })
-    }
+    const { playing } = player
 
     const confirmDelete = (take: RecordingSummary) => {
         if (remove.isPending) return
-        if (playing === take.id) stopAudio()
+        if (playing === take.id) player.stop()
         remove.mutate(take.id, {
             onSuccess: () => {
                 setConfirming(null)
@@ -93,7 +124,7 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                         <IconButton
                             icon={playing === take.id ? 'pause' : 'play'}
                             size={32}
-                            onClick={() => togglePlay(take)}
+                            onClick={() => player.toggle(take)}
                             disabled={!take.hasAudio}
                             ariaLabel={playing === take.id ? 'Pause take' : 'Play take'}
                             title={take.hasAudio ? undefined : 'No audio was kept for this take'}
