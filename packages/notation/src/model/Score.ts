@@ -4,7 +4,8 @@ import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
 import type { Interval } from './Interval'
-import { MeasureSerializer } from './io/ScoreSerializer'
+import type { MxmlMeasure, ScorePatch } from './io/MusicXml'
+import { MeasureSerializer, ScoreSerializer } from './io/ScoreSerializer'
 import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
@@ -726,7 +727,8 @@ export class Score {
                     freeBeats = 0
                     const remainderDurations = Duration.fromBeats(remainderBeats)
                     remainderNotes = remainderDurations.map(
-                        (d, i) => new Note({ duration: d, pitch: note.pitch, ...(i !== remainderDurations.length - 1 && { tie: 'start' }) }),
+                        (d, i) =>
+                            new Note({ duration: d, pitch: note.pitch, ...(i !== remainderDurations.length - 1 && { tie: 'start' }) }),
                     )
                 }
             }
@@ -742,36 +744,33 @@ export class Score {
 
     // --- Persistence dirty-tracking ---
 
-    clearDirty() {
+    private clearDirty() {
         this._dirtyMeasures.clear()
         this._structureChanged = false
         this._instrumentDirty = false
     }
 
+    /**
+     * Have the next flush send the part list, though the instrument was seeded rather than set —
+     * for a score rebuilt from a snapshot whose instrument differs from the one last saved.
+     */
+    markInstrumentDirty(): void {
+        this._instrumentDirty = true
+    }
+
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
-    flushDirty(): { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } | null {
+    flushDirty(): ScorePatch | null {
         const hasMeasureChanges = this._structureChanged || this._dirtyMeasures.size > 0
         if (!hasMeasureChanges && !this._instrumentDirty) return null
 
-        const result: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } = {}
+        const result: ScorePatch = {}
 
-        if (this._instrumentDirty) {
-            result.partList = {
-                scoreParts: [
-                    {
-                        id: 'P1',
-                        partName: this._instrument.displayName,
-                        scoreInstrument: { id: 'P1-I1', instrumentName: this._instrument.displayName },
-                        midiInstrument: { id: 'P1-I1', midiProgram: this._instrument.gmProgram + 1 },
-                    },
-                ],
-            }
-        }
+        if (this._instrumentDirty) result.partList = new ScoreSerializer(this).partList()
 
         if (this._structureChanged) {
             result.allMeasures = this.measures.map((m) => new MeasureSerializer(m).serialize())
         } else if (this._dirtyMeasures.size > 0) {
-            const measures: Record<string, unknown> = {}
+            const measures: Record<string, MxmlMeasure> = {}
             for (const measure of this._dirtyMeasures) {
                 const index = this._indexByMeasure.value.get(measure)
                 if (index !== undefined) {
@@ -792,11 +791,11 @@ export class Score {
      * is safe: a structure change subsumes per-measure dirt, and per-measure
      * dirt is a set union.
      */
-    redirty(flush: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> }): void {
-        if (flush.partList) this._instrumentDirty = true
-        if (flush.allMeasures) this._structureChanged = true
-        if (flush.measures) {
-            for (const key of Object.keys(flush.measures)) {
+    redirty(patch: ScorePatch): void {
+        if (patch.partList) this._instrumentDirty = true
+        if (patch.allMeasures) this._structureChanged = true
+        if (patch.measures) {
+            for (const key of Object.keys(patch.measures)) {
                 const measure = this.measures[Number(key)]
                 if (measure) this._dirtyMeasures.add(measure)
             }

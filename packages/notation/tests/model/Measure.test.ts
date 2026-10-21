@@ -539,7 +539,7 @@ describe('Measure', () => {
         it('applyInheritedClef rewrites the leading clef without marking it explicit or dirty', () => {
             const score = makeScore(1)
             const m = score.measures[0]
-            score.clearDirty()
+            score.flushDirty()
             const v = m.version
             m.applyInheritedClef('bass')
             expect(m.clef.type).toBe('bass')

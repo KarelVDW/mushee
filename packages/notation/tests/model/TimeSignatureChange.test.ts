@@ -99,7 +99,7 @@ describe('Score.setTimeSignature', () => {
             const score = new Score(() => calls++)
             score.addMeasure().complete()
             score.addMeasure().complete()
-            score.clearDirty()
+            score.flushDirty()
             calls = 0
             const version = score.version
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))

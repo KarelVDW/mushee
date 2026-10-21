@@ -151,3 +151,25 @@ export interface ScorePartwise {
     partList: MxmlPartList
     parts: MxmlPart[]
 }
+
+/**
+ * A stored score the API could not read as MusicXML-JSON, handed back as its raw text
+ * (a MusicXML file kept verbatim). Never an input to ScoreDeserializer.
+ */
+export interface RawMusicXmlDocument {
+    raw: string
+}
+
+/** A score document as the API stores and returns it. */
+export type StoredScoreDocument = ScorePartwise | RawMusicXmlDocument
+
+/**
+ * The save PATCH for a score's unsaved edits (`Score.flushDirty`): the changed measures keyed
+ * by index — or every measure after a structural change — plus the part list when the
+ * instrument changed.
+ */
+export interface ScorePatch {
+    measures?: Record<string, MxmlMeasure>
+    allMeasures?: MxmlMeasure[]
+    partList?: MxmlPartList
+}

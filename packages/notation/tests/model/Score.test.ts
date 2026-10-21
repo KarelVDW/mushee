@@ -2,6 +2,7 @@ import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@mushee/notation/engraving/co
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Interval } from '@mushee/notation/model/Interval'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
@@ -13,11 +14,16 @@ import { describe, expect, it } from 'vitest'
 
 /** A C4 written under a 3:2 ratio. */
 const tripletC = (type: DurationType, dots = 0) =>
-    new Note({ duration: new Duration({ type, dots, ratio: { actualNotes: 3, normalNotes: 2 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+    new Note({
+        duration: new Duration({ type, dots, ratio: { actualNotes: 3, normalNotes: 2 } }),
+        pitch: new Pitch({ name: 'C', octave: 4 }),
+    })
 
 /** Each note's written value: type, dots as '.', 't' inside a tuplet, '~start' when it ties on. */
 const writtenShape = (notes: Note[]) =>
-    notes.map((n) => `${n.duration.type}${'.'.repeat(n.duration.dots)}${n.duration.isTuplet ? 't' : ''}${n.tie === 'start' ? '~start' : ''}`)
+    notes.map(
+        (n) => `${n.duration.type}${'.'.repeat(n.duration.dots)}${n.duration.isTuplet ? 't' : ''}${n.tie === 'start' ? '~start' : ''}`,
+    )
 
 describe('Score', () => {
     describe('version & onChange', () => {
@@ -61,11 +67,19 @@ describe('Score', () => {
             const misspelled = () => [q(p('G', 4, 1)), q(p('A', 4, -1)), q(p('D', 5, -1)), q()]
             const cases: [string, Note[], (score: Score) => unknown][] = [
                 ['transpose (whole score)', misspelled(), (s) => s.transpose(Interval.fromParts(2, 'major'))],
-                ['transpose (selection)', misspelled(), (s) => s.transpose(Interval.fromParts(2, 'major'), s.measures[0].notes.slice(0, 3))],
+                [
+                    'transpose (selection)',
+                    misspelled(),
+                    (s) => s.transpose(Interval.fromParts(2, 'major'), s.measures[0].notes.slice(0, 3)),
+                ],
                 ['minimizeAccidentals (whole score)', misspelled(), (s) => s.minimizeAccidentals()],
                 ['minimizeAccidentals (selection)', misspelled(), (s) => s.minimizeAccidentals(s.measures[0].notes.slice(0, 3))],
                 // E-major notes already spelled for E: the pass only re-keys, respelling nothing.
-                ['minimizeAccidentals (key only)', [q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))], (s) => s.minimizeAccidentals()],
+                [
+                    'minimizeAccidentals (key only)',
+                    [q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))],
+                    (s) => s.minimizeAccidentals(),
+                ],
                 ['setInstrument (transposing)', misspelled(), (s) => s.setInstrument(Instrument.Trumpet)],
                 ['setDuration', misspelled(), (s) => s.setDuration(s.measures[0].firstNote, { type: 'h' })],
                 ['toggleTuplet', misspelled(), (s) => s.toggleTuplet(s.measures[0].firstNote)],
@@ -732,13 +746,13 @@ describe('Score', () => {
     describe('dirty tracking', () => {
         it('flushDirty returns null when nothing changed', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             expect(score.flushDirty()).toBeNull()
         })
 
         it('flushDirty returns allMeasures after a structure change', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.addMeasure() // structure changes are tracked automatically
             const result = score.flushDirty()
             expect(result?.allMeasures).toHaveLength(2)
@@ -747,7 +761,7 @@ describe('Score', () => {
 
         it('flushDirty returns a measures map for content-only changes', () => {
             const score = makeScore(2)
-            score.clearDirty()
+            score.flushDirty()
             const first = score.firstMeasure
             if (!first) throw new Error('expected firstMeasure')
             first.setTempo(0, 120) // content mutation marks the measure dirty automatically
@@ -765,13 +779,13 @@ describe('Score', () => {
 
         it('clearDirty drops pending changes without serializing them', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             expect(score.flushDirty()).toBeNull()
         })
 
         it('redirty restores a failed measures flush so the next flush retries it', () => {
             const score = makeScore(2)
-            score.clearDirty()
+            score.flushDirty()
             const first = score.firstMeasure
             if (!first) throw new Error('expected firstMeasure')
             first.setTempo(0, 120)
@@ -785,8 +799,8 @@ describe('Score', () => {
 
         it('redirty restores structure and instrument flushes', () => {
             const score = makeScore(1)
-            score.clearDirty()
-            score.redirty({ allMeasures: [], partList: {} })
+            score.flushDirty()
+            score.redirty({ allMeasures: [], partList: { scoreParts: [] } })
             const retried = score.flushDirty()
             expect(retried?.allMeasures).toHaveLength(1)
             expect(retried?.partList).toBeDefined()
@@ -794,8 +808,8 @@ describe('Score', () => {
 
         it('redirty ignores measure indices that no longer exist', () => {
             const score = makeScore(1)
-            score.clearDirty()
-            score.redirty({ measures: { '5': {} } })
+            score.flushDirty()
+            score.redirty({ measures: { '5': { number: '6', entries: [] } } })
             expect(score.flushDirty()).toBeNull()
         })
     })
@@ -1215,7 +1229,7 @@ describe('Score', () => {
     describe('seedInstrument', () => {
         it('sets the instrument without marking the score dirty', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.seedInstrument(Instrument.Flute)
             expect(score.instrument).toBe(Instrument.Flute)
             // Unlike setInstrument, seeding is for deserialization and leaves nothing to flush.
@@ -1414,15 +1428,28 @@ describe('Score', () => {
     describe('flushDirty instrument changes', () => {
         it('emits a partList when the instrument changed', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.setInstrument(Instrument.Trumpet)
             const result = score.flushDirty()
             expect(result?.partList).toBeDefined()
-            const scoreParts = (result?.partList as { scoreParts: Array<Record<string, unknown>> }).scoreParts
-            expect(scoreParts[0].partName).toBe('Trumpet')
-            const midi = scoreParts[0].midiInstrument as { midiProgram: number }
+            const [part] = result?.partList?.scoreParts ?? []
+            expect(part.partName).toBe('Trumpet')
             // gmProgram is 0-indexed here, +1 in MusicXML.
-            expect(midi.midiProgram).toBe(Instrument.Trumpet.gmProgram + 1)
+            expect(part.midiInstrument?.midiProgram).toBe(Instrument.Trumpet.gmProgram + 1)
+            // The same part list a full document carries.
+            expect(result?.partList).toEqual(new ScoreSerializer(score).toInput().partList)
+        })
+
+        it('markInstrumentDirty sends a seeded instrument with the next flush', () => {
+            const score = makeScore(1)
+            score.flushDirty()
+            score.seedInstrument(Instrument.Flute)
+            expect(score.flushDirty()).toBeNull()
+            score.markInstrumentDirty()
+            const result = score.flushDirty()
+            expect(result?.partList?.scoreParts[0].partName).toBe('Flute')
+            expect(result?.measures).toBeUndefined()
+            expect(result?.allMeasures).toBeUndefined()
         })
 
         it('emits only a partList (no measure entries) when the instrument changes on an empty score', () => {
@@ -1438,7 +1465,7 @@ describe('Score', () => {
 
         it('skips a dirty measure that is no longer part of the score index', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
             // A stray measure's content mutations still mark it dirty, but it has no index.
             stray.addTempo(0, 100)
