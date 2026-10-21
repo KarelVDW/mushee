@@ -169,11 +169,10 @@ export function useAllRecordings(options?: { enabled?: boolean }) {
 }
 
 /** The takes recorded into one score, newest first. */
-export function useRecordings(scoreId: string, options?: { enabled?: boolean }) {
+export function useRecordings(scoreId: string) {
     return useQuery({
         queryKey: recordingKeys.list(scoreId),
         queryFn: () => listRecordings(scoreId),
-        enabled: options?.enabled ?? true,
     })
 }
 

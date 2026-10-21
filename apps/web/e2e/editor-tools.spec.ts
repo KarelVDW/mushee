@@ -184,7 +184,24 @@ test('popovers and the export menu dismiss with Escape without touching the scor
     await expect(page.getByRole('dialog', { name: 'Export score' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog', { name: 'Export score' })).toHaveCount(0)
+    // Focus goes back to the chip that opened the menu.
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeFocused()
 
+    expect(apiMock.patches.length).toBe(before)
+})
+
+test('keys pressed inside the export menu stay out of the score', async ({ page, apiMock }) => {
+    const before = apiMock.patches.length
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
+
+    await page.getByRole('button', { name: 'Export score' }).click()
+    const menu = page.getByRole('dialog', { name: 'Export score' })
+    await expect(menu.getByRole('button', { name: 'MusicXML' })).toBeFocused()
+
+    // Backspace would clear the selected note's pitch if it reached the editor.
+    await page.keyboard.press('Backspace')
+    await expect(menu).toBeVisible()
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
     expect(apiMock.patches.length).toBe(before)
 })
 

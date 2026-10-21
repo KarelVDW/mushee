@@ -1,8 +1,9 @@
 'use client'
 
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react'
 
 import { Eyebrow } from './Brand'
+import { FOCUSABLE_SELECTOR } from './Dialog'
 
 interface PopoverProps {
     /** Accessible dialog name, e.g. "Select clef". */
@@ -21,6 +22,12 @@ interface PopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** Rendered on the far side of the eyebrow, e.g. a live readout. */
     headerRight?: ReactNode
+    /**
+     * Move focus to the panel's first control on open, and back to the trigger (the first
+     * control in `anchorRef`) on close when focus was still inside — for menus opened from a
+     * chip (HeaderMenu). Off for the editor's attribute popovers, which leave focus on the score.
+     */
+    manageFocus?: boolean
     children: ReactNode
 }
 
@@ -29,8 +36,31 @@ interface PopoverProps {
  * by Escape or clicking outside. The chrome mirror of `DialogPanel` for
  * non-modal surfaces.
  */
-export function Popover({ ariaLabel, title, onDismiss, onKeyDown, className, anchorRef, headerRight, children }: PopoverProps) {
+export function Popover({
+    ariaLabel,
+    title,
+    onDismiss,
+    onKeyDown,
+    className,
+    anchorRef,
+    headerRight,
+    manageFocus = false,
+    children,
+}: PopoverProps) {
     const popRef = useRef<HTMLDivElement>(null)
+
+    // A layout effect, not a passive one: its cleanup runs while the panel is still in the
+    // document, so it can tell whether focus was inside it when the popover closed.
+    useLayoutEffect(() => {
+        const panel = popRef.current
+        if (!manageFocus || !panel) return
+        const trigger = anchorRef?.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ?? null
+        panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+        return () => {
+            // Only steal focus back when it is still inside the closing panel (not when the user clicked elsewhere).
+            if (panel.contains(document.activeElement)) trigger?.focus()
+        }
+    }, [manageFocus, anchorRef])
 
     // While a popover is open no key reaches the editor shortcuts underneath. The listener
     // sits on window in the capture phase, so it runs before the editor container's own
