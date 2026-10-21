@@ -1,7 +1,7 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import {
     ApiError,
@@ -15,6 +15,7 @@ import {
     deleteRecording,
     deleteScore,
     duplicateScore,
+    getAccountDeletionStatus,
     getBetaStatus,
     getBillingState,
     getScore,
@@ -231,18 +232,40 @@ export function useSaveKeyboardShortcuts() {
     })
 }
 
+const accountKeys = {
+    deletion: ['account', 'deletion'] as const,
+}
+
+/**
+ * Asks whether the signed-in account is soft-deleted (the sign-in flow's check). Always a
+ * fresh request and never retried: a cached answer could belong to the previous sign-in or
+ * account in this tab, and a retry backoff would hold sign-in up — the caller treats a
+ * failure as "not pending" and carries on.
+ */
+export function useCheckPendingDeletion() {
+    const queryClient = useQueryClient()
+    return useCallback(
+        () => queryClient.fetchQuery({ queryKey: accountKeys.deletion, queryFn: getAccountDeletionStatus, staleTime: 0, retry: false }),
+        [queryClient],
+    )
+}
+
 /** Soft-deletes the account (7-day grace period) after password re-auth. */
 export function useRequestAccountDeletion() {
+    const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (password: string) => requestAccountDeletion(password),
+        onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         // The dialog shows wrong-password feedback inline; a toast would double up.
         meta: { silentError: true },
     })
 }
 
 export function useReactivateAccount() {
+    const queryClient = useQueryClient()
     return useMutation({
         mutationFn: () => reactivateAccount(),
+        onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         meta: { errorMessage: "Couldn't reactivate your account. Please try again." },
     })
 }
