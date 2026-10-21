@@ -8,16 +8,7 @@
  */
 
 /** Pages a signed-out visitor may open. '/' is matched exactly — see isPublicPath. */
-export const PUBLIC_PATH_PREFIXES = [
-    '/login',
-    '/signup',
-    '/reset-password',
-    '/pricing',
-    '/privacy',
-    '/terms',
-    '/contact',
-    '/s',
-] as const
+export const PUBLIC_PATH_PREFIXES = ['/login', '/signup', '/reset-password', '/pricing', '/privacy', '/terms', '/contact', '/s'] as const
 
 /** Paths a pending beta user may still visit while waiting for approval. */
 export const BETA_ALLOWED_PATH_PREFIXES = ['/beta', '/onboarding', '/settings'] as const
