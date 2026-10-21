@@ -57,6 +57,25 @@ export interface SegmentOptions {
 }
 
 /**
+ * The shipping instrument-path segmentation — what every trajectory provider
+ * runs unless the profile overrides a field. No band sets `smoothFrames` and only
+ * noisy takes set `minFramesPerNote`, so these values are what actually runs.
+ * The frame counts are in provider frames: a provider whose frames cover less
+ * real time (the octave-down wrapper) scales them from here.
+ */
+export const SEGMENT_DEFAULTS: Required<Pick<SegmentOptions, 'confidenceThreshold' | 'minFramesPerNote' | 'pitchBinToleranceCents' | 'mode' | 'smoothFrames'>> = {
+    confidenceThreshold: 0.5,
+    minFramesPerNote: 4, // ≈ 80 ms at the at-pitch CREPE hop (20 ms)
+    pitchBinToleranceCents: 50,
+    // Semitone-merge segmentation with temporal smoothing: boundaries fall on
+    // semitone changes and brief transition/vibrato frames are absorbed. Validated
+    // to lift real sung/hummed F1 markedly while holding the synthetic-instrument
+    // corpus; far steadier than running-median on expressive monophonic input.
+    mode: 'semitone',
+    smoothFrames: 4,
+}
+
+/**
  * Segment a per-frame `cents` / `confidence` stream into note events. Runs of
  * voiced frames whose pitch sits within `pitchBinToleranceCents` of the
  * running median become single notes; voiced frames outside the band end the

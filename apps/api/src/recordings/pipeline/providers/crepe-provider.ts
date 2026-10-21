@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common'
 import { envOptionalNumber } from '../env'
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
-import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
+import { frameEnergy, SEGMENT_DEFAULTS, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
 import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
 import type { ModelBackend } from './model-backend'
@@ -75,19 +75,11 @@ const VITERBI_OPTS: ViterbiOptions = {
 }
 
 const SEGMENT_OPTS: SegmentOptions = {
+    ...SEGMENT_DEFAULTS,
     hopSize: HOP_SIZE,
     sampleRate: SAMPLE_RATE,
-    confidenceThreshold: 0.5,
     minFreqHz: 65,
     maxFreqHz: 1100,
-    minFramesPerNote: 4, // ≈ 80 ms at HOP_SIZE = 320
-    pitchBinToleranceCents: 50,
-    // Semitone-merge segmentation with temporal smoothing: boundaries fall on
-    // semitone changes and brief transition/vibrato frames are absorbed. Validated
-    // to lift real sung/hummed F1 markedly while holding the synthetic-instrument
-    // corpus; far steadier than running-median on expressive monophonic input.
-    mode: 'semitone',
-    smoothFrames: 4,
 }
 
 /**
