@@ -16,13 +16,17 @@ into two layers with a deliberate boundary between them.
   lock, credit check, pipeline); the gateway's only service.
 - `recordings.service.ts` — the takes behind the controller (list, replay,
   delete) and the account purge.
-- `recording-credits.service.ts` / `recording-locks.service.ts` — daily credit
-  accounting (per subscription tier) and the one-recording-per-user lock.
-- `recording-session.ts` — bridges one live session to the pipeline and
-  persists results via the TypeORM `Recording` repository.
+- `recording-credits.service.ts` / `recording-locks.service.ts` — credit
+  accounting (the daily budget per tier plus purchased pack seconds) and the
+  one-recording-per-user lock.
+- `recording-session.ts` — one live take: feeds the pipeline, meters credits
+  while audio streams, enforces the hard caps, and persists the `Recording` row.
+- `dto/recording-meta.dto.ts` — validation for the client's `meta` frame (the
+  socket bypasses Nest's ValidationPipe).
 - `recording-archiver.ts` — archives raw session audio and the debug bundle
-  through the `StorageService`; implements the pipeline's `PipelineArchive`
-  port, so the dependency runs root → pipeline only.
+  through the `StorageService`, and owns the take-folder layout (`folderFor`);
+  implements the pipeline's `PipelineArchive` port, so the dependency runs
+  root → pipeline only.
 - `entities/` — TypeORM entities (registered in `database/data-source.ts`).
 
 ## `pipeline/`: audio → notated measures

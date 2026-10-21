@@ -118,7 +118,6 @@ export class RecordingArchiver implements PipelineArchive {
     }
 }
 
-/** Container sniffing from the stream's first bytes (magic numbers). */
 /**
  * The containers browsers' MediaRecorder produces, by magic bytes: the same table
  * names the object's extension when the audio is written and its content type
@@ -143,6 +142,7 @@ const CONTAINERS: ReadonlyArray<{ extension: string; contentType: string; matche
 ]
 const UNKNOWN_CONTAINER = { extension: '.bin', contentType: 'application/octet-stream' }
 
+/** Container sniffing from the stream's first bytes (magic numbers). */
 export function sniffContainer(buffer: Buffer): { extension: string; contentType: string } {
     if (buffer.length < 4) return UNKNOWN_CONTAINER
     const match = CONTAINERS.find((container) => container.matches(buffer))

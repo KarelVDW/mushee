@@ -9,7 +9,7 @@ import type { StorageProvider } from './storage-provider'
 const DEFAULT_LOCAL_DIR = resolve(process.cwd(), 'storage')
 
 /**
- * Blob storage for user data (score MusicXML, recording audio + debug
+ * Blob storage for user data (score documents, recording audio + debug
  * bundles), delegating to a {@link StorageProvider} picked from the
  * environment:
  *
