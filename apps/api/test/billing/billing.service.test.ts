@@ -145,6 +145,11 @@ describe('createCheckout', () => {
         await expect(service.createCheckout(USER, 'pro', 'monthly')).rejects.toBeInstanceOf(ServiceUnavailableException)
     })
 
+    it('answers 503, not 400, when Polar and the product are both unconfigured', async () => {
+        const { service } = makeService()
+        await expect(service.createCheckout(USER, 'studio', 'yearly')).rejects.toBeInstanceOf(ServiceUnavailableException)
+    })
+
     it('rejects tier/interval combinations without a configured product', async () => {
         configurePolar(fakePolar())
         const { service } = makeService()
@@ -180,6 +185,11 @@ describe('createPackCheckout', () => {
     it('answers 503 when Polar is not configured', async () => {
         const { service } = makeService()
         await expect(service.createPackCheckout(USER, 'single')).rejects.toBeInstanceOf(ServiceUnavailableException)
+    })
+
+    it('answers 503, not 400, when Polar and the pack product are both unconfigured', async () => {
+        const { service } = makeService()
+        await expect(service.createPackCheckout(USER, 'album')).rejects.toBeInstanceOf(ServiceUnavailableException)
     })
 
     it('rejects packs without a configured product', async () => {

@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
+import type { Polar } from '@polar-sh/sdk'
 
 import { isBetaMode } from '../beta/beta-config'
 import { RecordingCreditsService } from '../recordings/recording-credits.service'
@@ -65,12 +66,7 @@ export class BillingService {
         }
     }
 
-    /**
-     * Create a Polar checkout session and return its hosted URL. The customer
-     * IP is forwarded because sessions are created server-side: Polar picks
-     * the presentment currency (USD/EUR) by geolocating that IP — without it,
-     * every customer would be priced from the server's location.
-     */
+    /** Create a Polar checkout session for a subscription plan and return its hosted URL. */
     async createCheckout(
         user: { id: string; email: string },
         tierId: PaidTierId,
@@ -80,21 +76,15 @@ export class BillingService {
         if (isBetaMode()) {
             throw new ForbiddenException('Plans cannot be purchased during the beta — everyone is on the beta plan.')
         }
+        // Unconfigured billing answers 503 before an unconfigured product's 400.
         const polar = this.requirePolar()
-        const productId = productIdFor(tierId, interval)
-        if (!productId) {
-            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
-        }
-
-        const checkout = await polar.checkouts.create({
-            products: [productId],
-            externalCustomerId: user.id,
-            customerEmail: user.email,
-            customerIpAddress: customerIp,
-            successUrl: `${this.webAppUrl()}/settings?checkout=success`,
-            metadata: { userId: user.id },
-        })
-        return { url: checkout.url }
+        return this.hostedCheckout(
+            polar,
+            user,
+            this.planProductId(tierId, interval),
+            { successQuery: 'checkout=success', metadata: { userId: user.id } },
+            customerIp,
+        )
     }
 
     /**
@@ -110,14 +100,37 @@ export class BillingService {
         if (!productId) {
             throw new BadRequestException(`The ${packId} pack is not available yet.`)
         }
+        return this.hostedCheckout(
+            polar,
+            user,
+            productId,
+            { successQuery: 'pack=success', metadata: { userId: user.id, packId } },
+            customerIp,
+        )
+    }
 
+    /**
+     * The one Polar checkout payload, shared by plans and packs: linked to the
+     * user as Polar's external customer, returning to settings with
+     * `successQuery`. The customer IP is forwarded because sessions are
+     * created server-side: Polar picks the presentment currency (USD/EUR) by
+     * geolocating that IP — without it, every customer would be priced from
+     * the server's location.
+     */
+    private async hostedCheckout(
+        polar: Polar,
+        user: { id: string; email: string },
+        productId: string,
+        opts: { successQuery: string; metadata: Record<string, string> },
+        customerIp?: string,
+    ): Promise<{ url: string }> {
         const checkout = await polar.checkouts.create({
             products: [productId],
             externalCustomerId: user.id,
             customerEmail: user.email,
             customerIpAddress: customerIp,
-            successUrl: `${this.webAppUrl()}/settings?pack=success`,
-            metadata: { userId: user.id, packId },
+            successUrl: `${this.webAppUrl()}/settings?${opts.successQuery}`,
+            metadata: opts.metadata,
         })
         return { url: checkout.url }
     }
@@ -143,10 +156,7 @@ export class BillingService {
         if (!row?.polarSubscriptionId) {
             throw new BadRequestException('No active subscription to change — start a checkout instead.')
         }
-        const productId = productIdFor(tierId, interval)
-        if (!productId) {
-            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
-        }
+        const productId = this.planProductId(tierId, interval)
         await polar.subscriptions.update({
             id: row.polarSubscriptionId,
             subscriptionUpdate: { productId },
@@ -195,6 +205,15 @@ export class BillingService {
             if ((statusCode ?? status) === 404) return
             throw err
         }
+    }
+
+    /** The Polar product selling a plan; 400 when this environment has none configured. */
+    private planProductId(tierId: PaidTierId, interval: BillingInterval): string {
+        const productId = productIdFor(tierId, interval)
+        if (!productId) {
+            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
+        }
+        return productId
     }
 
     private requirePolar() {
