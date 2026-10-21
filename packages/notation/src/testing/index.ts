@@ -1,6 +1,6 @@
-import { Clef } from '../model/Clef'
+import type { Clef } from '../model/Clef'
 import { Duration } from '../model/Duration'
-import { KeySignature } from '../model/KeySignature'
+import type { KeySignature } from '../model/KeySignature'
 import { Measure } from '../model/Measure'
 import { Note } from '../model/Note'
 import { Pitch } from '../model/Pitch'

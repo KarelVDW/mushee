@@ -1,7 +1,7 @@
 import { Bravura } from '../../engraving/Bravura'
-import { Clef } from '../Clef'
+import type { Clef } from '../Clef'
 import { ClefLayout } from './ClefLayout'
-import { PhysicalWidth } from './PhysicalWidth'
+import type { PhysicalWidth } from './PhysicalWidth'
 
 export class ClefWidth implements PhysicalWidth {
     readonly paddingLeft: number = 4

@@ -1,6 +1,6 @@
 import { Bravura } from '../../engraving/Bravura'
 import type { KeyAccidental } from '../KeySignature'
-import { PhysicalWidth } from './PhysicalWidth'
+import type { PhysicalWidth } from './PhysicalWidth'
 
 /** Horizontal gap between adjacent key-signature accidentals. */
 export const ACCIDENTAL_GAP = 2

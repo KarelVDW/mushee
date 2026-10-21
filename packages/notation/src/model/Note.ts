@@ -1,10 +1,10 @@
 import type { Clef } from './Clef'
-import { Duration } from './Duration'
+import type { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
 import { NoteLayout } from './layout/NoteLayout'
 import { NoteWidth } from './layout/NoteWidth'
 import type { Measure } from './Measure'
-import { Pitch } from './Pitch'
+import type { Pitch } from './Pitch'
 import { STAFF_MIDDLE_LINE } from './staffLines'
 import type { TieType } from './types'
 

@@ -1,5 +1,5 @@
 import { Bravura } from '../../engraving/Bravura'
-import { Clef } from '../Clef'
+import type { Clef } from '../Clef'
 import { CLEF_DEFS, type ClefDef, type ClefSign } from '../clefs'
 import type { ClefType } from '../types'
 import { Staff } from './Staff'

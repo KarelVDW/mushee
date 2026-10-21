@@ -1,6 +1,6 @@
 import { Bravura } from '../../engraving/Bravura'
 import type { TimeSignature } from '../TimeSignature'
-import { PhysicalWidth } from './PhysicalWidth'
+import type { PhysicalWidth } from './PhysicalWidth'
 
 export class TimeSignatureWidth implements PhysicalWidth {
     readonly paddingLeft: number = 4

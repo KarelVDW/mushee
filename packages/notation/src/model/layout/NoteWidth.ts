@@ -1,6 +1,6 @@
 import { Bravura } from '../../engraving/Bravura'
 import type { Note } from '../Note'
-import { PhysicalWidth } from './PhysicalWidth'
+import type { PhysicalWidth } from './PhysicalWidth'
 
 export class NoteWidth implements PhysicalWidth {
     readonly paddingLeft: number = 4

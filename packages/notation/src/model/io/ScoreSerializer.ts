@@ -1,9 +1,9 @@
 import { CLEF_DEFS } from '../clefs'
 import type { Duration } from '../Duration'
 import type { KeySignature } from '../KeySignature'
-import { Measure } from '../Measure'
-import { Score } from '../Score'
-import { TimeSignature } from '../TimeSignature'
+import type { Measure } from '../Measure'
+import type { Score } from '../Score'
+import type { TimeSignature } from '../TimeSignature'
 import type { ClefType, TieType } from '../types'
 import {
     BAR_STYLE,

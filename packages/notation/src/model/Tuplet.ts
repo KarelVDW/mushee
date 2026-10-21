@@ -1,6 +1,6 @@
 import type { TupletLayout } from './layout/TupletLayout'
 import type { Measure } from './Measure'
-import { Note } from './Note'
+import type { Note } from './Note'
 
 /**
  * A group of notes written under one tuplet ratio. Derived per measure version

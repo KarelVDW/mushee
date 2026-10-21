@@ -1,5 +1,5 @@
 import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '../../engraving/constants'
-import { Note } from '../Note'
+import type { Note } from '../Note'
 import type { BeamedRun } from './BeamFinder'
 import type { NoteLayout } from './NoteLayout'
 import type { LayoutBeamSegment, LayoutStem } from './types'

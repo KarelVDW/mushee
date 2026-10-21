@@ -3,7 +3,7 @@ import { Duration } from '@mushee/notation/model/Duration'
 import type { TieLayout } from '@mushee/notation/model/layout/TieLayout'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
-import { Score } from '@mushee/notation/model/Score'
+import type { Score } from '@mushee/notation/model/Score'
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
