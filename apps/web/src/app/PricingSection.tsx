@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 
-import { Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
+import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 /**
  * The pricing section — the tier cards, the professional tier, the one-time
  * packs teaser — shared by the landing page (#pricing) and the /pricing route.
  * Renders straight from the static plan catalogue so both pages work without
- * the API; in-app surfaces use the DB-driven `usePlans()` instead.
+ * the API; in-app surfaces use the DB-driven `usePlanCatalogue()` instead.
  */
 /** `intro` — the section's own eyebrow + headline; off when a page already frames it (the /pricing hero). */
 export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => void; intro?: boolean }) {
@@ -114,7 +114,7 @@ function PacksTeaser({ currency }: { currency: Currency }) {
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
-                Not ready for a subscription? One-time minute packs, from {formatMoney(6, currency)}
+                Not ready for a subscription? One-time minute packs, from {formatMoney(CHEAPEST_PACK.price, currency)}
             </button>
             {open && (
                 <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
@@ -154,11 +154,7 @@ function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currenc
             ].join(' ')}>
             <div className="flex justify-between items-start">
                 <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
-                {emphasis && (
-                    <span className="font-label font-semibold text-[10px] leading-none uppercase tracking-[0.12em] bg-secondary-soft text-on-secondary-soft px-2.5 py-1.5 rounded-full">
-                        Best value
-                    </span>
-                )}
+                {emphasis && <Badge tone="secondary">Best value</Badge>}
             </div>
             <div className="flex items-baseline gap-1.5">
                 <span className="font-display font-bold text-[40px] tracking-[-0.03em]">

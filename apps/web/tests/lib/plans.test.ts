@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
-import { BETA_PLAN, CREDIT_PACKS, PLAN_TIERS, planById, planFeatures, planPrice, recordingBudgetLabel, scoreLimitLabel } from '@/lib/plans'
+import type { Plan } from '@/lib/api'
+import {
+    BETA_PLAN,
+    CHEAPEST_PACK,
+    CREDIT_PACKS,
+    isPaidTier,
+    isPlanTierId,
+    PLAN_TIERS,
+    planById,
+    PlanCatalogue,
+    planFeatures,
+    planPrice,
+    recordingBudgetLabel,
+} from '@/lib/plans'
 
 describe('plan catalogue', () => {
     it('lists the four sellable tiers with unique ids', () => {
@@ -50,8 +63,8 @@ describe('plan catalogue', () => {
     })
 
     it('formats score caps, with the free tier capped and the rest open', () => {
-        expect(scoreLimitLabel(5)).toBe('Up to 5 scores')
-        expect(scoreLimitLabel(null)).toBe('As many scores as you like')
+        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: 5, features: [] })[1]).toBe('Up to 5 scores')
+        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: null, features: [] })[1]).toBe('As many scores as you like')
         expect(planById('free').maxScores).toBe(5)
         expect(PLAN_TIERS.filter((p) => p.id !== 'free').every((p) => p.maxScores === null)).toBe(true)
     })
@@ -61,9 +74,10 @@ describe('plan catalogue', () => {
         expect(planFeatures(pro)[0]).toBe('20 min of recording / day')
         expect(planFeatures(pro)[1]).toBe('As many scores as you like')
         expect(planFeatures(planById('free'))[1]).toBe('Up to 5 scores')
-        // Re-tuned database entitlements override the static fallbacks.
-        expect(planFeatures(pro, 600)[0]).toBe('10 min of recording / day')
-        expect(planFeatures(pro, 600, 20)[1]).toBe('Up to 20 scores')
+        // A plan merged with re-tuned database entitlements shows those, not the static fallbacks.
+        const merged = { ...pro, dailyRecordingSeconds: 600, maxScores: 20 }
+        expect(planFeatures(merged)[0]).toBe('10 min of recording / day')
+        expect(planFeatures(merged)[1]).toBe('Up to 20 scores')
         expect(planFeatures(pro).slice(2)).toEqual(pro.features)
     })
 })
@@ -83,10 +97,85 @@ describe('credit packs', () => {
         }
     })
 
+    it('quotes the cheapest pack and compares the single pack against Songwriter from the catalogue', () => {
+        expect(CHEAPEST_PACK.id).toBe('single')
+        expect(CREDIT_PACKS[0].compare('usd')).toBe('Songwriter gives you 20 min every day for $3 more a month.')
+        expect(CREDIT_PACKS[0].compare('eur')).toBe('Songwriter gives you 20 min every day for €3 more a month.')
+    })
+
     it('prices larger packs at a gently declining per-minute rate', () => {
         const rates = CREDIT_PACKS.map((p) => p.price / p.minutes)
         for (let i = 1; i < rates.length; i++) {
             expect(rates[i]).toBeLessThan(rates[i - 1])
         }
+    })
+})
+
+describe('tier ids', () => {
+    it('knows which tiers Polar sells', () => {
+        expect(isPaidTier('pro')).toBe(true)
+        expect(isPaidTier('studio')).toBe(true)
+        expect(isPaidTier('arranger')).toBe(true)
+        expect(isPaidTier('free')).toBe(false)
+        expect(isPaidTier('beta')).toBe(false)
+    })
+
+    it('recognises only the statically decorated tier ids', () => {
+        expect(PLAN_TIERS.every((p) => isPlanTierId(p.id))).toBe(true)
+        expect(isPlanTierId('beta')).toBe(false)
+        expect(isPlanTierId('team')).toBe(false)
+    })
+})
+
+describe('PlanCatalogue', () => {
+    // The database catalogue, re-tuned against the static fallbacks so the merge is visible.
+    const API_PLANS: Plan[] = [
+        { id: 'free', name: 'Sketchbook', dailyRecordingCredits: 240, maxScores: 3, sellable: true },
+        { id: 'pro', name: 'Songwriter', dailyRecordingCredits: 1500, maxScores: null, sellable: true },
+        { id: 'beta', name: 'Insider', dailyRecordingCredits: 3600, maxScores: 50, sellable: false },
+        { id: 'studio', name: 'Studio', dailyRecordingCredits: 10800, maxScores: null, sellable: true },
+        { id: 'team', name: 'Team', dailyRecordingCredits: null, maxScores: null, sellable: true },
+    ]
+
+    it('stands in with the static catalogue while the API has not answered', () => {
+        const plans = new PlanCatalogue(undefined)
+        expect(plans.sellable).toBe(PLAN_TIERS)
+        expect(plans.beta).toBe(BETA_PLAN)
+        expect(plans.nextAfter('free')?.id).toBe('pro')
+        expect(plans.maxScoresFor('free')).toBe(5)
+    })
+
+    it('offers the sellable API tiers in API order, with database names and limits over the static decoration', () => {
+        const plans = new PlanCatalogue(API_PLANS)
+        // Beta is not sellable; 'team' has no static decoration to show it with.
+        expect(plans.sellable.map((p) => p.id)).toEqual(['free', 'pro', 'studio'])
+        const free = plans.byId('free')
+        expect(free).toMatchObject({ name: 'Sketchbook', dailyRecordingSeconds: 240, maxScores: 3 })
+        expect(free?.icon).toBe(planById('free').icon)
+        expect(free?.priceMonthly).toBe(0)
+        expect(plans.byId('pro')?.priceMonthly).toBe(planById('pro').priceMonthly)
+        expect(plans.byId('beta')).toBeUndefined()
+    })
+
+    it('merges the database beta plan into its static decoration', () => {
+        const plans = new PlanCatalogue(API_PLANS)
+        expect(plans.beta).toEqual({ ...BETA_PLAN, name: 'Insider', dailyRecordingSeconds: 3600, maxScores: 50 })
+        // Without a beta row the static plan stands.
+        expect(new PlanCatalogue(API_PLANS.filter((p) => p.id !== 'beta')).beta).toBe(BETA_PLAN)
+    })
+
+    it('names the next tier up the sellable ladder, and none at the top or off it', () => {
+        const plans = new PlanCatalogue(API_PLANS)
+        expect(plans.nextAfter('free')?.name).toBe('Songwriter')
+        expect(plans.nextAfter('pro')?.name).toBe('Studio')
+        expect(plans.nextAfter('studio')).toBeUndefined()
+        expect(plans.nextAfter('beta')).toBeUndefined()
+    })
+
+    it('reads score caps from every API plan, beta included, falling back to the static cap', () => {
+        const plans = new PlanCatalogue(API_PLANS)
+        expect(plans.maxScoresFor('free')).toBe(3)
+        expect(plans.maxScoresFor('beta')).toBe(50)
+        expect(plans.maxScoresFor('arranger')).toBe(planById('arranger').maxScores)
     })
 })

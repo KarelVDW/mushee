@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 
-import { BETA_MODE, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
+import { formatMoney } from '@/lib/currency'
+import { BETA_MODE, CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
 import { SITE_URL } from '@/lib/siteUrl'
 
 import { PRICING_FAQ } from './faq'
 import { PricingPage } from './PricingPage'
+
+/** The cheapest paid plan's monthly price — the "plans from …" figure. */
+const PLANS_FROM = Math.min(...PLAN_TIERS.filter((tier) => tier.priceMonthly > 0).map((tier) => tier.priceMonthly))
 
 export const metadata: Metadata = {
     title: 'Pricing',
@@ -13,7 +17,7 @@ export const metadata: Metadata = {
     alternates: { canonical: '/pricing' },
     openGraph: {
         title: 'Solkey pricing — pay for recording time, nothing else',
-        description: 'Free to start. Plans from $9 a month, one-time minute packs from $6. Every plan gets the full editor.',
+        description: `Free to start. Plans from ${formatMoney(PLANS_FROM, 'usd')} a month, one-time minute packs from ${formatMoney(CHEAPEST_PACK.price, 'usd')}. Every plan gets the full editor.`,
     },
 }
 

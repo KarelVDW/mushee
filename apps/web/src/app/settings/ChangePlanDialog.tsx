@@ -3,11 +3,11 @@
 import { useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
-import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { BusyNotice, DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
-import type { BillingState } from '@/lib/api'
-import { type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
-import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
+import type { BillingInterval, BillingState } from '@/lib/api'
+import { isPaidTier, type PlanTier } from '@/lib/plans'
+import { useCancelSubscription, useChangePlan, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
@@ -25,59 +25,55 @@ interface ChangePlanDialogProps {
  * - paid → free: POST /billing/cancel (keeps access until the period ends).
  */
 export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: ChangePlanDialogProps) {
-    const currentBilling: Billing = state.interval ?? 'monthly'
+    const currentBilling: BillingInterval = state.interval ?? 'monthly'
     const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
-    const [billing, setBilling] = useState<Billing>(currentBilling)
+    const [billing, setBilling] = useState<BillingInterval>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
 
     const startCheckout = useStartCheckout()
     const changePlan = useChangePlan()
     const cancelSubscription = useCancelSubscription()
 
-    // Tier identity (names, budgets, which tiers exist) comes from the
-    // database catalogue; the static entries only decorate it (icons, display
-    // prices) and bridge the moment before the query resolves.
-    const { data: apiPlans } = usePlans()
-    const plans: PlanTier[] = apiPlans
-        ? apiPlans
-              .filter((p) => p.sellable)
-              .map((p) => ({
-                  ...planById(p.id),
-                  id: p.id as PlanTier['id'],
-                  name: p.name,
-                  dailyRecordingSeconds: p.dailyRecordingCredits,
-                  maxScores: p.maxScores,
-              }))
-        : PLAN_TIERS
+    const catalogue = usePlanCatalogue()
+    const plans = catalogue.sellable
 
     const hasSubscription = Boolean(state.status)
-    const currentPlan = plans.find((p) => p.id === state.tierId) ?? plans[0]
-    const nextPlan = plans.find((p) => p.id === selected) ?? plans[0]
-    const isSame = selected === state.tierId && (nextPlan.priceMonthly === 0 || billing === currentBilling)
+    const currentPlan = catalogue.byId(state.tierId) ?? plans[0]
+    const nextPlan = catalogue.byId(selected) ?? plans[0]
+    // The tier the account is on, in the cadence it pays (a free tier has no cadence).
+    const isCurrentPlan = (p: PlanTier) => p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)
+    const isSame = isCurrentPlan(nextPlan)
     const isDowngrade = nextPlan.priceMonthly < currentPlan.priceMonthly
     const isCancel = nextPlan.id === 'free' && hasSubscription
     const needsCheckout = nextPlan.priceMonthly > 0 && !hasSubscription
 
     const apply = () => {
         if (isSame || phase !== 'choose') return
-        setPhase('redirecting')
         if (isCancel) {
+            setPhase('redirecting')
             track('subscription_cancel_started')
             cancelSubscription.mutate(undefined, {
                 onSuccess: () => setPhase('done'),
                 onError: () => setPhase('choose'),
             })
-        } else if (needsCheckout) {
-            track('checkout_started', { tierId: nextPlan.id, interval: billing })
+            return
+        }
+        // Sketch is reached by cancelling (above): checkouts and plan changes
+        // only ever target a paid tier.
+        const tierId = nextPlan.id
+        if (!isPaidTier(tierId)) return
+        setPhase('redirecting')
+        if (needsCheckout) {
+            track('checkout_started', { tierId, interval: billing })
             startCheckout.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
+                { tierId, interval: billing },
                 // Success navigates away to Polar; only errors return here.
                 { onError: () => setPhase('choose') },
             )
         } else {
-            track('plan_change_started', { tierId: nextPlan.id, interval: billing })
+            track('plan_change_started', { tierId, interval: billing })
             changePlan.mutate(
-                { tierId: nextPlan.id as 'pro' | 'studio' | 'arranger', interval: billing },
+                { tierId, interval: billing },
                 {
                     onSuccess: () => setPhase('done'),
                     onError: () => setPhase('choose'),
@@ -144,7 +140,7 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                             onBillingChange={setBilling}
                             selected={selected}
                             onSelect={setSelected}
-                            isCurrent={(p) => p.id === state.tierId && (p.priceMonthly === 0 || billing === currentBilling)}
+                            isCurrent={isCurrentPlan}
                         />
 
                         {onShowPacks && (
@@ -174,15 +170,9 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
                 )}
 
                 {phase === 'redirecting' && (
-                    <div className="flex flex-col items-center gap-3.5 px-4 py-6">
-                        <span
-                            className="w-10 h-10 rounded-full border-[3px] border-surface-container border-t-primary"
-                            style={{ animation: 'solkey-spin 700ms linear infinite' }}
-                        />
-                        <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-center max-w-90">
-                            {needsCheckout ? "Sending you to Polar's secure checkout…" : 'Talking to Polar to update your subscription.'}
-                        </span>
-                    </div>
+                    <BusyNotice>
+                        {needsCheckout ? "Sending you to Polar's secure checkout…" : 'Talking to Polar to update your subscription.'}
+                    </BusyNotice>
                 )}
 
                 {phase === 'done' && (

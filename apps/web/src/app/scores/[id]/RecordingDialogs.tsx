@@ -4,8 +4,8 @@ import { type CSSProperties, useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
-import { BETA_MODE, PLAN_TIERS } from '@/lib/plans'
-import { usePlans } from '@/lib/queries'
+import { BETA_MODE, CHEAPEST_PACK } from '@/lib/plans'
+import { usePlanCatalogue } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
 import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
@@ -37,12 +37,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     useEscape(onClose)
     const currency = useDisplayCurrency()
 
-    // The upgrade target comes from the database tier catalogue; the static
-    // list only bridges the moment before the query resolves.
-    const { data: apiPlans } = usePlans()
-    const catalogue = apiPlans?.filter((p) => p.sellable) ?? PLAN_TIERS
-    const tierIndex = catalogue.findIndex((p) => p.id === info.planId)
-    const nextPlanName = tierIndex >= 0 ? catalogue[tierIndex + 1]?.name : undefined
+    const nextPlanName = usePlanCatalogue().nextAfter(info.planId)?.name
 
     return (
         <DialogScrim onDismiss={onClose}>
@@ -86,7 +81,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                             <a href="/settings" className="text-primary underline">
                                 One-time minute packs
                             </a>{' '}
-                            start at {formatMoney(6, currency)} and never expire.
+                            start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
                         </span>
                     )}
                 </div>

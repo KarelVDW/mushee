@@ -1,9 +1,11 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 import {
     ApiError,
+    type BillingInterval,
     cancelSubscription,
     changePlan,
     createBillingPortalSession,
@@ -23,6 +25,7 @@ import {
     listScores,
     loadScore,
     type OnboardingPatch,
+    type PackId,
     type PaidTierId,
     patchOnboarding,
     putKeyboardShortcuts,
@@ -37,6 +40,7 @@ import {
     updateScore,
 } from './api'
 import type { StoredShortcuts } from './Keybindings'
+import { PlanCatalogue } from './plans'
 
 export const scoreKeys = {
     all: ['scores'] as const,
@@ -246,18 +250,25 @@ export function useReactivateAccount() {
 
 // ── Plans (database-driven tier catalogue) ──────────────────────────────────
 
-/**
- * The tier catalogue from the database (GET /plans). Entitlements — names and
- * recording budgets — come from here; static display decoration (icons,
- * taglines, prices) stays in lib/plans.ts keyed by id.
- */
-export function usePlans() {
+/** The tier catalogue as the database knows it (GET /plans). */
+function usePlans() {
     return useQuery({
         queryKey: ['plans'],
         queryFn: listPlans,
         // The catalogue changes on the order of releases, not clicks.
         staleTime: 5 * 60 * 1000,
     })
+}
+
+/**
+ * The database catalogue merged with the static display decoration in
+ * lib/plans.ts: entitlements — names, recording budgets, score caps — come
+ * from the database; icons, taglines and prices from the static entries,
+ * which also stand in while the query loads.
+ */
+export function usePlanCatalogue(): PlanCatalogue {
+    const { data } = usePlans()
+    return useMemo(() => new PlanCatalogue(data), [data])
 }
 
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
@@ -276,7 +287,7 @@ export function useBillingState() {
 /** Creates a Polar checkout and sends the browser there. */
 export function useStartCheckout() {
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => createCheckout(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: BillingInterval }) => createCheckout(args.tierId, args.interval),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -287,7 +298,7 @@ export function useStartCheckout() {
 /** Checkout for a one-time minute pack; redirects to Polar like a plan checkout. */
 export function useStartPackCheckout() {
     return useMutation({
-        mutationFn: (packId: 'single' | 'ep' | 'album') => createPackCheckout(packId),
+        mutationFn: (packId: PackId) => createPackCheckout(packId),
         onSuccess: ({ url }) => {
             window.location.assign(url)
         },
@@ -310,7 +321,7 @@ export function useBillingPortal() {
 export function useChangePlan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (args: { tierId: PaidTierId; interval: 'monthly' | 'yearly' }) => changePlan(args.tierId, args.interval),
+        mutationFn: (args: { tierId: PaidTierId; interval: BillingInterval }) => changePlan(args.tierId, args.interval),
         onSuccess: (state) => queryClient.setQueryData(billingKeys.subscription, state),
         meta: { errorMessage: "Couldn't change the plan. Please try again." },
     })

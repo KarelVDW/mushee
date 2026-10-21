@@ -45,6 +45,42 @@ export function SubHeadline({ children }: { children: ReactNode }) {
     return <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant m-0">{children}</p>
 }
 
+const AVATAR_SIZES = {
+    sm: 'w-9 h-9 text-[13px]',
+    lg: 'w-16 h-16 text-[22px]',
+} as const
+
+const AVATAR_TONES = {
+    soft: 'bg-secondary-soft text-on-secondary-soft',
+    neutral: 'bg-surface-container text-on-surface',
+} as const
+
+/** A person's initials in a circle: the first letters of up to two words of their name. */
+export function Avatar({
+    name,
+    size = 'lg',
+    tone = 'soft',
+    className,
+}: {
+    name: string
+    size?: keyof typeof AVATAR_SIZES
+    tone?: keyof typeof AVATAR_TONES
+    className?: string
+}) {
+    const initials = name
+        .split(' ')
+        .map((s) => s[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    return (
+        <span
+            className={`rounded-full inline-flex items-center justify-center font-label font-semibold leading-none ${AVATAR_SIZES[size]} ${AVATAR_TONES[tone]} ${className ?? ''}`}>
+            {initials}
+        </span>
+    )
+}
+
 // Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
 // and this file is the copy the shared kit is extracted from.
 interface PillProps {

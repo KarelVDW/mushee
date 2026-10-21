@@ -1,19 +1,20 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
-import { type Dispatch, type SetStateAction, useState } from 'react'
+import { type Dispatch, type ReactNode, type SetStateAction, useState } from 'react'
 
+import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
+import type { BillingInterval } from '@/lib/api'
 import { emailOtp } from '@/lib/auth-client'
-import { BETA_PLAN, type Billing, planFeatures, type PlanTier } from '@/lib/plans'
+import type { BetaPlan, PlanTier } from '@/lib/plans'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
-import { OptionCard, StepShell } from './OnboardingControls'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
-// Step 0 — verify email
+// 'verify' — verify email
 export function VerifyStep({
     userEmail,
     sessionEmail,
@@ -101,7 +102,7 @@ export function VerifyStep({
     )
 }
 
-// Step 1 — mic permission. The state itself lives in the page: `canAdvance`
+// 'mic' — mic permission. The state itself lives in the page: `canAdvance`
 // depends on it, and it must survive navigating away from this step and back.
 export function MicStep({ micState, setMicState }: { micState: MicState; setMicState: (s: MicState) => void }) {
     const requestMic = async () => {
@@ -165,7 +166,7 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
     )
 }
 
-// Step 2 — name
+// 'name' — name
 export function NameStep({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     return (
         <StepShell title="What should we call you?" subtitle="This shows up on your scores and lets us greet you properly.">
@@ -174,7 +175,7 @@ export function NameStep({ value, onChange }: { value: string; onChange: (v: str
     )
 }
 
-// Step 3 — musical background
+// 'background' — musical background
 export function BackgroundStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
     return (
         <StepShell
@@ -189,7 +190,7 @@ export function BackgroundStep({ value, onChange }: { value: string | null; onCh
     )
 }
 
-// Step 4 — primary goal
+// 'goal' — primary goal
 export function GoalStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
     return (
         <StepShell
@@ -204,7 +205,7 @@ export function GoalStep({ value, onChange }: { value: string | null; onChange: 
     )
 }
 
-// Step 5 — instruments
+// 'instruments' — instruments
 export function InstrumentsStep({ value, onChange }: { value: string[]; onChange: Dispatch<SetStateAction<string[]>> }) {
     const toggleInstrument = (i: string) => {
         onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
@@ -238,7 +239,7 @@ export function InstrumentsStep({ value, onChange }: { value: string[]; onChange
     )
 }
 
-// Step 6 — referral source
+// 'source' — referral source
 export function SourceStep({
     source,
     onSourceChange,
@@ -269,7 +270,7 @@ export function SourceStep({
     )
 }
 
-// Step 7 — pick a plan (outside beta mode)
+// 'plan' — pick a plan (outside beta mode)
 export function PlanStep({
     plans,
     billing,
@@ -278,8 +279,8 @@ export function PlanStep({
     onTierChange,
 }: {
     plans: PlanTier[]
-    billing: Billing
-    onBillingChange: (b: Billing) => void
+    billing: BillingInterval
+    onBillingChange: (b: BillingInterval) => void
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
@@ -290,40 +291,20 @@ export function PlanStep({
     )
 }
 
-// Step 7 — beta mode: nothing to pick, nothing to pay
-export function BetaPlanStep({
-    betaPlan,
-    awaitingApproval,
-}: {
-    betaPlan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'> & { name: string; tagline: string }
-    awaitingApproval: boolean
-}) {
+// 'plan' in beta mode: nothing to pick, nothing to pay
+export function BetaPlanStep({ betaPlan, awaitingApproval }: { betaPlan: BetaPlan; awaitingApproval: boolean }) {
     return (
         <StepShell
             title="You're on the Beta plan."
             subtitle="During the closed beta there's nothing to pick and nothing to pay — every account gets the same plan.">
-            <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                <span className="w-12 h-12 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
-                    <Icon name={BETA_PLAN.icon} size={22} />
-                </span>
-                <div className="flex flex-col gap-1.5">
-                    <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+            <BetaPlanCard
+                plan={betaPlan}
+                title={
+                    <>
                         {betaPlan.name} — {betaPlan.tagline.toLowerCase()}
-                    </span>
-                    <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                        {planFeatures(betaPlan).map((f) => (
-                            <li
-                                key={f}
-                                className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                                <span className="mt-px opacity-80">
-                                    <Icon name="check" size={14} />
-                                </span>
-                                {f}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
+                    </>
+                }
+            />
             {awaitingApproval && (
                 <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3.5 font-body font-normal text-[13px] leading-normal">
                     One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you the moment
@@ -372,5 +353,45 @@ export function DoneStep({
                 </PrimaryButton>
             </div>
         </div>
+    )
+}
+
+// Building blocks of the steps above
+
+function StepShell({ title, subtitle, children }: { title: ReactNode; subtitle: ReactNode; children: ReactNode }) {
+    return (
+        <div className="flex flex-col gap-5">
+            <ModalTitle>{title}</ModalTitle>
+            <SubHeadline>{subtitle}</SubHeadline>
+            {children}
+        </div>
+    )
+}
+
+function OptionCard({ active, onClick, title, body }: { active?: boolean; onClick?: () => void; title: ReactNode; body?: ReactNode }) {
+    return (
+        <button
+            onClick={onClick}
+            type="button"
+            className={[
+                'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-solkey',
+                'focus-ring',
+                active
+                    ? 'bg-primary-soft text-on-primary-soft'
+                    : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
+            ].join(' ')}>
+            <div className="flex flex-col gap-1">
+                <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>
+                {body && (
+                    <span
+                        className={[
+                            'font-body font-normal text-[13px] leading-[1.4] opacity-85',
+                            active ? 'text-on-primary-soft' : 'text-on-surface-variant',
+                        ].join(' ')}>
+                        {body}
+                    </span>
+                )}
+            </div>
+        </button>
     )
 }
