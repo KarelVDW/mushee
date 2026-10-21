@@ -13,9 +13,11 @@ into two layers with a deliberate boundary between them.
 - `recordings.controller.ts` — the owner's takes over HTTP: list per score,
   replay the archived audio (signed URL or stream), delete one (audio first,
   then the row).
-- `recordings.service.ts` — wires sessions together: resolves a pipeline
-  profile, builds the pipeline, and enforces credits and locks; also the takes
-  queries behind the controller.
+- `recording-sessions.service.ts` — the live-recording engine: owns the pitch
+  model registry and profile resolver, and opens one session per take (slot
+  lock, credit check, pipeline); the gateway's only service.
+- `recordings.service.ts` — the takes behind the controller (list, replay,
+  delete) and the account purge.
 - `recording-credits.service.ts` / `recording-locks.service.ts` — daily credit
   accounting (per subscription tier) and the one-recording-per-user lock.
 - `recording-session.ts` — bridges one live session to the pipeline and

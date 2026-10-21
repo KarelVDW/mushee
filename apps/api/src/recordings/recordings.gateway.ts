@@ -8,9 +8,8 @@ import { auth } from '../auth/auth.config'
 import { BetaService } from '../beta/beta.service'
 import { ScoresService } from '../scores/scores.service'
 import type { RecordingCreditBalance } from './recording-credits.service'
-import { RecordingCreditsService } from './recording-credits.service'
 import type { RecordingSession } from './recording-session'
-import { RecordingsService } from './recordings.service'
+import { RecordingSessionsService } from './recording-sessions.service'
 
 interface RecordingMetaMessage {
     type: 'meta'
@@ -95,8 +94,7 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
     private readonly clients = new Set<WebSocket>()
 
     constructor(
-        private readonly recordingsService: RecordingsService,
-        private readonly creditsService: RecordingCreditsService,
+        private readonly recordingSessions: RecordingSessionsService,
         private readonly scoresService: ScoresService,
         private readonly betaService: BetaService,
     ) {}
@@ -247,7 +245,9 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             return null
         }
 
-        const session = await this.recordingsService.createSession(user.id, scoreId, {
+        // A throw here (the session already closed itself) reaches handleConnection's
+        // catch, which answers 1011.
+        const opened = await this.recordingSessions.open(user.id, scoreId, {
             onUpdate: (update) => {
                 if (client.readyState !== client.OPEN) return
                 client.send(JSON.stringify({ type: 'score-update', ...update }))
@@ -271,36 +271,19 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
                 client.send(JSON.stringify({ type: 'recording-health', ok: health.ok }))
             },
         })
-        if (!session) {
-            this.reject(client, 'concurrent-recording')
-            return null
-        }
-
-        // From here on the session (and its one-per-user lock) is live — every
-        // failure path must close it, or the user is locked out of recording
-        // until the heartbeat goes stale.
-        try {
-            // No credits left today — tell the client why before it streams anything.
-            const balance = await this.creditsService.balance(user.id)
-            if (balance.exhausted) {
-                this.logger.log(`Rejected recording with exhausted budget (user ${user.id})`)
-                await session.close()
-                this.sendLimit(client, balance)
+        if ('rejected' in opened) {
+            if (opened.rejected === 'concurrent-recording') {
+                this.reject(client, 'concurrent-recording')
+            } else {
+                // No credits left today — tell the client why before it streams anything.
+                this.sendLimit(client, opened.balance)
                 client.close(WS_POLICY_VIOLATION, 'Daily recording limit reached')
-                return null
             }
-
-            await session.open()
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err)
-            this.logger.warn(`Failed to open recording session: ${message}`)
-            await session.close().catch(() => undefined)
-            client.close(WS_INTERNAL_ERROR, 'Recording session failed')
             return null
         }
 
         this.logger.log(`Recording client connected (user ${user.id}, score ${scoreId})`)
-        return session
+        return opened.session
     }
 
     private scoreIdFrom(request: IncomingMessage): string | null {
