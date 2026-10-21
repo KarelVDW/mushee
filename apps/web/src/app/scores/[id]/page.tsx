@@ -617,14 +617,15 @@ export default function ScoreEditorPage() {
                 />
             </div>
 
-            <ChangeInstrumentDialog
-                open={instrumentDialogOpen}
-                current={score.instrument}
-                onCancel={() => setInstrumentDialogOpen(false)}
-                onConfirm={handleInstrumentChange}
-            />
+            {instrumentDialogOpen && (
+                <ChangeInstrumentDialog
+                    current={score.instrument}
+                    onCancel={() => setInstrumentDialogOpen(false)}
+                    onConfirm={handleInstrumentChange}
+                />
+            )}
 
-            <KeyboardShortcutsDialog open={shortcutsOpen} keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />
+            {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
 
             {recordingHalt?.kind === 'limit' && (
                 <RecordingLimitDialog

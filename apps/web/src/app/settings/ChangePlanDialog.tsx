@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
-import { BusyNotice, DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { BusyNotice, DialogPanel, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import type { BillingInterval, BillingState } from '@/lib/api'
 import { isPaidTier, type PlanTier } from '@/lib/plans'
@@ -93,101 +93,99 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
     const locked = phase !== 'choose'
 
     return (
-        <DialogScrim onDismiss={locked ? undefined : onClose}>
-            <DialogPanel
-                title={
-                    phase === 'done'
-                        ? isCancel
-                            ? 'Cancellation scheduled.'
-                            : 'Plan updated.'
-                        : phase === 'redirecting'
-                          ? needsCheckout
-                              ? 'Redirecting to Polar…'
-                              : 'Updating your subscription…'
-                          : 'Change plan'
-                }
-                subtitle={
-                    phase === 'choose'
-                        ? 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
-                        : undefined
-                }
-                onClose={locked ? undefined : onClose}
-                width={720}
-                footer={
-                    phase === 'choose' ? (
-                        <>
-                            <TertiaryButton onClick={onClose}>Keep current plan</TertiaryButton>
-                            <PrimaryButton
-                                emphasis="pop"
-                                disabled={isSame}
-                                danger={isCancel}
-                                icon={needsCheckout ? 'external-link' : undefined}
-                                onClick={apply}>
-                                {ctaLabel}
-                            </PrimaryButton>
-                        </>
-                    ) : phase === 'done' ? (
-                        <PrimaryButton emphasis="pop" onClick={onClose}>
-                            Done
+        <DialogPanel
+            title={
+                phase === 'done'
+                    ? isCancel
+                        ? 'Cancellation scheduled.'
+                        : 'Plan updated.'
+                    : phase === 'redirecting'
+                      ? needsCheckout
+                          ? 'Redirecting to Polar…'
+                          : 'Updating your subscription…'
+                      : 'Change plan'
+            }
+            subtitle={
+                phase === 'choose'
+                    ? 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
+                    : undefined
+            }
+            onClose={locked ? undefined : onClose}
+            width={720}
+            footer={
+                phase === 'choose' ? (
+                    <>
+                        <TertiaryButton onClick={onClose}>Keep current plan</TertiaryButton>
+                        <PrimaryButton
+                            emphasis="pop"
+                            disabled={isSame}
+                            danger={isCancel}
+                            icon={needsCheckout ? 'external-link' : undefined}
+                            onClick={apply}>
+                            {ctaLabel}
                         </PrimaryButton>
-                    ) : null
-                }>
-                {phase === 'choose' && (
-                    <div className="flex flex-col gap-4.5 pb-2">
-                        <PlanPicker
-                            plans={plans}
-                            billing={billing}
-                            onBillingChange={setBilling}
-                            selected={selected}
-                            onSelect={setSelected}
-                            isCurrent={isCurrentPlan}
-                        />
+                    </>
+                ) : phase === 'done' ? (
+                    <PrimaryButton emphasis="pop" onClick={onClose}>
+                        Done
+                    </PrimaryButton>
+                ) : null
+            }>
+            {phase === 'choose' && (
+                <div className="flex flex-col gap-4.5 pb-2">
+                    <PlanPicker
+                        plans={plans}
+                        billing={billing}
+                        onBillingChange={setBilling}
+                        selected={selected}
+                        onSelect={setSelected}
+                        isCurrent={isCurrentPlan}
+                    />
 
-                        {onShowPacks && (
-                            <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
-                                Just need a few minutes once?{' '}
-                                <button
-                                    type="button"
-                                    onClick={onShowPacks}
-                                    className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[12px] text-primary underline">
-                                    One-time minute packs
-                                </button>
-                            </p>
-                        )}
+                    {onShowPacks && (
+                        <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                            Just need a few minutes once?{' '}
+                            <button
+                                type="button"
+                                onClick={onShowPacks}
+                                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[12px] text-primary underline">
+                                One-time minute packs
+                            </button>
+                        </p>
+                    )}
 
-                        {isCancel && (
-                            <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                You&apos;ll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then
-                                drop to Sketch. Your scores are never deleted.
-                            </div>
-                        )}
-                        {isDowngrade && !isCancel && (
-                            <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                                The switch takes effect right away; Polar prorates the difference on your next invoice.
-                            </div>
-                        )}
-                    </div>
-                )}
+                    {isCancel && (
+                        <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
+                            You&apos;ll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then drop to
+                            Sketch. Your scores are never deleted.
+                        </div>
+                    )}
+                    {isDowngrade && !isCancel && (
+                        <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
+                            The switch takes effect right away; Polar prorates the difference on your next invoice.
+                        </div>
+                    )}
+                </div>
+            )}
 
-                {phase === 'redirecting' && (
-                    <BusyNotice>
-                        {needsCheckout ? "Sending you to Polar's secure checkout…" : 'Talking to Polar to update your subscription.'}
-                    </BusyNotice>
-                )}
+            {phase === 'redirecting' && (
+                <BusyNotice>
+                    {needsCheckout ? "Sending you to Polar's secure checkout…" : 'Talking to Polar to update your subscription.'}
+                </BusyNotice>
+            )}
 
-                {phase === 'done' && (
-                    <div className="flex items-center gap-3.5 pt-2 pb-4">
-                        <span className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
-                            <Icon name="check" size={20} />
-                        </span>
-                        <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                            {isCancel
-                                ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
-                                : 'Polar has the new plan on file. Receipt follows by email.'}
-                        </span>
-                    </div>
-                )}
-            </DialogPanel>
-        </DialogScrim>
+            {phase === 'done' && (
+                <div className="flex items-center gap-3.5 pt-2 pb-4">
+                    <span className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                        <Icon name="check" size={20} />
+                    </span>
+                    <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                        {isCancel
+                            ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
+                            : 'Polar has the new plan on file. Receipt follows by email.'}
+                    </span>
+                </div>
+            )}
+        </DialogPanel>
     )
 }

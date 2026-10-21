@@ -26,7 +26,7 @@ interface PopoverProps {
 
 /**
  * Anchored transient panel: dialog role + eyebrow heading on a glass panel, dismissed
- * by Escape or clicking outside. The chrome mirror of `DialogScrim`/`DialogPanel` for
+ * by Escape or clicking outside. The chrome mirror of `DialogPanel` for
  * non-modal surfaces.
  */
 export function Popover({ ariaLabel, title, onDismiss, onKeyDown, x, y, className, anchorRef, headerRight, children }: PopoverProps) {

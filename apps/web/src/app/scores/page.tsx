@@ -9,7 +9,6 @@ import { useRef, useState } from 'react'
 import {
     Alert,
     DialogPanel,
-    DialogScrim,
     ErrorScreen,
     Footer,
     Icon,
@@ -243,22 +242,20 @@ export default function ScoresPage() {
             {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
 
             {deleteTarget && (
-                <DialogScrim onDismiss={() => setDeleteTarget(null)}>
-                    <DialogPanel
-                        title="Delete this score?"
-                        subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
-                        width={440}
-                        onClose={() => setDeleteTarget(null)}
-                        footer={
-                            <>
-                                <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
-                                <PrimaryButton danger onClick={() => handleDeleteConfirmed(deleteTarget)}>
-                                    Delete score
-                                </PrimaryButton>
-                            </>
-                        }
-                    />
-                </DialogScrim>
+                <DialogPanel
+                    title="Delete this score?"
+                    subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
+                    width={440}
+                    onClose={() => setDeleteTarget(null)}
+                    footer={
+                        <>
+                            <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
+                            <PrimaryButton danger onClick={() => handleDeleteConfirmed(deleteTarget)}>
+                                Delete score
+                            </PrimaryButton>
+                        </>
+                    }
+                />
             )}
 
             <Footer />

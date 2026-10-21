@@ -4,7 +4,7 @@ export { Avatar, Eyebrow, ModalTitle, PageTitle, SubHeadline, Wordmark } from '.
 export { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from './Buttons'
 export { Footer, PageHeader, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
-export { DialogPanel, DialogScrim } from './Dialog'
+export { DialogPanel } from './Dialog'
 export { Alert, BusyNotice, ErrorScreen, StepProgress } from './Feedback'
 export { Icon, type IconName } from './Icon'
 export { Chip, TextField } from './Inputs'
