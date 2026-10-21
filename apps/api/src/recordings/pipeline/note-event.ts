@@ -10,6 +10,11 @@ export interface NoteEventTime {
     startTimeSeconds: number
     durationSeconds: number
     pitchMidi: number
+    /**
+     * Note SALIENCE: the provider's peak per-frame confidence (0–1) on every
+     * current producer — not a level measurement (the name is basic-pitch's).
+     * Under reverb the two part ways: confidence collapses while level does not.
+     */
     amplitude: number
     /**
      * The unrounded contour pitch (MIDI, A=440), consumed only by notation
