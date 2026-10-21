@@ -1,6 +1,6 @@
 'use client'
 
-import { Instrument } from '@mushee/notation/model/Instrument'
+import { Instrument } from '@mushee/notation/model'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 

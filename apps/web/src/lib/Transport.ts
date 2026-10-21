@@ -1,5 +1,4 @@
-import type { Note } from '@mushee/notation/model/Note'
-import type { Score } from '@mushee/notation/model/Score'
+import type { Note, Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'

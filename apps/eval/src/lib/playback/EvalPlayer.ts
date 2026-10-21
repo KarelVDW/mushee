@@ -10,8 +10,7 @@
  * so the saved wav starts at beat 0.
  */
 
-import { Instrument } from '@mushee/notation/model/Instrument'
-import type { Score } from '@mushee/notation/model/Score'
+import { Instrument, type Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'

@@ -1,8 +1,7 @@
 'use client'
 
 import { Glyph, Staff } from '@mushee/notation/components'
-import { KeySignature } from '@mushee/notation/model/KeySignature'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { KeySignature, Pitch } from '@mushee/notation/model'
 
 import { Popover, PopoverOption } from '@/components/ui'
 

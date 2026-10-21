@@ -1,7 +1,7 @@
 'use client'
 
 import { Score as NotationScore } from '@mushee/notation/components'
-import type { Score } from '@mushee/notation/model/Score'
+import type { Score } from '@mushee/notation/model'
 import { Component, type ReactNode } from 'react'
 
 /**

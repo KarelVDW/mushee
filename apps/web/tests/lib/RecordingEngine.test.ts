@@ -1,5 +1,4 @@
-import { Score } from '@mushee/notation/model/Score'
-import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import { Score, TimeSignature } from '@mushee/notation/model'
 import { makeScore } from '@mushee/notation/testing'
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

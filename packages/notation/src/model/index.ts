@@ -1,6 +1,6 @@
 export { Clef } from './Clef'
 export { CLEF_DEFS, type ClefDef, type ClefSign } from './clefs'
-export { Duration } from './Duration'
+export { BEAT_EPSILON, Duration } from './Duration'
 export { Instrument, type InstrumentCategory } from './Instrument'
 export { Interval, type IntervalQuality } from './Interval'
 export { KeySignature } from './KeySignature'

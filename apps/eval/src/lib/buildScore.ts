@@ -5,15 +5,9 @@
  * the product uses.
  */
 
-import type { ClefType } from '@mushee/notation/model'
-import { Duration } from '@mushee/notation/model/Duration'
-import { Instrument } from '@mushee/notation/model/Instrument'
+import { type ClefType, Duration, Instrument, Note, Pitch, Score, TimeSignature } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
-import { Score } from '@mushee/notation/model/Score'
-import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 
 import type { ClipMelody, MelodyEvent } from './melody'
 
