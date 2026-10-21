@@ -183,7 +183,7 @@ describe('RecordingsService takes', () => {
     it('deletes the audio folder before the row, and skips storage for audio-less rows', async () => {
         const { service, repo, deletePrefix } = makeService()
         await service.remove('u1', 'r-old')
-        expect(deletePrefix).toHaveBeenCalledWith('recordings/u1/s1/r-old/')
+        expect(deletePrefix).toHaveBeenCalledWith('recordings/u1/s1/r-old')
         expect(repo.delete).toHaveBeenCalledWith({ id: 'r-old' })
         expect(deletePrefix.mock.invocationCallOrder[0]).toBeLessThan(repo.delete.mock.invocationCallOrder[0])
 

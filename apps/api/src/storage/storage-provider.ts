@@ -32,9 +32,13 @@ export interface StorageProvider {
      */
     createReadStream(key: string): Readable
 
-    /** List the keys directly under `prefix` (a "directory"). Absent prefixes
-     *  resolve to an empty list. */
-    list(prefix: string): Promise<string[]>
+    /**
+     * List the keys of the objects directly inside `folder` (a key prefix
+     * without trailing slash; one is tolerated): no nested folders' contents,
+     * and never a sibling that merely shares the string prefix (`a/b` vs
+     * `a/bc/…`). An absent folder lists empty; an empty folder is refused.
+     */
+    list(folder: string): Promise<string[]>
 
     /**
      * A time-limited URL a browser can fetch `key` from directly, or null when
@@ -47,8 +51,22 @@ export interface StorageProvider {
     delete(key: string): Promise<void>
 
     /**
-     * Delete every object under `prefix` (used for account purges, e.g.
-     * `recordings/<userId>/`). An empty prefix match is a no-op, not an error.
+     * Delete everything inside `folder` (a key prefix without trailing slash,
+     * e.g. `recordings/<userId>` for an account purge), nested folders
+     * included — and never a sibling that merely shares the string prefix, so
+     * `recordings/u1` cannot take `recordings/u10` with it. An absent folder is
+     * a no-op; an empty folder is refused (it would name the whole store).
      */
-    deletePrefix(prefix: string): Promise<void>
+    deletePrefix(folder: string): Promise<void>
+}
+
+/**
+ * `folder` as both backends must read it: without trailing slashes, and never
+ * empty — an empty or `/`-only folder would name the whole bucket or storage
+ * root, which no caller may list or delete.
+ */
+export function storageFolder(folder: string): string {
+    const trimmed = folder.replace(/\/+$/, '')
+    if (trimmed === '') throw new Error(`Refusing an empty storage folder (${JSON.stringify(folder)}): it names the whole store`)
+    return trimmed
 }

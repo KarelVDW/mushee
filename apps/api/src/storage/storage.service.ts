@@ -64,8 +64,8 @@ export class StorageService implements StorageProvider {
         return this.provider.createReadStream(key)
     }
 
-    async list(prefix: string): Promise<string[]> {
-        return this.provider.list(prefix)
+    async list(folder: string): Promise<string[]> {
+        return this.provider.list(folder)
     }
 
     async signedUrl(key: string, ttlSeconds: number): Promise<string | null> {
@@ -77,8 +77,8 @@ export class StorageService implements StorageProvider {
         this.logger.log(`Deleted ${key} from storage`)
     }
 
-    async deletePrefix(prefix: string): Promise<void> {
-        await this.provider.deletePrefix(prefix)
-        this.logger.log(`Deleted prefix ${prefix} from storage`)
+    async deletePrefix(folder: string): Promise<void> {
+        await this.provider.deletePrefix(folder)
+        this.logger.log(`Deleted folder ${folder} from storage`)
     }
 }

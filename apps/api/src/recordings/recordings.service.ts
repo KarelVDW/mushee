@@ -154,7 +154,7 @@ export class RecordingsService implements OnModuleInit {
      */
     async remove(userId: string, id: string): Promise<void> {
         const recording = await this.findOwned(userId, id)
-        if (recording.storagePath) await this.storage.deletePrefix(`${recording.storagePath}/`)
+        if (recording.storagePath) await this.storage.deletePrefix(recording.storagePath)
         await this.recordingRepo.delete({ id: recording.id })
     }
 
@@ -164,7 +164,7 @@ export class RecordingsService implements OnModuleInit {
      * report failure instead of dropping the rows that locate the audio.
      */
     async deleteAllForUser(userId: string): Promise<void> {
-        await this.storage.deletePrefix(`recordings/${userId}/`)
+        await this.storage.deletePrefix(`recordings/${userId}`)
         await this.recordingRepo.delete({ userId })
         await this.credits.deleteAllForUser(userId)
         await this.locks.deleteAllForUser(userId)
