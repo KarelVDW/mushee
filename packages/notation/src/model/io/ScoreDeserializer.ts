@@ -6,7 +6,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import type { BarlineType, ClefType, TieType } from '../types'
+import type { BarlineType, ClefType } from '../types'
 import { BARLINE_TYPE, DURATION_TYPE, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
 
 /** Default staff line per clef sign when MusicXML omits <line>. */
@@ -167,7 +167,7 @@ export class ScoreDeserializer {
         const ratio = entry.timeModification
             ? { actualNotes: entry.timeModification.actualNotes, normalNotes: entry.timeModification.normalNotes }
             : undefined
-        const tie = ScoreDeserializer.mxmlTieToTieType(entry.tie)
+        const tie = Note.tieFor(entry.tie?.some((t) => t.type === 'stop') ?? false, entry.tie?.some((t) => t.type === 'start') ?? false)
         return new Note({
             duration: new Duration({
                 type: entry.type ? DURATION_TYPE[entry.type] : 'q',
@@ -186,15 +186,5 @@ export class ScoreDeserializer {
             if (def.sign === sign && def.line === resolvedLine && def.octaveChange === oc) return type as ClefType
         }
         return 'treble'
-    }
-
-    private static mxmlTieToTieType(ties: Array<{ type: 'start' | 'stop' }> | undefined): TieType | undefined {
-        if (!ties?.length) return undefined
-        const hasStart = ties.some((t) => t.type === 'start')
-        const hasStop = ties.some((t) => t.type === 'stop')
-        if (hasStart && hasStop) return 'start-stop'
-        if (hasStart) return 'start'
-        if (hasStop) return 'stop'
-        return undefined
     }
 }

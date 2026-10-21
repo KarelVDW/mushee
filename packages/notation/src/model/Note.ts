@@ -91,6 +91,14 @@ export class Note {
         return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
     }
 
+    /** The tie mark for a note bound to its predecessor (`back`) and/or its successor (`forward`). */
+    static tieFor(back: boolean, forward: boolean): TieType | undefined {
+        if (back && forward) return 'start-stop'
+        if (forward) return 'start'
+        if (back) return 'stop'
+        return undefined
+    }
+
     get tiesForward(): boolean {
         return this.tie === 'start' || this.tie === 'start-stop'
     }

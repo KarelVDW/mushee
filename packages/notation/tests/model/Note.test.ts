@@ -51,6 +51,13 @@ describe('Note', () => {
         expect(new Note({ duration: new Duration() }).tiesBack).toBe(false)
     })
 
+    it('tieFor turns back/forward tie flags into the tie mark', () => {
+        expect(Note.tieFor(false, false)).toBeUndefined()
+        expect(Note.tieFor(false, true)).toBe('start')
+        expect(Note.tieFor(true, false)).toBe('stop')
+        expect(Note.tieFor(true, true)).toBe('start-stop')
+    })
+
     it('tiesBack is derived from a predecessor that ties forward (start-only ties)', () => {
         const score = new Score()
         score.addMeasure().complete()

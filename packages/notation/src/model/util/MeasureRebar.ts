@@ -5,7 +5,7 @@ import { Measure } from '../Measure'
 import { Note } from '../Note'
 import type { Score } from '../Score'
 import type { TimeSignature } from '../TimeSignature'
-import type { BarlineType, TieType } from '../types'
+import type { BarlineType } from '../types'
 
 // One reflowable span of time: a single source note, or the tied chain the old barlines split it into.
 // The chain shares one pitch and tuplet ratio, so its first note speaks for the whole unit.
@@ -176,16 +176,9 @@ export class MeasureRebar {
             return new Note({
                 duration,
                 pitch,
-                tie: pitch && MeasureRebar.tieType(!first || unit.tiesBack, !last || unit.tiesForward),
+                tie: pitch && Note.tieFor(!first || unit.tiesBack, !last || unit.tiesForward),
             })
         })
-    }
-
-    private static tieType(back: boolean, forward: boolean): TieType | undefined {
-        if (back && forward) return 'start-stop'
-        if (forward) return 'start'
-        if (back) return 'stop'
-        return undefined
     }
 
     private closeMeasure() {

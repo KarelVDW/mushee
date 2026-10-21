@@ -6,7 +6,6 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import type { TieType } from '../types'
 import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 
@@ -352,7 +351,7 @@ export class MidiImporter {
                                 new Note({
                                     duration,
                                     pitch,
-                                    tie: MidiImporter.tieType(
+                                    tie: Note.tieFor(
                                         j > 0 || from > note.onset + BEAT_EPSILON,
                                         j < durations.length - 1 || to < note.end - BEAT_EPSILON,
                                     ),
@@ -409,13 +408,6 @@ export class MidiImporter {
             candidates.find((pitch) => pitch.alter === 0) ??
             (candidates.find((pitch) => pitch.alter === (fifths < 0 ? -1 : 1)) as Pitch)
         )
-    }
-
-    private static tieType(back: boolean, forward: boolean): TieType | undefined {
-        if (back && forward) return 'start-stop'
-        if (forward) return 'start'
-        if (back) return 'stop'
-        return undefined
     }
 
     private warn(message: string) {
