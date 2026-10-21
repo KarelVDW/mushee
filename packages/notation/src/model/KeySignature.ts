@@ -102,6 +102,17 @@ export class KeySignature {
     }
 
     /**
+     * The tonic of the major key with `fifths` sharps (+) or flats (−), as a reader names it —
+     * "C", "F♯", "B♭" — for a drawable key (−7…7). Tonics step round the circle of fifths one
+     * letter ahead of the sharps' own order, and take the key's alteration of that letter.
+     */
+    static majorKeyName(fifths: number): string {
+        const letter = SHARP_ORDER[(((fifths + 1) % 7) + 7) % 7]
+        const alter = KeySignature.alterInKey(fifths, letter)
+        return letter + (alter > 0 ? '♯' : alter < 0 ? '♭' : '')
+    }
+
+    /**
      * The accidentals actually drawn on the staff for this key in context. Only a switch *to* C major draws
      * cancellation naturals (one for each of the preceding key's sharps/flats, to mark the transition); every
      * other key just draws its own accidentals.

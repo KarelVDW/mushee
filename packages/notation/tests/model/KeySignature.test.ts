@@ -51,6 +51,11 @@ describe('KeySignature', () => {
         expect(key(-7).flats).toEqual(['B', 'E', 'A', 'D', 'G', 'C', 'F'])
     })
 
+    it('majorKeyName names the major tonic of every drawable key', () => {
+        const names = Array.from({ length: 15 }, (_, i) => KeySignature.majorKeyName(i - 7))
+        expect(names).toEqual(['C♭', 'G♭', 'D♭', 'A♭', 'E♭', 'B♭', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'C♯'])
+    })
+
     describe('key identity (fifths, mode)', () => {
         it('sameKeyAs compares fifths and mode — relative major and minor are different keys', () => {
             expect(key(0).sameKeyAs(0)).toBe(true)
