@@ -1,6 +1,6 @@
 import * as grpc from '@grpc/grpc-js'
 import { loadSync } from '@grpc/proto-loader'
-import { PROTO_PATH } from '@mushee/inference-proto'
+import { PROTO_PACKAGE, PROTO_PATH } from '@mushee/inference-proto'
 import { Logger } from '@nestjs/common'
 
 import { describeError } from '../describe-error'
@@ -9,8 +9,6 @@ import type { ModelBackend, ModelKey } from './model-backend'
 
 /** Per-call deadline; the forward pass is bounded so this is generous. */
 const CALL_TIMEOUT_MS = envPositiveNumber('INFERENCE_TIMEOUT_MS', 15000)
-
-const PKG = 'mushee.inference.v1'
 
 interface GrpcClient extends grpc.Client {
     [method: string]: unknown
@@ -56,7 +54,7 @@ export class RemoteModelBackend implements ModelBackend {
         private readonly url: string,
     ) {
         // proto-loader nests by package segment: proto.mushee.inference.v1.*
-        const pkg = PKG.split('.').reduce<Record<string, unknown>>(
+        const pkg = PROTO_PACKAGE.split('.').reduce<Record<string, unknown>>(
             (obj, key) => obj[key] as Record<string, unknown>,
             loadProto() as unknown as Record<string, unknown>,
         )
