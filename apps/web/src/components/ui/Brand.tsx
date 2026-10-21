@@ -22,14 +22,11 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
     return <span className={`${EYEBROW_CLASS} ${className ?? ''}`}>{children}</span>
 }
 
-// Space Grotesk by default; `italic` keeps Space Grotesk italic for in-app titles.
-// Newsreader italic is reserved for marketing + auth surfaces — see DESIGN.md §Voice.
-export function PageTitle({ children, italic = false }: { children: ReactNode; italic?: boolean }) {
+// In-app page titles are upright Space Grotesk; Newsreader italic is reserved for
+// marketing + auth surfaces — see DESIGN.md §Voice.
+export function PageTitle({ children }: { children: ReactNode }) {
     return (
-        <h1
-            className={`font-display font-bold text-[34px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 ${italic ? 'italic' : ''}`}>
-            {children}
-        </h1>
+        <h1 className="font-display font-bold text-[34px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">{children}</h1>
     )
 }
 
