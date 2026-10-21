@@ -12,7 +12,6 @@ import {
     planFeatures,
     planPrice,
     recordingBudgetLabel,
-    scoreLimitLabel,
 } from '@/lib/plans'
 
 describe('plan catalogue', () => {
@@ -63,8 +62,8 @@ describe('plan catalogue', () => {
     })
 
     it('formats score caps, with the free tier capped and the rest open', () => {
-        expect(scoreLimitLabel(5)).toBe('Up to 5 scores')
-        expect(scoreLimitLabel(null)).toBe('As many scores as you like')
+        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: 5, features: [] })[1]).toBe('Up to 5 scores')
+        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: null, features: [] })[1]).toBe('As many scores as you like')
         expect(planById('free').maxScores).toBe(5)
         expect(PLAN_TIERS.filter((p) => p.id !== 'free').every((p) => p.maxScores === null)).toBe(true)
     })
@@ -74,9 +73,10 @@ describe('plan catalogue', () => {
         expect(planFeatures(pro)[0]).toBe('20 min of recording / day')
         expect(planFeatures(pro)[1]).toBe('As many scores as you like')
         expect(planFeatures(planById('free'))[1]).toBe('Up to 5 scores')
-        // Re-tuned database entitlements override the static fallbacks.
-        expect(planFeatures(pro, 600)[0]).toBe('10 min of recording / day')
-        expect(planFeatures(pro, 600, 20)[1]).toBe('Up to 20 scores')
+        // A plan merged with re-tuned database entitlements shows those, not the static fallbacks.
+        const merged = { ...pro, dailyRecordingSeconds: 600, maxScores: 20 }
+        expect(planFeatures(merged)[0]).toBe('10 min of recording / day')
+        expect(planFeatures(merged)[1]).toBe('Up to 20 scores')
         expect(planFeatures(pro).slice(2)).toEqual(pro.features)
     })
 })

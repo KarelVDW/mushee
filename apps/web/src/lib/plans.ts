@@ -235,32 +235,26 @@ export function recordingBudgetLabel(seconds: number | null): string {
 }
 
 /** Human line for a score cap; null = no cap. */
-export function scoreLimitLabel(maxScores: number | null): string {
+function scoreLimitLabel(maxScores: number | null): string {
     if (maxScores === null) return 'As many scores as you like'
     return `Up to ${maxScores} scores`
 }
 
 /**
  * The full feature list for a plan card: the recording budget and score cap
- * first, then the marketing lines. Pass the API's `dailyRecordingCredits` and
- * `maxScores` when available so the shown limits are the ones the server
- * actually enforces.
+ * first, then the marketing lines. In-app, pass a plan already merged with
+ * the API's limits (PlanCatalogue) so the shown limits are the ones the
+ * server actually enforces.
  */
-export function planFeatures(
-    plan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'>,
-    dailyRecordingSeconds: number | null = plan.dailyRecordingSeconds,
-    maxScores: number | null = plan.maxScores,
-): string[] {
-    return [recordingBudgetLabel(dailyRecordingSeconds), scoreLimitLabel(maxScores), ...plan.features]
+export function planFeatures(plan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'>): string[] {
+    return [recordingBudgetLabel(plan.dailyRecordingSeconds), scoreLimitLabel(plan.maxScores), ...plan.features]
 }
 
+/** A plan's price as one line ("$9/mo", "$7.50/mo · billed yearly", "Free"). */
 export function planPrice(plan: PlanTier, billing: BillingInterval, currency: Currency = 'usd'): string {
-    if (plan.priceMonthly === 0) return 'Free'
-    if (billing === 'yearly') {
-        const m = (plan.priceYearly / 12).toFixed(plan.priceYearly % 12 === 0 ? 0 : 2)
-        return `${currencySymbol(currency)}${m}/mo · billed yearly`
-    }
-    return `${formatMoney(plan.priceMonthly, currency)}/mo`
+    const { amount } = planPriceParts(plan, billing, currency)
+    if (plan.priceMonthly === 0) return amount
+    return billing === 'yearly' ? `${amount}/mo · billed yearly` : `${amount}/mo`
 }
 
 /**
