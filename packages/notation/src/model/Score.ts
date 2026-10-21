@@ -26,7 +26,7 @@ import { MeasureRebar } from './util/MeasureRebar'
  * recomputes lazily off that version (see ARCHITECTURE.md).
  */
 export class Score {
-    /** Tempo assumed before any explicit marking — matches the playback engines' fallback. */
+    /** Tempo assumed before any explicit marking. */
     static readonly DEFAULT_BPM = 90
 
     readonly measures: Measure[] = []
@@ -584,14 +584,20 @@ export class Score {
         })
     }
 
-    /** The tempo (BPM) sounding at `note`: the nearest marking at or before it, else the default. */
-    bpmAt(note: Note | null | undefined): number {
-        if (!note) return Score.DEFAULT_BPM
-        const measure = note.measure
-        const local = measure.tempoAtOrBefore(measure.beatOffsetOf(note))
+    /**
+     * The tempo (BPM) sounding at `beat` of `measure`: the nearest marking at or before it in the
+     * measure, else the tempo carried in from earlier measures, else the default.
+     */
+    bpmAtBeat(measure: Measure, beat: number): number {
+        const local = measure.tempoAtOrBefore(beat)
         if (local) return local.bpm
         /* v8 ignore next -- defensive: tempoMap has one entry per measure index, so the lookup is always defined for an in-score measure */
         return this._tempoMap.value[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
+    }
+
+    /** The tempo (BPM) sounding at `note` ({@link bpmAtBeat} at its onset), or the default without a note. */
+    bpmAt(note: Note | null | undefined): number {
+        return note ? this.bpmAtBeat(note.measure, note.measure.beatOffsetOf(note)) : Score.DEFAULT_BPM
     }
 
     /**

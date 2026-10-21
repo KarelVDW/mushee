@@ -1413,6 +1413,17 @@ describe('Score', () => {
             expect(score.bpmAt(m.firstNote)).toBe(100)
         })
 
+        it('bpmAtBeat applies a mid-measure marking from its beat on, never before it', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            score.setTempo(m0.noteAtBeat(2), 150) // the score's only marking, at beat 2
+            expect(score.bpmAtBeat(m0, 0)).toBe(Score.DEFAULT_BPM)
+            expect(score.bpmAtBeat(m0, 1.5)).toBe(Score.DEFAULT_BPM) // mid-measure, before the marking
+            expect(score.bpmAtBeat(m0, 2)).toBe(150)
+            expect(score.bpmAtBeat(m0, 3.5)).toBe(150) // mid-measure, after it
+            expect(score.bpmAtBeat(m1, 0)).toBe(150) // carried into the next measure
+        })
+
         it('returns the cached tempo map on a second read without mutation', () => {
             const score = makeScore(2)
             score.setTempo(score.measures[0].firstNote, 110)
