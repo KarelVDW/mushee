@@ -34,13 +34,11 @@ export class Note {
      * The note's layout. Attached notes delegate into the current ScoreLayout;
      * a detached note (the editor's ghost/preview note) gets a standalone
      * snapshot, cached forever since its content and preview clef are fixed.
+     * Without a bar to read context from, a detached note draws no accidental.
      */
     get layout(): NoteLayout {
         if (this._measure) return this._measure.layout.noteLayoutFor(this)
-        this._detachedLayout ||= new NoteLayout(this, {
-            accidentalGlyph: this.pitch?.accidentalGlyph,
-            width: new NoteWidth(this, this.pitch?.accidentalGlyph),
-        })
+        this._detachedLayout ||= new NoteLayout(this, { accidentalGlyph: undefined, width: new NoteWidth(this, undefined) })
         return this._detachedLayout
     }
 

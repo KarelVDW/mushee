@@ -124,10 +124,10 @@ describe('a tie binds only notes that sound the same', () => {
         const { score, a, b } = twoNotes(
             new Note({
                 duration: new Duration({ type: 'q' }),
-                pitch: new Pitch({ name: 'C', alter: 1, accidental: '#', octave: 5 }),
+                pitch: new Pitch({ name: 'C', alter: 1, octave: 5 }),
                 tie: 'start',
             }),
-            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'D', alter: -1, accidental: 'b', octave: 5 }) }),
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'D', alter: -1, octave: 5 }) }),
         )
         expect(score.tiePartner(a)).toBe(b)
         expect(b.tiesBack).toBe(true)

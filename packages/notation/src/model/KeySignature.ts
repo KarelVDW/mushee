@@ -113,8 +113,8 @@ export class KeySignature {
 
     /**
      * Spell a (line-derived, natural) pitch according to this key — e.g. an F entered in G major becomes
-     * F♯. The alteration is implied by the key, so no explicit accidental is attached (the displayed
-     * accidental is derived later). Used when entering notes by staff position (click / arrow keys).
+     * F♯. Only the alteration is set: whether an accidental is drawn is decided later, in context, by the
+     * layout layer (here none, as the key implies it). Used when entering notes by staff position (click / arrow keys).
      */
     spell(pitch: Pitch): Pitch {
         const alter = this.alterForNote(pitch.name)

@@ -214,27 +214,27 @@ describe('Note', () => {
             const [placed] = score.replace([target], [pitched('C', 4)])
             // C natural in C major draws no accidental.
             expect(placed.layout.accidental).toBeUndefined()
-            const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+            const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
             const [placedSharp] = score.replace([placed], [sharp])
             expect(placedSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
         })
 
-        it('the drawn accidental falls back to the pitch glyph for a detached note', () => {
-            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: 'b', alter: -1 }) })
-            expect(detached.layout.accidental?.glyphName).toBe('accidentalFlat')
+        it('a detached note draws no accidental — there is no bar to resolve one in', () => {
+            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: -1 }) })
+            expect(detached.layout.accidental).toBeUndefined()
         })
     })
 
     describe('previewUnder', () => {
-        it('renders line and accidental under the supplied clef, bypassing measure resolution', () => {
-            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+        it('renders the line under the supplied clef, bypassing measure resolution', () => {
+            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
             const bass = clef('bass')
             const returned = note.previewUnder(bass)
             expect(returned).toBe(note)
             expect(note.clef).toBe(bass)
             expect(note.line).toBe(bass.lineFor(note.pitch as Pitch))
-            // Preview note has no measure, so the accidental comes from the pitch itself.
-            expect(note.layout.accidental?.glyphName).toBe('accidentalSharp')
+            // Preview note has no measure, so no displayed accidental can be resolved for it.
+            expect(note.layout.accidental).toBeUndefined()
         })
 
         it('clears the cached detached layout so it re-renders under the preview clef', () => {

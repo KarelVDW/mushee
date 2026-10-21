@@ -139,7 +139,8 @@ describe('KeySignature', () => {
             expect(p.name).toBe('F')
             expect(p.octave).toBe(4)
             expect(p.alter).toBe(1) // F♯
-            expect(p.accidental).toBeUndefined() // implied by the key signature, not drawn
+            // Whether a sharp is drawn is the layout layer's call (none: the key implies it).
+            expect(new Pitch({ name: 'F', octave: 4, alter: 1 })).toEqual(p)
         })
 
         it('flattens a pitch whose letter the key flats', () => {

@@ -97,7 +97,7 @@ describe('MusicXmlExporter', () => {
         const score = makeScore(1)
         const sharp = new Note({
             duration: new Duration({ type: 'q' }),
-            pitch: new Pitch({ name: 'F', octave: 4, alter: 1, accidental: '#' }),
+            pitch: new Pitch({ name: 'F', octave: 4, alter: 1 }),
         })
         const first = score.firstMeasure?.firstNote
         if (!first) throw new Error('expected first note')

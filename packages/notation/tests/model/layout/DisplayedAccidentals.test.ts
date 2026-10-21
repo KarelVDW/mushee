@@ -2,15 +2,15 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { DisplayedAccidentals } from '@mushee/notation/model/layout/DisplayedAccidentals'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { type Accidental, Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { describe, expect, it } from 'vitest'
 
-const q = (name: string, octave: number, accidental?: string) =>
+const q = (name: string, octave: number, accidental?: Accidental) =>
     new Note({
         duration: new Duration({ type: 'q' }),
-        pitch: new Pitch({ name, octave, accidental, alter: Pitch.accidentalToAlter(accidental) }),
+        pitch: new Pitch({ name, octave, alter: Pitch.accidentalToAlter(accidental) }),
     })
 
 /** An orphan measure (key + notes) — enough to exercise the measure-local accidental derivation. */
@@ -32,8 +32,8 @@ describe('accidental display (full measure-aware)', () => {
         expect(glyphFor(m, fSharp)).toBeUndefined()
     })
 
-    it('hides a key-implied alteration even with no stored accidental glyph (a key-spelled note)', () => {
-        // Mirrors KeySignature.spell output: alter set, accidental undefined.
+    it('hides a key-implied alteration on a key-spelled note', () => {
+        // Mirrors KeySignature.spell output: only the alteration is set.
         const fSharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 4, alter: 1 }) })
         const m = bar([fSharp], 1) // G major
         expect(glyphFor(m, fSharp)).toBeUndefined()
@@ -101,8 +101,8 @@ describe('accidental display (full measure-aware)', () => {
         expect(fNat.layout.accidental?.glyphName).toBe('accidentalNatural')
     })
 
-    it('a detached note falls back to its own stored accidental (no measure context)', () => {
+    it('a detached note draws no accidental (no measure context to resolve one in)', () => {
         const fSharp = q('F', 4, '#')
-        expect(fSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
+        expect(fSharp.layout.accidental).toBeUndefined()
     })
 })

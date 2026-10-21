@@ -1,5 +1,7 @@
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
+import { NoteLayout } from '@mushee/notation/model/layout/NoteLayout'
+import { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { describe, expect, it } from 'vitest'
@@ -61,12 +63,11 @@ describe('NoteLayout', () => {
         expect(n.layout.flag).toBeUndefined()
     })
 
-    it('accidental is laid out when pitch carries one', () => {
-        const sharp = new Note({
-            duration: new Duration({ type: 'q' }),
-            pitch: new Pitch({ name: 'F', octave: 5, accidental: '#' }),
-        })
-        expect(sharp.layout.accidental?.glyphName).toBe('accidentalSharp')
+    it('accidental is laid out when the layout context resolves one', () => {
+        const sharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 5, alter: 1 }) })
+        const layout = new NoteLayout(sharp, { accidentalGlyph: 'accidentalSharp', width: new NoteWidth(sharp, 'accidentalSharp') })
+        expect(layout.accidental?.glyphName).toBe('accidentalSharp')
+        expect(layout.accidental?.x).toBeLessThan(layout.noteX)
     })
 
     it('dots are laid out when duration is dotted', () => {

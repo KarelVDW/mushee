@@ -12,16 +12,31 @@ const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, 
 
 const INDEX_TO_NOTE = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
+/** An accidental token, as the editor names an alteration: sharp, flat, their doubles, and natural. */
+export type Accidental = '#' | 'b' | '##' | 'bb' | 'n'
+
+/** The one accidental vocabulary: each token with its semitone alteration and SMuFL glyph. */
+const ACCIDENTALS: ReadonlyArray<{ token: Accidental; alter: number; glyph: string }> = [
+    { token: '#', alter: 1, glyph: 'accidentalSharp' },
+    { token: 'b', alter: -1, glyph: 'accidentalFlat' },
+    { token: '##', alter: 2, glyph: 'accidentalDoubleSharp' },
+    { token: 'bb', alter: -2, glyph: 'accidentalDoubleFlat' },
+    { token: 'n', alter: 0, glyph: 'accidentalNatural' },
+]
+
+/**
+ * A written pitch: letter name, alteration in semitones and octave — exactly what
+ * MusicXML's `<pitch>` stores. Whether an accidental is *drawn* is not part of the
+ * pitch: the layout layer decides that in context (key, earlier notes in the bar).
+ */
 export class Pitch {
     readonly name: string
     readonly alter: number
-    readonly accidental: string | undefined
     readonly octave: number
 
-    constructor(value: { name: string; alter?: number; accidental?: string | undefined; octave: number }) {
+    constructor(value: { name: string; alter?: number; octave: number }) {
         this.name = value.name
         this.alter = value.alter ?? 0
-        this.accidental = value.accidental
         this.octave = value.octave
     }
 
@@ -43,69 +58,27 @@ export class Pitch {
         return Pitch.fromLine(this.line - 0.5)
     }
 
-    withAccidental(accidental: string | undefined): Pitch {
-        return new Pitch({ name: this.name, alter: Pitch.accidentalToAlter(accidental), accidental, octave: this.octave })
+    withAccidental(accidental: Accidental | undefined): Pitch {
+        return new Pitch({ name: this.name, alter: Pitch.accidentalToAlter(accidental), octave: this.octave })
     }
 
     /** SMuFL glyph name for a given alteration (0 → natural, shown only when it cancels a prior accidental). */
     static glyphForAlter(alter: number): string | undefined {
-        switch (alter) {
-            case 0:
-                return 'accidentalNatural'
-            case 1:
-                return 'accidentalSharp'
-            case -1:
-                return 'accidentalFlat'
-            case 2:
-                return 'accidentalDoubleSharp'
-            case -2:
-                return 'accidentalDoubleFlat'
-            default:
-                return undefined
-        }
+        return ACCIDENTALS.find((a) => a.alter === alter)?.glyph
     }
 
-    static accidentalToAlter(accidental: string | undefined): number {
-        switch (accidental) {
-            case '#':
-                return 1
-            case 'b':
-                return -1
-            case '##':
-                return 2
-            case 'bb':
-                return -2
-            case 'n':
-                return 0
-            default:
-                return 0
-        }
+    /** Semitone alteration of a token; no token (and 'n') is natural. */
+    static accidentalToAlter(accidental: Accidental | undefined): number {
+        return ACCIDENTALS.find((a) => a.token === accidental)?.alter ?? 0
     }
 
     /**
-     * The accidental token ('#', 'b', '##', 'bb', or undefined for natural) implied by this pitch's
-     * alteration — what the editor's accidental control reflects, independent of whether an accidental
-     * is actually drawn (a key-spelled note carries the alteration but no stored accidental glyph).
+     * The accidental token ('#', 'b', '##', 'bb', or undefined for natural) of this pitch's
+     * alteration — what the editor's accidental control reflects, independent of whether an
+     * accidental is actually drawn (a key-spelled F♯ in G major draws none).
      */
-    get accidentalValue(): string | undefined {
+    get accidental(): Accidental | undefined {
         return Pitch.alterToAccidental(this.alter)
-    }
-
-    get accidentalGlyph(): string | undefined {
-        switch (this.accidental) {
-            case '#':
-                return 'accidentalSharp'
-            case 'b':
-                return 'accidentalFlat'
-            case '##':
-                return 'accidentalDoubleSharp'
-            case 'bb':
-                return 'accidentalDoubleFlat'
-            case 'n':
-                return 'accidentalNatural'
-            default:
-                return undefined
-        }
     }
 
     toMidi(): number {
@@ -119,10 +92,10 @@ export class Pitch {
         return new Pitch({ name: INDEX_TO_NOTE[noteIndex], octave })
     }
 
-    /** The same pitch class, `octaves` whole octaves away — spelling and accidental preserved. */
+    /** The same pitch class, `octaves` whole octaves away — spelling preserved. */
     octaveShifted(octaves: number): Pitch {
         if (!octaves) return this
-        return new Pitch({ name: this.name, alter: this.alter, accidental: this.accidental, octave: this.octave + octaves })
+        return new Pitch({ name: this.name, alter: this.alter, octave: this.octave + octaves })
     }
 
     /**
@@ -146,12 +119,7 @@ export class Pitch {
         const newNaturalMidi = (newOctave + 1) * 12 + SEMITONES[newName]
         const newAlter = newMidi - newNaturalMidi
 
-        return new Pitch({
-            name: newName,
-            alter: newAlter,
-            accidental: Pitch.alterToAccidental(newAlter),
-            octave: newOctave,
-        })
+        return new Pitch({ name: newName, alter: newAlter, octave: newOctave })
     }
 
     /**
@@ -166,25 +134,18 @@ export class Pitch {
             const octave = Math.round((midi - SEMITONES[name]) / 12) - 1
             const alter = midi - ((octave + 1) * 12 + SEMITONES[name])
             if (alter >= -1 && alter <= 1) {
-                result.push(new Pitch({ name, alter, accidental: Pitch.alterToAccidental(alter), octave }))
+                result.push(new Pitch({ name, alter, octave }))
             }
         }
         return result
     }
 
-    /** Accidental token for an alteration ('#', 'b', '##', 'bb', or undefined for natural). Inverse of accidentalToAlter. */
-    static alterToAccidental(alter: number): string | undefined {
-        switch (alter) {
-            case 1:
-                return '#'
-            case -1:
-                return 'b'
-            case 2:
-                return '##'
-            case -2:
-                return 'bb'
-            default:
-                return undefined
-        }
+    /**
+     * Accidental token for an alteration ('#', 'b', '##', 'bb'). Natural is the absence of a
+     * token, so 0 gives undefined, not 'n' — as does an alteration no token writes.
+     */
+    static alterToAccidental(alter: number): Accidental | undefined {
+        if (alter === 0) return undefined
+        return ACCIDENTALS.find((a) => a.alter === alter)?.token
     }
 }

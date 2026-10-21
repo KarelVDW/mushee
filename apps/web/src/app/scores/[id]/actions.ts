@@ -1,4 +1,4 @@
-import { type ClefType, type DurationType, Note, Pitch, type Score } from '@mushee/notation/model'
+import { type Accidental, type ClefType, type DurationType, Note, Pitch, type Score } from '@mushee/notation/model'
 import type { ReactNode } from 'react'
 
 /**
@@ -130,12 +130,12 @@ export const CHANGE_PITCH: ScoreAction = {
     },
 }
 
-/** `arg`: an accidental token (`'#'`, `'b'`, or `undefined` for natural). */
+/** `arg`: an {@link Accidental} token (`'#'`, `'b'`, or `undefined` for natural). */
 export const SET_ACCIDENTAL: ScoreAction = {
     id: 'set-accidental',
     label: 'Set accidental',
     executeBulk: (score, notes, arg) => {
-        const accidental = arg as string | undefined
+        const accidental = arg as Accidental | undefined
         return score.replace(
             notes,
             notes.map((note) => note.clone({ pitch: note.pitch?.withAccidental(accidental) })),

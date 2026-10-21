@@ -30,7 +30,7 @@ const plain16 = () => new Note({ duration: new Duration({ type: '16' }), pitch: 
 function distinctSharps(n: number): Note[] {
     const names = ['C', 'D', 'E', 'G', 'A', 'B']
     return Array.from({ length: n }, (_, i) => {
-        const pitch = new Pitch({ name: names[i % names.length], octave: 5 + Math.floor(i / names.length), accidental: '#', alter: 1 })
+        const pitch = new Pitch({ name: names[i % names.length], octave: 5 + Math.floor(i / names.length), alter: 1 })
         return new Note({ duration: new Duration({ type: '16' }), pitch })
     })
 }

@@ -72,20 +72,13 @@ describe('note content round-trip', () => {
     })
 
     it('round-trips accidentals (sharp, flat, double-sharp, double-flat, natural)', () => {
-        const cases: Array<{ alter: number; accidental?: string }> = [
-            { alter: 1, accidental: '#' },
-            { alter: -1, accidental: 'b' },
-            { alter: 2, accidental: '##' },
-            { alter: -2, accidental: 'bb' },
-            { alter: 0, accidental: undefined },
-        ]
-        for (const { alter, accidental } of cases) {
+        for (const alter of [1, -1, 2, -2, 0]) {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             score.replace(
                 [m.notes[0]],
-                [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, accidental, octave: 4 }) })],
+                [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter, octave: 4 }) })],
             )
             const restored = roundTrip(score).firstMeasure
             if (!restored) throw new Error('expected restored firstMeasure')
@@ -108,7 +101,7 @@ describe('note content round-trip', () => {
         if (!m) throw new Error('expected firstMeasure')
         score.replace(
             [m.notes[0]],
-            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 }) })],
+            [new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', alter: 1, octave: 4 }) })],
         )
         const entry = noteEntries(toInput(score))[0]
         expect(entry.pitch?.alter).toBe(1)

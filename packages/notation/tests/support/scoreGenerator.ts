@@ -92,9 +92,10 @@ function randomPitch(rng: Rng): Pitch {
     const name = rng.pick(['C', 'D', 'E', 'F', 'G', 'A', 'B'])
     const roll = rng.next()
     const alter = roll < 0.6 ? 0 : roll < 0.8 ? 1 : roll < 0.95 ? -1 : rng.pick([2, -2])
-    // Half the altered notes carry no accidental token (a key-spelled note): only `alter` is persisted.
-    const accidental = rng.chance(0.5) ? Pitch.alterToAccidental(alter) : undefined
-    return new Pitch({ name, alter, accidental, octave: rng.int(3, 6) })
+    // An unused draw (it once picked a stored accidental token Pitch no longer has), kept so every
+    // seed still generates the score its suites were tuned on.
+    rng.chance(0.5)
+    return new Pitch({ name, alter, octave: rng.int(3, 6) })
 }
 
 function samePitch(a: Pitch | undefined, b: Pitch | undefined): boolean {

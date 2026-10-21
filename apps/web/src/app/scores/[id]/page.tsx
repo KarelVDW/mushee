@@ -9,7 +9,7 @@ import {
     type TempoClickEvent,
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
-import { type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
+import { type Accidental, type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
@@ -122,7 +122,7 @@ export default function ScoreEditorPage() {
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
     const handleSelectionStart = useCallback((note: Note) => manipulator.select(note), [manipulator])
     const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
-    const handleAccidentalChange = useCallback((acc: string | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
+    const handleAccidentalChange = useCallback((acc: Accidental | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
     const handleDurationChange = useCallback((duration: DurationType) => manipulator.run(SET_DURATION, duration), [manipulator])
     const handleDotToggle = useCallback(() => manipulator.run(TOGGLE_DOT), [manipulator])
     const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
@@ -541,7 +541,7 @@ export default function ScoreEditorPage() {
             <div className="relative shrink-0">
                 {isMobile && renderAttributePopover(COMPACT_POPOVER_SHEET)}
                 <NoteToolDock
-                    accidental={activeNote?.pitch?.accidentalValue}
+                    accidental={activeNote?.pitch?.accidental}
                     duration={activeNote?.duration.type}
                     accidentalDisabled={activeNote?.isRest ?? true}
                     onAccidentalChange={handleAccidentalChange}

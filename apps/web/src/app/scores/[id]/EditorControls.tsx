@@ -4,7 +4,7 @@ import { Glyph } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
 import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
-import { CLEF_DEFS, type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
+import { type Accidental, CLEF_DEFS, type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
@@ -14,7 +14,7 @@ import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/Ti
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
-const ACCIDENTALS: { label: string; value: string | undefined }[] = [
+const ACCIDENTALS: { label: string; value: Accidental | undefined }[] = [
     { label: '♮', value: undefined },
     { label: '♭', value: 'b' },
     { label: '♯', value: '#' },
@@ -181,10 +181,10 @@ export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, 
 // --- Note tool-dock (floats over the bottom of the score area) ---
 
 interface NoteToolDockProps {
-    accidental: string | undefined
+    accidental: Accidental | undefined
     duration: DurationType | undefined
     accidentalDisabled: boolean
-    onAccidentalChange: (accidental: string | undefined) => void
+    onAccidentalChange: (accidental: Accidental | undefined) => void
     onDurationChange: (duration: DurationType) => void
     dotted: boolean
     onDotToggle: () => void

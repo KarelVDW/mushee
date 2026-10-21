@@ -162,12 +162,7 @@ export class ScoreDeserializer {
 
     private static mxmlNoteToNote(entry: MxmlNote): Note {
         const pitch = entry.pitch
-            ? new Pitch({
-                  name: entry.pitch.step,
-                  alter: entry.pitch.alter ?? 0,
-                  accidental: ScoreDeserializer.alterToAccidental(entry.pitch.alter),
-                  octave: entry.pitch.octave,
-              })
+            ? new Pitch({ name: entry.pitch.step, alter: entry.pitch.alter ?? 0, octave: entry.pitch.octave })
             : undefined
         const ratio = entry.timeModification
             ? { actualNotes: entry.timeModification.actualNotes, normalNotes: entry.timeModification.normalNotes }
@@ -182,21 +177,6 @@ export class ScoreDeserializer {
             pitch,
             tie,
         })
-    }
-
-    private static alterToAccidental(alter: number | undefined): string | undefined {
-        switch (alter) {
-            case 1:
-                return '#'
-            case -1:
-                return 'b'
-            case 2:
-                return '##'
-            case -2:
-                return 'bb'
-            default:
-                return undefined
-        }
     }
 
     private static mxmlClefToType(sign: string, line?: number, octaveChange?: number): ClefType {
