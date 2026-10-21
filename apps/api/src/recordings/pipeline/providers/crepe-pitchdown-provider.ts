@@ -2,7 +2,7 @@ import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
 import { CrepeProvider } from './crepe-provider'
 import type { ModelBackend } from './model-backend'
-import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
+import type { PitchSession, PitchTranscribeOptions, TrajectoryProvider } from './pitch-provider'
 
 /**
  * CREPE analysing the audio ONE OCTAVE DOWN — the trajectory provider for the
@@ -31,7 +31,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitc
  * Heavy reverb was the one deficit (−0.03…−0.07). A 2-octave variant measured
  * worse (no content needs the depth, 4× inference cost).
  */
-export class CrepePitchdownProvider implements PitchProvider {
+export class CrepePitchdownProvider implements TrajectoryProvider {
     readonly name: string
     /** Slow-down factor: decode at 16 kHz × this, analyse as 16 kHz. */
     private readonly factor = 2

@@ -6,7 +6,7 @@ import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segm
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
 import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
 import type { ModelBackend } from './model-backend'
-import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
+import type { PitchSession, PitchTranscribeOptions, TrajectoryProvider } from './pitch-provider'
 
 /** CREPE was trained on 16 kHz mono audio. */
 const SAMPLE_RATE = 16000
@@ -108,7 +108,7 @@ class CrepeSession implements PitchSession {
  * per-frame activations, decodes a smooth pitch trajectory via Viterbi, then
  * segments runs of stable pitch into `NoteEventTime[]`.
  */
-export class CrepeProvider implements PitchProvider {
+export class CrepeProvider implements TrajectoryProvider {
     readonly name: string
     readonly sampleRate = SAMPLE_RATE
     readonly normalizeLoudness = false

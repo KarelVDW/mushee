@@ -16,19 +16,21 @@ export class AudioConverter {
     private readonly extractor: NoteExtractor
     private readonly session: PitchSession
     private readonly onsetDetector: OnsetDetector | null
+    /** The provider tuning the profile selects; undefined for an unprofiled converter. */
+    private readonly pitchOptions: PitchTranscribeOptions | undefined
 
     constructor(
         readonly provider: PitchProvider,
         opts: {
-            extractor?: NoteExtractor
             /** Split sustained runs at audio re-attacks to recover repeated notes. */
             enableOnsetSplit?: boolean
-            /** Resolved profile — selects the cleanup set (voice vs trajectory vs note-level). */
+            /** Resolved profile — selects the cleanup set (voice vs trajectory vs note-level) and the provider tuning. */
             profile?: PipelineProfile
         } = {},
     ) {
-        const { extractor, enableOnsetSplit = true, profile } = opts
-        this.extractor = extractor ?? new NoteExtractor(AudioConverter.cleanupFor(provider, profile))
+        const { enableOnsetSplit = true, profile } = opts
+        this.extractor = new NoteExtractor(AudioConverter.cleanupFor(provider.hasNativeOnsets, profile))
+        this.pitchOptions = profile && AudioConverter.pitchOptionsFor(profile)
         this.session = provider.createSession()
         // Only providers without native onset detection (CREPE) need the
         // amplitude re-attack splitter; a note-level provider emits its own onsets, so adding
@@ -84,9 +86,11 @@ export class AudioConverter {
      * re-onset transition was implemented and measured as the principled alternative
      * (`VoiceDecodeOptions.reonsetCost`/`accentBonus`) and is a null with a broadband
      * envelope — see those docstrings before trying it again.
+     *
+     * Public so the eval harness can replay the shipped cleanup instead of a copy.
      */
-    private static cleanupFor(provider: PitchProvider, profile?: PipelineProfile): NoteExtractorOptions {
-        if (provider.hasNativeOnsets) return {}
+    static cleanupFor(hasNativeOnsets: boolean, profile?: PipelineProfile): NoteExtractorOptions {
+        if (hasNativeOnsets) return {}
         if (profile?.isVoice) {
             return {
                 // The adaptive length floor earns its place back on the voice path
@@ -129,12 +133,26 @@ export class AudioConverter {
         }
     }
 
-    init(): Promise<void> {
-        return this.provider.init()
+    /** The provider tuning a resolved profile selects — what every profiled `convert` pass runs with. */
+    static pitchOptionsFor(profile: PipelineProfile): PitchTranscribeOptions {
+        return {
+            minFreqHz: profile.minFreqHz,
+            maxFreqHz: profile.maxFreqHz,
+            confidenceThreshold: profile.confidenceThreshold,
+            minFramesPerNote: profile.minFramesPerNote,
+            // Segmentation is a profile decision as of the voice flow: the resolver picks
+            // WHERE to listen and now also HOW to decide where notes are.
+            segmentMode: profile.segmentMode,
+            smoothFrames: profile.smoothFrames,
+        }
     }
 
-    /** One pass: transcribe `samples`, then clean and beat-quantize the notes at `bpm`. */
-    async convert(samples: Float32Array, bpm: number, pitchOptions?: PitchTranscribeOptions): Promise<ExtractedNotes> {
+    /**
+     * One pass: transcribe `samples`, then clean and beat-quantize the notes at `bpm`.
+     * `pitchOptions` replaces the profile's tuning wholesale — for unprofiled runs
+     * (a fixed provider in the eval harness); production passes nothing.
+     */
+    async convert(samples: Float32Array, bpm: number, pitchOptions = this.pitchOptions): Promise<ExtractedNotes> {
         const onsetTimesSec = this.onsetDetector?.detect(samples, this.provider.sampleRate)
         const raw = await this.provider.transcribe(samples, pitchOptions, this.session)
         return this.extractor.extract(raw, { bpm, onsetTimesSec })

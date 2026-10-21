@@ -9,7 +9,6 @@ import type { NoteEventTime } from './note-event'
 import { ExtractedNotes } from './note-extractor'
 import { DEFAULT_PROFILE, type PipelineProfile } from './profiles/pipeline-profile'
 import { ProfileResolver } from './profiles/profile-resolver'
-import type { PitchTranscribeOptions } from './providers/pitch-provider'
 import { ProviderRegistry } from './providers/provider-registry'
 import { RecordingDebugRenderer } from './recording-debug-renderer'
 
@@ -388,7 +387,7 @@ export class RecordingPipeline {
 
         const duration = full.length / provider.sampleRate
 
-        const extracted = await converter.convert(full, this.bpm, this.pitchOptions(profile))
+        const extracted = await converter.convert(full, this.bpm)
         const tConvert = Date.now()
         this.emitFromExtracted(extracted, duration, isFinal)
         const tEnd = Date.now()
@@ -536,19 +535,6 @@ export class RecordingPipeline {
             measures[m] = this.builder.buildMeasure(m, this.emittedNotes)
         }
         this.onUpdate({ measures })
-    }
-
-    private pitchOptions(profile: PipelineProfile): PitchTranscribeOptions {
-        return {
-            minFreqHz: profile.minFreqHz,
-            maxFreqHz: profile.maxFreqHz,
-            confidenceThreshold: profile.confidenceThreshold,
-            minFramesPerNote: profile.minFramesPerNote,
-            // Segmentation is a profile decision as of the voice flow: the resolver picks
-            // WHERE to listen and now also HOW to decide where notes are.
-            segmentMode: profile.segmentMode,
-            smoothFrames: profile.smoothFrames,
-        }
     }
 
     /**
