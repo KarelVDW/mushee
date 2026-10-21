@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain } from 'class-transformer'
 import { ILike, Repository } from 'typeorm'
@@ -197,23 +197,38 @@ export class ScoresService {
         }
 
         if (dto.allMeasures) {
-            await this.editCache.replaceAllMeasures(
-                score.id,
-                dto.allMeasures.map((measure) => instanceToPlain(measure)),
-            )
+            const measures = dto.allMeasures.map((measure) => instanceToPlain(measure))
+            await this.patchDocument(score, () => this.editCache.replaceAllMeasures(score.id, measures))
         } else if (dto.measures) {
             const measures: Record<string, Record<string, unknown>> = {}
             for (const [index, measure] of Object.entries(dto.measures)) {
                 measures[index] = instanceToPlain(measure)
             }
-            await this.editCache.updateMeasures(score.id, measures)
+            await this.patchDocument(score, () => this.editCache.updateMeasures(score.id, measures))
         }
 
         if (dto.partList) {
-            await this.editCache.updatePartList(score.id, instanceToPlain(dto.partList))
+            const partList = instanceToPlain(dto.partList)
+            await this.patchDocument(score, () => this.editCache.updatePartList(score.id, partList))
         }
 
         return score
+    }
+
+    /**
+     * Apply one edit to the score's edit-cache row. A missing row means the
+     * flush cron already wrote the document to storage and dropped it — the
+     * editor loads once and then only sends deltas, so its next save lands
+     * here. Re-prime from storage (which holds exactly what the row held) and
+     * apply again; the prime never overwrites, so a concurrent save that got
+     * there first keeps its edit. A second miss fails loudly instead of
+     * answering 200 for an edit that was stored nowhere, so the client retries.
+     */
+    private async patchDocument(score: Score, patch: () => Promise<boolean>): Promise<void> {
+        if (await patch()) return
+        const stored = this.decodeStored(await this.storageService.read(score.storageKey))
+        await this.editCache.primeIfAbsent(score.id, stored)
+        if (!(await patch())) throw new ServiceUnavailableException('Score could not be saved')
     }
 
     async remove(userId: string, id: string): Promise<void> {
