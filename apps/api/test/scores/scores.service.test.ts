@@ -325,11 +325,40 @@ describe('update', () => {
         expect(rows.get(SOURCE.id)).toEqual({ partList: { renamed: true }, parts: [{ measures: [{ n: 'only' }] }] })
     })
 
+    it('moves updatedAt on a document-only edit, so the library shows and sorts by real editing', async () => {
+        const { service, scoreRepo } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        const before = new Date('2026-01-01T00:00:00Z')
+        scoreRepo.findOneBy.mockResolvedValueOnce({ ...SOURCE, updatedAt: before })
+
+        const updated = await service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))
+
+        expect(updated.updatedAt.getTime()).toBeGreaterThan(before.getTime())
+        expect(scoreRepo.save).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.save).toHaveBeenCalledWith(expect.objectContaining({ id: SOURCE.id, updatedAt: updated.updatedAt }))
+    })
+
+    it('saves a rename and a document edit in one row write', async () => {
+        const { service, scoreRepo, rows } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        const updated = await service.update('u1', SOURCE.id, { title: 'Nocturne', partList: { renamed: true } } as unknown as UpdateScoreDto)
+        expect(updated.title).toBe('Nocturne')
+        expect(scoreRepo.save).toHaveBeenCalledTimes(1)
+        expect(rows.get(SOURCE.id)?.partList).toEqual({ renamed: true })
+    })
+
+    it('a rename alone writes the row and leaves the edit cache alone', async () => {
+        const { service, scoreRepo, cache } = makeEditingService()
+        await service.update('u1', SOURCE.id, { title: 'Nocturne' } as unknown as UpdateScoreDto)
+        expect(scoreRepo.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nocturne' }))
+        expect(cache.updateMeasures).not.toHaveBeenCalled()
+        expect(cache.primeIfAbsent).not.toHaveBeenCalled()
+    })
+
     it('fails the save instead of answering success when the edit still lands nowhere', async () => {
-        const { service, cache } = makeEditingService()
+        const { service, cache, scoreRepo } = makeEditingService()
         cache.primeIfAbsent.mockResolvedValueOnce(undefined) // the row never appears (e.g. a concurrent delete)
         await expect(service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))).rejects.toBeInstanceOf(ServiceUnavailableException)
         expect(cache.updateMeasures).toHaveBeenCalledTimes(2)
+        expect(scoreRepo.save).not.toHaveBeenCalled() // a failed edit doesn't claim the score was updated
     })
 
     it('a concurrent save that re-primed first keeps its edit', async () => {

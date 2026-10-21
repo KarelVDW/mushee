@@ -190,27 +190,32 @@ export class ScoresService {
 
     async update(userId: string, id: string, dto: UpdateScoreDto): Promise<Score> {
         const score = await this.findOne(userId, id)
-
-        if (dto.title) {
-            score.title = dto.title
-            await this.scoreRepo.save(score)
-        }
+        let documentChanged = false
 
         if (dto.allMeasures) {
             const measures = dto.allMeasures.map((measure) => instanceToPlain(measure))
             await this.patchDocument(score, () => this.editCache.replaceAllMeasures(score.id, measures))
+            documentChanged = true
         } else if (dto.measures) {
             const measures: Record<string, Record<string, unknown>> = {}
             for (const [index, measure] of Object.entries(dto.measures)) {
                 measures[index] = instanceToPlain(measure)
             }
             await this.patchDocument(score, () => this.editCache.updateMeasures(score.id, measures))
+            documentChanged = true
         }
 
         if (dto.partList) {
             const partList = instanceToPlain(dto.partList)
             await this.patchDocument(score, () => this.editCache.updatePartList(score.id, partList))
+            documentChanged = true
         }
+
+        // Document edits only touch cached_scores, so the row's updatedAt — what
+        // the library shows as "Updated" and sorts by — is moved explicitly.
+        if (documentChanged) score.updatedAt = new Date()
+        if (dto.title) score.title = dto.title
+        if (documentChanged || dto.title) await this.scoreRepo.save(score)
 
         return score
     }
