@@ -3,8 +3,8 @@
 import { useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
-import { PLAN_TIERS, planById } from '@/lib/plans'
-import { useBillingState, usePlans } from '@/lib/queries'
+import { planById } from '@/lib/plans'
+import { useBillingState, usePlanCatalogue } from '@/lib/queries'
 
 function useEscape(onClose: () => void) {
     useEffect(() => {
@@ -31,17 +31,14 @@ export function ScoreLimitDialog({ onUpgrade, onClose }: ScoreLimitDialogProps) 
     useEscape(onClose)
 
     const { data: billing } = useBillingState()
-    const { data: apiPlans } = usePlans()
+    const plans = usePlanCatalogue()
 
     // Only the free tier is capped today, so it is the safe fallback while
     // the billing query resolves.
     const planId = billing?.tierId ?? 'free'
     const planName = billing?.tierName ?? planById(planId).name
-    const limit = apiPlans?.find((p) => p.id === planId)?.maxScores ?? planById(planId).maxScores
-
-    const catalogue = apiPlans?.filter((p) => p.sellable) ?? PLAN_TIERS
-    const tierIndex = catalogue.findIndex((p) => p.id === planId)
-    const nextPlanName = tierIndex >= 0 ? catalogue[tierIndex + 1]?.name : undefined
+    const limit = plans.maxScoresFor(planId)
+    const nextPlanName = plans.nextAfter(planId)?.name
 
     return (
         <DialogScrim onDismiss={onClose}>

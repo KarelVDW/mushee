@@ -6,8 +6,8 @@ import { PlanPicker } from '@/components/PlanPicker'
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import type { BillingInterval, BillingState } from '@/lib/api'
-import { isPaidTier, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
-import { useCancelSubscription, useChangePlan, usePlans, useStartCheckout } from '@/lib/queries'
+import { isPaidTier, type PlanTier } from '@/lib/plans'
+import { useCancelSubscription, useChangePlan, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
 
 type Phase = 'choose' | 'redirecting' | 'done'
 
@@ -34,25 +34,12 @@ export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: Chang
     const changePlan = useChangePlan()
     const cancelSubscription = useCancelSubscription()
 
-    // Tier identity (names, budgets, which tiers exist) comes from the
-    // database catalogue; the static entries only decorate it (icons, display
-    // prices) and bridge the moment before the query resolves.
-    const { data: apiPlans } = usePlans()
-    const plans: PlanTier[] = apiPlans
-        ? apiPlans
-              .filter((p) => p.sellable)
-              .map((p) => ({
-                  ...planById(p.id),
-                  id: p.id as PlanTier['id'],
-                  name: p.name,
-                  dailyRecordingSeconds: p.dailyRecordingCredits,
-                  maxScores: p.maxScores,
-              }))
-        : PLAN_TIERS
+    const catalogue = usePlanCatalogue()
+    const plans = catalogue.sellable
 
     const hasSubscription = Boolean(state.status)
-    const currentPlan = plans.find((p) => p.id === state.tierId) ?? plans[0]
-    const nextPlan = plans.find((p) => p.id === selected) ?? plans[0]
+    const currentPlan = catalogue.byId(state.tierId) ?? plans[0]
+    const nextPlan = catalogue.byId(selected) ?? plans[0]
     const isSame = selected === state.tierId && (nextPlan.priceMonthly === 0 || billing === currentBilling)
     const isDowngrade = nextPlan.priceMonthly < currentPlan.priceMonthly
     const isCancel = nextPlan.id === 'free' && hasSubscription

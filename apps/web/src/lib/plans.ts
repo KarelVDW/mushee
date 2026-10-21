@@ -1,11 +1,12 @@
 /**
  * Display decoration for the subscription tiers: icons, taglines, display
  * prices, marketing feature lines. The tiers themselves — names and
- * entitlements — live in the database and are served by `GET /plans`
- * (see `usePlans` in lib/queries.ts); in-app surfaces merge that data with
- * this decoration by id. Only the marketing landing page renders straight
- * from this static catalogue (it must work without the API), so keep the
- * `dailyRecordingSeconds` fallbacks roughly in sync with the seeded tiers.
+ * entitlements — live in the database and are served by `GET /plans`;
+ * in-app surfaces merge that data with this decoration by id through
+ * PlanCatalogue (`usePlanCatalogue` in lib/queries.ts). Only the marketing
+ * pages render straight from this static catalogue (they must work without
+ * the API), so keep the `dailyRecordingSeconds` fallbacks roughly in sync
+ * with the seeded tiers.
  * Prices are display-only; the amounts actually charged come from the Polar
  * products configured on the API. Numerals are the same in USD and EUR
  * (parity pricing — keep the Polar products configured that way too); the
@@ -17,7 +18,7 @@
 
 import type { IconName } from '@/components/ui'
 
-import type { BillingInterval, PackId, PaidTierId, TierId } from './api'
+import type { BillingInterval, PackId, PaidTierId, Plan, TierId } from './api'
 import { type Currency, currencySymbol, formatMoney } from './currency'
 
 export interface PlanTier {
@@ -131,11 +132,16 @@ export const CREDIT_PACKS: CreditPack[] = [
     },
 ]
 
+/** The closed-beta plan's display data. */
+export interface BetaPlan extends Pick<PlanTier, 'name' | 'icon' | 'tagline' | 'dailyRecordingSeconds' | 'maxScores' | 'features'> {
+    id: 'beta'
+}
+
 /** The closed-beta plan — assigned automatically, never sold. */
-export const BETA_PLAN = {
-    id: 'beta' as const,
+export const BETA_PLAN: BetaPlan = {
+    id: 'beta',
     name: 'Beta',
-    icon: 'sparkles' as const,
+    icon: 'sparkles',
     tagline: 'Free while the beta runs',
     dailyRecordingSeconds: 1800,
     maxScores: null,
@@ -153,6 +159,70 @@ export function planById(id: string | undefined | null): PlanTier {
 /** Whether a tier is one Polar sells — checkouts and plan changes only ever target these. */
 export function isPaidTier(id: TierId): id is PaidTierId {
     return id !== 'free' && id !== 'beta'
+}
+
+/** Whether an API plan id names one of the static tiers above — the ones the app can decorate. */
+export function isPlanTierId(id: string): id is PlanTier['id'] {
+    return PLAN_TIERS.some((p) => p.id === id)
+}
+
+/**
+ * The tier catalogue as in-app surfaces show it. The database decides which
+ * tiers exist, their names and the limits the server enforces; the static
+ * entries only decorate them (icons, taglines, display prices) and stand in
+ * until `GET /plans` resolves — construct it from `undefined` while loading.
+ */
+export class PlanCatalogue {
+    /** The tiers a picker offers, in the API's order. */
+    readonly sellable: PlanTier[]
+    /** The closed-beta plan under its database name and limits. */
+    readonly beta: BetaPlan
+    private readonly apiPlans: Plan[] | undefined
+
+    constructor(apiPlans: Plan[] | undefined) {
+        this.apiPlans = apiPlans
+        this.sellable = apiPlans
+            ? apiPlans.flatMap((p) =>
+                  p.sellable && isPlanTierId(p.id)
+                      ? [
+                            {
+                                ...planById(p.id),
+                                id: p.id,
+                                name: p.name,
+                                dailyRecordingSeconds: p.dailyRecordingCredits,
+                                maxScores: p.maxScores,
+                            },
+                        ]
+                      : [],
+              )
+            : PLAN_TIERS
+        const betaApiPlan = apiPlans?.find((p) => p.id === BETA_PLAN.id)
+        this.beta = betaApiPlan
+            ? {
+                  ...BETA_PLAN,
+                  name: betaApiPlan.name,
+                  dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits,
+                  maxScores: betaApiPlan.maxScores,
+              }
+            : BETA_PLAN
+    }
+
+    /** A sellable tier by id. */
+    byId(id: string): PlanTier | undefined {
+        return this.sellable.find((p) => p.id === id)
+    }
+
+    /** The next tier up the ladder — what a limit dialog offers as the upgrade.
+     *  Undefined at the top, and for tiers off the ladder (beta). */
+    nextAfter(id: string): PlanTier | undefined {
+        const index = this.sellable.findIndex((p) => p.id === id)
+        return index >= 0 ? this.sellable[index + 1] : undefined
+    }
+
+    /** The score cap of any tier, beta and other unsold tiers included; the static cap stands in. */
+    maxScoresFor(id: string): number | null {
+        return this.apiPlans?.find((p) => p.id === id)?.maxScores ?? planById(id).maxScores
+    }
 }
 
 /** Human line for a daily recording budget in seconds; null = unlimited. */

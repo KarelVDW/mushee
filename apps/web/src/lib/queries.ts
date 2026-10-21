@@ -1,6 +1,7 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 import {
     ApiError,
@@ -39,6 +40,7 @@ import {
     updateScore,
 } from './api'
 import type { StoredShortcuts } from './Keybindings'
+import { PlanCatalogue } from './plans'
 
 export const scoreKeys = {
     all: ['scores'] as const,
@@ -248,18 +250,25 @@ export function useReactivateAccount() {
 
 // ── Plans (database-driven tier catalogue) ──────────────────────────────────
 
-/**
- * The tier catalogue from the database (GET /plans). Entitlements — names and
- * recording budgets — come from here; static display decoration (icons,
- * taglines, prices) stays in lib/plans.ts keyed by id.
- */
-export function usePlans() {
+/** The tier catalogue as the database knows it (GET /plans). */
+function usePlans() {
     return useQuery({
         queryKey: ['plans'],
         queryFn: listPlans,
         // The catalogue changes on the order of releases, not clicks.
         staleTime: 5 * 60 * 1000,
     })
+}
+
+/**
+ * The database catalogue merged with the static display decoration in
+ * lib/plans.ts: entitlements — names, recording budgets, score caps — come
+ * from the database; icons, taglines and prices from the static entries,
+ * which also stand in while the query loads.
+ */
+export function usePlanCatalogue(): PlanCatalogue {
+    const { data } = usePlans()
+    return useMemo(() => new PlanCatalogue(data), [data])
 }
 
 // ── Billing (Polar) ─────────────────────────────────────────────────────────

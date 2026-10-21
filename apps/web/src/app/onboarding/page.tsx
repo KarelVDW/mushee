@@ -8,8 +8,8 @@ import { setUserProperties, track } from '@/lib/analytics'
 import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
-import { BETA_MODE, BETA_PLAN, isPaidTier, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
-import { useBetaGate, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
+import { BETA_MODE, isPaidTier, type PlanTier } from '@/lib/plans'
+import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
 
 import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES } from './onboarding-data'
 import { StepProgress } from './OnboardingControls'
@@ -31,29 +31,7 @@ export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
     const startCheckout = useStartCheckout()
-    // Tier names and recording budgets come from the database catalogue; the
-    // static entries decorate it and bridge the moment before it resolves.
-    const { data: apiPlans } = usePlans()
-    const displayPlans: PlanTier[] = apiPlans
-        ? apiPlans
-              .filter((p) => p.sellable)
-              .map((p) => ({
-                  ...planById(p.id),
-                  id: p.id as PlanTier['id'],
-                  name: p.name,
-                  dailyRecordingSeconds: p.dailyRecordingCredits,
-                  maxScores: p.maxScores,
-              }))
-        : PLAN_TIERS
-    const betaApiPlan = apiPlans?.find((p) => p.id === BETA_PLAN.id)
-    const betaPlan = betaApiPlan
-        ? {
-              ...BETA_PLAN,
-              name: betaApiPlan.name,
-              dailyRecordingSeconds: betaApiPlan.dailyRecordingCredits,
-              maxScores: betaApiPlan.maxScores,
-          }
-        : BETA_PLAN
+    const plans = usePlanCatalogue()
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
     const verified = session?.user?.emailVerified ?? false
@@ -209,17 +187,17 @@ export default function OnboardingPage() {
                 )}
 
                 {!done && step === 7 && !BETA_MODE && (
-                    <PlanStep plans={displayPlans} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
+                    <PlanStep plans={plans.sellable} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
                 )}
 
-                {!done && step === 7 && BETA_MODE && <BetaPlanStep betaPlan={betaPlan} awaitingApproval={awaitingApproval} />}
+                {!done && step === 7 && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
 
                 {done && (
                     <DoneStep
                         name={name}
                         awaitingApproval={awaitingApproval}
-                        betaPlanName={betaPlan.name}
-                        planName={BETA_MODE ? betaPlan.name : displayPlans.find((p) => p.id === tier)?.name}
+                        betaPlanName={plans.beta.name}
+                        planName={BETA_MODE ? plans.beta.name : plans.byId(tier)?.name}
                         onFinish={finish}
                     />
                 )}

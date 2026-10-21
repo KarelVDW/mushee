@@ -7,7 +7,7 @@ import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
 import { emailOtp } from '@/lib/auth-client'
-import { BETA_PLAN, planFeatures, type PlanTier } from '@/lib/plans'
+import { BETA_PLAN, type BetaPlan, planFeatures, type PlanTier } from '@/lib/plans'
 
 import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
 import { OptionCard, StepShell } from './OnboardingControls'
@@ -292,13 +292,7 @@ export function PlanStep({
 }
 
 // Step 7 — beta mode: nothing to pick, nothing to pay
-export function BetaPlanStep({
-    betaPlan,
-    awaitingApproval,
-}: {
-    betaPlan: Pick<PlanTier, 'dailyRecordingSeconds' | 'maxScores' | 'features'> & { name: string; tagline: string }
-    awaitingApproval: boolean
-}) {
+export function BetaPlanStep({ betaPlan, awaitingApproval }: { betaPlan: BetaPlan; awaitingApproval: boolean }) {
     return (
         <StepShell
             title="You're on the Beta plan."

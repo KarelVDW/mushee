@@ -11,7 +11,7 @@ import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
  * The pricing section — the tier cards, the professional tier, the one-time
  * packs teaser — shared by the landing page (#pricing) and the /pricing route.
  * Renders straight from the static plan catalogue so both pages work without
- * the API; in-app surfaces use the DB-driven `usePlans()` instead.
+ * the API; in-app surfaces use the DB-driven `usePlanCatalogue()` instead.
  */
 /** `intro` — the section's own eyebrow + headline; off when a page already frames it (the /pricing hero). */
 export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => void; intro?: boolean }) {
