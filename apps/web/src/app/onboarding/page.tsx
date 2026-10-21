@@ -48,7 +48,7 @@ export default function OnboardingPage() {
     // and it must survive navigating away from the step and back.
     const [micState, setMicState] = useState<MicState>('idle')
 
-    // Steps 2–7 — preferences
+    // The preference answers, 'name' through 'plan'
     const [name, setName] = useState(session?.user?.name ?? '')
     const [background, setBackground] = useState<string | null>(null)
     const [goal, setGoal] = useState<string | null>(null)
