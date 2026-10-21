@@ -30,10 +30,12 @@ describe('Note', () => {
         expect(n.isRest).toBe(false)
     })
 
-    it('inTuplet is true when ratio.actualNotes !== 1', () => {
+    it('inTuplet is true for any ratio but 1:1 (Duration.isTuplet)', () => {
         const tuplet = new Note({ duration: new Duration({ ratio: { actualNotes: 3, normalNotes: 2 } }) })
+        const degenerate = new Note({ duration: new Duration({ ratio: { actualNotes: 1, normalNotes: 2 } }) })
         const plain = new Note({ duration: new Duration() })
         expect(tuplet.inTuplet).toBe(true)
+        expect(degenerate.inTuplet).toBe(true)
         expect(plain.inTuplet).toBe(false)
     })
 

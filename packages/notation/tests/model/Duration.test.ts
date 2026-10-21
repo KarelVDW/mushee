@@ -30,6 +30,30 @@ describe('Duration', () => {
         expect(d.effectiveBeats).toBeCloseTo((0.5 * 2) / 3)
     })
 
+    describe('tuplet ratio', () => {
+        const triplet = { actualNotes: 3, normalNotes: 2 }
+
+        it('isTuplet is true for any ratio but 1:1', () => {
+            expect(new Duration().isTuplet).toBe(false)
+            expect(new Duration({ ratio: { actualNotes: 1, normalNotes: 1 } }).isTuplet).toBe(false)
+            expect(new Duration({ ratio: triplet }).isTuplet).toBe(true)
+            expect(new Duration({ ratio: { actualNotes: 5, normalNotes: 4 } }).isTuplet).toBe(true)
+        })
+
+        it('isTuplet counts a degenerate 1:n ratio as a tuplet, like every other non-1:1 ratio', () => {
+            expect(new Duration({ ratio: { actualNotes: 1, normalNotes: 2 } }).isTuplet).toBe(true)
+        })
+
+        it('sameRatioAs compares both terms of the ratio, ignoring the written value', () => {
+            const a = new Duration({ type: '8', ratio: triplet })
+            expect(a.sameRatioAs(new Duration({ type: 'q', dots: 1, ratio: { actualNotes: 3, normalNotes: 2 } }))).toBe(true)
+            expect(a.sameRatioAs(new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 4 } }))).toBe(false)
+            expect(a.sameRatioAs(new Duration({ type: '8', ratio: { actualNotes: 5, normalNotes: 2 } }))).toBe(false)
+            expect(a.sameRatioAs(new Duration({ type: '8' }))).toBe(false)
+            expect(new Duration({ type: 'h' }).sameRatioAs(new Duration({ type: '16' }))).toBe(true)
+        })
+    })
+
     it('isBeamable for 8th and 16th only', () => {
         expect(new Duration({ type: '8' }).isBeamable).toBe(true)
         expect(new Duration({ type: '16' }).isBeamable).toBe(true)

@@ -177,6 +177,14 @@ describe('tuplet serialization round-trip', () => {
         expect(restoredTuplet.length).toBe(3)
         expect(restoredTuplet[0].duration.ratio).toEqual({ actualNotes: 3, normalNotes: 2 })
     })
+
+    it('writes a time modification for every non-1:1 ratio, a degenerate 1:2 included', () => {
+        const entry = (ratio: { actualNotes: number; normalNotes: number }) =>
+            ScoreSerializer.noteEntry(new Duration({ type: 'q', ratio }), undefined)
+        expect(entry({ actualNotes: 1, normalNotes: 1 }).timeModification).toBeUndefined()
+        expect(entry({ actualNotes: 1, normalNotes: 2 }).timeModification).toEqual({ actualNotes: 1, normalNotes: 2 })
+        expect(entry({ actualNotes: 1, normalNotes: 2 }).duration).toBe(24) // a quarter stretched to two beats
+    })
 })
 
 describe('tempo serialization round-trip', () => {

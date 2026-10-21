@@ -63,7 +63,7 @@ export class Note {
     }
 
     get inTuplet(): boolean {
-        return this.duration.ratio.actualNotes !== 1
+        return this.duration.isTuplet
     }
 
     /**

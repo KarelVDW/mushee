@@ -3,6 +3,12 @@ import type { DurationType } from './types'
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
 export const BEAT_EPSILON = 0.001
 
+/**
+ * A time modification as MusicXML writes it: `actualNotes` notes in the time of
+ * `normalNotes` (3:2 for a triplet). Plain notation is 1:1.
+ */
+export type TupletRatio = { readonly actualNotes: number; readonly normalNotes: number }
+
 /** Ordered list of duration values for greedy decomposition (largest first) */
 const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: number }> = [
     { duration: 'w', beats: 4 },
@@ -18,9 +24,9 @@ const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: num
 export class Duration {
     readonly type: DurationType
     readonly dots: number
-    readonly ratio: { actualNotes: number; normalNotes: number } // used for tuplets
+    readonly ratio: TupletRatio
 
-    constructor(value?: { type?: DurationType; dots?: number; ratio?: { actualNotes: number; normalNotes: number } }) {
+    constructor(value?: { type?: DurationType; dots?: number; ratio?: TupletRatio }) {
         this.type = value?.type || 'q'
         this.dots = value?.dots || 0
         this.ratio = value?.ratio || { actualNotes: 1, normalNotes: 1 }
@@ -48,6 +54,16 @@ export class Duration {
 
     get effectiveBeats(): number {
         return this.beats * (this.ratio.normalNotes / this.ratio.actualNotes)
+    }
+
+    /** Whether this value is written under a tuplet ratio — anything but plain 1:1. */
+    get isTuplet(): boolean {
+        return this.ratio.actualNotes !== 1 || this.ratio.normalNotes !== 1
+    }
+
+    /** Whether `other` is written under the same tuplet ratio (all plain values share 1:1). */
+    sameRatioAs(other: Duration): boolean {
+        return this.ratio.actualNotes === other.ratio.actualNotes && this.ratio.normalNotes === other.ratio.normalNotes
     }
 
     get isBeamable(): boolean {
@@ -142,7 +158,7 @@ export class Duration {
      * span is tuplet space (e.g. ⅔ beat inside a 3:2 triplet — inexpressible in
      * plain values): the written equivalent is decomposed and the ratio re-attached.
      */
-    static fromBeats(beats: number, ratio?: { actualNotes: number; normalNotes: number }): Duration[] {
+    static fromBeats(beats: number, ratio?: TupletRatio): Duration[] {
         const result: Duration[] = []
         let remaining = ratio ? beats * (ratio.actualNotes / ratio.normalNotes) : beats
         while (remaining > BEAT_EPSILON) {

@@ -156,7 +156,7 @@ export class ScoreSerializer {
             type: MXML_NOTE_TYPE[duration.type],
             ...(duration.dots > 0 && { dot: duration.dots }),
             ...(tie && { tie }),
-            ...(actualNotes !== 1 && { timeModification: { actualNotes, normalNotes } }),
+            ...(duration.isTuplet && { timeModification: { actualNotes, normalNotes } }),
         }
     }
 

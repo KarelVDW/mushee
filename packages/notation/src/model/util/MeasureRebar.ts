@@ -8,9 +8,9 @@ import type { TimeSignature } from '../TimeSignature'
 import type { BarlineType, TieType } from '../types'
 
 // One reflowable span of time: a single source note, or the tied chain the old barlines split it into.
+// The chain shares one pitch and tuplet ratio, so its first note speaks for the whole unit.
 interface Unit {
     notes: Note[]
-    ratio: { actualNotes: number; normalNotes: number }
     // Effective (tuplet-adjusted) beats.
     beats: number
     tiesBack: boolean
@@ -109,7 +109,6 @@ export class MeasureRebar {
                 } else {
                     units.push({
                         notes: [note],
-                        ratio: note.duration.ratio,
                         beats: note.duration.effectiveBeats,
                         tiesBack: note.tiesBack,
                         tiesForward: note.tiesForward,
@@ -131,7 +130,7 @@ export class MeasureRebar {
         const a = prev.notes[0].pitch
         const b = note.pitch
         if (!a || !b || a.name !== b.name || a.octave !== b.octave || a.alter !== b.alter) return false
-        return prev.ratio.actualNotes === note.duration.ratio.actualNotes && prev.ratio.normalNotes === note.duration.ratio.normalNotes
+        return prev.notes[0].duration.sameRatioAs(note.duration)
     }
 
     private flow(unit: Unit) {
@@ -140,7 +139,8 @@ export class MeasureRebar {
             this.pending.push(unit.notes[0])
             this.fill += unit.beats
         } else {
-            const ratio = unit.ratio.actualNotes !== 1 ? unit.ratio : undefined
+            const written = unit.notes[0].duration
+            const ratio = written.isTuplet ? written.ratio : undefined
             let remaining = unit.beats
             let firstChunk = true
             while (remaining > BEAT_EPSILON) {
