@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 interface WordmarkProps {
     size?: number
@@ -15,14 +15,11 @@ export function Wordmark({ size = 28, className }: WordmarkProps) {
     )
 }
 
-export function Eyebrow({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-    return (
-        <span
-            className={`font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant ${className ?? ''}`}
-            style={style}>
-            {children}
-        </span>
-    )
+/** The small-caps label voice — shared by Eyebrow and the kit's field labels. */
+export const EYEBROW_CLASS = 'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant'
+
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+    return <span className={`${EYEBROW_CLASS} ${className ?? ''}`}>{children}</span>
 }
 
 // Space Grotesk by default; `italic` keeps Space Grotesk italic for in-app titles.

@@ -2,9 +2,10 @@
 
 import { type ReactNode, useId, useState } from 'react'
 
+import { EYEBROW_CLASS } from './Brand'
 import { Icon, type IconName } from './Icon'
 
-const LABEL_CLASS = 'font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant cursor-text'
+const LABEL_CLASS = `${EYEBROW_CLASS} cursor-text`
 
 interface TextFieldProps {
     label?: ReactNode

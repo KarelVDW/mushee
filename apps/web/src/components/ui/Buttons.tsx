@@ -71,18 +71,24 @@ export function PrimaryButton({
     )
 }
 
-export function SecondaryButton({ children, onClick, size = 'md', type = 'button', disabled, fullWidth }: PrimaryButtonProps) {
-    const big = size === 'lg'
+interface SecondaryButtonProps {
+    children?: ReactNode
+    onClick?: () => void
+    disabled?: boolean
+    fullWidth?: boolean
+}
+
+export function SecondaryButton({ children, onClick, disabled, fullWidth }: SecondaryButtonProps) {
     return (
         <button
-            type={type}
+            type="button"
             disabled={disabled}
             onClick={onClick}
             className={[
                 'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
                 'border-0 rounded-full font-label font-semibold',
                 'bg-surface-container-low text-on-surface hover:bg-surface-container',
-                big ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
+                'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
                 'leading-none',
                 'transition-colors duration-150 ease-solkey',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -98,13 +104,12 @@ interface TertiaryButtonProps {
     children?: ReactNode
     onClick?: () => void
     danger?: boolean
-    type?: 'button' | 'submit'
 }
 
-export function TertiaryButton({ children, onClick, danger = false, type = 'button' }: TertiaryButtonProps) {
+export function TertiaryButton({ children, onClick, danger = false }: TertiaryButtonProps) {
     return (
         <button
-            type={type}
+            type="button"
             onClick={onClick}
             className={[
                 'bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
