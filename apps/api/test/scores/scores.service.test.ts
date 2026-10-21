@@ -129,7 +129,9 @@ describe('remove', () => {
         expect(cache.deleteByScoreId).toHaveBeenCalledWith('src')
         expect(storage.delete).toHaveBeenCalledWith(SOURCE.storageKey)
         expect(scoreRepo.remove).toHaveBeenCalledWith(expect.objectContaining({ id: 'src' }))
-        const order = [storage.deletePrefix, cache.deleteByScoreId, storage.delete, scoreRepo.remove].map((fn) => fn.mock.invocationCallOrder[0])
+        const order = [storage.deletePrefix, cache.deleteByScoreId, storage.delete, scoreRepo.remove].map(
+            (fn) => fn.mock.invocationCallOrder[0],
+        )
         expect(order).toEqual([...order].sort((a, b) => a - b))
     })
 

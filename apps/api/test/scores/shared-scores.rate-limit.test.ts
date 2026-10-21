@@ -4,7 +4,11 @@ import type { ExecutionContext } from '@nestjs/common'
 import { HttpException, HttpStatus } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
-import { SHARED_RATE_LIMIT_MAX, SHARED_RATE_LIMIT_MAX_TRACKED, SharedScoreRateLimitGuard } from '../../src/scores/shared-score-rate-limit.guard'
+import {
+    SHARED_RATE_LIMIT_MAX,
+    SHARED_RATE_LIMIT_MAX_TRACKED,
+    SharedScoreRateLimitGuard,
+} from '../../src/scores/shared-score-rate-limit.guard'
 
 /** Per-IP fixed-window limiter on the public share route. Its binding to the controller is tested in shared-scores.controller.test.ts. */
 
