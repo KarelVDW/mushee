@@ -4,12 +4,20 @@ import type { ReactNode } from 'react'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { Footer, Icon } from '@/components/ui'
 
+interface PublicPageShellProps {
+    title: string
+    subtitle?: string
+    /** Designed content above the article (the contact cards), kept out of the legal-prose styles. */
+    lead?: ReactNode
+    children: ReactNode
+}
+
 /**
  * Shared chrome for public content pages (privacy, terms, contact): the
  * marketing nav with a way back to the landing page, centered article
  * column, standard footer.
  */
-export function PublicPageShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function PublicPageShell({ title, subtitle, lead, children }: PublicPageShellProps) {
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
             <MarketingNav>
@@ -27,6 +35,8 @@ export function PublicPageShell({ title, subtitle, children }: { title: string; 
                 {subtitle && (
                     <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant mt-3 mb-0">{subtitle}</p>
                 )}
+                {/* .legal-prose is unlayered CSS: inside it, it beats Tailwind's utilities, so designed blocks go above. */}
+                {lead && <div className="mt-8">{lead}</div>}
                 <article className="legal-prose mt-8">{children}</article>
             </main>
             <Footer width="marketing" />
