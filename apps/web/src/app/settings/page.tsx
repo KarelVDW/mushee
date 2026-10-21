@@ -1,6 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -166,9 +167,9 @@ export default function SettingsPage() {
                                             <Icon name="mail" size={16} />
                                             support@solkey.io
                                         </a>
-                                        <a href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        <Link href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
                                             All contact options
-                                        </a>
+                                        </Link>
                                     </div>
                                 </SettingsSection>
                                 <SettingsSection title="Sign out" subtitle="Log out of this browser.">
