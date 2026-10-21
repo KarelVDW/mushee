@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { ExportMenu } from '@/components/ExportMenu'
 import {
     Footer,
     Icon,
@@ -26,7 +27,6 @@ import { withNext } from '@/lib/nextPath'
 import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 
-import { ExportMenu } from '../../scores/[id]/ExportMenu'
 import { useSharedPlayback } from './useSharedPlayback'
 
 /**
