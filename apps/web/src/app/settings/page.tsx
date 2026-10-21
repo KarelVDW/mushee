@@ -262,7 +262,7 @@ function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                             'flex items-center gap-2.5',
                             'font-body font-medium text-[14px] leading-none',
                             'transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                            'focus-ring',
                             active
                                 ? 'bg-surface-container text-on-surface'
                                 : 'bg-transparent text-on-surface-variant hover:text-on-surface',

@@ -166,7 +166,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
             })
         }
 
-        if (path === '/beta/status') return json({ betaMode: false, status: null, role: 'user' })
+        if (path === '/beta/status') return json({ betaMode: false, status: null })
 
         // The database tier catalogue, mirroring the seed migrations.
         if (path === '/plans') {

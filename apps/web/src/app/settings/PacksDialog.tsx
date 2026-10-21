@@ -82,7 +82,7 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                                         className={[
                                             'text-left border-0 rounded-lg p-4 cursor-pointer',
                                             'flex flex-col gap-2',
-                                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                            'focus-ring',
                                             active
                                                 ? 'bg-primary-soft text-on-primary-soft'
                                                 : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',

@@ -324,7 +324,6 @@ export interface BetaStatus {
     betaMode: boolean
     /** null = account predates the beta (never gated). */
     status: 'pending' | 'approved' | null
-    role: string
 }
 
 /** Fresh from the database — the waiting screen polls this to spot approval.
