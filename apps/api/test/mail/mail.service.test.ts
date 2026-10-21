@@ -134,6 +134,10 @@ describe('MailService announcements', () => {
         expect(rendered.html).not.toContain('**')
     })
 
+    it('escapes the subject heading exactly once', () => {
+        expect(MailService.renderAnnouncement("What's new & improved", 'B').html).toContain('What&#39;s new &amp; improved</h1>')
+    })
+
     it('understands **bold** and [label](https://url) links, and nothing else', () => {
         const { html, text } = MailService.renderAnnouncement(
             'S',
