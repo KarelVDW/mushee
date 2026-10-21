@@ -3,7 +3,7 @@ import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
 import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from '../util/scoreGenerator'
+import { generateScore, Rng } from '../../support/scoreGenerator'
 
 /**
  * The MIDI importer parses raw bytes; a corrupted or hostile file must never

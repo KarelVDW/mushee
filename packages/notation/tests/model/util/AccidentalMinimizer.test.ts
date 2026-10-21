@@ -7,7 +7,7 @@ import { AccidentalMinimizer } from '@mushee/notation/model/util/AccidentalMinim
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
-import { describeScore, soundingEvents } from './scoreObservations'
+import { describeScore, soundingEvents } from '../../support/scoreObservations'
 
 /** A quarter note (or rest without `pitch`). */
 const q = (pitch?: Pitch, tie?: 'start' | 'stop') => new Note({ duration: new Duration({ type: 'q' }), pitch, tie })

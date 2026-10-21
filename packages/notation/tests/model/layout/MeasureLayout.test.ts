@@ -230,6 +230,11 @@ describe('MeasureLayout', () => {
             expect(MeasureLayout.barlineWidth('end')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH)
             expect(MeasureLayout.barlineWidth(undefined)).toBe(BARLINE_THIN_WIDTH)
         })
+
+        it('draws end and double barlines wider than a single one', () => {
+            expect(MeasureLayout.barlineWidth('end')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+            expect(MeasureLayout.barlineWidth('double')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+        })
     })
 
     describe('mid-measure elements', () => {

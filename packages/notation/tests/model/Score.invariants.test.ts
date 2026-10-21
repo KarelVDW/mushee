@@ -3,8 +3,8 @@ import type { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from './scoreGenerator'
-import { describeScore, soundingEvents } from './scoreObservations'
+import { generateScore, Rng } from '../support/scoreGenerator'
+import { describeScore, soundingEvents } from '../support/scoreObservations'
 
 /**
  * Structural edits must not change the music. Over generated scores:

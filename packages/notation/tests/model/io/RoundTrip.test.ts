@@ -8,8 +8,8 @@ import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from '../util/scoreGenerator'
-import { describeScore, meter, soundingEvents, tempoMarks } from '../util/scoreObservations'
+import { generateScore, Rng } from '../../support/scoreGenerator'
+import { describeScore, meter, soundingEvents, tempoMarks } from '../../support/scoreObservations'
 
 /**
  * Generative round-trip properties. A seeded generator builds random but valid

@@ -153,6 +153,53 @@ describe('Pitch', () => {
         it('throws for an unknown step name', () => {
             expect(() => new Pitch({ name: 'H', octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
         })
+
+        it('transposes C5 down by a major 2nd to B♭4 (trumpet writes C, sounds B♭)', () => {
+            const c5 = new Pitch({ name: 'C', octave: 5 })
+            const result = c5.transposed(-2, -1)
+            expect(result.name).toBe('B')
+            expect(result.octave).toBe(4)
+            expect(result.alter).toBe(-1)
+            expect(result.accidental).toBe('b')
+        })
+
+        it('transposes C5 up by an octave to C6 (piccolo writes C, sounds C an octave higher)', () => {
+            const c5 = new Pitch({ name: 'C', octave: 5 })
+            const result = c5.transposed(12, 7)
+            expect(result.name).toBe('C')
+            expect(result.octave).toBe(6)
+            expect(result.alter).toBe(0)
+        })
+
+        it('transposes C5 down by a major 6th to E♭4 (alto sax)', () => {
+            const c5 = new Pitch({ name: 'C', octave: 5 })
+            const result = c5.transposed(-9, -5)
+            expect(result.name).toBe('E')
+            expect(result.octave).toBe(4)
+            expect(result.alter).toBe(-1)
+        })
+
+        it('transposes C5 down by a perfect 5th to F4 (French horn)', () => {
+            const c5 = new Pitch({ name: 'C', octave: 5 })
+            const result = c5.transposed(-7, -4)
+            expect(result.name).toBe('F')
+            expect(result.octave).toBe(4)
+            expect(result.alter).toBe(0)
+        })
+
+        it('preserves pitch identity through round-trip transposition', () => {
+            const original = new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 })
+            const round = original.transposed(-7, -4).transposed(7, 4)
+            expect(round.name).toBe('F')
+            expect(round.octave).toBe(4)
+            expect(round.alter).toBe(1)
+        })
+
+        it('preserves the underlying MIDI relationship: written + chromatic = sounding', () => {
+            const written = new Pitch({ name: 'D', alter: 1, octave: 4 })
+            const sounding = written.transposed(-9, -5)
+            expect(sounding.toMidi()).toBe(written.toMidi() - 9)
+        })
     })
 
     describe('accidentalValue (control token from alteration)', () => {

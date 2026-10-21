@@ -2,7 +2,7 @@ import { SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import type { Score } from '@mushee/notation/model/Score'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from '../util/scoreGenerator'
+import { generateScore, Rng } from '../../support/scoreGenerator'
 
 /**
  * Layout robustness: for any valid score, at every layout width the editor uses
