@@ -5,7 +5,6 @@
     "description": "Solkey's score playback engine: MidiPlayer (smplr soundfonts over Web Audio), the rAF Ticker, ScoreScheduler and Metronome. Shipped as TypeScript source — consuming apps compile it with their own bundler (Next: transpilePackages).",
     "type": "module",
     "exports": {
-        ".": "./src/index.ts",
         "./*": "./src/*.ts"
     },
     "scripts": {
