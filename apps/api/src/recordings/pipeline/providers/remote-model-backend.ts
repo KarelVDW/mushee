@@ -3,6 +3,7 @@ import { loadSync } from '@grpc/proto-loader'
 import { PROTO_PATH } from '@mushee/inference-proto'
 import { Logger } from '@nestjs/common'
 
+import { describeError } from '../describe-error'
 import { envPositiveNumber } from '../env'
 import type { ModelBackend, ModelKey } from './model-backend'
 
@@ -76,7 +77,7 @@ export class RemoteModelBackend implements ModelBackend {
         try {
             await this.unary('Health', {})
         } catch (err) {
-            this.logger.warn(`Inference service for ${model} at ${this.url} not ready: ${describe(err)}`)
+            this.logger.warn(`Inference service for ${model} at ${this.url} not ready: ${describeError(err)}`)
         }
     }
 
@@ -104,8 +105,4 @@ export class RemoteModelBackend implements ModelBackend {
             })
         })
     }
-}
-
-function describe(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
 }

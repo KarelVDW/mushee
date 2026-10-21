@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common'
 
+import { describeError } from '../describe-error'
 import { AT_PITCH_PROVIDER_NAME, PITCHDOWN_PROVIDER_NAME, type ProviderName } from '../profiles/pipeline-profile'
 import { CrepePitchdownProvider } from './crepe-pitchdown-provider'
 import { CrepeProvider } from './crepe-provider'
@@ -48,8 +49,7 @@ export class ProviderRegistry {
         await Promise.all(
             targets.map((p) =>
                 p.init().catch((err: unknown) => {
-                    const msg = err instanceof Error ? err.message : String(err)
-                    this.logger.error(`Failed to init provider "${p.name}": ${msg}`)
+                    this.logger.error(`Failed to init provider "${p.name}": ${describeError(err)}`)
                 }),
             ),
         )
