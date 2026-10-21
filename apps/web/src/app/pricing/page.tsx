@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 
+import { JsonLd } from '@/components/marketing/JsonLd'
 import { formatMoney } from '@/lib/currency'
-import { BETA_MODE, CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
 import { SITE_URL } from '@/lib/env'
+import { CHEAPEST_PACK, PLAN_TIERS } from '@/lib/plans'
+import { solkeyApplicationJsonLd } from '@/lib/structuredData'
 
 import { PRICING_FAQ } from './faq'
 import { PricingPage } from './PricingPage'
@@ -21,40 +23,9 @@ export const metadata: Metadata = {
     },
 }
 
-/** Structured data: the offer ladder (hidden during the beta) and the FAQ, for rich results. */
+/** Structured data: the product with its offer ladder (hidden during the beta) and the FAQ, for rich results. */
 const jsonLd = [
-    {
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'Solkey',
-        url: `${SITE_URL}/pricing`,
-        applicationCategory: 'MultimediaApplication',
-        operatingSystem: 'Web',
-        offers: BETA_MODE
-            ? [{ '@type': 'Offer', name: 'Solkey Beta', price: 0, priceCurrency: 'USD' }]
-            : [
-                  ...PLAN_TIERS.map((tier) => ({
-                      '@type': 'Offer',
-                      name: `Solkey ${tier.name}`,
-                      price: tier.priceMonthly,
-                      priceCurrency: 'USD',
-                      ...(tier.priceMonthly > 0 && {
-                          priceSpecification: {
-                              '@type': 'UnitPriceSpecification',
-                              price: tier.priceMonthly,
-                              priceCurrency: 'USD',
-                              billingDuration: 'P1M',
-                          },
-                      }),
-                  })),
-                  ...CREDIT_PACKS.map((pack) => ({
-                      '@type': 'Offer',
-                      name: `Solkey ${pack.name} pack (${pack.minutes} min)`,
-                      price: pack.price,
-                      priceCurrency: 'USD',
-                  })),
-              ],
-    },
+    solkeyApplicationJsonLd(`${SITE_URL}/pricing`),
     {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
@@ -69,7 +40,7 @@ const jsonLd = [
 export default function Page() {
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <JsonLd data={jsonLd} />
             <PricingPage />
         </>
     )
