@@ -1,15 +1,3 @@
-/**
- * Re-attack detector. The monophonic pitch-trajectory providers (CREPE)
- * segment only on pitch stability, so two repeated same-pitch notes read as one
- * sustained note — a recall loss. This finds note re-articulations from the
- * audio amplitude envelope so `NoteExtractor` can split a sustained run back
- * into the notes that were actually played.
- *
- * It is deliberately conservative: an onset requires the energy to genuinely
- * DIP (to a fraction of the preceding peak — a real inter-note gap) and then
- * rise back. Vibrato/tremolo ripple and noise never dip that far, so a held
- * note is not shattered (which would wreck the pipeline's high precision).
- */
 /** Tunable re-attack sensitivity; defaults reproduce the historical behavior. */
 export interface OnsetDetectorOptions {
     /** Minimum spacing between detected onsets, in seconds. */
@@ -96,6 +84,18 @@ export interface OnsetDetectorOptions {
     hopSec?: number
 }
 
+/**
+ * Re-attack detector. The monophonic pitch-trajectory providers (CREPE)
+ * segment only on pitch stability, so two repeated same-pitch notes read as one
+ * sustained note — a recall loss. This finds note re-articulations from the
+ * audio amplitude envelope so `NoteExtractor` can split a sustained run back
+ * into the notes that were actually played.
+ *
+ * It is deliberately conservative: an onset requires the energy to genuinely
+ * DIP (to a fraction of the preceding peak — a real inter-note gap) and then
+ * rise back. Vibrato/tremolo ripple and noise never dip that far, so a held
+ * note is not shattered (which would wreck the pipeline's high precision).
+ */
 export class OnsetDetector {
     /** `dipRatio` when none is given: tuned on dry audio (see `SUSTAINED_ONSET_DIP_RATIO`). */
     static readonly DEFAULT_DIP_RATIO = 0.5

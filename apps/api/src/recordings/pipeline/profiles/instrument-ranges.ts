@@ -8,6 +8,13 @@
  * Ranges are generous (a bit below the lowest and above the highest practical
  * note) and expressed at concert/sounding pitch, matching what the microphone
  * actually hears regardless of the instrument's written transposition.
+ *
+ * Hand-kept twin of the instrument catalogue in
+ * packages/notation/src/model/Instrument.ts: the keys and the voice prior
+ * (`'voice-lead'`, ids starting `voice`) follow its ids and its Voice category.
+ * Nothing checks the two agree — an id added or renamed there gets at most the
+ * substring fallback's hint here (and, for a voice not named `voice…`, no voice
+ * prior) until this file learns it too.
  */
 export interface FreqRange {
     minHz: number

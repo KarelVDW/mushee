@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
 import { describeError } from '../describe-error'
+import { envFlag } from '../env'
 import { ensureWasmBackend, readModelArtifacts } from '../providers/tf-backend'
 
 /**
@@ -52,11 +53,11 @@ import { ensureWasmBackend, readModelArtifacts } from '../providers/tf-backend'
 const logger = new Logger('SourceClassifier')
 
 /** Kill-switch, mirroring RECORDING_VOICE_DECODE: `0` disables classification. */
-const CLASSIFY = process.env.RECORDING_SOURCE_CLASSIFY !== '0'
+const CLASSIFY = envFlag('RECORDING_SOURCE_CLASSIFY')
 
 const MODEL_DIR = process.env.YAMNET_MODEL_DIR ?? resolve(__dirname, '../../../../model-yamnet')
 
-/** YAMNet's native rate — happily also the pipeline's detect rate. */
+/** YAMNet's native rate — the resolver's detection rate is defined from it (`DETECT_SAMPLE_RATE`). */
 export const YAMNET_SAMPLE_RATE = 16000
 /** One 0.96 s YAMNet analysis frame is the minimum decidable audio. */
 const MIN_SAMPLES = Math.round(0.96 * YAMNET_SAMPLE_RATE) + 1

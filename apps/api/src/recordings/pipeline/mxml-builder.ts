@@ -1,6 +1,6 @@
 import type { MxmlMeasure, MxmlMeasureEntry, MxmlNoteType, MxmlPitch, MxmlStep, MxmlTie } from './mxml.types'
 import type { NoteEventTime } from './note-event'
-import { chooseNamingOffset, estimateGridPhaseBeats, estimateTuningOffsetCents, keyPitchClasses, spellMidi } from './voice-notation'
+import { TakeSpelling } from './voice-notation'
 
 const DIVISIONS_PER_QUARTER = 12
 
@@ -52,26 +52,21 @@ export interface BuilderOptions {
      * notes still ambiguous after tuning normalization — see voice-notation.ts.
      */
     keyFifths?: number | null
+    /**
+     * Spell pitches on the take's own tuning grid (+ key-aware snapping) instead
+     * of the absolute keyboard (`TakeSpelling`). The pipeline sets it once the
+     * profile locks as voice; a mid-take estimate can differ from the final one,
+     * but the finalize pass rebuilds every measure, so the shipped score is
+     * spelled consistently from the whole take. Default false.
+     */
+    voiceSpelling?: boolean
 }
 
 /** A committed note as the builder lays it out; `pitchMidiFloat` drives voice spelling. */
 export type PendingNote = Pick<NoteEventTime, 'startTimeSeconds' | 'durationSeconds' | 'pitchMidi' | 'pitchMidiFloat'>
 
 export class MxmlBuilder {
-    /**
-     * Spell pitches on the take's own tuning grid (+ key-aware snapping) instead
-     * of the absolute keyboard. Enabled by the pipeline once the profile locks
-     * as voice; a mid-take estimate can differ from the final one, but the
-     * finalize pass rebuilds every measure, so the shipped score is spelled
-     * consistently from the whole take.
-     */
-    private voiceSpelling = false
-
     constructor(private readonly options: BuilderOptions) {}
-
-    setVoiceSpelling(on: boolean): void {
-        this.voiceSpelling = on
-    }
 
     /**
      * Bar length in quarter-note beats — the unit `bpm` counts in. `beats` alone is
@@ -105,32 +100,38 @@ export class MxmlBuilder {
         return [first, Math.max(first, last)]
     }
 
+    /** One bar of the take written from `allNotes` — every note so far, not just this bar's. */
     buildMeasure(index: number, allNotes: PendingNote[]): MxmlMeasure {
+        return this.writeMeasure(index, allNotes, this.spellingFor(allNotes))
+    }
+
+    /**
+     * Several bars of the take from one note set, keyed by index. The take's
+     * spelling is estimated once for the whole batch rather than once per bar —
+     * identical output to calling `buildMeasure` for each index.
+     */
+    buildMeasures(indices: Iterable<number>, allNotes: PendingNote[]): Record<number, MxmlMeasure> {
+        const spelling = this.spellingFor(allNotes)
+        const measures: Record<number, MxmlMeasure> = {}
+        for (const index of indices) measures[index] = this.writeMeasure(index, allNotes, spelling)
+        return measures
+    }
+
+    /**
+     * Sung takes are spelled on the take's own tuning grid: the offset must be
+     * estimated over ALL notes (one constant per take, never per note), which is
+     * why it happens here — the one place that always sees the whole performance
+     * so far — and not per emitted measure fragment.
+     */
+    private spellingFor(allNotes: PendingNote[]): TakeSpelling {
+        if (!this.options.voiceSpelling) return TakeSpelling.NONE
+        return TakeSpelling.fromNotes(allNotes, { keyFifths: this.options.keyFifths, bpm: this.options.bpm })
+    }
+
+    private writeMeasure(index: number, allNotes: PendingNote[], spelling: TakeSpelling): MxmlMeasure {
         const measureStartBeat = index * this.measureBeats
         const measureEndBeat = measureStartBeat + this.measureBeats
-
-        // Sung takes are spelled on the take's own tuning grid: the offset must be
-        // estimated over ALL notes (one constant per take, never per note), which
-        // is why this happens here — the one place that always sees the whole
-        // performance so far — and not per emitted measure fragment.
-        //
-        // The key mask is the SCORE's signature only. The take-key fallback for
-        // keyless takes (`estimateTakeKeyClasses`, E8) was built, measured on the
-        // intonation tier, and does NOT ship: it recovers the actual key barely
-        // half the time on short diatonic takes and nudges spelling the wrong way
-        // when it misses — see the findings log and scripts/eval/research/design-take-key.md.
-        // The implementation was removed from voice-notation.ts; commit e16a3a7 holds it.
-        const keyClasses = this.voiceSpelling && this.options.keyFifths != null ? keyPitchClasses(this.options.keyFifths) : null
-        const offsetCents = this.voiceSpelling ? chooseNamingOffset(allNotes, estimateTuningOffsetCents(allNotes), keyClasses) : 0
-        // The rhythm twin of the tuning offset: a take dragged uniformly behind
-        // the click is written back on the beat. Vote-gated (see the estimator);
-        // clamped so the first note cannot shift before zero.
-        const phaseShift = this.voiceSpelling
-            ? Math.min(
-                  estimateGridPhaseBeats(allNotes, this.options.bpm),
-                  allNotes.length ? (allNotes[0].startTimeSeconds * this.options.bpm) / 60 : 0,
-              )
-            : 0
+        const phaseShift = spelling.phaseShiftBeats
 
         const segments: Array<{
             startBeat: number
@@ -150,7 +151,7 @@ export class MxmlBuilder {
             segments.push({
                 startBeat: Math.max(startBeat, measureStartBeat),
                 endBeat: Math.min(endBeat, measureEndBeat),
-                pitchMidi: this.voiceSpelling ? spellMidi(n, offsetCents, keyClasses) : n.pitchMidi,
+                pitchMidi: spelling.spell(n),
             })
         }
         segments.sort((a, b) => a.startBeat - b.startBeat)
@@ -232,6 +233,15 @@ export class MxmlBuilder {
      * A span is emitted as ONE symbol only when it both matches a writable value and
      * begins on a position at least as strong as that value's own alignment — which is
      * what allows a dotted half at the start of a bar while forbidding one from beat 2.
+     *
+     * Twin of the editor's packages/notation/src/model/util/DurationSpeller.ts, which
+     * ports this speller (`spellDuration`/`spellSpan` ↔ `spell`/`spellUnits`). Two
+     * differences: this one counts 12 divisions per quarter where DurationSpeller
+     * counts 4 sixteenth units, and its no-interior-boundary fallback takes the
+     * largest value that fits without DurationSpeller's alignment check. Kept apart
+     * until the API can run the notation package; the table test in
+     * test/recordings/recording-editor-contract.test.ts pins them to the same
+     * spelling on the sixteenth grid.
      */
     private spellDuration(startBeatInMeasure: number, beats: number): StandardDuration[] {
         const divs = Math.round(beats * DIVISIONS_PER_QUARTER)
@@ -267,7 +277,8 @@ export class MxmlBuilder {
             }
         }
         // No interior boundary: the span sits inside one grid cell, so the best we can
-        // do is the largest writable value that fits, then whatever remains.
+        // do is the largest writable value that fits, then whatever remains. (Unlike
+        // DurationSpeller, the fit is not required to align — see `spellDuration`.)
         const fit = STANDARD_DURATIONS.find((d) => d.divisions <= divs)
         if (!fit) return []
         return [fit, ...this.spellSpan(start + fit.divisions, divs - fit.divisions)]

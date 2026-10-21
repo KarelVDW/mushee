@@ -3,13 +3,13 @@ import { Logger } from '@nestjs/common'
 import { AudioConverter } from './audio-converter'
 import { AudioDecoder, StreamingDecoder } from './audio-decoder'
 import { describeError } from './describe-error'
+import { envFlag, envNumber, envPositiveNumber } from './env'
 import type { MxmlMeasure } from './mxml.types'
 import { MxmlBuilder, PendingNote } from './mxml-builder'
 import type { NoteEventTime } from './note-event'
 import { ExtractedNotes } from './note-extractor'
-import { DEFAULT_PROFILE, type PipelineProfile } from './profiles/pipeline-profile'
-import { ProfileResolver } from './profiles/profile-resolver'
-import type { PitchTranscribeOptions } from './providers/pitch-provider'
+import type { PipelineProfile } from './profiles/pipeline-profile'
+import { DETECT_DECODE, DETECT_SAMPLE_RATE, ProfileResolver } from './profiles/profile-resolver'
 import { ProviderRegistry } from './providers/provider-registry'
 import { RecordingDebugRenderer } from './recording-debug-renderer'
 
@@ -18,7 +18,7 @@ const DEFAULT_BEATS = 4
 const DEFAULT_BEAT_TYPE = 4
 // Pass cadence. Overridable so eval harnesses can drive many incremental passes
 // without waiting in real time; unset in production, where it stays 1 s.
-const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
+const DEBOUNCE_MS = envPositiveNumber('RECORDING_DEBOUNCE_MS', 1000)
 /**
  * OFFSET-confirmation margin (E5/R12): a note is committed once this much
  * audio exists past its END — the streaming analogue of Essentia Pitch2Midi's
@@ -30,10 +30,7 @@ const DEBOUNCE_MS = Number(process.env.RECORDING_DEBOUNCE_MS) || 1000
  * delay compensation does not apply either — we report measured note times,
  * not confirmation times; R7 calibrated the reported-time bias at 0.)
  */
-const STABLE_MARGIN_SEC = Number(process.env.RECORDING_STABLE_MARGIN_SEC) || 0.4
-/** Sample rate / high-pass for the coarse detection decode that picks a profile. */
-const DETECT_SAMPLE_RATE = 16000
-const DETECT_HIGHPASS_HZ = 30
+const STABLE_MARGIN_SEC = envPositiveNumber('RECORDING_STABLE_MARGIN_SEC', 0.4)
 /** Minimum audio before we trust the pitch scan enough to lock a profile. */
 const DETECT_MIN_SEC = 1.2
 /**
@@ -56,20 +53,7 @@ const DETECT_MAX_WAIT_SEC = envNumber('RECORDING_DETECT_MAX_WAIT_SEC', 8)
  * this reproduces the pre-2026-09 lock behaviour exactly — the A/B the
  * `probe-leadin.ts` harness measures, and production's rollback.
  */
-const FINAL_REROUTE = process.env.RECORDING_FINAL_REROUTE !== '0'
-
-/** Numeric env override; `0` is a legitimate value (unlike `Number(x) || d`). */
-function envNumber(key: string, fallback: number): number {
-    const raw = process.env[key]
-    if (raw === undefined || raw === '') return fallback
-    const v = Number(raw)
-    return Number.isFinite(v) ? v : fallback
-}
-
-/** The resolver's "no reliable pitch in this audio" outcome, with or without a hint. */
-function isFallbackProfile(profile: PipelineProfile): boolean {
-    return profile.id === DEFAULT_PROFILE.id || profile.id.startsWith(`${DEFAULT_PROFILE.id}+`)
-}
+const FINAL_REROUTE = envFlag('RECORDING_FINAL_REROUTE')
 
 export interface ScoreUpdate {
     measures: Record<number, MxmlMeasure>
@@ -167,12 +151,6 @@ export class RecordingPipeline {
     private chromaticTranspose = 0
     // Key signature at the recording start (fifths), for voice pitch spelling.
     private keyFifths: number | null = null
-    private builder = new MxmlBuilder({
-        bpm: this.bpm,
-        beats: this.beats,
-        beatType: this.beatType,
-        chromaticTranspose: this.chromaticTranspose,
-    })
 
     private processing = false
     private rerunRequested = false
@@ -183,9 +161,12 @@ export class RecordingPipeline {
     private onHealth: (health: PipelineHealth) => void = () => {}
     private consecutiveFailures = 0
 
-    // Resolved once, from the first ~1.2 s of audio (or on finalize), then locked
-    // for the session: which provider runs and with what frequency window /
-    // high-pass / thresholds. `converter` is built to match the chosen provider.
+    // Which provider runs and with what frequency window / high-pass / thresholds.
+    // Locked once the scanned prefix (≥ DETECT_MIN_SEC) holds pitch — deferred up
+    // to DETECT_MAX_WAIT_SEC while it does not, or taken on the final pass — and
+    // kept for the session, except that a take locked on the fallback is
+    // re-resolved over the whole audio on the final pass (`rerouteFinal`).
+    // `converter` is built to match the chosen provider.
     private profile: PipelineProfile | null = null
     private converter: AudioConverter | null = null
     private instrumentHint: string | undefined
@@ -195,6 +176,8 @@ export class RecordingPipeline {
     // ffmpeg input-format hint derived from the client's negotiated MIME type.
     // Undefined (unknown type / no meta) means ffmpeg probes the container.
     private inputFormat: string | undefined
+    // Declared after the meta and profile fields it is built from (see `createBuilder`).
+    private builder = this.createBuilder()
 
     constructor(
         private readonly registry: ProviderRegistry,
@@ -226,16 +209,24 @@ export class RecordingPipeline {
         if (typeof meta.mimeType === 'string') {
             this.inputFormat = AudioDecoder.inputFormatFor(meta.mimeType)
         }
-        this.builder = new MxmlBuilder({
+        this.builder = this.createBuilder()
+    }
+
+    /**
+     * The builder is configured from two sources that change independently: the
+     * take's meta (`setMeta`) and the routing decision — voice spelling on the
+     * take's own tuning grid — which belongs to the locked profile (`lockProfile`).
+     * Both rebuild it here, so neither can leave the other's half stale.
+     */
+    private createBuilder(): MxmlBuilder {
+        return new MxmlBuilder({
             bpm: this.bpm,
             beats: this.beats,
             beatType: this.beatType,
             chromaticTranspose: this.chromaticTranspose,
             keyFifths: this.keyFifths,
+            voiceSpelling: this.profile?.isVoice ?? false,
         })
-        // The builder is rebuilt on meta, but the routing decision (voice spelling
-        // on the take's own tuning grid) belongs to the locked profile.
-        this.builder.setVoiceSpelling(this.profile?.isVoice ?? false)
     }
 
     setOnUpdate(cb: (update: ScoreUpdate) => void): void {
@@ -360,7 +351,7 @@ export class RecordingPipeline {
         // the user.
         if (!this.converter || !this.profile) {
             await this.resolveProfile(Buffer.concat(this.chunks), isFinal)
-        } else if (isFinal && FINAL_REROUTE && isFallbackProfile(this.profile) && this.streamDecoder) {
+        } else if (isFinal && FINAL_REROUTE && this.profile.fallback && this.streamDecoder) {
             // The take was locked on the unvoiced fallback (a lead-in longer than
             // DETECT_MAX_WAIT_SEC). Now that the whole take exists, ask the resolver
             // again — a real register band beats a blind window every time.
@@ -376,7 +367,7 @@ export class RecordingPipeline {
         // From here `appendChunk` forwards new chunks straight in — each byte is
         // decoded exactly once instead of re-decoding the whole stream every pass.
         if (!this.streamDecoder) {
-            this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
+            this.streamDecoder = this.spawnDecoder()
         }
 
         // On the final pass, flush ffmpeg (incl. any filter look-ahead tail) and take
@@ -388,7 +379,7 @@ export class RecordingPipeline {
 
         const duration = full.length / provider.sampleRate
 
-        const extracted = await converter.convert(full, this.bpm, this.pitchOptions(profile))
+        const extracted = await converter.convert(full, this.bpm)
         const tConvert = Date.now()
         this.emitFromExtracted(extracted, duration, isFinal)
         const tEnd = Date.now()
@@ -413,42 +404,54 @@ export class RecordingPipeline {
      * Waits for at least `DETECT_MIN_SEC` of audio unless this is the final pass.
      */
     private async resolveProfile(buffer: Buffer, isFinal: boolean): Promise<boolean> {
-        let detect
-        try {
-            detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, {
-                loudnorm: false,
-                highpassHz: DETECT_HIGHPASS_HZ,
-                inputFormat: this.inputFormat,
-            })
-        } catch (err) {
-            this.logger.debug(`Detection decode not ready (${describeError(err)})`)
-            return false
-        }
-        if (!isFinal && detect.duration < DETECT_MIN_SEC) return false
-
-        const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
-            instrumentId: this.instrumentHint,
-            sourceKind: this.sourceKind,
-        })
+        const detected = await this.detectProfile(buffer, isFinal ? 0 : DETECT_MIN_SEC, 'Detection decode not ready')
+        if (!detected) return false
+        const { profile, durationSec } = detected
         // No reliable pitch yet (breath, a late start, speech): keep listening
         // rather than lock the blind fallback for the whole take. Nothing is lost by
         // waiting — there are no notes to emit before the first pitched audio.
-        if (!isFinal && isFallbackProfile(profile) && detect.duration < DETECT_MAX_WAIT_SEC) {
-            this.logger.debug(`No pitched audio in the first ${detect.duration.toFixed(1)} s — profile lock deferred`)
+        if (!isFinal && profile.fallback && durationSec < DETECT_MAX_WAIT_SEC) {
+            this.logger.debug(`No pitched audio in the first ${durationSec.toFixed(1)} s — profile lock deferred`)
             return false
         }
         this.lockProfile(profile)
         return true
     }
 
-    /** Install `profile` (and a converter for its provider) as the session's routing. */
-    /** Commit to `profile`: build its converter (returned, so callers need not re-read the nullable field). */
-    private lockProfile(profile: PipelineProfile): AudioConverter {
-        this.profile = profile
-        const converter = new AudioConverter(this.registry.get(profile.providerName), {
-            profile,
+    /**
+     * The detection half shared by the lock and the final re-route: decode the
+     * encoded take so far at the resolver's input contract and resolve a profile
+     * from it. Null when ffmpeg cannot decode it yet (logged under `failure`) or
+     * when it holds less than `minSec` of audio — checked BEFORE resolving, which
+     * runs the pitch scan, the reverberance estimate and the source classifier.
+     */
+    private async detectProfile(
+        buffer: Buffer,
+        minSec: number,
+        failure: string,
+    ): Promise<{ profile: PipelineProfile; durationSec: number } | null> {
+        let detect
+        try {
+            detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, { ...DETECT_DECODE, inputFormat: this.inputFormat })
+        } catch (err) {
+            this.logger.debug(`${failure} (${describeError(err)})`)
+            return null
+        }
+        if (detect.duration < minSec) return null
+        const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
+            instrumentId: this.instrumentHint,
+            sourceKind: this.sourceKind,
         })
-        this.converter = converter
+        return { profile, durationSec: detect.duration }
+    }
+
+    /**
+     * Commit to `profile` as the session's routing: build the converter for its
+     * provider, rebuild the builder for its spelling, and tell the client.
+     */
+    private lockProfile(profile: PipelineProfile): void {
+        this.profile = profile
+        this.converter = new AudioConverter(this.registry.get(profile.providerName), { profile })
         this.logger.log(
             `Adaptive profile locked: ${profile.id} provider=${profile.providerName} ` +
                 `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
@@ -458,8 +461,8 @@ export class RecordingPipeline {
         )
         // Sung takes are SPELLED on their own tuning grid at the notation layer
         // (voice-notation.ts); the flag lives on the builder, which setMeta may
-        // have created before the profile existed — so set it here too.
-        this.builder.setVoiceSpelling(profile.isVoice ?? false)
+        // have created before the profile existed — so rebuild it here too.
+        this.builder = this.createBuilder()
         // Tell the client what the pipeline believes it is hearing — the user is
         // the one observer who can tell us when this is wrong. `sourceBelief`, not
         // `isVoice`: belief is the observation, `isVoice` the routing outcome, and
@@ -468,14 +471,18 @@ export class RecordingPipeline {
             source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
             decidedBy: profile.sourceDecidedBy ?? 'prior',
         })
-        return converter
     }
 
-    private spawnDecoder(profile: PipelineProfile, sampleRate: number, loudnorm: boolean): StreamingDecoder {
-        const decoder = new StreamingDecoder(sampleRate, {
-            highpassHz: profile.highpassHz,
-            loudnorm,
-            denoise: profile.denoise,
+    /**
+     * A long-lived decoder for the locked profile and its provider, seeded with
+     * every chunk buffered so far (it must see the container header first).
+     */
+    private spawnDecoder(): StreamingDecoder {
+        const { profile, converter } = this
+        if (!profile || !converter) throw new Error('spawnDecoder called before a profile was locked')
+        const provider = converter.provider
+        const decoder = new StreamingDecoder(provider.sampleRate, {
+            ...AudioConverter.decodeOptionsFor(provider, profile),
             inputFormat: this.inputFormat,
         })
         decoder.write(Buffer.concat(this.chunks))
@@ -497,22 +504,10 @@ export class RecordingPipeline {
      */
     private async rerouteFinal(): Promise<void> {
         if (!this.streamDecoder) return
-        let detect
-        try {
-            detect = await this.decoder.decode(Buffer.concat(this.chunks), DETECT_SAMPLE_RATE, {
-                loudnorm: false,
-                highpassHz: DETECT_HIGHPASS_HZ,
-                inputFormat: this.inputFormat,
-            })
-        } catch (err) {
-            this.logger.debug(`Final re-resolve decode failed (${describeError(err)})`)
-            return
-        }
-        const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
-            instrumentId: this.instrumentHint,
-            sourceKind: this.sourceKind,
-        })
-        if (isFallbackProfile(profile)) return // still nothing pitched — keep what we have
+        const detected = await this.detectProfile(Buffer.concat(this.chunks), 0, 'Final re-resolve decode failed')
+        if (!detected) return
+        const { profile } = detected
+        if (profile.fallback) return // still nothing pitched — keep what we have
 
         this.logger.log(
             `Final pass re-routes the take: ${this.profile?.id ?? 'none'} → ${profile.id} ` +
@@ -520,8 +515,8 @@ export class RecordingPipeline {
         )
         // Let the old ffmpeg drain and exit; its PCM is not needed any more.
         void this.streamDecoder.finalize().catch(() => undefined)
-        const provider = this.lockProfile(profile).provider
-        this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
+        this.lockProfile(profile)
+        this.streamDecoder = this.spawnDecoder()
         this.emittedNotes.length = 0
         this.emittedKeys.clear()
         this.reemitAll = true
@@ -531,24 +526,12 @@ export class RecordingPipeline {
     private emitAllMeasures(): void {
         this.reemitAll = false
         if (this.lastEmittedMeasure < 0) return
-        const measures: Record<number, MxmlMeasure> = {}
-        for (let m = 0; m <= this.lastEmittedMeasure; m += 1) {
-            measures[m] = this.builder.buildMeasure(m, this.emittedNotes)
-        }
-        this.onUpdate({ measures })
+        this.onUpdate({ measures: this.builder.buildMeasures(RecordingPipeline.barsThrough(this.lastEmittedMeasure), this.emittedNotes) })
     }
 
-    private pitchOptions(profile: PipelineProfile): PitchTranscribeOptions {
-        return {
-            minFreqHz: profile.minFreqHz,
-            maxFreqHz: profile.maxFreqHz,
-            confidenceThreshold: profile.confidenceThreshold,
-            minFramesPerNote: profile.minFramesPerNote,
-            // Segmentation is a profile decision as of the voice flow: the resolver picks
-            // WHERE to listen and now also HOW to decide where notes are.
-            segmentMode: profile.segmentMode,
-            smoothFrames: profile.smoothFrames,
-        }
+    /** Bar indices 0 … `last`, inclusive. */
+    private static barsThrough(last: number): number[] {
+        return Array.from({ length: last + 1 }, (_, m) => m)
     }
 
     /**
@@ -598,10 +581,10 @@ export class RecordingPipeline {
             for (let m = 0; m <= this.lastEmittedMeasure; m += 1) affected.add(m)
             this.reemitAll = false
         }
-        const measures: Record<number, MxmlMeasure> = {}
-        for (const idx of [...affected].sort((a, b) => a - b)) {
-            measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes)
-        }
+        const measures = this.builder.buildMeasures(
+            [...affected].sort((a, b) => a - b),
+            this.emittedNotes,
+        )
         if (!this.timings.firstUpdateAt) this.timings.firstUpdateAt = Date.now()
         this.onUpdate({ measures })
     }
@@ -696,7 +679,6 @@ export class RecordingPipeline {
 
         let scoreJson: string | undefined
         if (this.emittedNotes.length) {
-            const measures: Record<number, MxmlMeasure> = {}
             // The archive is a whole take, so it is every bar from the first to the last —
             // including bars that only carry a held note's continuation and bars the
             // performer rested through. Keying off note onsets (as this did) dropped both.
@@ -705,11 +687,7 @@ export class RecordingPipeline {
                 const [, last] = this.builder.measureRangeFor(n.startTimeSeconds, n.durationSeconds)
                 highest = Math.max(highest, last)
             }
-            const indices = new Set<number>()
-            for (let m = 0; m <= highest; m += 1) indices.add(m)
-            for (const idx of indices) {
-                measures[idx] = this.builder.buildMeasure(idx, this.emittedNotes)
-            }
+            const measures = this.builder.buildMeasures(RecordingPipeline.barsThrough(highest), this.emittedNotes)
             scoreJson = JSON.stringify({ measures }, null, 2)
         }
 

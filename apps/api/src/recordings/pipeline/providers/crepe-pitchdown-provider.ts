@@ -1,8 +1,10 @@
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
+import { PITCHDOWN_PROVIDER_NAME } from '../profiles/pipeline-profile'
+import { SEGMENT_DEFAULTS } from '../semitone-segmenter'
 import { CrepeProvider } from './crepe-provider'
 import type { ModelBackend } from './model-backend'
-import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
+import type { PitchSession, PitchTranscribeOptions, TrajectoryProvider } from './pitch-provider'
 
 /**
  * CREPE analysing the audio ONE OCTAVE DOWN — the trajectory provider for the
@@ -31,7 +33,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitc
  * Heavy reverb was the one deficit (−0.03…−0.07). A 2-octave variant measured
  * worse (no content needs the depth, 4× inference cost).
  */
-export class CrepePitchdownProvider implements PitchProvider {
+export class CrepePitchdownProvider implements TrajectoryProvider {
     readonly name: string
     /** Slow-down factor: decode at 16 kHz × this, analyse as 16 kHz. */
     private readonly factor = 2
@@ -42,7 +44,7 @@ export class CrepePitchdownProvider implements PitchProvider {
 
     private readonly inner: CrepeProvider
 
-    constructor(backend: ModelBackend, name = 'crepe-tiny-down1') {
+    constructor(backend: ModelBackend, name: string = PITCHDOWN_PROVIDER_NAME) {
         this.name = name
         this.inner = new CrepeProvider(backend, name)
         this.sampleRate = this.inner.sampleRate * this.factor
@@ -64,7 +66,7 @@ export class CrepePitchdownProvider implements PitchProvider {
             maxFreqHz: options?.maxFreqHz !== undefined ? options.maxFreqHz / k : undefined,
             // The profile declares its note floor in provider frames; one inner frame
             // covers 1/k of the real time, so the count must scale to keep the floor.
-            minFramesPerNote: (options?.minFramesPerNote ?? 4) * k,
+            minFramesPerNote: (options?.minFramesPerNote ?? SEGMENT_DEFAULTS.minFramesPerNote) * k,
             // Same for the semitone smoother: unscaled, the median window covers only
             // 1/k of the real time it covers on the at-pitch provider — the R11 class
             // of inconsistency. Measured as a wash on accuracy (dogfood whistling
@@ -74,7 +76,7 @@ export class CrepePitchdownProvider implements PitchProvider {
             // every provider. It is NOT the mechanism of this band's split excess —
             // that question is gated on human-verified whistle labels (see the
             // 2026-08-22 findings log).
-            smoothFrames: (options?.smoothFrames ?? 4) * k,
+            smoothFrames: (options?.smoothFrames ?? SEGMENT_DEFAULTS.smoothFrames) * k,
             // The voice decode is calibrated on real-time singing and the very-high
             // band is whistling territory where it deliberately never applied; do not
             // let it run on slowed audio it was never measured on.

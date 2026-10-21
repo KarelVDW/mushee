@@ -1,4 +1,5 @@
 import type { NoteEventTime } from '../note-event'
+import type { PitchTrack } from '../pitch-track'
 
 /**
  * Opaque per-recording state owned by a `PitchProvider`. Exists so providers
@@ -102,4 +103,18 @@ export interface PitchProvider {
      * `session` between concurrent recordings.
      */
     transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]>
+}
+
+/**
+ * A provider that also exposes its frame-level measurement — the trajectory
+ * `transcribe` segments, before any note decision. Both CREPE providers are one;
+ * it is what lets the eval harness cache inference and sweep segmentation alone.
+ */
+export interface TrajectoryProvider extends PitchProvider {
+    /** Frame-level trajectory of `samples`, with the same session caching as `transcribe`; null on too little audio. */
+    track(samples: Float32Array, session?: PitchSession): Promise<PitchTrack | null>
+}
+
+export function isTrajectoryProvider(provider: PitchProvider): provider is TrajectoryProvider {
+    return typeof (provider as Partial<TrajectoryProvider>).track === 'function'
 }

@@ -25,17 +25,26 @@ into two layers with a deliberate boundary between them.
   port, so the dependency runs root → pipeline only.
 - `entities/` — TypeORM entities (registered in `database/data-source.ts`).
 
-## `pipeline/`: pure audio → notes DSP
+## `pipeline/`: audio → notated measures
 
 A dependency-injection-free transcription pipeline (its only NestJS import is
-the `Logger` from `@nestjs/common`): decode (ffmpeg) → pitch inference →
-note extraction / onset detection → MusicXML measures.
+the `Logger` from `@nestjs/common`). It imports nothing from the root: its one
+outward dependency is the `PipelineArchive` port, declared in
+`recording-pipeline.ts` and implemented by `recording-archiver.ts`.
 
-- `providers/` — pitch-model backends behind the `ModelBackend` seam: local
-  TF.js (WASM) inference or remote Python gRPC services, plus the
-  CREPE providers (at-pitch and octave-down) and decoders.
-- `profiles/` — register-based pipeline configuration (provider choice,
-  frequency windows, instrument ranges) resolved per recording.
+| Stage              | Files                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Decode             | `audio-decoder.ts` — ffmpeg to mono f32 PCM, one-shot and streaming                                                                                                                                                                                                                                                                                                       |
+| Profile lock       | `profiles/` — `pitch-scan.ts` and `reverberance.ts` (measurements), `source-classifier.ts` (voice vs instrument, stock YAMNet), `profile-resolver.ts` (routing policy and the detection-decode contract), `pipeline-profile.ts` (bands, overlays, provider names), `instrument-ranges.ts` (score-instrument hints; twin of packages/notation's `Instrument` ids)          |
+| Pitch inference    | `providers/` — the `ModelBackend` seam (`local-model-backend.ts` TF.js, `remote-model-backend.ts` gRPC, `create-model-backend.ts` picks one; `composite-model-backend.ts` is the unwired seam for a second model), the CREPE providers (`crepe-provider.ts`, octave-down `crepe-pitchdown-provider.ts`), `crepe-decoding.ts`, `provider-registry.ts`, `pitch-provider.ts` |
+| Trajectory → notes | `pitch-track.ts`, `semitone-segmenter.ts` (instruments), `voice-note-decoder.ts` (voice)                                                                                                                                                                                                                                                                                  |
+| Cleanup            | `audio-converter.ts` (one pass: provider + shipping cleanup set), `note-extractor.ts`, `onset-detector.ts`                                                                                                                                                                                                                                                                |
+| Notation           | `mxml-builder.ts` (bars and metrical duration spelling), `voice-notation.ts` (`TakeSpelling` for sung takes), `mxml.types.ts` (the emitted subset of packages/notation's `model/io/MusicXml.ts`, pinned by `test/recordings/recording-editor-contract.test.ts`)                                                                                                           |
+| Orchestration      | `recording-pipeline.ts` (one per session: profile lock, streaming passes, emission, archive)                                                                                                                                                                                                                                                                              |
+| Debug              | `recording-debug-renderer.ts` (the archived pitch plot)                                                                                                                                                                                                                                                                                                                   |
+| Shared             | `note-event.ts`, `env.ts` (env overrides), `describe-error.ts`                                                                                                                                                                                                                                                                                                            |
+
+Eval-only research code (e.g. `NoteSegmenter`) lives in `scripts/eval/lib`, not here.
 
 The adaptive profile (band, provider, gates, voice routing) is locked from the
 first ≥1.2 s of _pitched_ audio — a silent or spoken lead-in defers the lock (up

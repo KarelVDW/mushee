@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { estimateReverberance, ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { estimateReverberance } from '../../src/recordings/pipeline/profiles/reverberance'
 
 const SR = 16000
 

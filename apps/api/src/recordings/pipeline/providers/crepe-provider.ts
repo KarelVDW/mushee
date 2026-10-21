@@ -1,12 +1,13 @@
 import { Logger } from '@nestjs/common'
 
+import { envOptionalNumber } from '../env'
 import type { NoteEventTime } from '../note-event'
 import { PitchTrack } from '../pitch-track'
-import { frameEnergy, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
+import { frameEnergy, SEGMENT_DEFAULTS, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
 import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
 import type { ModelBackend } from './model-backend'
-import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './pitch-provider'
+import type { PitchSession, PitchTranscribeOptions, TrajectoryProvider } from './pitch-provider'
 
 /** CREPE was trained on 16 kHz mono audio. */
 const SAMPLE_RATE = 16000
@@ -64,9 +65,7 @@ const RECOMPUTE_TAIL_FRAMES = 5
  * not what actually limits reverb recall. Set RECORDING_VITERBI_JUMP_FLOOR to
  * a negative number to experiment.
  */
-const JUMP_FLOOR_ENV = process.env.RECORDING_VITERBI_JUMP_FLOOR
-const VITERBI_JUMP_FLOOR =
-    JUMP_FLOOR_ENV !== undefined && JUMP_FLOOR_ENV !== '' && Number.isFinite(Number(JUMP_FLOOR_ENV)) ? Number(JUMP_FLOOR_ENV) : undefined
+const VITERBI_JUMP_FLOOR = envOptionalNumber('RECORDING_VITERBI_JUMP_FLOOR')
 
 const VITERBI_OPTS: ViterbiOptions = {
     numBins: NUM_BINS,
@@ -76,19 +75,11 @@ const VITERBI_OPTS: ViterbiOptions = {
 }
 
 const SEGMENT_OPTS: SegmentOptions = {
+    ...SEGMENT_DEFAULTS,
     hopSize: HOP_SIZE,
     sampleRate: SAMPLE_RATE,
-    confidenceThreshold: 0.5,
     minFreqHz: 65,
     maxFreqHz: 1100,
-    minFramesPerNote: 4, // ≈ 80 ms at HOP_SIZE = 320
-    pitchBinToleranceCents: 50,
-    // Semitone-merge segmentation with temporal smoothing: boundaries fall on
-    // semitone changes and brief transition/vibrato frames are absorbed. Validated
-    // to lift real sung/hummed F1 markedly while holding the synthetic-instrument
-    // corpus; far steadier than running-median on expressive monophonic input.
-    mode: 'semitone',
-    smoothFrames: 4,
 }
 
 /**
@@ -103,12 +94,14 @@ class CrepeSession implements PitchSession {
 }
 
 /**
- * Monophonic pitch transcriber backed by a real CREPE model loaded via TF.js.
- * Resamples audio to 16 kHz, slides 1024-sample windows, runs the CNN to get
- * per-frame activations, decodes a smooth pitch trajectory via Viterbi, then
- * segments runs of stable pitch into `NoteEventTime[]`.
+ * Monophonic pitch transcriber on the crepe-tiny CREPE model, whose forward pass
+ * runs through a `ModelBackend` (in-process TF.js or the remote gRPC service).
+ * Takes 16 kHz audio (its declared `sampleRate` — the decoder resamples), slides
+ * 1024-sample windows, runs the CNN to get per-frame activations, decodes a
+ * smooth pitch trajectory via Viterbi, then segments it into `NoteEventTime[]`
+ * (runs of stable pitch, or the voice decode when the profile routes voice).
  */
-export class CrepeProvider implements PitchProvider {
+export class CrepeProvider implements TrajectoryProvider {
     readonly name: string
     readonly sampleRate = SAMPLE_RATE
     readonly normalizeLoudness = false
@@ -119,7 +112,7 @@ export class CrepeProvider implements PitchProvider {
 
     constructor(
         private readonly backend: ModelBackend,
-        name = 'crepe',
+        name: string,
     ) {
         this.name = name
         this.logger.log(`${name} provider ready`)

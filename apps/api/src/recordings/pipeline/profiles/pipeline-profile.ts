@@ -14,8 +14,8 @@
 
 export interface PipelineProfile {
     id: string
-    /** Provider key understood by the ProviderRegistry. */
-    providerName: string
+    /** Which registered provider runs this profile (`ProviderRegistry.get`). */
+    providerName: ProviderName
     /** Decoder high-pass cutoff (Hz). Sits below the lowest expected fundamental. */
     highpassHz: number
     minFreqHz: number
@@ -63,7 +63,8 @@ export interface PipelineProfile {
     /** Semitone-mode median smoother half-window, in frames. */
     smoothFrames?: number
     /**
-     * True when the resolver believes this recording is a human voice. Distinct
+     * True when the profile routes this recording as a human voice (the voice
+     * overlay applied — see `sourceBelief` for what the resolver believes). Distinct
      * from `segmentMode === 'voice'` because it also selects the voice cleanup set
      * downstream (`AudioConverter.cleanupFor`) and is what gets archived as the
      * routing decision.
@@ -71,10 +72,13 @@ export interface PipelineProfile {
     isVoice?: boolean
     /**
      * What the resolver believes is at the microphone — distinct from `isVoice`,
-     * which is the ROUTING outcome: on the no-reliable-pitch fallback the profile
-     * ran the note-level provider, where the voice overlay deliberately never applied, so a
-     * voice take can be believed 'voice' while `isVoice` stays unset. The belief
-     * is what the client shows the user and what gets archived for debugging.
+     * which is the ROUTING outcome: the voice overlay (`applyVoice`) refuses the
+     * very-high band, whose octave-down provider is whistling territory the voice
+     * decode was never measured on, and applies nowhere under
+     * `RECORDING_VOICE_DECODE=0`. In either case a take can be believed 'voice'
+     * while `isVoice` stays unset. (The no-reliable-pitch fallback runs the
+     * at-pitch provider and does take the overlay.) The belief is what the client
+     * shows the user and what gets archived for debugging.
      */
     sourceBelief?: 'voice' | 'instrument'
     /**
@@ -84,6 +88,13 @@ export interface PipelineProfile {
      * A mis-routed recording is only debuggable if this is recorded.
      */
     sourceDecidedBy?: 'explicit' | 'classifier' | 'prior'
+    /**
+     * No reliable pitch in the scanned audio: the resolver fell back to
+     * `DEFAULT_PROFILE`. Set there and carried through every overlay (each
+     * spreads its base), so the lock policy reads this fact rather than parsing
+     * the id — ids are labels for logs and archives.
+     */
+    fallback?: true
 }
 
 /** Absolute clamps for any resolved window. ~A0 to a hair above C8. */
@@ -132,7 +143,13 @@ export const TRAJECTORY_MODEL_CEILING_HZ = 1900
 export const SUSTAINED_ONSET_DIP_RATIO = 0.35
 export const VOICE_ONSET_DIP_RATIO = 0.35
 
+/**
+ * The two providers the registry holds, both on the crepe-tiny checkpoint: at
+ * pitch, and an octave down (`CrepePitchdownProvider`) for the very-high band.
+ */
+export const AT_PITCH_PROVIDER_NAME = 'crepe-tiny'
 export const PITCHDOWN_PROVIDER_NAME = 'crepe-tiny-down1'
+export type ProviderName = typeof AT_PITCH_PROVIDER_NAME | typeof PITCHDOWN_PROVIDER_NAME
 /** The wrapper hears everything at half frequency: 2 × the CREPE ceiling. */
 export const PITCHDOWN_MODEL_CEILING_HZ = TRAJECTORY_MODEL_CEILING_HZ * 2
 
@@ -152,7 +169,7 @@ export const PITCHDOWN_MODEL_CEILING_HZ = TRAJECTORY_MODEL_CEILING_HZ * 2
 export const PROFILE_BANDS: PipelineProfile[] = [
     {
         id: 'low', // bass voice, tuba, cello, bassoon
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 40,
         minFreqHz: 55,
         maxFreqHz: 700,
@@ -163,7 +180,7 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     },
     {
         id: 'mid', // trumpet, clarinet, tenor/alto voice, harmonica
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 70,
         minFreqHz: 90,
         maxFreqHz: 1300,
@@ -171,7 +188,7 @@ export const PROFILE_BANDS: PipelineProfile[] = [
     },
     {
         id: 'high', // flute, oboe, violin, soprano voice
-        providerName: 'crepe-tiny',
+        providerName: AT_PITCH_PROVIDER_NAME,
         highpassHz: 120,
         minFreqHz: 200,
         maxFreqHz: 1900,
@@ -229,14 +246,15 @@ export const VOICE_OVERLAY = {
  */
 export const DEFAULT_PROFILE: PipelineProfile = {
     id: 'default-wide',
-    providerName: 'crepe-tiny',
+    providerName: AT_PITCH_PROVIDER_NAME,
     highpassHz: 55,
     minFreqHz: GLOBAL_MIN_FREQ_HZ,
     maxFreqHz: TRAJECTORY_MODEL_CEILING_HZ,
     confidenceThreshold: 0.5,
+    fallback: true,
 }
 
 /** Distinct provider keys any profile can select — what the registry pre-warms. */
-export function usedProviderNames(): string[] {
+export function usedProviderNames(): ProviderName[] {
     return [...new Set([DEFAULT_PROFILE.providerName, ...PROFILE_BANDS.map((b) => b.providerName)])]
 }

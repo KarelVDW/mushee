@@ -1,12 +1,12 @@
 import { Logger } from '@nestjs/common'
 
+import { describeError } from '../describe-error'
+import { AT_PITCH_PROVIDER_NAME, PITCHDOWN_PROVIDER_NAME, type ProviderName } from '../profiles/pipeline-profile'
 import { CrepePitchdownProvider } from './crepe-pitchdown-provider'
 import { CrepeProvider } from './crepe-provider'
 import { LocalModelBackend } from './local-model-backend'
 import type { ModelBackend, ProviderModelDirs } from './model-backend'
 import type { PitchProvider } from './pitch-provider'
-
-export type { ProviderModelDirs } from './model-backend'
 
 /**
  * Owns one instance of each available pitch provider, loaded once. The adaptive
@@ -25,15 +25,15 @@ export type { ProviderModelDirs } from './model-backend'
  */
 export class ProviderRegistry {
     private readonly logger = new Logger(ProviderRegistry.name)
-    private readonly providers = new Map<string, PitchProvider>()
+    private readonly providers = new Map<ProviderName, PitchProvider>()
 
     constructor(dirs: ProviderModelDirs, backend?: ModelBackend) {
         const modelBackend = backend ?? new LocalModelBackend(dirs)
         if (!modelBackend.available('crepe-tiny')) {
             throw new Error('ProviderRegistry: crepe-tiny model unavailable from backend')
         }
-        this.providers.set('crepe-tiny', new CrepeProvider(modelBackend, 'crepe-tiny'))
-        this.providers.set('crepe-tiny-down1', new CrepePitchdownProvider(modelBackend))
+        this.providers.set(AT_PITCH_PROVIDER_NAME, new CrepeProvider(modelBackend, AT_PITCH_PROVIDER_NAME))
+        this.providers.set(PITCHDOWN_PROVIDER_NAME, new CrepePitchdownProvider(modelBackend))
         this.logger.log(`Registered providers: ${[...this.providers.keys()].join(', ')}`)
     }
 
@@ -42,26 +42,23 @@ export class ProviderRegistry {
      * select to avoid warming models nothing will use; omit to warm all. Any
      * provider not pre-warmed still loads lazily on first `transcribe`.
      */
-    async initAll(names?: string[]): Promise<void> {
-        const targets = names ? [...new Set(names)].map((n) => this.providers.get(n)).filter(Boolean) : [...this.providers.values()]
+    async initAll(names?: ProviderName[]): Promise<void> {
+        const targets = names
+            ? [...new Set(names)].map((n) => this.providers.get(n)).filter((p): p is PitchProvider => p !== undefined)
+            : [...this.providers.values()]
         await Promise.all(
-            (targets as PitchProvider[]).map((p) =>
+            targets.map((p) =>
                 p.init().catch((err: unknown) => {
-                    const msg = err instanceof Error ? err.message : String(err)
-                    this.logger.error(`Failed to init provider "${p.name}": ${msg}`)
+                    this.logger.error(`Failed to init provider "${p.name}": ${describeError(err)}`)
                 }),
             ),
         )
     }
 
-    has(name: string): boolean {
-        return this.providers.has(name)
-    }
-
-    /** Get a provider by name, falling back to crepe-tiny if absent. */
-    get(name: string): PitchProvider {
-        const provider = this.providers.get(name) ?? this.providers.get('crepe-tiny')
-        if (!provider) throw new Error('ProviderRegistry has no crepe-tiny fallback')
+    /** The provider registered under `name`. Every `ProviderName` is registered, so a miss is a bug, not a fallback. */
+    get(name: ProviderName): PitchProvider {
+        const provider = this.providers.get(name)
+        if (!provider) throw new Error(`ProviderRegistry has no provider "${name}"`)
         return provider
     }
 }

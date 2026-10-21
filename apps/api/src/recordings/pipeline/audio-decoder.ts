@@ -27,9 +27,9 @@ const DENOISE_FILTER = process.env.RECORDING_DENOISE_FILTER ?? 'afftdn=nr=12:nf=
 /**
  * Build the ffmpeg audio-filter chain shared by the one-shot and streaming
  * decoders, applying `DecodeOptions`' defaults in this one place. High-pass
- * first (causal IIR, clears sub-bass rumble that the onset head otherwise
- * misreads as low-pitch onsets; its output prefix is stable across re-runs with
- * longer inputs), then the optional denoiser (fed rumble-free audio), then
+ * first (causal IIR, clears sub-bass rumble below the profile's pitch window;
+ * its output prefix is stable across re-runs with longer inputs), then the
+ * optional denoiser (fed rumble-free audio), then
  * optional `loudnorm` (which then normalizes the DENOISED level). See
  * `DecodeOptions` for why `loudnorm` is opt-in.
  */

@@ -1,14 +1,14 @@
 import * as grpc from '@grpc/grpc-js'
 import { loadSync } from '@grpc/proto-loader'
-import { PROTO_PATH } from '@mushee/inference-proto'
+import { PROTO_PACKAGE, PROTO_PATH } from '@mushee/inference-proto'
 import { Logger } from '@nestjs/common'
 
+import { describeError } from '../describe-error'
+import { envPositiveNumber } from '../env'
 import type { ModelBackend, ModelKey } from './model-backend'
 
 /** Per-call deadline; the forward pass is bounded so this is generous. */
-const CALL_TIMEOUT_MS = Number(process.env.INFERENCE_TIMEOUT_MS) || 15000
-
-const PKG = 'mushee.inference.v1'
+const CALL_TIMEOUT_MS = envPositiveNumber('INFERENCE_TIMEOUT_MS', 15000)
 
 interface GrpcClient extends grpc.Client {
     [method: string]: unknown
@@ -40,9 +40,10 @@ function bytesToF32(bytes: Buffer, count: number): Float32Array {
 
 /**
  * Runs a single model's forward pass in a remote inference service over gRPC.
- * One instance serves exactly one model (its own service + channel); the
- * pipeline composes per-model backends (see `createModelBackend`). The proto
- * contract is in `@mushee/inference-proto`.
+ * One instance serves exactly one model (its own service + channel);
+ * `createModelBackend` picks Local or Remote from env, and a second model would
+ * come back through `CompositeModelBackend`. The proto contract is in
+ * `@mushee/inference-proto`.
  */
 export class RemoteModelBackend implements ModelBackend {
     private readonly logger = new Logger(RemoteModelBackend.name)
@@ -53,7 +54,7 @@ export class RemoteModelBackend implements ModelBackend {
         private readonly url: string,
     ) {
         // proto-loader nests by package segment: proto.mushee.inference.v1.*
-        const pkg = PKG.split('.').reduce<Record<string, unknown>>(
+        const pkg = PROTO_PACKAGE.split('.').reduce<Record<string, unknown>>(
             (obj, key) => obj[key] as Record<string, unknown>,
             loadProto() as unknown as Record<string, unknown>,
         )
@@ -75,7 +76,7 @@ export class RemoteModelBackend implements ModelBackend {
         try {
             await this.unary('Health', {})
         } catch (err) {
-            this.logger.warn(`Inference service for ${model} at ${this.url} not ready: ${describe(err)}`)
+            this.logger.warn(`Inference service for ${model} at ${this.url} not ready: ${describeError(err)}`)
         }
     }
 
@@ -103,8 +104,4 @@ export class RemoteModelBackend implements ModelBackend {
             })
         })
     }
-}
-
-function describe(err: unknown): string {
-    return err instanceof Error ? err.message : String(err)
 }

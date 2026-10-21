@@ -21,6 +21,7 @@
  * logs/flags as telemetry (and can act on via env-enabled adaptations).
  */
 
+import { envNumber, NOISE_ADAPT } from '../env'
 import { GLOBAL_MAX_FREQ_HZ, GLOBAL_MIN_FREQ_HZ } from './pipeline-profile'
 
 export interface PitchScan {
@@ -34,8 +35,9 @@ export interface PitchScan {
      * Harmonic-to-residual ratio in dB, the noise-adaptation signal: within each
      * voted frame, the energy in the picked fundamental's harmonic bins versus
      * everything else in the analysis band (wind, chatter, hiss, reverb wash of
-     * other notes), median across voted frames. Needs no gaps, so it works on
-     * wall-to-wall legato. Undefined only when nothing was voted.
+     * other notes), 75th percentile across voted frames (breathy and consonant
+     * frames would drag a median down). Needs no gaps, so it works on
+     * wall-to-wall legato. Undefined when fewer than three frames were voted.
      */
     snrDb?: number
     /**
@@ -79,19 +81,11 @@ const WHITEN_PROMINENCE_CAP = 10
  * defeat a fixed threshold on raw whitened prominence. Broadband noise lands
  * near 2.5; even a weak pitched frame under heavy noise clears 10.
  */
-const HARMONICITY_GATE = Number.isFinite(Number(process.env.RECORDING_HARMONICITY_GATE))
-    ? Number(process.env.RECORDING_HARMONICITY_GATE)
-    : 4.0
+const HARMONICITY_GATE = envNumber('RECORDING_HARMONICITY_GATE', 4.0)
 /** Frames below this fraction of the loudest frame's energy are ignored entirely. */
 const FLOOR_ENERGY_FRACTION = 0.02
 /** Log-spaced sub-bands for the residual (noise) estimate — see scanPitch. */
 const RESIDUAL_BANDS = 8
-
-/**
- * A/B kill-switch for eval sweeps: RECORDING_NOISE_ADAPT=0 restores the
- * legacy scan (no whitening, energy-only voicing gate). Production default: on.
- */
-const NOISE_ADAPT = process.env.RECORDING_NOISE_ADAPT !== '0'
 
 /** In-place iterative radix-2 Cooley–Tukey FFT on interleaved re/im. */
 function fft(re: Float64Array, im: Float64Array): void {

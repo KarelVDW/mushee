@@ -13,7 +13,7 @@ import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
 import { AudioDecoder } from '../../src/recordings/pipeline/audio-decoder'
-import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import { estimateReverberance } from '../../src/recordings/pipeline/profiles/reverberance'
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
 import { inSplit, splitFromEnv } from './lib/split'
 
