@@ -128,6 +128,16 @@ describe('ScoreManipulator bulk actions', () => {
         expect(manipulator.selectedNotes.every((n) => n.isRest)).toBe(true)
     })
 
+    it('toggles a rest into a note on the middle line of the clef in effect (D3 under bass)', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.run(TOGGLE_REST) // C5 → rest
+        manipulator.setClefAt(0, 'bass')
+        manipulator.run(TOGGLE_REST) // rest → note
+        const pitch = manipulator.selectedNote?.pitch
+        expect(`${pitch?.name}${pitch?.octave}`).toBe('D3')
+    })
+
     it('runs a non-bulk action on the active note only and collapses the selection', () => {
         const { manipulator, notes } = setupPitched()
         manipulator.select(notes[0])

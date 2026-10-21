@@ -41,6 +41,11 @@ export class Clef {
         return Pitch.fromLine(line - CLEF_LINE_OFFSET[this.type])
     }
 
+    /** The natural pitch on the staff's middle line — B4 in treble, D3 in bass: where a new note lands by default. */
+    get middleLinePitch(): Pitch {
+        return this.pitchForLine(STAFF_MIDDLE_LINE)
+    }
+
     /**
      * The whole-octave shift that brings `pitches` closest to this clef's staff:
      * their median lands as near the middle line as whole octaves allow. Used to

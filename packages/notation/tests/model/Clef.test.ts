@@ -1,4 +1,5 @@
 import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+import { STAFF_MIDDLE_LINE } from '@mushee/notation/model/staffLines'
 import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -80,6 +81,26 @@ describe('Clef', () => {
                 const restored = c.pitchForLine(c.lineFor(p))
                 expect(restored.name).toBe(p.name)
                 expect(restored.octave).toBe(p.octave)
+            }
+        })
+    })
+
+    describe('middleLinePitch', () => {
+        it('is the natural pitch on the middle staff line under each clef', () => {
+            const at = (type: ClefType) => {
+                const p = clef(type).middleLinePitch
+                return `${p.name}${p.accidental ?? ''}${p.octave}`
+            }
+            expect(at('treble')).toBe('B4')
+            expect(at('bass')).toBe('D3')
+            expect(at('alto')).toBe('C4')
+            expect(at('tenor')).toBe('A3')
+        })
+
+        it('sits on the middle line it is named for', () => {
+            for (const type of ['treble', 'bass', 'alto', 'treble8vb'] as ClefType[]) {
+                const c = clef(type)
+                expect(c.lineFor(c.middleLinePitch)).toBe(STAFF_MIDDLE_LINE)
             }
         })
     })

@@ -1,4 +1,4 @@
-import { type Accidental, type ClefType, type DurationType, Note, Pitch, type Score } from '@mushee/notation/model'
+import { type Accidental, type ClefType, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
 import type { ReactNode } from 'react'
 
 /**
@@ -200,13 +200,14 @@ export const TOGGLE_TIE: ScoreAction = {
         ),
 }
 
+/** A rest becomes a note on the middle line of the clef in effect there; a note becomes a rest. */
 export const TOGGLE_REST: ScoreAction = {
     id: 'toggle-rest',
     label: 'Toggle rest',
     executeBulk: (score, notes) =>
         score.replace(
             notes,
-            notes.map((note) => note.clone({ pitch: note.isRest ? new Pitch({ name: 'B', octave: 4 }) : undefined })),
+            notes.map((note) => note.clone({ pitch: note.isRest ? note.clef.middleLinePitch : undefined })),
         ),
 }
 
