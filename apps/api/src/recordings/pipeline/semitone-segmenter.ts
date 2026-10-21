@@ -84,10 +84,10 @@ export function segmentNotes(cents: Float32Array, confidence: Float32Array, fram
             startTimeSeconds: (runStart * opts.hopSize) / opts.sampleRate,
             durationSeconds: ((endIndex - runStart) * opts.hopSize) / opts.sampleRate,
             pitchMidi: midi,
-            // The unrounded pitch, for the NOTATION layer (E1): tuning-aware spelling
-            // (voice-notation.ts) acts on any note carrying it and ignores the rest,
-            // so attaching it here extends that machinery to trajectory instruments
-            // without touching pitchMidi or any scored number. Absolute (A=440).
+            // The unrounded pitch, for the NOTATION layer (E1), without touching
+            // pitchMidi or any scored number. Absolute (A=440). Inert today:
+            // `MxmlBuilder` spells only voice-routed takes, and voice never reaches
+            // this segmenter (it decodes through `VoiceNoteDecoder`).
             pitchMidiFloat: medianCents / 100,
             amplitude: runMaxConf,
         })
@@ -213,7 +213,8 @@ export function segmentNotesBySemitone(
         if (runStart >= 0 && runMidi >= 0 && endIndex - runStart >= opts.minFramesPerNote) {
             // Unrounded pitch for the notation layer (E1): median of the run's own
             // voiced contour, ABSOLUTE (no tuning delta) — spelling normalises on its
-            // own grid (voice-notation.ts) and the eval's truth is absolute.
+            // own grid (voice-notation.ts) and the eval's truth is absolute. Inert
+            // today, as in `segmentNotes`: only voice-routed takes are spelled.
             const runCents: number[] = []
             for (let i = runStart; i < endIndex; i += 1) {
                 if (isVoiced(i)) runCents.push(cents[i])

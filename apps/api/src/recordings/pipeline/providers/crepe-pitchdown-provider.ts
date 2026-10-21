@@ -113,7 +113,9 @@ export class CrepePitchdownProvider implements PitchProvider {
             startTimeSeconds: n.startTimeSeconds / k,
             durationSeconds: n.durationSeconds / k,
             pitchMidi: n.pitchMidi + this.semitones,
-            // The trajectory segmenters attach the unrounded pitch (E1); it shifts with pitchMidi.
+            // The trajectory segmenters attach the unrounded pitch (E1); it shifts with
+            // pitchMidi. Never read on this band: voice is not routed here, and only
+            // voice-routed takes are spelled.
             ...(n.pitchMidiFloat !== undefined && { pitchMidiFloat: n.pitchMidiFloat + this.semitones }),
         }))
     }

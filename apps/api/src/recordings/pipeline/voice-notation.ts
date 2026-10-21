@@ -31,9 +31,10 @@ import type { NoteEventTime } from './note-event'
  *     confidently-sung accidental must survive (users do sing chromatic
  *     lines on purpose).
  *
- * Both act on the FRACTIONAL pitch (`pitchMidiFloat`) the voice decoder
- * attaches to its notes; notes without it pass
- * through untouched, so nothing here can move an instrument take.
+ * Both act on the FRACTIONAL pitch (`pitchMidiFloat`) set by `VoiceNoteDecoder`,
+ * and `MxmlBuilder` runs them only when the locked profile routes voice; notes
+ * without the field pass through untouched. (The instrument segmenters attach
+ * it as well, but instrument takes are not spelled today.)
  */
 
 /** The fields tuning-aware spelling reads (see `NoteEventTime.pitchMidiFloat`). */

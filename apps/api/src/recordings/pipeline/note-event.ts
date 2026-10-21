@@ -13,8 +13,10 @@ export interface NoteEventTime {
     amplitude: number
     /**
      * The unrounded contour pitch (MIDI, A=440), consumed only by notation
-     * spelling (voice-notation.ts). Every note-rewriting step spread-copies, so
-     * it survives the extractor; field-by-field copies must carry it explicitly.
+     * spelling (voice-notation.ts) — and read only when the locked profile routes
+     * voice. The instrument segmenters attach it too (E1), but `MxmlBuilder` does
+     * not spell instrument takes today. Every note-rewriting step spread-copies,
+     * so it survives the extractor; field-by-field copies must carry it explicitly.
      */
     pitchMidiFloat?: number
 }
