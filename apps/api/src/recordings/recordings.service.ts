@@ -62,7 +62,7 @@ export class RecordingsService {
     }
 
     /** One take, only for its owner. */
-    async findOwned(userId: string, id: string): Promise<Recording> {
+    private async findOwned(userId: string, id: string): Promise<Recording> {
         const recording = await this.recordingRepo.findOneBy({ id })
         if (!recording) throw new NotFoundException('Recording not found')
         if (recording.userId !== userId) throw new ForbiddenException()
