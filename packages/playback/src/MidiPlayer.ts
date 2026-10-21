@@ -1,6 +1,8 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Soundfont, type StopFn } from 'smplr'
 
+import { AudioSession } from './AudioSession'
+
 export interface ScheduledNote {
     startTime: number
     duration: number
@@ -8,13 +10,13 @@ export interface ScheduledNote {
     instrument: Instrument
 }
 
-type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
-
 /**
  * Plays MIDI notes via smplr's Soundfont sampler. Has no knowledge of scores
  * or music notation. Each Instrument is loaded lazily on first request and
  * kept in memory for the lifetime of this player. Call `loadInstruments`
  * before `start`/`schedule` to avoid silent skips while samples download.
+ * Claims the 'playback' AudioSession whenever it makes sound, so iOS plays it
+ * with the silent switch on.
  */
 export class MidiPlayer {
     private audioCtx: AudioContext | null = null
@@ -26,10 +28,6 @@ export class MidiPlayer {
     get currentTime(): number {
         if (!this.audioCtx) return 0
         return this.audioCtx.currentTime - this.startOffset
-    }
-
-    get isActive(): boolean {
-        return this.audioCtx !== null
     }
 
     /**
@@ -56,10 +54,9 @@ export class MidiPlayer {
 
     /** Begin a playback session. Notes are scheduled individually via `schedule`. */
     start() {
-        this.stop()
-        MidiPlayer.setAudioSessionType('playback')
-        const ctx = this.ensureCtx()
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        this.cancelStops(this.scheduledStops)
+        this.scheduledStops = []
+        const ctx = this.wake()
         this.startOffset = ctx.currentTime
     }
 
@@ -79,7 +76,7 @@ export class MidiPlayer {
     stop() {
         this.cancelStops(this.scheduledStops)
         this.scheduledStops = []
-        MidiPlayer.setAudioSessionType('auto')
+        AudioSession.release('playback')
     }
 
     /** Suspend playback — freezes currentTime and halts audio output without losing state. */
@@ -87,27 +84,19 @@ export class MidiPlayer {
         this.audioCtx?.suspend().catch(() => {})
     }
 
-    /** Resume a suspended playback context. */
+    /** Resume after `pause`: re-claims the playback session and wakes the context. */
     resume() {
-        MidiPlayer.setAudioSessionType('playback')
-        this.audioCtx?.resume().catch(() => {})
+        this.wake()
     }
 
     /** Play a single note for the given duration. Stops any previous preview. */
     preview(midi: number, duration: number, instrument: Instrument) {
         this.stopPreview()
-        MidiPlayer.setAudioSessionType('playback')
-        const ctx = this.ensureCtx()
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        const ctx = this.wake()
         const sf = this.soundfonts.get(instrument.id)?.sf
         if (!sf) return
         const stop = sf.start({ note: midi, time: ctx.currentTime, duration })
         this.previewStops.push(stop)
-    }
-
-    stopPreview() {
-        this.cancelStops(this.previewStops)
-        this.previewStops = []
     }
 
     /** Releases all loaded samples and closes the audio context. */
@@ -118,7 +107,6 @@ export class MidiPlayer {
         this.soundfonts.clear()
         this.audioCtx?.close().catch(() => {})
         this.audioCtx = null
-        MidiPlayer.setAudioSessionType('auto')
     }
 
     // --- Internal ---
@@ -128,19 +116,19 @@ export class MidiPlayer {
         return this.audioCtx
     }
 
-    /**
-     * Hint the OS audio session via WebKit's API; no-op on other browsers.
-     * iOS mutes Web Audio while the hardware silent switch is on unless the
-     * session is declared 'playback' — without this, replay is inaudible for
-     * anyone whose phone is on silent. Never touches a 'play-and-record'
-     * session: during a take the RecordingEngine owns it, and reclaiming it
-     * for playback-only would break mic capture under the count-off.
-     */
-    private static setAudioSessionType(type: 'playback' | 'auto'): void {
-        if (typeof navigator === 'undefined') return
-        const session = (navigator as NavigatorWithAudioSession).audioSession
-        if (!session || session.type === 'play-and-record') return
-        session.type = type
+    /** Make audio audible now: claim the playback session and wake the context. */
+    private wake(): AudioContext {
+        AudioSession.claim('playback')
+        const ctx = this.ensureCtx()
+        // Unconditional rather than on state === 'suspended': also covers a
+        // suspend() still in flight and iOS's 'interrupted' state.
+        ctx.resume().catch(() => {})
+        return ctx
+    }
+
+    private stopPreview() {
+        this.cancelStops(this.previewStops)
+        this.previewStops = []
     }
 
     private cancelStops(stops: StopFn[]) {

@@ -1,7 +1,10 @@
 export interface Tickable {
     /** Reset internal state for a new playback pass. */
     reset(): void
-    /** Called each animation frame. Return true when done. */
+    /**
+     * Called each animation frame: schedule the audio due before
+     * `currentTime + Ticker.LOOK_AHEAD`. Return true when done.
+     */
     tick(): boolean
 }
 
@@ -12,15 +15,19 @@ export interface Tickable {
  * tick in a mode it doesn't belong to.
  */
 export class Ticker {
+    /**
+     * How far ahead of the audio clock (seconds) tickables schedule. About three
+     * rAF frames at 60 Hz: margin for the frame interval plus jitter, so a late
+     * frame never lets a start time slip into the past, while keeping little
+     * audio queued so a pause or stop stays cheap.
+     */
+    static readonly LOOK_AHEAD = 0.05
+
     private tickables = new Set<Tickable>()
 
     private _isPlaying = false
     private animationId = 0
-    private onFinish: (() => void) | null = null
-
-    get isPlaying() {
-        return this._isPlaying
-    }
+    private onFinish: () => void = () => {}
 
     play(tickables: Iterable<Tickable>, onFinish: () => void) {
         this.stop()
@@ -29,8 +36,7 @@ export class Ticker {
 
         for (const t of this.tickables) t.reset()
 
-        this._isPlaying = true
-        this.animationId = requestAnimationFrame(this.tick)
+        this.startLoop()
     }
 
     stop() {
@@ -44,6 +50,10 @@ export class Ticker {
     /** Restart the tick loop without resetting tickable state. */
     resume() {
         if (this._isPlaying) return
+        this.startLoop()
+    }
+
+    private startLoop() {
         this._isPlaying = true
         this.animationId = requestAnimationFrame(this.tick)
     }
@@ -59,10 +69,8 @@ export class Ticker {
         }
 
         if (allDone) {
-            this._isPlaying = false
-            cancelAnimationFrame(this.animationId)
-            this.animationId = 0
-            this.onFinish?.()
+            this.stop()
+            this.onFinish()
             return
         }
 

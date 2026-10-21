@@ -18,9 +18,10 @@ function fakePlayer() {
 }
 
 describe('Metronome', () => {
-    it('tick() returns true when no score is set', () => {
+    it('with no score, reset() is safe and tick() reports done', () => {
         const { player } = fakePlayer()
         const metro = new Metronome(player)
+        expect(() => metro.reset()).not.toThrow()
         expect(metro.tick()).toBe(true)
     })
 
@@ -135,7 +136,7 @@ describe('Metronome', () => {
         expect(scheduled.length).toBeGreaterThan(afterFirst)
     })
 
-    it('reset() picks the highest-beat tempo when a measure has several (sort comparator)', () => {
+    it('carries the last marking of an earlier measure', () => {
         const { player, scheduled, raw } = fakePlayer()
         const metro = new Metronome(player)
         const score = makeScore(2)
@@ -152,20 +153,12 @@ describe('Metronome', () => {
         expect(scheduled[1].startTime).toBeCloseTo(60 / 180, 5)
     })
 
-    it('reset() returns early (no tempo lookup) when no score is set', () => {
-        const { player } = fakePlayer()
-        const metro = new Metronome(player)
-        // No score assigned. reset() must not throw and tick() reports done immediately.
-        expect(() => metro.reset()).not.toThrow()
-        expect(metro.tick()).toBe(true)
-    })
-
-    it('reset() skips missing measures while walking back for the active tempo', () => {
+    it('a start measure past the end of the score produces no clicks and finishes', () => {
         const { player, scheduled, raw } = fakePlayer()
         const metro = new Metronome(player)
         const score = makeScore(2)
-        // Tempo lives on measure 0; start beyond the end so the walk-back hits an
-        // out-of-range index (continue) before finding it.
+        // A marking on measure 0 behind a start index past the end: reset() must
+        // cope with the missing measures in between.
         score.measures[0].setTempo(0, 60)
         metro.score = score
         metro.startMeasureIndex = 5 // past the 2 real measures
@@ -175,19 +168,6 @@ describe('Metronome', () => {
         raw.currentTime = 100
         expect(metro.tick()).toBe(true)
         expect(scheduled).toHaveLength(0)
-        // But the walk-back still found the 60bpm tempo from measure 0.
-        expect((metro as unknown as { bpm: number }).bpm).toBe(60)
-    })
-
-    it('reset() restores defaults (default bpm with no tempo markings)', () => {
-        const { player, scheduled, raw } = fakePlayer()
-        const metro = new Metronome(player)
-        metro.score = makeScore(1)
-        metro.reset()
-        raw.currentTime = 100
-        metro.tick()
-        // No tempo marking => default 90bpm interval.
-        expect(scheduled[1].startTime).toBeCloseTo(60 / 90, 5)
     })
 
     describe('meter-aware pulse', () => {

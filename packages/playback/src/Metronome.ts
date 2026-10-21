@@ -2,10 +2,9 @@ import { Instrument } from '@mushee/notation/model/Instrument'
 import type { Score } from '@mushee/notation/model/Score'
 
 import { MidiPlayer } from './MidiPlayer'
-import type { Tickable } from './Ticker'
+import { type Tickable, Ticker } from './Ticker'
 
 const DEFAULT_BPM = 90
-const LOOK_AHEAD = 0.05
 /** Regular click, and the higher-pitched one that marks the downbeat of every measure. */
 const CLICK_MIDI = 96 // C7
 const ACCENT_MIDI = 108 // C8, an octave up
@@ -72,7 +71,7 @@ export class Metronome implements Tickable {
 
     tick(): boolean {
         if (!this.score) return true
-        const horizon = this.midiPlayer.currentTime + LOOK_AHEAD
+        const horizon = this.midiPlayer.currentTime + Ticker.LOOK_AHEAD
         while (this.nextClickTime <= horizon) {
             if (!this.step(true)) return true
         }

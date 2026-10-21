@@ -46,9 +46,9 @@ describe('Ticker', () => {
         cb()
     }
 
-    it('starts not playing', () => {
-        const ticker = new Ticker()
-        expect(ticker.isPlaying).toBe(false)
+    it('schedules no frame until play()', () => {
+        new Ticker()
+        expect(frames).toHaveLength(0)
     })
 
     it('play() resets the given tickables and schedules a frame', () => {
@@ -58,7 +58,6 @@ describe('Ticker', () => {
 
         ticker.play([a, b], () => {})
 
-        expect(ticker.isPlaying).toBe(true)
         expect(a.resetCount).toBe(1)
         expect(b.resetCount).toBe(1)
         expect(frames).toHaveLength(1)
@@ -76,7 +75,9 @@ describe('Ticker', () => {
         expect(b.tickCount).toBe(1)
         // A new frame is scheduled because work remains.
         expect(frames).toHaveLength(1)
-        expect(ticker.isPlaying).toBe(true)
+        fireFrame()
+        expect(a.tickCount).toBe(2)
+        expect(b.tickCount).toBe(2)
     })
 
     it('calls onFinish and stops once every tickable reports done', () => {
@@ -89,7 +90,6 @@ describe('Ticker', () => {
         fireFrame()
 
         expect(onFinish).toHaveBeenCalledTimes(1)
-        expect(ticker.isPlaying).toBe(false)
         // No follow-up frame is scheduled after finishing.
         expect(frames).toHaveLength(0)
     })
@@ -114,7 +114,6 @@ describe('Ticker', () => {
 
         ticker.play([a], () => {})
         ticker.stop()
-        expect(ticker.isPlaying).toBe(false)
 
         // Fire the frame captured by play() — it should bail immediately.
         fireFrame()
@@ -127,14 +126,13 @@ describe('Ticker', () => {
 
         ticker.stop()
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
-        expect(ticker.isPlaying).toBe(false)
     })
 
     it('stop() is a no-op when no frame is pending', () => {
         const ticker = new Ticker()
         ticker.stop()
         expect(cancelAnimationFrame).not.toHaveBeenCalled()
-        expect(ticker.isPlaying).toBe(false)
+        expect(frames).toHaveLength(0)
     })
 
     it('resume() restarts the loop without resetting tickable state', () => {
@@ -146,10 +144,11 @@ describe('Ticker', () => {
         ticker.stop()
 
         ticker.resume()
-        expect(ticker.isPlaying).toBe(true)
         // resume must not call reset again.
         expect(a.resetCount).toBe(1)
         expect(frames).toHaveLength(2) // one from play, one from resume
+        fireFrame()
+        expect(a.tickCount).toBe(1)
     })
 
     it('resume() is a no-op while already playing', () => {
@@ -169,9 +168,11 @@ describe('Ticker', () => {
         ticker.play([a], () => {})
 
         // stop() was called internally, cancelling the first frame.
-        expect(cancelAnimationFrame).toHaveBeenCalled()
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
         expect(a.resetCount).toBe(2)
-        expect(ticker.isPlaying).toBe(true)
+        // The second play's frame runs the loop.
+        fireFrame()
+        expect(a.tickCount).toBe(1)
     })
 
     it('addTickable() joins the pass in flight', () => {
@@ -210,6 +211,6 @@ describe('Ticker', () => {
         fireFrame()
         // allDone stays true with no tickables.
         expect(onFinish).toHaveBeenCalledTimes(1)
-        expect(ticker.isPlaying).toBe(false)
+        expect(frames).toHaveLength(0)
     })
 })

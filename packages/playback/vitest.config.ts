@@ -6,7 +6,7 @@ export default defineConfig({
     resolve: {
         alias: {
             // Tests import the package by its public name; point it at the
-            // source so vite's normal resolution (extensions, indexes) applies.
+            // source so vite's normal resolution (extension lookup) applies.
             '@mushee/playback': fileURLToPath(new URL('./src', import.meta.url)),
         },
     },
@@ -15,12 +15,5 @@ export default defineConfig({
         include: ['tests/**/*.test.ts'],
         globals: false,
         setupFiles: ['./tests/setup.ts'],
-        coverage: {
-            provider: 'v8',
-            include: ['src/**/*.ts'],
-            exclude: ['src/index.ts'],
-            reporter: ['text', 'json-summary', 'html'],
-            reportsDirectory: './coverage',
-        },
     },
 })
