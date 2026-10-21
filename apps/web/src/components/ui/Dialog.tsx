@@ -85,7 +85,9 @@ function Scrim({ children, onDismiss }: { children: ReactNode; onDismiss?: () =>
     }
 
     return (
-        <div onClick={onDismiss} className="fixed inset-0 z-100 bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
+        <div
+            onClick={onDismiss}
+            className="fixed inset-0 z-(--z-dialog) bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
             <div ref={panelRef} tabIndex={-1} onKeyDown={handleKeyDown} onClick={(e) => e.stopPropagation()} className="outline-none">
                 {children}
             </div>

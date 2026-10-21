@@ -55,7 +55,7 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
         <div
             role="dialog"
             aria-label="Cookie consent"
-            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
+            className="fixed bottom-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-55 flex flex-col gap-1.5">
                 <Eyebrow>Cookies</Eyebrow>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">

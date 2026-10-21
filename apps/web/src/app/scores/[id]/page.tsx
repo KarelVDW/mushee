@@ -671,7 +671,10 @@ function AttributePopoverAnchor({ x, y, children }: { x: number; y: number; chil
         setLeft(Math.min(x, Math.max(POPOVER_EDGE_MARGIN, parent.clientWidth - panel.offsetWidth - POPOVER_EDGE_MARGIN)))
     })
     return (
-        <div ref={ref} className="absolute z-50" style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
+        <div
+            ref={ref}
+            className="absolute z-(--z-popover)"
+            style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
             {children}
         </div>
     )

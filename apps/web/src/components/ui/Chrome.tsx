@@ -23,7 +23,7 @@ export function TopNav({ user, onCreate }: TopNavProps) {
     const pathname = usePathname()
 
     return (
-        <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
+        <nav className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div className="max-w-384 mx-auto px-4 sm:px-8 py-3.5 sm:py-4.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-6.5 min-w-0">
                     <Link href="/scores" className="no-underline max-[24rem]:hidden">

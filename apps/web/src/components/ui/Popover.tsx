@@ -99,7 +99,7 @@ export function Popover({
             ref={popRef}
             role="dialog"
             aria-label={ariaLabel}
-            className={`glass-panel tonal-layer-glow absolute z-50 flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
+            className={`glass-panel tonal-layer-glow absolute z-(--z-popover) flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             {headerRight ? (
                 <div className="flex justify-between items-center">

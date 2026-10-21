@@ -56,7 +56,7 @@ export function BrowserSupportBanner() {
         <div
             role="status"
             aria-label="Unsupported browser"
-            className="fixed top-5 left-5 right-5 z-60 max-w-180 mx-auto bg-surface-container-lowest rounded-lg editorial-shadow px-5 py-3.5 flex items-center gap-4">
+            className="fixed top-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto bg-surface-container-lowest rounded-lg editorial-shadow px-5 py-3.5 flex items-center gap-4">
             <span className="w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center bg-error-container text-on-error-container">
                 <Icon name="error" size={16} />
             </span>
