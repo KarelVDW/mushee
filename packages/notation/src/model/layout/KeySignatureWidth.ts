@@ -3,7 +3,7 @@ import type { KeyAccidental } from '../KeySignature'
 import { PhysicalWidth } from './PhysicalWidth'
 
 /** Horizontal gap between adjacent key-signature accidentals. */
-const ACCIDENTAL_GAP = 2
+export const ACCIDENTAL_GAP = 2
 
 export class KeySignatureWidth implements PhysicalWidth {
     readonly paddingLeft: number

@@ -1,11 +1,11 @@
 import { STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
+import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { Staff } from '@mushee/notation/model/layout/Staff'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { ClefType } from '@mushee/notation/model/types'
-import { KeySignatureWidth } from '@mushee/notation/model/width/KeySignatureWidth'
 import { describe, expect, it } from 'vitest'
 
 const bar = (clef: ClefType, fifths: number) => new Measure(new Score(), clef, new TimeSignature(4, 4), { keyFifths: fifths })

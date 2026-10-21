@@ -1,6 +1,6 @@
 import { Bravura } from '../../engraving/Bravura'
 import { Clef } from '../Clef'
-import { ClefLayout } from '../layout/ClefLayout'
+import { ClefLayout } from './ClefLayout'
 import { PhysicalWidth } from './PhysicalWidth'
 
 export class ClefWidth implements PhysicalWidth {

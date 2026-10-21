@@ -1,10 +1,10 @@
 import { CLEF_LINE_OFFSET } from './clefs'
 import { ClefLayout } from './layout/ClefLayout'
+import { ClefWidth } from './layout/ClefWidth'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
 import { LINES_PER_OCTAVE, STAFF_MIDDLE_LINE } from './staffLines'
 import type { ClefType } from './types'
-import { ClefWidth } from './width/ClefWidth'
 
 /**
  * A clef anchored in a measure: the leading clef sits at beat 0, further ones

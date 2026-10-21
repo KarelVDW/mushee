@@ -1,5 +1,5 @@
+import { ClefWidth } from '@mushee/notation/model/layout/ClefWidth'
 import type { ClefType } from '@mushee/notation/model/types'
-import { ClefWidth } from '@mushee/notation/model/width/ClefWidth'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

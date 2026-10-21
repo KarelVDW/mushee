@@ -1,6 +1,6 @@
 import { Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
-import { TimeSignatureWidth } from './width/TimeSignatureWidth'
+import { TimeSignatureWidth } from './layout/TimeSignatureWidth'
 
 /**
  * An immutable value object (no measure reference, no identity): instances are

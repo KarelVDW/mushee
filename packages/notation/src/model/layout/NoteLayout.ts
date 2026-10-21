@@ -2,7 +2,7 @@ import { Bravura } from '../../engraving/Bravura'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
-import type { NoteWidth } from '../width/NoteWidth'
+import type { NoteWidth } from './NoteWidth'
 import { Staff } from './Staff'
 import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 

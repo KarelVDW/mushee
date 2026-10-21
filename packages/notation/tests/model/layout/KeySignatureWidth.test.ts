@@ -1,4 +1,4 @@
-import { KeySignatureWidth } from '@mushee/notation/model/width/KeySignatureWidth'
+import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { key } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

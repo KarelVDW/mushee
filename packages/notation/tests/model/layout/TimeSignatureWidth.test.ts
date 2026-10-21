@@ -1,5 +1,5 @@
+import { TimeSignatureWidth } from '@mushee/notation/model/layout/TimeSignatureWidth'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { TimeSignatureWidth } from '@mushee/notation/model/width/TimeSignatureWidth'
 import { describe, expect, it } from 'vitest'
 
 describe('TimeSignatureWidth', () => {

@@ -1,7 +1,7 @@
 import { Duration } from '@mushee/notation/model/Duration'
+import { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
-import { NoteWidth } from '@mushee/notation/model/width/NoteWidth'
 import { describe, expect, it } from 'vitest'
 
 describe('NoteWidth', () => {
