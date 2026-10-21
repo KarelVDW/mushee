@@ -4,7 +4,7 @@
  * `_type` naming the entry element); ScoreSerializer writes it, ScoreDeserializer
  * reads it, and the file codecs translate it to and from real MusicXML.
  */
-import type { DurationType } from '../../components/types'
+import type { BarlineType, DurationType } from '../../components/types'
 
 /** Divisions per quarter note in every document the editor writes. */
 export const DIVISIONS = 12
@@ -22,6 +22,17 @@ export const MXML_NOTE_TYPE: Record<DurationType, MxmlNoteType> = { w: 'whole', 
 
 /** The model note value of each `<type>` — the inverse of MXML_NOTE_TYPE. */
 export const DURATION_TYPE: Record<MxmlNoteType, DurationType> = { whole: 'w', half: 'h', quarter: 'q', eighth: '8', '16th': '16' }
+
+/** The `<bar-style>` each model barline is written as. */
+export const BAR_STYLE: Record<BarlineType, MxmlBarStyle> = { single: 'regular', double: 'light-light', end: 'light-heavy', none: 'none' }
+
+/** The model barline of each `<bar-style>` — the inverse of BAR_STYLE. */
+export const BARLINE_TYPE: Record<MxmlBarStyle, BarlineType> = {
+    regular: 'single',
+    'light-light': 'double',
+    'light-heavy': 'end',
+    none: 'none',
+}
 
 export interface MxmlPitch {
     step: MxmlStep

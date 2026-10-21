@@ -1,14 +1,14 @@
 import { CLEF_DEFS } from '../../components/constants'
-import type { BarlineType, ClefType, TieType } from '../../components/types'
+import type { ClefType, TieType } from '../../components/types'
 import type { Duration } from '../Duration'
 import type { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
 import {
+    BAR_STYLE,
     DIVISIONS,
     MXML_NOTE_TYPE,
-    type MxmlBarStyle,
     type MxmlClefSign,
     type MxmlMeasureEntry,
     type MxmlNote,
@@ -104,7 +104,7 @@ export class MeasureSerializer {
             entries.push({
                 _type: 'barline' as const,
                 location: 'right' as const,
-                barStyle: MeasureSerializer.barlineTypeToMxmlBarStyle(this.measure.endBarline),
+                barStyle: BAR_STYLE[this.measure.endBarline],
             })
         }
 
@@ -118,20 +118,6 @@ export class MeasureSerializer {
 
     private static keyToMxmlKey(key: KeySignature): { fifths: number; mode?: string } {
         return { fifths: key.fifths, ...(key.mode && { mode: key.mode }) }
-    }
-
-    private static barlineTypeToMxmlBarStyle(type: BarlineType): MxmlBarStyle {
-        switch (type) {
-            case 'double':
-                return 'light-light'
-            case 'end':
-                return 'light-heavy'
-            case 'none':
-                return 'none'
-            /* v8 ignore next 2 -- only reachable for 'single', but the caller guards `endBarline !== 'single'`, so this default never runs */
-            default:
-                return 'regular'
-        }
     }
 
     private static timeSignatureToMxmlTime(ts: TimeSignature): { beats: string; beatType: string } {

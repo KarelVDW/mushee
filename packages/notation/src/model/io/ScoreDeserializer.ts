@@ -7,7 +7,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import { DURATION_TYPE, type MxmlBarStyle, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
+import { BARLINE_TYPE, DURATION_TYPE, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
 
 /** Default staff line per clef sign when MusicXML omits <line>. */
 const DEFAULT_CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 }
@@ -73,7 +73,7 @@ export class ScoreDeserializer {
                     }
                     case 'barline': {
                         if (entry.barStyle) {
-                            const parsed = ScoreDeserializer.mxmlBarStyleToBarlineType(entry.barStyle)
+                            const parsed = BARLINE_TYPE[entry.barStyle]
                             // 'single' is the implicit default everywhere in the model; keep it as undefined
                             // so the positional defaults (e.g. the end-of-piece barline) still apply.
                             endBarline = parsed === 'single' ? undefined : parsed
@@ -206,19 +206,6 @@ export class ScoreDeserializer {
             if (def.sign === sign && def.line === resolvedLine && def.octaveChange === oc) return type as ClefType
         }
         return 'treble'
-    }
-
-    private static mxmlBarStyleToBarlineType(style: MxmlBarStyle): BarlineType {
-        switch (style) {
-            case 'light-light':
-                return 'double'
-            case 'light-heavy':
-                return 'end'
-            case 'none':
-                return 'none'
-            default:
-                return 'single'
-        }
     }
 
     private static mxmlTieToTieType(ties: Array<{ type: 'start' | 'stop' }> | undefined): TieType | undefined {
