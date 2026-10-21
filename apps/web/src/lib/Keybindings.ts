@@ -1,5 +1,5 @@
 /** True on macOS/iOS — decides the primary shortcut modifier (⌘ there, Ctrl elsewhere). */
-export const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
 
 /** Keys that can never form a shortcut on their own — recording keeps waiting through these. */
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'CapsLock', 'NumLock', 'ScrollLock', 'ContextMenu', 'Fn', 'FnLock'])

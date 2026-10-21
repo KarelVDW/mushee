@@ -23,7 +23,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         const user = session?.user
         if (user) {
             lastUserId.current = user.id
-            identifyUser({ id: user.id, email: user.email, name: user.name })
+            identifyUser(user.id)
         } else if (lastUserId.current) {
             lastUserId.current = null
             resetAnalyticsIdentity()
