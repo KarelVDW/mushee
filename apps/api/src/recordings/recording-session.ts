@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common'
 import { Repository } from 'typeorm'
 
+import { positiveIntSetting } from '../common/env'
 import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
 import type { PipelineHealth, RecordingMeta, RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
@@ -38,8 +39,8 @@ const METER_INTERVAL_MS = 1000
 /** Hard per-session caps — defense in depth on top of credits, protecting the
  *  process from unbounded memory on unlimited tiers (PCM grows ~320 MB/hour).
  *  Env-tunable for load tests; the defaults comfortably exceed any real take. */
-const MAX_SESSION_SECONDS = Number(process.env.RECORDING_MAX_SECONDS) || 3600
-const MAX_SESSION_ENCODED_BYTES = Number(process.env.RECORDING_MAX_ENCODED_BYTES) || 128 * 1024 * 1024
+const MAX_SESSION_SECONDS = positiveIntSetting(process.env.RECORDING_MAX_SECONDS, 3600)
+const MAX_SESSION_ENCODED_BYTES = positiveIntSetting(process.env.RECORDING_MAX_ENCODED_BYTES, 128 * 1024 * 1024)
 
 /**
  * One recording session: ties a pipeline to the user and score it records

@@ -4,12 +4,7 @@ import type { ExecutionContext } from '@nestjs/common'
 import { HttpException, HttpStatus } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-    positiveIntSetting,
-    SHARED_RATE_LIMIT_MAX,
-    SHARED_RATE_LIMIT_MAX_TRACKED,
-    SharedScoreRateLimitGuard,
-} from '../../src/scores/shared-score-rate-limit.guard'
+import { SHARED_RATE_LIMIT_MAX, SHARED_RATE_LIMIT_MAX_TRACKED, SharedScoreRateLimitGuard } from '../../src/scores/shared-score-rate-limit.guard'
 
 /** Per-IP fixed-window limiter on the public share route. Its binding to the controller is tested in shared-scores.controller.test.ts. */
 
@@ -24,15 +19,6 @@ describe('SharedScoreRateLimitGuard', () => {
     it('defaults to a ceiling below the global 120/min', () => {
         // The exported constant reads the environment at import time, so only its bound is asserted here.
         expect(SHARED_RATE_LIMIT_MAX).toBeLessThan(120)
-        expect(positiveIntSetting(undefined, 30)).toBe(30)
-        expect(positiveIntSetting('45', 30)).toBe(45)
-    })
-
-    it('falls back to the default on a malformed or non-positive setting instead of disabling the limiter', () => {
-        expect(positiveIntSetting('abc', 30)).toBe(30)
-        expect(positiveIntSetting('0', 30)).toBe(30)
-        expect(positiveIntSetting('-5', 30)).toBe(30)
-        expect(positiveIntSetting('', 60_000)).toBe(60_000)
     })
 
     it('allows up to max requests per IP, then answers 429 with retry-after', () => {

@@ -8,6 +8,7 @@ import { WsAdapter } from '@nestjs/platform-ws'
 import type { FastifyRequest } from 'fastify'
 
 import { AppModule } from './app.module'
+import { positiveIntSetting } from './common/env'
 import { DEV_WEB_ORIGIN } from './config/app-urls'
 import { runMigrationsLocked } from './database/run-migrations'
 import { seedDemoData } from './database/seed/demo-seed'
@@ -15,7 +16,7 @@ import { ErrorReporter, monitorProcessErrors } from './telemetry/error-reporter'
 
 /** Cap on HTTP request bodies (score JSON). WebSocket audio chunks are
  *  capped separately via `maxPayload` on the recordings gateway. */
-const MAX_BODY_BYTES = parseInt(process.env.MAX_BODY_BYTES ?? String(5 * 1024 * 1024), 10)
+const MAX_BODY_BYTES = positiveIntSetting(process.env.MAX_BODY_BYTES, 5 * 1024 * 1024)
 
 /** Pull the better-auth session token out of the cookie header so the rate
  *  limiter keys per-user where possible, falling back to per-IP. */
@@ -33,7 +34,7 @@ function parseTrustProxy(value: string | undefined): boolean | number | string {
 }
 
 const rateLimitOptions = {
-    max: parseInt(process.env.RATE_LIMIT_MAX ?? '120', 10),
+    max: positiveIntSetting(process.env.RATE_LIMIT_MAX, 120),
     timeWindow: process.env.RATE_LIMIT_WINDOW ?? '1 minute',
     keyGenerator: rateLimitKey,
     // Don't throttle the uptime probe.
