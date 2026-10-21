@@ -9,15 +9,13 @@ import type { DurationType } from '../../components/types'
 /** Divisions per quarter note in every document the editor writes. */
 export const DIVISIONS = 12
 
-// --- MusicXML JSON types (input/output format, mirrors MusicXML 4.0) ---
+// --- MusicXML JSON types (input/output format, the subset Solkey stores) ---
 
 export type MxmlStep = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
 export type MxmlNoteType = 'whole' | 'half' | 'quarter' | 'eighth' | '16th'
-export type MxmlStemValue = 'up' | 'down' | 'none' | 'double'
 export type MxmlClefSign = 'G' | 'F' | 'C' | 'percussion' | 'TAB' | 'none'
 export type MxmlStartStop = 'start' | 'stop'
 export type MxmlBarStyle = 'regular' | 'light-light' | 'light-heavy' | 'none'
-export type MxmlBeamValue = 'begin' | 'continue' | 'end' | 'forward hook' | 'backward hook'
 
 /** The `<type>` each model note value is written as. */
 export const MXML_NOTE_TYPE: Record<DurationType, MxmlNoteType> = { w: 'whole', h: 'half', q: 'quarter', '8': 'eighth', '16': '16th' }
@@ -31,9 +29,8 @@ export interface MxmlPitch {
     octave: number
 }
 
-export interface MxmlRest {
-    measure?: boolean
-}
+/** `<rest/>` — stored without attributes. */
+export type MxmlRest = Record<never, never>
 
 export interface MxmlTimeModification {
     actualNotes: number // e.g. 3 for a triplet
@@ -42,11 +39,6 @@ export interface MxmlTimeModification {
 
 export interface MxmlTie {
     type: MxmlStartStop
-}
-
-export interface MxmlBeam {
-    number?: number // 1-8, default 1
-    value: MxmlBeamValue
 }
 
 export interface MxmlNote {
@@ -58,10 +50,7 @@ export interface MxmlNote {
     voice?: string
     type?: MxmlNoteType
     dot?: number // count of <dot> elements
-    stem?: MxmlStemValue
-    staff?: number
     timeModification?: MxmlTimeModification
-    beam?: MxmlBeam[]
 }
 
 export interface MxmlKey {
@@ -77,7 +66,6 @@ export interface MxmlTime {
 export interface MxmlClef {
     sign: MxmlClefSign
     line?: number
-    number?: number // staff number
     clefOctaveChange?: number // +1 = 8va, -1 = 8vb, +2 = 15ma, -2 = 15mb
 }
 
@@ -95,7 +83,6 @@ export interface MxmlAttributes {
     divisions?: number
     key?: MxmlKey[]
     time?: MxmlTime[]
-    staves?: number
     clef?: MxmlClef[]
     transpose?: MxmlTranspose
 }
@@ -113,19 +100,7 @@ export interface MxmlDirection {
     sound?: { tempo?: number }
 }
 
-export interface MxmlBackup {
-    _type: 'backup'
-    duration: number
-}
-
-export interface MxmlForward {
-    _type: 'forward'
-    duration: number
-    voice?: string
-    staff?: number
-}
-
-export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection | MxmlBackup | MxmlForward
+export type MxmlMeasureEntry = MxmlNote | MxmlAttributes | MxmlBarline | MxmlDirection
 
 export interface MxmlMeasure {
     number: string

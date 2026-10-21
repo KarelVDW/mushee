@@ -71,12 +71,6 @@ export class MusicXmlExporter {
                 return this.directionXml(entry)
             case 'barline':
                 return this.barlineXml(entry)
-            /* v8 ignore next 2 -- ScoreSerializer never emits backup entries; handled for type completeness */
-            case 'backup':
-                return ['      <backup>', `        <duration>${entry.duration}</duration>`, '      </backup>']
-            /* v8 ignore next 2 -- ScoreSerializer never emits forward entries; handled for type completeness */
-            case 'forward':
-                return ['      <forward>', `        <duration>${entry.duration}</duration>`, '      </forward>']
         }
     }
 
