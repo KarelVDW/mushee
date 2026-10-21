@@ -66,10 +66,7 @@ export class CronService {
     @Cron(CronExpression.EVERY_10_MINUTES)
     async flushStaleScores(): Promise<void> {
         await this.withCronLock(ADVISORY_LOCKS.flushScores, async () => {
-            const flushed = await this.scoresService.flushIdleDocuments(10)
-            if (flushed > 0) {
-                this.logger.log(`Flushed ${flushed} idle score(s) to storage`)
-            }
+            await this.scoresService.flushIdleDocuments(10)
         })
     }
 }

@@ -211,9 +211,14 @@ export class ScoresService {
 
         // Document edits only touch cached_scores, so the row's updatedAt — what
         // the library shows as "Updated" and sorts by — is moved explicitly.
-        if (documentChanged) score.updatedAt = new Date()
-        if (dto.title) score.title = dto.title
-        if (documentChanged || dto.title) await this.scoreRepo.save(score)
+        // Only the columns this request changes are written: save() would write
+        // back every column of the row read above, so a share revoke or a rename
+        // committed while this autosave was in flight would be silently undone.
+        if (documentChanged || dto.title) {
+            score.updatedAt = new Date()
+            if (dto.title) score.title = dto.title
+            await this.scoreRepo.update({ id: score.id }, { updatedAt: score.updatedAt, ...(dto.title ? { title: dto.title } : {}) })
+        }
 
         return score
     }
@@ -267,6 +272,7 @@ export class ScoresService {
     async flushIdleDocuments(idleMinutes: number): Promise<number> {
         const idle = await this.editCache.findStale(idleMinutes)
         let flushed = 0
+        let failed = 0
         for (const cached of idle) {
             try {
                 const score = await this.findById(cached.scoreId)
@@ -286,8 +292,12 @@ export class ScoresService {
                 // stuck in the cache are invisible in the logs alone.
                 this.logger.error(`Failed to flush score ${cached.scoreId}: ${String(error)}`)
                 this.reporter.capture(error, { origin: 'cron', job: 'flush-scores', scoreId: cached.scoreId })
+                failed++
             }
         }
+        // One line per run, quiet runs included, so "ran and found nothing" is
+        // told apart from "never ran" and failures show beside the successes.
+        this.logger.log(`Flush run: ${idle.length} idle, ${flushed} flushed, ${failed} failed`)
         return flushed
     }
 

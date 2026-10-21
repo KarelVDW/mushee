@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import { ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
+import { ForbiddenException, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import type { Repository } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -251,6 +251,17 @@ describe('flushIdleDocuments', () => {
         expect(reporter.capture).toHaveBeenCalledTimes(1)
         expect(reporter.capture).toHaveBeenCalledWith(failure, { origin: 'cron', job: 'flush-scores', scoreId: SOURCE.id })
     })
+
+    it('logs one summary line per run, quiet runs included, so a run that found nothing is still visible', async () => {
+        const log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {})
+        try {
+            const { service } = makeService(tier(null), 1)
+            await service.flushIdleDocuments(10)
+            expect(log).toHaveBeenCalledWith('Flush run: 0 idle, 0 flushed, 0 failed')
+        } finally {
+            log.mockRestore()
+        }
+    })
 })
 
 describe('update', () => {
@@ -262,6 +273,7 @@ describe('update', () => {
         const scoreRepo = {
             findOneBy: vi.fn(({ id }: { id: string }) => Promise.resolve(id === SOURCE.id ? { ...SOURCE } : null)),
             save: vi.fn((score: Score) => Promise.resolve(score)),
+            update: vi.fn(() => Promise.resolve({ affected: 1 })),
         }
         const patchRow = (scoreId: string, apply: (doc: Doc) => void) => {
             const doc = rows.get(scoreId)
@@ -333,8 +345,8 @@ describe('update', () => {
         const updated = await service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))
 
         expect(updated.updatedAt.getTime()).toBeGreaterThan(before.getTime())
-        expect(scoreRepo.save).toHaveBeenCalledTimes(1)
-        expect(scoreRepo.save).toHaveBeenCalledWith(expect.objectContaining({ id: SOURCE.id, updatedAt: updated.updatedAt }))
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt })
     })
 
     it('saves a rename and a document edit in one row write', async () => {
@@ -344,14 +356,15 @@ describe('update', () => {
             partList: { renamed: true },
         } as unknown as UpdateScoreDto)
         expect(updated.title).toBe('Nocturne')
-        expect(scoreRepo.save).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt, title: 'Nocturne' })
         expect(rows.get(SOURCE.id)?.partList).toEqual({ renamed: true })
     })
 
     it('a rename alone writes the row and leaves the edit cache alone', async () => {
         const { service, scoreRepo, cache } = makeEditingService()
         await service.update('u1', SOURCE.id, { title: 'Nocturne' } as unknown as UpdateScoreDto)
-        expect(scoreRepo.save).toHaveBeenCalledWith(expect.objectContaining({ title: 'Nocturne' }))
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, expect.objectContaining({ title: 'Nocturne' }))
         expect(cache.updateMeasures).not.toHaveBeenCalled()
         expect(cache.primeIfAbsent).not.toHaveBeenCalled()
     })
@@ -363,7 +376,24 @@ describe('update', () => {
             ServiceUnavailableException,
         )
         expect(cache.updateMeasures).toHaveBeenCalledTimes(2)
-        expect(scoreRepo.save).not.toHaveBeenCalled() // a failed edit doesn't claim the score was updated
+        expect(scoreRepo.update).not.toHaveBeenCalled() // a failed edit doesn't claim the score was updated
+    })
+
+    it('never writes back columns it did not change, so a share revoke mid-autosave stays revoked', async () => {
+        // The row was read with a share token that an admin or the owner revokes
+        // while this PATCH is in flight; writing the whole entity would restore it.
+        const { service, scoreRepo } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
+        scoreRepo.findOneBy.mockResolvedValueOnce({ ...SOURCE, shareToken: 'stale-token-0123' })
+
+        const updated = await service.update('u1', SOURCE.id, {
+            title: 'Nocturne',
+            measures: { 0: { n: 'edited' } },
+        } as unknown as UpdateScoreDto)
+
+        expect(scoreRepo.save).not.toHaveBeenCalled()
+        expect(scoreRepo.update).toHaveBeenCalledTimes(1)
+        // An exact match: any shareToken (or other stale column) in the write fails it.
+        expect(scoreRepo.update).toHaveBeenCalledWith({ id: SOURCE.id }, { updatedAt: updated.updatedAt, title: 'Nocturne' })
     })
 
     it('a concurrent save that re-primed first keeps its edit', async () => {
