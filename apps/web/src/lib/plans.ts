@@ -6,7 +6,10 @@
  * PlanCatalogue (`usePlanCatalogue` in lib/queries.ts). Only the marketing
  * pages render straight from this static catalogue (they must work without
  * the API), so keep the `dailyRecordingSeconds` fallbacks roughly in sync
- * with the seeded tiers.
+ * with the seeded tiers. Copy that quotes a price or budget derives it from
+ * here, except prose: pricing/faq.ts and the landing copy (LandingPage,
+ * BetaPricing in PricingSection) restate Sketch's and Beta's limits in
+ * words — review them whenever those limits change.
  * Prices are display-only; the amounts actually charged come from the Polar
  * products configured on the API. Numerals are the same in USD and EUR
  * (parity pricing — keep the Polar products configured that way too); the
@@ -102,8 +105,13 @@ export interface CreditPack {
     price: number
     blurb: string
     /** The honest subscription comparison shown on the card. */
-    compare: (currency: Currency) => string
+    compare(this: CreditPack, currency: Currency): string
 }
+
+/** Songwriter — the subscription the pack copy measures the packs against. */
+export const SONGWRITER = planById('pro')
+/** Songwriter's daily budget in minutes (a fixed allowance, never unlimited). */
+export const SONGWRITER_DAILY_MINUTES = Math.round((SONGWRITER.dailyRecordingSeconds ?? 0) / 60)
 
 export const CREDIT_PACKS: CreditPack[] = [
     {
@@ -112,7 +120,10 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 15,
         price: 6,
         blurb: 'One song, with plenty of retakes.',
-        compare: (c) => `Songwriter gives you 20 min every day for ${formatMoney(3, c)} more a month.`,
+        compare(c) {
+            const extra = formatMoney(SONGWRITER.priceMonthly - this.price, c)
+            return `${SONGWRITER.name} gives you ${SONGWRITER_DAILY_MINUTES} min every day for ${extra} more a month.`
+        },
     },
     {
         id: 'ep',
@@ -131,6 +142,9 @@ export const CREDIT_PACKS: CreditPack[] = [
         compare: () => 'Four months of Songwriter costs the same.',
     },
 ]
+
+/** The lowest-priced pack — what the "packs from …" lines quote. */
+export const CHEAPEST_PACK = CREDIT_PACKS.reduce((cheapest, pack) => (pack.price < cheapest.price ? pack : cheapest))
 
 /** The closed-beta plan's display data. */
 export interface BetaPlan extends Pick<PlanTier, 'name' | 'icon' | 'tagline' | 'dailyRecordingSeconds' | 'maxScores' | 'features'> {

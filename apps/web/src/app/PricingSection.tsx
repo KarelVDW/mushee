@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
+import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 /**
@@ -114,7 +114,7 @@ function PacksTeaser({ currency }: { currency: Currency }) {
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
-                Not ready for a subscription? One-time minute packs, from {formatMoney(6, currency)}
+                Not ready for a subscription? One-time minute packs, from {formatMoney(CHEAPEST_PACK.price, currency)}
             </button>
             {open && (
                 <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">

@@ -4,7 +4,7 @@ import { type CSSProperties, useEffect } from 'react'
 
 import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
-import { BETA_MODE } from '@/lib/plans'
+import { BETA_MODE, CHEAPEST_PACK } from '@/lib/plans'
 import { usePlanCatalogue } from '@/lib/queries'
 import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
 import { formatRecordingTime } from '@/lib/recordingTime'
@@ -81,7 +81,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                             <a href="/settings" className="text-primary underline">
                                 One-time minute packs
                             </a>{' '}
-                            start at {formatMoney(6, currency)} and never expire.
+                            start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
                         </span>
                     )}
                 </div>

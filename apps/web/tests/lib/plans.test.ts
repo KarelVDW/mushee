@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Plan } from '@/lib/api'
 import {
     BETA_PLAN,
+    CHEAPEST_PACK,
     CREDIT_PACKS,
     isPaidTier,
     isPlanTierId,
@@ -94,6 +95,12 @@ describe('credit packs', () => {
         for (const pack of CREDIT_PACKS) {
             expect(pack.price / pack.minutes).toBeGreaterThan(songwriterPerMinute * 10)
         }
+    })
+
+    it('quotes the cheapest pack and compares the single pack against Songwriter from the catalogue', () => {
+        expect(CHEAPEST_PACK.id).toBe('single')
+        expect(CREDIT_PACKS[0].compare('usd')).toBe('Songwriter gives you 20 min every day for $3 more a month.')
+        expect(CREDIT_PACKS[0].compare('eur')).toBe('Songwriter gives you 20 min every day for €3 more a month.')
     })
 
     it('prices larger packs at a gently declining per-minute rate', () => {
