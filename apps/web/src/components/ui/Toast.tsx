@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { CloseButton } from './Buttons'
 import { Icon, type IconName } from './Icon'
 
 interface ToastItem {
@@ -89,13 +90,7 @@ export function Toaster() {
                         <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
                     </span>
                     <span className="font-body font-medium text-[13px] leading-[1.4] text-on-surface">{toast.message}</span>
-                    <button
-                        type="button"
-                        aria-label="Dismiss"
-                        onClick={() => dismissToast(toast.id)}
-                        className="bg-transparent border-0 p-1.5 cursor-pointer text-on-surface-variant hover:text-on-surface inline-flex shrink-0">
-                        <Icon name="x" size={14} />
-                    </button>
+                    <CloseButton ariaLabel="Dismiss" onClick={() => dismissToast(toast.id)} />
                 </div>
             ))}
         </div>

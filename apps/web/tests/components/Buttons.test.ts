@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui/Buttons'
+import { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui/Buttons'
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el)
 
@@ -32,6 +32,21 @@ describe('capsule buttons', () => {
         expect(html(createElement(PrimaryButton, { children: 'Go', emphasis: 'pop' }))).toContain(freeze)
         expect(html(createElement(PrimaryButton, { children: 'Go' }))).not.toContain(freeze)
         expect(html(createElement(PrimaryButton, { children: 'Delete', emphasis: 'pop', danger: true }))).not.toContain(freeze)
+    })
+})
+
+describe('CloseButton', () => {
+    it('is a labelled, non-submitting × with the shared focus ring', () => {
+        const markup = html(createElement(CloseButton, { onClick: () => {} }))
+        expect(markup).toMatch(/^<button type="button" aria-label="Close"/)
+        expect(markup).toContain('focus-ring')
+        expect(markup).toContain('width="14"')
+    })
+
+    it('takes a custom label and a dialog-header size', () => {
+        const markup = html(createElement(CloseButton, { onClick: () => {}, ariaLabel: 'Dismiss', size: 'md' }))
+        expect(markup).toContain('aria-label="Dismiss"')
+        expect(markup).toContain('width="20"')
     })
 })
 

@@ -1,6 +1,6 @@
 export { AuthCard, AuthShell } from './AuthCard'
 export { Eyebrow, ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
-export { IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from './Buttons'
+export { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from './Buttons'
 export { DialogPanel, DialogScrim, Footer, PageHeader, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
 export { Alert, ErrorScreen } from './Feedback'

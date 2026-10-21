@@ -210,6 +210,35 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
     )
 }
 
+interface CloseButtonProps {
+    onClick: () => void
+    ariaLabel?: string
+    /** `sm` (14px glyph) for toasts and banners, `md` (20px) for dialog headers. */
+    size?: 'sm' | 'md'
+}
+
+/**
+ * The bare × that dismisses a toast, banner or dialog. Plain CSS only — no
+ * opacity-modified colours, transforms or shadows — because BrowserSupportBanner
+ * renders it on the browsers below the CSS floor.
+ */
+export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: CloseButtonProps) {
+    return (
+        <button
+            type="button"
+            aria-label={ariaLabel}
+            onClick={onClick}
+            className={[
+                'bg-transparent border-0 cursor-pointer inline-flex shrink-0 rounded-full',
+                size === 'md' ? 'p-1' : 'p-1.5',
+                'text-on-surface-variant hover:text-on-surface transition-colors duration-150 ease-solkey',
+                'focus-ring',
+            ].join(' ')}>
+            <Icon name="x" size={size === 'md' ? 20 : 14} />
+        </button>
+    )
+}
+
 // Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
 // and this file is the copy the shared kit is extracted from.
 interface ToggleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
