@@ -1,6 +1,6 @@
 import { sumBy } from 'lodash-es'
 
-import { Clef } from '../Clef'
+import type { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
@@ -73,7 +73,6 @@ export class MeasureLayout {
         this.reuseSignature = context.reuseSignature
 
         const widthOf = (el: MeasureElement): PhysicalWidth => {
-            if (el instanceof Clef) return el.width
             if (el instanceof KeySignature) {
                 const width = context.keyWidths.get(el)
                 if (!width) throw new Error('Key signature width missing from layout context')
@@ -84,7 +83,8 @@ export class MeasureLayout {
                 if (!width) throw new Error('Note width missing from layout context')
                 return width
             }
-            return el.width
+            // Clefs and time signatures are context-free: their width rides on their shared layout.
+            return el.layout.width
         }
 
         // --- Element order: leading context, then notes merged with mid-measure changes by beat

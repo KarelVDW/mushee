@@ -121,7 +121,7 @@ export const Measure = memo(function Measure({
             {layout.showsTimeSignature && (
                 <g transform={`translate(${layout.getXForElement(measure.timeSignature)}, 0)`}>
                     <ClickableGlyph
-                        width={measure.timeSignature.width.total}
+                        width={measure.timeSignature.layout.width.total}
                         onClick={
                             onTimeSignatureClick &&
                             (() => onTimeSignatureClick(measure.timeSignature, layout.getXForElement(measure.timeSignature)))

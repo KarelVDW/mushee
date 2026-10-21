@@ -1,6 +1,5 @@
 import { CLEF_LINE_OFFSET } from './clefs'
 import { ClefLayout } from './layout/ClefLayout'
-import { ClefWidth } from './layout/ClefWidth'
 import type { Measure } from './Measure'
 import { Pitch } from './Pitch'
 import { LINES_PER_OCTAVE, STAFF_MIDDLE_LINE } from './staffLines'
@@ -8,14 +7,12 @@ import type { ClefType } from './types'
 
 /**
  * A clef anchored in a measure: the leading clef sits at beat 0, further ones
- * are mid-measure changes. Immutable after construction; its layout and width
- * depend only on `type`, so they are cached forever (context-free, see
- * ARCHITECTURE.md).
+ * are mid-measure changes. Immutable after construction; its layout (with its
+ * width) depends only on `type`, so it is the per-type shared ClefLayout
+ * (context-free, see ARCHITECTURE.md).
  */
 export class Clef {
     readonly id = crypto.randomUUID()
-    private _layout: ClefLayout | null = null
-    private _width: ClefWidth | null = null
 
     constructor(
         readonly measure: Measure,
@@ -23,14 +20,8 @@ export class Clef {
         readonly type: ClefType,
     ) {}
 
-    get width(): ClefWidth {
-        this._width ||= new ClefWidth(this)
-        return this._width
-    }
-
     get layout(): ClefLayout {
-        this._layout ||= new ClefLayout(this)
-        return this._layout
+        return ClefLayout.of(this.type)
     }
 
     lineFor(pitch: Pitch): number {

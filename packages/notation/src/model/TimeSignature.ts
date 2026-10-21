@@ -1,26 +1,19 @@
 import { BEAT_EPSILON, Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
-import { TimeSignatureWidth } from './layout/TimeSignatureWidth'
 
 /**
  * An immutable value object (no measure reference, no identity): instances are
- * shared freely across measures, so its layout and width — which depend only on
- * the digits — are cached forever.
+ * shared freely across measures, so its layout (with its width) — which depends
+ * only on the digits — is cached forever.
  */
 export class TimeSignature {
     readonly beatAmount: number
     readonly beatType: number
     private _layout: TimeSignatureLayout | null = null
-    private _width: TimeSignatureWidth | null = null
 
     constructor(beatAmount: number, beatType: number) {
         this.beatAmount = beatAmount
         this.beatType = beatType
-    }
-
-    get width(): TimeSignatureWidth {
-        this._width ||= new TimeSignatureWidth(this)
-        return this._width
     }
 
     get layout(): TimeSignatureLayout {

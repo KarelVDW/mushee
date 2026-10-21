@@ -39,9 +39,9 @@ export function TimeSignatureGlyph({
     size?: number
     color?: string
 }) {
-    const timeSignature = useMemo(() => new TimeSignature(beatAmount, beatType), [beatAmount, beatType])
-    const { topDigits, bottomDigits } = timeSignature.layout
-    const { paddingLeft, content } = timeSignature.width
+    const layout = useMemo(() => new TimeSignature(beatAmount, beatType).layout, [beatAmount, beatType])
+    const { topDigits, bottomDigits } = layout
+    const { paddingLeft, content } = layout.width
     // Window over the digits' content box (the staff padding trimmed) and the staff band:
     // the digits sit on lines 1 and 3, each spanning a space up and down.
     const left = paddingLeft - GLYPH_MARGIN

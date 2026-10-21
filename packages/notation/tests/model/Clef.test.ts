@@ -23,26 +23,19 @@ describe('Clef', () => {
         expect(clef('treble').id).not.toBe(clef('treble').id)
     })
 
-    it('lazily creates a single ClefWidth instance (context-free, cached forever)', () => {
-        const c = clef('treble')
-        expect(c.width).toBe(c.width)
-    })
-
-    it('lazily creates a single ClefLayout instance (context-free, cached forever)', () => {
+    it('shares one ClefLayout (with its width) per clef type (context-free)', () => {
         const c = clef('treble')
         expect(c.layout).toBe(c.layout)
+        expect(clef('bass', 2).layout).toBe(clef('bass').layout)
+        expect(clef('bass').layout).not.toBe(c.layout)
     })
 
     it('computes width and layout for every supported clef type', () => {
         for (const type of ['treble', 'bass', 'alto', 'tenor'] as ClefType[]) {
             const c = clef(type)
-            expect(c.width.total).toBeGreaterThan(0)
+            expect(c.layout.width.total).toBeGreaterThan(0)
             expect(typeof c.layout.glyphName).toBe('string')
         }
-    })
-
-    it('throws if width is requested for an unconfigured clef type', () => {
-        expect(() => clef('percussion' as ClefType).width).toThrow('Unknown clef type: percussion')
     })
 
     describe('lineFor (clef-aware staff position)', () => {

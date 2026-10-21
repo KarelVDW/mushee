@@ -51,8 +51,8 @@ describe('MeasureLayout', () => {
             const layout = m.layout
             const keyWidth = new KeySignatureWidth(m.keySignature.drawnAccidentals).total
             expect(layout.getXForElement(m.clef)).toBe(0)
-            expect(layout.getXForElement(m.keySignature)).toBe(m.clef.width.total)
-            expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total + keyWidth)
+            expect(layout.getXForElement(m.keySignature)).toBe(m.clef.layout.width.total)
+            expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total + keyWidth)
         })
 
         it('skips a C-major key signature even when the shows-flag is set', () => {
@@ -64,7 +64,7 @@ describe('MeasureLayout', () => {
             // Nothing is drawn, so the key occupies no slot.
             expect(() => m.layout.getXForElement(m.keySignature)).toThrow('Element not spaced in measure')
             // The time signature follows the clef directly.
-            expect(m.layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total)
+            expect(m.layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total)
         })
 
         it('omits clef and time signature for a mid-row measure with unchanged context', () => {
@@ -227,7 +227,7 @@ describe('MeasureLayout', () => {
             if (!midClef) throw new Error('expected a mid-measure clef')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
-            expect(layout.getXForElement(m.notes[2])).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
+            expect(layout.getXForElement(m.notes[2])).toBeCloseTo(layout.getXForElement(midClef) + midClef.layout.width.total)
         })
 
         it('orders a clef before a key signature at the same beat', () => {
@@ -240,7 +240,7 @@ describe('MeasureLayout', () => {
             if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeLessThan(layout.getXForElement(midKey))
-            expect(layout.getXForElement(midKey)).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
+            expect(layout.getXForElement(midKey)).toBeCloseTo(layout.getXForElement(midClef) + midClef.layout.width.total)
         })
 
         it('orders mid-measure elements at different beats by beat', () => {
@@ -260,7 +260,7 @@ describe('MeasureLayout', () => {
             const midClef = m.clefAtBeat(2)
             if (!midClef) throw new Error('expected a mid-measure clef')
             // Leading run: leading clef, time signature, then the homeless mid clef.
-            expect(m.layout.getXForElement(midClef)).toBe(m.clef.width.total + m.timeSignature.width.total)
+            expect(m.layout.getXForElement(midClef)).toBe(m.clef.layout.width.total + m.timeSignature.layout.width.total)
         })
 
         it('a mid-measure element past the last note folds into the final note slot', () => {

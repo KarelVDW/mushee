@@ -208,7 +208,7 @@ export class ScoreLayout {
             const noteWidths = new Map(notePairs)
             const keyWidths = new Map<KeySignature, KeySignatureWidth>([[measure.keySignature, leadingKeyWidth], ...midKeyPairs])
             const fixedWidth =
-                sumBy(measure.midMeasureClefs, (clef) => clef.width.total) +
+                sumBy(measure.midMeasureClefs, (clef) => clef.layout.width.total) +
                 sumBy(midKeyPairs, ([, width]) => width.total) +
                 sumBy(notePairs, ([, width]) => width.total) +
                 BarlineLayout.widthOf(measure.endBarline)
@@ -238,9 +238,9 @@ export class ScoreLayout {
 
     private static minimalWidth(plan: MeasurePlan, flags: MeasureFlags, minimumMeasureWidth: number): number {
         const sum =
-            (flags.showsClef ? plan.measure.clef.width.total : 0) +
+            (flags.showsClef ? plan.measure.clef.layout.width.total : 0) +
             (flags.showsKeySignature ? plan.leadingKeyWidth.total : 0) +
-            (flags.showsTimeSignature ? plan.measure.timeSignature.width.total : 0) +
+            (flags.showsTimeSignature ? plan.measure.timeSignature.layout.width.total : 0) +
             plan.fixedWidth
         return Math.max(sum, minimumMeasureWidth)
     }

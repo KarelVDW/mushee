@@ -38,9 +38,10 @@ describe('TimeSignature', () => {
         expect(b.timeSignature).toBe(a.timeSignature)
     })
 
-    it('lazily creates a single TimeSignatureWidth instance (cached forever)', () => {
+    it('its width rides on the cached layout (one ink cache)', () => {
         const ts = new TimeSignature(4, 4)
-        expect(ts.width).toBe(ts.width)
+        expect(ts.layout.width).toBe(ts.layout.width)
+        expect(ts.layout.width.total).toBeGreaterThan(0)
     })
 
     it('lazily creates a single TimeSignatureLayout instance (cached forever)', () => {
