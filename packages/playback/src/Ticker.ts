@@ -27,7 +27,7 @@ export class Ticker {
 
     private _isPlaying = false
     private animationId = 0
-    private onFinish: (() => void) | null = null
+    private onFinish: () => void = () => {}
 
     get isPlaying() {
         return this._isPlaying
@@ -40,8 +40,7 @@ export class Ticker {
 
         for (const t of this.tickables) t.reset()
 
-        this._isPlaying = true
-        this.animationId = requestAnimationFrame(this.tick)
+        this.startLoop()
     }
 
     stop() {
@@ -55,6 +54,10 @@ export class Ticker {
     /** Restart the tick loop without resetting tickable state. */
     resume() {
         if (this._isPlaying) return
+        this.startLoop()
+    }
+
+    private startLoop() {
         this._isPlaying = true
         this.animationId = requestAnimationFrame(this.tick)
     }
@@ -70,10 +73,8 @@ export class Ticker {
         }
 
         if (allDone) {
-            this._isPlaying = false
-            cancelAnimationFrame(this.animationId)
-            this.animationId = 0
-            this.onFinish?.()
+            this.stop()
+            this.onFinish()
             return
         }
 
