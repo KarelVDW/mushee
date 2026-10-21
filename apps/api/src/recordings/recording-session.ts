@@ -56,7 +56,8 @@ export class RecordingSession {
     private recordingId: string | null = null
     private creditsSpent = 0
     private meterTimer: NodeJS.Timeout | null = null
-    private limitReached = false
+    /** No more audio accepted: the credit budget ran out or a hard cap tripped. */
+    private stopped = false
     private closed = false
     private bytesReceived = 0
     private meterStartedAt = 0
@@ -123,7 +124,7 @@ export class RecordingSession {
     }
 
     appendChunk(buffer: Buffer): void {
-        if (this.limitReached || this.closed) return
+        if (this.stopped || this.closed) return
         this.bytesReceived += buffer.byteLength
         if (this.bytesReceived > MAX_SESSION_ENCODED_BYTES) {
             this.cap('max-bytes')
@@ -131,13 +132,6 @@ export class RecordingSession {
         }
         if (!this.meterTimer) this.startMeter()
         this.pipeline.appendChunk(buffer)
-    }
-
-    private finalize(): void {
-        this.stopMeter()
-        void this.pipeline.finalize().catch((err: unknown) => {
-            this.logger.warn(`Pipeline finalize failed: ${describeError(err)}`)
-        })
     }
 
     /** Tear down the session and persist its outcome. Safe to call twice. */
@@ -183,7 +177,7 @@ export class RecordingSession {
     }
 
     private async spendTick(): Promise<void> {
-        if (this.limitReached || this.closed) return
+        if (this.stopped || this.closed) return
 
         // Bill whichever is further along: wall-clock seconds or seconds of audio
         // actually decoded. Wall-clock alone lets a scripted client stream audio
@@ -215,23 +209,28 @@ export class RecordingSession {
             return
         }
         this.creditsSpent += toSpend
-        if (!balance.exhausted || this.limitReached || this.closed) return
+        if (!balance.exhausted || this.stopped || this.closed) return
 
-        this.limitReached = true
-        this.stopMeter()
         this.logger.log(`Daily recording limit reached (user ${this.userId}, ${balance.used} credits used)`)
         this.events.onLimitReached(balance)
-        this.finalize()
+        this.stop()
     }
 
     /** Stop the take at a hard cap: no more audio accepted, pipeline finalized
      *  so the user keeps everything transcribed up to the cap. */
     private cap(reason: SessionCapReason): void {
-        if (this.limitReached || this.closed) return
-        this.limitReached = true
-        this.stopMeter()
+        if (this.stopped || this.closed) return
         this.logger.warn(`Recording capped (${reason}) after ${this.creditsSpent}s / ${this.bytesReceived} bytes (user ${this.userId})`)
         this.events.onSessionCap?.(reason)
-        this.finalize()
+        this.stop()
+    }
+
+    /** Stop accepting audio and run the final pipeline pass; the session stays open until close(). */
+    private stop(): void {
+        this.stopped = true
+        this.stopMeter()
+        void this.pipeline.finalize().catch((err: unknown) => {
+            this.logger.warn(`Pipeline finalize failed: ${describeError(err)}`)
+        })
     }
 }
