@@ -9,19 +9,22 @@ export const BEAT_EPSILON = 0.001
  */
 export type TupletRatio = { readonly actualNotes: number; readonly normalNotes: number }
 
-/** Ordered list of duration values for greedy decomposition (largest first) */
-const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: number }> = [
-    { duration: 'w', beats: 4 },
-    { duration: 'h', dots: 1, beats: 3 },
-    { duration: 'h', beats: 2 },
-    { duration: 'q', dots: 1, beats: 1.5 },
-    { duration: 'q', beats: 1 },
-    { duration: '8', dots: 1, beats: 0.75 },
-    { duration: '8', beats: 0.5 },
-    { duration: '16', beats: 0.25 },
-]
-
 export class Duration {
+    /** Every plain value the model writes, coarsest first — so a scan picks the largest that fits. */
+    static readonly WRITABLE: readonly Duration[] = [
+        new Duration({ type: 'w' }),
+        new Duration({ type: 'h', dots: 1 }),
+        new Duration({ type: 'h' }),
+        new Duration({ type: 'q', dots: 1 }),
+        new Duration({ type: 'q' }),
+        new Duration({ type: '8', dots: 1 }),
+        new Duration({ type: '8' }),
+        new Duration({ type: '16' }),
+    ]
+
+    /** The finest written value (a sixteenth) in quarter-note beats: the grid imported time snaps to. */
+    static readonly GRID_BEATS = 0.25
+
     readonly type: DurationType
     readonly dots: number
     readonly ratio: TupletRatio
@@ -163,9 +166,9 @@ export class Duration {
         let remaining = ratio ? beats * (ratio.actualNotes / ratio.normalNotes) : beats
         while (remaining > BEAT_EPSILON) {
             let matched = false
-            for (const v of DURATION_VALUES) {
+            for (const v of Duration.WRITABLE) {
                 if (v.beats <= remaining + BEAT_EPSILON) {
-                    result.push(new Duration({ type: v.duration, dots: v.dots, ratio }))
+                    result.push(new Duration({ type: v.type, dots: v.dots, ratio }))
                     remaining -= v.beats
                     matched = true
                     break

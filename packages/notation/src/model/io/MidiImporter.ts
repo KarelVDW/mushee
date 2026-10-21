@@ -1,4 +1,4 @@
-import { BEAT_EPSILON } from '../Duration'
+import { BEAT_EPSILON, Duration } from '../Duration'
 import { Instrument } from '../Instrument'
 import { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
@@ -9,8 +9,6 @@ import { TimeSignature } from '../TimeSignature'
 import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 
-/** The finest written value: onsets and releases snap to this grid (in quarter-note beats). */
-const GRID = 0.25
 /** MIDI's assumed tempo when a file carries no tempo event. */
 const MIDI_DEFAULT_BPM = 120
 /** Stops a corrupt tick value from spinning out an endless score, and keeps a garbled file from freezing the tab. */
@@ -253,14 +251,15 @@ export class MidiImporter {
     // --- Notation decisions ---
 
     private toBeats(tick: number): number {
-        return Math.round(tick / this.division / GRID) * GRID
+        // Onsets and releases snap to the finest written value.
+        return Math.round(tick / this.division / Duration.GRID_BEATS) * Duration.GRID_BEATS
     }
 
     /** The single melody line: quantized, top note per onset, releases trimmed to the next onset. */
     private melodyOf(raw: RawNote[]): MelodyNote[] {
         const quantized = raw.map((note) => {
             const onset = this.toBeats(note.onset)
-            return { onset, end: Math.max(this.toBeats(note.end), onset + GRID), midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)) }
+            return { onset, end: Math.max(this.toBeats(note.end), onset + Duration.GRID_BEATS), midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)) }
         })
         if (
             quantized.some(

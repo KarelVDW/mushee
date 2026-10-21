@@ -1,26 +1,17 @@
 import { Duration } from '../Duration'
 import type { TimeSignature } from '../TimeSignature'
-import type { DurationType } from '../types'
 
-/** A writable value in sixteenth-note units. Coarsest first, so lookups pick the largest fit. */
+/** A writable value and its length in grid units (sixteenths). */
 interface WrittenValue {
-    type: DurationType
-    dots: number
+    duration: Duration
     units: number
 }
 
-const UNITS_PER_BEAT = 4
-
-const WRITTEN_VALUES: WrittenValue[] = [
-    { type: 'w', dots: 0, units: 16 },
-    { type: 'h', dots: 1, units: 12 },
-    { type: 'h', dots: 0, units: 8 },
-    { type: 'q', dots: 1, units: 6 },
-    { type: 'q', dots: 0, units: 4 },
-    { type: '8', dots: 1, units: 3 },
-    { type: '8', dots: 0, units: 2 },
-    { type: '16', dots: 0, units: 1 },
-]
+/** The model's writable values, coarsest first (so lookups pick the largest fit), in whole grid units. */
+const WRITTEN_VALUES: readonly WrittenValue[] = Duration.WRITABLE.map((duration) => ({
+    duration,
+    units: Math.round(duration.beats / Duration.GRID_BEATS),
+}))
 
 /**
  * Spells a span of time as written note values, honouring where in the bar it
@@ -41,14 +32,14 @@ export class DurationSpeller {
 
     /** Written values for `beats` of time starting `startBeat` into the bar (quarter-note beats). */
     spell(startBeat: number, beats: number): Duration[] {
-        return this.spellUnits(Math.round(startBeat * UNITS_PER_BEAT), Math.round(beats * UNITS_PER_BEAT)).map(
-            (value) => new Duration({ type: value.type, dots: value.dots }),
+        return this.spellUnits(Math.round(startBeat / Duration.GRID_BEATS), Math.round(beats / Duration.GRID_BEATS)).map(
+            ({ duration }) => new Duration({ type: duration.type, dots: duration.dots }),
         )
     }
 
     /** Metrical boundary sizes in units, coarsest first — whole units only, so a split is always spellable. */
     private get boundaryLevels(): number[] {
-        const beatUnits = (UNITS_PER_BEAT * 4) / this.timeSignature.beatType
+        const beatUnits = 4 / Duration.GRID_BEATS / this.timeSignature.beatType
         const measureUnits = beatUnits * this.timeSignature.beatAmount
         return [measureUnits, measureUnits / 2, beatUnits, beatUnits / 2, beatUnits / 4].filter((d) => d >= 1 && Number.isInteger(d))
     }
@@ -76,7 +67,7 @@ export class DurationSpeller {
      */
     private alignsWith(start: number, value: WrittenValue): boolean {
         if (start === 0) return true
-        const base = value.dots > 0 ? (value.units * 2) / 3 : value.units
+        const base = value.duration.dots > 0 ? (value.units * 2) / 3 : value.units
         return start % base === 0
     }
 }

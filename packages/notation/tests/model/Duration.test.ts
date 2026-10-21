@@ -153,6 +153,18 @@ describe('Duration', () => {
         })
     })
 
+    describe('WRITABLE / GRID_BEATS', () => {
+        it('lists every plain writable value, coarsest first', () => {
+            expect(Duration.WRITABLE.map((d) => `${d.type}${'.'.repeat(d.dots)}`)).toEqual(['w', 'h.', 'h', 'q.', 'q', '8.', '8', '16'])
+            expect(Duration.WRITABLE.map((d) => d.beats)).toEqual([4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25])
+            expect(Duration.WRITABLE.every((d) => !d.isTuplet)).toBe(true)
+        })
+
+        it('the grid is the finest writable value', () => {
+            expect(Duration.GRID_BEATS).toBe(Math.min(...Duration.WRITABLE.map((d) => d.beats)))
+        })
+    })
+
     describe('fromBeats (greedy decomposition)', () => {
         it('returns empty array for 0 beats', () => {
             expect(Duration.fromBeats(0)).toEqual([])
