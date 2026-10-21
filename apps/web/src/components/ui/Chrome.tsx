@@ -126,8 +126,12 @@ export function Footer({ width = 'app' }: FooterProps) {
                         Cookie settings
                     </button>
                 </nav>
-                <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © 2026 Solkey.
+                {/* The year is computed at render: prerendered pages show the build year until the next
+                    deploy, and suppressHydrationWarning covers a server/client mismatch across New Year. */}
+                <span
+                    suppressHydrationWarning
+                    className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
+                    © {new Date().getFullYear()} Solkey.
                 </span>
             </div>
         </footer>
