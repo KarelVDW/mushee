@@ -1,8 +1,8 @@
-import { Logger, OnApplicationShutdown } from '@nestjs/common'
+import { ForbiddenException, Logger, NotFoundException, OnApplicationShutdown } from '@nestjs/common'
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets'
 import { fromNodeHeaders } from 'better-auth/node'
 import { plainToInstance } from 'class-transformer'
-import { validateSync } from 'class-validator'
+import { isUUID, validateSync } from 'class-validator'
 import type { IncomingMessage } from 'http'
 import type { RawData, WebSocket } from 'ws'
 
@@ -218,9 +218,8 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         }
 
         // Every recording belongs to a score; verify it exists and is the user's.
-        try {
-            await this.scoresService.findOne(user.id, scoreId)
-        } catch {
+        // A malformed id names no score and is never sent to the uuid column.
+        if (!isUUID(scoreId) || !(await this.ownsScore(user.id, scoreId))) {
             this.logger.warn(`Rejected recording for inaccessible score ${scoreId} (user ${user.id})`)
             this.reject(client, 'score-not-found')
             return null
@@ -251,6 +250,22 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
 
         this.logger.log(`Recording client connected (user ${user.id}, score ${scoreId})`)
         return opened.session
+    }
+
+    /**
+     * Whether the score exists and is the user's. Only the lookup's own answers
+     * mean no: any other failure (a database outage) propagates to
+     * handleConnection's catch and its 1011 close, rather than passing for
+     * 'score-not-found', which the client takes as a reason to stop silently.
+     */
+    private async ownsScore(userId: string, scoreId: string): Promise<boolean> {
+        try {
+            await this.scoresService.findOne(userId, scoreId)
+            return true
+        } catch (err: unknown) {
+            if (err instanceof NotFoundException || err instanceof ForbiddenException) return false
+            throw err
+        }
     }
 
     private scoreIdFrom(request: IncomingMessage): string | null {

@@ -3,6 +3,7 @@ import 'reflect-metadata'
 import { EventEmitter } from 'node:events'
 import type { IncomingMessage } from 'node:http'
 
+import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { WebSocket } from 'ws'
 
@@ -58,24 +59,52 @@ afterEach(() => {
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
 
-function connect() {
+function connect({ scoreId = SCORE_ID, findOne = () => Promise.resolve({}) }: { scoreId?: string; findOne?: () => Promise<unknown> } = {}) {
     const session = {
         setMeta: vi.fn(),
         appendChunk: vi.fn(),
         close: vi.fn(() => Promise.resolve()),
     }
     const recordingSessions = { open: vi.fn(() => Promise.resolve({ session })) }
+    const scores = { findOne: vi.fn(findOne) }
     const gateway = new RecordingsGateway(
         recordingSessions as unknown as RecordingSessionsService,
-        { findOne: vi.fn(() => Promise.resolve({})) } as unknown as ScoresService,
+        scores as unknown as ScoresService,
         { isAwaitingApproval: vi.fn(() => Promise.resolve(false)) } as unknown as BetaService,
     )
     const client = new FakeSocket()
     sockets.push(client)
-    gateway.handleConnection(client as unknown as WebSocket, { url: `/recording?scoreId=${SCORE_ID}`, headers: {} } as IncomingMessage)
+    gateway.handleConnection(client as unknown as WebSocket, { url: `/recording?scoreId=${scoreId}`, headers: {} } as IncomingMessage)
     const text = (frame: string) => client.emit('message', Buffer.from(frame), false)
-    return { client, session, text }
+    return { client, session, text, scores, recordingSessions }
 }
+
+describe('RecordingsGateway score check', () => {
+    it('refuses a malformed score id as not found, without querying the uuid column', async () => {
+        const { client, scores, recordingSessions } = connect({ scoreId: 'not-a-uuid' })
+        await flush()
+        expect(scores.findOne).not.toHaveBeenCalled()
+        expect(recordingSessions.open).not.toHaveBeenCalled()
+        expect(client.sent).toEqual([{ type: 'recording-error', code: 'score-not-found' }])
+        expect(client.close).toHaveBeenCalledWith(1008, 'score-not-found')
+    })
+
+    it('refuses an unknown or someone else’s score as not found', async () => {
+        for (const error of [new NotFoundException(), new ForbiddenException()]) {
+            const { client } = connect({ findOne: () => Promise.reject(error) })
+            await flush()
+            expect(client.sent).toEqual([{ type: 'recording-error', code: 'score-not-found' }])
+        }
+    })
+
+    it('reports a failing score lookup as a server failure, not a missing score', async () => {
+        const { client, recordingSessions } = connect({ findOne: () => Promise.reject(new Error('connection terminated')) })
+        await flush()
+        expect(recordingSessions.open).not.toHaveBeenCalled()
+        expect(client.sent).toEqual([])
+        expect(client.close).toHaveBeenCalledWith(1011, 'Recording session failed')
+    })
+})
 
 describe('RecordingsGateway text frames', () => {
     it('ignores frames that are not a control object, without throwing or closing', async () => {

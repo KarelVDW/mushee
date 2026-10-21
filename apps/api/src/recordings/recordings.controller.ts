@@ -17,8 +17,8 @@ export class RecordingsController {
     constructor(private readonly recordings: RecordingsService) {}
 
     @Get()
-    list(@CurrentUser() user: { id: string }, @Query('scoreId') scoreId?: string) {
-        return this.recordings.listForUser(user.id, scoreId || undefined)
+    list(@CurrentUser() user: { id: string }, @Query('scoreId', new ParseUUIDPipe({ optional: true })) scoreId?: string) {
+        return this.recordings.listForUser(user.id, scoreId)
     }
 
     /** Redirect to a signed bucket URL when the storage backend has one, otherwise stream the audio. */
