@@ -28,10 +28,6 @@ export class MidiPlayer {
         return this.audioCtx.currentTime - this.startOffset
     }
 
-    get isActive(): boolean {
-        return this.audioCtx !== null
-    }
-
     /**
      * Pre-fetch the listed instruments. Resolves once every requested
      * instrument's samples are loaded. Subsequent calls for the same
@@ -105,11 +101,6 @@ export class MidiPlayer {
         this.previewStops.push(stop)
     }
 
-    stopPreview() {
-        this.cancelStops(this.previewStops)
-        this.previewStops = []
-    }
-
     /** Releases all loaded samples and closes the audio context. */
     dispose() {
         this.stop()
@@ -126,6 +117,11 @@ export class MidiPlayer {
     private ensureCtx(): AudioContext {
         if (!this.audioCtx) this.audioCtx = new AudioContext()
         return this.audioCtx
+    }
+
+    private stopPreview() {
+        this.cancelStops(this.previewStops)
+        this.previewStops = []
     }
 
     /**

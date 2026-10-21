@@ -29,10 +29,6 @@ export class Ticker {
     private animationId = 0
     private onFinish: () => void = () => {}
 
-    get isPlaying() {
-        return this._isPlaying
-    }
-
     play(tickables: Iterable<Tickable>, onFinish: () => void) {
         this.stop()
         this.onFinish = onFinish

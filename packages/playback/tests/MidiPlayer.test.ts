@@ -52,17 +52,17 @@ describe('MidiPlayer', () => {
         vi.mocked(Soundfont).mockClear()
     })
 
-    it('currentTime is 0 and isActive false before any context exists', () => {
+    it('currentTime is 0 before any context exists', () => {
         const player = new MidiPlayer()
         expect(player.currentTime).toBe(0)
-        expect(player.isActive).toBe(false)
+        expect(FakeAudioContext.created).toHaveLength(0)
     })
 
     it('start() creates a context, resumes if suspended, and seeds the offset', () => {
         const player = new MidiPlayer()
         player.start()
+        expect(FakeAudioContext.created).toHaveLength(1)
         const ctx = FakeAudioContext.created[0]
-        expect(player.isActive).toBe(true)
         // state defaults to 'running', so resume is not forced — but starting again from suspended should resume.
         ctx.state = 'suspended'
         player.start()
@@ -195,16 +195,6 @@ describe('MidiPlayer', () => {
         expect(FakeAudioContext.created).toHaveLength(1)
     })
 
-    it('stopPreview() cancels the active preview', async () => {
-        const player = new MidiPlayer()
-        await player.loadInstruments([Instrument.Piano])
-        player.start()
-        player.preview(60, 0.5, Instrument.Piano)
-        const stop = stopFns[stopFns.length - 1]
-        player.stopPreview()
-        expect(stop).toHaveBeenCalled()
-    })
-
     it('dispose() stops everything, disconnects soundfonts, closes and clears the context', async () => {
         const player = new MidiPlayer()
         await player.loadInstruments([Instrument.Piano])
@@ -218,16 +208,17 @@ describe('MidiPlayer', () => {
 
         expect(sf.disconnect).toHaveBeenCalled()
         expect(ctx.close).toHaveBeenCalled()
-        expect(player.isActive).toBe(false)
-        // After dispose the soundfont map is cleared — a fresh load builds a new Soundfont.
+        // After dispose the context and soundfont map are cleared — a fresh load
+        // opens a new context and builds a new Soundfont.
         await player.loadInstruments([Instrument.Piano])
+        expect(FakeAudioContext.created).toHaveLength(2)
         expect(soundfontInstances.length).toBeGreaterThan(1)
     })
 
     it('dispose() is safe when nothing was ever started', () => {
         const player = new MidiPlayer()
         expect(() => player.dispose()).not.toThrow()
-        expect(player.isActive).toBe(false)
+        expect(FakeAudioContext.created).toHaveLength(0)
     })
 
     it('swallows rejected resume/suspend/close promises from the audio context', async () => {
