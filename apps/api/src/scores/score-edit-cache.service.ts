@@ -4,8 +4,14 @@ import { LessThan, Repository } from 'typeorm'
 
 import { CachedScore } from './entities/cached-score.entity'
 
+/**
+ * The `cached_scores` table: the live copy of a score under editing. The
+ * editor's saves patch it in place and ScoresService.flushIdleDocuments writes
+ * idle rows back to storage. Not a disposable cache — until a row is flushed it
+ * holds the only copy of the user's latest edits. Private to ScoresModule.
+ */
 @Injectable()
-export class CacheService {
+export class ScoreEditCacheService {
     constructor(
         @InjectRepository(CachedScore)
         private readonly cachedScoreRepo: Repository<CachedScore>,

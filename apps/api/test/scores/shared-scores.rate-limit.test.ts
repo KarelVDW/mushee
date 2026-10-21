@@ -13,7 +13,7 @@ import {
 } from '../../src/scores/shared-scores.controller'
 
 vi.mock('../../src/scores/entities/score.entity', () => ({ Score: class Score {} }))
-vi.mock('../../src/cache/cache.service', () => ({ CacheService: class CacheService {} }))
+vi.mock('../../src/scores/score-edit-cache.service', () => ({ ScoreEditCacheService: class ScoreEditCacheService {} }))
 vi.mock('../../src/storage/storage.service', () => ({ StorageService: class StorageService {} }))
 
 /** Per-IP fixed-window limiter on the public share route. */

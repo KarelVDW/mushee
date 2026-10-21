@@ -5,13 +5,13 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { instanceToPlain } from 'class-transformer'
 import { ILike, Repository } from 'typeorm'
 
-import { CacheService } from '../cache/cache.service'
 import { StorageService } from '../storage/storage.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { ErrorReporter } from '../telemetry/error-reporter'
 import { CreateScoreDto } from './dto/create-score.dto'
 import { UpdateScoreDto } from './dto/update-score.dto'
 import { Score } from './entities/score.entity'
+import { ScoreEditCacheService } from './score-edit-cache.service'
 
 @Injectable()
 export class ScoresService {
@@ -20,7 +20,7 @@ export class ScoresService {
     constructor(
         @InjectRepository(Score)
         private readonly scoreRepo: Repository<Score>,
-        private readonly cacheService: CacheService,
+        private readonly editCache: ScoreEditCacheService,
         private readonly storageService: StorageService,
         private readonly subscriptions: SubscriptionsService,
         private readonly reporter: ErrorReporter,
@@ -74,7 +74,7 @@ export class ScoresService {
 
         // Put the document in the edit cache for immediate editing; the flush
         // cron writes it to storage later.
-        await this.cacheService.upsert(saved.id, document)
+        await this.editCache.upsert(saved.id, document)
 
         return saved
     }
@@ -113,7 +113,7 @@ export class ScoresService {
      * row that the flush cron later rewrites to storage for nothing.
      */
     private async loadDocument(score: Score, { prime = true } = {}): Promise<Record<string, unknown>> {
-        const cached = await this.cacheService.findByScoreId(score.id)
+        const cached = await this.editCache.findByScoreId(score.id)
         if (cached) {
             return cached.data
         }
@@ -122,7 +122,7 @@ export class ScoresService {
         const musicxml = await this.storageService.read(score.storageKey)
         const scoreData = this.decodeStored(musicxml)
 
-        if (prime) await this.cacheService.upsert(score.id, scoreData)
+        if (prime) await this.editCache.upsert(score.id, scoreData)
 
         return scoreData
     }
@@ -187,7 +187,7 @@ export class ScoresService {
         }
 
         if (dto.allMeasures) {
-            await this.cacheService.replaceAllMeasures(
+            await this.editCache.replaceAllMeasures(
                 score.id,
                 dto.allMeasures.map((measure) => instanceToPlain(measure)),
             )
@@ -196,11 +196,11 @@ export class ScoresService {
             for (const [index, measure] of Object.entries(dto.measures)) {
                 measures[index] = instanceToPlain(measure)
             }
-            await this.cacheService.updateMeasures(score.id, measures)
+            await this.editCache.updateMeasures(score.id, measures)
         }
 
         if (dto.partList) {
-            await this.cacheService.updatePartList(score.id, instanceToPlain(dto.partList))
+            await this.editCache.updatePartList(score.id, instanceToPlain(dto.partList))
         }
 
         return score
@@ -220,7 +220,7 @@ export class ScoresService {
     }
 
     private async removeScore(score: Score): Promise<void> {
-        await this.cacheService.deleteByScoreId(score.id)
+        await this.editCache.deleteByScoreId(score.id)
 
         if (score.storageKey) {
             await this.storageService.delete(score.storageKey)
@@ -237,19 +237,19 @@ export class ScoresService {
      * score is logged and skipped so one bad document doesn't stall the rest.
      */
     async flushIdleDocuments(idleMinutes: number): Promise<number> {
-        const idle = await this.cacheService.findStale(idleMinutes)
+        const idle = await this.editCache.findStale(idleMinutes)
         let flushed = 0
         for (const cached of idle) {
             try {
                 const score = await this.findOneInternal(cached.scoreId)
                 if (!score) {
                     this.logger.warn(`Score ${cached.scoreId} not found in DB, removing from cache`)
-                    await this.cacheService.deleteByScoreId(cached.scoreId)
+                    await this.editCache.deleteByScoreId(cached.scoreId)
                     continue
                 }
 
                 await this.storageService.write(score.storageKey, this.encodeForStorage(cached.data))
-                await this.cacheService.deleteIfNotUpdatedSince(cached.scoreId, cached.updatedAt)
+                await this.editCache.deleteIfNotUpdatedSince(cached.scoreId, cached.updatedAt)
                 flushed++
 
                 this.logger.log(`Flushed score ${score.id} (${score.title}) to storage`)

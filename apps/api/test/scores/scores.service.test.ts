@@ -4,10 +4,10 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import type { Repository } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { CacheService } from '../../src/cache/cache.service'
-import type { CachedScore } from '../../src/cache/entities/cached-score.entity'
 import type { CreateScoreDto } from '../../src/scores/dto/create-score.dto'
+import type { CachedScore } from '../../src/scores/entities/cached-score.entity'
 import type { Score } from '../../src/scores/entities/score.entity'
+import type { ScoreEditCacheService } from '../../src/scores/score-edit-cache.service'
 import { ScoresService } from '../../src/scores/scores.service'
 import type { StorageService } from '../../src/storage/storage.service'
 import type { SubscriptionTier } from '../../src/subscriptions/entities/subscription-tier.entity'
@@ -20,8 +20,8 @@ import type { ErrorReporter } from '../../src/telemetry/error-reporter'
 vi.mock('../../src/scores/entities/score.entity', () => ({
     Score: class Score {},
 }))
-vi.mock('../../src/cache/cache.service', () => ({
-    CacheService: class CacheService {},
+vi.mock('../../src/scores/score-edit-cache.service', () => ({
+    ScoreEditCacheService: class ScoreEditCacheService {},
 }))
 vi.mock('../../src/storage/storage.service', () => ({
     StorageService: class StorageService {},
@@ -69,7 +69,7 @@ function makeService(t: SubscriptionTier, existingScores: number, cached: Record
 
     const service = new ScoresService(
         scoreRepo as unknown as Repository<Score>,
-        cache as unknown as CacheService,
+        cache as unknown as ScoreEditCacheService,
         storage as unknown as StorageService,
         subscriptions as unknown as SubscriptionsService,
         reporter as unknown as ErrorReporter,
