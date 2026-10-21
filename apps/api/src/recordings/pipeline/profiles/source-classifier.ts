@@ -57,7 +57,7 @@ const CLASSIFY = envFlag('RECORDING_SOURCE_CLASSIFY')
 
 const MODEL_DIR = process.env.YAMNET_MODEL_DIR ?? resolve(__dirname, '../../../../model-yamnet')
 
-/** YAMNet's native rate — happily also the pipeline's detect rate. */
+/** YAMNet's native rate — the resolver's detection rate is defined from it (`DETECT_SAMPLE_RATE`). */
 export const YAMNET_SAMPLE_RATE = 16000
 /** One 0.96 s YAMNet analysis frame is the minimum decidable audio. */
 const MIN_SAMPLES = Math.round(0.96 * YAMNET_SAMPLE_RATE) + 1

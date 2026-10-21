@@ -7,6 +7,7 @@
 
 import { Logger } from '@nestjs/common'
 
+import type { DecodeOptions } from '../audio-decoder'
 import { envFlag, envNumber, envOptionalNumber, NOISE_ADAPT, VOICE_DECODE } from '../env'
 import { OnsetDetector } from '../onset-detector'
 import { isStruckOrPluckedInstrument, isVoiceInstrument, rangeForInstrument } from './instrument-ranges'
@@ -24,7 +25,18 @@ import {
 } from './pipeline-profile'
 import { scanPitch } from './pitch-scan'
 import { estimateReverberance } from './reverberance'
-import { SourceClassifier } from './source-classifier'
+import { SourceClassifier, YAMNET_SAMPLE_RATE } from './source-classifier'
+
+/**
+ * The resolver's input contract: how a caller must decode audio before
+ * `resolve`. The rate is the source classifier's native one — on any other
+ * rate the classifier silently abstains, and routing falls back to the score's
+ * instrument prior — and the decode is a 30 Hz rumble high-pass with no
+ * loudnorm. Exported so every caller — the pipeline's lock and the eval
+ * harness alike — decodes the resolver's input the same way.
+ */
+export const DETECT_SAMPLE_RATE = YAMNET_SAMPLE_RATE
+export const DETECT_DECODE: Readonly<DecodeOptions> = { loudnorm: false, highpassHz: 30 }
 
 /**
  * What the caller knows about the source before any audio is analysed.

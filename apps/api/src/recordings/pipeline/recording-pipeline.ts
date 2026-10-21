@@ -9,7 +9,7 @@ import { MxmlBuilder, PendingNote } from './mxml-builder'
 import type { NoteEventTime } from './note-event'
 import { ExtractedNotes } from './note-extractor'
 import { DEFAULT_PROFILE, type PipelineProfile } from './profiles/pipeline-profile'
-import { ProfileResolver } from './profiles/profile-resolver'
+import { DETECT_DECODE, DETECT_SAMPLE_RATE, ProfileResolver } from './profiles/profile-resolver'
 import { ProviderRegistry } from './providers/provider-registry'
 import { RecordingDebugRenderer } from './recording-debug-renderer'
 
@@ -31,9 +31,6 @@ const DEBOUNCE_MS = envPositiveNumber('RECORDING_DEBOUNCE_MS', 1000)
  * not confirmation times; R7 calibrated the reported-time bias at 0.)
  */
 const STABLE_MARGIN_SEC = envPositiveNumber('RECORDING_STABLE_MARGIN_SEC', 0.4)
-/** Sample rate / high-pass for the coarse detection decode that picks a profile. */
-const DETECT_SAMPLE_RATE = 16000
-const DETECT_HIGHPASS_HZ = 30
 /** Minimum audio before we trust the pitch scan enough to lock a profile. */
 const DETECT_MIN_SEC = 1.2
 /**
@@ -437,11 +434,7 @@ export class RecordingPipeline {
     ): Promise<{ profile: PipelineProfile; durationSec: number } | null> {
         let detect
         try {
-            detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, {
-                loudnorm: false,
-                highpassHz: DETECT_HIGHPASS_HZ,
-                inputFormat: this.inputFormat,
-            })
+            detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, { ...DETECT_DECODE, inputFormat: this.inputFormat })
         } catch (err) {
             this.logger.debug(`${failure} (${describeError(err)})`)
             return null
@@ -491,9 +484,7 @@ export class RecordingPipeline {
         if (!profile || !converter) throw new Error('spawnDecoder called before a profile was locked')
         const provider = converter.provider
         const decoder = new StreamingDecoder(provider.sampleRate, {
-            highpassHz: profile.highpassHz,
-            loudnorm: provider.normalizeLoudness,
-            denoise: profile.denoise,
+            ...AudioConverter.decodeOptionsFor(provider, profile),
             inputFormat: this.inputFormat,
         })
         decoder.write(Buffer.concat(this.chunks))

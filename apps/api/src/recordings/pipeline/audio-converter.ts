@@ -1,3 +1,4 @@
+import type { DecodeOptions } from './audio-decoder'
 import { ExtractedNotes, NoteExtractor, type NoteExtractorOptions } from './note-extractor'
 import { OnsetDetector } from './onset-detector'
 import type { PipelineProfile } from './profiles/pipeline-profile'
@@ -130,6 +131,19 @@ export class AudioConverter {
             // by the harness, so gating on it rewards reproducing that artefact).
             // 0.4 and 0.5 measured slightly worse; it shipped as 0 (disabled) until now.
             adaptiveFloorFraction: 0.3,
+        }
+    }
+
+    /**
+     * How audio must be decoded for `provider` under `profile` — the stream the
+     * provider transcribes (the caller adds the container hint). Decode at
+     * `provider.sampleRate`.
+     */
+    static decodeOptionsFor(provider: PitchProvider, profile: PipelineProfile): DecodeOptions {
+        return {
+            highpassHz: profile.highpassHz,
+            loudnorm: provider.normalizeLoudness,
+            denoise: profile.denoise,
         }
     }
 
