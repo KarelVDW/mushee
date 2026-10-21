@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-import { Eyebrow, Footer, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
-import { track } from '@/lib/analytics'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { Eyebrow, Footer, TertiaryButton, Wordmark } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -21,12 +21,6 @@ export function PricingPage() {
     const { data: session } = useSession()
     const authed = !!session?.user
 
-    const onGetStarted = (location: string) => {
-        track('landing_cta_clicked', { location, beta: BETA_MODE })
-        router.push(authed ? '/scores' : '/signup')
-    }
-    const cta = authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'
-
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
             <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
@@ -36,9 +30,7 @@ export function PricingPage() {
                     </Link>
                     <div className="flex items-center gap-4 sm:gap-6">
                         {!authed && <TertiaryButton onClick={() => router.push('/login')}>Sign in</TertiaryButton>}
-                        <PrimaryButton icon="arrow-right" onClick={() => onGetStarted('pricing-nav')}>
-                            {cta}
-                        </PrimaryButton>
+                        <GetStartedButton location="pricing-nav" />
                     </div>
                 </div>
             </nav>
@@ -58,16 +50,14 @@ export function PricingPage() {
             </header>
 
             <main className="flex-1">
-                {BETA_MODE ? <BetaPricing /> : <Pricing intro={false} onGetStarted={() => onGetStarted('pricing-page')} />}
+                {BETA_MODE ? <BetaPricing /> : <Pricing intro={false} ctaLocation="pricing-page" />}
                 <PricingFaq />
                 <section className="py-16 sm:py-20 px-5 sm:px-8">
                     <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
                         <h2 className="font-display font-bold text-[32px] sm:text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0">
                             Start with Sketch. <em className="font-serif font-normal">Upgrade when your ideas do.</em>
                         </h2>
-                        <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={() => onGetStarted('pricing-footer')}>
-                            {cta}
-                        </PrimaryButton>
+                        <GetStartedButton location="pricing-footer" size="lg" emphasis="pop" />
                         <Link href="/contact" className="font-body font-normal text-[14px] text-on-surface-variant underline">
                             Questions about a plan? Talk to us.
                         </Link>

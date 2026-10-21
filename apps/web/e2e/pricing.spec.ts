@@ -25,8 +25,9 @@ test('pricing page: heading, FAQ and structured data are present; CTA routes to 
     expect(jsonLd).toContain('"FAQPage"')
     expect(jsonLd).toContain('"SoftwareApplication"')
 
+    // The get-started CTA's two signed-out labels (launch / closed beta), one table in GetStartedButton.
     await page
-        .getByRole('button', { name: /Start free|Request beta access/ })
+        .getByRole('link', { name: /Start free|Request access/ })
         .first()
         .click()
     await expect(page).toHaveURL(/\/signup$/)

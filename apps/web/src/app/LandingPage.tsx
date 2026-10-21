@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 
-import { Eyebrow, Footer, Icon, type IconName, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
-import { track } from '@/lib/analytics'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { Eyebrow, Footer, Icon, type IconName, TertiaryButton, Wordmark } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -16,44 +16,23 @@ export function LandingPage() {
     const authed = !!session?.user
 
     const onSignIn = () => router.push('/login')
-    const onGetStarted = (location: string) => {
-        track('landing_cta_clicked', { location, beta: BETA_MODE })
-        router.push(authed ? '/scores' : '/signup')
-    }
-
-    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : 'Start free'
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <LandingNav
-                authed={authed}
-                cta={authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'}
-                onSignIn={onSignIn}
-                onGetStarted={() => onGetStarted('nav')}
-            />
+            <LandingNav authed={authed} onSignIn={onSignIn} />
             <main className="flex-1">
-                <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
+                <Hero authed={authed} onSignIn={onSignIn} />
                 <HowItWorks />
                 <FeatureGrid />
-                {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing')} />}
-                <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
+                {BETA_MODE ? <BetaPricing /> : <Pricing ctaLocation="pricing" />}
+                <FinalCTA />
             </main>
             <Footer width="marketing" />
         </div>
     )
 }
 
-function LandingNav({
-    authed,
-    cta,
-    onSignIn,
-    onGetStarted,
-}: {
-    authed: boolean
-    cta: string
-    onSignIn: () => void
-    onGetStarted: () => void
-}) {
+function LandingNav({ authed, onSignIn }: { authed: boolean; onSignIn: () => void }) {
     const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
     return (
         <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
@@ -70,16 +49,14 @@ function LandingNav({
                         Pricing
                     </a>
                     {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
-                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
-                        {cta}
-                    </PrimaryButton>
+                    <GetStartedButton location="nav" />
                 </div>
             </div>
         </nav>
     )
 }
 
-function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: string; onSignIn: () => void; onGetStarted: () => void }) {
+function Hero({ authed, onSignIn }: { authed: boolean; onSignIn: () => void }) {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
@@ -95,9 +72,7 @@ function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: s
                         Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
-                        <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                            {cta}
-                        </PrimaryButton>
+                        <GetStartedButton location="hero" size="lg" emphasis="pop" />
                         {!authed && <TertiaryButton onClick={onSignIn}>Already have an account?</TertiaryButton>}
                     </div>
                     {BETA_MODE && (
@@ -215,7 +190,7 @@ function FeatureGrid() {
     )
 }
 
-function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void }) {
+function FinalCTA() {
     return (
         <section className="py-16 sm:py-24 px-5 sm:px-8 relative overflow-hidden">
             <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
@@ -229,9 +204,7 @@ function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void
                     Sign up now and get it on paper before it slips away.
                 </p>
                 <div className="mt-2">
-                    <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                        {cta}
-                    </PrimaryButton>
+                    <GetStartedButton location="footer" size="lg" emphasis="pop" />
                 </div>
             </div>
         </section>
