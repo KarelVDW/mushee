@@ -530,27 +530,8 @@ export class Score {
         }
         for (const region of this.keyRegions()) {
             if (!region.notes.length) continue
-            const targets = new Set(region.notes)
-            const current = region.key.fifths
-            let best = current
-            // Every audition ranks on the notes' sounding pitch classes, never on spellings this
-            // very pass rewrites — otherwise a second pass would see different counts and could
-            // move the key again.
-            const drawnUnder = (fifths: number) => new AccidentalMinimizer(region.notes, targets, () => fifths, 'sounding').drawnCount
-            let bestRank = [drawnUnder(current), 0, Math.abs(current), current > 0 ? 0 : 1]
-            for (let fifths = -7; fifths <= 7; fifths++) {
-                if (fifths === current) continue
-                const count = drawnUnder(fifths)
-                // Rank: fewest drawn accidentals; then the key already in place (a region whose
-                // notes can't tell keys apart must not drift); then the lighter signature; then
-                // the sharp side of an enharmonic pair.
-                const rank = [count, 1, Math.abs(fifths), fifths > 0 ? 0 : 1]
-                if (AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
-                    best = fifths
-                    bestRank = rank
-                }
-            }
-            if (best !== current) region.key.measure.setKeySignature(region.key.beatPosition, best)
+            const best = AccidentalMinimizer.bestFifths(region.notes, region.key.fifths)
+            if (best !== region.key.fifths) region.key.measure.setKeySignature(region.key.beatPosition, best)
         }
         this.propagateContext()
         return this.respell(this.measures.flatMap((m) => m.notes))

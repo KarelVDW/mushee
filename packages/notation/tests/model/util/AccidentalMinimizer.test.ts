@@ -171,6 +171,37 @@ describe('AccidentalMinimizer', () => {
         expect(result.respelled.size).toBe(0)
     })
 
+    describe('bestFifths', () => {
+        /** One bar holding `pitches` as quarters, in order. */
+        const bar = (pitches: ReturnType<typeof p>[]) => {
+            const score = makeScore(1)
+            return fill(score, 0, pitches.map((pitch) => q(pitch))).notes
+        }
+        // C, D, E, G, A: no F or B, so C, G and F major all spell them with no accidental.
+        const undecided = () => bar([p('C', 4), p('D', 4), p('E', 4), p('G', 4), p('A', 4)])
+
+        it('picks the key drawing the fewest accidentals', () => {
+            // E major's pitch classes, spelled in C: only the four-sharp key draws nothing.
+            expect(AccidentalMinimizer.bestFifths(bar([p('F', 4, 1), p('G', 4, 1), p('C', 5, 1), p('D', 5, 1)]), 0)).toBe(4)
+        })
+
+        it('keeps the key already in place when the notes cannot tell keys apart', () => {
+            expect(AccidentalMinimizer.bestFifths(undecided(), 1)).toBe(1)
+            expect(AccidentalMinimizer.bestFifths(undecided(), -1)).toBe(-1)
+        })
+
+        it('among equally clean keys, prefers the lighter signature', () => {
+            // B major draws four naturals here; C, G and F major draw none — C has the fewest sharps/flats.
+            expect(AccidentalMinimizer.bestFifths(undecided(), 5)).toBe(0)
+        })
+
+        it('between enharmonic keys, prefers the sharp side', () => {
+            // F♯, B and E♯ sit only in F♯ major and its enharmonic G♭ major (as G♭, C♭, F): both
+            // draw nothing, six fifths each way.
+            expect(AccidentalMinimizer.bestFifths(bar([p('F', 4, 1), p('B', 4), p('E', 5, 1)]), 0)).toBe(6)
+        })
+    })
+
     describe('compareRanks', () => {
         it('orders lexicographically and treats equal vectors as equal', () => {
             expect(AccidentalMinimizer.compareRanks([0, 1], [1, 0])).toBeLessThan(0)

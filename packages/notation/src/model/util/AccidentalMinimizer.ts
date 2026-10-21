@@ -103,7 +103,36 @@ export class AccidentalMinimizer {
         return Pitch.spellingsOf(pitch.toMidi())
     }
 
-    /** Lexicographic comparison of equal-length rank vectors (lower wins) — shared with the key chooser in `Score.minimizeAccidentals`. */
+    /**
+     * The key (fifths, −7..7) a key-signature region's `notes` are best written in: whichever
+     * draws the fewest accidentals over them. Every audition ranks on the notes' sounding pitch
+     * classes, never on spellings the caller's pass is about to rewrite — otherwise a second
+     * pass would see different counts and could move the key again. Ties go to the key already
+     * in place (a region whose notes can't tell keys apart must not drift), then the lighter
+     * signature, then the sharp side of an enharmonic pair.
+     */
+    static bestFifths(notes: Note[], currentFifths: number): number {
+        const targets = new Set(notes)
+        const rankOf = (fifths: number) => [
+            new AccidentalMinimizer(notes, targets, () => fifths, 'sounding').drawnCount,
+            fifths === currentFifths ? 0 : 1,
+            Math.abs(fifths),
+            fifths > 0 ? 0 : 1,
+        ]
+        let best = currentFifths
+        let bestRank = rankOf(currentFifths)
+        for (let fifths = -7; fifths <= 7; fifths++) {
+            if (fifths === currentFifths) continue
+            const rank = rankOf(fifths)
+            if (AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
+                best = fifths
+                bestRank = rank
+            }
+        }
+        return best
+    }
+
+    /** Lexicographic comparison of equal-length rank vectors (lower wins) — used by the spelling ranker and {@link bestFifths}. */
     static compareRanks(a: number[], b: number[]): number {
         for (let i = 0; i < a.length; i++) {
             if (a[i] !== b[i]) return a[i] - b[i]
