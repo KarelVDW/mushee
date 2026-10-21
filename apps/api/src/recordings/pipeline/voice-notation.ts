@@ -101,11 +101,7 @@ export function keyPitchClasses(fifths: number): Set<number> {
  * let the key choose: the naming under which more of the take (duration-
  * weighted) is diatonic wins. Ties keep the minimal shift.
  */
-export function chooseNamingOffset(
-    notes: ReadonlyArray<FractionalPitch>,
-    offsetCents: number,
-    keyClasses: Set<number> | null,
-): number {
+export function chooseNamingOffset(notes: ReadonlyArray<FractionalPitch>, offsetCents: number, keyClasses: Set<number> | null): number {
     if (!keyClasses || Math.abs(offsetCents) <= 30) return offsetCents
     const other = offsetCents - 100 * Math.sign(offsetCents)
     const inKeyWeight = (off: number): number => {
@@ -169,7 +165,11 @@ export function estimateGridPhaseBeats(notes: ReadonlyArray<{ startTimeSeconds: 
  * The written MIDI for one note: normalize by the take offset, round, and let
  * the key vote only inside the ambiguity band.
  */
-export function spellMidi(note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>, offsetCents: number, keyClasses: Set<number> | null): number {
+export function spellMidi(
+    note: Pick<NoteEventTime, 'pitchMidiFloat' | 'pitchMidi'>,
+    offsetCents: number,
+    keyClasses: Set<number> | null,
+): number {
     if (note.pitchMidiFloat === undefined) return note.pitchMidi
     const x = note.pitchMidiFloat - offsetCents / 100
     let midi = Math.round(x)
