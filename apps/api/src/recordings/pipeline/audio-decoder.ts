@@ -13,8 +13,7 @@ export interface DecodedAudio {
  * subtracts it per FFT bin; it is deterministic and emits samples in place
  * (no timeline shift), so the streaming decoder's append-only PCM contract
  * holds. Overridable for tuning sweeps.
- */
-/**
+ *
  * The trailing atrim compensates afftdn's constant 25.0 ms analysis delay
  * (measured by cross-correlation at both 16 kHz and 22.05 kHz) so note onsets
  * stay on the metronome grid; atrim is causal, so the streaming decoder's
@@ -178,17 +177,6 @@ export class AudioDecoder {
     }
 }
 
-export interface StreamingDecodeOptions {
-    /** See `DecodeOptions.loudnorm`. Defaults to true. */
-    loudnorm?: boolean
-    /** See `DecodeOptions.highpassHz`. Defaults to 80. */
-    highpassHz?: number
-    /** See `DecodeOptions.inputFormat`. Omit to auto-detect. */
-    inputFormat?: string
-    /** See `DecodeOptions.denoise`. Defaults to false. */
-    denoise?: boolean
-}
-
 /**
  * Long-lived ffmpeg decode for one recording. Feed the encoded container stream
  * incrementally with `write()`; ffmpeg decodes it to mono f32le PCM which we
@@ -198,7 +186,7 @@ export interface StreamingDecodeOptions {
  *
  * Output samples are append-only: once a sample index is filled it is never
  * rewritten (ffmpeg single-pass filters are causal + bounded look-ahead, so the
- * emitted prefix is stable). `samples(...)` therefore hands back a zero-copy
+ * emitted prefix is stable). `samples()` therefore hands back a zero-copy
  * subarray that stays valid for the duration of an async transcription pass even
  * if more audio arrives meanwhile (later writes only ever land at higher indices,
  * and a capacity grow allocates a new backing array while the old one — and any
@@ -216,7 +204,7 @@ export class StreamingDecoder {
 
     constructor(
         readonly sampleRate: number,
-        opts?: StreamingDecodeOptions,
+        opts?: DecodeOptions,
     ) {
         const filterChain = buildFilterChain(opts?.highpassHz ?? 80, opts?.loudnorm ?? true, opts?.denoise ?? false)
         this.buf = new Float32Array(sampleRate * 8) // ~8 s initial, grows as needed
@@ -243,15 +231,9 @@ export class StreamingDecoder {
         this.proc.stdin.write(chunk)
     }
 
-    /** Decoded PCM so far, as a stable zero-copy view over `[start, end)` samples. */
-    samples(start = 0, end = this.len): Float32Array {
-        const lo = Math.max(0, Math.min(start, this.len))
-        const hi = Math.max(lo, Math.min(end, this.len))
-        return this.buf.subarray(lo, hi)
-    }
-
-    get decodedSamples(): number {
-        return this.len
+    /** Decoded PCM so far, as a stable zero-copy view. */
+    samples(): Float32Array {
+        return this.buf.subarray(0, this.len)
     }
 
     get durationSec(): number {
