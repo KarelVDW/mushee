@@ -119,10 +119,9 @@ export class Measure {
         return this._timeSignature.maxBeats
     }
 
-    beatOffsetOf(el: Note | Clef | KeySignature): number {
-        // Clefs and key signatures carry their own beat so mid-measure changes sort and space at the right position.
-        if (el instanceof Clef || el instanceof KeySignature) return el.beatPosition
-        return this._beatData.value.get(el) ?? 0
+    /** Beats from the start of the measure to `note` (0 for a note not in it). */
+    beatOffsetOf(note: Note): number {
+        return this._beatData.value.get(note) ?? 0
     }
 
     /** Find the note whose beat range contains the given (continuous) beat value. */

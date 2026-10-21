@@ -1,6 +1,4 @@
-import { Clef } from '@mushee/notation/model/Clef'
 import { Duration } from '@mushee/notation/model/Duration'
-import { KeySignature } from '@mushee/notation/model/KeySignature'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
@@ -206,18 +204,6 @@ describe('Measure', () => {
             expect(m.beatOffsetOf(n1)).toBe(0)
             expect(m.beatOffsetOf(n2)).toBeCloseTo(1)
             expect(m.beatOffsetOf(n3)).toBeCloseTo(3)
-        })
-
-        it('beatOffsetOf reads the stored beat of clefs and key signatures', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            m.addClef(2, 'bass')
-            m.addKeySignature(3, 1)
-            const midClef = m.clefAtBeat(2)
-            const midKey = m.keyAtBeat(3)
-            if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
-            expect(m.beatOffsetOf(midClef)).toBe(2)
-            expect(m.beatOffsetOf(midKey)).toBe(3)
         })
 
         it('beatOffsetOf falls back to 0 for a note that is not in the measure', () => {
@@ -698,20 +684,6 @@ describe('Measure', () => {
             expect(m.endBarline).toBe('double')
             m.setEndBarline(undefined)
             expect(m.endBarline).toBeUndefined()
-        })
-    })
-
-    describe('beatOffsetOf type dispatch', () => {
-        it('treats Clef and KeySignature subclasses by their stored beat, notes by accumulation', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            const n = rest('h')
-            m.addNotes([rest('q'), n])
-            expect(m.beatOffsetOf(n)).toBe(1)
-            expect(m.beatOffsetOf(m.clef)).toBe(0)
-            expect(m.beatOffsetOf(m.keySignature)).toBe(0)
-            expect(m.clef).toBeInstanceOf(Clef)
-            expect(m.keySignature).toBeInstanceOf(KeySignature)
         })
     })
 })
