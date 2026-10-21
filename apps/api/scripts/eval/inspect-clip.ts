@@ -15,9 +15,9 @@
 import { resolve } from 'path'
 
 import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor'
-import { NoteSegmenter } from '../../src/recordings/pipeline/note-segmenter'
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { NoteSegmenter } from './lib/note-segmenter'
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
 import { splitOf } from './lib/split'
 import { type CachedClip, TrackCache } from './lib/trackCache'

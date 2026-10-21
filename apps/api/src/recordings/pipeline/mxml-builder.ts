@@ -1,5 +1,5 @@
-import type { NoteEventTime } from './note-event'
 import type { MxmlMeasure, MxmlMeasureEntry, MxmlNoteType, MxmlPitch, MxmlStep, MxmlTie } from './mxml.types'
+import type { NoteEventTime } from './note-event'
 import { chooseNamingOffset, estimateGridPhaseBeats, estimateTuningOffsetCents, keyPitchClasses, spellMidi } from './voice-notation'
 
 const DIVISIONS_PER_QUARTER = 12

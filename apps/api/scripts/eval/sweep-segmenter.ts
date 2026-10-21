@@ -33,10 +33,10 @@
 import { resolve } from 'path'
 
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor'
-import { NoteSegmenter, type NoteSegmenterOptions } from '../../src/recordings/pipeline/note-segmenter'
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
 import { type EstNote, scoreNotesBest } from './lib/metrics'
+import { NoteSegmenter, type NoteSegmenterOptions } from './lib/note-segmenter'
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
 import { formatSegErrors, repairSecondsPer100, type SegErrorCounts, segErrors } from './lib/segErrors'
 import { inSplit, splitFromEnv } from './lib/split'
