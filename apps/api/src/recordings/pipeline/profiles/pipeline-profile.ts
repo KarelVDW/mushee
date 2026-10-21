@@ -63,7 +63,8 @@ export interface PipelineProfile {
     /** Semitone-mode median smoother half-window, in frames. */
     smoothFrames?: number
     /**
-     * True when the resolver believes this recording is a human voice. Distinct
+     * True when the profile routes this recording as a human voice (the voice
+     * overlay applied — see `sourceBelief` for what the resolver believes). Distinct
      * from `segmentMode === 'voice'` because it also selects the voice cleanup set
      * downstream (`AudioConverter.cleanupFor`) and is what gets archived as the
      * routing decision.
@@ -71,10 +72,13 @@ export interface PipelineProfile {
     isVoice?: boolean
     /**
      * What the resolver believes is at the microphone — distinct from `isVoice`,
-     * which is the ROUTING outcome: on the no-reliable-pitch fallback the profile
-     * ran the note-level provider, where the voice overlay deliberately never applied, so a
-     * voice take can be believed 'voice' while `isVoice` stays unset. The belief
-     * is what the client shows the user and what gets archived for debugging.
+     * which is the ROUTING outcome: the voice overlay (`applyVoice`) refuses the
+     * very-high band, whose octave-down provider is whistling territory the voice
+     * decode was never measured on, and applies nowhere under
+     * `RECORDING_VOICE_DECODE=0`. In either case a take can be believed 'voice'
+     * while `isVoice` stays unset. (The no-reliable-pitch fallback runs the
+     * at-pitch provider and does take the overlay.) The belief is what the client
+     * shows the user and what gets archived for debugging.
      */
     sourceBelief?: 'voice' | 'instrument'
     /**

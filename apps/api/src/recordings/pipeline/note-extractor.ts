@@ -66,14 +66,15 @@ const ADAPTIVE_FLOOR_MEDIAN_GATE_SEC = 0.45
  */
 const OUTLIER_PITCH_DIFF_SEMITONES = 7
 
-/**
- * Tunable post-processing knobs. Defaults reproduce the historical behavior, so
- * `new NoteExtractor()` is unchanged; the eval harness overrides them to search
- * for settings that generalize across real and synthetic corpora.
- */
 /** Kill-switch (A/B only): `EXTRACTOR_COLLAPSE_COINCIDENT=0` restores the pre-2026-09-27 output. */
 const COLLAPSE_COINCIDENT = envFlag('EXTRACTOR_COLLAPSE_COINCIDENT')
 
+/**
+ * Tunable post-processing knobs. Defaults reproduce the historical behavior, so
+ * `new NoteExtractor()` is unchanged; the eval harness overrides them to search
+ * for settings that generalize across real and synthetic corpora, and the
+ * shipping sets are `AudioConverter.cleanupFor`'s.
+ */
 export interface NoteExtractorOptions {
     /** Shortest note kept, in beats. Lower recovers brief notes (recall). */
     minDurationBeats?: number
@@ -88,7 +89,7 @@ export interface NoteExtractorOptions {
      * (1/divisor of a beat). The MusicXML notation grid bottoms out at the 16th
      * note (quarter-beat, divisor 4), so onsets snapped finer than the notation
      * can represent are re-rounded by the round-trip; capping here keeps the
-     * deduced notes and the rendered score in lock-step. Default 16 (legacy).
+     * deduced notes and the rendered score in lock-step. Default 4.
      */
     maxGridDivisor?: number
     /**
@@ -109,7 +110,8 @@ export interface NoteExtractorOptions {
      * aggressive floor that folds vibrato/transition flutter into the held note,
      * while fast humming (short median) keeps its genuinely short notes. This is
      * what lets ONE config serve both without a fixed constant. Fraction of the
-     * median treated as the noise floor; 0 disables. Default 0.4.
+     * median treated as the noise floor; 0 disables. Default 0 (off); both
+     * shipping cleanup sets use 0.3.
      */
     adaptiveFloorFraction?: number
     /**
