@@ -2,13 +2,13 @@ import { MAX_MEASURES_PER_ROW, TIE_Y_SHIFT } from '@mushee/notation/engraving/co
 import { Duration } from '@mushee/notation/model/Duration'
 import type { TieLayout } from '@mushee/notation/model/layout/TieLayout'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import type { Score } from '@mushee/notation/model/Score'
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** A pitched half-note carrying a tie type, for use as a `replace` value. */
-function halfNote(name: string, octave: number, tie?: 'start' | 'stop'): Note {
+function halfNote(name: PitchStep, octave: number, tie?: 'start' | 'stop'): Note {
     return new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name, octave }), tie })
 }
 
@@ -23,7 +23,7 @@ function tieStartingAt(score: Score, note: Note): TieLayout {
  * Replace the first measure's rests with two pitched half-notes, the first tied to the second,
  * and return the resulting TieLayout. Both notes land in the same row.
  */
-function sameRowTie(name = 'C', octave = 4): { score: Score; tie: TieLayout } {
+function sameRowTie(name: PitchStep = 'C', octave = 4): { score: Score; tie: TieLayout } {
     const score = makeScore(1)
     const m = score.firstMeasure
     if (!m) throw new Error('expected first measure')

@@ -1,4 +1,4 @@
-import { Duration, Note, Pitch } from '@mushee/notation/model'
+import { Duration, Interval, Note, Pitch } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -126,6 +126,16 @@ describe('ScoreManipulator bulk actions', () => {
         manipulator.run(TOGGLE_REST) // bulk
         expect(manipulator.selectedNotes).toHaveLength(2)
         expect(manipulator.selectedNotes.every((n) => n.isRest)).toBe(true)
+    })
+
+    it('toggles a rest into a note on the middle line of the clef in effect (D3 under bass)', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.run(TOGGLE_REST) // C5 → rest
+        manipulator.setClefAt(0, 'bass')
+        manipulator.run(TOGGLE_REST) // rest → note
+        const pitch = manipulator.selectedNote?.pitch
+        expect(`${pitch?.name}${pitch?.octave}`).toBe('D3')
     })
 
     it('runs a non-bulk action on the active note only and collapses the selection', () => {
@@ -494,7 +504,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
     it('transposes the whole score (keys included) and re-anchors the active note by position', () => {
         const { manipulator, notes } = setupPitched()
         manipulator.select(notes[1]) // D5
-        manipulator.transpose(2, 1, 'score')
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'score')
         expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(2) // C → D major
         expect(spellings(manipulator)).toEqual(['D5', 'E5', 'F#5', 'G5'])
         expect(manipulator.selectedNote).toBe(allNotes(manipulator)[1]) // same position, new identity
@@ -504,7 +514,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         const { manipulator, notes } = setupPitched()
         manipulator.select(notes[0])
         manipulator.extendSelectionTo(notes[1])
-        manipulator.transpose(2, 1, 'selection')
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'selection')
         expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(0)
         expect(spellings(manipulator)).toEqual(['D5', 'E5', 'E5', 'F5'])
         expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))
@@ -512,7 +522,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
 
     it('a transpose is one undoable step', () => {
         const { manipulator } = setupPitched()
-        manipulator.transpose(2, 1, 'score')
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'score')
         expect(manipulator.canUndo).toBe(true)
         manipulator.undo()
         expect(spellings(manipulator)).toEqual(['C5', 'D5', 'E5', 'F5'])
@@ -562,13 +572,13 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         manipulator.minimizeAccidentals() // single-note selection → whole score
         expect(flashes).toEqual(['all'])
 
-        manipulator.transpose(2, 1, 'score')
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'score')
         expect(flashes).toEqual(['all', 'all'])
 
         const notes = allNotes(manipulator)
         manipulator.select(notes[0])
         manipulator.extendSelectionTo(notes[1])
-        manipulator.transpose(2, 1, 'selection')
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'selection')
         expect(flashes).toHaveLength(3)
         // The flash carries the replacement identities — the notes now living in the score.
         expect(flashes[2]).toEqual(allNotes(manipulator).slice(0, 2))

@@ -3,6 +3,7 @@ import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
+import type { Interval } from './Interval'
 import { MeasureSerializer } from './io/ScoreSerializer'
 import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
@@ -72,9 +73,8 @@ export class Score {
             const map = new Map<Note, Note>()
             for (const measure of this.measures) {
                 for (const note of measure.notes) {
-                    if (!note.tiesForward || !note.pitch) continue
-                    const next = this.nextNote(note)
-                    if (next?.pitch && next.pitch.toMidi() === note.pitch.toMidi()) map.set(note, next)
+                    const partner = note.tiesForward ? this.tieableSuccessor(note) : null
+                    if (partner) map.set(note, partner)
                 }
             }
             return map
@@ -194,6 +194,21 @@ export class Score {
     /** The note a tie-starting note sustains into, or null when it has no tie or no successor. */
     tiePartner(note: Note): Note | null {
         return this._tiePartners.value.get(note) ?? null
+    }
+
+    /**
+     * Whether a tie from `note` would bind: it and the note after it are pitched and sound the
+     * same (C♯ to D♭ included). The editor offers tying on only where this holds.
+     */
+    canTieForward(note: Note): boolean {
+        return this.tieableSuccessor(note) !== null
+    }
+
+    /** The note a tie from `note` would sustain into — the tie rule {@link canTieForward} and the tie map share. */
+    private tieableSuccessor(note: Note): Note | null {
+        if (!note.pitch) return null
+        const next = this.nextNote(note)
+        return next?.pitch && next.pitch.toMidi() === note.pitch.toMidi() ? next : null
     }
 
     // --- Navigation (the single traversal implementation; Note/Measure delegate here) ---
@@ -317,9 +332,7 @@ export class Score {
         this.propagateContext()
         for (const { measure, clefType, key, bpm } of successors) {
             if (measure.clef.type !== clefType) measure.setClef(0, clefType)
-            if (measure.keySignature.fifths !== key.fifths || measure.keySignature.mode !== key.mode) {
-                measure.setKeySignature(0, key.fifths, key.mode)
-            }
+            if (!measure.keySignature.sameKeyAs(key.fifths, key.mode)) measure.setKeySignature(0, key.fifths, key.mode)
             if (!measure.tempoAtBeat(0) && this.tempoEntering(measure) !== bpm) measure.setTempo(0, bpm)
         }
         this.propagateContext()
@@ -418,7 +431,7 @@ export class Score {
             const carried = this.getPreviousMeasure(measure)?.lastKey
             // Demote to inherited only when nothing changes; a relative major↔minor switch (same fifths,
             // different mode) is still a real boundary and must be kept explicit so the mode is preserved.
-            if (fifths === (carried?.fifths ?? 0) && mode === carried?.mode) measure.makeLeadingKeyInherited()
+            if (KeySignature.same(carried, fifths, mode)) measure.makeLeadingKeyInherited()
             else measure.setKeySignature(0, fifths, mode)
         } else measure.setKeySignature(beat, fifths, mode)
         this.propagateContext()
@@ -426,10 +439,10 @@ export class Score {
     }
 
     /**
-     * Transpose by a (chromatic, diatonic) interval — the user-facing transposition (see
-     * {@link Interval}). With no `notes` the whole score moves: every key signature is
-     * re-keyed (folded back into the drawable −7..7 range, taking the enharmonic key when
-     * the raw result overflows) and every note follows; with a selection only those notes
+     * Transpose by `interval` — the user-facing transposition. With no `notes` the whole
+     * score moves: every key signature is re-keyed (folded back into the drawable −7..7
+     * range, taking the enharmonic key when the raw result overflows) and every note
+     * follows; with a selection only those notes
      * move and the keys stay. Either way the rewritten notes are then respelled to draw the
      * fewest accidentals under the keys now in effect, so the result is always cleanly
      * spelled — and matches what a preview built the same way shows.
@@ -437,9 +450,11 @@ export class Score {
      * Rewrites go through `replace`, so note identities change; the returned notes are the
      * final replacements, index-aligned with the transposed notes in score order.
      */
-    transpose(chromatic: number, diatonic: number, notes?: Note[]): Note[] {
+    transpose(interval: Interval, notes?: Note[]): Note[] {
         const targets = notes ?? this.measures.flatMap((m) => m.notes)
-        if (chromatic === 0 && diatonic === 0) return targets
+        if (interval.isUnison) return targets
+        // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
+        const { chromatic, diatonic } = interval
         if (!notes) {
             for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
             // A score that starts in inherited C major now carries a transposed leading key that
@@ -484,7 +499,7 @@ export class Score {
         // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
         for (const measure of this.measures) {
             const visible = new Set(measure.midMeasureKeySignatures)
-            for (const key of measure.keySignatures) {
+            for (const key of [...measure.keySignatures]) {
                 if (key.beatPosition > 0 && !visible.has(key)) measure.setKeySignature(key.beatPosition, key.fifths, key.mode)
             }
         }
@@ -586,9 +601,7 @@ export class Score {
         const ratio = note.duration.ratio
         const type = value.type ?? note.duration.type
         const dots = value.dots ?? note.duration.dots
-        // The sixteenth is the model's finest value: a dotted one would leave a thirty-second's
-        // worth of bar that no rest can fill, so the bar would come out short for good.
-        if (type === '16' && dots > 0) return null
+        if (dots > 0 && !Duration.canDot(type)) return null
         let durations = [new Duration({ type, dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {

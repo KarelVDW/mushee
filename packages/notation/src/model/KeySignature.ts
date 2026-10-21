@@ -1,16 +1,16 @@
 import type { KeySignatureLayout } from './layout/KeySignatureLayout'
 import type { Measure } from './Measure'
-import { Pitch } from './Pitch'
+import { Pitch, type PitchStep } from './Pitch'
 
 /** Order of sharps and flats in key signatures */
-const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'] as const
-const FLAT_ORDER = ['B', 'E', 'A', 'D', 'G', 'C', 'F'] as const
+const SHARP_ORDER: readonly PitchStep[] = ['F', 'C', 'G', 'D', 'A', 'E', 'B']
+const FLAT_ORDER: readonly PitchStep[] = ['B', 'E', 'A', 'D', 'G', 'C', 'F']
 
 /**
  * Canonical pitch (name + octave) each sharp/flat occupies in a treble-clef key signature.
  * KeySignatureLayout positions them via the active clef and normalizes by octaves into the staff.
  */
-const SHARP_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
+const SHARP_PITCHES: ReadonlyArray<{ name: PitchStep; octave: number }> = [
     { name: 'F', octave: 5 },
     { name: 'C', octave: 5 },
     { name: 'G', octave: 5 },
@@ -19,7 +19,7 @@ const SHARP_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
     { name: 'E', octave: 5 },
     { name: 'B', octave: 4 },
 ]
-const FLAT_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
+const FLAT_PITCHES: ReadonlyArray<{ name: PitchStep; octave: number }> = [
     { name: 'B', octave: 4 },
     { name: 'E', octave: 5 },
     { name: 'A', octave: 4 },
@@ -31,16 +31,17 @@ const FLAT_PITCHES: ReadonlyArray<{ name: string; octave: number }> = [
 
 export interface KeyAccidental {
     glyphName: 'accidentalSharp' | 'accidentalFlat' | 'accidentalNatural'
-    name: string
+    name: PitchStep
     octave: number
 }
 
 /**
  * A key signature anchored in a measure, like a {@link Clef}: the leading key sits at beat 0,
- * further ones are mid-measure changes. Its identity for propagation is `fifths` (positive =
- * sharps, negative = flats); `mode` is carried for serialization but does not affect accidentals
- * or rendering. Its drawn form (cancellation naturals) depends on the *preceding* key, so its
- * layout is context-dependent and lives in the layout layer (delegated below).
+ * further ones are mid-measure changes. A key's identity is (fifths, mode) — see
+ * {@link sameKeyAs}: C major and A minor share fifths 0 yet are different keys to propagation,
+ * redundancy checks and serialization. Only `fifths` (positive = sharps, negative = flats)
+ * shapes accidentals and rendering. Its drawn form (cancellation naturals) depends on the
+ * *preceding* key, so its layout is context-dependent and lives in the layout layer (delegated below).
  */
 export class KeySignature {
     readonly id = crypto.randomUUID()
@@ -57,6 +58,19 @@ export class KeySignature {
         return this.measure.layout.keyLayoutFor(this)
     }
 
+    /** Whether this is the key (fifths, mode) — a key's identity, mode included. */
+    sameKeyAs(fifths: number, mode?: string): boolean {
+        return KeySignature.same(this, fifths, mode)
+    }
+
+    /**
+     * {@link sameKeyAs} for a key that may be absent or a plain `{ fifths, mode }` value: no key
+     * at all is C major with no mode — what a score assumes before its first key signature.
+     */
+    static same(key: { fifths: number; mode?: string } | undefined, fifths: number, mode?: string): boolean {
+        return (key?.fifths ?? 0) === fifths && key?.mode === mode
+    }
+
     /** Fifths of the key in effect immediately before this one — the previous measure's last key, or the key earlier in this measure. */
     get precedingFifths(): number {
         if (this.beatPosition > 0) return this.measure.keyBefore(this.beatPosition).fifths
@@ -64,15 +78,15 @@ export class KeySignature {
     }
 
     /** Note names that are sharp in this key */
-    get sharps(): string[] {
+    get sharps(): PitchStep[] {
         if (this.fifths <= 0) return []
-        return SHARP_ORDER.slice(0, this.fifths) as unknown as string[]
+        return SHARP_ORDER.slice(0, this.fifths)
     }
 
     /** Note names that are flat in this key */
-    get flats(): string[] {
+    get flats(): PitchStep[] {
         if (this.fifths >= 0) return []
-        return FLAT_ORDER.slice(0, -this.fifths) as unknown as string[]
+        return FLAT_ORDER.slice(0, -this.fifths)
     }
 
     /** The accidentals drawn for this key, in left-to-right order, with the pitch each occupies. */
@@ -88,6 +102,17 @@ export class KeySignature {
     }
 
     /**
+     * The tonic of the major key with `fifths` sharps (+) or flats (−), as a reader names it —
+     * "C", "F♯", "B♭" — for a drawable key (−7…7). Tonics step round the circle of fifths one
+     * letter ahead of the sharps' own order, and take the key's alteration of that letter.
+     */
+    static majorKeyName(fifths: number): string {
+        const letter = SHARP_ORDER[(((fifths + 1) % 7) + 7) % 7]
+        const alter = KeySignature.alterInKey(fifths, letter)
+        return letter + (alter > 0 ? '♯' : alter < 0 ? '♭' : '')
+    }
+
+    /**
      * The accidentals actually drawn on the staff for this key in context. Only a switch *to* C major draws
      * cancellation naturals (one for each of the preceding key's sharps/flats, to mark the transition); every
      * other key just draws its own accidentals.
@@ -100,21 +125,21 @@ export class KeySignature {
     }
 
     /** Semitone alteration this key signature applies to the given note name (+1 sharp, −1 flat, 0 natural). */
-    alterForNote(noteName: string): number {
+    alterForNote(noteName: PitchStep): number {
         return KeySignature.alterInKey(this.fifths, noteName)
     }
 
     /** Semitone alteration a key of `fifths` applies to a note name — {@link alterForNote} without an instance. */
-    static alterInKey(fifths: number, noteName: string): number {
-        if (fifths > 0 && SHARP_ORDER.indexOf(noteName as (typeof SHARP_ORDER)[number]) < fifths) return 1
-        if (fifths < 0 && FLAT_ORDER.indexOf(noteName as (typeof FLAT_ORDER)[number]) < -fifths) return -1
+    static alterInKey(fifths: number, noteName: PitchStep): number {
+        if (fifths > 0 && SHARP_ORDER.indexOf(noteName) < fifths) return 1
+        if (fifths < 0 && FLAT_ORDER.indexOf(noteName) < -fifths) return -1
         return 0
     }
 
     /**
      * Spell a (line-derived, natural) pitch according to this key — e.g. an F entered in G major becomes
-     * F♯. The alteration is implied by the key, so no explicit accidental is attached (the displayed
-     * accidental is derived later). Used when entering notes by staff position (click / arrow keys).
+     * F♯. Only the alteration is set: whether an accidental is drawn is decided later, in context, by the
+     * layout layer (here none, as the key implies it). Used when entering notes by staff position (click / arrow keys).
      */
     spell(pitch: Pitch): Pitch {
         const alter = this.alterForNote(pitch.name)

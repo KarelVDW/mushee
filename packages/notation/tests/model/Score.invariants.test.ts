@@ -1,4 +1,5 @@
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
+import { Interval } from '@mushee/notation/model/Interval'
 import type { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { describe, expect, it } from 'vitest'
@@ -65,11 +66,11 @@ describe('edit invariants over generated scores', () => {
         const before = soundingEvents(score)
         const chromatic = rng.int(-11, 11)
         const diatonic = Math.round((chromatic * 7) / 12)
-        score.transpose(chromatic, diatonic)
+        score.transpose(new Interval(chromatic, diatonic))
         assertBarsWellFormed(score, `after +${chromatic}`)
         const shifted = soundingEvents(score).map((e) => e.replace(/:(-?\d+)$/, (_, midi) => `:${Number(midi) - chromatic}`))
         expect(shifted, `after +${chromatic}: every attack moves by exactly the interval`).toEqual(before)
-        score.transpose(-chromatic, -diatonic)
+        score.transpose(new Interval(-chromatic, -diatonic))
         expect(soundingEvents(score), `after +${chromatic} −${chromatic}`).toEqual(before)
     })
 

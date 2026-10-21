@@ -1,4 +1,4 @@
-import { BEAT_EPSILON } from '../Duration'
+import { BEAT_EPSILON, Duration } from '../Duration'
 import { Instrument } from '../Instrument'
 import { KeySignature } from '../KeySignature'
 import { Measure } from '../Measure'
@@ -6,12 +6,9 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import type { TieType } from '../types'
 import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 
-/** The finest written value: onsets and releases snap to this grid (in quarter-note beats). */
-const GRID = 0.25
 /** MIDI's assumed tempo when a file carries no tempo event. */
 const MIDI_DEFAULT_BPM = 120
 /** Stops a corrupt tick value from spinning out an endless score, and keeps a garbled file from freezing the tab. */
@@ -254,14 +251,19 @@ export class MidiImporter {
     // --- Notation decisions ---
 
     private toBeats(tick: number): number {
-        return Math.round(tick / this.division / GRID) * GRID
+        // Onsets and releases snap to the finest written value.
+        return Math.round(tick / this.division / Duration.GRID_BEATS) * Duration.GRID_BEATS
     }
 
     /** The single melody line: quantized, top note per onset, releases trimmed to the next onset. */
     private melodyOf(raw: RawNote[]): MelodyNote[] {
         const quantized = raw.map((note) => {
             const onset = this.toBeats(note.onset)
-            return { onset, end: Math.max(this.toBeats(note.end), onset + GRID), midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)) }
+            return {
+                onset,
+                end: Math.max(this.toBeats(note.end), onset + Duration.GRID_BEATS),
+                midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)),
+            }
         })
         if (
             quantized.some(
@@ -352,7 +354,7 @@ export class MidiImporter {
                                 new Note({
                                     duration,
                                     pitch,
-                                    tie: MidiImporter.tieType(
+                                    tie: Note.tieFor(
                                         j > 0 || from > note.onset + BEAT_EPSILON,
                                         j < durations.length - 1 || to < note.end - BEAT_EPSILON,
                                     ),
@@ -389,7 +391,7 @@ export class MidiImporter {
     private markKeys(score: Score, measureStarts: number[], keys: Timed<{ fifths: number; mode: string }>[]) {
         let previous: { fifths: number; mode: string } | undefined
         for (const key of keys) {
-            if (previous && previous.fifths === key.value.fifths && previous.mode === key.value.mode) continue
+            if (previous && KeySignature.same(previous, key.value.fifths, key.value.mode)) continue
             previous = key.value
             const beat = this.toBeats(key.tick)
             let index = measureStarts.findIndex((start) => start > beat + BEAT_EPSILON) - 1
@@ -409,13 +411,6 @@ export class MidiImporter {
             candidates.find((pitch) => pitch.alter === 0) ??
             (candidates.find((pitch) => pitch.alter === (fifths < 0 ? -1 : 1)) as Pitch)
         )
-    }
-
-    private static tieType(back: boolean, forward: boolean): TieType | undefined {
-        if (back && forward) return 'start-stop'
-        if (forward) return 'start'
-        if (back) return 'stop'
-        return undefined
     }
 
     private warn(message: string) {

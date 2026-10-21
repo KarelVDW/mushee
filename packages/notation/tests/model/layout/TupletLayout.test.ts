@@ -1,7 +1,7 @@
 import { TUPLET_OFFSET } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import type { Tuplet } from '@mushee/notation/model/Tuplet'
 import { describe, expect, it } from 'vitest'
@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 const TRIPLET = { actualNotes: 3, normalNotes: 2 }
 
 /** A note in a 3:2 triplet of the given type, pitched (or a rest when name is omitted). */
-function tripletNote(type: '8' | 'q', name?: string, octave = 4): Note {
+function tripletNote(type: '8' | 'q', name?: PitchStep, octave = 4): Note {
     return new Note({
         duration: new Duration({ type, ratio: TRIPLET }),
         pitch: name ? new Pitch({ name, octave }) : undefined,

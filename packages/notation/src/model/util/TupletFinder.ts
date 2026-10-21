@@ -1,4 +1,4 @@
-import { BEAT_EPSILON } from '../Duration'
+import { BEAT_EPSILON, type Duration } from '../Duration'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import { Tuplet } from '../Tuplet'
@@ -11,15 +11,14 @@ export class TupletFinder {
         this.tuplets = []
         this.tupletByNote = new Map()
         let currentNotes: Note[] = []
-        let currentRatio: { actualNotes: number; normalNotes: number } | null = null
+        // A member of the open group, standing for the ratio the group is written under.
+        let currentRatio: Duration | null = null
         let totalDuration = 0
         let maxBaseBeats = 0
 
         for (const note of this.measure.notes) {
-            const { actualNotes, normalNotes } = note.duration.ratio
-
             // Ignore non-tuplet notes (ratio 1/1)
-            if (actualNotes === 1 && normalNotes === 1) {
+            if (!note.duration.isTuplet) {
                 if (currentNotes.length > 0) {
                     this.tuplets.push(new Tuplet(this.measure, currentNotes))
                     currentNotes = []
@@ -31,7 +30,7 @@ export class TupletFinder {
             }
 
             // Ratio changed — save current set and start fresh
-            if (currentRatio && (currentRatio.actualNotes !== actualNotes || currentRatio.normalNotes !== normalNotes)) {
+            if (currentRatio && !currentRatio.sameRatioAs(note.duration)) {
                 /* v8 ignore next -- currentRatio is set only alongside a non-empty currentNotes (both reset together), so this is always true here */
                 if (currentNotes.length > 0) {
                     this.tuplets.push(new Tuplet(this.measure, currentNotes))
@@ -41,7 +40,7 @@ export class TupletFinder {
                 maxBaseBeats = 0
             }
 
-            currentRatio = { actualNotes, normalNotes }
+            currentRatio = note.duration
             // The group spans normalNotes of its base unit. The base isn't stored, so estimate
             // it as the largest undotted member value seen: never smaller than the true base,
             // so an over-estimate falls back to the trailing push (still one group) instead of
@@ -52,7 +51,7 @@ export class TupletFinder {
             totalDuration += note.duration.effectiveBeats
 
             // Set is complete when total duration reaches the expected span
-            if (totalDuration >= normalNotes * maxBaseBeats - BEAT_EPSILON) {
+            if (totalDuration >= note.duration.ratio.normalNotes * maxBaseBeats - BEAT_EPSILON) {
                 this.tuplets.push(new Tuplet(this.measure, currentNotes))
                 currentNotes = []
                 currentRatio = null

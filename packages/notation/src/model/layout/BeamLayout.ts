@@ -1,5 +1,6 @@
 import { BEAM_LEVEL_STRIDE, BEAM_MAX_SLOPE, BEAM_WIDTH, PARTIAL_BEAM_LENGTH } from '../../engraving/constants'
 import type { Note } from '../Note'
+import type { StemDirection } from '../types'
 import type { BeamedRun } from './BeamFinder'
 import type { NoteLayout } from './NoteLayout'
 import type { LayoutBeamSegment, LayoutStem } from './types'
@@ -13,7 +14,7 @@ import type { LayoutBeamSegment, LayoutStem } from './types'
 export class BeamLayout {
     readonly id = crypto.randomUUID()
     readonly notes: Note[]
-    readonly stemDir: 'up' | 'down'
+    readonly stemDir: StemDirection
     readonly primary: LayoutBeamSegment
     readonly secondaries: LayoutBeamSegment[]
     private _stemByNote: Map<Note, LayoutStem>

@@ -51,6 +51,29 @@ describe('KeySignature', () => {
         expect(key(-7).flats).toEqual(['B', 'E', 'A', 'D', 'G', 'C', 'F'])
     })
 
+    it('majorKeyName names the major tonic of every drawable key', () => {
+        const names = Array.from({ length: 15 }, (_, i) => KeySignature.majorKeyName(i - 7))
+        expect(names).toEqual(['C♭', 'G♭', 'D♭', 'A♭', 'E♭', 'B♭', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'C♯'])
+    })
+
+    describe('key identity (fifths, mode)', () => {
+        it('sameKeyAs compares fifths and mode — relative major and minor are different keys', () => {
+            expect(key(0).sameKeyAs(0)).toBe(true)
+            expect(key(0, 'minor').sameKeyAs(0, 'minor')).toBe(true)
+            expect(key(0).sameKeyAs(0, 'minor')).toBe(false)
+            expect(key(0, 'major').sameKeyAs(0)).toBe(false) // an explicit 'major' is not the same as no mode
+            expect(key(1).sameKeyAs(2)).toBe(false)
+        })
+
+        it('same takes plain values, and reads no key at all as C major with no mode', () => {
+            expect(KeySignature.same({ fifths: 2, mode: 'major' }, 2, 'major')).toBe(true)
+            expect(KeySignature.same({ fifths: 2, mode: 'major' }, 2, 'minor')).toBe(false)
+            expect(KeySignature.same(undefined, 0)).toBe(true)
+            expect(KeySignature.same(undefined, 0, 'major')).toBe(false)
+            expect(KeySignature.same(undefined, 1)).toBe(false)
+        })
+    })
+
     describe('accidentals (drawn glyphs)', () => {
         it('C major draws nothing', () => {
             expect(key(0).accidentals).toEqual([])
@@ -139,7 +162,8 @@ describe('KeySignature', () => {
             expect(p.name).toBe('F')
             expect(p.octave).toBe(4)
             expect(p.alter).toBe(1) // F♯
-            expect(p.accidental).toBeUndefined() // implied by the key signature, not drawn
+            // Whether a sharp is drawn is the layout layer's call (none: the key implies it).
+            expect(new Pitch({ name: 'F', octave: 4, alter: 1 })).toEqual(p)
         })
 
         it('flattens a pitch whose letter the key flats', () => {

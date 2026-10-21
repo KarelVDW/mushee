@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest'
 const sixteenthSharp = (octave = 4) =>
     new Note({
         duration: new Duration({ type: '16' }),
-        pitch: new Pitch({ name: 'C', octave, accidental: '#' }),
+        pitch: new Pitch({ name: 'C', octave, alter: 1 }),
     })
 
 const tripletSixteenth = () =>
@@ -246,7 +246,7 @@ describe('ResizeError regressions', () => {
                 notes.push(
                     new Note({
                         duration: new Duration({ type: '16', ratio: { actualNotes: 3, normalNotes: 2 } }),
-                        pitch: new Pitch({ name: 'C', octave: 4, accidental: '#' }),
+                        pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }),
                     }),
                 )
             m.addNotes(notes)

@@ -1,26 +1,35 @@
-import type { DurationType } from './types'
+import type { DurationType, StemDirection } from './types'
 
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
 export const BEAT_EPSILON = 0.001
 
-/** Ordered list of duration values for greedy decomposition (largest first) */
-const DURATION_VALUES: Array<{ duration: DurationType; dots?: number; beats: number }> = [
-    { duration: 'w', beats: 4 },
-    { duration: 'h', dots: 1, beats: 3 },
-    { duration: 'h', beats: 2 },
-    { duration: 'q', dots: 1, beats: 1.5 },
-    { duration: 'q', beats: 1 },
-    { duration: '8', dots: 1, beats: 0.75 },
-    { duration: '8', beats: 0.5 },
-    { duration: '16', beats: 0.25 },
-]
+/**
+ * A time modification as MusicXML writes it: `actualNotes` notes in the time of
+ * `normalNotes` (3:2 for a triplet). Plain notation is 1:1.
+ */
+export type TupletRatio = { readonly actualNotes: number; readonly normalNotes: number }
 
 export class Duration {
+    /** Every plain value the model writes, coarsest first — so a scan picks the largest that fits. */
+    static readonly WRITABLE: readonly Duration[] = [
+        new Duration({ type: 'w' }),
+        new Duration({ type: 'h', dots: 1 }),
+        new Duration({ type: 'h' }),
+        new Duration({ type: 'q', dots: 1 }),
+        new Duration({ type: 'q' }),
+        new Duration({ type: '8', dots: 1 }),
+        new Duration({ type: '8' }),
+        new Duration({ type: '16' }),
+    ]
+
+    /** The finest written value (a sixteenth) in quarter-note beats: the grid imported time snaps to. */
+    static readonly GRID_BEATS = 0.25
+
     readonly type: DurationType
     readonly dots: number
-    readonly ratio: { actualNotes: number; normalNotes: number } // used for tuplets
+    readonly ratio: TupletRatio
 
-    constructor(value?: { type?: DurationType; dots?: number; ratio?: { actualNotes: number; normalNotes: number } }) {
+    constructor(value?: { type?: DurationType; dots?: number; ratio?: TupletRatio }) {
         this.type = value?.type || 'q'
         this.dots = value?.dots || 0
         this.ratio = value?.ratio || { actualNotes: 1, normalNotes: 1 }
@@ -48,6 +57,30 @@ export class Duration {
 
     get effectiveBeats(): number {
         return this.beats * (this.ratio.normalNotes / this.ratio.actualNotes)
+    }
+
+    /** Whether this value is written under a tuplet ratio — anything but plain 1:1. */
+    get isTuplet(): boolean {
+        return this.ratio.actualNotes !== 1 || this.ratio.normalNotes !== 1
+    }
+
+    /** Whether `other` is written under the same tuplet ratio (all plain values share 1:1). */
+    sameRatioAs(other: Duration): boolean {
+        return this.ratio.actualNotes === other.ratio.actualNotes && this.ratio.normalNotes === other.ratio.normalNotes
+    }
+
+    /**
+     * Whether a value of `type` can take a dot. The sixteenth is the model's finest value: a
+     * dotted one would leave a thirty-second's worth of bar that no rest can fill, so the bar
+     * would come out short for good.
+     */
+    static canDot(type: DurationType): boolean {
+        return type !== '16'
+    }
+
+    /** Whether this value can take a dot — {@link Duration.canDot} for its type. */
+    get canDot(): boolean {
+        return Duration.canDot(this.type)
     }
 
     get isBeamable(): boolean {
@@ -99,7 +132,7 @@ export class Duration {
         }
     }
 
-    flagGlyph(stemDirection: 'up' | 'down'): string | undefined {
+    flagGlyph(stemDirection: StemDirection): string | undefined {
         switch (this.type) {
             case '8':
                 return stemDirection === 'up' ? 'flag8thUp' : 'flag8thDown'
@@ -142,14 +175,14 @@ export class Duration {
      * span is tuplet space (e.g. ⅔ beat inside a 3:2 triplet — inexpressible in
      * plain values): the written equivalent is decomposed and the ratio re-attached.
      */
-    static fromBeats(beats: number, ratio?: { actualNotes: number; normalNotes: number }): Duration[] {
+    static fromBeats(beats: number, ratio?: TupletRatio): Duration[] {
         const result: Duration[] = []
         let remaining = ratio ? beats * (ratio.actualNotes / ratio.normalNotes) : beats
         while (remaining > BEAT_EPSILON) {
             let matched = false
-            for (const v of DURATION_VALUES) {
+            for (const v of Duration.WRITABLE) {
                 if (v.beats <= remaining + BEAT_EPSILON) {
-                    result.push(new Duration({ type: v.duration, dots: v.dots, ratio }))
+                    result.push(new Duration({ type: v.type, dots: v.dots, ratio }))
                     remaining -= v.beats
                     matched = true
                     break

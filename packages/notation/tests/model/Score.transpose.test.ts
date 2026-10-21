@@ -1,3 +1,4 @@
+import { Interval } from '@mushee/notation/model/Interval'
 import { Score } from '@mushee/notation/model/Score'
 import { fill, makeScore, p, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -12,7 +13,7 @@ describe('Score.transpose', () => {
         const score = makeScore(1)
         fill(score, 0, [q(p('C', 4)), q(p('D', 4)), q(), q()])
         const before = score.version
-        const result = score.transpose(0, 0)
+        const result = score.transpose(new Interval(0, 0))
         expect(score.version).toBe(before)
         expect(result).toEqual(score.measures[0].notes)
     })
@@ -21,7 +22,7 @@ describe('Score.transpose', () => {
         const score = makeScore(1)
         const m = fill(score, 0, [q(p('G', 4)), q(p('A', 4)), q(p('B', 4)), q()])
         m.setKeySignature(0, 1) // G major
-        score.transpose(2, 1) // up a major second
+        score.transpose(Interval.fromParts(2, 'major')) // up a major second
         expect(score.measures[0].keySignature.fifths).toBe(3) // A major
         expect(spellingsIn(score, 0)).toEqual(['A4', 'B4', 'C#5', 'rest'])
     })
@@ -30,7 +31,7 @@ describe('Score.transpose', () => {
         const score = makeScore(2)
         fill(score, 0, [q(p('C', 4)), q(p('E', 4)), q(p('G', 4)), q()])
         expect(score.measures[0].leadingKeyExplicit).toBe(false)
-        score.transpose(2, 1)
+        score.transpose(Interval.fromParts(2, 'major'))
         expect(score.measures[0].leadingKeyExplicit).toBe(true)
         expect(score.measures[0].keySignature.fifths).toBe(2) // D major
         expect(score.measures[1].keySignature.fifths).toBe(2) // carried forward
@@ -40,7 +41,7 @@ describe('Score.transpose', () => {
     it('an octave transposition leaves an inherited C-major key inherited', () => {
         const score = makeScore(1)
         fill(score, 0, [q(p('C', 4)), q(p('E', 4)), q(p('G', 4)), q()])
-        score.transpose(12, 7)
+        score.transpose(Interval.fromParts(8, 'perfect'))
         expect(score.measures[0].leadingKeyExplicit).toBe(false)
         expect(score.measures[0].keySignature.fifths).toBe(0)
         expect(spellingsIn(score, 0)).toEqual(['C5', 'E5', 'G5', 'rest'])
@@ -50,7 +51,7 @@ describe('Score.transpose', () => {
         const score = makeScore(1)
         const m = fill(score, 0, [q(p('F', 4, 1)), q(p('A', 4, 1)), q(p('C', 5, 1)), q()])
         m.setKeySignature(0, 6) // F♯ major
-        score.transpose(2, 1) // raw result would be G♯ major (+8)
+        score.transpose(Interval.fromParts(2, 'major')) // raw result would be G♯ major (+8)
         expect(score.measures[0].keySignature.fifths).toBe(-4) // A♭ major instead
         expect(spellingsIn(score, 0)).toEqual(['Ab4', 'C5', 'Eb5', 'rest'])
     })
@@ -63,7 +64,7 @@ describe('Score.transpose', () => {
         fill(score, 0, [q(p('F', 4, 1)), q(), q(p('D', 5, 1)), q()])
         fill(score, 1, [q(p('D', 5, 1)), q(), q(), q()]) // measure 2 inherits B major
         expect(score.measures[1].leadingKeyExplicit).toBe(false)
-        score.transpose(2, 1) // F♯ → +8 → A♭; B → +7 stays C♯
+        score.transpose(Interval.fromParts(2, 'major')) // F♯ → +8 → A♭; B → +7 stays C♯
         expect(score.measures[0].keySignature.fifths).toBe(-4)
         expect(score.measures[0].keyAtBeat(2)?.fifths).toBe(7)
         expect(score.measures[1].keySignature.fifths).toBe(7) // re-derived by propagation
@@ -74,7 +75,7 @@ describe('Score.transpose', () => {
         const score = makeScore(1)
         const m = fill(score, 0, [q(p('C', 4)), q(p('D', 4)), q(p('E', 4)), q()])
         const targets = [m.notes[0], m.notes[1]]
-        const result = score.transpose(2, 1, targets)
+        const result = score.transpose(Interval.fromParts(2, 'major'), targets)
         expect(result).toHaveLength(2)
         expect(m.keySignature.fifths).toBe(0)
         expect(spellingsIn(score, 0)).toEqual(['D4', 'E4', 'E4', 'rest'])
@@ -86,19 +87,19 @@ describe('Score.transpose', () => {
         const m = fill(score, 0, [q(p('F', 4, 1)), q(), q(), q()])
         m.setKeySignature(0, 0)
         // F♯ up an augmented unison is F𝄪 by raw interval math; the respell pass lands on G.
-        score.transpose(1, 0, [m.notes[0]])
+        score.transpose(Interval.fromParts(1, 'augmented'), [m.notes[0]])
         expect(spellingsIn(score, 0)).toEqual(['G4', 'rest', 'rest', 'rest'])
     })
 
     it('rests travel through a transposition unchanged', () => {
         const score = makeScore(1)
-        score.transpose(2, 1)
+        score.transpose(Interval.fromParts(2, 'major'))
         expect(spellingsIn(score, 0)).toEqual(['rest', 'rest', 'rest', 'rest'])
     })
 
     it('a score with no measures transposes to nothing', () => {
         const score = new Score()
-        expect(score.transpose(2, 1)).toEqual([])
+        expect(score.transpose(Interval.fromParts(2, 'major'))).toEqual([])
     })
 })
 

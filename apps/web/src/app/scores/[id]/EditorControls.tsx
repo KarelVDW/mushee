@@ -4,7 +4,16 @@ import { Glyph } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
 import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
-import { CLEF_DEFS, type ClefType, type DurationType, type Note, type Score, TimeSignature } from '@mushee/notation/model'
+import {
+    type Accidental,
+    CLEF_DEFS,
+    type ClefType,
+    type DurationType,
+    type Interval,
+    type Note,
+    type Score,
+    TimeSignature,
+} from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
@@ -14,7 +23,7 @@ import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/Ti
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
-const ACCIDENTALS: { label: string; value: string | undefined }[] = [
+const ACCIDENTALS: { label: string; value: Accidental | undefined }[] = [
     { label: '♮', value: undefined },
     { label: '♭', value: 'b' },
     { label: '♯', value: '#' },
@@ -181,10 +190,10 @@ export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, 
 // --- Note tool-dock (floats over the bottom of the score area) ---
 
 interface NoteToolDockProps {
-    accidental: string | undefined
+    accidental: Accidental | undefined
     duration: DurationType | undefined
     accidentalDisabled: boolean
-    onAccidentalChange: (accidental: string | undefined) => void
+    onAccidentalChange: (accidental: Accidental | undefined) => void
     onDurationChange: (duration: DurationType) => void
     dotted: boolean
     onDotToggle: () => void
@@ -211,7 +220,7 @@ interface NoteToolDockProps {
         onMinimize: () => void
         score: Score
         selectedNotes: Note[]
-        onTranspose: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+        onTranspose: (interval: Interval, scope: 'score' | 'selection') => void
         /** Forwarded to the popover's onScopeChange (the canvas pulse over its target). */
         onTransposeAim?: (scope: 'score' | 'selection' | null) => void
     }
@@ -476,7 +485,7 @@ function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureC
 interface TransposeControlProps {
     score: Score
     selectedNotes: Note[]
-    onApply: (chromatic: number, diatonic: number, scope: 'score' | 'selection') => void
+    onApply: (interval: Interval, scope: 'score' | 'selection') => void
     onScopeChange?: (scope: 'score' | 'selection' | null) => void
     disabled: boolean
     compact: boolean
@@ -497,8 +506,8 @@ function TransposeControl({ score, selectedNotes, onApply, onScopeChange, disabl
                     selectedNotes={selectedNotes}
                     anchorRef={anchorRef}
                     className={popoverPosition(compact)}
-                    onApply={(chromatic, diatonic, scope) => {
-                        onApply(chromatic, diatonic, scope)
+                    onApply={(interval, scope) => {
+                        onApply(interval, scope)
                         setOpen(false)
                     }}
                     onDismiss={() => setOpen(false)}

@@ -1,4 +1,5 @@
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+import { STAFF_MIDDLE_LINE } from '@mushee/notation/model/staffLines'
 import type { ClefType } from '@mushee/notation/model/types'
 import { clef } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -84,8 +85,28 @@ describe('Clef', () => {
         })
     })
 
+    describe('middleLinePitch', () => {
+        it('is the natural pitch on the middle staff line under each clef', () => {
+            const at = (type: ClefType) => {
+                const p = clef(type).middleLinePitch
+                return `${p.name}${p.accidental ?? ''}${p.octave}`
+            }
+            expect(at('treble')).toBe('B4')
+            expect(at('bass')).toBe('D3')
+            expect(at('alto')).toBe('C4')
+            expect(at('tenor')).toBe('A3')
+        })
+
+        it('sits on the middle line it is named for', () => {
+            for (const type of ['treble', 'bass', 'alto', 'treble8vb'] as ClefType[]) {
+                const c = clef(type)
+                expect(c.lineFor(c.middleLinePitch)).toBe(STAFF_MIDDLE_LINE)
+            }
+        })
+    })
+
     describe('octavesToCenter (octave normalization for recorded audio)', () => {
-        const pitches = (...specs: Array<[string, number]>) => specs.map(([name, octave]) => new Pitch({ name, octave }))
+        const pitches = (...specs: Array<[PitchStep, number]>) => specs.map(([name, octave]) => new Pitch({ name, octave }))
 
         it('returns 0 for an empty list', () => {
             expect(clef('treble').octavesToCenter([])).toBe(0)

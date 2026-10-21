@@ -1,8 +1,8 @@
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { type Accidental, Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { describe, expect, it } from 'vitest'
 
 describe('Pitch', () => {
-    it('stores constructor values with default alter=0 and undefined accidental', () => {
+    it('stores constructor values with default alter=0 (natural: no accidental token)', () => {
         const p = new Pitch({ name: 'C', octave: 4 })
         expect(p.name).toBe('C')
         expect(p.alter).toBe(0)
@@ -10,8 +10,8 @@ describe('Pitch', () => {
         expect(p.octave).toBe(4)
     })
 
-    it('respects explicit alter and accidental', () => {
-        const p = new Pitch({ name: 'F', octave: 5, alter: 1, accidental: '#' })
+    it('respects an explicit alter, and derives the accidental token from it', () => {
+        const p = new Pitch({ name: 'F', octave: 5, alter: 1 })
         expect(p.alter).toBe(1)
         expect(p.accidental).toBe('#')
     })
@@ -58,22 +58,39 @@ describe('Pitch', () => {
         expect(sharp).not.toBe(p)
     })
 
-    it('accidentalToAlter maps glyphs correctly', () => {
-        expect(Pitch.accidentalToAlter('#')).toBe(1)
-        expect(Pitch.accidentalToAlter('b')).toBe(-1)
-        expect(Pitch.accidentalToAlter('##')).toBe(2)
-        expect(Pitch.accidentalToAlter('bb')).toBe(-2)
-        expect(Pitch.accidentalToAlter('n')).toBe(0)
-        expect(Pitch.accidentalToAlter(undefined)).toBe(0)
+    it('withAccidental natural (token or none) clears the alteration', () => {
+        const fSharp = new Pitch({ name: 'F', octave: 4, alter: 1 })
+        for (const natural of ['n', undefined] as const) {
+            const p = fSharp.withAccidental(natural)
+            expect(p.alter).toBe(0)
+            expect(p.accidental).toBeUndefined()
+        }
     })
 
-    it('accidentalGlyph maps to font glyph names', () => {
-        expect(new Pitch({ name: 'C', octave: 4, accidental: '#' }).accidentalGlyph).toBe('accidentalSharp')
-        expect(new Pitch({ name: 'C', octave: 4, accidental: 'b' }).accidentalGlyph).toBe('accidentalFlat')
-        expect(new Pitch({ name: 'C', octave: 4, accidental: '##' }).accidentalGlyph).toBe('accidentalDoubleSharp')
-        expect(new Pitch({ name: 'C', octave: 4, accidental: 'bb' }).accidentalGlyph).toBe('accidentalDoubleFlat')
-        expect(new Pitch({ name: 'C', octave: 4, accidental: 'n' }).accidentalGlyph).toBe('accidentalNatural')
-        expect(new Pitch({ name: 'C', octave: 4 }).accidentalGlyph).toBeUndefined()
+    describe('the accidental vocabulary (token ↔ alter ↔ glyph)', () => {
+        // One row per token; natural is asymmetric on purpose — 'n' maps to alter 0 and the
+        // natural glyph, but alter 0 maps back to no token (natural is the absence of one).
+        const rows: Array<{ token: Accidental; alter: number; glyph: string; tokenOfAlter: Accidental | undefined }> = [
+            { token: '#', alter: 1, glyph: 'accidentalSharp', tokenOfAlter: '#' },
+            { token: 'b', alter: -1, glyph: 'accidentalFlat', tokenOfAlter: 'b' },
+            { token: '##', alter: 2, glyph: 'accidentalDoubleSharp', tokenOfAlter: '##' },
+            { token: 'bb', alter: -2, glyph: 'accidentalDoubleFlat', tokenOfAlter: 'bb' },
+            { token: 'n', alter: 0, glyph: 'accidentalNatural', tokenOfAlter: undefined },
+        ]
+
+        it.each(rows)('$token: alter $alter, glyph $glyph, alter back to token $tokenOfAlter', ({ token, alter, glyph, tokenOfAlter }) => {
+            expect(Pitch.accidentalToAlter(token)).toBe(alter)
+            expect(Pitch.glyphForAlter(alter)).toBe(glyph)
+            expect(Pitch.alterToAccidental(alter)).toBe(tokenOfAlter)
+            expect(new Pitch({ name: 'C', octave: 4, alter }).accidental).toBe(tokenOfAlter)
+        })
+
+        it('no token is natural, and an alteration no token writes has neither token nor glyph', () => {
+            expect(Pitch.accidentalToAlter(undefined)).toBe(0)
+            expect(Pitch.alterToAccidental(3)).toBeUndefined()
+            expect(Pitch.glyphForAlter(3)).toBeUndefined()
+            expect(new Pitch({ name: 'C', octave: 4, alter: -3 }).accidental).toBeUndefined()
+        })
     })
 
     it('glyphForAlter maps an alteration to the matching glyph, undefined out of range', () => {
@@ -94,6 +111,14 @@ describe('Pitch', () => {
         expect(Pitch.alterToAccidental(3)).toBeUndefined()
     })
 
+    it('spelledLike compares the written spelling — letter, alteration and octave', () => {
+        const cSharp4 = new Pitch({ name: 'C', alter: 1, octave: 4 })
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', alter: 1, octave: 4 }))).toBe(true)
+        expect(cSharp4.spelledLike(new Pitch({ name: 'D', alter: -1, octave: 4 }))).toBe(false) // enharmonic, sounds alike
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', octave: 4 }))).toBe(false)
+        expect(cSharp4.spelledLike(new Pitch({ name: 'C', alter: 1, octave: 5 }))).toBe(false)
+    })
+
     it('toMidi computes correct MIDI numbers', () => {
         // Middle C = 60, A4 = 69, C5 = 72
         expect(new Pitch({ name: 'C', octave: 4 }).toMidi()).toBe(60)
@@ -103,8 +128,9 @@ describe('Pitch', () => {
     })
 
     it('toMidi treats an unknown step name as zero semitones from the octave base', () => {
-        // SEMITONES has no entry for 'X', so it contributes 0 — (4+1)*12 = 60.
-        expect(new Pitch({ name: 'X', octave: 4 }).toMidi()).toBe(60)
+        // The type forbids it, but unvalidated stored JSON can still deliver one. SEMITONES has
+        // no entry for 'X', so it contributes 0 — (4+1)*12 = 60.
+        expect(new Pitch({ name: 'X' as PitchStep, octave: 4 }).toMidi()).toBe(60)
     })
 
     it('fromLine round-trips with line for natural notes', () => {
@@ -151,7 +177,7 @@ describe('Pitch', () => {
         })
 
         it('throws for an unknown step name', () => {
-            expect(() => new Pitch({ name: 'H', octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
+            expect(() => new Pitch({ name: 'H' as PitchStep, octave: 4 }).transposed(2, 1)).toThrow('Unknown step name: H')
         })
 
         it('transposes C5 down by a major 2nd to B♭4 (trumpet writes C, sounds B♭)', () => {
@@ -188,7 +214,7 @@ describe('Pitch', () => {
         })
 
         it('preserves pitch identity through round-trip transposition', () => {
-            const original = new Pitch({ name: 'F', alter: 1, accidental: '#', octave: 4 })
+            const original = new Pitch({ name: 'F', alter: 1, octave: 4 })
             const round = original.transposed(-7, -4).transposed(7, 4)
             expect(round.name).toBe('F')
             expect(round.octave).toBe(4)
@@ -202,22 +228,18 @@ describe('Pitch', () => {
         })
     })
 
-    describe('accidentalValue (control token from alteration)', () => {
-        it('derives from the alteration, not the stored accidental glyph', () => {
-            // A key-spelled note carries the alteration but no stored accidental.
-            expect(new Pitch({ name: 'F', octave: 4, alter: 1 }).accidentalValue).toBe('#')
-            expect(new Pitch({ name: 'B', octave: 4, alter: -1 }).accidentalValue).toBe('b')
-            expect(new Pitch({ name: 'C', octave: 4 }).accidentalValue).toBeUndefined()
-        })
-
-        it('matches the stored accidental for explicitly-altered notes', () => {
-            expect(new Pitch({ name: 'F', octave: 5, accidental: '#', alter: 1 }).accidentalValue).toBe('#')
+    describe('accidental (control token from alteration)', () => {
+        it('derives from the alteration, whether or not an accidental is drawn', () => {
+            // A key-spelled note (F♯ in G major) draws no accidental yet still reads as sharp.
+            expect(new Pitch({ name: 'F', octave: 4, alter: 1 }).accidental).toBe('#')
+            expect(new Pitch({ name: 'B', octave: 4, alter: -1 }).accidental).toBe('b')
+            expect(new Pitch({ name: 'C', octave: 4 }).accidental).toBeUndefined()
         })
     })
 
     describe('octaveShifted (whole-octave transposition)', () => {
         it('moves whole octaves while preserving spelling and accidental', () => {
-            const p = new Pitch({ name: 'F', octave: 5, accidental: '#', alter: 1 })
+            const p = new Pitch({ name: 'F', octave: 5, alter: 1 })
             const down = p.octaveShifted(-2)
             expect(down.name).toBe('F')
             expect(down.octave).toBe(3)

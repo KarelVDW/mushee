@@ -1,12 +1,13 @@
 import { Duration } from '@mushee/notation/model/Duration'
 import { Note } from '@mushee/notation/model/Note'
-import { Pitch } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
+import { STAFF_MIDDLE_LINE } from '@mushee/notation/model/staffLines'
 import { clef, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Replace a measure's leading rest with a pitched note and return the live note that lands at beat 0. */
-function placeNote(score: Score, measureIndex: number, name: string, octave: number): Note {
+function placeNote(score: Score, measureIndex: number, name: PitchStep, octave: number): Note {
     const measure = score.measures[measureIndex]
     const target = measure.firstNote as Note
     const [placed] = score.replace([target], [pitched(name, octave)])
@@ -30,10 +31,12 @@ describe('Note', () => {
         expect(n.isRest).toBe(false)
     })
 
-    it('inTuplet is true when ratio.actualNotes !== 1', () => {
+    it('inTuplet is true for any ratio but 1:1 (Duration.isTuplet)', () => {
         const tuplet = new Note({ duration: new Duration({ ratio: { actualNotes: 3, normalNotes: 2 } }) })
+        const degenerate = new Note({ duration: new Duration({ ratio: { actualNotes: 1, normalNotes: 2 } }) })
         const plain = new Note({ duration: new Duration() })
         expect(tuplet.inTuplet).toBe(true)
+        expect(degenerate.inTuplet).toBe(true)
         expect(plain.inTuplet).toBe(false)
     })
 
@@ -46,6 +49,20 @@ describe('Note', () => {
         expect(new Note({ duration: new Duration(), tie: 'start-stop' }).tiesBack).toBe(true)
         expect(new Note({ duration: new Duration() }).tiesForward).toBe(false)
         expect(new Note({ duration: new Duration() }).tiesBack).toBe(false)
+    })
+
+    it('canToggleTuplet: a tuplet note can always collapse; a plain one only when a shorter value exists', () => {
+        const tripletSixteenth = new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 3, normalNotes: 2 } }) })
+        expect(tripletSixteenth.canToggleTuplet).toBe(true)
+        expect(new Note({ duration: new Duration({ type: 'q' }) }).canToggleTuplet).toBe(true)
+        expect(new Note({ duration: new Duration({ type: '16' }) }).canToggleTuplet).toBe(false)
+    })
+
+    it('tieFor turns back/forward tie flags into the tie mark', () => {
+        expect(Note.tieFor(false, false)).toBeUndefined()
+        expect(Note.tieFor(false, true)).toBe('start')
+        expect(Note.tieFor(true, false)).toBe('stop')
+        expect(Note.tieFor(true, true)).toBe('start-stop')
     })
 
     it('tiesBack is derived from a predecessor that ties forward (start-only ties)', () => {
@@ -77,6 +94,12 @@ describe('Note', () => {
         it('low notes (line < 3) stem up', () => {
             const low = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
             expect(low.stemDir).toBe('up')
+        })
+
+        it('stemDirectionFor flips at the middle line — the rule beamed runs share', () => {
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE)).toBe('down')
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE + 0.5)).toBe('down')
+            expect(Note.stemDirectionFor(STAFF_MIDDLE_LINE - 0.25)).toBe('up') // e.g. a beamed run's average line
         })
     })
 
@@ -212,27 +235,27 @@ describe('Note', () => {
             const [placed] = score.replace([target], [pitched('C', 4)])
             // C natural in C major draws no accidental.
             expect(placed.layout.accidental).toBeUndefined()
-            const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+            const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
             const [placedSharp] = score.replace([placed], [sharp])
             expect(placedSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
         })
 
-        it('the drawn accidental falls back to the pitch glyph for a detached note', () => {
-            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: 'b', alter: -1 }) })
-            expect(detached.layout.accidental?.glyphName).toBe('accidentalFlat')
+        it('a detached note draws no accidental — there is no bar to resolve one in', () => {
+            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: -1 }) })
+            expect(detached.layout.accidental).toBeUndefined()
         })
     })
 
     describe('previewUnder', () => {
-        it('renders line and accidental under the supplied clef, bypassing measure resolution', () => {
-            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, accidental: '#', alter: 1 }) })
+        it('renders the line under the supplied clef, bypassing measure resolution', () => {
+            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
             const bass = clef('bass')
             const returned = note.previewUnder(bass)
             expect(returned).toBe(note)
             expect(note.clef).toBe(bass)
             expect(note.line).toBe(bass.lineFor(note.pitch as Pitch))
-            // Preview note has no measure, so the accidental comes from the pitch itself.
-            expect(note.layout.accidental?.glyphName).toBe('accidentalSharp')
+            // Preview note has no measure, so no displayed accidental can be resolved for it.
+            expect(note.layout.accidental).toBeUndefined()
         })
 
         it('clears the cached detached layout so it re-renders under the preview clef', () => {
@@ -242,6 +265,37 @@ describe('Note', () => {
             const after = note.layout
             expect(after).not.toBe(before)
             expect(after.noteY).not.toBe(before.noteY) // the line really moved
+        })
+    })
+
+    describe('steppedBy (staff-step entry)', () => {
+        const spelled = (note: Note) => (note.pitch ? `${note.pitch.name}${note.pitch.accidental ?? ''}${note.pitch.octave}` : 'rest')
+
+        it('moves one staff step up or down, spelled in the key in effect', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const e4 = placeNote(score, 0, 'E', 4)
+            expect(spelled(e4.steppedBy(1))).toBe('F4')
+            expect(spelled(e4.steppedBy(-1))).toBe('D4')
+            score.setKeySignature(e4, 1) // G major: the F stepped to is F♯
+            expect(spelled(e4.steppedBy(1))).toBe('F#4')
+        })
+
+        it('drops a written accidental: the step lands on the key-spelled neighbour', () => {
+            const score = new Score()
+            score.addMeasure().complete()
+            const written = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', alter: 1, octave: 4 }) })
+            const [cSharp] = score.replace([score.measures[0].firstNote as Note], [written])
+            expect(spelled(cSharp.steppedBy(1))).toBe('D4')
+            expect(spelled(cSharp.steppedBy(-1))).toBe('B3')
+        })
+
+        it('keeps a rest a rest — as a new note, like every edit', () => {
+            const r = rest('h')
+            const stepped = r.steppedBy(1)
+            expect(stepped.isRest).toBe(true)
+            expect(stepped).not.toBe(r)
+            expect(stepped.duration).toBe(r.duration)
         })
     })
 

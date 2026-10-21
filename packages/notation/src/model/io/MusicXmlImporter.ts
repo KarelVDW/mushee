@@ -1,4 +1,4 @@
-import { BEAT_EPSILON, Duration } from '../Duration'
+import { BEAT_EPSILON, Duration, type TupletRatio } from '../Duration'
 import type { Measure } from '../Measure'
 import { Pitch } from '../Pitch'
 import type { Score } from '../Score'
@@ -364,7 +364,7 @@ export class MusicXmlImporter {
     }
 
     /** Rewrite a span the file's own note value can't express: tuplet space greedily, plain time metrically. */
-    private simplify(beats: number, ratio: { actualNotes: number; normalNotes: number } | undefined): Duration[] {
+    private simplify(beats: number, ratio: TupletRatio | undefined): Duration[] {
         this.warn(WARN_SIMPLIFIED)
         return ratio ? Duration.fromBeats(beats, ratio) : new DurationSpeller(this.timeSignature).spell(this.fill, beats)
     }

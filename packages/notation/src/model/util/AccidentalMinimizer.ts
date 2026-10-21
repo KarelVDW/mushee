@@ -62,11 +62,7 @@ export class AccidentalMinimizer {
             for (const candidate of this.candidatesFor(note, pitch, targets)) {
                 const slot = candidate.name + candidate.octave
                 const prevailing = inEffect.get(slot) ?? KeySignature.alterInKey(noteFifths, candidate.name)
-                const keepsCurrent =
-                    basis === 'spelling' &&
-                    candidate.name === pitch.name &&
-                    candidate.alter === pitch.alter &&
-                    candidate.octave === pitch.octave
+                const keepsCurrent = basis === 'spelling' && candidate.spelledLike(pitch)
                 const withKey = noteFifths >= 0 ? candidate.alter >= 0 : candidate.alter <= 0
                 const rank = [candidate.alter === prevailing ? 0 : 1, keepsCurrent ? 0 : 1, Math.abs(candidate.alter), withKey ? 0 : 1]
                 if (!best || AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
@@ -80,7 +76,7 @@ export class AccidentalMinimizer {
             count += bestRank[0]
             inEffect.set(best.name + best.octave, best.alter)
             this.chosen.set(note, best)
-            if (targets.has(note) && (best.name !== pitch.name || best.alter !== pitch.alter || best.octave !== pitch.octave)) {
+            if (targets.has(note) && !best.spelledLike(pitch)) {
                 this.respelled.set(note, best)
             }
         }

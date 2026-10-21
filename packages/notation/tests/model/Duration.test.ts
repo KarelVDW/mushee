@@ -30,6 +30,40 @@ describe('Duration', () => {
         expect(d.effectiveBeats).toBeCloseTo((0.5 * 2) / 3)
     })
 
+    describe('tuplet ratio', () => {
+        const triplet = { actualNotes: 3, normalNotes: 2 }
+
+        it('isTuplet is true for any ratio but 1:1', () => {
+            expect(new Duration().isTuplet).toBe(false)
+            expect(new Duration({ ratio: { actualNotes: 1, normalNotes: 1 } }).isTuplet).toBe(false)
+            expect(new Duration({ ratio: triplet }).isTuplet).toBe(true)
+            expect(new Duration({ ratio: { actualNotes: 5, normalNotes: 4 } }).isTuplet).toBe(true)
+        })
+
+        it('isTuplet counts a degenerate 1:n ratio as a tuplet, like every other non-1:1 ratio', () => {
+            expect(new Duration({ ratio: { actualNotes: 1, normalNotes: 2 } }).isTuplet).toBe(true)
+        })
+
+        it('sameRatioAs compares both terms of the ratio, ignoring the written value', () => {
+            const a = new Duration({ type: '8', ratio: triplet })
+            expect(a.sameRatioAs(new Duration({ type: 'q', dots: 1, ratio: { actualNotes: 3, normalNotes: 2 } }))).toBe(true)
+            expect(a.sameRatioAs(new Duration({ type: '8', ratio: { actualNotes: 3, normalNotes: 4 } }))).toBe(false)
+            expect(a.sameRatioAs(new Duration({ type: '8', ratio: { actualNotes: 5, normalNotes: 2 } }))).toBe(false)
+            expect(a.sameRatioAs(new Duration({ type: '8' }))).toBe(false)
+            expect(new Duration({ type: 'h' }).sameRatioAs(new Duration({ type: '16' }))).toBe(true)
+        })
+    })
+
+    it('canDot for every value but the sixteenth (static by type, and on the instance)', () => {
+        expect(Duration.WRITABLE.filter((d) => d.dots === 0).map((d) => [d.type, Duration.canDot(d.type), d.canDot])).toEqual([
+            ['w', true, true],
+            ['h', true, true],
+            ['q', true, true],
+            ['8', true, true],
+            ['16', false, false],
+        ])
+    })
+
     it('isBeamable for 8th and 16th only', () => {
         expect(new Duration({ type: '8' }).isBeamable).toBe(true)
         expect(new Duration({ type: '16' }).isBeamable).toBe(true)
@@ -126,6 +160,18 @@ describe('Duration', () => {
             expect(ds).toHaveLength(1)
             expect(ds[0].type).toBe('16')
             expect(ds[0].effectiveBeats).toBeCloseTo(1 / 6)
+        })
+    })
+
+    describe('WRITABLE / GRID_BEATS', () => {
+        it('lists every plain writable value, coarsest first', () => {
+            expect(Duration.WRITABLE.map((d) => `${d.type}${'.'.repeat(d.dots)}`)).toEqual(['w', 'h.', 'h', 'q.', 'q', '8.', '8', '16'])
+            expect(Duration.WRITABLE.map((d) => d.beats)).toEqual([4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25])
+            expect(Duration.WRITABLE.every((d) => !d.isTuplet)).toBe(true)
+        })
+
+        it('the grid is the finest writable value', () => {
+            expect(Duration.GRID_BEATS).toBe(Math.min(...Duration.WRITABLE.map((d) => d.beats)))
         })
     })
 

@@ -6,7 +6,7 @@ import { NoteWidth } from './layout/NoteWidth'
 import type { Measure } from './Measure'
 import type { Pitch } from './Pitch'
 import { STAFF_MIDDLE_LINE } from './staffLines'
-import type { TieType } from './types'
+import type { StemDirection, TieType } from './types'
 
 /**
  * A note or rest. Content (duration, pitch, tie) is immutable — edits replace
@@ -34,13 +34,11 @@ export class Note {
      * The note's layout. Attached notes delegate into the current ScoreLayout;
      * a detached note (the editor's ghost/preview note) gets a standalone
      * snapshot, cached forever since its content and preview clef are fixed.
+     * Without a bar to read context from, a detached note draws no accidental.
      */
     get layout(): NoteLayout {
         if (this._measure) return this._measure.layout.noteLayoutFor(this)
-        this._detachedLayout ||= new NoteLayout(this, {
-            accidentalGlyph: this.pitch?.accidentalGlyph,
-            width: new NoteWidth(this, this.pitch?.accidentalGlyph),
-        })
+        this._detachedLayout ||= new NoteLayout(this, { accidentalGlyph: undefined, width: new NoteWidth(this, undefined) })
         return this._detachedLayout
     }
 
@@ -63,7 +61,12 @@ export class Note {
     }
 
     get inTuplet(): boolean {
-        return this.duration.ratio.actualNotes !== 1
+        return this.duration.isTuplet
+    }
+
+    /** Whether the triplet toggle can act here: collapse the group it is in, or split it into a triplet. */
+    get canToggleTuplet(): boolean {
+        return this.inTuplet || !!this.duration.tripletDivision()
     }
 
     /**
@@ -93,6 +96,14 @@ export class Note {
         return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
     }
 
+    /** The tie mark for a note bound to its predecessor (`back`) and/or its successor (`forward`). */
+    static tieFor(back: boolean, forward: boolean): TieType | undefined {
+        if (back && forward) return 'start-stop'
+        if (forward) return 'start'
+        if (back) return 'stop'
+        return undefined
+    }
+
     get tiesForward(): boolean {
         return this.tie === 'start' || this.tie === 'start-stop'
     }
@@ -111,9 +122,14 @@ export class Note {
         return previous !== null && this._measure.score.tiePartner(previous) === this
     }
 
-    get stemDir(): 'up' | 'down' {
+    /** The stem rule: a note (or a beamed run's average line) on or above the middle line stems down. */
+    static stemDirectionFor(line: number): StemDirection {
+        return line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
+    }
+
+    get stemDir(): StemDirection {
         if (this.isRest) return 'up'
-        return this.line >= STAFF_MIDDLE_LINE ? 'down' : 'up'
+        return Note.stemDirectionFor(this.line)
     }
 
     // --- Navigation (thin delegates; the traversal lives on Score) ---
@@ -124,6 +140,15 @@ export class Note {
 
     getPrevious(): Note | null {
         return this.measure.score.previousNote(this)
+    }
+
+    /**
+     * This note moved one staff step up (+1) or down (−1), spelled in the key in effect here
+     * (an F stepped to in G major is F♯). A rest stays a rest. Returns a new note, as edits do.
+     */
+    steppedBy(direction: 1 | -1): Note {
+        const stepped = this.pitch && (direction > 0 ? this.pitch.raised() : this.pitch.lowered())
+        return this.clone({ pitch: stepped ? this.keySignature.spell(stepped) : undefined })
     }
 
     clone(overrides: { duration?: Duration; pitch?: Pitch; tie?: TieType }) {

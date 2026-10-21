@@ -82,7 +82,8 @@ read of score.layout  → rebuild ScoreLayout if score.version moved, reusing un
 
 Carry-forward of inherited leading clefs/keys is **semantic** (the serializer depends on it),
 so it is propagated eagerly by `Score.propagateContext()` from the score-level mutators that can
-change measure context (`addMeasure`, `setClef`, `setKeySignature`, `setInstrument`). Calling
+change measure context (`addMeasure`, `removeMeasures`, `setTimeSignature`, `setClef`,
+`setKeySignature`, `setInstrument`, `transpose`, `minimizeAccidentals`). Calling
 `measure.setClef(...)` directly changes only that measure — propagation is a Score
 responsibility, never a side effect of layout.
 
@@ -107,7 +108,9 @@ into measures, and there is no re-entrancy to guard against.
   constructor-computed derived state.
 - Layout classes: readonly fields for everything. Never lazily-computed internals.
 - Beat-positioned collections (clefs, keys, tempos) share `BeatPositionedList` for their
-  at/at-or-before/before/last/mid-measure queries — don't re-implement those loops.
+  at/at-or-before/before/last/mid-measure queries — don't re-implement those loops. Clefs and
+  keys also share their writes through `LeadingTrack` (redundant mid-measure changes,
+  explicit vs inherited leading item); its writes replace the array, never mutate it.
 - Keep dead members out: if a method has no production caller, delete it (tests alone don't
   justify keeping API surface).
 - Importing the model from an app: top-level classes, constants and types come from the
