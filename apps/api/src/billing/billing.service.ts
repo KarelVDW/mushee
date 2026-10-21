@@ -30,10 +30,12 @@ export interface BillingState {
 }
 
 /**
- * Polar-backed billing. Checkout and the customer portal are hosted by
- * Polar (they are the merchant of record); this service only creates the
- * redirect sessions and mirrors subscription state from webhooks into
- * `user_subscriptions`.
+ * Outbound side of the Polar integration (Polar is the merchant of record).
+ * Creates hosted checkout and customer-portal sessions, changes plans and
+ * cancellation through the Polar API (mirroring the result into
+ * `user_subscriptions` right away), reports billing state, and deletes the
+ * Polar customer when an account is purged. Inbound webhooks live in
+ * PolarWebhookService.
  */
 @Injectable()
 export class BillingService {

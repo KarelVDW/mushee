@@ -12,7 +12,10 @@ import { type PolarWebhookEvent, validateEvent, WebhookVerificationError } from 
 
 /**
  * Inbound side of the Polar integration: verifies webhook deliveries, dedupes
- * them by delivery id, and applies each event to our state.
+ * them by delivery id (`processed_webhook_events`), and applies each event —
+ * subscription lifecycle and customer.state_changed snapshots are mirrored
+ * into `user_subscriptions`, pack orders grant or claw back seconds in
+ * `credit_balances`. Outbound Polar calls live in BillingService.
  */
 @Injectable()
 export class PolarWebhookService {

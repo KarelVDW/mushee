@@ -10,8 +10,9 @@ import { PolarWebhookService } from './polar-webhook.service'
  * via Nest's `rawBody` option.
  *
  * Configure in the Polar dashboard: <api-url>/billing/webhooks/polar with
- * the secret in POLAR_WEBHOOK_SECRET. Subscribe at least to the
- * subscription.* and customer.state_changed events.
+ * the secret in POLAR_WEBHOOK_SECRET. Subscribe to subscription.*,
+ * customer.state_changed, order.paid and order.refunded (packs are granted
+ * by order.paid).
  */
 @Controller('billing/webhooks')
 export class PolarWebhookController {
@@ -24,7 +25,10 @@ export class PolarWebhookController {
     async handle(@Req() req: FastifyRequest): Promise<{ received: boolean }> {
         const rawBody = (req as FastifyRequest & { rawBody?: Buffer }).rawBody
         try {
-            await this.webhooks.handleWebhook(rawBody ?? JSON.stringify(req.body), this.headerMap(req))
+            // Re-serialized JSON never verifies, so a missing raw body is a setup
+            // error, not something to work around.
+            if (!rawBody) throw new WebhookVerificationError('raw body unavailable — is rawBody enabled in main.ts?')
+            await this.webhooks.handleWebhook(rawBody, this.headerMap(req))
             return { received: true }
         } catch (err) {
             if (err instanceof WebhookVerificationError) {
