@@ -54,10 +54,9 @@ export class MidiPlayer {
 
     /** Begin a playback session. Notes are scheduled individually via `schedule`. */
     start() {
-        this.stop()
-        AudioSession.claim('playback')
-        const ctx = this.ensureCtx()
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        this.cancelStops(this.scheduledStops)
+        this.scheduledStops = []
+        const ctx = this.wake()
         this.startOffset = ctx.currentTime
     }
 
@@ -85,18 +84,15 @@ export class MidiPlayer {
         this.audioCtx?.suspend().catch(() => {})
     }
 
-    /** Resume a suspended playback context. */
+    /** Resume after `pause`: re-claims the playback session and wakes the context. */
     resume() {
-        AudioSession.claim('playback')
-        this.audioCtx?.resume().catch(() => {})
+        this.wake()
     }
 
     /** Play a single note for the given duration. Stops any previous preview. */
     preview(midi: number, duration: number, instrument: Instrument) {
         this.stopPreview()
-        AudioSession.claim('playback')
-        const ctx = this.ensureCtx()
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+        const ctx = this.wake()
         const sf = this.soundfonts.get(instrument.id)?.sf
         if (!sf) return
         const stop = sf.start({ note: midi, time: ctx.currentTime, duration })
@@ -111,7 +107,6 @@ export class MidiPlayer {
         this.soundfonts.clear()
         this.audioCtx?.close().catch(() => {})
         this.audioCtx = null
-        AudioSession.release('playback')
     }
 
     // --- Internal ---
@@ -119,6 +114,16 @@ export class MidiPlayer {
     private ensureCtx(): AudioContext {
         if (!this.audioCtx) this.audioCtx = new AudioContext()
         return this.audioCtx
+    }
+
+    /** Make audio audible now: claim the playback session and wake the context. */
+    private wake(): AudioContext {
+        AudioSession.claim('playback')
+        const ctx = this.ensureCtx()
+        // Unconditional rather than on state === 'suspended': also covers a
+        // suspend() still in flight and iOS's 'interrupted' state.
+        ctx.resume().catch(() => {})
+        return ctx
     }
 
     private stopPreview() {

@@ -63,7 +63,7 @@ describe('MidiPlayer', () => {
         player.start()
         expect(FakeAudioContext.created).toHaveLength(1)
         const ctx = FakeAudioContext.created[0]
-        // state defaults to 'running', so resume is not forced — but starting again from suspended should resume.
+        // Starting again from a suspended context resumes it.
         ctx.state = 'suspended'
         player.start()
         expect(ctx.resume).toHaveBeenCalled()
