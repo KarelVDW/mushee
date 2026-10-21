@@ -79,7 +79,9 @@ async function bootstrap() {
 
     /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- Nest's FastifyAdapter exposes a structurally-distinct Fastify instance type, so plugin refs need casting. */
     await app.register(fastifyCookie as any)
-    await app.register(fastifyHelmet as any)
+    // CORP 'same-site', not helmet's 'same-origin' default: the web app (solkey.io / localhost:3200)
+    // loads take audio from this API (api.solkey.io / localhost:4200) — same site, different origin.
+    await app.register(fastifyHelmet as any, { crossOriginResourcePolicy: { policy: 'same-site' } })
     await app.register(fastifyRateLimit as any, rateLimitOptions)
     /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 

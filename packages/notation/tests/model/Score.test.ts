@@ -1134,6 +1134,29 @@ describe('Score', () => {
             expect(score.lastMeasure?.endBarline).toBe('end')
         })
 
+        it('inserting at the start takes over the displaced measure’s clef, key and meter', () => {
+            const score = makeScore(1)
+            if (!score.firstMeasure) throw new Error('expected firstMeasure')
+            score.setTimeSignature(score.firstMeasure, new TimeSignature(3, 4))
+            const original = score.firstMeasure
+            score.setClef(original.firstNote, 'bass')
+            score.setKeySignature(original.firstNote, 2, 'major')
+
+            const inserted = score.addMeasure(0)
+
+            expect(inserted.clef.type).toBe('bass')
+            expect(inserted.keySignature.fifths).toBe(2)
+            expect(inserted.keySignature.mode).toBe('major')
+            expect(inserted.timeSignature.equals(new TimeSignature(3, 4))).toBe(true)
+            // The new opening measure is the carry-forward boundary now; the displaced one just inherits.
+            expect(inserted.leadingClefExplicit).toBe(true)
+            expect(inserted.leadingKeyExplicit).toBe(true)
+            expect(original.leadingClefExplicit).toBe(false)
+            expect(original.leadingKeyExplicit).toBe(false)
+            expect(original.clef.type).toBe('bass')
+            expect(original.keySignature.fifths).toBe(2)
+        })
+
         it('accepts a pre-built measure instead of synthesizing one', () => {
             const score = makeScore(1)
             const prebuilt = new Measure(score, 'treble', new TimeSignature(3, 4))

@@ -224,14 +224,29 @@ export class Score {
     addMeasure(index = this.measures.length, measure?: Measure) {
         if (!measure) {
             const previous = this.measures[index - 1]
-            // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
-            const inheritedClefType = previous?.lastClef.type ?? 'treble'
-            const inheritedKey = previous?.lastKey
-            const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
-            measure = new Measure(this, inheritedClefType, inheritedTimeSignature, {
-                keyFifths: inheritedKey?.fifths ?? 0,
-                keyMode: inheritedKey?.mode,
-            })
+            const displaced = previous ? undefined : this.measures[index]
+            if (displaced) {
+                // Inserted at the very start (e.g. a take recorded from measure one): nothing
+                // carries in, so the new measure takes over the leading context of the measure
+                // it pushes aside — which then simply inherits it instead of restating it.
+                measure = new Measure(this, displaced.clef.type, displaced.timeSignature, {
+                    keyFifths: displaced.keySignature.fifths,
+                    keyMode: displaced.keySignature.mode,
+                    leadingClefExplicit: displaced.leadingClefExplicit,
+                    leadingKeyExplicit: displaced.leadingKeyExplicit,
+                })
+                if (displaced.leadingClefExplicit) displaced.makeLeadingClefInherited()
+                if (displaced.leadingKeyExplicit) displaced.makeLeadingKeyInherited()
+            } else {
+                // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
+                const inheritedClefType = previous?.lastClef.type ?? 'treble'
+                const inheritedKey = previous?.lastKey
+                const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
+                measure = new Measure(this, inheritedClefType, inheritedTimeSignature, {
+                    keyFifths: inheritedKey?.fifths ?? 0,
+                    keyMode: inheritedKey?.mode,
+                })
+            }
         }
         this.measures.splice(index, 0, measure)
         const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
