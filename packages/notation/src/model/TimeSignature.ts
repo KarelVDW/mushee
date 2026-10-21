@@ -96,14 +96,4 @@ export class TimeSignature {
         const fullUnits = Math.round((this.maxBeats - nextBoundary) / unitBeats)
         return [...partial, ...Array.from({ length: fullUnits }, () => this.beatUnit)]
     }
-
-    /** String digits of the numerator, e.g. [4] or [1, 2] for 12/8 */
-    get beatsDigits(): string[] {
-        return String(this.beatAmount).split('')
-    }
-
-    /** String digits of the denominator */
-    get beatTypeDigits(): string[] {
-        return String(this.beatType).split('')
-    }
 }

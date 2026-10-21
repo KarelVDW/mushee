@@ -1,5 +1,6 @@
-import { TUPLET_OFFSET } from '@mushee/notation/engraving/constants'
+import { TUPLET_NUMBER_SCALE, TUPLET_OFFSET } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
+import { DigitRun } from '@mushee/notation/model/layout/DigitRun'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
@@ -33,9 +34,10 @@ describe('TupletLayout', () => {
         expect(layout.x2).toBeGreaterThan(layout.x1)
         expect(layout.numberGlyphs).toHaveLength(1)
         expect(layout.numberGlyphs[0].glyphName).toBe('timeSig3')
-        // The single digit sits roughly centred between x1 and x2.
+        // The digit is centred between x1 and x2, at the tuplet-number scale.
         const mid = (layout.x1 + layout.x2) / 2
-        expect(layout.numberGlyphs[0].x).toBeLessThan(mid)
+        expect(layout.numberGlyphs[0].x).toBeCloseTo(mid - new DigitRun(3, TUPLET_NUMBER_SCALE).width / 2)
+        expect(layout.numberGlyphs[0].scale).toBe(TUPLET_NUMBER_SCALE)
     })
 
     it('a low (stem-up) triplet brackets above the staff with location 1', () => {

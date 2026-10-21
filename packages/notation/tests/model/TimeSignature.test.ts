@@ -17,12 +17,6 @@ describe('TimeSignature', () => {
         expect(new TimeSignature(2, 2).maxBeats).toBe(4)
     })
 
-    it('beatsDigits and beatTypeDigits split into individual digits', () => {
-        const ts = new TimeSignature(12, 8)
-        expect(ts.beatsDigits).toEqual(['1', '2'])
-        expect(ts.beatTypeDigits).toEqual(['8'])
-    })
-
     describe('equals (value-object identity)', () => {
         it('is true for the same digits', () => {
             expect(new TimeSignature(3, 4).equals(new TimeSignature(3, 4))).toBe(true)

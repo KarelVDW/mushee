@@ -4,7 +4,7 @@ export interface LayoutGlyph {
     glyphName: string
     x: number
     y: number
-    /** Glyph scale when it differs from the default engraving scale. */
+    /** Glyph scale; omitted means the default engraving scale (GLYPH_SCALE). */
     scale?: number
 }
 

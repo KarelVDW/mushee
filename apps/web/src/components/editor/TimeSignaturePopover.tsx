@@ -1,7 +1,8 @@
 'use client'
 
 import { Glyph, Staff } from '@mushee/notation/components'
-import { Bravura } from '@mushee/notation/engraving/Bravura'
+import { TimeSignature } from '@mushee/notation/model'
+import { useMemo } from 'react'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -23,7 +24,10 @@ const TIME_SIGNATURE_ROWS: Array<Array<[number, number]>> = [
     ],
 ]
 
-/** Stacked meter digits (e.g. 6 over 8) drawn in staff coordinates. */
+/** Room kept around the digits on every side of the glyph's window. */
+const GLYPH_MARGIN = 2
+
+/** Stacked meter digits (e.g. 6 over 8), drawn from the same layout the staff uses. */
 export function TimeSignatureGlyph({
     beatAmount,
     beatType,
@@ -35,24 +39,20 @@ export function TimeSignatureGlyph({
     size?: number
     color?: string
 }) {
-    const rows = [
-        { digits: String(beatAmount).split(''), y: Staff.yForStaffLine(1) },
-        { digits: String(beatType).split(''), y: Staff.yForStaffLine(3) },
-    ].map((row) => ({ ...row, width: row.digits.reduce((total, digit) => total + Bravura.width(`timeSig${digit}`), 0) }))
-    const width = Math.max(...rows.map((row) => row.width)) + 4
-    // Window over the staff band: the digits sit on lines 1 and 3, each spanning a space up and down.
-    const top = Staff.yForStaffLine(0) - 2
-    const height = Staff.yForStaffLine(4) + 2 - top
+    const timeSignature = useMemo(() => new TimeSignature(beatAmount, beatType), [beatAmount, beatType])
+    const { topDigits, bottomDigits } = timeSignature.layout
+    const { paddingLeft, content } = timeSignature.width
+    // Window over the digits' content box (the staff padding trimmed) and the staff band:
+    // the digits sit on lines 1 and 3, each spanning a space up and down.
+    const left = paddingLeft - GLYPH_MARGIN
+    const width = content + 2 * GLYPH_MARGIN
+    const top = Staff.TOP_Y - GLYPH_MARGIN
+    const height = Staff.HEIGHT + 2 * GLYPH_MARGIN
     return (
-        <svg width={(size * width) / height} height={size} viewBox={`0 ${top} ${width} ${height}`} aria-hidden>
-            {rows.map((row, rowIndex) => {
-                let x = (width - row.width) / 2
-                return row.digits.map((digit, i) => {
-                    const glyph = <Glyph key={`${rowIndex}-${i}`} name={`timeSig${digit}`} x={x} y={row.y} fill={color} />
-                    x += Bravura.width(`timeSig${digit}`)
-                    return glyph
-                })
-            })}
+        <svg width={(size * width) / height} height={size} viewBox={`${left} ${top} ${width} ${height}`} aria-hidden>
+            {[...topDigits, ...bottomDigits].map((digit, i) => (
+                <Glyph key={i} name={digit.glyphName} x={digit.x} y={digit.y} scale={digit.scale} fill={color} />
+            ))}
         </svg>
     )
 }
