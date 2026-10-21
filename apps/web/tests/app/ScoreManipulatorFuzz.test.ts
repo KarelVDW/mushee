@@ -1,4 +1,4 @@
-import { BEAT_EPSILON, type ClefType, type DurationType, Instrument, Note, Pitch } from '@mushee/notation/model'
+import { BEAT_EPSILON, type ClefType, type DurationType, Instrument, Interval, Note, Pitch } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
@@ -140,7 +140,7 @@ function randomEdit(manipulator: ScoreManipulator, rng: Rng): string {
         const chromatic = rng.int(-12, 12)
         // A diatonic step count that fits the chromatic interval keeps spellings sane (as the popover does).
         const diatonic = Math.round((chromatic * 7) / 12)
-        manipulator.transpose(chromatic, diatonic, rng.pick(['score', 'selection']))
+        manipulator.transpose(new Interval(chromatic, diatonic), rng.pick(['score', 'selection']))
         return `transpose ${chromatic}/${diatonic}`
     }
     if (roll < 0.985) return (manipulator.minimizeAccidentals(), 'minimize accidentals')

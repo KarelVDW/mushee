@@ -3,6 +3,7 @@ import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
 import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
+import type { Interval } from './Interval'
 import { MeasureSerializer } from './io/ScoreSerializer'
 import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
@@ -438,10 +439,10 @@ export class Score {
     }
 
     /**
-     * Transpose by a (chromatic, diatonic) interval — the user-facing transposition (see
-     * {@link Interval}). With no `notes` the whole score moves: every key signature is
-     * re-keyed (folded back into the drawable −7..7 range, taking the enharmonic key when
-     * the raw result overflows) and every note follows; with a selection only those notes
+     * Transpose by `interval` — the user-facing transposition. With no `notes` the whole
+     * score moves: every key signature is re-keyed (folded back into the drawable −7..7
+     * range, taking the enharmonic key when the raw result overflows) and every note
+     * follows; with a selection only those notes
      * move and the keys stay. Either way the rewritten notes are then respelled to draw the
      * fewest accidentals under the keys now in effect, so the result is always cleanly
      * spelled — and matches what a preview built the same way shows.
@@ -449,9 +450,11 @@ export class Score {
      * Rewrites go through `replace`, so note identities change; the returned notes are the
      * final replacements, index-aligned with the transposed notes in score order.
      */
-    transpose(chromatic: number, diatonic: number, notes?: Note[]): Note[] {
+    transpose(interval: Interval, notes?: Note[]): Note[] {
         const targets = notes ?? this.measures.flatMap((m) => m.notes)
-        if (chromatic === 0 && diatonic === 0) return targets
+        if (interval.isUnison) return targets
+        // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
+        const { chromatic, diatonic } = interval
         if (!notes) {
             for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
             // A score that starts in inherited C major now carries a transposed leading key that

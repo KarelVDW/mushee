@@ -9,7 +9,16 @@ import {
     type TempoClickEvent,
     type TimeSignatureClickEvent,
 } from '@mushee/notation/components'
-import { type Accidental, type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
+import {
+    type Accidental,
+    type ClefType,
+    type DurationType,
+    Instrument,
+    type Interval,
+    type Note,
+    type Pitch,
+    TimeSignature,
+} from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
@@ -144,8 +153,8 @@ export default function ScoreEditorPage() {
     const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
     const handleMinimizeAccidentals = useCallback(() => manipulator.minimizeAccidentals(), [manipulator])
     const handleTransposeApply = useCallback(
-        (chromatic: number, diatonic: number, scope: 'score' | 'selection') => {
-            manipulator.transpose(chromatic, diatonic, scope)
+        (interval: Interval, scope: 'score' | 'selection') => {
+            manipulator.transpose(interval, scope)
             setTransposeOpen(false)
         },
         [manipulator],

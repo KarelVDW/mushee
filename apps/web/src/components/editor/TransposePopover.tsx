@@ -54,7 +54,7 @@ interface TransposePopoverProps {
     score: Score
     /** The current selection in score order — scope choice and the selection preview hang off it. */
     selectedNotes: Note[]
-    onApply: (chromatic: number, diatonic: number, scope: TransposeScope) => void
+    onApply: (interval: Interval, scope: TransposeScope) => void
     onDismiss: () => void
     /**
      * Reports the range the popover is currently aimed at — on open, whenever the scope
@@ -72,7 +72,7 @@ interface TransposePopoverProps {
  * The transpose panel. Simple by default — a signed semitone count plus a live preview —
  * with an advanced mode offering the full vocabulary (by interval, by target key, by
  * semitones) behind one toggle. Whatever the input mode, the engine receives a single
- * (chromatic, diatonic) interval and always respells the result minimally, so the preview
+ * {@link Interval} and always respells the result minimally, so the preview
  * below is exactly what Apply produces.
  */
 export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onScopeChange, className, anchorRef }: TransposePopoverProps) {
@@ -139,7 +139,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
 
     const apply = useCallback(() => {
         if (interval.isUnison) return
-        onApply(interval.chromatic, interval.diatonic, effectiveScope)
+        onApply(interval, effectiveScope)
     }, [interval, effectiveScope, onApply])
 
     const handleKey = useCallback(
@@ -414,9 +414,9 @@ function buildPreview(score: Score, selectedNotes: Note[], interval: Interval, s
             .filter((note) => note.measure === source)
             .map((note) => measure.notes[source.notes.indexOf(note)])
             .filter((note): note is Note => note !== undefined)
-        if (targets.length) preview.transpose(interval.chromatic, interval.diatonic, targets)
+        if (targets.length) preview.transpose(interval, targets)
     } else {
-        preview.transpose(interval.chromatic, interval.diatonic)
+        preview.transpose(interval)
     }
     return preview
 }
