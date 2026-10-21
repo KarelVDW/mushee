@@ -3,6 +3,15 @@
 > The full system (tokens, type specimens, UI kit, brand voice) lives in [`design/README.md`](design/README.md).
 > This file is the short rulebook for day-to-day work in `apps/web`. Where the two ever disagree, `design/README.md` wins — and please fix the discrepancy.
 
+**Product North Star: built for the amateur.** Solkey's user is a dabbler — a by-ear player, a hobby songwriter, someone humming a tune — who wants music on paper fast and has never used notation software. Being approachable is our main edge over pro-grade competitors. Every UX call (what ships, button placement, title sizes, motion) answers to that person. The full principles and the _dabbler test_ are in [`design/README.md` → Who we design for](design/README.md#who-we-design-for--the-north-star). The short version:
+
+- **One obvious next step per screen**; secondary actions recede; empty states hand over the button.
+- **Plain words first** ("Record", "Make it higher"); a notation term gets a one-line plain hint where a newcomer first meets it.
+- **Few controls, more on request.** Beginner tools stay visible and advanced ones sit behind a labelled "More". Prefer a good default to a new button.
+- **Forgiving:** autosave, undo for everything, and nothing destructive without a confirmation or an undo.
+- **Big and touchable:** labels ≥ 11px, touch targets ≥ 40px (44 preferred), WCAG AA, and every icon-only control has a name and a tooltip.
+- **Motion explains, never decorates**; respect `prefers-reduced-motion`. Keyboard + screen reader work everywhere.
+
 **Creative North Star: "The Precision Maverick."** A quiet, white-on-white workspace punctuated by two neon accents. Structured yet rebellious; breathable yet punchy. The workspace stays calm — accents announce action.
 
 ---

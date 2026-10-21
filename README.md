@@ -23,7 +23,18 @@ see the eval README's provider-consolidation logs.)
 ## What Solkey does
 
 Solkey (this repo's product name; the code is still "Mushee") turns a
-performance into editable sheet music:
+performance into editable sheet music.
+
+**Who it's for.** Amateurs and dabblers — by-ear players, hobby songwriters,
+people humming a tune — who want their music on paper quickly and have never
+learned notation software. That focus on approachability is the product's main
+edge over pro-grade editors (MuseScore, Sibelius, Dorico): real notation, but no
+jargon and no wall of buttons. It governs every feature and UX decision, from
+what ships to button placement, type size and motion. See
+[`apps/web/design/README.md` → Who we design for](apps/web/design/README.md#who-we-design-for--the-north-star)
+for the principles and the "dabbler test".
+
+What it does:
 
 - **Live audio-to-notation** — sing, whistle or play into the microphone and
   notes appear on the staff as you go; the API streams audio over a WebSocket

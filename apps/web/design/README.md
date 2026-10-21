@@ -1,8 +1,31 @@
 # Solkey Design System
 
-> **A score editor for the rest of us.** Solkey is a music score editor — young, fast, and dynamic. The interface is a quiet white-on-white workspace punctuated by two accent colors. Type is calm and editorial. The voice is warm, plain, and human — Solkey talks to musicians like another musician, not like a SaaS product.
+> **A score editor for the rest of us.** Solkey is a music score editor for amateurs and dabblers — young, fast, and dynamic. The interface is a quiet white-on-white workspace punctuated by two accent colors. Type is calm and editorial. The voice is warm, plain, and human — Solkey talks to people who make music like a friend who plays, not like a SaaS product or a theory textbook.
 
 This system encodes the visual + content vocabulary used to design and build for Solkey. Use it for production code, throwaway prototypes, marketing pages, decks — anywhere Solkey needs to feel like itself.
+
+---
+
+## Who we design for — the north star
+
+**Solkey is for the amateur, not the professional.** Our person hums in the shower, plays guitar by ear, writes songs on the side, or noodles at the piano — and wants that music on paper _quickly_, without learning notation software first. They may barely read sheet music. They have never opened a palette, an inspector or a ribbon, and they shouldn't have to.
+
+That is the main way we differ from the competition. MuseScore, Sibelius, Dorico and friends are built for engravers and conservatory students, and you can tell: dense toolbars, nested menus, jargon everywhere. Solkey wins by being **approachable first** — real notation underneath, but no technical mumbo-jumbo and no wall of buttons on the way to it.
+
+Every decision answers to this person: what we build, what we leave out, where a button goes, how big a title is, how something moves. Accessibility here means both things — _easy to get_ for a newcomer, and _usable by everyone_ (keyboard, screen readers, low vision, reduced motion).
+
+**The principles:**
+
+1. **One obvious next step.** Each screen has one primary action, placed where the eye lands first. Everything else recedes. Empty states say what to do and put the button to do it right there.
+2. **Plain words first.** Name actions by what they do for the user ("Record", "Hear it back", "Make it higher", "Change key"), not by engraving terms. When a notation word is the right one (key, time signature, tempo, tie), pair it with a short plain hint the first time a newcomer meets it ("4/4 — four beats in a bar"). Never leave an unexplained term or abbreviation in a newcomer's path.
+3. **Few controls, more on request.** Show the handful of tools a beginner reaches for; put the rest behind a clearly labelled "More", rather than adding rows or tiny icons. Before you add a button, ask whether a better default would make it unnecessary.
+4. **Forgiving by default.** Autosave, undo for everything, and nothing destructive without a confirmation or an undo. Transcription mistakes are expected, so fixing a note has to be one tap or one key.
+5. **Big, legible, touchable.** Headings readable at a glance, body text at a comfortable reading size, labels never smaller than 11px, touch targets at least 40px (44px preferred), and WCAG AA contrast at minimum. Icon-only controls always have an accessible name and a visible tooltip or label.
+6. **Motion that explains.** Animation confirms an action or shows where something went. It never decorates or slows you down, and everything respects `prefers-reduced-motion`.
+7. **Works for every body.** Full keyboard operation, a visible focus ring, screen-reader names and live announcements for state changes, and color is never the only signal.
+8. **Defaults that just work.** A new score is ready to record with zero setup. Instrument, key, meter and tempo start sensible and can be changed later. No settings screen stands between a new user and their first melody.
+
+**The dabbler test** — run it on every screen and every change: _could someone who has never used notation software do this on the first try, without reading anything?_ If not, simplify it. If it still needs explaining, explain it in the UI, in one plain line.
 
 ---
 

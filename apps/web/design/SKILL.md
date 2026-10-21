@@ -14,6 +14,8 @@ If the user invokes this skill without any other guidance, ask them what they wa
 
 **Critical Solkey rules to remember:**
 
+- **Design for the amateur.** The user is a dabbler with no notation-software experience; approachability is the product's main differentiator. One obvious next step per screen, plain words before notation jargon, few controls with more on request, forgiving (undo/autosave), big legible touch targets, motion that explains. Run the _dabbler test_ from `README.md` → "Who we design for" on everything.
+
 - Two accent colors only: cyan `#00DBE9` and magenta `#FF2079`. Use them sparingly; the rest of the system is white-on-white tonal layering.
 - **No 1px solid borders for sectioning.** Use surface tonal shifts to define regions.
 - Type stack: **Space Grotesk** for display + UI, **Manrope** for body copy at long-reading sizes, **Newsreader** italic for warm/literary moments **on marketing + auth surfaces only** (not in-app page titles), **Geist Mono** for code and numeric readouts.
