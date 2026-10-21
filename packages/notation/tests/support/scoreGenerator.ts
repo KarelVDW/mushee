@@ -180,7 +180,7 @@ export function generateScore(rng: Rng, options: GeneratorOptions): Score {
             const anchor = options.midBarTempos ? rng.pick(notes) : notes[0]
             measure.addTempo(measure.beatOffsetOf(anchor), rng.int(40, 240))
         }
-        score.addMeasure(undefined, measure)
+        score.appendMeasure(measure)
     }
     return score
 }

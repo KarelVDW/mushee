@@ -70,7 +70,7 @@ describe('KeySignatureLayout', () => {
         // Mark the key explicit so addMeasure's carry-forward doesn't demote it to the inherited C major.
         const measure = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 2, leadingKeyExplicit: true })
         measure.complete()
-        score.addMeasure(undefined, measure)
+        score.appendMeasure(measure)
         const viaDelegate = measure.keySignature.layout
         expect(viaDelegate.accidentals).toHaveLength(2)
         // Same instance on repeated access within one layout snapshot.

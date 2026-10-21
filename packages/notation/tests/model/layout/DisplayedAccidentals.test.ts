@@ -97,7 +97,7 @@ describe('accidental display (full measure-aware)', () => {
         const measure = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 1, leadingKeyExplicit: true })
         measure.addNotes([fNat])
         measure.complete()
-        score.addMeasure(undefined, measure)
+        score.appendMeasure(measure)
         expect(fNat.layout.accidental?.glyphName).toBe('accidentalNatural')
     })
 

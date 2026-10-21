@@ -405,7 +405,7 @@ function buildPreview(score: Score, selectedNotes: Note[], interval: Interval, s
     if (!source) return preview
     const key = source.keySignature
     const measure = new Measure(preview, source.clef.type, source.timeSignature, { keyFifths: key.fifths, keyMode: key.mode })
-    preview.addMeasure(0, measure)
+    preview.appendMeasure(measure)
     if (source.notes.length) measure.addNotes(source.notes.map((note) => note.clone({})))
     if (interval.isUnison) return preview
     if (scope === 'selection') {

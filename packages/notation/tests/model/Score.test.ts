@@ -163,20 +163,11 @@ describe('Score', () => {
             expect(a.endBarline).toBe('double')
         })
 
-        it('preserves an explicit barline on a pre-built measure inserted mid-score', () => {
-            const score = makeScore(2)
-            const withDouble = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'double' })
-            withDouble.complete()
-            score.addMeasure(1, withDouble)
-            expect(withDouble.endBarline).toBe('double')
-            expect(score.lastMeasure?.endBarline).toBe('end')
-        })
-
         it('preserves an explicit barline on a pre-built measure appended at the end', () => {
             const score = makeScore(1)
             const withNone = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'none' })
             withNone.complete()
-            score.addMeasure(undefined, withNone)
+            score.appendMeasure(withNone)
             expect(withNone.endBarline).toBe('none')
         })
 
@@ -1157,10 +1148,10 @@ describe('Score', () => {
             expect(original.keySignature.fifths).toBe(2)
         })
 
-        it('accepts a pre-built measure instead of synthesizing one', () => {
+        it('appendMeasure takes a pre-built measure instead of synthesizing one', () => {
             const score = makeScore(1)
             const prebuilt = new Measure(score, 'treble', new TimeSignature(3, 4))
-            const result = score.addMeasure(score.measures.length, prebuilt)
+            const result = score.appendMeasure(prebuilt)
             // The supplied measure object is appended directly rather than a freshly inherited one.
             expect(result).toBe(prebuilt)
             expect(score.lastMeasure).toBe(prebuilt)

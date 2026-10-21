@@ -236,49 +236,62 @@ export class Score {
 
     // --- Structure mutations ---
 
-    addMeasure(index = this.measures.length, measure?: Measure) {
-        if (!measure) {
-            const previous = this.measures[index - 1]
-            const displaced = previous ? undefined : this.measures[index]
-            if (displaced) {
-                // Inserted at the very start (e.g. a take recorded from measure one): nothing
-                // carries in, so the new measure takes over the leading context of the measure
-                // it pushes aside — which then simply inherits it instead of restating it.
-                measure = new Measure(this, displaced.clef.type, displaced.timeSignature, {
-                    keyFifths: displaced.keySignature.fifths,
-                    keyMode: displaced.keySignature.mode,
-                    leadingClefExplicit: displaced.leadingClefExplicit,
-                    leadingKeyExplicit: displaced.leadingKeyExplicit,
-                })
-                if (displaced.leadingClefExplicit) displaced.makeLeadingClefInherited()
-                if (displaced.leadingKeyExplicit) displaced.makeLeadingKeyInherited()
-            } else {
-                // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
-                const inheritedClefType = previous?.lastClef.type ?? 'treble'
-                const inheritedKey = previous?.lastKey
-                const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
-                measure = new Measure(this, inheritedClefType, inheritedTimeSignature, {
-                    keyFifths: inheritedKey?.fifths ?? 0,
-                    keyMode: inheritedKey?.mode,
-                })
-            }
+    /** Insert a new, empty measure at `index` (default: the end) in the context carried into that position. */
+    addMeasure(index = this.measures.length): Measure {
+        const measure = this.insertMeasure(index, this.createMeasure(index))
+        this.touch()
+        return measure
+    }
+
+    /** Append a measure built elsewhere (the deserializer, the importers) as the new last measure. */
+    appendMeasure(measure: Measure): Measure {
+        this.insertMeasure(this.measures.length, measure)
+        this.touch()
+        return measure
+    }
+
+    /** A new, empty measure for position `index`, in the context carried into it. Not yet in the score. */
+    private createMeasure(index: number): Measure {
+        const previous = this.measures[index - 1]
+        const displaced = previous ? undefined : this.measures[index]
+        if (displaced) {
+            // Inserted at the very start (e.g. a take recorded from measure one): nothing
+            // carries in, so the new measure takes over the leading context of the measure
+            // it pushes aside — which then simply inherits it instead of restating it.
+            const measure = new Measure(this, displaced.clef.type, displaced.timeSignature, {
+                keyFifths: displaced.keySignature.fifths,
+                keyMode: displaced.keySignature.mode,
+                leadingClefExplicit: displaced.leadingClefExplicit,
+                leadingKeyExplicit: displaced.leadingKeyExplicit,
+            })
+            if (displaced.leadingClefExplicit) displaced.makeLeadingClefInherited()
+            if (displaced.leadingKeyExplicit) displaced.makeLeadingKeyInherited()
+            return measure
         }
+        // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
+        const inheritedKey = previous?.lastKey
+        return new Measure(this, previous?.lastClef.type ?? 'treble', previous?.timeSignature ?? new TimeSignature(4, 4), {
+            keyFifths: inheritedKey?.fifths ?? 0,
+            keyMode: inheritedKey?.mode,
+        })
+    }
+
+    /** Splice `measure` in at `index` and settle barlines and carried context around it. No touch — the calling mutator owns it. */
+    private insertMeasure(index: number, measure: Measure): Measure {
         this.measures.splice(index, 0, measure)
-        const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
-        const nextMeasure = this.measures[index + 1]
-        if (nextMeasure) {
-            // Mid-score insertion: default the new measure's barline, but never overwrite an
-            // explicit style it was built with (e.g. a double barline from a loaded score).
-            if (measure.endBarline === undefined) measure.setEndBarline('single')
+        const previous = this.measures[index - 1]
+        if (this.measures[index + 1]) {
+            // Mid-score insertion — only freshly created measures arrive here, so the barline is positional.
+            measure.setEndBarline('single')
         } else {
             // Appended at the end: the final barline moves to the new measure. Only the
-            // positional 'end' on the previous measure is demoted — an explicit double/none stays.
-            if (previousMeasure?.endBarline === 'end') previousMeasure.setEndBarline('single')
+            // positional 'end' on the previous measure is demoted — an explicit double/none stays,
+            // and so does an explicit style an appended measure was built with (from a loaded score).
+            if (previous?.endBarline === 'end') previous.setEndBarline('single')
             if (measure.endBarline === undefined) measure.setEndBarline('end')
         }
         this.propagateContext()
         this._structureChanged = true
-        this.touch()
         return measure
     }
 

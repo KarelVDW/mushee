@@ -375,7 +375,7 @@ export class MidiImporter {
                     lastBpm = tempo.bpm
                 }
                 measureStarts.push(start)
-                score.addMeasure(undefined, measure)
+                score.appendMeasure(measure)
             }
         }
         return measureStarts
