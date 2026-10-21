@@ -114,20 +114,10 @@ export interface PitchProvider {
     /**
      * Transcribe a chunk of mono PCM at `sampleRate` into raw note events.
      *
-     * If `onProgress` is provided it MUST be called at least once with the final
-     * cumulative result, and SHOULD be called more times during processing so
-     * downstream consumers can stream incremental updates. The returned promise
-     * resolves with the same final array passed to the last `onProgress` call.
-     *
      * If `session` is provided, the implementation may use it to cache per-frame
      * state across calls within the same recording. Callers must pass the same
      * `session` object on every call within one recording, and must NOT share a
      * `session` between concurrent recordings.
      */
-    transcribe(
-        samples: Float32Array,
-        options?: PitchTranscribeOptions,
-        onProgress?: (rawNotes: NoteEventTime[]) => void,
-        session?: PitchSession,
-    ): Promise<NoteEventTime[]>
+    transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]>
 }

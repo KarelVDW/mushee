@@ -136,7 +136,7 @@ async function main(): Promise<void> {
             loudnorm: provider.normalizeLoudness,
             highpassHz: profile.highpassHz,
         })
-        const extracted = await new AudioConverter(provider).convert(decoded.samples, { bpm }, undefined, {
+        const extracted = await new AudioConverter(provider).convert(decoded.samples, bpm, {
             minFreqHz: profile.minFreqHz,
             maxFreqHz: profile.maxFreqHz,
             confidenceThreshold: profile.confidenceThreshold,

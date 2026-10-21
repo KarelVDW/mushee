@@ -429,19 +429,9 @@ export class RecordingPipeline {
         // Recomputed from this pass's notes below; reset so a pass that finds nothing
         // uncommitted doesn't inherit a stale onset and keep the window wide forever.
         this.uncommittedFromSec = Infinity
-        let emitMs = 0
-        let emitCount = 0
-        await converter.convert(
-            windowSamples,
-            { bpm: this.bpm },
-            (extracted) => {
-                const t0 = Date.now()
-                this.emitFromExtracted(extracted, duration, windowStartSec, isFinal)
-                emitMs += Date.now() - t0
-                emitCount += 1
-            },
-            this.pitchOptions(profile),
-        )
+        const extracted = await converter.convert(windowSamples, this.bpm, this.pitchOptions(profile))
+        const tConvert = Date.now()
+        this.emitFromExtracted(extracted, duration, windowStartSec, isFinal)
         const tEnd = Date.now()
 
         // Everything ending before the stable margin is now frozen; the next window
@@ -456,8 +446,8 @@ export class RecordingPipeline {
 
         this.logger.debug(
             `Pass timings: decode-wait=${tDecode - tStart}ms, ` +
-                `convert=${tEnd - tDecode - emitMs}ms, ` +
-                `emit=${emitMs}ms (${emitCount}x), ` +
+                `convert=${tConvert - tDecode}ms, ` +
+                `emit=${tEnd - tConvert}ms, ` +
                 `total=${tEnd - tStart}ms ` +
                 `(audioDur=${duration.toFixed(2)}s, ` +
                 `window=${windowStartSec.toFixed(2)}-${duration.toFixed(2)}s, ` +

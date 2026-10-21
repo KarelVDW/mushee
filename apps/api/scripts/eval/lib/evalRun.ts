@@ -330,7 +330,7 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
             const extracted = await new AudioConverter(provider, {
                 enableOnsetSplit: o.onsetSplit,
                 profile,
-            }).convert(decoded.samples, { bpm }, undefined, {
+            }).convert(decoded.samples, bpm, {
                 minFreqHz: profile.minFreqHz,
                 maxFreqHz: profile.maxFreqHz,
                 confidenceThreshold: profile.confidenceThreshold,
@@ -355,7 +355,7 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
         })
         const extracted = await new AudioConverter(provider, {
             enableOnsetSplit: o.onsetSplit,
-        }).convert(decoded.samples, { bpm }, undefined, o.pitchOptions)
+        }).convert(decoded.samples, bpm, o.pitchOptions)
         return extracted.deduced.map((n) => ({
             onsetSec: n.startTimeSeconds,
             durSec: n.durationSeconds,

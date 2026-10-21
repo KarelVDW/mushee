@@ -135,23 +135,12 @@ export class CrepeProvider implements PitchProvider {
         return new CrepeSession()
     }
 
-    async transcribe(
-        samples: Float32Array,
-        options?: PitchTranscribeOptions,
-        onProgress?: (rawNotes: NoteEventTime[]) => void,
-        session?: PitchSession,
-    ): Promise<NoteEventTime[]> {
+    async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {
         const track = await this.track(samples, session)
-        if (!track) {
-            onProgress?.([])
-            return []
-        }
-        const notes =
-            options?.segmentMode === 'voice'
-                ? this.decodeVoice(track, samples, options)
-                : segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(options))
-        onProgress?.(notes)
-        return notes
+        if (!track) return []
+        return options?.segmentMode === 'voice'
+            ? this.decodeVoice(track, samples, options)
+            : segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(options))
     }
 
     /**

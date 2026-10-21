@@ -58,12 +58,7 @@ export class CrepePitchdownProvider implements PitchProvider {
         return this.inner.createSession()
     }
 
-    async transcribe(
-        samples: Float32Array,
-        options?: PitchTranscribeOptions,
-        onProgress?: (rawNotes: NoteEventTime[]) => void,
-        session?: PitchSession,
-    ): Promise<NoteEventTime[]> {
+    async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {
         const k = this.factor
         const scaled: PitchTranscribeOptions = {
             ...options,
@@ -87,13 +82,7 @@ export class CrepePitchdownProvider implements PitchProvider {
             // let it run on slowed audio it was never measured on.
             segmentMode: options?.segmentMode === 'voice' ? 'semitone' : options?.segmentMode,
         }
-        const raw = await this.inner.transcribe(
-            samples,
-            scaled,
-            onProgress ? (notes) => onProgress(this.unscale(notes)) : undefined,
-            session,
-        )
-        return this.unscale(raw)
+        return this.unscale(await this.inner.transcribe(samples, scaled, session))
     }
 
     /**
