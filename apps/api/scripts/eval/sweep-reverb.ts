@@ -74,9 +74,9 @@ import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/p
 import { OnsetDetector, type OnsetDetectorOptions } from '../../src/recordings/pipeline/onset-detector'
 import type { PipelineProfile } from '../../src/recordings/pipeline/profiles/pipeline-profile'
 import { estimateReverberance } from '../../src/recordings/pipeline/profiles/profile-resolver'
-import { VOICE_OPTS } from '../../src/recordings/pipeline/providers/crepe-provider'
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { SHIPPING_VOICE_OPTS } from '../../src/recordings/pipeline/voice-note-decoder'
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { dereverbFrontEnd, type DereverbOptions } from './lib/dereverb'
 import { type EstNote, scoreNotes } from './lib/metrics'
@@ -1044,7 +1044,7 @@ function adaptiveFill(scale: number, lockSec?: number) {
 function voiceDecode(over: VoiceDecodeOptions = {}) {
     return (c: CachedVariant): ReturnType<typeof segmentNotes> =>
         new VoiceNoteDecoder({
-            ...VOICE_OPTS,
+            ...SHIPPING_VOICE_OPTS,
             confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
             minFreqHz: c.profile.minFreqHz,
             maxFreqHz: c.profile.maxFreqHz,

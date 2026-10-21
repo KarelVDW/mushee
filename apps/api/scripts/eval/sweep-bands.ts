@@ -35,8 +35,8 @@
 import { resolve } from 'path'
 
 import { NoteExtractor, type NoteExtractorOptions } from '../../src/recordings/pipeline/note-extractor'
-import { VOICE_OPTS } from '../../src/recordings/pipeline/providers/crepe-provider'
 import { segmentNotes } from '../../src/recordings/pipeline/providers/pitch-decoder'
+import { SHIPPING_VOICE_OPTS } from '../../src/recordings/pipeline/voice-note-decoder'
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { frameCount } from './lib/decodeCached'
 import { type EstNote, scoreNotesBest } from './lib/metrics'
@@ -206,7 +206,7 @@ function run(c: CachedClip, cfg: Config): EstNote[] {
     let raw
     if (c.profile.isVoice) {
         raw = new VoiceNoteDecoder({
-            ...VOICE_OPTS,
+            ...SHIPPING_VOICE_OPTS,
             ...gate,
             minNoteSec: cfg.voiceMinNoteSec ?? frameCount(c, c.profile.minFramesPerNote) * track.hopSec,
             ...(cfg.quorum ? { voicedQuorum: cfg.quorum } : {}),
