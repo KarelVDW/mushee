@@ -372,7 +372,7 @@ export class RecordingPipeline {
         // From here `appendChunk` forwards new chunks straight in — each byte is
         // decoded exactly once instead of re-decoding the whole stream every pass.
         if (!this.streamDecoder) {
-            this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
+            this.streamDecoder = this.spawnDecoder()
         }
 
         // On the final pass, flush ffmpeg (incl. any filter look-ahead tail) and take
@@ -409,6 +409,32 @@ export class RecordingPipeline {
      * Waits for at least `DETECT_MIN_SEC` of audio unless this is the final pass.
      */
     private async resolveProfile(buffer: Buffer, isFinal: boolean): Promise<boolean> {
+        const detected = await this.detectProfile(buffer, isFinal ? 0 : DETECT_MIN_SEC, 'Detection decode not ready')
+        if (!detected) return false
+        const { profile, durationSec } = detected
+        // No reliable pitch yet (breath, a late start, speech): keep listening
+        // rather than lock the blind fallback for the whole take. Nothing is lost by
+        // waiting — there are no notes to emit before the first pitched audio.
+        if (!isFinal && isFallbackProfile(profile) && durationSec < DETECT_MAX_WAIT_SEC) {
+            this.logger.debug(`No pitched audio in the first ${durationSec.toFixed(1)} s — profile lock deferred`)
+            return false
+        }
+        this.lockProfile(profile)
+        return true
+    }
+
+    /**
+     * The detection half shared by the lock and the final re-route: decode the
+     * encoded take so far at the resolver's input contract and resolve a profile
+     * from it. Null when ffmpeg cannot decode it yet (logged under `failure`) or
+     * when it holds less than `minSec` of audio — checked BEFORE resolving, which
+     * runs the pitch scan, the reverberance estimate and the source classifier.
+     */
+    private async detectProfile(
+        buffer: Buffer,
+        minSec: number,
+        failure: string,
+    ): Promise<{ profile: PipelineProfile; durationSec: number } | null> {
         let detect
         try {
             detect = await this.decoder.decode(buffer, DETECT_SAMPLE_RATE, {
@@ -417,34 +443,24 @@ export class RecordingPipeline {
                 inputFormat: this.inputFormat,
             })
         } catch (err) {
-            this.logger.debug(`Detection decode not ready (${describeError(err)})`)
-            return false
+            this.logger.debug(`${failure} (${describeError(err)})`)
+            return null
         }
-        if (!isFinal && detect.duration < DETECT_MIN_SEC) return false
-
+        if (detect.duration < minSec) return null
         const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
             instrumentId: this.instrumentHint,
             sourceKind: this.sourceKind,
         })
-        // No reliable pitch yet (breath, a late start, speech): keep listening
-        // rather than lock the blind fallback for the whole take. Nothing is lost by
-        // waiting — there are no notes to emit before the first pitched audio.
-        if (!isFinal && isFallbackProfile(profile) && detect.duration < DETECT_MAX_WAIT_SEC) {
-            this.logger.debug(`No pitched audio in the first ${detect.duration.toFixed(1)} s — profile lock deferred`)
-            return false
-        }
-        this.lockProfile(profile)
-        return true
+        return { profile, durationSec: detect.duration }
     }
 
-    /** Install `profile` (and a converter for its provider) as the session's routing. */
-    /** Commit to `profile`: build its converter (returned, so callers need not re-read the nullable field). */
-    private lockProfile(profile: PipelineProfile): AudioConverter {
+    /**
+     * Commit to `profile` as the session's routing: build the converter for its
+     * provider, rebuild the builder for its spelling, and tell the client.
+     */
+    private lockProfile(profile: PipelineProfile): void {
         this.profile = profile
-        const converter = new AudioConverter(this.registry.get(profile.providerName), {
-            profile,
-        })
-        this.converter = converter
+        this.converter = new AudioConverter(this.registry.get(profile.providerName), { profile })
         this.logger.log(
             `Adaptive profile locked: ${profile.id} provider=${profile.providerName} ` +
                 `window=${profile.minFreqHz.toFixed(0)}-${profile.maxFreqHz.toFixed(0)}Hz ` +
@@ -464,13 +480,19 @@ export class RecordingPipeline {
             source: profile.sourceBelief ?? (profile.isVoice ? 'voice' : 'instrument'),
             decidedBy: profile.sourceDecidedBy ?? 'prior',
         })
-        return converter
     }
 
-    private spawnDecoder(profile: PipelineProfile, sampleRate: number, loudnorm: boolean): StreamingDecoder {
-        const decoder = new StreamingDecoder(sampleRate, {
+    /**
+     * A long-lived decoder for the locked profile and its provider, seeded with
+     * every chunk buffered so far (it must see the container header first).
+     */
+    private spawnDecoder(): StreamingDecoder {
+        const { profile, converter } = this
+        if (!profile || !converter) throw new Error('spawnDecoder called before a profile was locked')
+        const provider = converter.provider
+        const decoder = new StreamingDecoder(provider.sampleRate, {
             highpassHz: profile.highpassHz,
-            loudnorm,
+            loudnorm: provider.normalizeLoudness,
             denoise: profile.denoise,
             inputFormat: this.inputFormat,
         })
@@ -493,21 +515,9 @@ export class RecordingPipeline {
      */
     private async rerouteFinal(): Promise<void> {
         if (!this.streamDecoder) return
-        let detect
-        try {
-            detect = await this.decoder.decode(Buffer.concat(this.chunks), DETECT_SAMPLE_RATE, {
-                loudnorm: false,
-                highpassHz: DETECT_HIGHPASS_HZ,
-                inputFormat: this.inputFormat,
-            })
-        } catch (err) {
-            this.logger.debug(`Final re-resolve decode failed (${describeError(err)})`)
-            return
-        }
-        const profile = this.resolver.resolve(detect.samples, DETECT_SAMPLE_RATE, {
-            instrumentId: this.instrumentHint,
-            sourceKind: this.sourceKind,
-        })
+        const detected = await this.detectProfile(Buffer.concat(this.chunks), 0, 'Final re-resolve decode failed')
+        if (!detected) return
+        const { profile } = detected
         if (isFallbackProfile(profile)) return // still nothing pitched — keep what we have
 
         this.logger.log(
@@ -516,8 +526,8 @@ export class RecordingPipeline {
         )
         // Let the old ffmpeg drain and exit; its PCM is not needed any more.
         void this.streamDecoder.finalize().catch(() => undefined)
-        const provider = this.lockProfile(profile).provider
-        this.streamDecoder = this.spawnDecoder(profile, provider.sampleRate, provider.normalizeLoudness)
+        this.lockProfile(profile)
+        this.streamDecoder = this.spawnDecoder()
         this.emittedNotes.length = 0
         this.emittedKeys.clear()
         this.reemitAll = true
