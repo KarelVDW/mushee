@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { Alert, Icon, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
+import type { BillingState } from '@/lib/api'
 import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
 import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
@@ -39,6 +40,8 @@ export function BillingSection() {
     const isBeta = billing.tierId === 'beta'
     const plan = planById(billing.tierId)
     const hasSubscription = Boolean(billing.status)
+    // Plans and packs are on offer only where Polar is wired up and the beta isn't running.
+    const canPurchase = !isBeta && billing.billingConfigured && !billing.betaMode
     const periodEnd = billing.currentPeriodEnd
         ? new Date(billing.currentPeriodEnd).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
         : null
@@ -67,18 +70,12 @@ export function BillingSection() {
                     <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">{billing.tierName}</span>
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{priceLine}</span>
                 </div>
-                {!isBeta && billing.billingConfigured && !billing.betaMode && (
-                    <PrimaryButton onClick={() => setChangePlanOpen(true)}>Change plan</PrimaryButton>
-                )}
+                {canPurchase && <PrimaryButton onClick={() => setChangePlanOpen(true)}>Change plan</PrimaryButton>}
             </div>
 
-            <CreditsMeter
-                limit={billing.credits.limitSeconds}
-                used={billing.credits.usedSeconds}
-                packSeconds={billing.credits.packSeconds}
-            />
+            <CreditsMeter credits={billing.credits} />
 
-            {!isBeta && billing.billingConfigured && !billing.betaMode && (
+            {canPurchase && (
                 <div>
                     <TertiaryButton onClick={() => setPacksOpen(true)}>Top up with a one-time pack</TertiaryButton>
                 </div>
@@ -128,35 +125,35 @@ export function BillingSection() {
 
 /** Today's recording budget as a small meter (resets at midnight UTC), plus
  *  any purchased pack minutes waiting behind it. */
-function CreditsMeter({ limit, used, packSeconds = 0 }: { limit: number | null; used: number; packSeconds?: number }) {
-    const fmt = formatRecordingTime
+function CreditsMeter({ credits }: { credits: BillingState['credits'] }) {
+    const { limitSeconds, usedSeconds, packSeconds } = credits
     const packLine = packSeconds > 0 && (
         <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-none text-on-surface-variant">
             <Icon name="gift" size={14} />
             <span>
-                <span className="font-mono">{fmt(packSeconds)}</span> banked from packs — used once today&apos;s minutes run out, never
-                expires.
+                <span className="font-mono">{formatRecordingTime(packSeconds)}</span> banked from packs — used once today&apos;s minutes run
+                out, never expires.
             </span>
         </div>
     )
-    if (limit === null) {
+    if (limitSeconds === null) {
         return (
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 font-body font-normal text-[13px] text-on-surface-variant">
                     <Icon name="infinity" size={16} />
-                    Unlimited recording — {fmt(used)} used today.
+                    Unlimited recording — {formatRecordingTime(usedSeconds)} used today.
                 </div>
                 {packLine}
             </div>
         )
     }
-    const pct = Math.min(100, (used / limit) * 100)
+    const pct = Math.min(100, (usedSeconds / limitSeconds) * 100)
     return (
         <div className="flex flex-col gap-1.5">
             <div className="flex justify-between font-body font-normal text-[12px] leading-none text-on-surface-variant">
                 <span>Recording today</span>
                 <span className="font-mono">
-                    {fmt(used)} / {fmt(limit)}
+                    {formatRecordingTime(usedSeconds)} / {formatRecordingTime(limitSeconds)}
                 </span>
             </div>
             <div className="h-1.5 rounded-full bg-surface-container overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)}>
