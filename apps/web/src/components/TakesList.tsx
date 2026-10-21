@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { Icon, showToast, TertiaryButton } from '@/components/ui'
+import { IconButton, showToast, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
 import { useDeleteRecording } from '@/lib/queries'
@@ -90,20 +90,16 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                 const subtitle = subtitleFor?.(take)
                 return (
                     <li key={take.id} className="flex items-center gap-2 rounded-md bg-surface-container-low px-3 py-2">
-                        <button
-                            type="button"
+                        <IconButton
+                            icon={playing === take.id ? 'pause' : 'play'}
+                            size={32}
                             onClick={() => togglePlay(take)}
                             disabled={!take.hasAudio}
-                            aria-label={playing === take.id ? 'Pause take' : 'Play take'}
+                            ariaLabel={playing === take.id ? 'Pause take' : 'Play take'}
                             title={take.hasAudio ? undefined : 'No audio was kept for this take'}
-                            className={[
-                                'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
-                                'bg-surface-container-lowest text-on-surface disabled:opacity-40 disabled:cursor-not-allowed',
-                                'hover:bg-surface-container-high transition-colors duration-150 ease-solkey',
-                                'focus-ring',
-                            ].join(' ')}>
-                            <Icon name={playing === take.id ? 'pause' : 'play'} size={14} />
-                        </button>
+                            hoverTone="neutral"
+                            idleClassName="bg-surface-container-lowest"
+                        />
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
                                 {formatTakeDate(take.startedAt)}
@@ -121,18 +117,14 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                                 <TertiaryButton onClick={() => setConfirming(null)}>Keep</TertiaryButton>
                             </span>
                         ) : (
-                            <button
-                                type="button"
+                            <IconButton
+                                icon="trash-2"
+                                size={32}
                                 onClick={() => setConfirming(take.id)}
-                                aria-label="Delete take"
-                                className={[
-                                    'shrink-0 w-8 h-8 rounded-full border-0 inline-flex items-center justify-center cursor-pointer',
-                                    'bg-transparent text-on-surface-variant hover:text-error hover:bg-surface-container-high',
-                                    'transition-colors duration-150 ease-solkey',
-                                    'focus-ring',
-                                ].join(' ')}>
-                                <Icon name="trash-2" size={14} />
-                            </button>
+                                ariaLabel="Delete take"
+                                hoverTone="magenta"
+                                idleClassName="bg-transparent text-on-surface-variant"
+                            />
                         )}
                     </li>
                 )
