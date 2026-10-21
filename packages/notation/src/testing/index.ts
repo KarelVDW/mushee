@@ -19,7 +19,7 @@ export function makeScore(count = 1): Score {
     return score
 }
 
-/** Convenience: a quarter-note rest. */
+/** Convenience: a rest of the given value (quarter by default). */
 export function rest(type: DurationType = 'q'): Note {
     return new Note({ duration: new Duration({ type }) })
 }

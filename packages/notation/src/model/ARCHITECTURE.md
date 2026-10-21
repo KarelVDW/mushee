@@ -82,7 +82,8 @@ read of score.layout  → rebuild ScoreLayout if score.version moved, reusing un
 
 Carry-forward of inherited leading clefs/keys is **semantic** (the serializer depends on it),
 so it is propagated eagerly by `Score.propagateContext()` from the score-level mutators that can
-change measure context (`addMeasure`, `setClef`, `setKeySignature`, `setInstrument`). Calling
+change measure context (`addMeasure`, `removeMeasures`, `setTimeSignature`, `setClef`,
+`setKeySignature`, `setInstrument`, `transpose`, `minimizeAccidentals`). Calling
 `measure.setClef(...)` directly changes only that measure — propagation is a Score
 responsibility, never a side effect of layout.
 

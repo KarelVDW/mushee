@@ -435,7 +435,7 @@ export class Measure {
         return this._tempoList.last
     }
 
-    // --- Navigation (thin delegates; the traversal lives on Score) ---
+    // --- Note stepping (Score.nextNote/previousNote build on these) ---
 
     getNextNote(note?: Note): Note | null {
         if (!note) return this.firstNote
@@ -449,6 +449,8 @@ export class Measure {
         if (idx <= 0) return null
         return this._notes[idx - 1]
     }
+
+    // --- Navigation (thin delegates; the traversal lives on Score) ---
 
     getNext(): Measure | null {
         return this.score.getNextMeasure(this)

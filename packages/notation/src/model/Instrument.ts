@@ -1,3 +1,6 @@
+/** User-facing instrument family, used to group every instrument picker in the app. */
+export type InstrumentCategory = 'Keyboard' | 'Strings' | 'Woodwinds' | 'Brass' | 'Voice' | 'Folk & World' | 'Percussion'
+
 /**
  * Score-level instrument. Carries the General MIDI program number, the smplr
  * preset name (sample bank), the user-facing family it belongs to, and the
@@ -11,15 +14,11 @@
  * resolve to the closest GM patch (e.g. erhu → fiddle, dizi → flute, baritone
  * horn → tuba, tin whistle → whistle).
  */
-
-/** User-facing instrument family, used to group every instrument picker in the app. */
-export type InstrumentCategory = 'Keyboard' | 'Strings' | 'Woodwinds' | 'Brass' | 'Voice' | 'Folk & World' | 'Percussion'
-
 export class Instrument {
     private static _all: Instrument[] = []
     private static _byId: Map<string, Instrument> = new Map()
 
-    /** Picker display order. Percussion is registry-only (the metronome click) and never offered. */
+    /** Picker display order. Percussion is registry-only (the metronome click); `selectable()` leaves it out. */
     private static readonly _categoryOrder: InstrumentCategory[] = ['Keyboard', 'Brass', 'Woodwinds', 'Voice', 'Strings', 'Folk & World']
 
     private constructor(
@@ -41,7 +40,7 @@ export class Instrument {
 
     /** Instruments offered to the user when picking a score's lead voice — excludes percussion-only patches like Woodblock. */
     static selectable(): ReadonlyArray<Instrument> {
-        return Instrument._all.filter((i) => i !== Instrument.Woodblock)
+        return Instrument._all.filter((i) => i.category !== 'Percussion')
     }
 
     /** Selectable instruments grouped for pickers: fixed family order, alphabetical within each group. */
@@ -75,7 +74,7 @@ export class Instrument {
         return Instrument._all.find((i) => i.displayName.toLowerCase() === lower)
     }
 
-    /** Default; also used as the fallback for unknown ids. */
+    /** Default instrument; the fallback for unknown GM programs, and names. */
     static readonly Piano = new Instrument('piano', 'Piano', 'Keyboard', 0, 'acoustic_grand_piano')
 
     // Concert-pitch instruments — written = sounding, no transposition.
