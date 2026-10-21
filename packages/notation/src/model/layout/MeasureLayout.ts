@@ -1,13 +1,6 @@
 import { sumBy } from 'lodash-es'
 
-import {
-    BARLINE_GAP,
-    BARLINE_THICK_WIDTH,
-    BARLINE_THIN_WIDTH,
-    NUM_STAFF_LINES,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from '../../engraving/constants'
+import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '../../engraving/constants'
 import { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
@@ -23,6 +16,7 @@ import type { PhysicalWidth } from '../width/PhysicalWidth'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
 import { NoteLayout } from './NoteLayout'
+import { Staff } from './Staff'
 import { TupletLayout } from './TupletLayout'
 import type { LayoutBarline } from './types'
 
@@ -161,11 +155,10 @@ export class MeasureLayout {
         if (barlineType === 'none') {
             this.barline = null
         } else {
-            const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
             this.barline = {
                 x: context.width - MeasureLayout.barlineWidth(measure.endBarline),
-                y: headroom,
-                height: (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE,
+                y: Staff.TOP_Y,
+                height: Staff.HEIGHT,
                 type: barlineType,
             }
         }

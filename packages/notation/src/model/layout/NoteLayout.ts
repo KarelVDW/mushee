@@ -1,9 +1,9 @@
-import { getYForNote } from '../../components/noteUtils'
 import { Bravura } from '../../engraving/Bravura'
 import { DOTTED_FLAG_SCALE, STAVE_LINE_DISTANCE } from '../../engraving/constants'
 import type { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { NoteWidth } from '../width/NoteWidth'
+import { Staff } from './Staff'
 import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 
 /**
@@ -27,7 +27,7 @@ export class NoteLayout {
     constructor(note: Note, context: { accidentalGlyph: string | undefined; width: NoteWidth }) {
         const width = context.width
         this.width = width
-        this.noteY = getYForNote(note.line)
+        this.noteY = Staff.yForNoteLine(note.line)
         this.glyphName = !note.pitch ? note.duration.restGlyph : note.duration.noteheadGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
@@ -43,8 +43,8 @@ export class NoteLayout {
         const ledgerLinePositions: number[] = []
         if (note.pitch) {
             const noteLine = note.line
-            for (let l = STAFF_BOTTOM_LINE - 1; l >= noteLine; l--) ledgerLinePositions.push(getYForNote(l))
-            for (let l = STAFF_TOP_LINE + 1; l <= noteLine; l++) ledgerLinePositions.push(getYForNote(l))
+            for (let l = STAFF_BOTTOM_LINE - 1; l >= noteLine; l--) ledgerLinePositions.push(Staff.yForNoteLine(l))
+            for (let l = STAFF_TOP_LINE + 1; l <= noteLine; l++) ledgerLinePositions.push(Staff.yForNoteLine(l))
         }
         this.ledgerLines = ledgerLinePositions.map((ly) => ({
             x1: cursorX,

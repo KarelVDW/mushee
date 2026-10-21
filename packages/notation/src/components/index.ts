@@ -1,7 +1,7 @@
+export { Staff } from '../model/layout/Staff'
 export { BeatUnit, beatUnitWidth } from './BeatUnit'
 export { INTERACTION_BLUE, NOTATION_INK } from './constants'
 export { Glyph } from './Glyph'
 export type { ScoreHighlight } from './HighlightLayer'
-export { getLineForY, getYForLine, getYForNote } from './noteUtils'
 export type { ClefClickEvent, KeySignatureClickEvent, SelectionMenuEvent, TempoClickEvent, TimeSignatureClickEvent } from './Score'
 export { Score } from './Score'

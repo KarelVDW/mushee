@@ -1,4 +1,4 @@
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
+import { Staff } from '../model/layout/Staff'
 import type { Note } from '../model/Note'
 import type { Score } from '../model/Score'
 import { HIGHLIGHT_MAGENTA } from './constants'
@@ -17,8 +17,8 @@ export interface ScoreHighlight {
 }
 
 // A little taller than the selection bands, so the wash reads as background behind them.
-const BAND_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 12
-const BAND_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 24
+const BAND_Y = Staff.TOP_Y - 12
+const BAND_HEIGHT = Staff.HEIGHT + 24
 
 const PULSE_MIN = 0.07
 const PULSE_MAX = 0.16

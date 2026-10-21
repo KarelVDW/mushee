@@ -1,11 +1,11 @@
 import { memo, type ReactNode } from 'react'
 
 import { Bravura } from '../engraving/Bravura'
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Measure as MeasureModel, Note } from '../model'
 import type { Clef as ClefModel } from '../model/Clef'
 import type { KeySignature as KeySignatureModel } from '../model/KeySignature'
+import { Staff } from '../model/layout/Staff'
 import type { TimeSignature as TimeSignatureModel } from '../model/TimeSignature'
 import { Barline } from './Barline'
 import { BeamGroup } from './BeamGroup'
@@ -22,8 +22,8 @@ const CURSOR_COLOR = INTERACTION_BLUE
 // spans the staff (matching the playback cursor); adjacent selected notes' bands abut into a
 // continuous run because each spans the full gap to the next note.
 const SELECTION_FILL = INTERACTION_BLUE_BAND
-const SELECTION_BAND_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 6
-const SELECTION_BAND_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 12
+const SELECTION_BAND_Y = Staff.TOP_Y - 6
+const SELECTION_BAND_HEIGHT = Staff.HEIGHT + 12
 
 interface MeasureProps {
     measure: MeasureModel
@@ -38,8 +38,8 @@ interface MeasureProps {
 }
 
 // Hit-area vertical extent: the full staff band (matches the selection band).
-const HIT_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE - 6
-const HIT_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 12
+const HIT_Y = Staff.TOP_Y - 6
+const HIT_HEIGHT = Staff.HEIGHT + 12
 
 /** Wraps an attribute glyph in a click target when a handler is provided —
  *  a transparent staff-height rect makes thin glyphs comfortably clickable. */

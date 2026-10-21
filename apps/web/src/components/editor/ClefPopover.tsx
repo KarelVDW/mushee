@@ -1,7 +1,6 @@
 'use client'
 
-import { Glyph } from '@mushee/notation/components'
-import { getYForLine } from '@mushee/notation/components/noteUtils'
+import { Glyph, Staff } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { CLEF_DEFS, type ClefType } from '@mushee/notation/model'
 import { ClefLayout } from '@mushee/notation/model/layout/ClefLayout'
@@ -24,10 +23,10 @@ export function ClefGlyph({ type, size = 30, color = 'currentColor' }: { type: C
     const width = 28
     const marker = ClefLayout.octaveMarker(type)
     const markerX = 4 + Bravura.width(config.glyphName) / 2
-    const markerY = marker?.above ? getYForLine(0) - 6 : getYForLine(4) + 13
+    const markerY = marker?.above ? Staff.yForStaffLine(0) - 6 : Staff.yForStaffLine(4) + 13
     return (
         <svg width={(size * width) / height} height={size} viewBox={`0 ${top} ${width} ${height}`} aria-hidden>
-            <Glyph name={config.glyphName} x={4} y={getYForLine(config.lineIndex)} fill={color} />
+            <Glyph name={config.glyphName} x={4} y={Staff.yForStaffLine(config.lineIndex)} fill={color} />
             {marker && (
                 <text x={markerX} y={markerY} fontSize={9} fontWeight={600} textAnchor="middle" dominantBaseline="middle" fill={color}>
                     {marker.text}

@@ -2,17 +2,16 @@
 
 import { useSyncExternalStore } from 'react'
 
-import { NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import type { Score as ScoreModel } from '../model'
+import { Staff } from '../model/layout/Staff'
 import { HIGHLIGHT_MAGENTA, WAVEFORM_CYAN } from './constants'
 
 /** Brand accents (loud tier) — one of the two sanctioned brand-accent exceptions inside the canvas (see constants.ts). */
 const BAR_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA]
 const BAR_WIDTH = 2.5
 /** Tallest bar: half the staff height on either side of the middle line. */
-const MAX_RADIUS = (((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE * 2) / 2
-const STAFF_MIDDLE_Y = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE + ((NUM_STAFF_LINES - 1) / 2) * STAVE_LINE_DISTANCE
+const MAX_RADIUS = Staff.HEIGHT / 2
 /** Bars shorter than this still read as a heartbeat during silence. */
 const MIN_RADIUS = 1.5
 
@@ -38,7 +37,7 @@ export function RecordingWaveform({ store, score }: { store: RecordingWaveformSt
                 if (!measure) return null
                 const row = score.layout.rowFor(measure)
                 const x = row.getMeasureX(measure) + measure.layout.getXForBeat(bar.beat)
-                const y = score.layout.getYForRow(row) + STAFF_MIDDLE_Y
+                const y = score.layout.getYForRow(row) + Staff.MIDDLE_Y
                 const radius = Math.max(MIN_RADIUS, bar.amp * MAX_RADIUS)
                 // The exit grows the bar to the full staff height before fading.
                 const burstScale = MAX_RADIUS / radius

@@ -1,7 +1,8 @@
-import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '../../engraving/constants'
+import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES } from '../../engraving/constants'
 import type { Measure } from '../Measure'
 import { Resizer, type Sizeable } from '../util/Resizer'
 import { availableRowWidth } from './rowWidth'
+import { Staff } from './Staff'
 import type { LayoutBarline, LayoutLine } from './types'
 
 export interface RowLayoutContext {
@@ -55,12 +56,11 @@ export class RowLayout {
         }
         this.width = cursorX
 
-        const headroom = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
         this.staffLines = Array.from({ length: NUM_STAFF_LINES }, (_, i) => {
-            const y = headroom + i * STAVE_LINE_DISTANCE
+            const y = Staff.yForStaffLine(i)
             return { x1: 0, y1: y, x2: this.width, y2: y }
         })
-        this.openingBarline = { x: 0, y: headroom, height: (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE, type: 'single' }
+        this.openingBarline = { x: 0, y: Staff.TOP_Y, height: Staff.HEIGHT, type: 'single' }
     }
 
     /** Whether this row's inputs are identical — used by ScoreLayout to reuse the instance across rebuilds. */

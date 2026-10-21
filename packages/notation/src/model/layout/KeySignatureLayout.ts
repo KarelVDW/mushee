@@ -1,10 +1,10 @@
-import { getYForNote } from '../../components/noteUtils'
 import { Bravura } from '../../engraving/Bravura'
 import type { Clef } from '../Clef'
 import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'
 import { LINES_PER_OCTAVE, STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { KeySignatureWidth } from '../width/KeySignatureWidth'
+import { Staff } from './Staff'
 import type { LayoutGlyph } from './types'
 
 /** Horizontal gap between adjacent accidentals (matches KeySignatureWidth). */
@@ -47,7 +47,7 @@ export class KeySignatureLayout {
         this.accidentals = items.map((a, i) => {
             const glyphX = x
             x += Bravura.width(a.glyphName) + ACCIDENTAL_GAP
-            return { glyphName: a.glyphName, x: glyphX, y: getYForNote(rawLines[i] + shift) }
+            return { glyphName: a.glyphName, x: glyphX, y: Staff.yForNoteLine(rawLines[i] + shift) }
         })
     }
 }

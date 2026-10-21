@@ -1,6 +1,6 @@
-import { getYForLine } from '@mushee/notation/components'
 import { STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
+import { Staff } from '@mushee/notation/model/layout/Staff'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
@@ -16,8 +16,8 @@ function layoutFor(m: Measure): KeySignatureLayout {
     return new KeySignatureLayout({ clef: m.clef, drawnAccidentals, width: new KeySignatureWidth(drawnAccidentals) })
 }
 
-const TOP = getYForLine(0) // top staff line
-const BOTTOM = getYForLine(4) // bottom staff line
+const TOP = Staff.yForStaffLine(0) // top staff line
+const BOTTOM = Staff.yForStaffLine(4) // bottom staff line
 
 describe('KeySignatureLayout', () => {
     it('draws a treble G-major sharp on the top staff line', () => {

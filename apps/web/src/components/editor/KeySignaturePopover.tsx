@@ -1,7 +1,6 @@
 'use client'
 
-import { Glyph } from '@mushee/notation/components'
-import { getYForNote } from '@mushee/notation/components/noteUtils'
+import { Glyph, Staff } from '@mushee/notation/components'
 import { KeySignature } from '@mushee/notation/model/KeySignature'
 import { Pitch } from '@mushee/notation/model/Pitch'
 
@@ -54,7 +53,7 @@ export function KeySignatureGlyph({ fifths, size = 30, color = 'currentColor' }:
                     key={i}
                     name={a.glyphName}
                     x={2 + i * GLYPH_ADVANCE}
-                    y={getYForNote(new Pitch({ name: a.name, octave: a.octave }).line)}
+                    y={Staff.yForNoteLine(new Pitch({ name: a.name, octave: a.octave }).line)}
                     fill={color}
                 />
             ))}
