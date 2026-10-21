@@ -1,9 +1,9 @@
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
-import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
-import { MidiImporter } from '@mushee/notation/model/util/MidiImporter'
+import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
+import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from './scoreGenerator'
+import { generateScore, Rng } from '../util/scoreGenerator'
 
 /**
  * The MIDI importer parses raw bytes; a corrupted or hostile file must never

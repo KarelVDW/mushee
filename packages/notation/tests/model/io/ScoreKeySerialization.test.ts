@@ -1,6 +1,6 @@
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { Score } from '@mushee/notation/model/Score'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

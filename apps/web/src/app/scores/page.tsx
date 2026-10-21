@@ -2,7 +2,7 @@
 
 import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 

@@ -4,6 +4,7 @@ import { SCORE_WIDTH } from '../components/constants'
 import type { ClefType, DurationType } from '../components/types'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
+import { MeasureSerializer } from './io/ScoreSerializer'
 import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
@@ -12,7 +13,6 @@ import { TimeSignature } from './TimeSignature'
 import { AccidentalMinimizer } from './util/AccidentalMinimizer'
 import { Derived } from './util/Derived'
 import { MeasureRebar } from './util/MeasureRebar'
-import { MeasureSerializer } from './util/ScoreSerializer'
 
 /**
  * The score: an ordered list of measures plus the lead instrument. Purely

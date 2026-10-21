@@ -1,5 +1,5 @@
-import { MusicXmlImporter } from '@mushee/notation/model/util/MusicXmlImporter'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
+import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

@@ -1,6 +1,6 @@
 import type { ScorePartwise } from '@mushee/notation/components/types'
-import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
+import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 
 import { getSettings, listScores, loadScore, type ScoreDocument, type UserSettings } from './api'
 

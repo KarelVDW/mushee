@@ -2,8 +2,8 @@
 
 import { SCORE_WIDTH } from '@mushee/notation/components/constants'
 import type { Score } from '@mushee/notation/model'
-import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
-import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
+import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
+import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
 import { useCallback, useState } from 'react'
 import { flushSync } from 'react-dom'
 

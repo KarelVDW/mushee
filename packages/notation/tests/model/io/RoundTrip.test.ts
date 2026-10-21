@@ -1,15 +1,15 @@
 import type { ScorePartwise } from '@mushee/notation/components/types'
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
-import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
-import { MidiImporter } from '@mushee/notation/model/util/MidiImporter'
-import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
-import { MusicXmlImporter } from '@mushee/notation/model/util/MusicXmlImporter'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
+import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
+import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
+import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
+import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from './scoreGenerator'
-import { describeScore, meter, soundingEvents, tempoMarks } from './scoreObservations'
+import { generateScore, Rng } from '../util/scoreGenerator'
+import { describeScore, meter, soundingEvents, tempoMarks } from '../util/scoreObservations'
 
 /**
  * Generative round-trip properties. A seeded generator builds random but valid

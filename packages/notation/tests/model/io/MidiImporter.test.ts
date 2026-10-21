@@ -1,7 +1,7 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
 import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
-import { MidiImporter } from '@mushee/notation/model/util/MidiImporter'
 import { describe, expect, it } from 'vitest'
 
 // --- Standard MIDI File byte builders ---

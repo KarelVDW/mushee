@@ -2,7 +2,7 @@ import type { ClefType, DurationType } from '@mushee/notation/components/types'
 import { Note, Pitch } from '@mushee/notation/model'
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
-import { ScoreSerializer } from '@mushee/notation/model/util/ScoreSerializer'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

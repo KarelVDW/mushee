@@ -2,7 +2,7 @@
 
 import { Score as ScoreView } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/components/types'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { Component, type ReactNode, useMemo } from 'react'
 
 import type { ScoreDocument } from '@/lib/api'

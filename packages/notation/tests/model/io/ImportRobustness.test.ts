@@ -1,9 +1,9 @@
 import { BEAT_EPSILON } from '@mushee/notation/model/Duration'
-import { MusicXmlExporter } from '@mushee/notation/model/util/MusicXmlExporter'
-import { MusicXmlImporter } from '@mushee/notation/model/util/MusicXmlImporter'
+import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
+import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
 import { describe, expect, it } from 'vitest'
 
-import { generateScore, Rng } from './scoreGenerator'
+import { generateScore, Rng } from '../util/scoreGenerator'
 
 /**
  * Import robustness: a MusicXML file a user uploads may be truncated, hand-edited

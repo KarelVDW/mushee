@@ -1,7 +1,7 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
 import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
-import { MusicXmlImporter } from '@mushee/notation/model/util/MusicXmlImporter'
 import { describe, expect, it } from 'vitest'
 
 const PART_LIST = '<part-list><score-part id="P1"><part-name>Flute</part-name></score-part></part-list>'

@@ -1,9 +1,9 @@
 import { MAX_MEASURES_PER_ROW } from '@mushee/notation/components/constants'
 import { Duration } from '@mushee/notation/model/Duration'
+import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
+import { MidiImporter } from '@mushee/notation/model/io/MidiImporter'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
-import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
-import { MidiImporter } from '@mushee/notation/model/util/MidiImporter'
 import { makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

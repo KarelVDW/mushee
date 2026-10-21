@@ -17,7 +17,7 @@ import type { Measure } from '../Measure'
 import { Pitch } from '../Pitch'
 import type { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import { DurationSpeller } from './DurationSpeller'
+import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 import { ScoreDeserializer } from './ScoreDeserializer'
 

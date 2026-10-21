@@ -1,9 +1,9 @@
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { MidiExporter } from '@mushee/notation/model/io/MidiExporter'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { MidiExporter } from '@mushee/notation/model/util/MidiExporter'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 

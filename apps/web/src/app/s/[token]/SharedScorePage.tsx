@@ -3,7 +3,7 @@
 import { Score as ScoreView } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/components/types'
 import type { Score } from '@mushee/notation/model'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'

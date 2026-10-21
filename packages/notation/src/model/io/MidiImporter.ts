@@ -7,7 +7,7 @@ import { Note } from '../Note'
 import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
-import { DurationSpeller } from './DurationSpeller'
+import { DurationSpeller } from '../util/DurationSpeller'
 import type { ImportedScore } from './ImportedScore'
 
 /** The finest written value: onsets and releases snap to this grid (in quarter-note beats). */

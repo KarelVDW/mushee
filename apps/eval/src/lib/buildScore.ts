@@ -8,11 +8,11 @@
 import type { ClefType, MxmlMeasure } from '@mushee/notation/components/types'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
 
 import type { ClipMelody, MelodyEvent } from './melody'
 

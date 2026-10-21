@@ -2,7 +2,7 @@
 
 import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformStore'
 import type { Note, Score } from '@mushee/notation/model'
-import { ScoreDeserializer } from '@mushee/notation/model/util/ScoreDeserializer'
+import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useRouter } from 'next/navigation'
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
