@@ -11,7 +11,7 @@ export interface DemoAccount {
     name: string
     /** Subscription tier id; must exist in the subscription_tiers table. */
     tierId: 'free' | 'pro' | 'studio' | 'arranger'
-    /** Grants the admin panel (beta approvals). */
+    /** Stamps role "admin" (shown as a label in the admin console); console access itself is ADMIN_SECRET. */
     role?: 'admin'
     /** Fixed UUIDs of the demo scores this account owns (keys of DEMO_SCORES). */
     scoreIds: string[]
@@ -57,7 +57,7 @@ interface DemoScore {
 
 type Entry = Record<string, unknown>
 
-/** Measure-1 attributes + tempo, matching what the web app's ScoreSerializer
+/** Measure-1 attributes + tempo, matching what @mushee/notation's ScoreSerializer
  *  emits for a new score (divisions 12, treble clef, 4/4). */
 function opening(tempo: number): Entry[] {
     return [
