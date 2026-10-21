@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { captcha } from 'better-auth/plugins'
 
 /**
@@ -33,7 +34,11 @@ export function signupCaptchaPlugins(env: NodeJS.ProcessEnv = process.env): Retu
                         'Set the Turnstile secret (or BETA_MODE=true) before starting the API.',
                 )
             }
-            console.warn('TURNSTILE_SECRET_KEY is not set: signup runs without a CAPTCHA. Set it before opening signup to the public.')
+            // Runs while auth.config.ts is imported, before main.ts installs the
+            // JSON logger, so this line prints in Nest's default format.
+            new Logger('Captcha').warn(
+                'TURNSTILE_SECRET_KEY is not set: signup runs without a CAPTCHA. Set it before opening signup to the public.',
+            )
         }
         return []
     }

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { betterAuth } from 'better-auth'
 import { emailOTP } from 'better-auth/plugins/email-otp'
 import { Pool } from 'pg'
@@ -14,6 +15,8 @@ import { signupCaptchaPlugins } from './captcha-config'
 if (process.env.NODE_ENV === 'production' && !process.env.BETTER_AUTH_SECRET) {
     throw new Error('BETTER_AUTH_SECRET must be set in production — better-auth would otherwise sign sessions with a public default.')
 }
+
+const logger = new Logger('Auth')
 
 const pool = new Pool({ connectionString: postgresUrl(), ssl: postgresSsl() || undefined })
 
@@ -99,7 +102,7 @@ export const auth = betterAuth({
                             }
                         }
                     } catch (err) {
-                        console.error('post-signup provisioning failed', err)
+                        logger.error(`Post-signup provisioning failed for ${user.id}: ${String(err)}`)
                     }
                 },
             },
