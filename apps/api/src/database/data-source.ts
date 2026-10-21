@@ -15,10 +15,10 @@ import { UserSettings } from '../settings/entities/user-settings.entity'
 import { SubscriptionTier } from '../subscriptions/entities/subscription-tier.entity'
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity'
 import { migrations } from './migrations'
-import { postgresSsl } from './postgres-ssl'
+import { postgresSsl, postgresUrl } from './postgres-connection'
 
 /**
- * Single source of truth for the Postgres connection, shared by the Nest app
+ * Single source of truth for the TypeORM data source, shared by the Nest app
  * (app.module.ts) and the TypeORM CLI (pnpm migration:*). Entities and
  * migrations are imported explicitly — no globs — so the same options work
  * from both ts (CLI via tsx) and compiled dist (production).
@@ -27,28 +27,10 @@ import { postgresSsl } from './postgres-ssl'
  * its schema is snapshotted into these migrations (BetterAuthSchema) so boot
  * alone fully provisions a fresh database.
  */
-// The mushee:mushee@localhost fallbacks below exist for local dev only; a
-// production pod that reaches them is misconfigured (Secret not mounted) and
-// must not sit in a crash-loop of connection errors that looks like a DB
-// outage.
-if (process.env.NODE_ENV === 'production' && !process.env.POSTGRES_URL && !process.env.POSTGRES_PASSWORD) {
-    throw new Error('POSTGRES_URL or POSTGRES_PASSWORD must be set in production — refusing to fall back to the local dev credentials.')
-}
-
 export const dataSourceOptions: DataSourceOptions = {
     type: 'postgres',
-    // POSTGRES_URL wins when set — better-auth and the seeder already read it,
-    // so TypeORM must too or the two halves of the app connect to different
-    // databases.
-    ...(process.env.POSTGRES_URL
-        ? { url: process.env.POSTGRES_URL }
-        : {
-              host: process.env.POSTGRES_HOST ?? 'localhost',
-              port: parseInt(process.env.POSTGRES_PORT ?? '5632', 10),
-              username: process.env.POSTGRES_USER ?? 'mushee',
-              password: process.env.POSTGRES_PASSWORD ?? 'mushee',
-              database: process.env.POSTGRES_DB ?? 'mushee',
-          }),
+    // Same URL and TLS as better-auth's pool and the seeder (postgres-connection.ts).
+    url: postgresUrl(),
     ssl: postgresSsl(),
     // Per-replica pool cap; two pools run per replica (TypeORM + better-auth),
     // so size against the server's max_connections before scaling replicas.

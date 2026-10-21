@@ -4,7 +4,7 @@ import { Pool } from 'pg'
 
 import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
 import { DEV_WEB_ORIGIN } from '../config/app-urls'
-import { postgresSsl } from '../database/postgres-ssl'
+import { postgresSsl, postgresUrl } from '../database/postgres-connection'
 import { mailService } from '../mail/mail.service'
 import { signupCaptchaPlugins } from './captcha-config'
 
@@ -15,12 +15,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.BETTER_AUTH_SECRET) {
     throw new Error('BETTER_AUTH_SECRET must be set in production — better-auth would otherwise sign sessions with a public default.')
 }
 
-const pool = new Pool({
-    connectionString:
-        process.env.POSTGRES_URL ??
-        `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5632'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
-    ssl: postgresSsl() || undefined,
-})
+const pool = new Pool({ connectionString: postgresUrl(), ssl: postgresSsl() || undefined })
 
 const trustedOrigins = [
     ...(process.env.TRUSTED_ORIGINS?.split(',')

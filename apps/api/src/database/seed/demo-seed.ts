@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common'
 import { Client } from 'pg'
 
 import { auth } from '../../auth/auth.config'
+import { postgresSsl, postgresUrl } from '../postgres-connection'
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, DEMO_SCORES } from './demo-data'
 
 /**
@@ -19,11 +20,7 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD, DEMO_SCORES } from './demo-data'
  */
 export async function seedDemoData(): Promise<void> {
     const logger = new Logger('DemoSeed')
-    const client = new Client({
-        connectionString:
-            process.env.POSTGRES_URL ??
-            `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5632'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
-    })
+    const client = new Client({ connectionString: postgresUrl(), ssl: postgresSsl() || undefined })
     await client.connect()
     try {
         // One seeder at a time; replicas that lose the race wait, then find the
