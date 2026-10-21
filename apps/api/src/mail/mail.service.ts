@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import sgMail from '@sendgrid/mail'
 
+import { adminAppUrl, webAppUrl } from '../config/app-urls'
+
 type SendArgs = {
     to: string
     subject: string
@@ -139,7 +141,7 @@ export class MailService {
         // Subjects cannot carry HTML, so the markup is flattened there (bold marks dropped, links as "label (url)").
         const plainSubject = MailService.markupToText(subject)
         const html = layout(
-            withToken(escapeHtml(plainSubject)),
+            withToken(plainSubject),
             paragraphs.map((p) => `<p>${withToken(MailService.markupToHtml(p)).replace(/\n/g, '<br/>')}</p>`).join('\n') +
                 `<p class="muted" style="margin-top:28px;">You're receiving this because you have a Solkey account. Manage it at <a href="${escapeHtml(webAppUrl())}/settings">${escapeHtml(webAppUrl())}/settings</a>.</p>`,
         )
@@ -278,16 +280,6 @@ export class MailService {
 }
 
 export const mailService = new MailService()
-
-/** Public base URL of the web app, for links in emails. */
-function webAppUrl(): string {
-    return (process.env.WEB_APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3200').replace(/\/$/, '')
-}
-
-/** Public base URL of the standalone admin console (apps/admin). */
-function adminAppUrl(): string {
-    return (process.env.ADMIN_APP_URL ?? 'http://localhost:3500').replace(/\/$/, '')
-}
 
 function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')

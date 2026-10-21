@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { CAPTCHA_ENDPOINTS, signupCaptchaPlugins } from '../../src/auth/captcha-config'
@@ -6,14 +7,14 @@ describe('signup CAPTCHA configuration', () => {
     afterEach(() => vi.restoreAllMocks())
 
     it('installs no plugin without a secret, and stays quiet outside production', () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
         expect(signupCaptchaPlugins({ NODE_ENV: 'development' })).toEqual([])
         expect(signupCaptchaPlugins({ NODE_ENV: 'development', TURNSTILE_SECRET_KEY: '   ' })).toEqual([])
         expect(warn).not.toHaveBeenCalled()
     })
 
     it('warns at production boot when the secret is missing during the closed beta — the gap must never be silent', () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
         expect(signupCaptchaPlugins({ NODE_ENV: 'production', BETA_MODE: 'true' })).toEqual([])
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('TURNSTILE_SECRET_KEY'))
     })

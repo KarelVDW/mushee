@@ -42,7 +42,3 @@ export function packForProduct(productId: string | null | undefined, env: NodeJS
     }
     return null
 }
-
-export function isPackId(id: string): id is PackId {
-    return (PACK_IDS as string[]).includes(id)
-}

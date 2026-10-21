@@ -1,9 +1,11 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 
 /**
- * A user's subscription tier plus the Polar state backing it. Rows are
- * written at beta signup (tier 'beta') and by the Polar webhook handler;
- * users without a row are on the free tier.
+ * A user's subscription tier plus the Polar state backing it. Written at
+ * signup (auth.config's create hook: free, beta or studio), by plan changes
+ * and cancellations (BillingService), by the Polar webhook handler
+ * (PolarWebhookService) and by the demo seeder; users without a row are on
+ * the free tier.
  */
 @Entity('user_subscriptions')
 export class UserSubscription {

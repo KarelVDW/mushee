@@ -10,7 +10,6 @@ export interface BetaUserStatus {
     betaMode: boolean
     /** null = signed up outside the beta (grandfathered — never gated). */
     status: BetaStatus | null
-    role: string
 }
 
 export interface BetaSignup {
@@ -39,15 +38,14 @@ export class BetaService {
     /** Fresh read — bypasses the 5-minute session cookie cache, so the web app
      *  can poll it to notice an approval without re-login. */
     async statusFor(userId: string): Promise<BetaUserStatus> {
-        const rows: Array<{ betaStatus: BetaStatus | null; role: string }> = await this.dataSource.query(
-            `SELECT "betaStatus", "role" FROM "user" WHERE id = $1`,
+        const rows: Array<{ betaStatus: BetaStatus | null }> = await this.dataSource.query(
+            `SELECT "betaStatus" FROM "user" WHERE id = $1`,
             [userId],
         )
         if (rows.length === 0) throw new NotFoundException('User not found')
         return {
             betaMode: isBetaMode(),
             status: rows[0].betaStatus,
-            role: rows[0].role,
         }
     }
 

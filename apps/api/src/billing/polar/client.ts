@@ -24,8 +24,3 @@ export function polarClient(): Polar | null {
 export function isBillingConfigured(): boolean {
     return Boolean(process.env.POLAR_ACCESS_TOKEN)
 }
-
-/** Test hook: forget the cached client (env vars may have changed). */
-export function resetPolarClient(): void {
-    client = undefined
-}

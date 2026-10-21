@@ -68,8 +68,10 @@ describe('customer.state_changed reconciliation', () => {
     })
 
     it('downgrades a paid tier when no active subscription remains', () => {
-        const patch = patchFromCustomerState({ id: 'cus-1', activeSubscriptions: [] }, resolveTier, 'pro')
-        expect(patch).toMatchObject({ tierId: 'free', polarSubscriptionId: null })
+        for (const tierId of ['pro', 'studio', 'arranger']) {
+            const patch = patchFromCustomerState({ id: 'cus-1', activeSubscriptions: [] }, resolveTier, tierId)
+            expect(patch).toMatchObject({ tierId: 'free', polarSubscriptionId: null })
+        }
     })
 
     it('never touches beta or free users without subscriptions', () => {

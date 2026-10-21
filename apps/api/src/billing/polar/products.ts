@@ -49,7 +49,3 @@ export function intervalForProduct(productId: string | null | undefined, env: No
 export function isPaidTierId(id: string): id is PaidTierId {
     return (PAID_TIER_IDS as string[]).includes(id)
 }
-
-export function isBillingInterval(v: string): v is BillingInterval {
-    return (BILLING_INTERVALS as string[]).includes(v)
-}

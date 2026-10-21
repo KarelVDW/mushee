@@ -37,9 +37,4 @@ export class SettingsService {
         await this.repo.save(this.repo.create({ userId, keyboardShortcuts }))
         return { keyboardShortcuts }
     }
-
-    /** Remove the user's settings (account purge). */
-    async deleteForUser(userId: string): Promise<void> {
-        await this.repo.delete({ userId })
-    }
 }

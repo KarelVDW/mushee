@@ -1,9 +1,11 @@
+import { Logger } from '@nestjs/common'
 import { betterAuth } from 'better-auth'
 import { emailOTP } from 'better-auth/plugins/email-otp'
 import { Pool } from 'pg'
 
-import { adminEmails, isAdminEmail, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
-import { postgresSsl } from '../database/postgres-ssl'
+import { adminEmails, isBetaMode, signupTierId, signupUserFields } from '../beta/beta-config'
+import { DEV_WEB_ORIGIN } from '../config/app-urls'
+import { postgresSsl, postgresUrl } from '../database/postgres-connection'
 import { mailService } from '../mail/mail.service'
 import { signupCaptchaPlugins } from './captcha-config'
 
@@ -14,18 +16,15 @@ if (process.env.NODE_ENV === 'production' && !process.env.BETTER_AUTH_SECRET) {
     throw new Error('BETTER_AUTH_SECRET must be set in production — better-auth would otherwise sign sessions with a public default.')
 }
 
-const pool = new Pool({
-    connectionString:
-        process.env.POSTGRES_URL ??
-        `postgres://${process.env.POSTGRES_USER ?? 'mushee'}:${process.env.POSTGRES_PASSWORD ?? 'mushee'}@${process.env.POSTGRES_HOST ?? 'localhost'}:${process.env.POSTGRES_PORT ?? '5632'}/${process.env.POSTGRES_DB ?? 'mushee'}`,
-    ssl: postgresSsl() || undefined,
-})
+const logger = new Logger('Auth')
+
+const pool = new Pool({ connectionString: postgresUrl(), ssl: postgresSsl() || undefined })
 
 const trustedOrigins = [
     ...(process.env.TRUSTED_ORIGINS?.split(',')
         .map((s) => s.trim())
         .filter(Boolean) ?? []),
-    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3200'] : []),
+    ...(process.env.NODE_ENV !== 'production' ? [DEV_WEB_ORIGIN] : []),
 ]
 
 export const auth = betterAuth({
@@ -89,7 +88,7 @@ export const auth = betterAuth({
                 // send the waitlist emails. Failures here must never block signup.
                 after: async (user) => {
                     try {
-                        const tierId = isAdminEmail(user.email) ? 'studio' : signupTierId()
+                        const tierId = signupTierId(user.email)
                         await pool.query(
                             `INSERT INTO user_subscriptions ("userId", "tierId") VALUES ($1, $2)
                ON CONFLICT ("userId") DO NOTHING`,
@@ -103,7 +102,7 @@ export const auth = betterAuth({
                             }
                         }
                     } catch (err) {
-                        console.error('post-signup provisioning failed', err)
+                        logger.error(`Post-signup provisioning failed for ${user.id}: ${String(err)}`)
                     }
                 },
             },

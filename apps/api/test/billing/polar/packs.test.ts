@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isPackId, PACK_SECONDS, packForProduct, productIdForPack } from '../../../src/billing/polar/packs'
+import { PACK_SECONDS, packForProduct, productIdForPack } from '../../../src/billing/polar/packs'
 
 const env = {
     POLAR_PRODUCT_PACK_SINGLE: 'prod-pack-single',
@@ -30,11 +30,5 @@ describe('polar pack mapping', () => {
         expect(packForProduct('prod-pro-m', env)).toBeNull()
         expect(packForProduct(null, env)).toBeNull()
         expect(packForProduct(undefined, env)).toBeNull()
-    })
-
-    it('validates pack ids', () => {
-        expect(isPackId('single')).toBe(true)
-        expect(isPackId('album')).toBe(true)
-        expect(isPackId('pro')).toBe(false)
     })
 })

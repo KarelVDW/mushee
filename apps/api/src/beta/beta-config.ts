@@ -1,18 +1,22 @@
 /**
- * Closed-beta launch switches. All read from the environment so the beta
- * flow can be toggled without a deploy artifact change:
+ * Signup policy and closed-beta launch switches: what a new account gets.
+ * All read from the environment so the beta flow can be toggled without a
+ * deploy artifact change:
  *
  * - BETA_MODE=true      → signups join a waitlist on the 'beta' tier and must
  *                         be approved by an admin before they can use the app.
- * - ADMIN_EMAILS=a,b    → accounts created with these emails get role 'admin'
- *                         (and are auto-approved), enabling /admin endpoints.
+ * - ADMIN_EMAILS=a,b    → accounts created with these emails are auto-approved,
+ *                         start on the Studio tier, receive the waitlist signup
+ *                         notifications and are labelled admins (role 'admin',
+ *                         shown in the admin console). The label grants no API
+ *                         access: the admin API is gated by ADMIN_SECRET.
  *
  * The web app mirrors the toggle as NEXT_PUBLIC_BETA_MODE.
  *
  * Deliberately a plain module rather than a Nest provider: the signup policy
  * must be readable from auth.config.ts (better-auth's config object is built
- * outside the DI container), and from billing/mail without pulling BetaModule
- * into their dependency graphs.
+ * outside the DI container), and from billing without pulling BetaModule into
+ * its dependency graph.
  */
 
 export type BetaStatus = 'pending' | 'approved'
@@ -47,7 +51,8 @@ export function signupUserFields(email: string): {
     }
 }
 
-/** Tier a fresh signup lands on. */
-export function signupTierId(): 'beta' | 'free' {
+/** Tier a fresh signup lands on: Studio for admins, else beta or free by BETA_MODE. */
+export function signupTierId(email: string): 'studio' | 'beta' | 'free' {
+    if (isAdminEmail(email)) return 'studio'
     return isBetaMode() ? 'beta' : 'free'
 }

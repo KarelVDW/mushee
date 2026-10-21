@@ -1,16 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { EntityManager, Repository } from 'typeorm'
+import type { Polar } from '@polar-sh/sdk'
 
 import { isBetaMode } from '../beta/beta-config'
+import { webAppUrl } from '../config/app-urls'
 import { RecordingCreditsService } from '../recordings/recording-credits.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
-import { ProcessedWebhookEvent } from './entities/processed-webhook-event.entity'
 import { isBillingConfigured, polarClient } from './polar/client'
-import { PACK_SECONDS, packForProduct, PackId, productIdForPack } from './polar/packs'
-import { BillingInterval, intervalForProduct, PaidTierId, productIdFor, tierForProduct } from './polar/products'
-import { patchFromCustomerState, patchFromSubscription, SubscriptionSnapshot } from './polar/subscription-state'
-import { validateEvent, WebhookVerificationError } from './polar/webhook-verify'
+import { PackId, productIdForPack } from './polar/packs'
+import { BillingInterval, intervalForProduct, PaidTierId, productIdFor } from './polar/products'
 
 export interface BillingState {
     tierId: string
@@ -34,18 +31,18 @@ export interface BillingState {
 }
 
 /**
- * Polar-backed billing. Checkout and the customer portal are hosted by
- * Polar (they are the merchant of record); this service only creates the
- * redirect sessions and mirrors subscription state from webhooks into
- * `user_subscriptions`.
+ * Outbound side of the Polar integration (Polar is the merchant of record).
+ * Creates hosted checkout and customer-portal sessions, changes plans and
+ * cancellation through the Polar API (mirroring the result into
+ * `user_subscriptions` right away), reports billing state, and deletes the
+ * Polar customer when an account is purged. Inbound webhooks live in
+ * PolarWebhookService.
  */
 @Injectable()
 export class BillingService {
     private readonly logger = new Logger(BillingService.name)
 
     constructor(
-        @InjectRepository(ProcessedWebhookEvent)
-        private readonly webhookEvents: Repository<ProcessedWebhookEvent>,
         private readonly subscriptions: SubscriptionsService,
         private readonly credits: RecordingCreditsService,
     ) {}
@@ -72,12 +69,7 @@ export class BillingService {
         }
     }
 
-    /**
-     * Create a Polar checkout session and return its hosted URL. The customer
-     * IP is forwarded because sessions are created server-side: Polar picks
-     * the presentment currency (USD/EUR) by geolocating that IP — without it,
-     * every customer would be priced from the server's location.
-     */
+    /** Create a Polar checkout session for a subscription plan and return its hosted URL. */
     async createCheckout(
         user: { id: string; email: string },
         tierId: PaidTierId,
@@ -87,21 +79,15 @@ export class BillingService {
         if (isBetaMode()) {
             throw new ForbiddenException('Plans cannot be purchased during the beta — everyone is on the beta plan.')
         }
+        // Unconfigured billing answers 503 before an unconfigured product's 400.
         const polar = this.requirePolar()
-        const productId = productIdFor(tierId, interval)
-        if (!productId) {
-            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
-        }
-
-        const checkout = await polar.checkouts.create({
-            products: [productId],
-            externalCustomerId: user.id,
-            customerEmail: user.email,
-            customerIpAddress: customerIp,
-            successUrl: `${this.webAppUrl()}/settings?checkout=success`,
-            metadata: { userId: user.id },
-        })
-        return { url: checkout.url }
+        return this.hostedCheckout(
+            polar,
+            user,
+            this.planProductId(tierId, interval),
+            { successQuery: 'checkout=success', metadata: { userId: user.id } },
+            customerIp,
+        )
     }
 
     /**
@@ -117,14 +103,37 @@ export class BillingService {
         if (!productId) {
             throw new BadRequestException(`The ${packId} pack is not available yet.`)
         }
+        return this.hostedCheckout(
+            polar,
+            user,
+            productId,
+            { successQuery: 'pack=success', metadata: { userId: user.id, packId } },
+            customerIp,
+        )
+    }
 
+    /**
+     * The one Polar checkout payload, shared by plans and packs: linked to the
+     * user as Polar's external customer, returning to settings with
+     * `successQuery`. The customer IP is forwarded because sessions are
+     * created server-side: Polar picks the presentment currency (USD/EUR) by
+     * geolocating that IP — without it, every customer would be priced from
+     * the server's location.
+     */
+    private async hostedCheckout(
+        polar: Polar,
+        user: { id: string; email: string },
+        productId: string,
+        opts: { successQuery: string; metadata: Record<string, string> },
+        customerIp?: string,
+    ): Promise<{ url: string }> {
         const checkout = await polar.checkouts.create({
             products: [productId],
             externalCustomerId: user.id,
             customerEmail: user.email,
             customerIpAddress: customerIp,
-            successUrl: `${this.webAppUrl()}/settings?pack=success`,
-            metadata: { userId: user.id, packId },
+            successUrl: `${webAppUrl()}/settings?${opts.successQuery}`,
+            metadata: opts.metadata,
         })
         return { url: checkout.url }
     }
@@ -134,7 +143,7 @@ export class BillingService {
         const polar = this.requirePolar()
         const session = await polar.customerSessions.create({
             externalCustomerId: userId,
-            returnUrl: `${this.webAppUrl()}/settings`,
+            returnUrl: `${webAppUrl()}/settings`,
         })
         return { url: session.customerPortalUrl }
     }
@@ -150,10 +159,7 @@ export class BillingService {
         if (!row?.polarSubscriptionId) {
             throw new BadRequestException('No active subscription to change — start a checkout instead.')
         }
-        const productId = productIdFor(tierId, interval)
-        if (!productId) {
-            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
-        }
+        const productId = this.planProductId(tierId, interval)
         await polar.subscriptions.update({
             id: row.polarSubscriptionId,
             subscriptionUpdate: { productId },
@@ -187,143 +193,6 @@ export class BillingService {
         return this.getState(userId)
     }
 
-    /**
-     * Validate and process a Polar webhook. Returns false when the delivery is
-     * a duplicate (already processed). Throws WebhookVerificationError on bad
-     * signatures — the controller maps that to a 403.
-     */
-    async handleWebhook(rawBody: Buffer | string, headers: Record<string, string>): Promise<boolean> {
-        const secret = process.env.POLAR_WEBHOOK_SECRET
-        if (!secret) {
-            throw new WebhookVerificationError('POLAR_WEBHOOK_SECRET is not configured')
-        }
-        const event = validateEvent(rawBody, headers, secret)
-
-        // Dedupe + apply in ONE transaction: if applying fails, the dedupe row
-        // rolls back with it, so Polar's retry gets a clean attempt instead of
-        // being swallowed as a "duplicate" of a delivery that never took effect.
-        const deliveryId = headers['webhook-id']
-        let applied = false
-        await this.webhookEvents.manager.transaction(async (em) => {
-            if (deliveryId && !(await this.markProcessed(deliveryId, em))) return
-            await this.applyEvent(event as { type: string; data: unknown }, em)
-            applied = true
-        })
-        if (!applied) {
-            this.logger.log(`Skipping duplicate webhook delivery ${deliveryId ?? ''}`)
-        }
-        return applied
-    }
-
-    /** Insert the delivery id; false means we've already seen it. */
-    private async markProcessed(deliveryId: string, em: EntityManager): Promise<boolean> {
-        const result = await em.createQueryBuilder().insert().into(ProcessedWebhookEvent).values({ id: deliveryId }).orIgnore().execute()
-        return (result.identifiers?.length ?? 0) > 0
-    }
-
-    private async applyEvent(event: { type: string; data: unknown }, em: EntityManager): Promise<void> {
-        switch (event.type) {
-            case 'subscription.created':
-            case 'subscription.active':
-            case 'subscription.updated':
-            case 'subscription.canceled':
-            case 'subscription.uncanceled':
-            case 'subscription.past_due':
-            case 'subscription.revoked': {
-                const sub = event.data as SubscriptionSnapshot & {
-                    customer?: { externalId?: string | null }
-                    metadata?: Record<string, unknown>
-                }
-                const userId = sub.customer?.externalId ?? (typeof sub.metadata?.userId === 'string' ? sub.metadata.userId : null)
-                if (!userId) {
-                    this.logger.warn(`Webhook ${event.type} for subscription ${sub.id} has no external customer id — ignoring`)
-                    return
-                }
-                const patch = patchFromSubscription(sub, (p) => tierForProduct(p))
-                if (!patch) {
-                    this.logger.warn(`Webhook ${event.type}: product ${sub.productId} is not mapped to a tier — ignoring`)
-                    return
-                }
-                // Polar retries can arrive out of order; never let an older snapshot
-                // overwrite newer state (e.g. an old `active` after a `revoked`).
-                const existing = await this.subscriptions.findForUser(userId, em)
-                if (existing?.lastPolarEventAt && sub.modifiedAt && sub.modifiedAt < existing.lastPolarEventAt) {
-                    this.logger.log(
-                        `${event.type}: stale event for user ${userId} (modified ${sub.modifiedAt.toISOString()} < applied ${existing.lastPolarEventAt.toISOString()}) — ignoring`,
-                    )
-                    return
-                }
-                await this.subscriptions.upsert(userId, patch, em)
-                this.logger.log(`${event.type}: user ${userId} → tier ${patch.tierId} (status ${patch.status})`)
-                return
-            }
-
-            case 'customer.state_changed': {
-                const state = event.data as {
-                    id: string
-                    externalId?: string | null
-                    activeSubscriptions: SubscriptionSnapshot[]
-                }
-                if (!state.externalId) return
-                const row = await this.subscriptions.findForUser(state.externalId, em)
-                const patch = patchFromCustomerState(state, (p) => tierForProduct(p), row?.tierId)
-                if (!patch) return
-                await this.subscriptions.upsert(state.externalId, patch, em)
-                this.logger.log(`customer.state_changed: user ${state.externalId} → tier ${patch.tierId}`)
-                return
-            }
-
-            // One-time minute packs. Only `order.paid` grants (never `order.created`
-            // / `order.updated`, which would double-credit the same purchase), and
-            // only for products mapped to a pack — subscription invoices also arrive
-            // as orders and must fall through untouched.
-            case 'order.paid': {
-                const order = this.asOrder(event.data)
-                const packId = packForProduct(order.productId)
-                if (!packId) return
-                if (!order.userId) {
-                    this.logger.warn(`order.paid for pack product ${order.productId} has no external customer id — ignoring`)
-                    return
-                }
-                await this.credits.grantPackSeconds(order.userId, PACK_SECONDS[packId], em)
-                this.logger.log(`order.paid: user ${order.userId} +${PACK_SECONDS[packId]}s (${packId} pack)`)
-                return
-            }
-
-            case 'order.refunded': {
-                const order = this.asOrder(event.data)
-                const packId = packForProduct(order.productId)
-                if (!packId || !order.userId) return
-                // Refunds are all-or-nothing for packs; already-recorded seconds
-                // clamp at zero rather than going negative.
-                await this.credits.revokePackSeconds(order.userId, PACK_SECONDS[packId], em)
-                this.logger.log(`order.refunded: user ${order.userId} -${PACK_SECONDS[packId]}s (${packId} pack)`)
-                return
-            }
-
-            default:
-                // Benefits, other order states… — nothing to mirror yet.
-                this.logger.debug?.(`Ignoring webhook event ${event.type}`)
-        }
-    }
-
-    /** The slice of a Polar order webhook payload this service reads. */
-    private asOrder(data: unknown): {
-        productId: string | null
-        userId: string | null
-    } {
-        const order = data as {
-            productId?: string | null
-            product?: { id?: string | null } | null
-            customer?: { externalId?: string | null } | null
-            metadata?: Record<string, unknown>
-        }
-        return {
-            productId: order.productId ?? order.product?.id ?? null,
-            userId: order.customer?.externalId ?? (typeof order.metadata?.userId === 'string' ? order.metadata.userId : null),
-        }
-    }
-
     /** GDPR cleanup of the Polar customer when an account is purged. */
     async deletePolarCustomer(userId: string): Promise<void> {
         const polar = polarClient()
@@ -335,11 +204,19 @@ export class BillingService {
             // Not existing is fine (the user never checked out). Anything else must
             // fail the purge so the hourly cron retries — the privacy policy
             // promises we ask Polar to delete the customer record.
-            const status =
-                (err as { statusCode?: number; status?: number }).statusCode ?? (err as { statusCode?: number; status?: number }).status
-            if (status === 404) return
+            const { statusCode, status } = err as { statusCode?: number; status?: number }
+            if ((statusCode ?? status) === 404) return
             throw err
         }
+    }
+
+    /** The Polar product selling a plan; 400 when this environment has none configured. */
+    private planProductId(tierId: PaidTierId, interval: BillingInterval): string {
+        const productId = productIdFor(tierId, interval)
+        if (!productId) {
+            throw new BadRequestException(`The ${tierId} (${interval}) plan is not available yet.`)
+        }
+        return productId
     }
 
     private requirePolar() {
@@ -348,9 +225,5 @@ export class BillingService {
             throw new ServiceUnavailableException('Billing is not configured on this environment.')
         }
         return polar
-    }
-
-    private webAppUrl(): string {
-        return (process.env.WEB_APP_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3200').replace(/\/$/, '')
     }
 }
