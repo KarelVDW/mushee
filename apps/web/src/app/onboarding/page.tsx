@@ -9,7 +9,7 @@ import { type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
 import { BETA_MODE, BETA_PLAN, type Billing, PLAN_TIERS, planById, type PlanTier } from '@/lib/plans'
-import { useBetaStatus, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
+import { useBetaGate, usePatchOnboarding, usePlans, useStartCheckout } from '@/lib/queries'
 
 import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES } from './onboarding-data'
 import { StepProgress } from './OnboardingControls'
@@ -58,9 +58,9 @@ export default function OnboardingPage() {
     const sessionEmail = session?.user?.email ?? null
     const verified = session?.user?.emailVerified ?? false
     const userEmail = sessionEmail ?? 'your inbox'
-    // During the closed beta, unapproved users end up on the waiting page.
-    const betaStatus = useBetaStatus({ enabled: BETA_MODE && !!session?.user })
-    const awaitingApproval = BETA_MODE && betaStatus.data?.status === 'pending'
+    // During the closed beta, unapproved users end up on the waiting page. The
+    // server decides (not BETA_MODE), and AuthGate shares this query.
+    const { awaitingApproval } = useBetaGate({ enabled: !!session?.user })
 
     const [step, setStep] = useState(0)
 

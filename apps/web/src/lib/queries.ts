@@ -340,13 +340,29 @@ export const betaKeys = {
     status: ['beta', 'status'] as const,
 }
 
-/** Polls while the user waits for approval so the screen unlocks by itself.
- *  Waitlist management lives in the standalone admin console (apps/admin). */
-export function useBetaStatus(options?: { poll?: boolean; enabled?: boolean }) {
-    return useQuery({
+/**
+ * Whether the signed-in user is still waiting for closed-beta approval, by the
+ * API's own rule (BetaService.isAwaitingApproval): the server is in beta mode
+ * and the account is pending. Only the server's runtime flag counts — the
+ * build-time BETA_MODE can drift from it, and gating on either flag sent users
+ * back and forth between /beta and the app. BETA_MODE stays for copy and plan
+ * visibility.
+ *
+ * `poll` refetches while the user waits so the screen unlocks by itself.
+ * Waitlist management lives in the standalone admin console (apps/admin).
+ */
+export function useBetaGate(options?: { poll?: boolean; enabled?: boolean }) {
+    const { data, isFetching, refetch } = useQuery({
         queryKey: betaKeys.status,
         queryFn: getBetaStatus,
         enabled: options?.enabled ?? true,
         refetchInterval: options?.poll ? 30_000 : false,
     })
+    return {
+        awaitingApproval: data?.betaMode === true && data.status === 'pending',
+        /** The server has answered at least once; until then neither verdict is known. */
+        isResolved: data !== undefined,
+        isFetching,
+        refetch,
+    }
 }
