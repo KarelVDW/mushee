@@ -1,22 +1,20 @@
 import { Logger, OnApplicationShutdown } from '@nestjs/common'
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets'
 import { fromNodeHeaders } from 'better-auth/node'
+import { plainToInstance } from 'class-transformer'
+import { validateSync } from 'class-validator'
 import type { IncomingMessage } from 'http'
 import type { RawData, WebSocket } from 'ws'
 
 import { auth } from '../auth/auth.config'
 import { BetaService } from '../beta/beta.service'
 import { ScoresService } from '../scores/scores.service'
+import { RecordingMetaDto } from './dto/recording-meta.dto'
 import { describeError } from './pipeline/describe-error'
-import type { RecordingMeta, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
+import type { ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'
 import type { RecordingCreditBalance } from './recording-credits.service'
 import type { RecordingSession, SessionCapReason } from './recording-session'
 import { RecordingSessionsService } from './recording-sessions.service'
-
-/** The take's tempo, meter and source hints for the pipeline. */
-interface RecordingMetaMessage extends RecordingMeta {
-    type: 'meta'
-}
 
 /** The client stopped capturing and has flushed its last audio chunk. The
  *  socket stays open: the server finalizes the pipeline, streams the trailing
@@ -25,7 +23,8 @@ interface RecordingEndMessage {
     type: 'end'
 }
 
-type RecordingControlMessage = RecordingMetaMessage | RecordingEndMessage
+/** A text frame that passed `parseControl`: the take's meta (whitelisted by its DTO) or the end of capture. */
+type RecordingControlMessage = { type: 'meta'; meta: RecordingMetaDto } | RecordingEndMessage
 
 /** Reasons a recording connection is refused; the client maps these to dialogs. */
 type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
@@ -113,19 +112,25 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         })
 
         client.on('message', (data: RawData, isBinary: boolean) => {
-            const session = this.connections.get(client)
-            if (session) {
-                this.handleMessage(client, session, data, isBinary)
-            } else {
-                pendingBytes += this.byteLength(data)
-                if (pendingBytes > MAX_PENDING_BYTES) {
-                    this.logger.warn('Closing recording socket: pre-session buffer exceeded')
-                    pending.length = 0
-                    closed = true
-                    client.close(WS_POLICY_VIOLATION, 'Too much data before session open')
-                    return
+            // ws does not guard its listeners: a throw here would surface as an
+            // uncaught exception and take the process (and every live take) down.
+            try {
+                const session = this.connections.get(client)
+                if (session) {
+                    this.handleMessage(client, session, data, isBinary)
+                } else {
+                    pendingBytes += this.byteLength(data)
+                    if (pendingBytes > MAX_PENDING_BYTES) {
+                        this.logger.warn('Closing recording socket: pre-session buffer exceeded')
+                        pending.length = 0
+                        closed = true
+                        client.close(WS_POLICY_VIOLATION, 'Too much data before session open')
+                        return
+                    }
+                    pending.push({ data, isBinary })
                 }
-                pending.push({ data, isBinary })
+            } catch (err: unknown) {
+                this.closeMalformed(client, err)
             }
         })
         client.on('close', () => {
@@ -144,8 +149,12 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
                 }
                 this.connections.set(client, created)
 
-                for (const msg of pending) {
-                    this.handleMessage(client, created, msg.data, msg.isBinary)
+                try {
+                    for (const msg of pending) {
+                        this.handleMessage(client, created, msg.data, msg.isBinary)
+                    }
+                } catch (err: unknown) {
+                    this.closeMalformed(client, err)
                 }
                 pending.length = 0
             })
@@ -297,18 +306,15 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             return
         }
 
-        let parsed: RecordingControlMessage
-        try {
-            parsed = JSON.parse(this.toBuffer(data).toString('utf8')) as RecordingControlMessage
-        } catch {
-            this.logger.warn('Received non-JSON text frame on recording socket')
+        const control = this.parseControl(data)
+        if (!control) {
+            this.logger.warn('Ignoring malformed text frame on recording socket')
             return
         }
 
-        if (parsed.type === 'meta') {
-            const { type: _type, ...meta } = parsed
-            session.setMeta(meta)
-        } else if (parsed.type === 'end') {
+        if (control.type === 'meta') {
+            session.setMeta(control.meta)
+        } else {
             // The client stopped capturing and is waiting for the take's tail.
             // Close the session (releases the per-user slot right away, then runs
             // the final pipeline pass, which streams the remaining notes out as
@@ -320,6 +326,33 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
                 client.close(WS_NORMAL_CLOSURE, 'Recording complete')
             })
         }
+    }
+
+    /**
+     * A text frame as a control message, or null when it is none: anything but
+     * a JSON object typed 'meta' or 'end', and meta whose fields fail
+     * RecordingMetaDto. Unknown meta keys are dropped (whitelist).
+     */
+    private parseControl(data: RawData): RecordingControlMessage | null {
+        let parsed: unknown
+        try {
+            parsed = JSON.parse(this.toBuffer(data).toString('utf8'))
+        } catch {
+            return null
+        }
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
+        const { type, ...fields } = parsed as Record<string, unknown>
+        if (type === 'end') return { type: 'end' }
+        if (type !== 'meta') return null
+        const meta = plainToInstance(RecordingMetaDto, fields)
+        if (validateSync(meta, { whitelist: true }).length > 0) return null
+        return { type: 'meta', meta }
+    }
+
+    /** A frame handler threw: drop the client rather than let the error escape into ws. */
+    private closeMalformed(client: WebSocket, err: unknown): void {
+        this.logger.warn(`Closing recording socket after a frame failed: ${describeError(err)}`)
+        client.close(WS_POLICY_VIOLATION, 'Malformed frame')
     }
 
     private toBuffer(data: RawData): Buffer {
