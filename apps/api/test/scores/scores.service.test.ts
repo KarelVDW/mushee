@@ -339,7 +339,10 @@ describe('update', () => {
 
     it('saves a rename and a document edit in one row write', async () => {
         const { service, scoreRepo, rows } = makeEditingService(new Map([[SOURCE.id, structuredClone(STORED)]]))
-        const updated = await service.update('u1', SOURCE.id, { title: 'Nocturne', partList: { renamed: true } } as unknown as UpdateScoreDto)
+        const updated = await service.update('u1', SOURCE.id, {
+            title: 'Nocturne',
+            partList: { renamed: true },
+        } as unknown as UpdateScoreDto)
         expect(updated.title).toBe('Nocturne')
         expect(scoreRepo.save).toHaveBeenCalledTimes(1)
         expect(rows.get(SOURCE.id)?.partList).toEqual({ renamed: true })
@@ -356,7 +359,9 @@ describe('update', () => {
     it('fails the save instead of answering success when the edit still lands nowhere', async () => {
         const { service, cache, scoreRepo } = makeEditingService()
         cache.primeIfAbsent.mockResolvedValueOnce(undefined) // the row never appears (e.g. a concurrent delete)
-        await expect(service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))).rejects.toBeInstanceOf(ServiceUnavailableException)
+        await expect(service.update('u1', SOURCE.id, measuresDto({ 0: { n: 'edited' } }))).rejects.toBeInstanceOf(
+            ServiceUnavailableException,
+        )
         expect(cache.updateMeasures).toHaveBeenCalledTimes(2)
         expect(scoreRepo.save).not.toHaveBeenCalled() // a failed edit doesn't claim the score was updated
     })

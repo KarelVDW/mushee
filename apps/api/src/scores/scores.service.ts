@@ -101,7 +101,7 @@ export class ScoresService {
 
     /**
      * Load a score for editing. Reads from the edit cache if available,
-     * otherwise reads MusicXML from storage, converts to JSON, and caches it.
+     * otherwise decodes the stored document and caches it.
      */
     async load(userId: string, id: string): Promise<Record<string, unknown>> {
         return this.loadDocument(await this.findOne(userId, id))
@@ -128,9 +128,7 @@ export class ScoresService {
             return cached.data
         }
 
-        // Read MusicXML from storage and convert to JSON
-        const musicxml = await this.storageService.read(score.storageKey)
-        const scoreData = this.decodeStored(musicxml)
+        const scoreData = this.decodeStored(await this.storageService.read(score.storageKey))
 
         if (prime) await this.editCache.upsert(score.id, scoreData)
 
