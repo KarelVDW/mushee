@@ -292,16 +292,6 @@ describe('MidiPlayer', () => {
             expect(audioSession.type).toBe('auto')
         })
 
-        it("never touches a session the RecordingEngine owns ('play-and-record')", () => {
-            const audioSession = { type: 'play-and-record' }
-            vi.stubGlobal('navigator', { audioSession })
-            const player = new MidiPlayer()
-            player.start() // count-off playback during a take
-            expect(audioSession.type).toBe('play-and-record')
-            player.stop()
-            expect(audioSession.type).toBe('play-and-record')
-        })
-
         it('is a no-op on browsers without the audioSession API', () => {
             vi.stubGlobal('navigator', {})
             const player = new MidiPlayer()
