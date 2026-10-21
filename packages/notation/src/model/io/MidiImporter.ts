@@ -259,7 +259,11 @@ export class MidiImporter {
     private melodyOf(raw: RawNote[]): MelodyNote[] {
         const quantized = raw.map((note) => {
             const onset = this.toBeats(note.onset)
-            return { onset, end: Math.max(this.toBeats(note.end), onset + Duration.GRID_BEATS), midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)) }
+            return {
+                onset,
+                end: Math.max(this.toBeats(note.end), onset + Duration.GRID_BEATS),
+                midi: Math.max(LOWEST_MIDI, Math.min(127, note.midi)),
+            }
         })
         if (
             quantized.some(

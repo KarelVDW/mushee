@@ -371,7 +371,8 @@ export class Measure {
      * The version still moves (via the internal bump) so stale layouts rebuild.
      */
     applyInheritedClef(type: ClefType) {
-        if (this._clefs.replaceLeadingInherited(() => new Clef(this, 0, type), () => this.clef.type === type)) this._version++
+        const inherited = () => new Clef(this, 0, type)
+        if (this._clefs.replaceLeadingInherited(inherited, () => this.clef.type === type)) this._version++
     }
 
     applyInheritedKey(fifths: number, mode?: string) {

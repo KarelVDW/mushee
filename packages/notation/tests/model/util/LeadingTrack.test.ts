@@ -8,6 +8,8 @@ interface Item {
 
 const item = (beatPosition: number, label: string): Item => ({ beatPosition, label })
 const labels = (track: LeadingTrack<Item>) => track.items.map((i) => `${i.beatPosition}:${i.label}`)
+/** The inherited leading item a carry-forward would put in. */
+const inherited = () => item(0, 'inherited')
 
 describe('LeadingTrack', () => {
     it('starts with its leading item and the given explicit state', () => {
@@ -59,14 +61,14 @@ describe('LeadingTrack', () => {
         it('swaps in the inherited leading item, keeping mid-measure changes, and reports the change', () => {
             const track = new LeadingTrack(item(0, 'lead'), false)
             track.add(item(2, 'mid'))
-            expect(track.replaceLeadingInherited(() => item(0, 'inherited'), () => false)).toBe(true)
+            expect(track.replaceLeadingInherited(inherited, () => false)).toBe(true)
             expect(labels(track)).toEqual(['0:inherited', '2:mid'])
             expect(track.leadingExplicit).toBe(false)
         })
 
         it('changes nothing when the leading item already matches', () => {
             const track = new LeadingTrack(item(0, 'lead'), false)
-            expect(track.replaceLeadingInherited(() => item(0, 'inherited'), () => true)).toBe(false)
+            expect(track.replaceLeadingInherited(inherited, () => true)).toBe(false)
             expect(labels(track)).toEqual(['0:lead'])
         })
 
@@ -77,7 +79,7 @@ describe('LeadingTrack', () => {
                 asked = true
                 return false
             }
-            expect(track.replaceLeadingInherited(() => item(0, 'inherited'), isCurrent)).toBe(false)
+            expect(track.replaceLeadingInherited(inherited, isCurrent)).toBe(false)
             expect(asked).toBe(false)
             expect(labels(track)).toEqual(['0:lead'])
         })
@@ -86,7 +88,7 @@ describe('LeadingTrack', () => {
             const track = new LeadingTrack(item(0, 'lead'), true)
             track.demoteLeading()
             expect(track.leadingExplicit).toBe(false)
-            expect(track.replaceLeadingInherited(() => item(0, 'inherited'), () => false)).toBe(true)
+            expect(track.replaceLeadingInherited(inherited, () => false)).toBe(true)
         })
     })
 
@@ -105,7 +107,7 @@ describe('LeadingTrack', () => {
             () => track.set(item(2, 'set'), () => false),
             () => track.remove(1),
             () => track.map((i) => i),
-            () => track.replaceLeadingInherited(() => item(0, 'inherited'), () => false),
+            () => track.replaceLeadingInherited(inherited, () => false),
         ]
         for (const write of writes) {
             const snapshot = track.items
