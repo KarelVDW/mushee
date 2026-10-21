@@ -31,7 +31,6 @@ interface MeasureFlags {
 /** Per-measure layout inputs derived once per rebuild from the semantic model. */
 interface MeasurePlan {
     measure: Measure
-    accidentals: Map<Note, string | undefined>
     noteWidths: Map<Note, NoteWidth>
     keyWidths: Map<KeySignature, KeySignatureWidth>
     leadingKeyWidth: KeySignatureWidth
@@ -131,7 +130,6 @@ export class ScoreLayout {
                 showsClef: flags[i].showsClef,
                 showsKeySignature: flags[i].showsKeySignature,
                 showsTimeSignature: flags[i].showsTimeSignature,
-                accidentals: plan.accidentals,
                 noteWidths: plan.noteWidths,
                 keyWidths: plan.keyWidths,
                 reuseSignature: [
@@ -221,7 +219,6 @@ export class ScoreLayout {
             previousTimeSignature = measure.timeSignature
             return {
                 measure,
-                accidentals,
                 noteWidths,
                 keyWidths,
                 leadingKeyWidth,

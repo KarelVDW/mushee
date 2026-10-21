@@ -23,6 +23,9 @@ describe('NoteWidth', () => {
         const plain = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
         const sharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
         expect(new NoteWidth(sharp, 'accidentalSharp').content).toBeGreaterThan(new NoteWidth(plain, undefined).content)
+        // The width carries the accidental it measured, for NoteLayout to draw.
+        expect(new NoteWidth(sharp, 'accidentalSharp').accidentalGlyph).toBe('accidentalSharp')
+        expect(new NoteWidth(plain, undefined).accidentalGlyph).toBeUndefined()
     })
 
     it('dots add gap + dotSpacing × dot count', () => {

@@ -335,7 +335,6 @@ describe('MeasureLayout', () => {
                 showsClef: false,
                 showsKeySignature: false,
                 showsTimeSignature: false,
-                accidentals: new Map<Note, string | undefined>(),
                 noteWidths: new Map<Note, NoteWidth>(),
                 keyWidths: new Map<KeySignature, KeySignatureWidth>(),
                 reuseSignature: 'direct-test',

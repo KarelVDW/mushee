@@ -1,6 +1,5 @@
 import { Bravura } from '../../engraving/Bravura'
 import type { Clef } from '../Clef'
-import type { KeyAccidental } from '../KeySignature'
 import { Pitch } from '../Pitch'
 import { LINES_PER_OCTAVE, STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import { ACCIDENTAL_GAP, type KeySignatureWidth } from './KeySignatureWidth'
@@ -9,16 +8,18 @@ import type { LayoutGlyph } from './types'
 
 /**
  * Positions a key signature's drawn accidentals on the staff. Context — the
- * clef in effect, the contextual drawn accidentals (incl. cancellation
- * naturals), and the computed width — is passed in by the layout layer.
+ * clef in effect, and the computed width carrying the contextual drawn
+ * accidentals (incl. cancellation naturals) — is passed in by the layout layer.
  */
 export class KeySignatureLayout {
     readonly id = crypto.randomUUID()
+    readonly width: KeySignatureWidth
     readonly accidentals: LayoutGlyph[]
 
-    constructor(context: { clef: Clef; drawnAccidentals: KeyAccidental[]; width: KeySignatureWidth }) {
+    constructor(context: { clef: Clef; width: KeySignatureWidth }) {
+        this.width = context.width
         // Position each accidental on the line of the note it alters, under the clef in effect at this key's beat.
-        const items = context.drawnAccidentals
+        const items = context.width.drawnAccidentals
         const rawLines = items.map((a) => context.clef.lineFor(new Pitch({ name: a.name, octave: a.octave })))
 
         // Shift the whole accidental block by whole octaves so it sits on the staff (bottom to top line). Anchoring

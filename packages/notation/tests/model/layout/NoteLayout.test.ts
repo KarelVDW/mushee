@@ -65,7 +65,7 @@ describe('NoteLayout', () => {
 
     it('accidental is laid out when the layout context resolves one', () => {
         const sharp = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 5, alter: 1 }) })
-        const layout = new NoteLayout(sharp, { accidentalGlyph: 'accidentalSharp', width: new NoteWidth(sharp, 'accidentalSharp') })
+        const layout = new NoteLayout(sharp, { width: new NoteWidth(sharp, 'accidentalSharp') })
         expect(layout.accidental?.glyphName).toBe('accidentalSharp')
         expect(layout.accidental?.x).toBeLessThan(layout.noteX)
     })

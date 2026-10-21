@@ -17,9 +17,9 @@ import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 
 /**
  * The geometry of a single note: notehead, stem, flag, ledger lines,
- * accidental, and dots. Context (the drawn accidental and the note's width)
- * is passed in explicitly by the layout layer — for detached preview notes,
- * by the note itself.
+ * accidental, and dots. Context (the note's width, which carries the drawn
+ * head and accidental) is passed in explicitly by the layout layer — for
+ * detached preview notes, by the note itself.
  */
 export class NoteLayout {
     readonly id = crypto.randomUUID()
@@ -35,7 +35,7 @@ export class NoteLayout {
     readonly accidental: LayoutGlyph | undefined
     readonly dots: { x: number; y: number }[] | undefined
 
-    constructor(note: Note, context: { accidentalGlyph: string | undefined; width: NoteWidth }) {
+    constructor(note: Note, context: { width: NoteWidth }) {
         const width = context.width
         this.width = width
         this.noteY = Staff.yForNoteLine(note.line)
@@ -45,9 +45,9 @@ export class NoteLayout {
         let cursorX = width.paddingLeft
 
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
-        if (context.accidentalGlyph) {
-            this.accidental = { x: cursorX, y: this.noteY, glyphName: context.accidentalGlyph }
-            cursorX += Bravura.width(context.accidentalGlyph) + NOTE_ELEMENT_GAP
+        if (width.accidentalGlyph) {
+            this.accidental = { x: cursorX, y: this.noteY, glyphName: width.accidentalGlyph }
+            cursorX += Bravura.width(width.accidentalGlyph) + NOTE_ELEMENT_GAP
         }
 
         // ledgerLines

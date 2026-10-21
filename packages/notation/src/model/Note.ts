@@ -38,7 +38,7 @@ export class Note {
      */
     get layout(): NoteLayout {
         if (this._measure) return this._measure.layout.noteLayoutFor(this)
-        this._detachedLayout ||= new NoteLayout(this, { accidentalGlyph: undefined, width: new NoteWidth(this, undefined) })
+        this._detachedLayout ||= new NoteLayout(this, { width: new NoteWidth(this, undefined) })
         return this._detachedLayout
     }
 

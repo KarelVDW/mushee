@@ -1,7 +1,5 @@
 import { memo, type ReactNode } from 'react'
 
-import { Bravura } from '../engraving/Bravura'
-import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Measure as MeasureModel, Note } from '../model'
 import type { Clef as ClefModel } from '../model/Clef'
 import type { KeySignature as KeySignatureModel } from '../model/KeySignature'
@@ -67,12 +65,8 @@ export const Measure = memo(function Measure({
     onTimeSignatureClick,
 }: MeasureProps) {
     const layout = measure.layout
-    const clefWidth = (clef: ClefModel) => Bravura.width(clef.layout.glyphName, GLYPH_SCALE)
-    const keyWidth = (key: KeySignatureModel) => {
-        const accidentals = key.layout.accidentals
-        if (accidentals.length === 0) return 0
-        return accidentals[accidentals.length - 1].x - accidentals[0].x + Bravura.width(accidentals[0].glyphName, GLYPH_SCALE)
-    }
+    const clefWidth = (clef: ClefModel) => clef.layout.width.content
+    const keyWidth = (key: KeySignatureModel) => key.layout.width.content
     return (
         <>
             {layout.showsClef && (

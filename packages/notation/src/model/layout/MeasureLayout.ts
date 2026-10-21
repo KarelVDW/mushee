@@ -28,8 +28,7 @@ export interface MeasureLayoutContext {
     showsClef: boolean
     showsKeySignature: boolean
     showsTimeSignature: boolean
-    /** Drawn accidental per note, resolved by DisplayedAccidentals. */
-    accidentals: Map<Note, string | undefined>
+    /** Width per note, carrying its drawn accidental (resolved by DisplayedAccidentals). */
     noteWidths: Map<Note, NoteWidth>
     /** Contextual width per drawn key signature (leading + mid-measure). */
     keyWidths: Map<KeySignature, KeySignatureWidth>
@@ -155,14 +154,14 @@ export class MeasureLayout {
         for (const note of measure.notes) {
             this._noteLayouts.set(
                 note,
-                new NoteLayout(note, { accidentalGlyph: context.accidentals.get(note), width: widthOf(note) as NoteWidth }),
+                new NoteLayout(note, { width: widthOf(note) as NoteWidth }),
             )
         }
 
         // --- Key signature layouts (leading + mid-measure) ---
         for (const [key, width] of context.keyWidths) {
             const clef = measure.clefAtOrBefore(key.beatPosition)
-            this._keyLayouts.set(key, new KeySignatureLayout({ clef, drawnAccidentals: key.drawnAccidentals, width }))
+            this._keyLayouts.set(key, new KeySignatureLayout({ clef, width }))
         }
 
         // --- Beams ---

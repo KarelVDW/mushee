@@ -13,9 +13,11 @@ export class NoteWidth implements PhysicalWidth {
     readonly headGlyph: string
     /** Width of `headGlyph`. */
     readonly noteHeadWidth: number
+    /** The accidental drawn before the head, if any (measure- and key-aware, resolved by the layout layer) — which NoteLayout draws. */
+    readonly accidentalGlyph: string | undefined
 
-    /** `accidentalGlyph` is the accidental actually drawn for the note (measure- and key-aware), resolved by the layout layer. */
     constructor(note: Note, accidentalGlyph: string | undefined) {
+        this.accidentalGlyph = accidentalGlyph
         this.headGlyph = note.pitch ? note.duration.noteheadGlyph : note.duration.restGlyph
         this.noteHeadWidth = Bravura.width(this.headGlyph)
         let contentWidth = LEDGER_LINE_EXTENSION * 2 + this.noteHeadWidth
