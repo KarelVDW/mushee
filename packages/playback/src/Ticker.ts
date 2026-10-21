@@ -1,7 +1,10 @@
 export interface Tickable {
     /** Reset internal state for a new playback pass. */
     reset(): void
-    /** Called each animation frame. Return true when done. */
+    /**
+     * Called each animation frame: schedule the audio due before
+     * `currentTime + Ticker.LOOK_AHEAD`. Return true when done.
+     */
     tick(): boolean
 }
 
@@ -12,6 +15,14 @@ export interface Tickable {
  * tick in a mode it doesn't belong to.
  */
 export class Ticker {
+    /**
+     * How far ahead of the audio clock (seconds) tickables schedule. About three
+     * rAF frames at 60 Hz: margin for the frame interval plus jitter, so a late
+     * frame never lets a start time slip into the past, while keeping little
+     * audio queued so a pause or stop stays cheap.
+     */
+    static readonly LOOK_AHEAD = 0.05
+
     private tickables = new Set<Tickable>()
 
     private _isPlaying = false

@@ -2,10 +2,9 @@ import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 
 import { MidiPlayer } from './MidiPlayer'
-import type { Tickable } from './Ticker'
+import { type Tickable, Ticker } from './Ticker'
 
 const DEFAULT_BPM = 90
-const LOOK_AHEAD = 0.05
 
 export interface TimelineEntry {
     startTime: number
@@ -65,7 +64,7 @@ export class ScoreScheduler implements Tickable {
         if (!this.score || this._done) return true
         const elapsed = this.midiPlayer.currentTime
 
-        while (this.nextNoteTime <= elapsed + LOOK_AHEAD) {
+        while (this.nextNoteTime <= elapsed + Ticker.LOOK_AHEAD) {
             const measure = this.score.measures[this.measureIdx]
             if (!measure) {
                 this._done = true

@@ -255,7 +255,7 @@ describe('ScoreScheduler', () => {
         raw.currentTime = 0
         scheduler.tick()
         const afterFirst = scheduled.length
-        // Only the note(s) within now + LOOK_AHEAD are scheduled, not all four.
+        // Only the note(s) within now + Ticker.LOOK_AHEAD are scheduled, not all four.
         expect(afterFirst).toBeGreaterThanOrEqual(1)
         expect(afterFirst).toBeLessThan(4)
 
