@@ -26,11 +26,9 @@ venv="$(mktemp -d)/proto-venv"
 "$python" -m venv "$venv"
 "$venv/bin/pip" install --quiet --disable-pip-version-check "grpcio-tools==$GRPCIO_TOOLS_VERSION"
 
-for app in inference-crepe inference-basic-pitch; do
-  out="$repo_root/apps/$app"
-  "$venv/bin/python" -m grpc_tools.protoc -I "$here" \
-    --python_out="$out" --grpc_python_out="$out" "$here/inference.proto"
-  echo "generated $out/inference_pb2{,_grpc}.py"
-done
+out="$repo_root/apps/inference-crepe"
+"$venv/bin/python" -m grpc_tools.protoc -I "$here" \
+  --python_out="$out" --grpc_python_out="$out" "$here/inference.proto"
+echo "generated $out/inference_pb2{,_grpc}.py"
 
 rm -rf "$(dirname "$venv")"

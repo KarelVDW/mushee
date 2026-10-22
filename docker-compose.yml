@@ -29,14 +29,6 @@ services:
         ports:
             - '50051:50051'
 
-    basic-pitch-inference:
-        image: mushee/basic-pitch-inference:latest
-        build:
-            context: .
-            dockerfile: apps/inference-basic-pitch/Dockerfile
-        ports:
-            - '50052:50052'
-
     api:
         image: mushee/api:latest
         build:
@@ -46,8 +38,6 @@ services:
             postgres:
                 condition: service_healthy
             crepe-inference:
-                condition: service_started
-            basic-pitch-inference:
                 condition: service_started
         environment:
             # The image bakes in NODE_ENV=production (it is the deployable image);
@@ -79,7 +69,6 @@ services:
             ADMIN_APP_URL: http://localhost:3500
             # Forward passes go to the per-model services; the API does no inference.
             CREPE_INFERENCE_URL: crepe-inference:50051
-            BASIC_PITCH_INFERENCE_URL: basic-pitch-inference:50052
             # Volume-backed local blob storage (scores + recording archives). Real
             # deployments set STORAGE_DRIVER=gcs and GCS_BUCKET instead.
             STORAGE_DRIVER: local

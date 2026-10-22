@@ -1,7 +1,6 @@
 # NestJS API. Multi-stage pnpm-workspace build; build context is the repo root.
-# In production the API runs in remote-inference mode (CREPE_INFERENCE_URL /
-# BASIC_PITCH_INFERENCE_URL set), so it ships NO model files — inference lives in
-# the per-model services.
+# In production the API runs in remote-inference mode (CREPE_INFERENCE_URL set):
+# the CREPE forward pass runs in the CREPE inference service, not in this image.
 FROM node:22-bookworm-slim AS build
 ENV CI=1
 RUN corepack enable
