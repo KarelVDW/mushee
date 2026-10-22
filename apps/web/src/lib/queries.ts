@@ -58,7 +58,7 @@ const scoreKeys = {
     detail: (id: string) => ['scores', 'detail', id] as const,
 }
 
-/** How often a list that couldn't reach the server tries again by itself. */
+/** How often a query that couldn't reach the server tries again by itself. */
 const UNREACHABLE_RETRY_MS = 10_000
 
 export function useScores(search?: string) {
@@ -74,7 +74,11 @@ export function useScores(search?: string) {
     })
 }
 
-/** Metadata and the serialized document, fetched together — the editor needs both. */
+/**
+ * Metadata and the serialized document, fetched together — the editor needs both. A load that
+ * can't reach the server keeps trying every few seconds, so the editor opens by itself once
+ * the connection is back.
+ */
 export function useScoreDocument(id: string) {
     return useQuery({
         queryKey: scoreKeys.detail(id),
@@ -90,6 +94,7 @@ export function useScoreDocument(id: string) {
         // dirty deltas (no full document comes back), so a cached entry can only
         // go stale — reopening must always load fresh from the server.
         gcTime: 0,
+        refetchInterval: (query) => (query.state.error instanceof NetworkError ? UNREACHABLE_RETRY_MS : false),
     })
 }
 
@@ -191,7 +196,7 @@ const recordingKeys = {
     list: (scoreId?: string) => [...recordingKeys.lists, scoreId ?? ''] as const,
 }
 
-/** Every take the account holds, newest first (Settings → Your data). */
+/** Every recording the account holds, newest first (Settings → Your data). */
 export function useAllRecordings(options?: { enabled?: boolean }) {
     return useQuery({
         queryKey: recordingKeys.list(),
@@ -200,7 +205,7 @@ export function useAllRecordings(options?: { enabled?: boolean }) {
     })
 }
 
-/** The takes recorded into one score, newest first. */
+/** The recordings made into one score, newest first. */
 export function useRecordings(scoreId: string) {
     return useQuery({
         queryKey: recordingKeys.list(scoreId),
@@ -218,7 +223,7 @@ export function useDeleteRecording() {
                 rows?.filter((row) => row.id !== id),
             )
         },
-        meta: { errorMessage: 'Could not delete the take. Please try again.' },
+        meta: { errorMessage: "Couldn't delete the recording. Please try again." },
     })
 }
 
@@ -232,7 +237,9 @@ export function useUpdateScore(id: string) {
                 rows?.map((row) => (row.id === meta.id ? meta : row)),
             )
         },
-        meta: { errorMessage: "Your latest changes couldn't be saved. We'll keep trying — check your connection." },
+        // No toast: the editor header says "Not saved yet — retrying" for as long as it lasts
+        // (a toast would time out while the edits are still unsaved), and the autosave retries.
+        meta: { silentError: true },
     })
 }
 

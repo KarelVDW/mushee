@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import {
     denyMicrophone,
@@ -30,7 +31,7 @@ test.beforeEach(async ({ page, apiMock }) => {
 
 test('renders the editor chrome and the engraved score', async ({ page }) => {
     await expect(page.locator('header input')).toHaveValue(MOCK_TITLE)
-    await expect(page.getByText('Loading score…')).toHaveCount(0)
+    await expect(page.getByTestId('editor-loading')).toHaveCount(0)
 
     // Transport + note-input controls are wired up.
     await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
@@ -450,6 +451,8 @@ test('navigates back to the library', async ({ page }) => {
     await page.getByRole('button', { name: 'Back to library' }).click()
     await expect(page).toHaveURL(/\/scores$/)
     await expect(page.getByRole('heading', { name: 'Your scores' })).toBeVisible()
+    // The tab no longer carries the score's name.
+    await expect(page).toHaveTitle('Your scores — Solkey')
 })
 
 test('recordings menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
@@ -484,17 +487,219 @@ test('recordings menu lists the score’s recordings and deletes one after confi
     await expect(panel).toHaveCount(0)
 })
 
-test('share menu turns the read-only link on, shows it, and turns it off again', async ({ page, apiMock }) => {
+test('share menu creates and copies the read-only link in one press, and turns it off after a confirm', async ({
+    page,
+    context,
+    apiMock,
+    browserName,
+}) => {
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.getByRole('button', { name: 'Share score' }).click()
     const panel = page.getByRole('dialog', { name: 'Share score' })
     await expect(panel).toBeVisible()
-    await panel.getByRole('button', { name: 'Turn on link' }).click()
+    await expect(panel).toContainText("Anyone with the link can see, play and download this score. They can't change it.")
+    await panel.getByRole('button', { name: 'Create link and copy' }).click()
 
     const link = panel.getByRole('textbox', { name: 'Share link' })
     await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
     expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
+    if (browserName === 'chromium') {
+        // Copied in the same press: Copy says so for a moment — and no toast lands over the dock.
+        await expect(panel.getByRole('button', { name: 'Copied' })).toBeFocused()
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+        await expect(page.getByRole('status').filter({ hasText: /copied/i })).toHaveCount(0)
+        await expect(panel.getByRole('button', { name: 'Copy', exact: true })).toBeVisible({ timeout: 4000 })
+    } else {
+        // Wherever the clipboard says no, the link is still ready, with Copy right beside it.
+        await expect(panel.getByRole('button', { name: /^Cop(y|ied)$/ })).toBeVisible()
+    }
+
+    // Turning off asks first; Keep it on backs out without a request.
+    await panel.getByRole('button', { name: 'Turn off link' }).click()
+    await expect(panel).toContainText('Turn off? The link stops working for everyone who has it.')
+    await expect(panel.getByRole('button', { name: 'Keep it on' })).toBeFocused()
+    await panel.getByRole('button', { name: 'Keep it on' }).click()
+    expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
+    await expect(panel.getByRole('button', { name: 'Turn off link' })).toBeFocused()
 
     await panel.getByRole('button', { name: 'Turn off link' }).click()
-    await expect(panel.getByRole('button', { name: 'Turn on link' })).toBeVisible()
+    await panel.getByRole('button', { name: 'Turn off', exact: true }).click()
+    await expect(panel.getByRole('button', { name: 'Create link and copy' })).toBeVisible()
     expect(apiMock.shareToken).toBeNull()
+})
+
+test('the header says when the score is saved, and a failed save stays until it gets through', async ({ page }) => {
+    const saved = page.locator('header').getByText('Saved', { exact: true })
+    await expect(saved).toHaveClass(/sr-only/)
+    // A failing server: the edit waits, says so — and keeps saying so, well past the old 6 s toast.
+    const scoreUrl = new RegExp(`/scores/${MOCK_SCORE_ID}$`)
+    await page.route(scoreUrl, (route) => (route.request().method() === 'PATCH' ? route.abort('connectionrefused') : route.fallback()))
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await expect(page.locator('header').getByText('Saving…')).toBeVisible()
+    const retrying = page.getByRole('button', { name: 'Not saved yet — retrying' })
+    await expect(retrying).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('alert').filter({ hasText: /saved/ })).toHaveCount(0)
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText('Not saved yet — retrying.')
+
+    // Back online: pressing it retries now, and the save lands.
+    await page.unroute(scoreUrl)
+    const patch = waitForAutosave(page)
+    await retrying.click()
+    await patch
+    await expect(saved).toBeVisible()
+    await expect(saved).not.toHaveClass(/sr-only/)
+    await expect(retrying).toHaveCount(0)
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText('Changes saved again.')
+    // After a moment the word goes; the check stays, still named for a screen reader.
+    await expect(saved).toHaveClass(/sr-only/, { timeout: 6000 })
+})
+
+test('renaming: Enter hands the keys back to the score, Escape puts the old title back, and the tab follows', async ({ page }) => {
+    await expect(page).toHaveTitle(`${MOCK_TITLE} — Solkey`)
+    const title = page.getByRole('textbox', { name: 'Score title' })
+    await expect(title).toHaveAttribute('placeholder', 'Untitled score')
+    await title.fill('Morning song')
+    await expect(page).toHaveTitle('Morning song — Solkey')
+    await page.keyboard.press('Enter')
+    // The keys go back to the named canvas itself, so a screen reader hears the score and its how-to.
+    const canvas = page.getByRole('application', { name: 'Morning song — score' })
+    await expect(canvas).toBeFocused()
+
+    await title.click()
+    await title.fill('Not this')
+    await page.keyboard.press('Escape')
+    await expect(title).toHaveValue('Morning song')
+    await expect(canvas).toBeFocused()
+
+    await title.fill('')
+    await expect(page).toHaveTitle('Untitled score — Solkey')
+})
+
+test('the canvas is a named score editor that says the selected note and what an edit changed', async ({ page }) => {
+    const canvas = page.getByRole('application', { name: `${MOCK_TITLE} — score` })
+    await expect(canvas).toHaveAttribute('aria-roledescription', 'score editor')
+    await expect(canvas).toHaveAccessibleDescription(
+        'Left and right arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button lists them all.',
+    )
+    const live = page.locator('[aria-live="polite"]:not([role])')
+    await focusEditor(page)
+    await page.keyboard.press('ArrowRight')
+    await expect(live).toHaveText('D, quarter note. Bar 1, beat 2.')
+    await page.keyboard.press('ArrowUp')
+    await expect(live).toHaveText('E.')
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(live).toHaveText('2 notes selected, bar 1.')
+})
+
+test('a delete from the selection actions offers its Undo, which puts the note back', async ({ page }) => {
+    const band = await page.locator(SELECTION_BANDS).first().boundingBox()
+    if (!band) throw new Error('expected the auto-selected note')
+    await page.mouse.click(band.x + band.width / 2, band.y + band.height / 2, { button: 'right' })
+    await page.getByRole('toolbar', { name: 'Selection actions' }).getByRole('button', { name: 'Delete' }).click()
+    const toast = page.getByRole('status').filter({ hasText: 'Deleted the note.' })
+    await expect(toast).toBeVisible()
+    const rest = page.getByRole('button', { name: 'Rest', exact: true })
+    await expect(rest).toHaveAttribute('aria-pressed', 'true')
+    // Named for what it undoes, so it never clashes with the header's Undo.
+    await toast.getByRole('button', { name: 'Undo delete' }).click()
+    await expect(toast).toHaveCount(0)
+    await expect(rest).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('a big edit’s Undo toast goes as soon as another edit comes along', async ({ page }) => {
+    await page.getByRole('button', { name: 'Transpose', exact: true }).click()
+    const popover = page.getByRole('dialog', { name: 'Transpose' })
+    await popover.getByRole('button', { name: 'Half step higher' }).click()
+    await popover.getByRole('button', { name: 'Apply' }).click()
+    const toast = page.getByRole('status').filter({ hasText: 'Moved 1 half step higher.' })
+    await expect(toast.getByRole('button', { name: 'Undo this change' })).toBeVisible()
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await expect(toast).toHaveCount(0)
+})
+
+test.describe('an empty score', () => {
+    test.beforeEach(async ({ page }) => {
+        // The fixture's first bar as rests too: a score without a single pitched note.
+        const stored = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as {
+            parts: { measures: { entries: Record<string, unknown>[] }[] }[]
+        }
+        for (const measure of stored.parts[0].measures) {
+            measure.entries = measure.entries.map((entry) => {
+                if (entry._type !== 'note' || !entry.pitch) return entry
+                const { pitch: _pitch, ...rest } = entry
+                return { ...rest, rest: {} }
+            })
+        }
+        await page.route(/\/scores\/[^/]+\/load$/, (route) =>
+            route.fulfill({
+                json: stored,
+                headers: {
+                    'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                    'access-control-allow-credentials': 'true',
+                },
+            }),
+        )
+        await page.reload()
+        await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    })
+
+    test('says what to do and that Solkey writes melodies, with the button to start right there', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        await expect(
+            page.getByText('Press record, wait for the count-in, then go. Solkey writes melodies, one note at a time.'),
+        ).toBeVisible()
+        await expect(page.getByText('Or click a beat on the staff to place notes by hand.')).toBeVisible()
+        // Start recording has a name of its own: the transport's Record stays the one exact 'Record'.
+        await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Record', exact: true })).toHaveCount(1)
+        // It describes the canvas too, and never reaches the score's own svg.
+        await expect(page.getByRole('application')).toHaveAccessibleDescription(/^Press record, wait for the count-in/)
+        expect(await page.locator('.max-w-240 svg[data-score-canvas]').innerHTML()).not.toContain('Sing, hum')
+    })
+
+    test('Start recording starts a take; once notes land the empty state is gone', async ({ page, browserName }) => {
+        test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+        await mockRecording(page)
+        const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+        await expect(heading).toBeVisible()
+        await page.getByRole('button', { name: 'Start recording' }).click()
+        const strip = page.getByRole('group', { name: 'Recording status' })
+        await expect(strip).toContainText('Get ready')
+        await expect(heading).toHaveCount(0)
+        await expect(strip).toContainText('Recording', { timeout: 6000 })
+        await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
+        await expect(page.getByRole('status').filter({ hasText: /Added bars? 1/ })).toBeVisible()
+        await expect(heading).toHaveCount(0)
+    })
+
+    test('a note written by hand sends it away; emptied again, it comes back', async ({ page }) => {
+        const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+        await expect(heading).toBeVisible()
+        await page.getByRole('button', { name: 'Rest', exact: true }).click() // the selected rest becomes a note
+        await expect(heading).toHaveCount(0)
+        await page.getByRole('button', { name: 'Rest', exact: true }).click()
+        await expect(heading).toBeVisible()
+    })
+
+    test('from onboarding, focus starts on Start recording', async ({ page }) => {
+        await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
+        await expect(page.getByRole('button', { name: 'Start recording' })).toBeFocused()
+    })
+
+    test('Start recording from the keyboard hands the keys to the canvas, so Escape stops the recording', async ({ page, browserName }) => {
+        test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+        await mockRecording(page)
+        await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
+        const start = page.getByRole('button', { name: 'Start recording' })
+        await expect(start).toBeFocused()
+        await page.keyboard.press('Enter')
+        const strip = page.getByRole('group', { name: 'Recording status' })
+        await expect(strip).toBeVisible()
+        await expect(start).toHaveCount(0)
+        // Never dropped to <body> as the empty state goes: the canvas holds the keys.
+        await expect(page.getByRole('application', { name: `${MOCK_TITLE} — score` })).toBeFocused()
+        await page.keyboard.press('Escape')
+        await expect(strip).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible()
+    })
 })

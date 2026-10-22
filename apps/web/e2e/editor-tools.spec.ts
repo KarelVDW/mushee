@@ -46,7 +46,7 @@ test('turning the share link on after an edit keeps the edit and the incremental
     // The share toggle rewrites the cached score meta; it must not re-attach the load-time document.
     await page.getByRole('button', { name: 'Share score' }).click()
     const panel = page.getByRole('dialog', { name: 'Share score' })
-    await panel.getByRole('button', { name: 'Turn on link' }).click()
+    await panel.getByRole('button', { name: 'Create link and copy' }).click()
     await expect(panel.getByRole('textbox', { name: 'Share link' })).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
     await page.keyboard.press('Escape')
     await expect(panel).toHaveCount(0)
@@ -352,16 +352,22 @@ test('changing the instrument through the dialog updates the header chip', async
     const dialog = page.getByRole('dialog', { name: 'Change instrument' })
     await expect(dialog).toBeVisible()
 
-    // Update is disabled until a different instrument is picked.
-    const update = dialog.getByRole('button', { name: 'Update' })
-    await expect(update).toBeDisabled()
+    // The confirm names the change; until a different instrument is picked it waits, and says why.
+    await expect(dialog).toContainText('Changes the playback sound and how the notes are written for it. Your melody stays the same.')
+    const confirm = dialog.getByRole('button', { name: /^Change to / })
+    await expect(confirm).toHaveText('Change to Piano')
+    await expect(confirm).toBeDisabled()
+    await expect(confirm).toHaveAccessibleDescription('Pick a different instrument')
+    // No 'Instrument · Piano' readout: the picked tile and the confirm already say it.
+    await expect(dialog.getByText(/^Instrument · /)).toHaveCount(0)
 
-    await dialog.getByPlaceholder('Filter instruments…').fill('violin')
+    // Violin is a popular tile; picking it names the confirm after it.
     await dialog.getByRole('button', { name: 'Pick Violin', exact: true }).click()
-    await expect(update).toBeEnabled()
+    await expect(confirm).toHaveText('Change to Violin')
+    await expect(confirm).toBeEnabled()
 
     const patch = waitForAutosave(page)
-    await update.click()
+    await confirm.click()
     await patch
     await expect(dialog).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Change instrument (current: Violin)' })).toBeVisible()
@@ -407,30 +413,68 @@ test('shortcuts dialog: a binding can be removed and defaults restored', async (
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the in-score plus and minus targets add and remove a measure', async ({ page }) => {
+test('Add bar and Remove last bar are named buttons under the final barline', async ({ page, browserName }) => {
     const svg = page.locator('.max-w-240 svg').first()
     await expect(svg).toBeVisible()
-
-    // The fixture score has one measure, so "-" starts disabled (opacity 0.3).
-    const plus = svg.locator('g[data-export-exclude]').filter({ hasText: '+' })
-    const minus = svg.locator('g[data-export-exclude]').filter({ hasText: '-' })
-    await expect(plus).toHaveCount(1)
+    // Real buttons now, outside the score's svg: nothing of them is drawn into it.
+    await expect(svg.locator('g[data-export-exclude]').filter({ hasText: /^[+-]$/ })).toHaveCount(0)
+    const add = page.getByRole('button', { name: 'Add bar' })
+    const remove = page.getByRole('button', { name: 'Remove last bar' })
+    await expect(add).toHaveAccessibleDescription('Add an empty bar at the end')
+    // Right-aligned under the last row's final barline, the remove 16px clear of the add.
+    const [addBox, removeBox, svgBox] = await Promise.all([add.boundingBox(), remove.boundingBox(), svg.boundingBox()])
+    expect(addBox?.y ?? 0).toBeGreaterThanOrEqual((svgBox?.y ?? 0) + (svgBox?.height ?? Infinity))
+    expect((removeBox?.x ?? 0) - ((addBox?.x ?? 0) + (addBox?.width ?? 0))).toBeGreaterThanOrEqual(16)
 
     const noteheadsBefore = await svg.locator('path').count()
     const patchAdd = waitForAutosave(page)
-    await plus.click()
+    await add.click()
     await patchAdd
     // A new measure appends rests: the engraving gains glyphs.
     await expect(async () => {
         expect(await svg.locator('path').count()).toBeGreaterThan(noteheadsBefore)
     }).toPass({ timeout: 5000 })
 
+    // An empty bar goes without a fuss — no Undo toast for rests.
     const patchRemove = waitForAutosave(page)
-    await minus.click()
+    await remove.click()
     await patchRemove
     await expect(async () => {
         expect(await svg.locator('path').count()).toBe(noteheadsBefore)
     }).toPass({ timeout: 5000 })
+    await expect(page.getByRole('status').filter({ hasText: /^Removed bar/ })).toHaveCount(0)
+
+    // Tab reaches them — straight after the canvas, in reading order — and the second-to-last
+    // bar goes too; the score's only bar never does. (Safari's Tab skips buttons unless asked.)
+    const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab'
+    await focusEditor(page)
+    await page.keyboard.press(tab)
+    await expect(add).toBeFocused()
+    await page.keyboard.press(tab)
+    await expect(remove).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(remove).toBeDisabled()
+    await expect(remove).toHaveAccessibleDescription('A score keeps at least one bar.')
+})
+
+test('removing a bar that held notes offers its Undo', async ({ page }) => {
+    const svg = page.locator('.max-w-240 svg').first()
+    // A fresh bar 3 with a note in it: select all, collapse onto the last rest, make it a note.
+    await page.getByRole('button', { name: 'Add bar' }).click()
+    await focusEditor(page)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('Escape')
+    const rest = page.getByRole('button', { name: 'Rest', exact: true })
+    await rest.click()
+    await expect(rest).toHaveAttribute('aria-pressed', 'false')
+    const glyphs = await svg.locator('path').count()
+
+    await page.getByRole('button', { name: 'Remove last bar' }).click()
+    const toast = page.getByRole('status').filter({ hasText: 'Removed bar 3.' })
+    await expect(toast).toBeVisible()
+    await toast.getByRole('button', { name: 'Undo this change' }).click()
+    await expect(toast).toHaveCount(0)
+    await expect.poll(() => svg.locator('path').count()).toBe(glyphs)
 })
 
 test('transport: Stop is hidden at rest and shows while something plays; Record is the largest', async ({ page }) => {

@@ -3,7 +3,7 @@
 import { Instrument } from '@mushee/notation/model'
 import { useState } from 'react'
 
-import { DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { DialogPanel, PrimaryButton, TertiaryButton, Tooltip } from '@/components/ui'
 
 import { InstrumentPicker } from '../InstrumentPicker'
 
@@ -13,7 +13,13 @@ interface ChangeInstrumentDialogProps {
     onConfirm: (instrument: Instrument) => void
 }
 
-/** Mounted only while open, so every opening starts from the score's current instrument. */
+/**
+ * Mounted only while open, so every opening starts from the score's current instrument. The
+ * shared picker (popular tiles, 'All instruments', the chord line for a chordal pick) without
+ * its 'Instrument · X' readout — the picked tile and the confirm already say it. The confirm
+ * names the change ('Change to Violin') and, until a different instrument is picked, says why
+ * it waits.
+ */
 export function ChangeInstrumentDialog({ current, onCancel, onConfirm }: ChangeInstrumentDialogProps) {
     const [instrument, setInstrument] = useState<Instrument>(current)
     const dirty = instrument.id !== current.id
@@ -21,19 +27,21 @@ export function ChangeInstrumentDialog({ current, onCancel, onConfirm }: ChangeI
     return (
         <DialogPanel
             title="Change instrument"
-            subtitle={`Currently ${current.displayName}.`}
+            subtitle="Changes the playback sound and how the notes are written for it. Your melody stays the same."
             onClose={onCancel}
             width={620}
             footer={
                 <>
                     <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                    <PrimaryButton emphasis="pop" disabled={!dirty} onClick={() => dirty && onConfirm(instrument)}>
-                        Update
-                    </PrimaryButton>
+                    <Tooltip reason={dirty ? undefined : 'Pick a different instrument'}>
+                        <PrimaryButton disabled={!dirty} onClick={() => dirty && onConfirm(instrument)}>
+                            Change to {instrument.displayName}
+                        </PrimaryButton>
+                    </Tooltip>
                 </>
             }>
             <div className="flex flex-col flex-1 min-h-0 pb-3">
-                <InstrumentPicker value={instrument} onChange={setInstrument} />
+                <InstrumentPicker value={instrument} onChange={setInstrument} showCurrentEyebrow={false} />
             </div>
         </DialogPanel>
     )
