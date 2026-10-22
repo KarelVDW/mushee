@@ -19,6 +19,11 @@ export class ApiError extends Error {
     get isClientError(): boolean {
         return this.status >= 400 && this.status < 500
     }
+
+    /** The plan's score cap refused a new score (a create or a copy) — an upgrade prompt, not a failure. */
+    get isScoreLimit(): boolean {
+        return this.code === 'score-limit'
+    }
 }
 
 /** The server could not be reached at all (down, offline, DNS, CORS). */

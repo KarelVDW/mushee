@@ -6,6 +6,7 @@ import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
+import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
 import {
     Alert,
     ErrorScreen,
@@ -29,7 +30,6 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { DeleteScoreDialog } from './DeleteScoreDialog'
 import { ImportScoreDialog } from './ImportScoreDialog'
 import { NewScoreDialog } from './NewScoreDialog'
-import { ScoreLimitDialog } from './ScoreLimitDialog'
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -103,7 +103,7 @@ export default function ScoresPage() {
                 onError: (err) => {
                     // The server refuses the create when the plan's score cap is
                     // reached — that's an upgrade conversation, not a failure toast.
-                    if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                    if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
                     else showToast('Could not create the score. Please try again.')
                 },
             },
@@ -115,7 +115,7 @@ export default function ScoresPage() {
             onSuccess: (copy) => showToast(`Created “${copy.title}”.`, 'info', 'check'),
             onError: (err) => {
                 // A copy is a new score, so it hits the same plan cap as a create.
-                if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
                 else showToast('Could not duplicate the score. Please try again.')
             },
         })
