@@ -165,12 +165,12 @@ describe('PlanPicker badges', () => {
     const badgeOf = (element: Element) =>
         [...element.querySelectorAll('span')].map((s) => s.textContent ?? '').find((t) => t === 'Your plan' || t === 'Best value') ?? ''
     /** Each tier card's badge, by the card's plan name. */
-    const badges = (host: HTMLElement) =>
+    const badges = (host: HTMLElement): Record<string, string> =>
         Object.fromEntries(
-            [...host.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')].map((card) => {
+            [...host.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')].map((card): [string, string] => {
                 const texts = [...card.querySelectorAll('span')].map((s) => s.textContent ?? '')
                 const name = PLAN_NAMES.find((n) => texts.some((t) => t === n || t.startsWith(`${n} — `)))
-                return [name, badgeOf(card)]
+                return [name ?? '?', badgeOf(card)]
             }),
         )
 

@@ -299,10 +299,7 @@ describe('MusicXmlImporter', () => {
             )
             const { score, warnings } = load(xml)
             expect(measureNotes(score)).toEqual(['A4:h~start-stop', 'A4:8~stop', 'B4:8.', 'r:16', 'r:8'])
-            expect(warnings).toEqual([
-                'A few note lengths were rounded to ones Solkey can write.',
-                'Very fast notes were left out.',
-            ])
+            expect(warnings).toEqual(['A few note lengths were rounded to ones Solkey can write.', 'Very fast notes were left out.'])
         })
 
         it('rewrites inconsistent tuplet notes inside their ratio', () => {

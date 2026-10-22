@@ -36,7 +36,9 @@ test('pricing FAQ: native disclosures, opening on the chords question', async ({
     await expect(first).toHaveAttribute('open', '')
     const recordingTime = faq.locator('details').filter({ hasText: 'What counts as recording time?' })
     await recordingTime.locator('summary').click()
-    await expect(recordingTime).toContainText('Your minutes refill once a day, at midnight UTC — Settings shows you when that is where you live.')
+    await expect(recordingTime).toContainText(
+        'Your minutes refill once a day, at midnight UTC — Settings shows you when that is where you live.',
+    )
 })
 
 test('pricing cards read as plans: taglines, allowances in words, Start free and Choose …', async ({ page }) => {
