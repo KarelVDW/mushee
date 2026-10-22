@@ -6,7 +6,7 @@ import { type ReactNode, useState } from 'react'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, showToast, TextField } from '@/components/ui'
-import { formatCount, formatDate, formatDateTime, formatSeconds } from '@/lib/format'
+import { formatCount, formatDate, formatDateTime, formatSeconds, plural } from '@/lib/format'
 import { useAdjustCredits, useRevokeSessions, useUser, useUserScores } from '@/lib/queries'
 
 export default function UserDetailPage() {
@@ -219,7 +219,7 @@ function RevokeSessions({ userId }: { userId: string }) {
                 onClick={() =>
                     revoke.mutate(undefined, {
                         onSuccess: (result) => {
-                            showToast(`Revoked ${result.revoked} session${result.revoked === 1 ? '' : 's'}.`, 'info')
+                            showToast(`Revoked ${result.revoked} ${plural(result.revoked, 'session')}.`, 'info')
                             setConfirming(false)
                         },
                     })

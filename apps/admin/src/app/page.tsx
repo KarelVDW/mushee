@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { BarList, DailyBars, StatTile } from '@/components/charts'
 import { Alert } from '@/components/ui'
-import { formatCount, formatSeconds } from '@/lib/format'
+import { formatCount, formatSeconds, plural } from '@/lib/format'
 import { useStats } from '@/lib/queries'
 
 export default function DashboardPage() {
@@ -44,7 +44,7 @@ export default function DashboardPage() {
                             href="/waitlist"
                             className="no-underline bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body text-[13px] leading-normal hover:bg-secondary-container hover:text-on-secondary-container transition-colors duration-150 ease-solkey">
                             <strong className="font-semibold">{formatCount(stats.data.totals.waitlistPending)}</strong>{' '}
-                            {stats.data.totals.waitlistPending === 1 ? 'person is' : 'people are'} waiting for beta approval →
+                            {plural(stats.data.totals.waitlistPending, 'person is', 'people are')} waiting for beta approval →
                         </Link>
                     )}
 

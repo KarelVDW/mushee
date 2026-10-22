@@ -32,6 +32,11 @@ export function formatCount(value: number): string {
     return value.toLocaleString('en-US')
 }
 
+/** The word to print after a count: plural(1, 'account') → "account"; plural(3, 'person is', 'people are') → "people are". */
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+    return count === 1 ? singular : pluralForm
+}
+
 /** "Jul 14" style tick label for the timeseries days. */
 export function formatDayTick(day: string): string {
     return new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })

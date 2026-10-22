@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, TertiaryButton, TextArea, TextField } from '@/components/ui'
 import { audienceCsvUrl, type AudienceFilter, type BetaStatusFilter } from '@/lib/api'
-import { formatCount, formatDateTime } from '@/lib/format'
+import { formatCount, formatDateTime, plural } from '@/lib/format'
 import { useAnnouncementPreview, useAnnouncements, useAudience, useRetryAnnouncement, useSendAnnouncement, useTiers } from '@/lib/queries'
 
 const BETA_OPTIONS: Array<{ value: BetaStatusFilter; label: string }> = [
@@ -62,7 +62,7 @@ export default function AnnouncementsPage() {
             {
                 onSuccess: (result) => {
                     setConfirming(false)
-                    setLastSent(`Sent to ${formatCount(result.recipientCount)} ${result.recipientCount === 1 ? 'account' : 'accounts'}.`)
+                    setLastSent(`Sent to ${formatCount(result.recipientCount)} ${plural(result.recipientCount, 'account')}.`)
                     setPartial(
                         result.failedCount > 0
                             ? `SendGrid rejected ${formatCount(result.failedCount)} of them — those accounts did not get the mail (${result.errors.join('; ')}). The ${formatCount(result.recipientCount)} above already have it, so check SendGrid before re-sending.`
@@ -167,7 +167,7 @@ export default function AnnouncementsPage() {
                                 {audience.isPending ? '…' : formatCount(total)}
                             </span>
                             <span className="font-body text-[12px] text-on-surface-variant">
-                                {total === 1 ? 'account' : 'accounts'} match
+                                {plural(total, 'account')} match
                                 {audience.data?.sample.length ? ` · e.g. ${audience.data.sample.map((s) => s.email).join(', ')}` : ''}
                             </span>
                         </div>
@@ -246,8 +246,8 @@ export default function AnnouncementsPage() {
                         {confirming ? (
                             <>
                                 <span className="font-body text-[13px] text-on-surface">
-                                    Send &ldquo;{subject}&rdquo; to <strong>{formatCount(total)}</strong>{' '}
-                                    {total === 1 ? 'account' : 'accounts'}? This cannot be undone.
+                                    Send &ldquo;{subject}&rdquo; to <strong>{formatCount(total)}</strong> {plural(total, 'account')}? This
+                                    cannot be undone.
                                 </span>
                                 <PrimaryButton onClick={sendReal} disabled={send.isPending}>
                                     {send.isPending ? 'Sending…' : `Yes, send to ${formatCount(total)}`}
@@ -256,7 +256,7 @@ export default function AnnouncementsPage() {
                             </>
                         ) : (
                             <PrimaryButton onClick={() => setConfirming(true)} disabled={!ready || total === 0 || send.isPending}>
-                                Send to {formatCount(total)} {total === 1 ? 'account' : 'accounts'}…
+                                Send to {formatCount(total)} {plural(total, 'account')}…
                             </PrimaryButton>
                         )}
                         {lastSent && <Pill tone="neutral">{lastSent}</Pill>}
@@ -297,7 +297,7 @@ export default function AnnouncementsPage() {
                                             retry.mutate(item.id, {
                                                 onSuccess: (result) =>
                                                     setLastSent(
-                                                        `Resent to ${formatCount(result.recipientCount)} ${result.recipientCount === 1 ? 'account' : 'accounts'}.`,
+                                                        `Resent to ${formatCount(result.recipientCount)} ${plural(result.recipientCount, 'account')}.`,
                                                     ),
                                             })
                                         }
