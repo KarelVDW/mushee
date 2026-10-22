@@ -7,6 +7,7 @@ import { useCallback, useMemo } from 'react'
 
 import type { ExportProfile } from './AccountExport'
 import {
+    api,
     type BillingInterval,
     cancelSubscription,
     changePlan,
@@ -27,6 +28,7 @@ import {
     listRecordings,
     listScores,
     loadScore,
+    NetworkError,
     type OnboardingPatch,
     type PackId,
     type PaidTierId,
@@ -56,6 +58,9 @@ const scoreKeys = {
     detail: (id: string) => ['scores', 'detail', id] as const,
 }
 
+/** How often a list that couldn't reach the server tries again by itself. */
+const UNREACHABLE_RETRY_MS = 10_000
+
 export function useScores(search?: string) {
     return useQuery({
         queryKey: scoreKeys.list(search),
@@ -63,6 +68,9 @@ export function useScores(search?: string) {
         // While a new search resolves, keep showing the previous list instead of
         // flashing back to the loading state on every keystroke.
         placeholderData: keepPreviousData,
+        // Unreachable (offline, server down): keep trying every few seconds, so the
+        // library comes back by itself once the connection does.
+        refetchInterval: (query) => (query.state.error instanceof NetworkError ? UNREACHABLE_RETRY_MS : false),
     })
 }
 
@@ -104,6 +112,21 @@ export function useDuplicateScore() {
         // Like create: the caller opens the upgrade dialog on a score-limit
         // refusal and toasts anything else itself.
         meta: { silentError: true },
+    })
+}
+
+/** Renames a score from the library; the new title shows on its row (and an open editor) at once. */
+export function useRenameScore() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, title }: { id: string; title: string }) => updateScore(id, { title }),
+        onSuccess: (meta: ScoreMeta) => {
+            queryClient.setQueriesData<ScoreMeta[]>({ queryKey: scoreKeys.lists }, (rows) =>
+                rows?.map((row) => (row.id === meta.id ? meta : row)),
+            )
+            queryClient.setQueryData<ScoreDocument>(scoreKeys.detail(meta.id), (data) => (data ? { ...data, meta } : data))
+        },
+        meta: { errorMessage: "Couldn't rename the score. Please try again." },
     })
 }
 
@@ -213,9 +236,35 @@ export function useUpdateScore(id: string) {
     })
 }
 
+const onboardingKeys = {
+    answers: ['onboarding'] as const,
+}
+
+/** What the account answered in onboarding, as the API stores it; every field may be unanswered. */
+export interface OnboardingAnswers {
+    /** Instrument display names, in the order picked (survey-only options like 'Other' included). */
+    instruments?: string[] | null
+}
+
+/**
+ * The account's onboarding answers (GET /onboarding) — the library starts a new score on the
+ * first instrument picked there. Null when the account has none yet.
+ */
+export function useOnboarding() {
+    return useQuery({
+        queryKey: onboardingKeys.answers,
+        // The API answers an empty body when nothing is stored yet; the cache needs a value.
+        queryFn: async () => (await api<OnboardingAnswers | null | undefined>('/onboarding')) ?? null,
+        // The answers change only when onboarding saves them, which refreshes this query.
+        staleTime: Infinity,
+    })
+}
+
 export function usePatchOnboarding() {
+    const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (patch: OnboardingPatch) => patchOnboarding(patch),
+        onSuccess: () => void queryClient.invalidateQueries({ queryKey: onboardingKeys.answers }),
         meta: { errorMessage: "Couldn't save your onboarding answers. Please try again." },
     })
 }
