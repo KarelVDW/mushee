@@ -3,6 +3,8 @@
 import { CloseButton, ModalTitle } from '@mushee/ui'
 import { type KeyboardEvent, type ReactNode, useEffect, useEffectEvent, useId, useRef } from 'react'
 
+import { focusWithoutTooltip } from './Tooltip'
+
 /** Everything keyboard focus can land on — the dialog's Tab trap cycles through these. */
 export const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
 
@@ -19,24 +21,29 @@ interface DialogPanelProps {
 
 /**
  * A modal dialog — the scrim and the glass panel on it — carrying the whole modal
- * contract: role/aria-modal/labelling, focus moved in on open and handed back on
+ * contract: role/aria-modal/labelling (the title names it, the subtitle describes it, so
+ * "there's no undo" is read out with the name), focus moved in on open and handed back on
  * close, Tab trapped inside, and one `onClose` for every way of dismissing it.
  */
 export function DialogPanel({ title, subtitle, children, footer, onClose, width }: DialogPanelProps) {
     const titleId = useId()
+    const subtitleId = useId()
     return (
         <Scrim onDismiss={onClose}>
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
+                aria-describedby={subtitle ? subtitleId : undefined}
                 className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90dvh] flex flex-col"
                 style={{ width }}>
                 <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                     <div className="flex flex-col gap-1.5">
                         <ModalTitle id={titleId}>{title}</ModalTitle>
                         {subtitle && (
-                            <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{subtitle}</span>
+                            <span id={subtitleId} className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                                {subtitle}
+                            </span>
                         )}
                     </div>
                     {onClose && <CloseButton size="md" onClick={onClose} />}
@@ -55,11 +62,12 @@ function Scrim({ children, onDismiss }: { children: ReactNode; onDismiss?: () =>
     const panelRef = useRef<HTMLDivElement>(null)
 
     // Move focus into the dialog on open and hand it back to the trigger on close, so
-    // keyboard users never end up "behind" the scrim.
+    // keyboard users never end up "behind" the scrim. Handed-back focus doesn't pop the
+    // trigger's tooltip: the user didn't move it there.
     useEffect(() => {
         const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
         panelRef.current?.focus()
-        return () => previouslyFocused?.focus()
+        return () => focusWithoutTooltip(previouslyFocused)
     }, [])
 
     // Escape is heard on the document, not only inside the panel: a control that removes itself

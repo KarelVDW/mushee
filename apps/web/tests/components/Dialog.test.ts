@@ -20,11 +20,12 @@ describe('DialogPanel', () => {
 
     const dialog = () => host.querySelector<HTMLElement>('[role="dialog"]')
 
-    function open(onClose?: () => void) {
+    function open(onClose?: () => void, subtitle?: string) {
         act(() => {
             root.render(
                 createElement(DialogPanel, {
                     title: 'Delete this score?',
+                    subtitle,
                     width: 440,
                     onClose,
                     children: createElement('button', { type: 'button' }, 'Keep it'),
@@ -57,6 +58,15 @@ describe('DialogPanel', () => {
 
         act(() => root.render(null))
         expect(document.activeElement).toBe(trigger)
+    })
+
+    it('is described by its subtitle, so the key sentence is read with the name', () => {
+        open(vi.fn(), "'Scale Study' will be gone for good — there's no undo.")
+        const describedBy = dialog()?.getAttribute('aria-describedby') ?? ''
+        expect(document.getElementById(describedBy)?.textContent).toBe("'Scale Study' will be gone for good — there's no undo.")
+
+        open(vi.fn())
+        expect(dialog()?.hasAttribute('aria-describedby')).toBe(false)
     })
 
     it('calls onClose once for Escape inside the panel', () => {
