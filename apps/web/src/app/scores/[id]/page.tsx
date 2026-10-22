@@ -478,16 +478,15 @@ export default function ScoreEditorPage() {
         )
     }
     if (loadError || unreadable) {
-        const notFound = scoreMissing
         return (
             <ErrorScreen
-                title={notFound ? 'Score not found' : "This score couldn't be loaded"}
+                title={scoreMissing ? 'Score not found' : "This score couldn't be loaded"}
                 message={
-                    notFound
+                    scoreMissing
                         ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
                         : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
                 }
-                onRetry={notFound ? undefined : () => void refetch()}
+                onRetry={scoreMissing ? undefined : () => void refetch()}
                 onBack={() => router.push('/scores')}
                 backLabel="Back to library"
             />

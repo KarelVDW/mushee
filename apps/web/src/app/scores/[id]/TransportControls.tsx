@@ -172,8 +172,9 @@ function LabelledWell({ label, children }: { label: string; children: ReactNode 
  * Touch replaces the keyboard: arrows become the note navigator, ArrowUp/Down become
  * pitch nudges, and the transport moves down here where thumbs live. The two pairs sit in
  * their own labelled wells ('Note' ‹ ›, 'Pitch' ▼ ▲ — named 'Lower' and 'Higher', like the
- * desktop dock's nudges) so moving between notes never reads as changing one. Buttons are 40px (44px from 400px wide), and the record button stays the
- * biggest, loudest control on the screen. Selection-scoped actions (copy / delete / select
+ * desktop dock's nudges) so moving between notes never reads as changing one. Buttons are
+ * 40px (44px from 400px wide), and the record button stays the biggest, loudest control on
+ * the screen. Selection-scoped actions (copy / delete / select
  * all) are NOT buttons here — they live in the score's selection popover, opened by
  * long-press / double-tap / drag-release.
  */
