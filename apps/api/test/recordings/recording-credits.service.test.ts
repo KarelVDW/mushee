@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 
 import type { Repository } from 'typeorm'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CreditBalance } from '../../src/recordings/entities/credit-balance.entity'
 import type { RecordingUsage } from '../../src/recordings/entities/recording-usage.entity'
@@ -87,6 +87,44 @@ describe('balance', () => {
         state.used = 600
         const balance = await service.balance('u1')
         expect(balance).toMatchObject({ remaining: 0, packSeconds: 0, exhausted: true })
+    })
+})
+
+describe('resetsAt', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('is the next midnight UTC, the start of the next usage day', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-22T23:59:30Z'))
+        const { service, usageRepo } = makeService(tier(600))
+        const balance = await service.balance('u1')
+        expect(usageRepo.findOneBy).toHaveBeenCalledWith({ userId: 'u1', day: '2026-10-22' })
+        expect(balance.resetsAt).toBe('2026-10-23T00:00:00.000Z')
+    })
+
+    it('rolls over month and year ends', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-12-31T00:00:00Z'))
+        const { service } = makeService(tier(600))
+        expect((await service.balance('u1')).resetsAt).toBe('2027-01-01T00:00:00.000Z')
+    })
+
+    it('comes with every spend, for the same day the spend was billed to', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2028-02-28T08:15:00Z'))
+        const { service, usageRepo } = makeService(tier(600))
+        const balance = await service.spend('u1', 1)
+        expect(usageRepo.query.mock.calls[0][1]).toEqual(['u1', '2028-02-28', 1])
+        expect(balance.resetsAt).toBe('2028-02-29T00:00:00.000Z')
+    })
+
+    it('is sent on unlimited tiers too', async () => {
+        const { service } = makeService(tier(null))
+        const balance = await service.balance('u1')
+        expect(Date.parse(balance.resetsAt)).toBeGreaterThan(Date.now())
+        expect(balance.resetsAt).toMatch(/T00:00:00\.000Z$/)
     })
 })
 

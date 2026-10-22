@@ -86,13 +86,19 @@ afterEach(() => {
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
 
-function connect({ scoreId = SCORE_ID, findOne = () => Promise.resolve({}) }: { scoreId?: string; findOne?: () => Promise<unknown> } = {}) {
+function connect({
+    scoreId = SCORE_ID,
+    findOne = () => Promise.resolve({}),
+    opened,
+}: { scoreId?: string; findOne?: () => Promise<unknown>; opened?: unknown } = {}) {
     const session = {
         setMeta: vi.fn(),
         appendChunk: vi.fn(),
         close: vi.fn(() => Promise.resolve()),
     }
-    const recordingSessions = { open: vi.fn(() => Promise.resolve({ session })) }
+    const recordingSessions = {
+        open: vi.fn((_userId: string, _scoreId: string, _events: unknown) => Promise.resolve(opened ?? { session })),
+    }
     const scores = { findOne: vi.fn(findOne) }
     const gateway = new RecordingsGateway(
         recordingSessions as unknown as RecordingSessionsService,
@@ -130,6 +136,40 @@ describe('RecordingsGateway score check', () => {
         expect(recordingSessions.open).not.toHaveBeenCalled()
         expect(client.sent).toEqual([])
         expect(client.close).toHaveBeenCalledWith(1011, 'Recording session failed')
+    })
+})
+
+describe('RecordingsGateway recording-limit frame', () => {
+    const balance = {
+        tier: { id: 'free', name: 'Sketch', dailyRecordingCredits: 180 },
+        used: 180,
+        remaining: 0,
+        packSeconds: 0,
+        exhausted: true,
+        resetsAt: '2026-10-23T00:00:00.000Z',
+    }
+    const frame = {
+        type: 'recording-limit',
+        planId: 'free',
+        planName: 'Sketch',
+        limitSeconds: 180,
+        usedSeconds: 180,
+        resetsAt: '2026-10-23T00:00:00.000Z',
+    }
+
+    it('tells a client with no budget left when it refills, then closes', async () => {
+        const { client } = connect({ opened: { rejected: 'limit-reached', balance } })
+        await flush()
+        expect(client.sent).toEqual([frame])
+        expect(client.close).toHaveBeenCalledWith(1008, 'Daily recording limit reached')
+    })
+
+    it('sends the same frame when the budget runs out mid-recording', async () => {
+        const { client, recordingSessions } = connect()
+        await flush()
+        const events = recordingSessions.open.mock.calls[0][2] as { onLimitReached: (b: typeof balance) => void }
+        events.onLimitReached(balance)
+        expect(client.sent).toEqual([frame])
     })
 })
 

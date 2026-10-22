@@ -6,13 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/api', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/api')>()),
-    api: vi.fn(),
+    getOnboarding: vi.fn(),
     listScores: vi.fn(),
     updateScore: vi.fn(),
     patchOnboarding: vi.fn(),
 }))
 
-import { api, listScores, NetworkError, type ScoreMeta, updateScore } from '@/lib/api'
+import { getOnboarding, listScores, NetworkError, type ScoreMeta, updateScore } from '@/lib/api'
 import { useOnboarding, usePatchOnboarding, useRenameScore, useScores } from '@/lib/queries'
 
 // React's act() refuses to run outside a test-aware environment.
@@ -54,28 +54,27 @@ async function settle() {
 }
 
 describe('useOnboarding', () => {
-    it('reads the stored answers, and an empty answer as null (nothing stored yet)', async () => {
-        vi.mocked(api).mockResolvedValueOnce({ instruments: ['Guitar'] })
+    it('reads the stored answers, or null when nothing is stored yet', async () => {
+        vi.mocked(getOnboarding).mockResolvedValueOnce({ instruments: ['Guitar'] })
         const answers = renderHook(() => useOnboarding())
         await vi.waitFor(() => expect(answers.current.data).toEqual({ instruments: ['Guitar'] }))
-        expect(api).toHaveBeenCalledWith('/onboarding')
         unmount?.()
 
         client.clear()
-        vi.mocked(api).mockResolvedValueOnce(undefined)
+        vi.mocked(getOnboarding).mockResolvedValueOnce(null)
         const none = renderHook(() => useOnboarding())
         await vi.waitFor(() => expect(none.current.data).toBeNull())
     })
 
     it('is refreshed when onboarding saves new answers', async () => {
-        vi.mocked(api).mockResolvedValue({ instruments: [] })
+        vi.mocked(getOnboarding).mockResolvedValue({ instruments: [] })
         const patch = renderHook(() => ({ answers: useOnboarding(), save: usePatchOnboarding() }))
         await settle()
-        expect(api).toHaveBeenCalledTimes(1)
+        expect(getOnboarding).toHaveBeenCalledTimes(1)
         await act(async () => {
             await patch.current.save.mutateAsync({ instruments: ['Piano'] })
         })
-        await vi.waitFor(() => expect(api).toHaveBeenCalledTimes(2))
+        await vi.waitFor(() => expect(getOnboarding).toHaveBeenCalledTimes(2))
     })
 })
 

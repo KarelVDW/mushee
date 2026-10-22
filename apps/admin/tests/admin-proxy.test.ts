@@ -129,6 +129,23 @@ describe('admin API proxy', () => {
         expect(res.headers.get('Location')).toBe('https://bucket.test/take.webm')
     })
 
+    it.each([
+        ['..', ['..', 'health']],
+        ['.', ['users', '.', 'u1']],
+        ['%2e%2e', ['%2e%2e', 'health']],
+        ['%2E.', ['users', '%2E.', 'u1']],
+    ])("refuses a '%s' segment with 400 before calling the API", async (_label, path) => {
+        const res = await GET(await signedRequest('http://admin.test/api/admin/stats'), context(...path))
+        expect(res.status).toBe(400)
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('still forwards segments that merely contain dots', async () => {
+        fetchMock.mockResolvedValue(json({ ok: true }, 200))
+        await GET(await signedRequest('http://admin.test/api/admin/files/a..b'), context('files', 'a..b', '...'))
+        expect(upstreamCall().url).toBe('http://api.test/admin/files/a..b/...')
+    })
+
     it("answers 502 when the API can't be reached", async () => {
         fetchMock.mockRejectedValue(new TypeError('fetch failed'))
         const res = await GET(await signedRequest('http://admin.test/api/admin/stats'), context('stats'))

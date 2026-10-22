@@ -1,4 +1,5 @@
 import type { Pitch } from './Pitch'
+import type { ClefType } from './types'
 
 /** User-facing instrument family, used to group every instrument picker in the app. */
 export type InstrumentCategory = 'Keyboard' | 'Strings' | 'Woodwinds' | 'Brass' | 'Voice' | 'Folk & World' | 'Percussion'
@@ -14,10 +15,14 @@ interface InstrumentTraits {
     playsChords?: boolean
     /** Display names the instrument used to carry, still matched by {@link Instrument.findByDisplayName}. */
     legacyNames?: ReadonlyArray<string>
+    /** The clef the instrument's part is written in, when it isn't treble — see {@link Instrument.defaultClef}. */
+    defaultClef?: ClefType
 }
 
 /** The traits of a duplicate or section patch: registered for loading, left out of pickers. */
 const HIDDEN: InstrumentTraits = { pickable: false }
+/** The traits of an instrument written in bass clef. */
+const BASS: InstrumentTraits = { defaultClef: 'bass' }
 
 /**
  * Score-level instrument. Carries the General MIDI program number, the smplr
@@ -45,6 +50,15 @@ export class Instrument {
 
     private readonly _pickable: boolean
     private readonly _playsChords: boolean
+    /**
+     * The clef the instrument's part is usually written in: alto for the viola; bass for the
+     * cello, double bass, bass guitar, bassoons and the low brass; treble for everything else,
+     * including the low instruments written an octave or more above where they sound (bass
+     * clarinet, tenor and baritone sax, guitar). Instruments that also read tenor clef for high
+     * passages (cello, bassoon, trombone) default to bass. Clef pickers offer it first; a score's
+     * clef stays the player's choice.
+     */
+    readonly defaultClef: ClefType
     /** Display names the instrument used to carry; {@link findByDisplayName} still resolves them. */
     readonly legacyNames: ReadonlyArray<string>
 
@@ -60,6 +74,7 @@ export class Instrument {
     ) {
         this._pickable = traits.pickable ?? true
         this._playsChords = traits.playsChords ?? false
+        this.defaultClef = traits.defaultClef ?? 'treble'
         this.legacyNames = traits.legacyNames ?? []
         Instrument._all.push(this)
         Instrument._byId.set(id, this)
@@ -148,13 +163,13 @@ export class Instrument {
 
     // Concert-pitch instruments — written = sounding, no transposition.
     static readonly Bagpipe = new Instrument('bagpipe', 'Bagpipe', 'Folk & World', 109, 'bagpipe')
-    static readonly BaritoneHorn = new Instrument('baritone-horn', 'Baritone Horn', 'Brass', 58, 'tuba')
-    static readonly Bassoon = new Instrument('bassoon', 'Bassoon', 'Woodwinds', 70, 'bassoon')
+    static readonly BaritoneHorn = new Instrument('baritone-horn', 'Baritone Horn', 'Brass', 58, 'tuba', 0, 0, BASS)
+    static readonly Bassoon = new Instrument('bassoon', 'Bassoon', 'Woodwinds', 70, 'bassoon', 0, 0, BASS)
     static readonly Brass = new Instrument('brass', 'Brass', 'Brass', 61, 'brass_section', 0, 0, HIDDEN)
-    static readonly Cello = new Instrument('cello', 'Cello', 'Strings', 42, 'cello')
+    static readonly Cello = new Instrument('cello', 'Cello', 'Strings', 42, 'cello', 0, 0, BASS)
     static readonly DiziFlute = new Instrument('dizi-flute', 'Dizi Flute', 'Folk & World', 73, 'flute')
     static readonly Erhu = new Instrument('erhu', 'Erhu', 'Folk & World', 110, 'fiddle')
-    static readonly Euphonium = new Instrument('euphonium', 'Euphonium', 'Brass', 58, 'tuba')
+    static readonly Euphonium = new Instrument('euphonium', 'Euphonium', 'Brass', 58, 'tuba', 0, 0, BASS)
     static readonly Flute = new Instrument('flute', 'Flute', 'Woodwinds', 73, 'flute')
     static readonly Harmonica = new Instrument('harmonica', 'Harmonica', 'Folk & World', 22, 'harmonica', 0, 0, { playsChords: true })
     static readonly HornInC = new Instrument('horn-in-c', 'Horn in C', 'Brass', 60, 'french_horn', 0, 0, HIDDEN)
@@ -167,12 +182,12 @@ export class Instrument {
     static readonly ShakuhachiFlute = new Instrument('shakuhachi-flute', 'Shakuhachi Flute', 'Folk & World', 77, 'shakuhachi')
     static readonly TinWhistle = new Instrument('tin-whistle', 'Tin Whistle', 'Folk & World', 78, 'whistle')
     static readonly TraditionalFlute = new Instrument('traditional-flute', 'Traditional Flute', 'Folk & World', 73, 'flute')
-    static readonly Trombone = new Instrument('trombone', 'Trombone', 'Brass', 57, 'trombone')
-    static readonly Tuba = new Instrument('tuba', 'Tuba', 'Brass', 58, 'tuba')
-    static readonly Viola = new Instrument('viola', 'Viola', 'Strings', 41, 'viola')
+    static readonly Trombone = new Instrument('trombone', 'Trombone', 'Brass', 57, 'trombone', 0, 0, BASS)
+    static readonly Tuba = new Instrument('tuba', 'Tuba', 'Brass', 58, 'tuba', 0, 0, BASS)
+    static readonly Viola = new Instrument('viola', 'Viola', 'Strings', 41, 'viola', 0, 0, { defaultClef: 'alto' })
     static readonly Violin = new Instrument('violin', 'Violin', 'Strings', 40, 'violin')
     static readonly ViolinLead = new Instrument('violin-lead', 'Violin Lead', 'Strings', 40, 'violin', 0, 0, HIDDEN)
-    static readonly Violoncello = new Instrument('violoncello', 'Violoncello', 'Strings', 42, 'cello', 0, 0, HIDDEN)
+    static readonly Violoncello = new Instrument('violoncello', 'Violoncello', 'Strings', 42, 'cello', 0, 0, { ...HIDDEN, ...BASS })
     static readonly VoiceLead = new Instrument('voice-lead', 'Voice', 'Voice', 53, 'voice_oohs', 0, 0, { legacyNames: ['Voice Lead'] })
 
     // B♭ instruments — written sounds a major 2nd lower (chromatic −2, diatonic −1).
@@ -200,11 +215,12 @@ export class Instrument {
     // Octave transpositions. Guitar and bass guitar are notated an octave above where they sound.
     static readonly Piccolo = new Instrument('piccolo', 'Piccolo', 'Woodwinds', 72, 'piccolo', 12, 7)
     static readonly Contrabass = new Instrument('contrabass', 'Double Bass', 'Strings', 43, 'contrabass', -12, -7, {
+        ...BASS,
         legacyNames: ['Contrabass'],
     })
-    static readonly Contrabassoon = new Instrument('contrabassoon', 'Contrabassoon', 'Woodwinds', 70, 'bassoon', -12, -7)
+    static readonly Contrabassoon = new Instrument('contrabassoon', 'Contrabassoon', 'Woodwinds', 70, 'bassoon', -12, -7, BASS)
     static readonly Guitar = new Instrument('guitar', 'Guitar', 'Strings', 24, 'acoustic_guitar_nylon', -12, -7, { playsChords: true })
-    static readonly BassGuitar = new Instrument('bass-guitar', 'Bass Guitar', 'Strings', 33, 'electric_bass_finger', -12, -7)
+    static readonly BassGuitar = new Instrument('bass-guitar', 'Bass Guitar', 'Strings', 33, 'electric_bass_finger', -12, -7, BASS)
 
     // Major-9th-down instruments — written sounds an octave + major 2nd lower.
     static readonly BaritoneHornTreble = new Instrument(

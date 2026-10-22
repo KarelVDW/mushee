@@ -54,6 +54,28 @@ describe('TimeSignature', () => {
         expect(new TimeSignature(6, 8).beatUnit.beats).toBe(0.5)
     })
 
+    describe('plainName (user copy)', () => {
+        const words = (a: number, b: number) => new TimeSignature(a, b)
+
+        it('counts the beats the metronome clicks, with how they feel', () => {
+            expect(words(4, 4).plainName).toBe('4 beats')
+            expect(words(3, 4).plainName).toBe('3 beats')
+            expect(words(6, 8).plainName).toBe('2 swaying beats')
+            expect(words(9, 8).plainName).toBe('3 swaying beats')
+            expect(words(12, 8).plainName).toBe('4 swaying beats')
+            expect(words(2, 2).plainName).toBe('2 long beats')
+            // 3/8 is simple: three quick eighths, as the count-in clicks it.
+            expect(words(3, 8).plainName).toBe('3 quick beats')
+            expect(words(7, 8).plainName).toBe('7 quick beats')
+        })
+
+        it('says one beat in the singular, and reads per bar', () => {
+            expect(words(1, 4).plainName).toBe('1 beat')
+            expect(words(4, 4).plainNamePerBar).toBe('4 beats in a bar')
+            expect(words(6, 8).plainNamePerBar).toBe('2 swaying beats in a bar')
+        })
+    })
+
     describe('pulse (the felt beat a metronome clicks and a listener taps)', () => {
         it('flags compound meters: eighth/sixteenth denominators grouped in threes, but not 3/8', () => {
             expect(new TimeSignature(6, 8).isCompound).toBe(true)

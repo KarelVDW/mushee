@@ -80,7 +80,7 @@ export class PlanCardCopy {
         if (limit === null) return null
         const used = this.billing.credits.usedSeconds
         const left = Math.max(0, limit - used)
-        const when = formatResetWhen(null, this.clock.now, this.clock.locale, this.clock.timeZone)
+        const when = formatResetWhen(this.billing.credits.resetsAt, this.clock.now, this.clock.locale, this.clock.timeZone)
         return {
             percent: limit > 0 ? Math.min(100, (used / limit) * 100) : 100,
             value: `${formatAllowanceShort(left)} left of ${formatAllowanceShort(limit)}`,

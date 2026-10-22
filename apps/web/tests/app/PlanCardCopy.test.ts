@@ -80,6 +80,14 @@ describe('PlanCardCopy', () => {
         expect(copyFor(SKETCH, null, BRUSSELS).meter?.helper).toBe('Refills tomorrow at 02:00.')
     })
 
+    it("uses the API's reset moment when it sends one", () => {
+        const withReset = (resetsAt: string) => ({ ...SKETCH, credits: { ...SKETCH.credits, resetsAt } })
+        // The API's own answer for 22 October: the same midnight UTC the fallback assumes.
+        expect(copyFor(withReset('2026-10-23T00:00:00.000Z')).meter?.helper).toBe('Refills tonight at 8:00 PM.')
+        // A reset the fallback would not guess is still shown as sent.
+        expect(copyFor(withReset('2026-10-23T06:00:00.000Z')).meter?.helper).toBe('Refills tomorrow at 2:00 AM.')
+    })
+
     it('says when all of today is used, and caps the meter', () => {
         const meter = copyFor({ ...SKETCH, credits: { ...SKETCH.credits, usedSeconds: 200, remainingSeconds: 0 } }).meter
         expect(meter?.percent).toBe(100)

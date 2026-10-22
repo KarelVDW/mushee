@@ -5,6 +5,8 @@ import { Pitch, type PitchStep } from './Pitch'
 /** Order of sharps and flats in key signatures */
 const SHARP_ORDER: readonly PitchStep[] = ['F', 'C', 'G', 'D', 'A', 'E', 'B']
 const FLAT_ORDER: readonly PitchStep[] = ['B', 'E', 'A', 'D', 'G', 'C', 'F']
+/** A relative minor sits three fifths above its major's signature (A minor shares C major's no sharps). */
+const RELATIVE_MINOR_FIFTHS = 3
 
 /**
  * Canonical pitch (name + octave) each sharp/flat occupies in a treble-clef key signature.
@@ -83,6 +85,22 @@ export class KeySignature {
         const letter = SHARP_ORDER[(((fifths + 1) % 7) + 7) % 7]
         const alter = KeySignature.alterInKey(fifths, letter)
         return letter + (alter > 0 ? '♯' : alter < 0 ? '♭' : '')
+    }
+
+    /**
+     * The key as people name it — "D major", "A minor" — for the key chip, its tooltip and the
+     * transpose readout. A minor key names its own tonic, the relative minor three fifths up the
+     * circle. User copy that may change: identity goes through (fifths, mode), never this.
+     */
+    get displayName(): string {
+        const minor = this.mode === 'minor'
+        const tonic = KeySignature.majorKeyName(minor ? this.fifths + RELATIVE_MINOR_FIFTHS : this.fifths)
+        return `${tonic} ${minor ? 'minor' : 'major'}`
+    }
+
+    /** Both keys a signature of `fifths` can stand for, as the key picker's hover title says them: "D major · B minor". */
+    static readingsOf(fifths: number): string {
+        return `${KeySignature.majorKeyName(fifths)} major · ${KeySignature.majorKeyName(fifths + RELATIVE_MINOR_FIFTHS)} minor`
     }
 
     /** Semitone alteration this key signature applies to the given note name (+1 sharp, −1 flat, 0 natural). */

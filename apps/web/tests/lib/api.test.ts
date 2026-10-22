@@ -1,7 +1,18 @@
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOnboarding, recordingSocketUrl, updateScore } from '@/lib/api'
+import {
+    api,
+    createScore,
+    deleteScore,
+    getOnboarding,
+    getScore,
+    listScores,
+    loadScore,
+    patchOnboarding,
+    recordingSocketUrl,
+    updateScore,
+} from '@/lib/api'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
@@ -125,6 +136,17 @@ describe('api', () => {
     it('api() resolves on an ok response with an empty body (void endpoints)', async () => {
         fetchMock.mockResolvedValue(okResponse(undefined))
         await expect(api('/scores/3', { method: 'DELETE' })).resolves.toBeUndefined()
+    })
+
+    it('getOnboarding() GETs /onboarding, and reads an empty body as null (nothing stored yet)', async () => {
+        fetchMock.mockResolvedValueOnce(okResponse({ instruments: ['Guitar'] }))
+        expect(await getOnboarding()).toEqual({ instruments: ['Guitar'] })
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit | undefined]
+        expect(url).toBe(`${BASE}/onboarding`)
+        expect(init?.method ?? 'GET').toBe('GET')
+
+        fetchMock.mockResolvedValueOnce(okResponse(undefined))
+        expect(await getOnboarding()).toBeNull()
     })
 
     it('patchOnboarding() PATCHes the patch body to /onboarding', async () => {

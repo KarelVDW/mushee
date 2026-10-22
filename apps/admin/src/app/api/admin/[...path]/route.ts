@@ -21,6 +21,20 @@ export const maxDuration = 60
 
 type Context = { params: Promise<{ path: string[] }> }
 
+/**
+ * A '.' or '..' segment, judged after decoding so '%2e%2e' counts too. A
+ * malformed escape can't decode to a dot segment, and re-encoding keeps it inert.
+ */
+function isDotSegment(segment: string): boolean {
+    let decoded = segment
+    try {
+        decoded = decodeURIComponent(segment)
+    } catch {
+        // Malformed escape: judge the raw segment.
+    }
+    return decoded === '.' || decoded === '..'
+}
+
 /** One handler for every exported method; `request.method` says which. */
 async function forward(request: NextRequest, { params }: Context) {
     const secret = process.env.ADMIN_SECRET
@@ -32,8 +46,13 @@ async function forward(request: NextRequest, { params }: Context) {
     }
 
     // Rebuild the upstream path from the matched segments (never from raw
-    // user input) — encodeURIComponent keeps '..'-style tricks inert.
+    // user input). encodeURIComponent leaves dots alone ('..' stays '..') and
+    // fetch normalises the URL, so a dot segment would climb out of /admin and
+    // carry the console secret to another API route: refuse it outright.
     const { path } = await params
+    if (path.some(isDotSegment)) {
+        return NextResponse.json({ message: "Paths can't contain '.' or '..' segments." }, { status: 400 })
+    }
     const upstream = `${API_URL}/admin/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`
     const body = request.method === 'GET' ? undefined : await request.text()
 
