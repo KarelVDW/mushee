@@ -84,7 +84,7 @@ export class MusicXmlImporter {
     private fill = 0
     private entries: MxmlMeasureEntry[] = []
     /** The written pieces of the last emitted note, so a following chord note can raise its pitch. */
-    private lastNote: MxmlNote[] = []
+    private lastNotePieces: MxmlNote[] = []
 
     constructor(readonly xml: string) {}
 
@@ -166,7 +166,7 @@ export class MusicXmlImporter {
     private readMeasure(elements: Element[], index: number): MxmlMeasure {
         this.fill = 0
         this.entries = []
-        this.lastNote = []
+        this.lastNotePieces = []
         for (const element of elements) {
             switch (element.tagName) {
                 case 'attributes':
@@ -261,17 +261,17 @@ export class MusicXmlImporter {
         const pitch = pitchElement && this.readPitch(pitchElement)
         if (pitchElement && !pitch) return this.warn(WARN_DROPPED)
 
-        if (this.child(element, 'chord') && this.lastNote.length && pitch) {
+        if (this.child(element, 'chord') && this.lastNotePieces.length && pitch) {
             // A chord note shares the previous note's time; keep whichever pitch is higher.
-            const top = this.lastNote[0].pitch
+            const top = this.lastNotePieces[0].pitch
             if (!top || MusicXmlImporter.midiOf(pitch) > MusicXmlImporter.midiOf(top))
-                this.lastNote.forEach((piece) => (piece.pitch = pitch))
+                this.lastNotePieces.forEach((piece) => (piece.pitch = pitch))
             return this.warn(WARN_CHORDS)
         }
 
         // A whole-bar rest carries no written value: leave the bar empty and let the fit pass pad it.
         if (this.child(element, 'rest')?.getAttribute('measure') === 'yes') {
-            this.lastNote = []
+            this.lastNotePieces = []
             return
         }
 
@@ -315,7 +315,7 @@ export class MusicXmlImporter {
             return ScoreSerializer.noteEntry(written, pitch, tie)
         })
         this.entries.push(...pieces)
-        this.lastNote = pieces
+        this.lastNotePieces = pieces
         this.fill += durations.reduce((sum, d) => sum + d.effectiveBeats, 0)
     }
 
@@ -326,7 +326,7 @@ export class MusicXmlImporter {
         if (!duration || duration <= 0 || duration / this.divisions > MAX_NOTE_BEATS) return
         const rests = new DurationSpeller(this.timeSignature).spell(this.fill, duration / this.divisions)
         this.entries.push(...rests.map((written) => ScoreSerializer.noteEntry(written, undefined)))
-        this.lastNote = []
+        this.lastNotePieces = []
         this.fill += rests.reduce((sum, d) => sum + d.effectiveBeats, 0)
     }
 
