@@ -77,20 +77,46 @@ test.describe('a stored document that is not MusicXML-JSON', () => {
     })
 })
 
+/** A one-bar score (a whole-note C) — enough for the signed-out page to engrave something. */
+const ONE_BAR = {
+    partList: { scoreParts: [{ id: 'P1', partName: 'Piano' }] },
+    parts: [
+        {
+            id: 'P1',
+            measures: [
+                {
+                    number: '1',
+                    entries: [
+                        { _type: 'attributes', divisions: 12, clef: [{ sign: 'G', line: 2 }], time: [{ beats: '4', beatType: '4' }] },
+                        { _type: 'note', pitch: { step: 'C', octave: 4 }, duration: 48, voice: '1', type: 'whole' },
+                    ],
+                },
+            ],
+        },
+    ],
+}
+
 test('a visitor without an account is sent to signup with the score as the way back', async ({ page }) => {
     await page.route(/^https?:\/\//, (route) => {
         const url = new URL(route.request().url())
         if (url.hostname !== 'localhost') return route.abort()
         if (url.pathname === `/shared/${MOCK_SHARE_TOKEN}`) {
+            // The app fetches with credentials, so the answer names the origin rather than '*'.
+            const headers = {
+                'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                'access-control-allow-credentials': 'true',
+                'access-control-allow-headers': 'content-type',
+            }
+            if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' })
             return route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                headers: { 'access-control-allow-origin': '*' },
+                headers,
                 body: JSON.stringify({
                     id: 'x',
                     title: MOCK_TITLE,
                     updatedAt: '2026-01-01T00:00:00.000Z',
-                    document: { partList: { scoreParts: [] }, parts: [] },
+                    document: ONE_BAR,
                 }),
             })
         }

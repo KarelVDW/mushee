@@ -84,7 +84,10 @@ describe('ExportMenu', () => {
         act(() => formats()[0].click())
         expect(formats()[0].textContent).toContain('Preparing PDF…')
         expect(formats().every((b) => b.disabled)).toBe(true)
-        await act(async () => pdf.resolve?.(new Blob(['%PDF-'])))
+        await act(() => {
+            pdf.resolve?.(new Blob(['%PDF-']))
+            return Promise.resolve()
+        })
         expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'My tune.pdf')
         expect(showToast).toHaveBeenCalledWith('Downloaded “My tune.pdf”.', 'info')
     })

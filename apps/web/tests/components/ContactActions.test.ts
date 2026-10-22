@@ -40,16 +40,22 @@ describe('CopyAddressButton', () => {
         vi.unstubAllGlobals()
     })
 
+    /** Click, then let the copy's promise settle. */
+    const click = (): Promise<void> => {
+        host.querySelector('button')?.click()
+        return Promise.resolve()
+    }
+
     it('copies the address and confirms', async () => {
         writeText.mockResolvedValue(undefined)
-        await act(async () => host.querySelector('button')?.click())
+        await act(() => click())
         expect(writeText).toHaveBeenCalledWith('support@solkey.io')
         expect(showToast).toHaveBeenCalledWith('Address copied', 'info')
     })
 
     it('says the address where the clipboard refuses', async () => {
         writeText.mockRejectedValue(new Error('denied'))
-        await act(async () => host.querySelector('button')?.click())
+        await act(() => click())
         expect(showToast).toHaveBeenCalledWith("Couldn't copy it — the address is support@solkey.io.")
     })
 })

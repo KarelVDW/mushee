@@ -59,7 +59,7 @@ describe('the FAQ lists', () => {
         mode.beta = false
     })
 
-    const lists = Object.entries(FAQ_LISTS) as [string, readonly FaqItem[]][]
+    const lists = Object.entries(FAQ_LISTS)
     const questions = (items: readonly FaqItem[]) => items.map((item) => item.question)
 
     it.each(lists)('%s: opens with the chords question, at launch and in the beta', (_name, items) => {
