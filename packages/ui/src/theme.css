@@ -142,6 +142,10 @@ body {
     background-size: 40px 40px;
 }
 
+/* Glass for surfaces over the page itself. Blur doesn't nest: a panel opened inside another
+   backdrop-filtered bar (the editor's header, the dock) samples only that bar, so menus,
+   popovers and tooltips use the opaque card instead — bg-surface-container-lowest with
+   .editorial-shadow — and never show the staff through their text. */
 .glass-panel {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
@@ -157,5 +161,20 @@ body {
 @keyframes solkey-pulse {
     50% {
         opacity: 0.45;
+    }
+}
+
+/* Reduced motion, for every app at once: animations and transitions collapse to an instant
+   (0.01ms rather than `none`, so exit animations still fire animationend and clear their
+   element) and smooth scrolling jumps. Motion driven from JS (scroll follow, tickers) checks
+   the media query itself. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
