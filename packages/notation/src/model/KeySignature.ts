@@ -1,3 +1,4 @@
+import type { GlyphName } from '../engraving/Bravura'
 import type { KeySignatureLayout } from './layout/KeySignatureLayout'
 import type { Measure } from './Measure'
 import { Pitch, type PitchStep } from './Pitch'
@@ -30,7 +31,7 @@ const FLAT_PITCHES: ReadonlyArray<{ name: PitchStep; octave: number }> = [
 ]
 
 export interface KeyAccidental {
-    glyphName: 'accidentalSharp' | 'accidentalFlat' | 'accidentalNatural'
+    glyphName: Extract<GlyphName, 'accidentalSharp' | 'accidentalFlat' | 'accidentalNatural'>
     name: PitchStep
     octave: number
 }

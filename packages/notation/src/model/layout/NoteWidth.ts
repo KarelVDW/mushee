@@ -1,4 +1,4 @@
-import { Bravura } from '../../engraving/Bravura'
+import { Bravura, type GlyphName } from '../../engraving/Bravura'
 import { DOT_RADIUS, DOT_SPACING, LEDGER_LINE_EXTENSION, NOTE_ELEMENT_GAP } from '../../engraving/constants'
 import type { Note } from '../Note'
 import type { PhysicalWidth } from './PhysicalWidth'
@@ -14,11 +14,11 @@ export class NoteWidth implements PhysicalWidth {
     readonly content: number
     readonly total: number
     /** The glyph drawn at the note's head — its notehead, or the rest glyph for a rest — which NoteLayout draws. */
-    readonly headGlyph: string
+    readonly headGlyph: GlyphName
     /** Width of `headGlyph`. */
     readonly noteHeadWidth: number
     /** The accidental drawn before the head, if any (measure- and key-aware, resolved by the layout layer) — which NoteLayout draws. */
-    readonly accidentalGlyph: string | undefined
+    readonly accidentalGlyph: GlyphName | undefined
     /** Note-local x of `accidentalGlyph`; undefined when none is drawn. */
     readonly accidentalX: number | undefined
     /** Note-local x of the head's left edge (ledger lines reach LEDGER_LINE_EXTENSION further each side). */
@@ -26,7 +26,7 @@ export class NoteWidth implements PhysicalWidth {
     /** Note-local x of each augmentation dot's centre, left to right. */
     readonly dotXs: number[]
 
-    constructor(note: Note, accidentalGlyph: string | undefined) {
+    constructor(note: Note, accidentalGlyph: GlyphName | undefined) {
         this.accidentalGlyph = accidentalGlyph
         this.headGlyph = note.pitch ? note.duration.noteheadGlyph : note.duration.restGlyph
         this.noteHeadWidth = Bravura.width(this.headGlyph)

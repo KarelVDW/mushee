@@ -21,6 +21,7 @@ describe('Bravura', () => {
     })
 
     it('throws when measuring a glyph the font lacks', () => {
+        // @ts-expect-error — names are typed; this is what a cast or untyped caller would hit
         expect(() => Bravura.width('noSuchGlyph')).toThrow('noSuchGlyph')
     })
 
@@ -32,6 +33,7 @@ describe('Bravura', () => {
     })
 
     it('draws nothing for a glyph the font lacks', () => {
+        // @ts-expect-error — as above
         expect(Bravura.svgPath('noSuchGlyph')).toBe('')
     })
 })

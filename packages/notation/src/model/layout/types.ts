@@ -1,7 +1,9 @@
 // The layout engine's output primitives: positions pre-computed for the renderer.
 
+import type { GlyphName } from '../../engraving/Bravura'
+
 export interface LayoutGlyph {
-    glyphName: string
+    glyphName: GlyphName
     x: number
     y: number
     /** Glyph scale; omitted means the default engraving scale (GLYPH_SCALE). */

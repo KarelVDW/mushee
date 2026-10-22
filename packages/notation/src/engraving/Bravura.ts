@@ -1,6 +1,9 @@
 import { BravuraFont } from './bravura_glyphs'
 import { GLYPH_SCALE } from './GlyphScale'
 
+/** The name of a glyph the bundled font carries — a typo or a glyph outside the subset is a compile error. */
+export type GlyphName = keyof typeof BravuraFont.glyphs
+
 type OutlineCommand = 'm' | 'l' | 'q' | 'b' | 'z'
 
 /** Coordinates each VexFlow outline command takes (x, y pairs). */
@@ -22,12 +25,12 @@ const SVG_COMMAND: Record<OutlineCommand, string> = { m: 'M', l: 'L', q: 'Q', b:
  */
 export class Bravura {
     /** Outline widths in font units, per glyph. */
-    private static readonly widths = new Map<string, number>()
+    private static readonly widths = new Map<GlyphName, number>()
     /** SVG path data, per glyph and scale. */
     private static readonly paths = new Map<string, string>()
 
     /** The visual width of a glyph in pixels, from its outline's horizontal extent. */
-    static width(name: string, scale: number = GLYPH_SCALE): number {
+    static width(name: GlyphName, scale: number = GLYPH_SCALE): number {
         let width = Bravura.widths.get(name)
         if (width === undefined) {
             const outline = Bravura.outline(name)
@@ -51,7 +54,7 @@ export class Bravura {
      * SVG lists control points before the endpoint, so q/b coordinates are reordered, and
      * y is negated (font units are y-up, SVG is y-down).
      */
-    static svgPath(name: string, scale: number = GLYPH_SCALE): string {
+    static svgPath(name: GlyphName, scale: number = GLYPH_SCALE): string {
         const key = `${name}@${scale}`
         let path = Bravura.paths.get(key)
         if (path === undefined) {
@@ -66,8 +69,9 @@ export class Bravura {
         return path
     }
 
-    private static outline(name: string): string | undefined {
-        return (BravuraFont.glyphs as Record<string, { o: string } | undefined>)[name]?.o
+    /** The glyph's outline; names are typed, but a cast or untyped caller can still name one the font lacks. */
+    private static outline(name: GlyphName): string | undefined {
+        return Object.hasOwn(BravuraFont.glyphs, name) ? BravuraFont.glyphs[name].o : undefined
     }
 
     /** The outline's commands with their coordinates, in font units; unknown tokens are skipped. */

@@ -1,8 +1,11 @@
 import { sum } from 'lodash-es'
 
-import { Bravura } from '../../engraving/Bravura'
+import { Bravura, type GlyphName } from '../../engraving/Bravura'
 import { GLYPH_SCALE } from '../../engraving/GlyphScale'
 import type { LayoutGlyph } from './types'
+
+/** A decimal numeral, as `String(value)` spells a whole number. */
+type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 /**
  * An engraved number — a time signature's numerator or denominator, a tuplet's
@@ -12,7 +15,21 @@ import type { LayoutGlyph } from './types'
  * by their real digit widths.
  */
 export class DigitRun {
-    readonly glyphNames: string[]
+    /** The time-signature figure that draws each digit; tuplet numbers are set in the same figures. */
+    private static readonly GLYPHS: Record<Digit, GlyphName> = {
+        '0': 'timeSig0',
+        '1': 'timeSig1',
+        '2': 'timeSig2',
+        '3': 'timeSig3',
+        '4': 'timeSig4',
+        '5': 'timeSig5',
+        '6': 'timeSig6',
+        '7': 'timeSig7',
+        '8': 'timeSig8',
+        '9': 'timeSig9',
+    }
+
+    readonly glyphNames: GlyphName[]
     readonly width: number
     private readonly _digitWidths: number[]
 
@@ -20,11 +37,17 @@ export class DigitRun {
         value: number,
         private readonly scale: number = GLYPH_SCALE,
     ) {
-        this.glyphNames = String(value)
-            .split('')
-            .map((digit) => `timeSig${digit}`)
+        this.glyphNames = Array.from(String(value), (numeral) => {
+            // The font has figures for 0–9 only: a sign, decimal point or NaN has nothing to draw.
+            if (!DigitRun.isDigit(numeral)) throw new Error(`DigitRun engraves whole numbers; got ${value}`)
+            return DigitRun.GLYPHS[numeral]
+        })
         this._digitWidths = this.glyphNames.map((name) => Bravura.width(name, scale))
         this.width = sum(this._digitWidths)
+    }
+
+    private static isDigit(numeral: string): numeral is Digit {
+        return Object.hasOwn(DigitRun.GLYPHS, numeral)
     }
 
     /** The run's glyphs, horizontally centred on `cx`, each at the run's scale with its origin on `y`. */

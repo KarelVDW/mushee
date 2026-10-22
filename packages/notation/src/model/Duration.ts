@@ -1,3 +1,4 @@
+import type { GlyphName } from '../engraving/Bravura'
 import type { DurationType, StemDirection } from './types'
 
 /** Tolerance for beat-sum comparisons — tuplet beats (e.g. thirds) don't sum exactly in floating point. */
@@ -91,7 +92,7 @@ export class Duration {
         return this.type === '16'
     }
 
-    get restGlyph(): string {
+    get restGlyph(): GlyphName {
         switch (this.type) {
             case 'w':
                 return 'restWhole'
@@ -121,7 +122,7 @@ export class Duration {
         return this.dots > 0 ? `dotted ${base}` : base
     }
 
-    get noteheadGlyph(): string {
+    get noteheadGlyph(): GlyphName {
         switch (this.type) {
             case 'w':
                 return 'noteheadWhole'
@@ -132,7 +133,7 @@ export class Duration {
         }
     }
 
-    flagGlyph(stemDirection: StemDirection): string | undefined {
+    flagGlyph(stemDirection: StemDirection): GlyphName | undefined {
         switch (this.type) {
             case '8':
                 return stemDirection === 'up' ? 'flag8thUp' : 'flag8thDown'

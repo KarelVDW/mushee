@@ -1,3 +1,4 @@
+import type { GlyphName } from '../../engraving/Bravura'
 import { DOTTED_FLAG_SCALE, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT, STEM_WIDTH } from '../../engraving/constants'
 import type { Clef } from '../Clef'
 import type { Duration } from '../Duration'
@@ -22,7 +23,7 @@ export class NoteLayout {
     /** x of the notehead's right edge — where a tie leaves and a tuplet bracket ends. */
     readonly noteRightX: number
     readonly noteY: number
-    readonly glyphName: string
+    readonly glyphName: GlyphName
     readonly width: NoteWidth
     readonly flag: LayoutGlyph | undefined
     readonly stem: LayoutStem | undefined
