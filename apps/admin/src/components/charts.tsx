@@ -22,7 +22,7 @@ export function StatTile({ label, value, detail }: { label: string; value: strin
     )
 }
 
-export interface DailyPoint {
+interface DailyPoint {
     day: string
     value: number
 }
@@ -37,7 +37,7 @@ interface DailyBarsProps {
 const CHART_HEIGHT = 120
 
 /** Pixel height of a bar — labels/tooltips anchor just above it. */
-function barTop(value: number, max: number): number {
+function barHeight(value: number, max: number): number {
     return value === 0 ? 2 : Math.max(3, Math.round((value / max) * CHART_HEIGHT))
 }
 
@@ -51,6 +51,11 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
     const max = Math.max(1, ...points.map((p) => p.value))
     const peak = points.reduce((best, p, i) => (p.value > points[best].value ? i : best), 0)
     const total = points.reduce((sum, p) => sum + p.value, 0)
+    /** Position just above a day's bar, centred on it. */
+    const anchorAbove = (index: number, gap: number) => ({
+        left: `${((index + 0.5) / points.length) * 100}%`,
+        bottom: barHeight(points[index].value, max) + gap,
+    })
 
     return (
         <div className="bg-surface-container-lowest rounded-lg tonal-layer-glow px-5 py-4">
@@ -61,7 +66,6 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
             <div className="relative">
                 <div className="flex items-end gap-px" style={{ height: CHART_HEIGHT }} role="img" aria-label={`${title}, last 30 days`}>
                     {points.map((point, i) => {
-                        const barHeight = barTop(point.value, max)
                         const active = hover === i
                         return (
                             <div
@@ -74,7 +78,7 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
                                         'w-full rounded-t-sm transition-colors duration-150 ease-solkey',
                                         point.value === 0 ? 'bg-surface-container-high' : active ? 'bg-primary' : 'bg-chart-cyan',
                                     ].join(' ')}
-                                    style={{ height: barHeight }}
+                                    style={{ height: barHeight(point.value, max) }}
                                 />
                             </div>
                         )
@@ -83,10 +87,7 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
                 {hover !== null && (
                     <div
                         className="absolute -translate-x-1/2 glass-panel editorial-shadow rounded-md px-2.5 py-1.5 whitespace-nowrap pointer-events-none z-10"
-                        style={{
-                            left: `${((hover + 0.5) / points.length) * 100}%`,
-                            bottom: barTop(points[hover].value, max) + 6,
-                        }}>
+                        style={anchorAbove(hover, 6)}>
                         <span className="font-label font-semibold text-[11px] text-on-surface-variant mr-2">
                             {formatDayTick(points[hover].day)}
                         </span>
@@ -96,20 +97,17 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
                 {hover === null && points[peak].value > 0 && (
                     <span
                         className="absolute -translate-x-1/2 font-mono text-[11px] leading-none text-on-surface-variant pointer-events-none"
-                        style={{
-                            left: `${((peak + 0.5) / points.length) * 100}%`,
-                            bottom: barTop(points[peak].value, max) + 5,
-                        }}>
+                        style={anchorAbove(peak, 5)}>
                         {formatValue(points[peak].value)}
                     </span>
                 )}
             </div>
             <div className="flex justify-between mt-2">
                 <span className="font-label text-[10px] tracking-[0.08em] uppercase text-on-surface-variant">
-                    {formatDayTick(points[0]?.day ?? '')}
+                    {formatDayTick(points[0].day)}
                 </span>
                 <span className="font-label text-[10px] tracking-[0.08em] uppercase text-on-surface-variant">
-                    {formatDayTick(points[points.length - 1]?.day ?? '')}
+                    {formatDayTick(points[points.length - 1].day)}
                 </span>
             </div>
         </div>
@@ -118,12 +116,11 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
 
 interface BarListProps {
     title: string
-    rows: Array<{ label: string; value: number; detail?: string }>
-    formatValue?: (value: number) => string
+    rows: Array<{ label: string; value: number }>
 }
 
 /** Horizontal magnitude list (e.g. users per tier): label + thin bar + value. */
-export function BarList({ title, rows, formatValue = formatCount }: BarListProps) {
+export function BarList({ title, rows }: BarListProps) {
     const max = Math.max(1, ...rows.map((r) => r.value))
     return (
         <div className="bg-surface-container-lowest rounded-lg tonal-layer-glow px-5 py-4">
@@ -139,8 +136,7 @@ export function BarList({ title, rows, formatValue = formatCount }: BarListProps
                             />
                         </div>
                         <span className="font-mono text-[13px] leading-none text-on-surface-variant text-right">
-                            {formatValue(row.value)}
-                            {row.detail ? <span className="text-outline"> · {row.detail}</span> : null}
+                            {formatCount(row.value)}
                         </span>
                     </div>
                 ))}
