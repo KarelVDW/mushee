@@ -82,6 +82,14 @@ describe('InstrumentPicker', () => {
         expect(search(host).placeholder).toBe('Filter instruments…')
     })
 
+    it('inside Change instrument drops the new-score intro but keeps the chord line', () => {
+        const host = renderPicker(Instrument.Piano, { showIntro: false, showCurrentEyebrow: false })
+        expect(host.textContent).not.toContain('What will you sing or play?')
+        expect(host.textContent).not.toContain('You can change it later.')
+        expect(host.querySelector('[role="group"][aria-label="Instrument"]')).not.toBeNull()
+        expect(host.textContent).toContain(`On piano, ${CHORD_LINE}`)
+    })
+
     it('leads with the popular eight as tiles, the voice with its plain subline', () => {
         const host = renderPicker(Instrument.VoiceLead)
         expect(pickNames(host)).toEqual(Instrument.popular().map((i) => `Pick ${i.displayName}`))
