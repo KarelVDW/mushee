@@ -110,8 +110,9 @@ describe('PlanCardCopy', () => {
         )
     })
 
-    it('counts scores against a cap only', () => {
-        expect(copyFor(SKETCH, 5).scoresLine(3)).toBe('Scores: 3 of 5')
+    it('counts scores against a cap only, in the library’s words', () => {
+        expect(copyFor(SKETCH, 5).scoresLine(3)).toBe('3 of 5 free scores')
+        expect(copyFor(SKETCH, 5).scoresLine(5)).toBe("You've used all 5 free scores.")
         expect(copyFor(SONGWRITER, null).scoresLine(12)).toBeNull()
     })
 })

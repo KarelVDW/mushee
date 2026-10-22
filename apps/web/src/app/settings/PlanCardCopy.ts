@@ -3,6 +3,7 @@ import { type Currency, formatMoney } from '@/lib/currency'
 import { formatLongDate } from '@/lib/dates'
 import type { PlanTier } from '@/lib/plans'
 import { formatAllowance, formatAllowanceShort, formatResetWhen } from '@/lib/recordingTime'
+import { ScoreAllowance } from '@/lib/ScoreAllowance'
 
 /** Where the account's day of recording stands, as the plan card's meter shows it. */
 export interface RecordingMeter {
@@ -100,8 +101,9 @@ export class PlanCardCopy {
         return `${formatAllowanceShort(packSeconds)} from packs — used once today's minutes run out, and they never expire.`
     }
 
-    /** How many of a capped plan's scores are in use ("Scores: 3 of 5"), or null without a cap. */
+    /** How many of a capped plan's scores are in use, in the library's words ("3 of 5 free scores"), or null without a cap. */
     scoresLine(count: number): string | null {
-        return this.maxScores === null ? null : `Scores: ${count} of ${this.maxScores}`
+        const { tierId, tierName } = this.billing
+        return new ScoreAllowance({ count, cap: this.maxScores, tierId, tierName }).summary
     }
 }

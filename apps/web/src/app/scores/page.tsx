@@ -6,7 +6,7 @@ import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { type ScoreAllowance, ScoreLimitDialog, useScoreAllowance } from '@/components/ScoreLimitDialog'
+import { ScoreLimitDialog, useScoreAllowance } from '@/components/ScoreLimitDialog'
 import {
     Alert,
     ErrorScreen,
@@ -28,6 +28,7 @@ import { useSession } from '@/lib/auth-client'
 import { formatRelativeTime, formatShortDate } from '@/lib/dates'
 import { withPlan } from '@/lib/plans'
 import { useBillingState, useCreateScore, useDeleteScore, useDuplicateScore, useOnboarding, useRenameScore, useScores } from '@/lib/queries'
+import type { ScoreAllowance } from '@/lib/ScoreAllowance'
 import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 

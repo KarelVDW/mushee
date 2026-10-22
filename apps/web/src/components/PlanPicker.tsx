@@ -20,8 +20,13 @@ interface PlanPickerProps {
      */
     selected: PlanTier['id'] | null
     onSelect: (id: PlanTier['id']) => void
-    /** Marks the user's current plan (settings); onboarding has none. */
+    /** Marks the user's current plan, in the cadence they pay (settings); onboarding has none. */
     isCurrent?: (plan: PlanTier) => boolean
+    /**
+     * The tier the account is on (settings), whatever the cadence: "Best value" then marks the
+     * popular tier only while it is above this one, so it never nudges a subscriber down.
+     */
+    currentTierId?: string
     /**
      * Radio rows (name, price, a one-line tagline) instead of cards — the selection and the
      * flow's button then fit one phone screen. Feature lists open behind "Compare plans", and
@@ -40,7 +45,7 @@ interface PlanPickerProps {
 export function PlanPicker(props: PlanPickerProps) {
     const currency = useDisplayCurrency()
     if (props.compact) return <CompactPlanPicker {...props} currency={currency} />
-    const { plans, billing, onBillingChange, selected, onSelect, isCurrent } = props
+    const { plans, billing, onBillingChange, selected, onSelect, isCurrent, currentTierId } = props
     const consumer = plans.filter((p) => !p.professional)
     const professional = plans.filter((p) => p.professional)
     return (
@@ -55,6 +60,7 @@ export function PlanPicker(props: PlanPickerProps) {
                         currency={currency}
                         active={selected === p.id}
                         current={isCurrent?.(p)}
+                        bestValue={marksBestValue(plans, p, currentTierId)}
                         onSelect={() => onSelect(p.id)}
                     />
                 ))}
@@ -67,11 +73,34 @@ export function PlanPicker(props: PlanPickerProps) {
                     currency={currency}
                     active={selected === p.id}
                     current={isCurrent?.(p)}
+                    bestValue={marksBestValue(plans, p, currentTierId)}
                     onSelect={() => onSelect(p.id)}
                 />
             ))}
         </>
     )
+}
+
+/** Whether "Best value" marks `plan`: the popular tier, for someone below it on the ladder (`plans` is in ladder order). */
+function marksBestValue(plans: PlanTier[], plan: PlanTier, currentTierId: string | undefined): boolean {
+    return plan.popular === true && plans.findIndex((p) => p.id === currentTierId) < plans.indexOf(plan)
+}
+
+/** A tier's one badge: "Your plan" on the account's own (as on /pricing), else "Best value" where it applies. */
+function PlanBadge({ current, bestValue, className }: { current?: boolean; bestValue?: boolean; className?: string }) {
+    if (current)
+        return (
+            <Badge tone="neutral" className={className}>
+                Your plan
+            </Badge>
+        )
+    if (bestValue)
+        return (
+            <Badge tone="secondary" className={className}>
+                Best value
+            </Badge>
+        )
+    return null
 }
 
 /**
@@ -87,6 +116,7 @@ function CompactPlanPicker({
     selected,
     onSelect,
     isCurrent,
+    currentTierId,
     currency,
 }: PlanPickerProps & { currency: Currency }) {
     const consumer = plans.filter((p) => !p.professional)
@@ -120,6 +150,7 @@ function CompactPlanPicker({
                         currency={currency}
                         active={selected === p.id}
                         current={isCurrent?.(p)}
+                        bestValue={marksBestValue(plans, p, currentTierId)}
                         expanded={comparing}
                         onSelect={() => onSelect(p.id)}
                     />
@@ -166,6 +197,7 @@ function PlanRow({
     currency,
     active,
     current,
+    bestValue,
     expanded,
     onSelect,
 }: TierCardProps & { radio: RadioProps; expanded: boolean }) {
@@ -190,7 +222,7 @@ function PlanRow({
                 <span className="flex flex-col gap-0.5 flex-1 min-w-0">
                     <span className="flex items-center gap-2 flex-wrap">
                         <span className="font-body font-semibold text-[15px] leading-[1.2]">{plan.name}</span>
-                        {current ? <Badge tone="neutral">Current</Badge> : plan.popular ? <Badge tone="secondary">Best value</Badge> : null}
+                        <PlanBadge current={current} bestValue={bestValue} />
                     </span>
                     <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{plan.tagline}</span>
                 </span>
@@ -261,6 +293,8 @@ interface TierCardProps {
     currency: Currency
     active: boolean
     current?: boolean
+    /** Carries the "Best value" badge (see marksBestValue). */
+    bestValue?: boolean
     onSelect: () => void
 }
 
@@ -317,22 +351,14 @@ function PriceBlock({
     )
 }
 
-function TierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function TierCard({ plan, billing, currency, active, current, bestValue, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}
             type="button"
             aria-pressed={active}
             className={`${cardShell(active)} px-4.5 pt-5 pb-4.5 flex flex-col gap-3.5`}>
-            {current ? (
-                <Badge tone="neutral" className={CARD_BADGE}>
-                    Current
-                </Badge>
-            ) : plan.popular ? (
-                <Badge tone="secondary" className={CARD_BADGE}>
-                    Best value
-                </Badge>
-            ) : null}
+            <PlanBadge current={current} bestValue={bestValue} className={CARD_BADGE} />
             <div className="flex items-center gap-2.5">
                 <span
                     className={[
@@ -363,18 +389,14 @@ function TierCard({ plan, billing, currency, active, current, onSelect }: TierCa
 
 /** The professional tier as a selectable row: enough to anchor the ladder,
  *  slim enough not to compete with the consumer cards above. */
-function ProfessionalTierCard({ plan, billing, currency, active, current, onSelect }: TierCardProps) {
+function ProfessionalTierCard({ plan, billing, currency, active, current, bestValue, onSelect }: TierCardProps) {
     return (
         <button
             onClick={onSelect}
             type="button"
             aria-pressed={active}
             className={`${cardShell(active)} px-5 py-4.5 flex flex-wrap items-center gap-4`}>
-            {current && (
-                <Badge tone="neutral" className={CARD_BADGE}>
-                    Current
-                </Badge>
-            )}
+            <PlanBadge current={current} bestValue={bestValue} className={CARD_BADGE} />
             <span
                 className={[
                     'w-10 h-10 rounded-full shrink-0 inline-flex items-center justify-center',

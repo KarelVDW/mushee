@@ -4,53 +4,8 @@ import { DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, planById, type PlanTier } from '@/lib/plans'
 import { useBillingState, usePlanCatalogue } from '@/lib/queries'
+import { ScoreAllowance } from '@/lib/ScoreAllowance'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
-
-interface ScoreAllowanceInit {
-    /** Scores in the library (the unfiltered list). */
-    count: number
-    /** The plan's score cap; null = no cap. */
-    cap: number | null
-    tierId: string
-    tierName: string
-    /** The tier an upgrade offers — absent at the top of the ladder and while plans aren't on sale (beta). */
-    next?: PlanTier
-}
-
-/**
- * Where the account stands against its plan's score cap: what the library header counts and
- * whether a new score can be made before any form is filled in. Quiet until the cap is near
- * (two below it), so a first score never reads as an upsell.
- */
-export class ScoreAllowance {
-    readonly count: number
-    readonly cap: number | null
-    readonly tierId: string
-    readonly tierName: string
-    readonly next: PlanTier | undefined
-
-    constructor({ count, cap, tierId, tierName, next }: ScoreAllowanceInit) {
-        this.count = count
-        this.cap = cap
-        this.tierId = tierId
-        this.tierName = tierName
-        this.next = next
-    }
-
-    /** No room for another score: New score, Import and Duplicate open the limit dialog instead. */
-    get atCap(): boolean {
-        return this.cap !== null && this.count >= this.cap
-    }
-
-    /** The library's count line: '3 of 5 free scores', "You've used all 5 free scores." at the cap, null while it's far off. */
-    get line(): string | null {
-        if (this.cap === null || this.count < this.cap - 2) return null
-        // The free tier's scores are "free scores"; another capped tier names itself.
-        const free = this.tierId === 'free'
-        if (this.atCap) return free ? `You've used all ${this.cap} free scores.` : `You've used all ${this.cap} scores on ${this.tierName}.`
-        return free ? `${this.count} of ${this.cap} free scores` : `${this.count} of ${this.cap} scores on ${this.tierName}`
-    }
-}
 
 /**
  * The account's {@link ScoreAllowance} for a library of `count` scores; null until both the

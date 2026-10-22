@@ -156,6 +156,7 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
                         selected={selected}
                         onSelect={setSelected}
                         isCurrent={isCurrentPlan}
+                        currentTierId={state.tierId}
                     />
 
                     {onShowPacks && (

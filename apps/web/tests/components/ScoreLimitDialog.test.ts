@@ -15,8 +15,9 @@ vi.mock('@/lib/queries', async () => {
 })
 vi.mock('@/lib/useDisplayCurrency', () => ({ useDisplayCurrency: () => 'eur' }))
 
-import { ScoreAllowance, ScoreLimitCopy, ScoreLimitDialog, useScoreAllowance } from '@/components/ScoreLimitDialog'
+import { ScoreLimitCopy, ScoreLimitDialog, useScoreAllowance } from '@/components/ScoreLimitDialog'
 import { planById } from '@/lib/plans'
+import { ScoreAllowance } from '@/lib/ScoreAllowance'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -76,9 +77,16 @@ describe('ScoreAllowance', () => {
         expect(new ScoreAllowance({ count: 10, cap: 10, tierId: 'beta', tierName: 'Beta' }).line).toBe("You've used all 10 scores on Beta.")
     })
 
+    it('summarises a capped plan at any count, in the same words', () => {
+        expect(sketch(1).summary).toBe('1 of 5 free scores')
+        expect(sketch(5).summary).toBe("You've used all 5 free scores.")
+        expect(new ScoreAllowance({ count: 2, cap: 10, tierId: 'beta', tierName: 'Beta' }).summary).toBe('2 of 10 scores on Beta')
+    })
+
     it('never counts an uncapped plan', () => {
         const studio = new ScoreAllowance({ count: 400, cap: null, tierId: 'studio', tierName: 'Studio' })
         expect(studio.line).toBeNull()
+        expect(studio.summary).toBeNull()
         expect(studio.atCap).toBe(false)
     })
 })
