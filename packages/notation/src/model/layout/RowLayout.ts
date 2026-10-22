@@ -1,8 +1,7 @@
-import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES } from '../../engraving/constants'
+import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, NUM_STAFF_LINES } from '../../engraving/constants'
 import type { Measure } from '../Measure'
 import { BarlineLayout } from './BarlineLayout'
 import { Resizer, type Sizeable } from './Resizer'
-import { availableRowWidth } from './rowWidth'
 import { Staff } from './Staff'
 import type { LayoutLine } from './types'
 
@@ -40,7 +39,7 @@ export class RowLayout {
         this._minimalWidths = context.minimalWidths
         this._scoreWidth = context.scoreWidth
 
-        const totalWidth = availableRowWidth({ isLastRow: context.isLastRow, scoreWidth: context.scoreWidth })
+        const totalWidth = RowLayout.availableWidth(context.scoreWidth, context.isLastRow)
         const allowIncompleteRow = context.isLastRow && context.measures.length <= 2
         const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : context.measures.length)
         const sizeables: Array<Sizeable & { measure: Measure }> = context.measures.map((measure) => ({
@@ -62,6 +61,17 @@ export class RowLayout {
             return { x1: 0, y1: y, x2: this.width, y2: y }
         })
         this.openingBarline = new BarlineLayout('single', 0)
+    }
+
+    /**
+     * Horizontal budget available to a row's measures within a score laid out
+     * `scoreWidth` units wide. The last row reserves MEASURE_BUTTON_SPACING for the
+     * add/remove-measure buttons after the final barline (ScoreLayout.measureButtons), so
+     * packing and RowLayout must agree on this number to keep row composition consistent
+     * with layout. See ScoreLayout.packGreedy.
+     */
+    static availableWidth(scoreWidth: number, isLastRow: boolean): number {
+        return scoreWidth - (isLastRow ? MEASURE_BUTTON_SPACING : 0)
     }
 
     /** Whether this row's inputs are identical — used by ScoreLayout to reuse the instance across rebuilds. */

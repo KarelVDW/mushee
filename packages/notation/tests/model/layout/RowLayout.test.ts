@@ -43,6 +43,11 @@ describe('RowLayout', () => {
         expect(row.width).toBe(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
     })
 
+    it('availableWidth reserves the measure-button spacing on the last row only', () => {
+        expect(RowLayout.availableWidth(SCORE_WIDTH, false)).toBe(SCORE_WIDTH)
+        expect(RowLayout.availableWidth(SCORE_WIDTH, true)).toBe(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
+    })
+
     it('an incomplete last row (≤2 measures) keeps natural widths instead of stretching', () => {
         const score = makeScore(1)
         const row = score.layout.rows[0]

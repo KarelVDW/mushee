@@ -20,7 +20,6 @@ import { KeySignatureWidth } from './KeySignatureWidth'
 import { MeasureLayout } from './MeasureLayout'
 import { NoteWidth } from './NoteWidth'
 import { RowLayout } from './RowLayout'
-import { availableRowWidth } from './rowWidth'
 import { Staff } from './Staff'
 import { TieLayout, type TieLayoutContext, type TieSegment } from './TieLayout'
 
@@ -273,7 +272,7 @@ export class ScoreLayout {
 
     /** Greedy row fill, reserving measure-button space on every row while fitting (the historical budget). */
     private static packGreedy(widths: number[], scoreWidth: number): number[][] {
-        const budget = availableRowWidth({ isLastRow: true, scoreWidth })
+        const budget = RowLayout.availableWidth(scoreWidth, true)
         const groups: number[][] = []
         let current: number[] = []
         let currentWidth = 0
