@@ -86,6 +86,30 @@ describe('AuthCard', () => {
         expect(host.querySelector('[role="alert"]')).toBeNull()
     })
 
+    it('reads a field problem out as it arrives, in a live region that was there before it', () => {
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const root = createRoot(host)
+        const show = (error: AuthErrorMessage | null) =>
+            act(() => root.render(createElement(AuthCard, { mode: 'signup', onSubmit: () => {}, error })))
+        unmount = () => {
+            act(() => root.unmount())
+            host.remove()
+        }
+
+        show(null)
+        const live = host.querySelector('[aria-live="polite"].sr-only')
+        expect(live?.textContent).toBe('')
+        show(error('PASSWORD_TOO_SHORT'))
+        expect(host.querySelector('[aria-live="polite"].sr-only')).toBe(live)
+        expect(live?.textContent).toBe('Password: Use at least 8 characters.')
+        show(error('INVALID_EMAIL'))
+        expect(live?.textContent).toBe("Email: That email doesn't look quite right.")
+        // A banner error speaks through its own alert, not twice.
+        show(error('INVALID_EMAIL_OR_PASSWORD'))
+        expect(live?.textContent).toBe('')
+    })
+
     it("links an error's next step in place, keeping ?next=, and never shows the library's words", () => {
         const host = render({ mode: 'signup', error: error('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'), next: '/s/token' })
         const alert = host.querySelector('[role="alert"]')

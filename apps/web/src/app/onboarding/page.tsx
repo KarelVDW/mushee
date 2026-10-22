@@ -13,8 +13,8 @@ import { setUserProperties, track } from '@/lib/analytics'
 import { ApiError, type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { formatMoney } from '@/lib/currency'
-import { LIBRARY_PATH, nextPathFrom } from '@/lib/nextPath'
-import { BETA_MODE, isPaidTier, type PlanCatalogue, type PlanTier, requestedPlanFrom } from '@/lib/plans'
+import { LIBRARY_PATH, nextPathFrom, withNext } from '@/lib/nextPath'
+import { BETA_MODE, isPaidTier, type PlanCatalogue, type PlanTier, requestedPlanFrom, withPlan } from '@/lib/plans'
 import { useBetaGate, useCreateScore, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout } from '@/lib/queries'
 import { formatAllowance } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
@@ -167,11 +167,12 @@ export default function OnboardingPage() {
         track('onboarding_skipped', { step: stepName })
         leave()
     }
-    // A mistyped email: back to signup, the name already filled in.
+    // A mistyped email: back to signup, the name already filled in, and the ?next= destination
+    // and ?plan= pick kept, so signing up again leads to the same place and plan step.
     const startOver = () => {
         track('onboarding_start_over')
         AuthPrefill.offer({ name: sessionName })
-        void signOut('/signup')
+        void signOut(withPlan(withNext('/signup', nextPath), requestedPlan))
     }
 
     // The usual end: a new score on the first instrument picked, open and ready to record.

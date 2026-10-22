@@ -154,6 +154,54 @@ describe('VerifyStep', () => {
         expect(host.textContent).not.toContain('Invalid OTP')
     })
 
+    it('reads a wrong code out as it lands, from a live region that was there before it', async () => {
+        verifyEmail.mockResolvedValue({ error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts' } })
+        const host = renderVerify()
+        // The region right under the code box, empty and already listening.
+        const live = codeInput(host).parentElement?.nextElementSibling
+        expect(live?.getAttribute('aria-live')).toBe('polite')
+        expect(live?.textContent).toBe('')
+        type(codeInput(host), '333333')
+        await settle()
+        expect(codeInput(host).parentElement?.nextElementSibling).toBe(live)
+        expect(live?.textContent).toBe('Too many tries. Send a new code to start again.')
+        // Asking for a new code clears the stale error, so the next one is read out afresh.
+        sendVerificationOtp.mockResolvedValue({ error: null })
+        click(buttonNamed(host, 'send a new code'))
+        await settle()
+        expect(live?.textContent).toBe('')
+    })
+
+    it('announces "Email verified." in a status region that was there before it', () => {
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const root = createRoot(host)
+        const show = (verified: boolean) =>
+            act(() =>
+                root.render(
+                    createElement(VerifyStep, {
+                        titleRef,
+                        userEmail: 'robin@example.com',
+                        sessionEmail: 'robin@example.com',
+                        verified,
+                        onVerified: () => {},
+                        onAdvance: () => {},
+                        onStartOver: () => {},
+                    }),
+                ),
+            )
+        unmount = () => {
+            act(() => root.unmount())
+            host.remove()
+        }
+        show(false)
+        const status = host.querySelector('[role="status"]')
+        expect(status?.textContent).toBe('')
+        show(true)
+        expect(host.querySelector('[role="status"]')).toBe(status)
+        expect(status?.textContent).toBe('Email verified.')
+    })
+
     it('sends a fresh code by itself when the old one has expired', async () => {
         verifyEmail.mockResolvedValue({ error: { code: 'OTP_EXPIRED', message: 'OTP expired' } })
         sendVerificationOtp.mockResolvedValue({ error: null })

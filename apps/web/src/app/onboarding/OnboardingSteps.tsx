@@ -66,6 +66,8 @@ export function VerifyStep({
 
     const sendNewCode = async (): Promise<boolean> => {
         if (!sessionEmail) return false
+        // A new code makes the last error stale; clearing it also lets a repeat of it be read out again.
+        setCodeError(null)
         setResend('sending')
         try {
             const { error } = await emailOtp.sendVerificationOtp({ email: sessionEmail, type: 'email-verification' })
@@ -127,58 +129,71 @@ export function VerifyStep({
                     step protects your scores.
                 </>
             }>
-            {!verified ? (
-                <>
-                    <CodeField
-                        value={code}
-                        onChange={change}
-                        onEnter={() => void submit(code)}
-                        error={codeError}
-                        busy={verifying}
-                        inputRef={inputRef}
-                    />
-                    <div className="flex flex-col gap-1.5 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                        <p className="m-0" aria-live="polite">
-                            Can&apos;t find it? Check your spam folder, or{' '}
-                            <button
-                                type="button"
-                                onClick={() => void sendNewCode()}
-                                disabled={resend === 'sending'}
-                                className={INLINE_BUTTON}>
-                                {resend === 'sending' ? 'sending a new code…' : resend === 'sent' ? 'new code sent' : 'send a new code'}
-                            </button>
-                            .
-                        </p>
-                        {/*
-                         * No account is deleted here: the API has no way for an unverified account to remove
-                         * itself yet. The mistyped address keeps an unverified account, and its real owner can
-                         * claim it through "reset your password" (the email proves the address is theirs).
-                         */}
-                        <p className="m-0">
-                            Wrong email?{' '}
-                            <button type="button" onClick={onStartOver} className={INLINE_BUTTON}>
-                                Start over
-                            </button>
-                        </p>
-                    </div>
-                </>
-            ) : (
-                <div
-                    role="status"
-                    className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3.5 self-start min-w-0 max-w-full">
-                    <span className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
-                        <Icon name="check" size={16} />
-                    </span>
-                    <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface">Email verified.</span>
+            {/*
+             * No gap of its own: the status region is always there (so "Email verified." is read out
+             * when it lands, rather than mounting with its text), and takes no room while empty.
+             */}
+            <div className="flex flex-col">
+                <div role="status" className="flex flex-col">
+                    {verified && (
+                        <div className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3.5 self-start min-w-0 max-w-full">
+                            <span className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                                <Icon name="check" size={16} />
+                            </span>
+                            <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface">Email verified.</span>
+                        </div>
+                    )}
                 </div>
-            )}
+                {!verified && (
+                    <div className="flex flex-col gap-5">
+                        <CodeField
+                            value={code}
+                            onChange={change}
+                            onEnter={() => void submit(code)}
+                            error={codeError}
+                            busy={verifying}
+                            inputRef={inputRef}
+                        />
+                        {/* Spaced apart on touch, so the two links' tap areas (INLINE_BUTTON) don't overlap. */}
+                        <div className="flex flex-col gap-1.5 pointer-coarse:gap-6 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                            <p className="m-0" aria-live="polite">
+                                Can&apos;t find it? Check your spam folder, or{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => void sendNewCode()}
+                                    disabled={resend === 'sending'}
+                                    className={INLINE_BUTTON}>
+                                    {resend === 'sending' ? 'sending a new code…' : resend === 'sent' ? 'new code sent' : 'send a new code'}
+                                </button>
+                                .
+                            </p>
+                            {/*
+                             * No account is deleted here: the API has no way for an unverified account to remove
+                             * itself yet. The mistyped address keeps an unverified account, and its real owner can
+                             * claim it through "reset your password" (the email proves the address is theirs).
+                             */}
+                            <p className="m-0">
+                                Wrong email?{' '}
+                                <button type="button" onClick={onStartOver} className={INLINE_BUTTON}>
+                                    Start over
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </StepShell>
     )
 }
 
-/** A link-styled button inside a sentence of help text. */
-const INLINE_BUTTON =
-    'bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline underline-offset-2 rounded-sm focus-ring disabled:cursor-default'
+/**
+ * A link-styled button inside a sentence of help text. On touch an invisible ::after grows its
+ * tap area past 40px tall (DESIGN.md §4b) without spreading the sentence's lines apart.
+ */
+const INLINE_BUTTON = [
+    'relative bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline underline-offset-2 rounded-sm focus-ring disabled:cursor-default',
+    "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-3 pointer-coarse:after:content-['']",
+].join(' ')
 
 // The kit's centre-out focus stroke, in `primary` (the neon fails 3:1 on the field's fill).
 const FOCUS_STROKE =
@@ -213,10 +228,10 @@ function CodeField({
         }
     }
     return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col">
             <label
                 htmlFor={id}
-                className="font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                className="mb-1.5 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
                 6-digit code
             </label>
             <div className="relative self-start bg-surface-container-low rounded-sm">
@@ -239,11 +254,17 @@ function CodeField({
                 />
                 <div className={FOCUS_STROKE} />
             </div>
-            {error && (
-                <span id={errorId} className="font-body font-medium text-[12px] leading-[1.4] text-error">
-                    {error}
-                </span>
-            )}
+            {/*
+             * Always mounted and live: the code submits itself and focus stays put, so a wrong or
+             * expired code is read out as it lands (aria-describedby alone waits for the next focus).
+             */}
+            <div aria-live="polite">
+                {error && (
+                    <span id={errorId} className="block mt-1.5 font-body font-medium text-[12px] leading-[1.4] text-error">
+                        {error}
+                    </span>
+                )}
+            </div>
         </div>
     )
 }

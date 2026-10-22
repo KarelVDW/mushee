@@ -16,9 +16,9 @@ import {
     TertiaryButton,
     TextField,
 } from '@/components/ui'
-import { AuthPrefill } from '@/components/ui/AuthCard'
+import { AuthPrefill, FieldErrorAnnouncement } from '@/components/ui/AuthCard'
 import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
-import { AuthErrorCopy, type AuthErrorMessage } from '@/lib/AuthErrorCopy'
+import { AuthErrorCopy, type AuthErrorField, type AuthErrorMessage } from '@/lib/AuthErrorCopy'
 import { nextPathFrom, withNext } from '@/lib/nextPath'
 
 type Stage = 'request' | 'sent' | 'set-new' | 'done'
@@ -74,7 +74,8 @@ function PasswordResetPageInner() {
         try {
             const { error } = await requestPasswordReset({
                 email: addr,
-                redirectTo: `${window.location.origin}/reset-password`,
+                // The emailed link comes back here with ?token= added, so ?next= survives the trip through the inbox.
+                redirectTo: `${window.location.origin}${withNext('/reset-password', next)}`,
             })
             if (error) {
                 setError(AuthErrorCopy.for(error))
@@ -133,12 +134,16 @@ function PasswordResetPageInner() {
         }
     }
 
-    // Under the stage's title and the fields, just above its button — in reading order.
-    const errorAlert = error && <Alert>{error.message}</Alert>
+    // A problem with one of the stage's fields sits under that field (and is read out); any other
+    // is the stage's banner, under its title and fields, just above its button — in reading order.
+    const fieldOfStage: AuthErrorField | null = stage === 'request' ? 'email' : stage === 'set-new' ? 'password' : null
+    const fieldError = error && error.field === fieldOfStage ? error.message : undefined
+    const errorAlert = error && !fieldError && <Alert>{error.message}</Alert>
 
     return (
         <AuthShell>
             <AuthFrame headline={stage === 'done' ? ["You're", 'back in.'] : ['Reset your', 'password.']} tagline={STAGE_TAGLINE[stage]}>
+                <FieldErrorAnnouncement label={fieldOfStage === 'email' ? 'Email' : 'New password'} message={fieldError} />
                 <div className="flex-1 flex flex-col gap-6">
                     {stage === 'request' && (
                         <form
@@ -160,6 +165,7 @@ function PasswordResetPageInner() {
                                         autoCapitalize="none"
                                         name="email"
                                         autoFocus
+                                        error={fieldError}
                                     />
                                 </div>
                                 {errorAlert && <div className="mt-3">{errorAlert}</div>}
@@ -198,7 +204,11 @@ function PasswordResetPageInner() {
                                         onClick={() => {
                                             void handleResend()
                                         }}
-                                        className="bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline rounded-sm focus-ring">
+                                        className={[
+                                            'relative bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline rounded-sm focus-ring',
+                                            // A 40px+ tap area on touch, without spreading the sentence apart.
+                                            "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-3 pointer-coarse:after:content-['']",
+                                        ].join(' ')}>
                                         {resent ? 'link sent again' : 'resend the link'}
                                     </button>
                                     .
@@ -239,6 +249,8 @@ function PasswordResetPageInner() {
                                     onConfirmChange={setPw2}
                                     confirmLabel="Confirm password"
                                     autoFocus
+                                    // The pair's one error slot, under both fields.
+                                    confirmError={fieldError}
                                 />
                                 {errorAlert}
                             </div>

@@ -173,6 +173,7 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
 
     const fieldError = (field: 'email' | 'password') => (error?.field === field ? error.message : undefined)
     const alert = error && error.field !== 'email' && error.field !== 'password' ? error : null
+    const fieldMessage = fieldError('email') ?? fieldError('password')
 
     return (
         <AuthFrame headline={copy.headline} tagline="The fastest way to get a melody on the page." mobileTagline={copy.headline.join(' ')}>
@@ -234,6 +235,7 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
                             <AuthErrorText error={alert} email={email} next={next} />
                         </Alert>
                     )}
+                    <FieldErrorAnnouncement label={error?.field === 'email' ? 'Email' : 'Password'} message={fieldMessage} />
                 </div>
 
                 <div className="flex flex-col gap-3.5 pt-2">
@@ -251,6 +253,21 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
                 </div>
             </form>
         </AuthFrame>
+    )
+}
+
+/**
+ * Reads a field's error out the moment it arrives, naming the field ("Password: Use at least 8
+ * characters."). The message under the field is tied to it by aria-describedby, which a screen
+ * reader only reads when the field next takes focus — and the form leaves focus where it was.
+ * Always mounted and visually hidden; the page clears its error before each try, so a repeat
+ * of the same problem is read out again.
+ */
+export function FieldErrorAnnouncement({ label, message }: { label: string; message?: string }) {
+    return (
+        <div aria-live="polite" className="sr-only">
+            {message ? `${label}: ${message}` : ''}
+        </div>
     )
 }
 

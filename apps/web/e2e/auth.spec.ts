@@ -202,8 +202,10 @@ test('signup: a too-short password is flagged under its field', async ({ page })
     await password.fill('short')
     await page.getByRole('button', { name: 'Create account' }).click()
 
-    await expect(page.getByText('Use at least 8 characters.')).toBeVisible()
+    await expect(page.getByText('Use at least 8 characters.', { exact: true })).toBeVisible()
     await expect(password).toHaveAttribute('aria-invalid', 'true')
+    // Read out as it arrives: focus stays on the button, where the field's own description isn't read.
+    await expect(page.getByText('Password: Use at least 8 characters.', { exact: true })).toHaveAttribute('aria-live', 'polite')
     await expect(page.getByText('Password too short')).toHaveCount(0)
 })
 
@@ -225,6 +227,32 @@ test('reset password: requesting a link reaches the sent stage and can resend', 
 
     await page.getByRole('button', { name: 'Use a different email' }).click()
     await expect(send).toBeVisible()
+})
+
+test('reset password: a rejected address is flagged under its field, and the emailed link keeps ?next=', async ({ page }) => {
+    const redirects: string[] = []
+    page.on('request', (request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/auth/request-password-reset')
+            redirects.push((request.postDataJSON() as { redirectTo: string }).redirectTo)
+    })
+    let attempts = 0
+    await answer(page, '/api/auth/request-password-reset', () =>
+        ++attempts === 1 ? failure('INVALID_EMAIL', 'Invalid email') : { status: 200, body: { status: true } },
+    )
+    await page.goto('/reset-password?next=%2Fs%2Fe2e-token')
+
+    const email = page.getByLabel('Email')
+    await email.fill('e2e@example.com')
+    await page.getByRole('button', { name: 'Send reset link' }).click()
+    await expect(page.getByText("That email doesn't look quite right.", { exact: true })).toBeVisible()
+    await expect(email).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByRole('alert').filter({ hasText: "That email doesn't look quite right." })).toHaveCount(0)
+    await expect(page.getByText('Invalid email')).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Send reset link' }).click()
+    await expect(page.getByRole('heading', { name: 'Check your email.' })).toBeVisible()
+    // better-auth sends the visitor back to this URL with ?token= added: the destination rides along.
+    expect(redirects.at(-1)).toMatch(/\/reset-password\?next=%2Fs%2Fe2e-token$/)
 })
 
 test('reset password: the new-password stage validates strength and match', async ({ page }) => {
@@ -387,12 +415,12 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeVisible()
     })
 
-    test('verify: a mistyped email starts over at signup with the name filled in', async ({ page }) => {
+    test('verify: a mistyped email starts over at signup with the name filled in, the destination and plan kept', async ({ page }) => {
         await answer(page, '/api/auth/get-session', () => ({ status: 200, body: sessionFor(false) }))
-        await page.goto('/onboarding')
+        await page.goto('/onboarding?next=%2Fs%2Fe2e-token&plan=pro')
 
         await page.getByRole('button', { name: 'Start over' }).click()
-        await expect(page).toHaveURL(/\/signup$/)
+        await expect(page).toHaveURL(/\/signup\?next=%2Fs%2Fe2e-token&plan=pro$/)
         await expect(page.getByLabel('Your name')).toHaveValue('E2E Tester')
         await expect(page.getByLabel('Email')).toHaveValue('')
     })

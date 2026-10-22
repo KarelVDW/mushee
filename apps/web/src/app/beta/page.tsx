@@ -66,9 +66,15 @@ export default function BetaWaitingPage() {
                         </p>
                     </div>
 
-                    {/* The page already checks by itself, so checking by hand stays a quiet option. */}
+                    {/*
+                     * The page already checks by itself, so checking by hand stays a quiet option. A
+                     * click while a check runs does nothing (refetch would cancel it and start over).
+                     */}
                     <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                        <TertiaryButton onClick={() => void gate.refetch()}>
+                        <TertiaryButton
+                            onClick={() => {
+                                if (!gate.isFetching) void gate.refetch()
+                            }}>
                             <span className="inline-flex items-center gap-1.5">
                                 <Icon name="refresh-cw" size={13} />
                                 {gate.isFetching ? 'Checking…' : 'Check my status'}
