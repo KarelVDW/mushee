@@ -129,3 +129,50 @@ describe('TakesList playback', () => {
         expect(labels()).toEqual(['Play take', 'Play take'])
     })
 })
+
+describe('TakesList score names', () => {
+    let container: HTMLElement
+    let root: Root
+
+    beforeEach(() => {
+        container = document.createElement('div')
+        document.body.appendChild(container)
+        root = createRoot(container)
+    })
+
+    afterEach(() => {
+        act(() => root.unmount())
+        container.remove()
+    })
+
+    const orphan: RecordingSummary = { ...take('c'), scoreId: 'gone' }
+    const rowText = (row: number) => container.querySelectorAll('li')[row]?.textContent
+
+    it('links each row to its score on a cross-score list, and names a gone one in plain text', () => {
+        const titles = new Map([['score-1', 'Scale Study']])
+        act(() =>
+            root.render(createElement(TakesList, { takes: [take('a'), orphan], scoreTitleFor: (t) => titles.get(t.scoreId) ?? null })),
+        )
+        const links = [...container.querySelectorAll('a')]
+        expect(links).toHaveLength(1)
+        expect(links[0]?.textContent).toBe('Scale Study')
+        expect(links[0]?.getAttribute('href')).toBe('/scores/score-1')
+        expect(rowText(0)).toContain(' · Scale Study')
+        expect(rowText(1)).toContain(' · Deleted score')
+        expect(container.querySelectorAll('li')[1]?.querySelector('a')).toBeNull()
+    })
+
+    it('keeps the score link out of the truncating date line, so its focus ring is never clipped', () => {
+        act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
+        const link = container.querySelector('a')
+        // The link truncates its own name; no ancestor clips it (or its ring) with overflow.
+        expect(link?.parentElement?.closest('.truncate')).toBeNull()
+        expect(link?.querySelector('.truncate')?.textContent).toBe('Scale Study')
+    })
+
+    it('shows no score name on a per-score list', () => {
+        act(() => root.render(createElement(TakesList, { takes: [take('a')] })))
+        expect(container.querySelector('a')).toBeNull()
+        expect(rowText(0)).not.toContain('·')
+    })
+})

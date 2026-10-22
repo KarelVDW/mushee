@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DialogPanel, Eyebrow, Icon, type IconName, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
+import { DialogPanel, Eyebrow, Icon, type IconName, PasswordField, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { formatPurgeDate } from '@/lib/dates'
 import { useRequestAccountDeletion } from '@/lib/queries'
@@ -11,6 +11,10 @@ interface DeleteAccountDialogProps {
     email?: string
     onCancel: () => void
     onConfirm: () => void
+    /** Runs Settings' "Download my data" without closing the dialog, so the scores can be kept first. */
+    onExport: () => void
+    /** The download is being prepared. */
+    exporting: boolean
 }
 
 const PHRASE = 'delete my account'
@@ -21,7 +25,7 @@ const LOSS_ITEMS: [icon: IconName, text: string][] = [
     ['link', 'Share links — they stop working once deletion completes'],
 ]
 
-export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccountDialogProps) {
+export function DeleteAccountDialog({ email, onCancel, onConfirm, onExport, exporting }: DeleteAccountDialogProps) {
     const [typed, setTyped] = useState('')
     const [pw, setPw] = useState('')
     const [ack, setAck] = useState(false)
@@ -49,9 +53,13 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
           ? "That password doesn't match your account. Try again."
           : "Couldn't schedule the deletion. Please try again."
 
+    // The field label is an uppercase eyebrow like every other; the phrase inside it keeps its own
+    // case and quotes, so it reads exactly as it is typed.
     const labelEl = (
         <>
-            Type <span className="font-mono font-medium text-[13px] leading-none text-on-surface">{PHRASE}</span> to confirm
+            Type{' '}
+            <span className="normal-case tracking-normal font-body font-semibold text-[13px] leading-none text-on-surface">“{PHRASE}”</span>{' '}
+            to confirm
         </>
     )
 
@@ -98,23 +106,25 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                                 </div>
                             ))}
                         </div>
+                        <div className="-mb-1">
+                            <TertiaryButton onClick={onExport}>
+                                {exporting ? 'Preparing your download…' : 'Download my data first'}
+                            </TertiaryButton>
+                        </div>
                     </div>
 
                     <TextField label={labelEl} value={typed} onChange={setTyped} placeholder={PHRASE} autoFocus />
-                    <TextField
-                        label="Your password"
-                        value={pw}
-                        onChange={setPw}
-                        type="password"
-                        placeholder="••••••••••••"
-                        error={errorMessage}
-                    />
+                    <PasswordField label="Your password" value={pw} onChange={setPw} autoComplete="current-password" error={errorMessage} />
 
-                    <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.75 accent-error" />
+                    <label className="flex items-start gap-2.5 cursor-pointer pointer-coarse:min-h-10 pointer-coarse:items-center">
+                        <input
+                            type="checkbox"
+                            checked={ack}
+                            onChange={(e) => setAck(e.target.checked)}
+                            className="mt-0.75 pointer-coarse:mt-0 size-4 pointer-coarse:size-5 shrink-0 accent-error cursor-pointer"
+                        />
                         <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                            I understand that after the 7-day grace period this can&apos;t be undone, and that exporting my scores first is
-                            recommended.
+                            I understand that after 7 days this can&apos;t be undone.
                         </span>
                     </label>
                 </div>

@@ -4,34 +4,59 @@ import { useState } from 'react'
 
 import { BusyNotice, DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
+import type { BillingState } from '@/lib/api'
 import { formatMoney } from '@/lib/currency'
-import { CREDIT_PACKS, type CreditPack, dailyMinutes } from '@/lib/plans'
+import { CREDIT_PACKS, type CreditPack } from '@/lib/plans'
 import { usePlanCatalogue, useStartPackCheckout } from '@/lib/queries'
+import { formatAllowance } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { useRadioGroup } from '@/lib/useRadioGroup'
 
 type Phase = 'choose' | 'redirecting'
 
 interface PacksDialogProps {
+    /** The account's plan and allowance — what the packs come on top of. */
+    billing: BillingState
     onClose: () => void
     /** Open the subscription picker instead — plans stay the headline offer. */
     onSeePlans?: () => void
 }
 
 /**
- * One-time minute packs. Deliberately the secondary offer: the dialog opens
- * with an honest "a subscription is the better deal" nudge and every card
- * carries its subscription comparison. Checkout is Polar-hosted; the minutes
- * land via the `order.paid` webhook and never expire.
+ * The subtitle: when pack minutes are used, measured against the account's own allowance in
+ * words ("your free 3 minutes", "your daily 3 hours").
  */
-export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
+function packsSubtitle(billing: BillingState): string {
+    const limit = billing.credits.limitSeconds
+    if (limit === null) return 'For busy days: extra recording time that never expires.'
+    const allowance = billing.tierId === 'free' ? `free ${formatAllowance(limit)}` : `daily ${formatAllowance(limit)}`
+    return `For busy days: used after your ${allowance} run out, and they never expire.`
+}
+
+/**
+ * One-time minute packs. Deliberately the secondary offer: a free account gets one honest
+ * "a subscription is the better deal" nudge (a subscriber already has one, so it gets none).
+ * Each card leads with what it buys — minutes. Checkout is Polar-hosted; the minutes land
+ * via the `order.paid` webhook and never expire.
+ */
+export function PacksDialog({ billing, onClose, onSeePlans }: PacksDialogProps) {
     const [selected, setSelected] = useState<CreditPack['id']>('single')
     const [phase, setPhase] = useState<Phase>('choose')
     const currency = useDisplayCurrency()
     const startCheckout = useStartPackCheckout()
     const songwriter = usePlanCatalogue().songwriter
+    const radios = useRadioGroup(
+        CREDIT_PACKS.map((p) => p.id),
+        selected,
+        setSelected,
+    )
 
     const pack = CREDIT_PACKS.find((p) => p.id === selected) ?? CREDIT_PACKS[0]
     const locked = phase !== 'choose'
+    // The subscription nudge is for a free account only: a subscriber already has a plan,
+    // often a bigger one than Songwriter. It quotes Songwriter's allowance in words.
+    const songwriterDaily = songwriter.dailyRecordingSeconds
+    const nudge = billing.tierId === 'free' && songwriterDaily !== null ? formatAllowance(songwriterDaily) : null
 
     const buy = () => {
         if (locked) return
@@ -43,37 +68,36 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
 
     return (
         <DialogPanel
-            title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
-            subtitle={
-                phase === 'choose'
-                    ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
-                    : undefined
-            }
+            title={phase === 'redirecting' ? 'Taking you to the payment page…' : 'Extra recording minutes'}
+            subtitle={phase === 'choose' ? packsSubtitle(billing) : undefined}
             onClose={locked ? undefined : onClose}
             width={640}
             footer={
                 phase === 'choose' ? (
-                    <>
+                    <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-2 min-w-0">
                         {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
                         <PrimaryButton icon="external-link" onClick={buy}>
-                            {`Buy ${pack.name} · ${formatMoney(pack.price, currency)}`}
+                            {`Buy ${pack.minutes} min · ${formatMoney(pack.price, currency)}`}
                         </PrimaryButton>
-                    </>
+                    </div>
                 ) : null
             }>
             {phase === 'choose' && (
                 <div className="flex flex-col gap-4 pb-2">
-                    <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                        Recording regularly? <strong>{songwriter.name}</strong> gives you {dailyMinutes(songwriter)} minutes{' '}
-                        <em>every day</em> for {formatMoney(songwriter.priceMonthly, currency)}/month — packs are for the once-in-a-while.
-                    </div>
+                    {nudge && (
+                        <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
+                            Recording regularly? <strong>{songwriter.name}</strong> gives you {nudge} every day for{' '}
+                            {formatMoney(songwriter.priceMonthly, currency)} a month — packs are for the once-in-a-while.
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
-                        {CREDIT_PACKS.map((p) => {
+                        {CREDIT_PACKS.map((p, index) => {
                             const active = selected === p.id
                             return (
                                 <button
                                     key={p.id}
+                                    {...radios.radioProps(index)}
                                     type="button"
                                     role="radio"
                                     aria-checked={active}
@@ -86,24 +110,23 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                                             ? 'bg-primary-soft text-on-primary-soft'
                                             : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
                                     ].join(' ')}>
-                                    <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
                                     <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
+                                        {p.minutes} min
+                                    </span>
+                                    <span className="font-body font-semibold text-[14px] leading-[1.2]">
                                         {formatMoney(p.price, currency)}
                                     </span>
-                                    <span className="font-body font-normal text-[13px] leading-[1.4]">{p.minutes} min of recording</span>
-                                    <span className="font-body font-normal text-[12px] leading-[1.4] opacity-80">{p.blurb}</span>
+                                    <span className="font-body font-normal text-[13px] leading-[1.4] opacity-80">
+                                        {p.name} · {p.blurb}
+                                    </span>
                                 </button>
                             )
                         })}
                     </div>
-
-                    <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
-                        {pack.compare(currency, songwriter)}
-                    </p>
                 </div>
             )}
 
-            {phase === 'redirecting' && <BusyNotice>Sending you to Polar&apos;s secure checkout…</BusyNotice>}
+            {phase === 'redirecting' && <BusyNotice>You&apos;ll pay on a secure page run by our payment partner, Polar.</BusyNotice>}
         </DialogPanel>
     )
 }
