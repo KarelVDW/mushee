@@ -326,7 +326,7 @@ describe('Transport', () => {
         expect(raw.loadInstruments).toHaveBeenLastCalledWith([Instrument.Flute])
     })
 
-    it('preview sounds a note at its instrument\'s sounding pitch, and a rest not at all', () => {
+    it("preview sounds a note at its instrument's sounding pitch, and a rest not at all", () => {
         const { player, raw } = fakePlayer()
         const transport = new Transport(player)
         const score = scoreWithNotes()

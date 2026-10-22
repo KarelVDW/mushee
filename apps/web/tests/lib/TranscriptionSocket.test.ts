@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { TranscriptionSocket, type TranscriptionMeta } from '@/lib/TranscriptionSocket'
+import { type TranscriptionMeta, TranscriptionSocket } from '@/lib/TranscriptionSocket'
 
 let lastSocket: FakeWebSocket | null = null
 const rememberSocket = (socket: FakeWebSocket): void => {

@@ -5,7 +5,7 @@ import type { Tickable } from '@mushee/playback/Ticker'
 
 import { Microphone } from './Microphone'
 import type { PlaybackCursor } from './PlaybackCursor'
-import { type RecordingErrorCode, type RecordingLimitInfo, TranscriptionSocket, type TranscriptionMeta } from './TranscriptionSocket'
+import { type RecordingErrorCode, type RecordingLimitInfo, type TranscriptionMeta, TranscriptionSocket } from './TranscriptionSocket'
 import { WaveformMeter } from './WaveformMeter'
 
 const CHUNK_MS = 100

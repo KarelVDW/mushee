@@ -12,12 +12,15 @@ class FakeAnalyser {
 
 let analyser: FakeAnalyser
 let context: FakeAudioContext
+const rememberContext = (ctx: FakeAudioContext): void => {
+    context = ctx
+}
 class FakeAudioContext {
     createMediaStreamSource = vi.fn(() => ({ connect: vi.fn() }))
     createAnalyser = vi.fn(() => (analyser = new FakeAnalyser()))
     close = vi.fn(() => Promise.resolve())
     constructor() {
-        context = this
+        rememberContext(this)
     }
 }
 

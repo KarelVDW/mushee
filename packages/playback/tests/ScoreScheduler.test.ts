@@ -279,7 +279,7 @@ describe('ScoreScheduler', () => {
         expect(scheduler.positionAt(60 / 90)).toEqual({ measureIndex: 0, beat: 1 })
     })
 
-    it('a tie chain across a barline holds at each measure\'s tempo', () => {
+    it("a tie chain across a barline holds at each measure's tempo", () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
         const held = new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })

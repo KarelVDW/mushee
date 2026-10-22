@@ -206,13 +206,14 @@ describe('Ticker', () => {
 
     it('play() runs tickables that have no reset', () => {
         const ticker = new Ticker()
-        const lifecycleDrivenElsewhere: Tickable = { tick: vi.fn(() => true) }
+        const tick = vi.fn(() => true)
+        const lifecycleDrivenElsewhere: Tickable = { tick }
         const onFinish = vi.fn()
 
         ticker.play([lifecycleDrivenElsewhere], onFinish)
         fireFrame()
 
-        expect(lifecycleDrivenElsewhere.tick).toHaveBeenCalledTimes(1)
+        expect(tick).toHaveBeenCalledTimes(1)
         expect(onFinish).toHaveBeenCalledTimes(1)
     })
 

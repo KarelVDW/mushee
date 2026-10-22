@@ -156,7 +156,7 @@ bug-fix logs were dropped; what remains is still-true reference material.
   Ticker + tick units and assembles the tickable set per mode (playback =
   scheduler + cursor ± metronome; recording = engine + metronome). Nothing
   ambient survives between passes — the notes-replay-into-recording bug is
-  impossible by construction. `Metronome.syncTo(elapsed)` exists so toggling it
+  impossible by construction. `Metronome.joinAt(elapsed)` exists so toggling it
   mid-playback doesn't burst-schedule elapsed clicks.
 - **Octave normalization on recording** (chosen over setting the clef from the
   recording — the clef is a deliberate user choice, and whistling sits above any
