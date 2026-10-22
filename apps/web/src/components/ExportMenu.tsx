@@ -13,10 +13,11 @@ import { PdfExporter } from '@/lib/PdfExporter'
 
 type ExportFormat = 'musicxml' | 'pdf' | 'midi'
 
-const FORMATS: Array<{ format: ExportFormat; label: string; description: string }> = [
-    { format: 'musicxml', label: 'MusicXML', description: 'For other notation apps (.musicxml)' },
-    { format: 'pdf', label: 'PDF', description: 'Print-ready sheet music (.pdf)' },
-    { format: 'midi', label: 'MIDI', description: 'For DAWs and players (.mid)' },
+/** What a dabbler most often wants comes first: sheet music to print or send, then other apps. */
+const FORMATS: Array<{ format: ExportFormat; label: string; description: string; extension: string }> = [
+    { format: 'pdf', label: 'PDF', description: 'Print it or send it as sheet music', extension: '.pdf' },
+    { format: 'midi', label: 'MIDI', description: 'Open it in GarageBand or other music apps', extension: '.mid' },
+    { format: 'musicxml', label: 'MusicXML', description: 'Keep editing in MuseScore or other notation apps', extension: '.musicxml' },
 ]
 
 interface ExportMenuProps {
@@ -26,9 +27,28 @@ interface ExportMenuProps {
     getSvg: () => SVGSVGElement | null
     /** Icon-only trigger (the mobile header). */
     compact?: boolean
+    /** The chip's visible text: 'Export' in the editor, 'Download' on the share page. */
+    label?: string
+    /** The chip's and panel's accessible name; it must contain `label` (WCAG 2.5.3). */
+    ariaLabel?: string
+    /** The panel's eyebrow (`title` is the score's, for the file names). */
+    menuTitle?: string
 }
 
-export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenuProps) {
+/**
+ * The score's download menu: PDF, MIDI or MusicXML, each with what it is for. A PDF takes a
+ * moment to render ("Preparing PDF…"); every finished download is confirmed with the file's
+ * name — never a folder, which the browser decides.
+ */
+export function ExportMenu({
+    score,
+    title,
+    getSvg,
+    compact = false,
+    label = 'Export',
+    ariaLabel = 'Export score',
+    menuTitle = 'Download as',
+}: ExportMenuProps) {
     // Held here, not in the panel: an export keeps running (and blocks a second one) after Escape closes the menu.
     const [busy, setBusy] = useState<ExportFormat | null>(null)
 
@@ -36,13 +56,15 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
         async (format: ExportFormat, onExported: () => void) => {
             if (busy) return
             const basename = title.replace(/[/\\:*?"<>|]/g, '').trim() || 'score'
+            const { label: formatLabel, extension } = FORMATS.find((f) => f.format === format) ?? FORMATS[0]
+            const filename = `${basename}${extension}`
             setBusy(format)
             try {
                 if (format === 'musicxml') {
                     const xml = new MusicXmlExporter(score).toXml(title)
-                    downloadBlob(new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' }), `${basename}.musicxml`)
+                    downloadBlob(new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' }), filename)
                 } else if (format === 'midi') {
-                    downloadBlob(new Blob([new MidiExporter(score).toBytes()], { type: 'audio/midi' }), `${basename}.mid`)
+                    downloadBlob(new Blob([new MidiExporter(score).toBytes()], { type: 'audio/midi' }), filename)
                 } else {
                     // The PDF is a print artifact: pin the layout to the standard page width
                     // for the snapshot (a phone displays a reflowed layout), restore after.
@@ -51,15 +73,16 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                     try {
                         const svg = getSvg()
                         if (!svg) throw new Error('Score is not rendered')
-                        downloadBlob(await new PdfExporter(score, svg).toBlob(title), `${basename}.pdf`)
+                        downloadBlob(await new PdfExporter(score, svg).toBlob(title), filename)
                     } finally {
                         if (displayWidth !== SCORE_WIDTH) flushSync(() => score.setLayoutWidth(displayWidth))
                     }
                 }
                 onExported()
+                showToast(`Downloaded “${filename}”.`, 'info')
             } catch (err) {
                 console.error(`Export to ${format} failed`, err)
-                showToast(`The ${FORMATS.find((f) => f.format === format)?.label ?? format} export failed. Please try again.`)
+                showToast(`The ${formatLabel} export failed. Please try again.`)
             } finally {
                 setBusy(null)
             }
@@ -68,25 +91,28 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
     )
 
     return (
-        <HeaderMenu icon="download" label="Export" compact={compact} ariaLabel="Export score" title="Export as" className="gap-2">
+        <HeaderMenu icon="download" label={label} compact={compact} ariaLabel={ariaLabel} title={menuTitle} className="gap-2">
             {({ close }) => (
                 <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
-                    {FORMATS.map(({ format, label, description }) => (
+                    {FORMATS.map(({ format, label: formatLabel, description, extension }) => (
                         <button
                             key={format}
                             type="button"
                             disabled={busy !== null}
                             onClick={() => void handleExport(format, close)}
                             className={[
-                                'flex flex-col items-start gap-1 w-56 px-3 py-2.5 rounded-md border-0 text-left',
+                                'flex flex-col items-start justify-center gap-1.5 w-64 max-w-full px-3 py-2.5 pointer-coarse:min-h-11 rounded-md border-0 text-left',
                                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
                                 'bg-surface-container-low hover:bg-surface-container',
-                                'transition-colors duration-150 ease-solkey',
+                                'transition-colors duration-150 ease-solkey focus-ring',
                             ].join(' ')}>
-                            <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
-                                {busy === format ? `Exporting ${label}…` : label}
+                            <span className="flex w-full items-baseline justify-between gap-3">
+                                <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
+                                    {busy === format ? `Preparing ${formatLabel}…` : formatLabel}
+                                </span>
+                                <span className="font-mono text-[11px] leading-none text-on-surface-variant">{extension}</span>
                             </span>
-                            <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">{description}</span>
+                            <span className="font-body font-normal text-[11px] leading-[1.35] text-on-surface-variant">{description}</span>
                         </button>
                     ))}
                 </div>

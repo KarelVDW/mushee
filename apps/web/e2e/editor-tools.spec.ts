@@ -320,7 +320,8 @@ test('keys pressed inside the export menu stay out of the score', async ({ page,
 
     await page.getByRole('button', { name: 'Export score' }).click()
     const menu = page.getByRole('dialog', { name: 'Export score' })
-    await expect(menu.getByRole('button', { name: 'MusicXML' })).toBeFocused()
+    // Focus lands on the first format, PDF (the menu leads with what most people want).
+    await expect(menu.getByRole('button', { name: 'PDF' })).toBeFocused()
 
     // Backspace would clear the selected note's pitch if it reached the editor.
     await page.keyboard.press('Backspace')
