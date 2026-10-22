@@ -29,6 +29,12 @@ export const HIGHLIGHT_MAGENTA = '#FF2079'
 /** The brand cyan — with HIGHLIGHT_MAGENTA, the live recording waveform's bar colours. */
 export const WAVEFORM_CYAN = '#00DBE9'
 
+/**
+ * The recording waveform's bar colours, alternated bar by bar: brand accents (loud tier), the
+ * first sanctioned exception to the canvas colour ban. The landing-page demo reuses them.
+ */
+export const WAVEFORM_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA] as const
+
 /** Add/remove-measure button chrome: face, outline and label. */
 export const MEASURE_BUTTON_FILL = 'white'
 export const MEASURE_BUTTON_STROKE = '#dbdddd'

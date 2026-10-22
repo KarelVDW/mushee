@@ -5,10 +5,8 @@ import { useSyncExternalStore } from 'react'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import type { Score as ScoreModel } from '../model'
 import { Staff } from '../model/layout/Staff'
-import { HIGHLIGHT_MAGENTA, WAVEFORM_CYAN } from './constants'
+import { WAVEFORM_COLORS } from './constants'
 
-/** Brand accents (loud tier) — one of the two sanctioned brand-accent exceptions inside the canvas (see constants.ts). */
-const BAR_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA]
 const BAR_WIDTH = 2.5
 /** Tallest bar: half the staff height on either side of the middle line. */
 const MAX_RADIUS = Staff.HEIGHT / 2
@@ -50,7 +48,7 @@ export function RecordingWaveform({ store, score }: { store: RecordingWaveformSt
                         width={BAR_WIDTH}
                         height={radius * 2}
                         rx={BAR_WIDTH / 2}
-                        fill={BAR_COLORS[bar.seq % BAR_COLORS.length]}
+                        fill={WAVEFORM_COLORS[bar.seq % WAVEFORM_COLORS.length]}
                         onAnimationEnd={bar.exiting ? () => store.remove(bar.id) : undefined}
                     />
                 )

@@ -1,5 +1,5 @@
 export { BeatUnit, beatUnitWidth } from './BeatUnit'
-export { INTERACTION_BLUE, NOTATION_INK } from './constants'
+export { INTERACTION_BLUE, NOTATION_INK, WAVEFORM_COLORS } from './constants'
 export { Glyph } from './Glyph'
 export type { ScoreHighlight } from './HighlightLayer'
 export { BeatUnitIcon, ClefIcon, KeySignatureIcon, TimeSignatureIcon } from './NotationIcons'
