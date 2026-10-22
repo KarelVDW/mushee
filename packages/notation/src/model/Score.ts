@@ -100,6 +100,19 @@ export class Score {
         this._onChange = onChange
     }
 
+    /**
+     * A new score's starting point for `instrument`: one measure completed the way the editor
+     * completes one (four quarter rests in 4/4), marked at `bpm`. New scores open at 120 on
+     * purpose — DEFAULT_BPM is only what a score without any marking is assumed to play at.
+     */
+    static blank(instrument: Instrument, bpm = 120): Score {
+        const score = new Score()
+        score._instrument = instrument
+        const measure = score.addMeasure().complete()
+        score.setTempo(measure.firstNote, bpm)
+        return score
+    }
+
     /** Version of the whole score's semantic content; any mutation moves it. */
     get version(): number {
         return this._version

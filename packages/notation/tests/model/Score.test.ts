@@ -1237,6 +1237,30 @@ describe('Score', () => {
         })
     })
 
+    describe('blank', () => {
+        it('opens with one completed measure under the instrument, marked at 120', () => {
+            const score = Score.blank(Instrument.Flute)
+            expect(score.instrument).toBe(Instrument.Flute)
+            expect(score.measures).toHaveLength(1)
+            const [m] = score.measures
+            expect(m.notes.map((n) => (n.isRest ? n.duration.type : 'pitched'))).toEqual(['q', 'q', 'q', 'q'])
+            expect(m.endBarline).toBe('end')
+            expect(m.tempoAtBeat(0)?.bpm).toBe(120)
+            expect(score.bpmAtBeat(m, 0)).not.toBe(Score.DEFAULT_BPM) // a deliberate opening tempo
+        })
+
+        it('takes another opening tempo', () => {
+            expect(Score.blank(Instrument.Piano, 96).measures[0].tempoAtBeat(0)?.bpm).toBe(96)
+        })
+
+        it('is saved whole on its first flush, part list included', () => {
+            const patch = Score.blank(Instrument.Trumpet).flushDirty()
+            expect(patch?.allMeasures).toHaveLength(1)
+            // Like a seeded instrument, a new score's instrument travels in the full document, not the patch.
+            expect(patch?.partList).toBeUndefined()
+        })
+    })
+
     describe('addMeasure at an interior index', () => {
         it('inserting before an existing measure gives the new measure a single end barline', () => {
             const score = makeScore(1)
