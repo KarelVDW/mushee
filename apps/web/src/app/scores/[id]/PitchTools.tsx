@@ -61,6 +61,9 @@ export function PitchTools({
             <PopoverChip
                 plain={plain}
                 compact={compact}
+                // In the dock it follows the dock's rule — no selected note, no tool; the header's
+                // stays available, since transposing the whole score needs no selection.
+                disabled={plain && !manipulator.selectedNote}
                 ariaLabel="Transpose"
                 chip={<Icon name="transpose" size={iconSize} />}
                 className={plain ? undefined : HEADER_POPOVER_POSITION}
