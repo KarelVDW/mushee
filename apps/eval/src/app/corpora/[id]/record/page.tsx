@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ScoreView } from '@/components/ScoreView'
@@ -42,23 +42,29 @@ export default function RecordFlowPage() {
 
 function RecordFlow() {
     const { id } = useParams<{ id: string }>()
-    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+    const clipId = useSearchParams().get('clip')
     const detail = useCorpus(id)
     const uploadTake = useUploadTake()
     const transcribe = useTranscribe()
     const { player, mode } = useEvalPlayer()
 
-    const [currentClipId, setCurrentClipId] = useState<string | null>(searchParams.get('clip'))
     const [flow, setFlow] = useState<FlowState>({ step: 'ready' })
     const [metronomeOn, setMetronomeOn] = useState(true)
     const [progress, setProgress] = useState(0)
 
     const clips = detail.data?.clips
     const corpus = detail.data?.corpus
-    const clip = useMemo(() => {
-        if (!clips?.length) return null
-        return clips.find((c) => c.id === currentClipId) ?? clips.find((c) => c.status === 'pending') ?? clips[0]
-    }, [clips, currentClipId])
+    const clip = useMemo(() => clips?.find((c) => c.id === clipId) ?? null, [clips, clipId])
+
+    // The URL owns the current clip, so a refetch after a take can't move the
+    // page off the clip just recorded. With no (or a stale) ?clip, land on the
+    // first pending clip once.
+    const defaultClipId = clips?.length && !clip ? (clips.find((c) => c.status === 'pending') ?? clips[0]).id : null
+    useEffect(() => {
+        if (defaultClipId) router.replace(`${pathname}?clip=${defaultClipId}`)
+    }, [defaultClipId, pathname, router])
 
     const built = useMemo(() => {
         if (!clip || !corpus) return null
@@ -80,14 +86,16 @@ function RecordFlow() {
         return () => clearInterval(timer)
     }, [mode, built, player])
 
-    if (detail.isPending)
-        return (
-            <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
-                <Spinner /> Loading corpus…
-            </div>
-        )
+    const loading = (
+        <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
+            <Spinner /> Loading corpus…
+        </div>
+    )
+    if (detail.isPending) return loading
     if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {errorText(detail.error)}</Alert>
-    if (!clips || !clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
+    if (!clips?.length || !corpus) return <Alert>This corpus has no clips.</Alert>
+    // Until the default ?clip lands.
+    if (!clip || !built) return loading
 
     const clipIndex = clips.findIndex((c) => c.id === clip.id)
     const nextClip = clips[clipIndex + 1] ?? null
@@ -139,7 +147,7 @@ function RecordFlow() {
     const goNext = () => {
         if (!nextClip) return
         player.stop()
-        setCurrentClipId(nextClip.id)
+        router.replace(`${pathname}?clip=${nextClip.id}`)
         setFlow({ step: 'ready' })
         setProgress(0)
     }

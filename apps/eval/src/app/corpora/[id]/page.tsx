@@ -58,8 +58,8 @@ export default function CorpusDetailPage() {
                     <PrimaryButton
                         emphasis="pop"
                         icon="mic"
-                        disabled={!firstPending && corpus.clipCount === 0}
-                        onClick={() => router.push(`/corpora/${corpus.id}/record${firstPending ? `?clip=${firstPending.id}` : ''}`)}>
+                        disabled={corpus.clipCount === 0}
+                        onClick={() => router.push(`/corpora/${corpus.id}/record`)}>
                         {firstPending ? 'Record clips' : 'Re-record clips'}
                     </PrimaryButton>
                 </div>
