@@ -1,10 +1,11 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 
 import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
+import { useScrollFollow } from '../lib/useScrollFollow'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
 import type { Clef, Measure as MeasureModel, Note, Pitch, Score as ScoreModel } from '../model'
 import { NoteLayout } from '../model/layout/NoteLayout'
@@ -33,17 +34,6 @@ const INPUT_CURSOR_GAP = 15
 const REFLOW_BREAKPOINT = 768
 /** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
 const MIN_LAYOUT_WIDTH = 340
-/** Breathing room kept between the followed row and the scroll viewport's edges. */
-const FOLLOW_SCROLL_MARGIN = 16
-
-/** The nearest ancestor that scrolls vertically — where selection/cursor following happens. */
-function findScrollParent(el: HTMLElement | null): HTMLElement | null {
-    for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
-        const overflowY = getComputedStyle(node).overflowY
-        if (overflowY === 'auto' || overflowY === 'scroll') return node
-    }
-    return null
-}
 
 interface ScoreProps {
     score: ScoreModel
@@ -145,6 +135,8 @@ export const Score = memo(function Score({
     const rows = layout.rows
     const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
+    // The svg renders once the container has been measured (and there is a row to draw).
+    const svgMounted = containerWidth > 0 && totalHeight > 0
 
     // Input-cursor position: note-local x, row-local y
     const inputCursorPos = useMemo(() => {
@@ -172,52 +164,7 @@ export const Score = memo(function Score({
         [totalHeight, score],
     )
 
-    // Scroll the nearest scrollable ancestor so the row at `layoutY` sits inside the
-    // viewport (no-op when it already does) — how the selection and the playback
-    // cursor stay in view on small screens.
-    const scrollRowIntoView = useCallback(
-        (layoutY: number) => {
-            const svg = svgRef.current
-            const scroller = findScrollParent(containerRef.current)
-            if (!svg || !scroller) return
-            const scale = svg.getBoundingClientRect().width / score.layout.scoreWidth
-            const svgTop = svg.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
-            const rowTop = svgTop + layoutY * scale
-            const rowBottom = rowTop + score.layout.rowHeight * scale
-            if (rowTop < scroller.scrollTop + FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: 'smooth' })
-            } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: 'smooth' })
-            }
-        },
-        [score],
-    )
-
-    // Keep the selected note's row visible whenever the selection moves (taps,
-    // arrow keys, the mobile note navigator).
-    useEffect(() => {
-        if (!selectedNote) return
-        try {
-            const row = score.layout.rowFor(selectedNote.measure)
-            scrollRowIntoView(score.layout.getYForRow(row))
-        } catch {
-            // A selection can briefly reference a measure detached by an in-flight edit.
-        }
-    }, [selectedNote, score, scrollRowIntoView])
-
-    // Follow playback/recording: the engines drive the cursor rect's transform
-    // directly, so a row change surfaces here as an attribute mutation.
-    useEffect(() => {
-        const cursor = playbackCursorRef?.current
-        if (!cursor || containerWidth === 0) return
-        const observer = new MutationObserver(() => {
-            if (cursor.getAttribute('display') === 'none') return
-            const match = /translate\(\s*0\s*[,\s]\s*([\d.]+)\s*\)/.exec(cursor.getAttribute('transform') ?? '')
-            if (match) scrollRowIntoView(Number(match[1]))
-        })
-        observer.observe(cursor, { attributes: true, attributeFilter: ['transform', 'display'] })
-        return () => observer.disconnect()
-    }, [playbackCursorRef, containerWidth, scrollRowIntoView])
+    useScrollFollow({ svgRef, containerRef, score, selectedNote, playbackCursorRef, mounted: svgMounted })
 
     // Attribute glyphs only *report* clicks, in container pixels — opening an editing surface
     // is the parent's business. One stable handler for every measure (a per-measure adapter
@@ -347,7 +294,7 @@ export const Score = memo(function Score({
 
     return (
         <div ref={containerRef} className="relative select-none">
-            {containerWidth > 0 && totalHeight > 0 && (
+            {svgMounted && (
                 <svg
                     ref={svgRef}
                     width={containerWidth}
