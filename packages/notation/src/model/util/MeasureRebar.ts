@@ -7,24 +7,28 @@ import type { Score } from '../Score'
 import type { TimeSignature } from '../TimeSignature'
 import type { BarlineType } from '../types'
 
-// One reflowable span of time: a single source note, or the tied chain the old barlines split it into.
-// The chain shares one pitch and tuplet ratio, so its first note speaks for the whole unit.
+/**
+ * One reflowable span of time: a single source note, or the tied chain the old barlines split it into.
+ * The chain shares one pitch and tuplet ratio, so its first note speaks for the whole unit.
+ */
 interface Unit {
     notes: Note[]
-    // Effective (tuplet-adjusted) beats.
+    /** Effective (tuplet-adjusted) beats. */
     beats: number
     tiesBack: boolean
     tiesForward: boolean
 }
 
-// A clef/key/tempo marking lifted to region-absolute beats, re-anchored after the reflow.
+/** A clef/key/tempo marking lifted to region-absolute beats, re-anchored after the reflow. */
 interface Mark {
     beat: number
     apply: (measure: Measure, beatPosition: number) => void
 }
 
-// Rebars a run of measures under a new time signature: the content flows across the new barlines,
-// coalescing what the old barlines split and re-splitting with ties where it straddles new ones.
+/**
+ * Rebars a run of measures under a new time signature: the content flows across the new barlines,
+ * coalescing what the old barlines split and re-splitting with ties where it straddles new ones.
+ */
 export class MeasureRebar {
     readonly measures: Measure[] = []
 
@@ -33,7 +37,7 @@ export class MeasureRebar {
     private readonly capacity: number
     private readonly marks: Mark[]
 
-    // The measure being filled: its notes so far and their effective beats.
+    /** The measure being filled: its notes so far and their effective beats. */
     private pending: Note[] = []
     private fill = 0
 
@@ -57,8 +61,10 @@ export class MeasureRebar {
         for (const barline of barlines) this.applyBarline(barline)
     }
 
-    // The caller must have put `measures` into the score already, and `onApplied` must restore
-    // carry-forward context so each mark's redundancy checks see the marks applied before it.
+    /**
+     * The caller must have put `measures` into the score already, and `onApplied` must restore
+     * carry-forward context so each mark's redundancy checks see the marks applied before it.
+     */
     applyMarks(onApplied: () => void) {
         for (const mark of this.marks) {
             const index = Math.min(Math.floor((mark.beat + BEAT_EPSILON) / this.capacity), this.measures.length - 1)
@@ -124,7 +130,7 @@ export class MeasureRebar {
         return { units, marks, barlines }
     }
 
-    // Whether the old barline split one logical note into this tied pair: same pitch and tuplet ratio.
+    /** Whether the old barline split one logical note into this tied pair: same pitch and tuplet ratio. */
     private static chainsBack(prev: Unit | undefined, note: Note): boolean {
         if (!prev?.tiesForward) return false
         const a = prev.notes[0].pitch
@@ -167,7 +173,7 @@ export class MeasureRebar {
         if (this.fill >= this.capacity - BEAT_EPSILON) this.closeMeasure()
     }
 
-    // The written notes for one chunk of a unit, tied together and to the unit's neighbours.
+    /** The written notes for one chunk of a unit, tied together and to the unit's neighbours. */
     private pieces(unit: Unit, durations: Duration[], firstChunk: boolean, lastChunk: boolean): Note[] {
         const pitch = unit.notes[0].pitch
         return durations.map((duration, i) => {
@@ -190,7 +196,7 @@ export class MeasureRebar {
         this.fill = 0
     }
 
-    // Restore an interior explicit barline where its absolute boundary still falls on a new barline.
+    /** Restore an interior explicit barline where its absolute boundary still falls on a new barline. */
     private applyBarline(barline: { beat: number; style: BarlineType }) {
         const boundary = Math.round(barline.beat / this.capacity)
         if (boundary > 0 && boundary < this.measures.length && Math.abs(boundary * this.capacity - barline.beat) < BEAT_EPSILON) {
