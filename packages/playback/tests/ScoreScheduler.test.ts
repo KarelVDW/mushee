@@ -4,6 +4,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { pitched, rest } from '@mushee/notation/testing'
+import { Metronome } from '@mushee/playback/Metronome'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import { describe, expect, it } from 'vitest'
 
@@ -145,6 +146,70 @@ describe('ScoreScheduler', () => {
         expect(scheduler.entries[3].startTime).toBeCloseTo(2 * q90 + q180, 5)
     })
 
+    it('a marking between onsets takes effect at its exact beat', () => {
+        const { player, scheduled } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const score = scoreWithNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+        score.measures[0].setTempo(0, 60)
+        score.measures[0].addTempo(1, 120) // mid-way through the C
+        scheduler.score = score
+        scheduler.reset()
+
+        player.currentTime = 100
+        scheduler.tick()
+        // The C: one beat at 60bpm (1s) + one at 120bpm (0.5s).
+        expect(scheduled[0].duration).toBeCloseTo(1.5, 5)
+        expect(scheduled[1].startTime).toBeCloseTo(1.5, 5)
+        expect(scheduled[1].duration).toBeCloseTo(1, 5)
+    })
+
+    it('metronome clicks land on the note onsets when a marking sits between them', () => {
+        const notes = fakePlayer()
+        const clicks = fakePlayer()
+        const score = scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)])
+        score.measures[0].setTempo(0, 60)
+        score.measures[0].addTempo(1.5, 120) // between the D and E onsets
+        const scheduler = new ScoreScheduler(notes.player)
+        const metronome = new Metronome(clicks.player)
+        scheduler.score = score
+        metronome.score = score
+        scheduler.reset()
+        metronome.reset()
+
+        notes.player.currentTime = 100
+        clicks.player.currentTime = 100
+        scheduler.tick()
+        metronome.tick()
+        expect(notes.scheduled.map((n) => n.startTime)).toEqual([0, 1, 1.75, 2.25])
+        expect(clicks.scheduled.map((n) => n.startTime)).toEqual(notes.scheduled.map((n) => n.startTime))
+    })
+
+    it('starting at a note keeps every later onset where playing from the top puts it', () => {
+        const score = scoreWithNotes(
+            [pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)],
+            [pitched('G', 4, 'h'), pitched('A', 4, 'h')],
+        )
+        score.measures[0].setTempo(0, 60)
+        score.measures[0].addTempo(2.5, 150)
+        score.measures[1].addTempo(1, 75)
+        const onsets = (startNote: Note | null) => {
+            const { player, scheduled } = fakePlayer()
+            const scheduler = new ScoreScheduler(player)
+            scheduler.score = score
+            scheduler.startNote = startNote
+            scheduler.reset()
+            player.currentTime = 100
+            scheduler.tick()
+            return scheduled.map((n) => n.startTime)
+        }
+
+        const fromTop = onsets(null)
+        const fromE = onsets(score.measures[0].notes[2])
+        const shared = fromTop.slice(2).map((t) => t - fromTop[2])
+        expect(fromE).toHaveLength(shared.length)
+        fromE.forEach((t, i) => expect(t).toBeCloseTo(shared[i], 9))
+    })
+
     it('extends a forward-tied note over its tied continuation for audio duration', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
@@ -184,6 +249,24 @@ describe('ScoreScheduler', () => {
         expect(scheduled[0].duration).toBeCloseTo((2 * 60) / 90, 5)
         // The continuation still gets a timeline entry so the cursor advances over it.
         expect(scheduler.entries).toHaveLength(2)
+    })
+
+    it('a tie chain across a barline holds at each measure\'s tempo', () => {
+        const { player, scheduled } = fakePlayer()
+        const scheduler = new ScoreScheduler(player)
+        const held = new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
+        const into = new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+        const score = scoreWithNotes([pitched('E', 4, 'h'), held], [into, rest('h')])
+        score.measures[1].setTempo(0, 120)
+        scheduler.score = score
+        scheduler.reset()
+
+        player.currentTime = 100
+        scheduler.tick()
+        // Two beats at the default 90bpm, then two at 120bpm.
+        expect(scheduled.map((n) => n.midi)).toEqual([64, 60])
+        expect(scheduled[1].startTime).toBeCloseTo((2 * 60) / 90, 5)
+        expect(scheduled[1].duration).toBeCloseTo((2 * 60) / 90 + (2 * 60) / 120, 5)
     })
 
     it('a lone tie-start note sounds for its own length', () => {

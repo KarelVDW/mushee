@@ -62,7 +62,7 @@ describe('Metronome', () => {
         expect(scheduled[1].startTime).toBeCloseTo(0.5, 5)
     })
 
-    it('reset() walks back to find the active tempo from startMeasureIndex', () => {
+    it('starting at a later measure clicks at the tempo carried into it', () => {
         const { player, scheduled } = fakePlayer()
         const metro = new Metronome(player)
         const score = makeScore(3)
@@ -130,10 +130,10 @@ describe('Metronome', () => {
         const { player, scheduled } = fakePlayer()
         const metro = new Metronome(player)
         const score = makeScore(2)
-        // Two tempos in measure 0: reset() sorts them and keeps the later (beat 2 => 180bpm) one.
+        // Two tempos in measure 0: the later one (beat 2 => 180bpm) is what carries out of it.
         score.measures[0].setTempo(0, 60)
         score.measures[0].addTempo(2, 180)
-        // Start at measure 1 (no beat-0 tempo there) so reset's inherited 180bpm is what ticks use.
+        // Start at measure 1 (no marking of its own) so the inherited 180bpm is what the clicks use.
         metro.score = score
         metro.startMeasureIndex = 1
         metro.reset()
@@ -265,6 +265,37 @@ describe('Metronome', () => {
             player.currentTime = 100
             metro.tick()
             // Beats 0,1 at 60bpm (1s apart), beats 2,3 at 120bpm (0.5s apart).
+            expect(scheduled.map((n) => n.startTime)).toEqual([0, 1, 2, 2.5])
+        })
+
+        it('a marking between pulses applies at its exact beat, not at the next click', () => {
+            const { player, scheduled } = fakePlayer()
+            const metro = new Metronome(player)
+            const score = makeScore(1)
+            score.measures[0].setTempo(0, 60)
+            score.measures[0].addTempo(1.5, 120)
+            metro.score = score
+            metro.reset()
+
+            player.currentTime = 100
+            metro.tick()
+            // Beat 1 at 1s; half a beat at 60bpm (0.5s) then half at 120bpm (0.25s) to beat 2.
+            expect(scheduled.map((n) => n.startTime)).toEqual([0, 1, 1.75, 2.25])
+        })
+
+        it('starting at a beat before a mid-measure marking clicks at the tempo in effect there', () => {
+            const { player, scheduled } = fakePlayer()
+            const metro = new Metronome(player)
+            const score = makeScore(2)
+            score.measures[0].setTempo(0, 60)
+            // The second measure's only marking sits at beat 2: from its downbeat the inherited 60bpm holds.
+            score.measures[1].setTempo(2, 120)
+            metro.score = score
+            metro.startMeasureIndex = 1
+            metro.reset()
+
+            player.currentTime = 100
+            metro.tick()
             expect(scheduled.map((n) => n.startTime)).toEqual([0, 1, 2, 2.5])
         })
     })
