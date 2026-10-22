@@ -6,6 +6,7 @@ import {
     type MouseEvent as ReactMouseEvent,
     type PointerEvent as ReactPointerEvent,
     type ReactNode,
+    type Ref,
     useCallback,
     useEffect,
     useId,
@@ -286,7 +287,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
                 </span>
             )}
             {openedBy && (
-                <TooltipCard
+                <FloatingTooltipCard
                     anchor={wrapperRef}
                     side={openedBy === 'hold' ? 'top' : side}
                     touch={openedBy === 'hold'}
@@ -311,7 +312,7 @@ function matchesFocusVisible(el: HTMLElement): boolean {
     }
 }
 
-interface TooltipCardProps {
+interface FloatingTooltipCardProps {
     anchor: { current: HTMLElement | null }
     side: 'top' | 'bottom'
     touch: boolean
@@ -323,10 +324,9 @@ interface TooltipCardProps {
 /**
  * The visible tooltip, portalled to <body> and fixed-positioned against its control so no
  * scrolling ancestor clips it and no blurred chrome shows through it. Clamped inside the
- * viewport, and flipped to the other side when its own side has no room. Decorative for
- * assistive tech — the hidden role=tooltip text carries the description.
+ * viewport, and flipped to the other side when its own side has no room.
  */
-function TooltipCard({ anchor, side, touch, label, hint, keys }: TooltipCardProps) {
+function FloatingTooltipCard({ anchor, side, touch, label, hint, keys }: FloatingTooltipCardProps) {
     const cardRef = useRef<HTMLSpanElement>(null)
     const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
 
@@ -345,22 +345,52 @@ function TooltipCard({ anchor, side, touch, label, hint, keys }: TooltipCardProp
     }, [anchor, side])
 
     const style: CSSProperties = position ? { top: position.top, left: position.left } : { top: 0, left: 0, visibility: 'hidden' }
-    const card = touch ? (
-        <span
-            ref={cardRef}
-            aria-hidden="true"
-            style={style}
-            className="tooltip-enter fixed z-(--z-toast) pointer-events-none w-max max-w-[min(20rem,calc(100vw-1rem))] rounded-full bg-surface-container-high px-3 py-1.5 font-label font-semibold text-[13px] leading-[1.3] text-on-surface">
-            {label}
-            {label && hint && <span className="font-body font-normal text-on-surface-variant"> — {hint}</span>}
-            {!label && hint}
-        </span>
-    ) : (
-        <span
-            ref={cardRef}
-            aria-hidden="true"
-            style={style}
-            className="tooltip-enter fixed z-(--z-toast) pointer-events-none w-max max-w-60 rounded-md bg-surface-container-lowest editorial-shadow px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface">
+    return createPortal(
+        <TooltipCard ref={cardRef} touch={touch} label={label} hint={hint} keys={keys} style={style} className="fixed z-(--z-toast)" />,
+        document.body,
+    )
+}
+
+const CARD_CLASS =
+    'max-w-60 rounded-md bg-surface-container-lowest editorial-shadow px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface'
+const TOUCH_BUBBLE_CLASS =
+    'max-w-[min(20rem,calc(100vw-1rem))] rounded-full bg-surface-container-high px-3 py-1.5 font-label font-semibold text-[13px] leading-[1.3] text-on-surface'
+
+interface TooltipCardProps {
+    /** The name, in the label face. */
+    label?: string
+    /** The plain line after the name (or on its own, e.g. a disabled control's reason). */
+    hint?: string
+    /** The shortcut text, as {@link shortcutText} returns it; never shown in the touch bubble. */
+    keys?: string | null
+    /** The touch bubble: a pill with name and hint, no key. */
+    touch?: boolean
+    /** Positioning only (`fixed`, `absolute`, z-index, translate) — the look is the card's own. */
+    className?: string
+    style?: CSSProperties
+    ref?: Ref<HTMLSpanElement>
+}
+
+/**
+ * The tooltip's visual card: "Name — hint · key" on an opaque 13px card that fades in (the
+ * touch form is a pill bubble). Decorative for assistive tech — a real Tooltip carries its
+ * description in hidden role=tooltip text. The caller positions it; anything else that names
+ * a control on hover (the in-score glyphs' "Change key") reuses it, so every label looks alike.
+ */
+export function TooltipCard({ label, hint, keys, touch = false, className, style, ref }: TooltipCardProps) {
+    const look = touch ? TOUCH_BUBBLE_CLASS : CARD_CLASS
+    const classes = ['tooltip-enter', className, 'pointer-events-none w-max', look].filter(Boolean).join(' ')
+    if (touch) {
+        return (
+            <span ref={ref} aria-hidden="true" style={style} className={classes}>
+                {label}
+                {label && hint && <span className="font-body font-normal text-on-surface-variant"> — {hint}</span>}
+                {!label && hint}
+            </span>
+        )
+    }
+    return (
+        <span ref={ref} aria-hidden="true" style={style} className={classes}>
             {label && <span className="font-label font-semibold">{label}</span>}
             {label && hint && <span className="text-on-surface-variant"> — </span>}
             {hint && <span className={label ? 'text-on-surface-variant' : undefined}>{hint}</span>}
@@ -374,5 +404,4 @@ function TooltipCard({ anchor, side, touch, label, hint, keys }: TooltipCardProp
             )}
         </span>
     )
-    return createPortal(card, document.body)
 }

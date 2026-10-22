@@ -9,7 +9,7 @@ import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { usePickConfirmation } from '@/components/ui'
-import { TOOLTIP_HOVER_DELAY_MS } from '@/components/ui/Tooltip'
+import { TOOLTIP_HOVER_DELAY_MS, TooltipCard } from '@/components/ui/Tooltip'
 
 import type { ScoreManipulator } from './ScoreManipulator'
 
@@ -165,7 +165,7 @@ function AttributePopoverAnchor({ x, y, children }: { x: number; y: number; chil
 /**
  * The hover label over an in-score clef, key, time signature or tempo mark — "Change key" —
  * so the printed-looking glyphs say they can be clicked. Mouse hover only (the ScoreView
- * reports pen and mouse), after the shared tooltip delay; drawn in the tooltip's opaque card.
+ * reports pen and mouse), after the shared tooltip delay; drawn in the shared TooltipCard.
  * Decorative for assistive tech: the glyphs aren't focusable, and the dock's chips carry the
  * same controls by name.
  */
@@ -181,11 +181,10 @@ export function AttributeHoverTip({ event }: { event: AttributeClickEvent | null
     }, [event])
     if (!shown) return null
     return (
-        <span
-            aria-hidden
-            className="tooltip-enter absolute z-(--z-popover) pointer-events-none -translate-x-1/2 -translate-y-full w-max rounded-md bg-surface-container-lowest editorial-shadow px-2.5 py-1.5 font-label font-semibold text-[13px] leading-[1.35] text-on-surface"
-            style={{ left: shown.x, top: shown.y - HOVER_TIP_GAP }}>
-            {CHANGE_LABEL[shown.kind]}
-        </span>
+        <TooltipCard
+            label={CHANGE_LABEL[shown.kind]}
+            className="absolute z-(--z-popover) -translate-x-1/2 -translate-y-full"
+            style={{ left: shown.x, top: shown.y - HOVER_TIP_GAP }}
+        />
     )
 }

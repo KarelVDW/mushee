@@ -1,6 +1,6 @@
 import { act, createElement, useState } from 'react'
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
-import { renderToString } from 'react-dom/server'
+import { renderToStaticMarkup, renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -10,6 +10,7 @@ import {
     TOOLTIP_HOLD_DELAY_MS,
     TOOLTIP_HOLD_LINGER_MS,
     TOOLTIP_HOVER_DELAY_MS,
+    TooltipCard,
 } from '@/components/ui/Tooltip'
 import { Shortcut } from '@/lib/Keybindings'
 
@@ -374,5 +375,31 @@ describe('shortcutText', () => {
         expect(shortcutText(null)).toBeNull()
         expect(shortcutText(undefined)).toBeNull()
         expect(shortcutText([])).toBeNull()
+    })
+})
+
+describe('TooltipCard', () => {
+    const markup = (props: Parameters<typeof TooltipCard>[0]) => renderToStaticMarkup(createElement(TooltipCard, props))
+
+    it('draws "Name — hint · key" on the opaque card, decorative for assistive tech', () => {
+        const html = markup({ label: 'Quarter note', hint: '1 beat', keys: 'Q' })
+        expect(html).toMatch(/^<span aria-hidden="true" class="tooltip-enter [^"]*rounded-md bg-surface-container-lowest editorial-shadow/)
+        expect(html).toContain('<span class="font-label font-semibold">Quarter note</span>')
+        expect(html).toContain('<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant">1 beat</span>')
+        expect(html).toContain('>Q</kbd>')
+    })
+
+    it('takes positioning from the caller and keeps its own look', () => {
+        const html = markup({ label: 'Change key', className: 'absolute -translate-y-full', style: { left: 12, top: 4 } })
+        expect(html).toContain('class="tooltip-enter absolute -translate-y-full pointer-events-none')
+        expect(html).toContain('style="left:12px;top:4px"')
+        expect(html).not.toContain('<kbd')
+    })
+
+    it('renders the touch bubble as a pill without the key', () => {
+        const html = markup({ label: 'Record', hint: 'Start a recording', keys: '⇧R', touch: true })
+        expect(html).toContain('rounded-full bg-surface-container-high')
+        expect(html).toContain(' — Start a recording')
+        expect(html).not.toContain('⇧R')
     })
 })
