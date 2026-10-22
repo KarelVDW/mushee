@@ -35,7 +35,7 @@ describe('DurationSpeller', () => {
         expect(written(compound, 0, 3)).toEqual(['h.'])
         expect(written(compound, 0, 1.5)).toEqual(['q.'])
         expect(written(compound, 0.5, 2)).toEqual(['8', '8', '8', '8'])
-        // A quarter on the third eighth sits on a quarter-aligned position, so it stays whole (as the recording pipeline writes it).
+        // A quarter on the third eighth sits on a quarter-aligned position, so it stays whole (as the API's recording-pipeline twin writes it too).
         expect(written(compound, 1, 1)).toEqual(['q'])
     })
 
