@@ -331,13 +331,6 @@ export default function ScoreEditorPage() {
         saveToApi,
     })
 
-    // A live take streams transcription into the score; undoing then would swap the Score
-    // instance out from under the transport's refs, so history travel is locked for the
-    // take's duration. The finished take folds into one undoable step (see the manager).
-    useEffect(() => {
-        manipulator.historyLocked = recordingState !== 'idle'
-    }, [manipulator, recordingState])
-
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
     // both deps — attaching the listener and focusing for capture. Suspended while a dialog is

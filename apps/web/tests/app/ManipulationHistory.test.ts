@@ -218,18 +218,54 @@ describe('ScoreManipulator undo/redo', () => {
         expect(allNotes(manipulator)[0].pitch?.name).toBe('G')
     })
 
-    it('refuses to travel while historyLocked (a live recording)', () => {
+    it('refuses to travel while the history is locked (a live recording)', () => {
         const { manipulator, notes } = setupPitched()
         manipulator.select(notes[1])
         manipulator.run(RAISE_PITCH)
 
-        manipulator.historyLocked = true
+        const release = manipulator.lockHistory()
         expect(manipulator.canUndo).toBe(false)
         expect(manipulator.undo()).toBe(false)
 
-        manipulator.historyLocked = false
+        release()
         expect(manipulator.canUndo).toBe(true)
         expect(manipulator.undo()).toBe(true)
+    })
+
+    it('travel refuses until the release runs, and re-renders on lock and release', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[1])
+        manipulator.run(RAISE_PITCH)
+        manipulator.undo()
+        let renders = 0
+        manipulator.subscribe(() => renders++)
+
+        const release = manipulator.lockHistory()
+        expect(renders).toBe(1)
+        expect(manipulator.canRedo).toBe(false)
+        expect(manipulator.redo()).toBe(false)
+
+        release()
+        expect(renders).toBe(2)
+        release() // idempotent: a second call neither unlocks twice nor re-renders
+        expect(renders).toBe(2)
+        expect(manipulator.redo()).toBe(true)
+    })
+
+    it("an earlier take's release does not unlock a later take", () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[1])
+        manipulator.run(RAISE_PITCH)
+
+        const releaseFirst = manipulator.lockHistory()
+        const releaseSecond = manipulator.lockHistory()
+        releaseFirst()
+        releaseFirst()
+        expect(manipulator.canUndo).toBe(false)
+        expect(manipulator.undo()).toBe(false)
+
+        releaseSecond()
+        expect(manipulator.canUndo).toBe(true)
     })
 
     it('autosaves the restored score instance after travel', () => {

@@ -127,6 +127,9 @@ export function useRecording({
         const recordingClef = activeNote.clef
         let octaveShift: number | null = null
         let transcriptionDown = false
+        // The take writes into the score from here until its socket has drained the
+        // last transcription updates — history travel stays locked for all of it.
+        const releaseHistory = manipulator.lockHistory()
         manipulator.select(null)
         waveformStore.reset()
         const startIndex = measureIndex
@@ -153,6 +156,7 @@ export function useRecording({
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
+                onDrained: releaseHistory,
                 onHealth: ({ ok }) => {
                     // The server's transcription backend went away (or came back). Say so:
                     // waveform bars with no notes must read as "Solkey is having trouble",
@@ -235,6 +239,7 @@ export function useRecording({
             console.error('Recording failed to start', err)
             showToast(micErrorToast(err))
             stopAll()
+            releaseHistory()
             return
         }
 

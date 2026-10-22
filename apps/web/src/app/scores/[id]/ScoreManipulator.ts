@@ -50,12 +50,8 @@ export class ScoreManipulator {
     private readonly listeners = new Set<() => void>()
     private save: (score: Score) => void = () => {}
     private readonly history = new ManipulationHistoryManager()
-    /**
-     * Set while a recording take is writing into the score (the page toggles it): history
-     * travel would swap the Score instance out from under the transport's live refs, so
-     * undo/redo refuse until the take ends — the take then becomes one undoable step itself.
-     */
-    historyLocked = false
+    /** Outstanding {@link lockHistory} holds; history travel refuses while any is held. */
+    private lockCount = 0
 
     /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
     constructor(readonly keybindings: Keybindings<EditorCommand> = new Keybindings(EDITOR_COMMANDS)) {}
@@ -454,14 +450,34 @@ export class ScoreManipulator {
 
     // --- History (undo / redo) ---
 
+    /**
+     * Hold history travel off while a recording take writes into the score — from the take's
+     * start until its socket has drained the last transcription updates. Undoing meanwhile
+     * would swap the Score instance out from under the transport's live refs, and the late
+     * updates would land in a score the editor no longer shows. The take then becomes one
+     * undoable step itself. Returns the release; it is idempotent, and holds from overlapping
+     * takes count separately, so an earlier take's release never unlocks a later take.
+     */
+    lockHistory(): () => void {
+        this.lockCount++
+        this.emit()
+        let released = false
+        return () => {
+            if (released) return
+            released = true
+            this.lockCount--
+            this.emit()
+        }
+    }
+
     /** Whether a step back exists. False while a recording locks history travel. */
     get canUndo(): boolean {
-        return !this.historyLocked && this._score !== null && this.history.canUndo(this._score)
+        return this.lockCount === 0 && this._score !== null && this.history.canUndo(this._score)
     }
 
     /** Whether an undone step can be reapplied. False while a recording locks history travel. */
     get canRedo(): boolean {
-        return !this.historyLocked && this._score !== null && this.history.canRedo(this._score)
+        return this.lockCount === 0 && this._score !== null && this.history.canRedo(this._score)
     }
 
     /** Step back one manipulation (⌘Z). Returns whether anything was undone. */
@@ -476,7 +492,7 @@ export class ScoreManipulator {
 
     private travel(direction: 'undo' | 'redo'): boolean {
         const score = this._score
-        if (!score || this.historyLocked) return false
+        if (!score || this.lockCount > 0) return false
         const address = this.selectionAddress()
         const restored =
             direction === 'undo'
