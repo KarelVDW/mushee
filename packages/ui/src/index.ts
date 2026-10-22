@@ -3,5 +3,6 @@ export { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton
 export { Alert, BusyNotice, ErrorScreen, Spinner, StepProgress } from './Feedback'
 export { Icon, type IconName } from './Icon'
 export { Chip, TextArea, TextField, type TextFieldProps } from './Inputs'
+export { createQueryClient } from './queryClient'
 export { RenderBoundary } from './RenderBoundary'
 export { showToast, Toaster } from './Toast'

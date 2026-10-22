@@ -1,5 +1,7 @@
 /** Typed client for this app's own API routes. */
 
+import { ApiError, NetworkError, requestJson } from '@mushee/ui/http'
+
 import type { GeneratorParams } from './generator'
 import type { ClipMelody } from './melody'
 
@@ -109,62 +111,42 @@ export interface RunDto {
     }
 }
 
-export class ApiError extends Error {
-    constructor(
-        message: string,
-        readonly status: number,
-    ) {
-        super(message)
-    }
-}
-
 /**
  * An error as display text, the same on both sides of the wire: routes return
  * it as `{ error }`, pages render it. String(err) would prefix a generic
  * 'Error: ' on each side and double it; a specific name (NotAllowedError,
- * TypeError) is kept because it is part of the diagnosis.
+ * TypeError) is kept because it is part of the diagnosis. The shared fetch
+ * core's errors read as what they carry: an ApiError is the route's own text,
+ * a NetworkError wraps what fetch threw.
  */
 export function errorText(err: unknown): string {
+    if (err instanceof ApiError) return err.message
+    if (err instanceof NetworkError) return errorText(err.cause)
     if (!(err instanceof Error)) return String(err)
     return err.name && err.name !== 'Error' ? `${err.name}: ${err.message}` : err.message
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(path, init)
-    if (!response.ok) {
-        let message = `${response.status} ${response.statusText}`
-        try {
-            const body = (await response.json()) as { error?: string }
-            if (body.error) message = body.error
-        } catch {
-            /* non-JSON error body */
-        }
-        throw new ApiError(message, response.status)
-    }
-    return (await response.json()) as T
-}
-
 export const api = {
-    listCorpora: () => request<CorpusDto[]>('/api/corpora'),
+    listCorpora: () => requestJson<CorpusDto[]>('/api/corpora'),
     createCorpus: (body: { label: string; kind: string; instrumentId?: string; tier: string; notes?: string; params: GeneratorParams }) =>
-        request<{ id: string }>('/api/corpora', { method: 'POST', body: JSON.stringify(body) }),
-    getCorpus: (id: string) => request<CorpusDetailDto>(`/api/corpora/${encodeURIComponent(id)}`),
-    deleteCorpus: (id: string) => request<{ ok: true }>(`/api/corpora/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    getClip: (id: string) => request<ClipDetailDto>(`/api/clips/${encodeURIComponent(id)}`),
+        requestJson<{ id: string }>('/api/corpora', { method: 'POST', body: JSON.stringify(body) }),
+    getCorpus: (id: string) => requestJson<CorpusDetailDto>(`/api/corpora/${encodeURIComponent(id)}`),
+    deleteCorpus: (id: string) => requestJson<{ ok: true }>(`/api/corpora/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    getClip: (id: string) => requestJson<ClipDetailDto>(`/api/clips/${encodeURIComponent(id)}`),
     uploadTake: (clipId: string, take: Blob, trimSec: number) =>
-        request<{ ok: true; durationSec: number }>(`/api/clips/${encodeURIComponent(clipId)}/audio`, {
+        requestJson<{ ok: true; durationSec: number }>(`/api/clips/${encodeURIComponent(clipId)}/audio`, {
             method: 'POST',
             body: take,
             headers: { 'Content-Type': take.type || 'application/octet-stream', 'x-trim-seconds': String(trimSec) },
         }),
     transcribe: (clipId: string) =>
-        request<{ transcription: TranscriptionDto }>(`/api/clips/${encodeURIComponent(clipId)}/transcribe`, { method: 'POST' }),
-    listReports: () => request<ReportListingDto[]>('/api/reports'),
+        requestJson<{ transcription: TranscriptionDto }>(`/api/clips/${encodeURIComponent(clipId)}/transcribe`, { method: 'POST' }),
+    listReports: () => requestJson<ReportListingDto[]>('/api/reports'),
     reportDetail: (root: string, file: string) =>
-        request<ReportDto>(`/api/reports/detail?root=${encodeURIComponent(root)}&file=${encodeURIComponent(file)}`),
-    listRuns: () => request<RunDto[]>('/api/runs'),
+        requestJson<ReportDto>(`/api/reports/detail?root=${encodeURIComponent(root)}&file=${encodeURIComponent(file)}`),
+    listRuns: () => requestJson<RunDto[]>('/api/runs'),
     startRun: (corpusId?: string) =>
-        request<{ run: RunDto; reportFile: string }>('/api/runs', {
+        requestJson<{ run: RunDto; reportFile: string }>('/api/runs', {
             method: 'POST',
             body: JSON.stringify(corpusId ? { corpusId } : {}),
         }),

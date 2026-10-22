@@ -46,18 +46,8 @@ import { signOut, updateUser } from './auth-client'
 import type { StoredShortcuts } from './Keybindings'
 import { PlanCatalogue } from './plans'
 
-// The meta every mutation here may carry, read by the MutationCache's onError in
-// app/providers.tsx — typed so a misspelt key fails compilation instead of the toast.
-declare module '@tanstack/react-query' {
-    interface Register {
-        mutationMeta: {
-            /** The failure toast's message, in place of the generic network/API phrasing. */
-            errorMessage?: string
-            /** The caller renders the failure itself, so no toast. */
-            silentError?: boolean
-        }
-    }
-}
+// Mutation `meta` ({ errorMessage, silentError }) is typed by @mushee/ui's
+// createQueryClient, whose MutationCache turns a failure into a toast.
 
 const scoreKeys = {
     all: ['scores'] as const,
