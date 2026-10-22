@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EDITOR_COMMAND_GROUPS, EDITOR_COMMANDS, SELECTION_MENU_COMMAND, SHOW_SHORTCUTS_COMMAND } from '@/app/scores/[id]/commands'
-import { type BindableCommand, Keybindings, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
+import { type BindableCommand, Keybindings, KeyboardLayout, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
 
 const COMMANDS: BindableCommand[] = [
     { id: 'copy', defaultShortcut: 'Mod+KeyC' },
@@ -68,6 +68,94 @@ describe('Shortcut', () => {
         expect(Shortcut.parse('Mod+Shift+ArrowLeft', false).displayParts(null, false)).toEqual(['Ctrl', 'Shift', '←'])
         expect(Shortcut.parse('Backspace', true).displayParts(null, true)).toEqual(['⌫'])
         expect(Shortcut.parse('Backspace', false).displayParts(null, false)).toEqual(['Backspace'])
+    })
+
+    it('names punctuation keys by character, never by their raw code', () => {
+        // No layout map (Firefox, Safari) and no recorded character: the US character the code is named after.
+        const codes = ['Period', 'Comma', 'Slash', 'Minus', 'Equal', 'Semicolon', 'Quote', 'BracketLeft', 'BracketRight']
+        expect(codes.map((code) => Shortcut.parse(code, false).displayParts(null, false)[0])).toEqual([
+            '.',
+            ',',
+            '/',
+            '-',
+            '=',
+            ';',
+            "'",
+            '[',
+            ']',
+        ])
+        // With a layout map, what the user's keycap prints: Belgian AZERTY has ':' on Period, ',' on KeyM.
+        const azerty = new Map([
+            ['Period', ':'],
+            ['KeyM', ','],
+            ['KeyQ', 'a'],
+        ])
+        expect(Shortcut.parse('Period', false).displayParts(azerty, false)).toEqual([':'])
+        expect(Shortcut.parse('KeyM', false).displayParts(azerty, false)).toEqual([','])
+        expect(Shortcut.parse('KeyQ', false).displayParts(azerty, false)).toEqual(['A'])
+    })
+})
+
+describe('KeyboardLayout', () => {
+    type LayoutNavigator = Navigator & { keyboard?: unknown }
+    const nav = navigator as LayoutNavigator
+    const original = Object.getOwnPropertyDescriptor(nav, 'keyboard')
+
+    function stubLayoutMap(...maps: ReadonlyMap<string, string>[]) {
+        const getLayoutMap = vi.fn(() => Promise.resolve(maps.length > 1 ? (maps.shift() as ReadonlyMap<string, string>) : maps[0]))
+        Object.defineProperty(nav, 'keyboard', { value: { getLayoutMap }, configurable: true })
+        return getLayoutMap
+    }
+
+    afterEach(() => {
+        if (original) Object.defineProperty(nav, 'keyboard', original)
+        else delete nav.keyboard
+    })
+
+    it('fetches the map on the first subscription, and stays null where the API is missing', async () => {
+        delete nav.keyboard
+        const missing = new KeyboardLayout()
+        missing.subscribe(() => undefined)
+        await Promise.resolve()
+        expect(missing.getSnapshot()).toBeNull()
+
+        const getLayoutMap = stubLayoutMap(new Map([['KeyQ', 'a']]))
+        const layout = new KeyboardLayout()
+        const listener = vi.fn()
+        layout.subscribe(listener)
+        layout.subscribe(() => undefined)
+        await Promise.resolve()
+        expect(getLayoutMap).toHaveBeenCalledTimes(1)
+        expect(layout.getSnapshot()?.get('KeyQ')).toBe('a')
+        expect(listener).toHaveBeenCalledTimes(1)
+    })
+
+    it('refreshes on demand and tells subscribers only when the layout really changed', async () => {
+        const getLayoutMap = stubLayoutMap(new Map([['KeyQ', 'q']]), new Map([['KeyQ', 'q']]), new Map([['KeyQ', 'a']]))
+        const layout = new KeyboardLayout()
+        const listener = vi.fn()
+        layout.subscribe(listener)
+        await Promise.resolve()
+        layout.refresh() // the same layout: a new map object, but nothing to re-render
+        await Promise.resolve()
+        expect(listener).toHaveBeenCalledTimes(1)
+        layout.refresh() // the user switched to AZERTY
+        await Promise.resolve()
+        expect(getLayoutMap).toHaveBeenCalledTimes(3)
+        expect(listener).toHaveBeenCalledTimes(2)
+        expect(layout.getSnapshot()?.get('KeyQ')).toBe('a')
+    })
+
+    it('keeps the fallback labels when the browser refuses the map', async () => {
+        Object.defineProperty(nav, 'keyboard', {
+            value: { getLayoutMap: () => Promise.reject(new Error('SecurityError')) },
+            configurable: true,
+        })
+        const layout = new KeyboardLayout()
+        layout.subscribe(() => undefined)
+        await Promise.resolve()
+        await Promise.resolve()
+        expect(layout.getSnapshot()).toBeNull()
     })
 })
 

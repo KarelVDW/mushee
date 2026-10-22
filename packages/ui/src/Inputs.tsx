@@ -42,6 +42,11 @@ export interface TextFieldProps {
 // (The placeholder colour is set kit-wide in theme.css.)
 const FIELD_TEXT = 'text-on-surface font-body font-normal text-[14px] pointer-coarse:text-[16px]'
 
+// The input fill, read from `--field-fill` (theme.css): `surface-container-low` on the page, one
+// tonal step up inside a dialog's glass, which renders that same shade. The container decides,
+// so no caller passes a tone.
+const FIELD_FILL = 'bg-(--field-fill)'
+
 // The focus stroke: 2px `primary` (the neon fill fails 3:1 on the input fill), grown from the centre.
 const FOCUS_STROKE =
     'absolute bottom-0 left-1/2 right-1/2 peer-focus:left-0 peer-focus:right-0 h-0.5 bg-primary transition-[left,right] duration-300 ease-solkey motion-reduce:transition-none'
@@ -50,7 +55,8 @@ const HINT_CLASS = 'font-body font-normal text-[12px] leading-[1.4] text-on-surf
 const ERROR_CLASS = 'font-body font-medium text-[12px] leading-[1.4] text-error'
 
 /**
- * Text input on a `surface-container-low` fill with a 2px `primary` bottom stroke
+ * Text input on a `surface-container-low` fill (`surface-container` inside a dialog, see
+ * FIELD_FILL) with a 2px `primary` bottom stroke
  * that grows from the centre on focus (CSS `peer-focus`, both edges transition).
  * `peer-focus` rather than `focus-within`, so a focused `rightSlot` button (the
  * password toggle) doesn't light the stroke. The hint and error are wired to the
@@ -102,11 +108,7 @@ export function TextField({
                     {label}
                 </label>
             )}
-            <div
-                className={[
-                    'relative flex items-center gap-1.5 bg-surface-container-low rounded-sm',
-                    leftIcon ? 'pl-9 pr-2.5' : 'px-2.5',
-                ].join(' ')}>
+            <div className={[`relative flex items-center gap-1.5 ${FIELD_FILL} rounded-sm`, leftIcon ? 'pl-9 pr-2.5' : 'px-2.5'].join(' ')}>
                 {leftIcon && (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline inline-flex">
                         <Icon name={leftIcon} size={16} />
@@ -187,7 +189,7 @@ export function TextArea({ label, value, onChange, placeholder, rows = 4, ariaLa
                     {label}
                 </label>
             )}
-            <div className="relative bg-surface-container-low rounded-sm px-2.5">
+            <div className={`relative ${FIELD_FILL} rounded-sm px-2.5`}>
                 <textarea
                     id={id}
                     value={value}

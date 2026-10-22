@@ -14,7 +14,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { dismissToast, ErrorScreen, LoadingScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
+import { dismissToast, ErrorScreen, focusWithoutTooltip, LoadingScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -81,8 +81,9 @@ export default function ScoreEditorPage() {
     const containerRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLDivElement>(null)
     // Without scrolling: the canvas can be taller than the viewport, and handing the keys back
-    // must never move the score away from where the user had it.
-    const focusCanvas = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), [])
+    // must never move the score away from where the user had it. Focus the app moves never opens
+    // a tooltip.
+    const focusCanvas = useCallback(() => focusWithoutTooltip(canvasRef.current, { preventScroll: true }), [])
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -478,7 +479,9 @@ export default function ScoreEditorPage() {
         if (dialogOpen || !editor || !lost) return
         const recordButton = dockRef.current?.querySelector<HTMLElement>(RECORD_BUTTON_SELECTOR)
         // Without scrolling: the phone dock's rows are still animating to their new height inside a clipped frame.
-        if (recordButton) recordButton.focus({ preventScroll: true })
+        // Never opening its tooltip: the user didn't move focus there, and on a phone a key hint
+        // would pop up over the dock and the recording's toast.
+        if (recordButton) focusWithoutTooltip(recordButton, { preventScroll: true })
         else focusCanvas()
     }, [stripUp, dialogOpen, focusCanvas])
 

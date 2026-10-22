@@ -4,8 +4,25 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(n
 /** Keys that can never form a shortcut on their own — recording keeps waiting through these. */
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'CapsLock', 'NumLock', 'ScrollLock', 'ContextMenu', 'Fn', 'FnLock'])
 
-/** Display labels for non-printing keys the browser's layout map doesn't cover. */
+/**
+ * Display labels for the keys the browser's layout map doesn't cover — non-printing keys always,
+ * and the punctuation keys wherever there is no map (Firefox, Safari): there a binding the user
+ * never recorded (a default like Dotted's Period) has no captured character to fall back on, and
+ * would otherwise print its raw code. The punctuation labels are the US characters, which is what
+ * the codes are named after.
+ */
 const SPECIAL_LABELS: Record<string, string> = {
+    Period: '.',
+    Comma: ',',
+    Slash: '/',
+    Backslash: '\\',
+    Minus: '-',
+    Equal: '=',
+    Semicolon: ';',
+    Quote: "'",
+    Backquote: '`',
+    BracketLeft: '[',
+    BracketRight: ']',
     ArrowLeft: '←',
     ArrowRight: '→',
     ArrowUp: '↑',
@@ -107,6 +124,63 @@ export class Shortcut {
         if (printed?.trim()) return printed.length === 1 ? printed.toUpperCase() : printed
         const special = (isMac ? MAC_SPECIAL_LABELS[this.code] : undefined) ?? SPECIAL_LABELS[this.code]
         return special ?? this.code.replace(/^(Key|Digit)/, '')
+    }
+}
+
+/** Minimal typing for the (Chromium-only) Keyboard Layout Map API. */
+interface KeyboardLayoutNavigator {
+    keyboard?: { getLayoutMap?: () => Promise<ReadonlyMap<string, string>> }
+}
+
+/**
+ * The browser's live code → character map (`navigator.keyboard.getLayoutMap()`), shared by every
+ * surface that names a key — the tooltips, the More popover, the shortcuts dialog — so they all
+ * print what's on the user's own keycaps (Q and W read A and Z on AZERTY) and never disagree.
+ * {@link current} is the one instance; it is a `useSyncExternalStore` source. The map is fetched
+ * on the first subscription and again on {@link refresh} (the user may have switched system
+ * layouts since). Null where the API is missing or refused — labels then fall back inside
+ * {@link Shortcut.displayParts}.
+ */
+export class KeyboardLayout {
+    static readonly current = new KeyboardLayout()
+
+    private map: ReadonlyMap<string, string> | null = null
+    private requested = false
+    private readonly listeners = new Set<() => void>()
+
+    subscribe = (listener: () => void): (() => void) => {
+        this.listeners.add(listener)
+        if (!this.requested) this.refresh()
+        return () => this.listeners.delete(listener)
+    }
+
+    getSnapshot = (): ReadonlyMap<string, string> | null => this.map
+
+    /** Fetch the map again; subscribers hear of it only when it actually changed. */
+    refresh(): void {
+        this.requested = true
+        if (typeof navigator === 'undefined') return
+        const { keyboard } = navigator as Navigator & KeyboardLayoutNavigator
+        try {
+            keyboard?.getLayoutMap?.().then(
+                (map) => this.update(map),
+                () => undefined,
+            )
+        } catch {
+            /* refused outright (a cross-origin frame, a permissions policy) — keep the fallback labels */
+        }
+    }
+
+    private update(map: ReadonlyMap<string, string>): void {
+        if (this.map && KeyboardLayout.same(this.map, map)) return
+        this.map = map
+        for (const listener of this.listeners) listener()
+    }
+
+    private static same(a: ReadonlyMap<string, string>, b: ReadonlyMap<string, string>): boolean {
+        if (a.size !== b.size) return false
+        for (const [code, character] of a) if (b.get(code) !== character) return false
+        return true
     }
 }
 

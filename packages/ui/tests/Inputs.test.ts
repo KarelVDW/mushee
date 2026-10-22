@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -75,6 +77,25 @@ describe('TextArea', () => {
         expect(markup).toContain('pointer-coarse:text-[16px]')
         expect(markup).toContain('aria-label="Notes"')
         expect(markup).toContain('name="notes"')
+    })
+})
+
+describe('the input fill', () => {
+    const theme = readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8')
+    /** The declarations of every top-level rule for one selector in theme.css. */
+    const rule = (selector: string) =>
+        [...theme.matchAll(new RegExp(`^${selector.replace('.', '\\.')} \\{([^}]*)\\}`, 'gm'))].map((match) => match[1]).join('\n')
+
+    it('comes from the container: TextField and TextArea read --field-fill, never a fixed tone', () => {
+        for (const markup of [html(createElement(TextField, { value: '' })), html(createElement(TextArea, { value: '' }))]) {
+            expect(markup).toContain('bg-(--field-fill) rounded-sm')
+            expect(markup).not.toContain('bg-surface-container-low')
+        }
+    })
+
+    it('is surface_container_low on the page and steps up to surface_container on the dialogs’ glass', () => {
+        expect(rule(':root')).toContain('--field-fill: var(--color-surface-container-low);')
+        expect(rule('.glass-panel')).toContain('--field-fill: var(--color-surface-container);')
     })
 })
 

@@ -113,6 +113,13 @@
     --z-toast: 110;
 }
 
+/* The input fill TextField and TextArea read (and so PasswordField): surface_container_low on
+   the page. A container whose own tone is that shade sets it one tonal step up, so an empty field
+   still shows its edge — by tone, never a resting stroke (the No-Line Rule). See .glass-panel. */
+:root {
+    --field-fill: var(--color-surface-container-low);
+}
+
 body {
     background: var(--color-background);
     color: var(--color-on-background);
@@ -154,11 +161,14 @@ body {
 /* Glass for surfaces over the page itself. Blur doesn't nest: a panel opened inside another
    backdrop-filtered bar (the editor's header, the dock) samples only that bar, so menus,
    popovers and tooltips use the opaque card instead — bg-surface-container-lowest with
-   .editorial-shadow — and never show the staff through their text. */
+   .editorial-shadow — and never show the staff through their text.
+   Over the dialog scrim the glass itself renders about surface_container_low, so a field on it
+   would have no edge until focused: inside, the input fill steps up to surface_container. */
 .glass-panel {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    --field-fill: var(--color-surface-container);
 }
 
 @keyframes solkey-spin {

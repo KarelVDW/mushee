@@ -21,7 +21,7 @@ import {
     type TooltipShortcut,
     usePickConfirmation,
 } from '@/components/ui'
-import { shortcutText } from '@/components/ui/Tooltip'
+import { shortcutText, useKeyboardLayout } from '@/components/ui/Tooltip'
 
 import { SET_ACCIDENTAL, TOGGLE_DOT, TOGGLE_REST, TOGGLE_TIE, TOGGLE_TUPLET } from './actions'
 import {
@@ -127,7 +127,8 @@ interface ToolRowProps {
  */
 function ToolRow({ icon, label, hint, shortcut, state, toggle = false, onClick }: ToolRowProps) {
     const hintId = useId()
-    const keys = shortcutText(shortcut)
+    const layout = useKeyboardLayout()
+    const keys = shortcutText(shortcut, undefined, layout)
     return (
         <button
             type="button"

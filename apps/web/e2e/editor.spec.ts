@@ -537,7 +537,13 @@ test('hovering a dock control names it, with its hint and live shortcut', async 
     await page.getByRole('button', { name: 'Quarter note' }).hover()
     // The tooltip card is decorative (the hidden role=tooltip text describes the control).
     await expect(page.getByText('1 beat', { exact: true })).toBeVisible()
-    await expect(page.locator('kbd').filter({ hasText: /^Q$/ })).toBeVisible()
+    // The key is named as the machine's own keyboard layout prints physical KeyQ — Q on US
+    // QWERTY, A on AZERTY — the same map the shortcuts dialog reads.
+    const keycap = await page.evaluate(async () => {
+        const { keyboard } = navigator as Navigator & { keyboard?: { getLayoutMap?: () => Promise<ReadonlyMap<string, string>> } }
+        return ((await keyboard?.getLayoutMap?.())?.get('KeyQ') ?? 'q').toUpperCase()
+    })
+    await expect(page.locator('kbd').filter({ hasText: new RegExp(`^${keycap}$`) })).toBeVisible()
 })
 
 test('right-clicking a note opens the selection actions; Delete clears it', async ({ page }) => {
