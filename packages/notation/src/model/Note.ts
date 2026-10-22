@@ -1,3 +1,5 @@
+import { upperFirst } from 'lodash-es'
+
 import type { Clef } from './Clef'
 import type { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
@@ -107,6 +109,44 @@ export class Note {
     get stemDir(): StemDirection {
         if (this.isRest) return 'up'
         return Note.stemDirectionFor(this.line)
+    }
+
+    // --- Names (what the editor shows and says about a note) ---
+
+    /** An alteration as read aloud, after the letter. */
+    private static readonly SPOKEN_ALTER: Readonly<Record<number, string>> = {
+        2: ' double sharp',
+        1: ' sharp',
+        [-1]: ' flat',
+        [-2]: ' double flat',
+    }
+
+    /** The letter name as printed, with ♯/♭ and no octave — 'A', 'F♯', 'B♭' — or null for a rest. */
+    get letterName(): string | null {
+        if (!this.pitch) return null
+        const { name, alter } = this.pitch
+        return `${name}${alter > 0 ? '♯'.repeat(alter) : '♭'.repeat(-alter)}`
+    }
+
+    /** The pitch as read aloud — 'G', 'F sharp', 'B double flat' — and 'Rest' for a rest. */
+    get spokenPitch(): string {
+        if (!this.pitch) return 'Rest'
+        return `${this.pitch.name}${Note.SPOKEN_ALTER[this.pitch.alter] ?? ''}`
+    }
+
+    /** The written value as read aloud: 'quarter note', 'dotted half note', 'triplet eighth note', 'eighth rest'. */
+    get spokenDuration(): string {
+        const { duration } = this
+        const tuplet = duration.isTuplet ? (duration.ratio.actualNotes === 3 ? 'triplet ' : 'tuplet ') : ''
+        return `${tuplet}${duration.name} ${this.isRest ? 'rest' : 'note'}`
+    }
+
+    /**
+     * What a screen reader hears for this note when it is selected: 'G, quarter note', 'F sharp,
+     * dotted half note', 'Quarter rest'. Where it sits (bar, beat) is the caller's to add.
+     */
+    get spokenDescription(): string {
+        return this.pitch ? `${this.spokenPitch}, ${this.spokenDuration}` : upperFirst(this.spokenDuration)
     }
 
     // --- Navigation (thin delegates; the traversal lives on Score) ---

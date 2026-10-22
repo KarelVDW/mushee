@@ -13,11 +13,11 @@ import { generateScore, Rng } from '../../support/scoreGenerator'
 
 const FRIENDLY_ERRORS = [
     'The file is not a MIDI file.',
-    'MIDI files with SMPTE timing are not supported.',
-    'The MIDI file contains no tracks.',
-    'The MIDI file contains no notes.',
-    'The MIDI file is truncated or corrupt.',
-    'The MIDI file is too long to import.',
+    "This MIDI file uses a timing format Solkey can't read. Export it again from your music app and try once more.",
+    'This file has no music in it.',
+    'This file has no music in it.',
+    "This file looks damaged, so Solkey couldn't read it.",
+    'This MIDI file is too long to import.',
 ]
 
 function mutate(bytes: Uint8Array, rng: Rng): Uint8Array {

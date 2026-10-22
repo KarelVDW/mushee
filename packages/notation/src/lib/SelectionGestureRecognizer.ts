@@ -19,14 +19,22 @@ export interface SelectionGestureOptions<T> {
      * collapses onto it, but a long-press opens the menu over the *existing* selection.
      */
     isSelected?: (target: T) => boolean
+    /**
+     * Whether an element is the whole selection (the one selected element). With menu gestures
+     * active, a plain tap on it opens the menu — the second tap of "tap to select, tap again
+     * for actions". A tap inside a larger selection still collapses onto the tapped element.
+     */
+    isOnlySelected?: (target: T) => boolean
     /** Begin a selection (plain press). */
     onSelectionStart?: (target: T) => void
     /** Extend the selection (shift-press, or a drag reaching another element). */
     onSelectionExtend?: (target: T) => void
     /**
-     * A menu gesture completed: long-press, double-tap, or releasing a drag that extended the
-     * selection — the moments Android surfaces its text-selection menu. Omit to disable menu
-     * gestures entirely (plain press/drag selection still works).
+     * A menu gesture completed. Touch and pen: long-press, double-tap, a tap on the only
+     * selected element, or releasing a drag that extended the selection — the moments Android
+     * surfaces its text-selection menu. Mouse: a right-click on an element, or releasing a
+     * drag that extended the selection; a plain click or double-click never opens it. Omit to
+     * disable menu gestures entirely (plain press/drag selection still works).
      */
     onSelectionMenu?: (gesture: SelectionMenuGesture<T>) => void
 }
@@ -36,6 +44,17 @@ export interface GesturePointer {
     clientX: number
     clientY: number
     shiftKey: boolean
+    /** 'mouse' switches to the desktop grammar; anything else (touch, pen, unknown) is touch. */
+    pointerType?: string
+    /** The pressed button: 2 is the secondary (right) button. */
+    button?: number
+}
+
+/** What {@link SelectionGestures.contextMenu} reads of a contextmenu event. */
+export interface GestureContextMenu {
+    preventDefault: () => void
+    /** Set where the browser reports it (contextmenu as a PointerEvent); otherwise the last press decides. */
+    pointerType?: string
 }
 
 /** The recognizer's outward face: element handlers to wire up, and press-state queries. */
@@ -44,8 +63,13 @@ export interface SelectionGestures<T> {
     pointerDown: (e: GesturePointer, target: T) => void
     /** Feed every pointermove with the element under the pointer (null over dead space). */
     pointerMove: (e: GesturePointer, target: T | null) => void
-    /** Wire to `onContextMenu`: suppresses the browser's long-press menu while menu gestures are active. */
-    contextMenu: (e: Pick<Event, 'preventDefault'>) => void
+    /**
+     * Wire to `onContextMenu`, with the element under the pointer (null over dead space). While
+     * menu gestures are active, a mouse right-click on an element opens the menu over it (the
+     * browser's own menu stays for dead space); on touch it suppresses the browser's long-press
+     * menu, since the long-press opens ours.
+     */
+    contextMenu: (e: GestureContextMenu, target?: T | null) => void
     /** True while a press is in progress (a drag may still develop). */
     pressed: () => boolean
     /** True when the press reached another element (a range drag) — lasts until the next press. */
@@ -68,13 +92,19 @@ interface Press<T> {
     menuFired: boolean
     /** The pressed element was already selected: collapse on release instead of on press. */
     deferredCollapse: boolean
+    /** The pressed element was the only selected one: a plain tap on it opens the menu. */
+    reopensMenu: boolean
+    /** A mouse press: no long-press, no double-tap, no deferred collapse. */
+    mouse: boolean
 }
 
 /**
  * Pointer-gesture recognizer for selectable elements — the interaction grammar of Android's
  * text selection, applied to anything with an id: press starts a selection, dragging across
- * elements extends it, and (when a menu callback is given) long-press, double-tap, and
- * drag-release ask for a selection menu.
+ * elements extends it, and (when a menu callback is given) long-press, double-tap, a tap on
+ * the only selected element, and drag-release ask for a selection menu. A mouse keeps the
+ * desktop grammar instead: clicks stay clicks, and the menu comes from a right-click or a
+ * drag-release.
  *
  * It is deliberately blind to what the elements are: callers resolve their own hit targets
  * and feed them in, so the same recognizer serves notes on a staff or anything else. Presses
@@ -92,6 +122,8 @@ export class SelectionGestureRecognizer<T> implements SelectionGestures<T> {
     private lastPress: Press<T> | null = null
     private longPressTimer: ReturnType<typeof setTimeout> | null = null
     private lastTap: { id: string; time: number } | null = null
+    /** The pointer type of the latest press — a contextmenu event that doesn't carry one is judged by it. */
+    private lastPointerType: string | undefined
     private attachedTo: EventTarget | null = null
 
     constructor(options: SelectionGestureOptions<T>) {
@@ -121,7 +153,15 @@ export class SelectionGestureRecognizer<T> implements SelectionGestures<T> {
     }
 
     pointerDown = (e: GesturePointer, target: T): void => {
-        const { targetId, isSelected, onSelectionStart, onSelectionExtend, onSelectionMenu } = this.options
+        const { targetId, isSelected, isOnlySelected, onSelectionStart, onSelectionExtend, onSelectionMenu } = this.options
+        const mouse = e.pointerType === 'mouse'
+        this.lastPointerType = e.pointerType
+        if (mouse && e.button === 2) {
+            // A right-button press only readies the context menu: it starts no press or drag, keeps
+            // a selection it lands in (the menu acts on all of it), and selects a note outside one.
+            if (!isSelected?.(target)) onSelectionStart?.(target)
+            return
+        }
         const id = targetId(target)
         const press: Press<T> = {
             target,
@@ -133,19 +173,23 @@ export class SelectionGestureRecognizer<T> implements SelectionGestures<T> {
             dragged: false,
             menuFired: false,
             deferredCollapse: false,
+            reopensMenu: false,
+            mouse,
         }
         this.press = press
         this.lastPress = press
         if (e.shiftKey) {
             onSelectionExtend?.(target)
-        } else if (onSelectionMenu && isSelected?.(target)) {
-            // Keep the existing selection alive: a long-press wants the menu over it,
-            // and only a plain tap (resolved on release) collapses onto this element.
+        } else if (onSelectionMenu && !mouse && isSelected?.(target)) {
+            // Keep the existing selection alive: a long-press wants the menu over it, a tap on
+            // the only selected element wants it too, and only a plain tap inside a larger
+            // selection (resolved on release) collapses onto this element.
             press.deferredCollapse = true
+            press.reopensMenu = isOnlySelected?.(target) ?? false
         } else {
             onSelectionStart?.(target)
         }
-        if (onSelectionMenu) {
+        if (onSelectionMenu && !mouse) {
             this.clearLongPress()
             this.longPressTimer = setTimeout(() => {
                 this.longPressTimer = null
@@ -171,9 +215,19 @@ export class SelectionGestureRecognizer<T> implements SelectionGestures<T> {
         this.options.onSelectionExtend?.(target)
     }
 
-    contextMenu = (e: Pick<Event, 'preventDefault'>): void => {
+    contextMenu = (e: GestureContextMenu, target: T | null = null): void => {
+        const { onSelectionMenu } = this.options
+        if (!onSelectionMenu) return
+        if ((e.pointerType || this.lastPointerType) === 'mouse') {
+            // A right-click opens our menu over the element it lands on (selected by the press);
+            // over dead space the browser's own menu stays.
+            if (!target) return
+            e.preventDefault()
+            onSelectionMenu({ target })
+            return
+        }
         // Android surfaces its own context menu on long-press; ours replaces it.
-        if (this.options.onSelectionMenu) e.preventDefault()
+        e.preventDefault()
     }
 
     pressed = (): boolean => this.press !== null
@@ -203,9 +257,12 @@ export class SelectionGestureRecognizer<T> implements SelectionGestures<T> {
             onSelectionMenu?.({ target: press.lastTarget })
             return
         }
+        // A mouse click is a plain click: double-clicks and click-to-pitch never open the menu.
+        if (press.mouse) return
         const now = performance.now()
         const lastTap = this.lastTap
-        if (onSelectionMenu && lastTap && lastTap.id === press.id && now - lastTap.time < DOUBLE_TAP_MS) {
+        const doubleTap = lastTap !== null && lastTap.id === press.id && now - lastTap.time < DOUBLE_TAP_MS
+        if (onSelectionMenu && (doubleTap || press.reopensMenu)) {
             this.lastTap = null
             press.menuFired = true
             onSelectionMenu({ target: press.target })

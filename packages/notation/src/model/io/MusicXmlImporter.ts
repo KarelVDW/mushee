@@ -53,14 +53,14 @@ const STEPS = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G'])
 
 const WARN_PARTS = (name: string, others: number) =>
     `Only the first part (“${name}”) was imported; ${others} other ${others === 1 ? 'part was' : 'parts were'} left out.`
-const WARN_VOICES = 'Only the first voice of the part was imported.'
-const WARN_CHORDS = 'Chords were reduced to their top note.'
-const WARN_GRACE = 'Grace and cue notes were left out.'
+const WARN_VOICES = 'Solkey keeps one melody, so only the first line of this part came in.'
+const WARN_CHORDS = 'Solkey keeps one note at a time, so chords were reduced to their top note.'
+const WARN_GRACE = 'Grace and cue notes (small extra notes) were left out.'
 const WARN_SIMPLIFIED = 'Some note values were rewritten with the nearest supported ones.'
-const WARN_DROPPED = 'Some notes could not be read and were left out.'
+const WARN_DROPPED = "Some notes couldn't be read and were left out."
 const WARN_SHORT = 'Notes shorter than a sixteenth were left out.'
 const WARN_OVERFLOW = 'Some bars held more than their time signature allows; the overflow was trimmed.'
-const WARN_UNEVEN = 'Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.'
+const WARN_UNEVEN = "Some bars didn't add up, so rests were added to fill them."
 
 /**
  * Reads a MusicXML document (partwise or timewise) into a Score. The model holds a
@@ -90,13 +90,13 @@ export class MusicXmlImporter {
 
     toScore(): ImportedScore {
         const document = new DOMParser().parseFromString(this.xml, 'application/xml')
-        if (document.querySelector('parsererror')) throw new Error('The file is not well-formed XML.')
+        if (document.querySelector('parsererror')) throw new Error("This file looks damaged, so Solkey couldn't read it.")
         const root = document.documentElement
         if (root.tagName !== 'score-partwise' && root.tagName !== 'score-timewise') throw new Error('The file is not a MusicXML score.')
 
         const { partList, partId } = this.readPartList(root)
         const measures = this.measuresOf(root, partId)
-        if (!measures.length) throw new Error('The score has no measures.')
+        if (!measures.length) throw new Error('This file has no music in it.')
 
         const input: ScorePartwise = {
             partList,

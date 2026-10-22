@@ -267,12 +267,147 @@ describe('SelectionGestureRecognizer', () => {
     })
 
     it("suppresses the browser's context menu while menu gestures are active", () => {
-        const { recognizer } = setup()
+        const { recognizer, onSelectionMenu } = setup()
         const contextMenu = { preventDefault: vi.fn() }
 
-        recognizer.contextMenu(contextMenu)
+        recognizer.contextMenu(contextMenu, 'a')
 
         expect(contextMenu.preventDefault).toHaveBeenCalledOnce()
+        // On touch the long-press opens our menu; the contextmenu event itself does not.
+        expect(onSelectionMenu).not.toHaveBeenCalled()
+    })
+
+    describe('tap again for the menu (touch)', () => {
+        it('opens the menu on a plain tap of the only selected element, without collapsing', () => {
+            const { recognizer, onSelectionStart, onSelectionMenu, up } = setup({
+                isSelected: (target) => target === 'a',
+                isOnlySelected: (target) => target === 'a',
+            })
+
+            recognizer.pointerDown(at(), 'a')
+            expect(onSelectionMenu).not.toHaveBeenCalled()
+            up()
+
+            expect(onSelectionMenu).toHaveBeenCalledExactlyOnceWith({ target: 'a' })
+            expect(onSelectionStart).not.toHaveBeenCalled()
+            expect(recognizer.clickSuppressed()).toBe(true)
+        })
+
+        it('still collapses a larger selection onto the tapped member', () => {
+            const { recognizer, onSelectionStart, onSelectionMenu, up } = setup({
+                isSelected: () => true,
+                isOnlySelected: () => false,
+            })
+
+            recognizer.pointerDown(at(), 'b')
+            up()
+
+            expect(onSelectionStart).toHaveBeenCalledExactlyOnceWith('b')
+            expect(onSelectionMenu).not.toHaveBeenCalled()
+        })
+
+        it('opens it once per tap of the selected element, quick second taps included', () => {
+            let selected: string | null = null
+            const { recognizer, onSelectionMenu, up } = setup({
+                isSelected: (target) => target === selected,
+                isOnlySelected: (target) => target === selected,
+                onSelectionStart: (target) => {
+                    selected = target
+                },
+            })
+
+            recognizer.pointerDown(at(), 'a') // selects a
+            up()
+            recognizer.pointerDown(at(), 'a') // a is the selection, and it is a double-tap too: one menu
+            up()
+            recognizer.pointerDown(at(), 'a') // still the selection: the menu again
+            up()
+
+            expect(onSelectionMenu).toHaveBeenCalledTimes(2)
+        })
+
+        it('leaves taps alone without a menu callback', () => {
+            const { recognizer, onSelectionStart, up } = setup({
+                isSelected: () => true,
+                isOnlySelected: () => true,
+                onSelectionMenu: undefined,
+            })
+
+            recognizer.pointerDown(at(), 'a')
+            up()
+
+            expect(onSelectionStart).toHaveBeenCalledExactlyOnceWith('a')
+            expect(recognizer.clickSuppressed()).toBe(false)
+        })
+    })
+
+    describe('mouse', () => {
+        const mouse = (clientX = 0, clientY = 0, button = 0) => ({ clientX, clientY, shiftKey: false, pointerType: 'mouse', button })
+
+        it('has no long-press, double-click or click-again menu, so a click stays a click', () => {
+            const { recognizer, onSelectionStart, onSelectionMenu, up } = setup({ isSelected: () => true, isOnlySelected: () => true })
+
+            recognizer.pointerDown(mouse(), 'a')
+            vi.advanceTimersByTime(600)
+            up()
+            recognizer.pointerDown(mouse(), 'a')
+            up()
+
+            expect(onSelectionMenu).not.toHaveBeenCalled()
+            expect(recognizer.clickSuppressed()).toBe(false)
+            // A press inside the selection collapses onto the note at once, as without menu gestures.
+            expect(onSelectionStart).toHaveBeenCalledTimes(2)
+        })
+
+        it('opens the menu on releasing a drag that extended the selection', () => {
+            const { recognizer, onSelectionExtend, onSelectionMenu, up } = setup()
+
+            recognizer.pointerDown(mouse(), 'a')
+            recognizer.pointerMove(mouse(30, 0), 'b')
+            up()
+
+            expect(onSelectionExtend).toHaveBeenCalledWith('b')
+            expect(onSelectionMenu).toHaveBeenCalledExactlyOnceWith({ target: 'b' })
+            expect(recognizer.clickSuppressed()).toBe(true)
+        })
+
+        it('keeps the selection on a right-button press inside it and selects a note outside it', () => {
+            const { recognizer, onSelectionStart, up } = setup({ isSelected: (target) => target === 'a' })
+
+            recognizer.pointerDown(mouse(0, 0, 2), 'a')
+            expect(onSelectionStart).not.toHaveBeenCalled()
+            // The right button starts no press: moving with it held extends nothing.
+            expect(recognizer.pressed()).toBe(false)
+
+            recognizer.pointerDown(mouse(0, 0, 2), 'b')
+            up()
+            expect(onSelectionStart).toHaveBeenCalledExactlyOnceWith('b')
+        })
+
+        it('opens the menu on a right-click over an element, and leaves the browser menu over dead space', () => {
+            const { recognizer, onSelectionMenu } = setup()
+            const onNote = { preventDefault: vi.fn() }
+            const onNothing = { preventDefault: vi.fn() }
+
+            recognizer.pointerDown(mouse(0, 0, 2), 'a')
+            recognizer.contextMenu(onNote, 'a')
+            recognizer.contextMenu(onNothing, null)
+            recognizer.contextMenu(onNothing)
+
+            expect(onNote.preventDefault).toHaveBeenCalledOnce()
+            expect(onSelectionMenu).toHaveBeenCalledExactlyOnceWith({ target: 'a' })
+            expect(onNothing.preventDefault).not.toHaveBeenCalled()
+        })
+
+        it('trusts the pointer type the contextmenu event carries over the last press', () => {
+            const { recognizer, onSelectionMenu } = setup()
+            const event = { preventDefault: vi.fn(), pointerType: 'mouse' }
+
+            recognizer.pointerDown(at(), 'a') // a touch press
+            recognizer.contextMenu(event, 'a')
+
+            expect(onSelectionMenu).toHaveBeenCalledExactlyOnceWith({ target: 'a' })
+        })
     })
 
     it('reads the latest options on every event', () => {

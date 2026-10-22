@@ -7,6 +7,14 @@ import type { Note, Score } from '../model'
 /** Breathing room kept between the followed row and the scroll viewport's edges. */
 const FOLLOW_SCROLL_MARGIN = 16
 
+/**
+ * How the follow scrolls: smoothly, unless the viewer asked for reduced motion — a smooth
+ * follow through a whole piece is continuous motion, so then it jumps.
+ */
+export function followScrollBehavior(): ScrollBehavior {
+    return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
 /** The nearest ancestor that scrolls vertically — where selection/cursor following happens. */
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
     for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
@@ -47,9 +55,9 @@ export function useScrollFollow({ svgRef, containerRef, score, selectedNote, pla
             const rowTop = svgTop + layoutY * scale
             const rowBottom = rowTop + score.layout.rowHeight * scale
             if (rowTop < scroller.scrollTop + FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: 'smooth' })
+                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: followScrollBehavior() })
             } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: 'smooth' })
+                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: followScrollBehavior() })
             }
         },
         [svgRef, containerRef, score],

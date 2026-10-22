@@ -35,8 +35,10 @@ interface Segment {
  * keyframes carried in the layer's own <style> tag, so it stays self-contained (no
  * dependence on a host stylesheet) and restarts on mount — SMIL is no good here: a
  * dynamically inserted animation runs against the SVG document's timeline, so a
- * fill="freeze" flash would land already finished. Notes from a stale range (a Score
- * that has since been swapped) simply match nothing.
+ * fill="freeze" flash would land already finished. Under prefers-reduced-motion the same
+ * tag stops the animation, and the band rests at its static fill-opacity (the pulse's
+ * peak) until the host clears it. Notes from a stale range (a Score that has since been
+ * swapped) simply match nothing.
  */
 export function HighlightLayer({ score, highlight }: { score: Score; highlight: ScoreHighlight }) {
     const layout = score.layout
@@ -73,6 +75,7 @@ export function HighlightLayer({ score, highlight }: { score: Score; highlight: 
             <style>{`
                 @keyframes solkey-score-pulse { from { fill-opacity: ${PULSE_MIN} } to { fill-opacity: ${PULSE_MAX} } }
                 @keyframes solkey-score-flash { from { fill-opacity: ${FLASH_START} } to { fill-opacity: 0 } }
+                @media (prefers-reduced-motion: reduce) { [data-score-highlight] rect { animation: none !important } }
             `}</style>
             {segments.map((segment, i) => (
                 <rect
@@ -83,6 +86,7 @@ export function HighlightLayer({ score, highlight }: { score: Score; highlight: 
                     height={BAND_HEIGHT}
                     rx={6}
                     fill={HIGHLIGHT_MAGENTA}
+                    fillOpacity={PULSE_MAX}
                     style={
                         highlight.kind === 'pulse'
                             ? { animation: 'solkey-score-pulse 1s ease-in-out infinite alternate' }

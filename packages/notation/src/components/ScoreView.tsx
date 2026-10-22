@@ -1,8 +1,8 @@
 'use client'
 
-import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { SCORE_WIDTH } from '../engraving/constants'
+import { MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useScrollFollow } from '../lib/useScrollFollow'
@@ -23,6 +23,10 @@ import { Tie } from './Tie'
 
 /** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
 const INPUT_CURSOR_GAP = 15
+/** The hover-to-pitch ghost: its notehead's opacity, and its letter label's on-screen size and gap (CSS px). */
+const GHOST_OPACITY = 0.5
+const GHOST_LABEL_PX = 11
+const GHOST_LABEL_GAP_PX = 6
 
 /**
  * Below this container width the layout reflows to the container instead of
@@ -69,11 +73,57 @@ interface ScoreViewProps {
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
     /**
+     * Draw the in-score + / − bar buttons (given their callbacks). Default true; a host that
+     * renders its own HTML buttons from {@link onMeasureButtonsLayout} turns them off.
+     */
+    showMeasureButtons?: boolean
+    /**
+     * Where the bar buttons go, in container pixels — reported whenever the layout or the
+     * container width moves (null while there is nowhere to put them), whether or not the
+     * in-score buttons are drawn, so a host can place its own controls there.
+     */
+    onMeasureButtonsLayout?: (rect: MeasureButtonsRect | null) => void
+    /**
+     * Whether the score takes pointer input. False (during a take): taps and clicks on notes,
+     * glyphs and the bar buttons do nothing, nothing hovers, the bar buttons are hidden, and
+     * native scrolling still works. Default true.
+     */
+    interactive?: boolean
+    /**
      * A tempo marking, clef, key or time signature was clicked. The score only reports the
      * event — what happens next (the editor opens its popover) is the parent's call; omit the
      * callback and the glyphs render inert (the read-only consumers pass nothing).
      */
     onAttributeClick?: (event: AttributeClickEvent) => void
+    /**
+     * A mouse or pen entered one of those glyphs (the event says which) or left it (null) — so
+     * the host can say what a click would change ('Change key'). Needs `onAttributeClick`.
+     */
+    onAttributeHover?: (event: AttributeClickEvent | null) => void
+    /** Passed through to the score's container, for hosts that make it an accessible widget. */
+    role?: string
+    'aria-roledescription'?: string
+    'aria-label'?: string
+    'aria-describedby'?: string
+}
+
+/** A square in container pixels: its top-left corner and side. */
+export interface PixelSquare {
+    x: number
+    y: number
+    size: number
+}
+
+/** The bar-button area after the final barline, in pixels relative to the score's container. */
+export interface MeasureButtonsRect {
+    /** The final barline's x. */
+    barlineX: number
+    /** The last row's top and bottom staff lines. */
+    staffTop: number
+    staffBottom: number
+    /** The in-score + (add a bar) and − (remove the last bar) buttons. */
+    add: PixelSquare
+    remove: PixelSquare
 }
 
 export interface SelectionMenuEvent {
@@ -84,8 +134,10 @@ export interface SelectionMenuEvent {
  * A clicked attribute glyph, discriminated by `kind`, in the measure at `measureIndex`.
  * `x`/`y` are pixel coordinates relative to the score's container, ready to anchor a popover:
  * the marking itself for a tempo, the staff top for a clef, key or time signature.
+ * `staffBottom` is the y of that row's bottom staff line, for a popover that must open below
+ * the row instead of covering the bar being edited.
  */
-export type AttributeClickEvent = AttributeClick & { measureIndex: number; x: number; y: number }
+export type AttributeClickEvent = AttributeClick & { measureIndex: number; x: number; y: number; staffBottom: number }
 
 export const ScoreView = memo(function ScoreView({
     score,
@@ -101,7 +153,15 @@ export const ScoreView = memo(function ScoreView({
     onAddMeasure,
     onRemoveMeasure,
     canRemoveMeasure = true,
+    showMeasureButtons: drawMeasureButtons = true,
+    onMeasureButtonsLayout,
+    interactive = true,
     onAttributeClick,
+    onAttributeHover,
+    role,
+    'aria-roledescription': ariaRoleDescription,
+    'aria-label': ariaLabel,
+    'aria-describedby': ariaDescribedBy,
 }: ScoreViewProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
@@ -111,8 +171,10 @@ export const ScoreView = memo(function ScoreView({
     // staff line, under its clef. `line` is that rendered line — the detached clone's own `line`
     // ignores the clef — so a move along the same line can keep the ghost as it is.
     const [ghost, setGhost] = useState<{ source: Note; line: number; note: Note; clef: Clef } | null>(null)
-    const ghostNote = ghost?.note ?? null
-    const ghostLayout = useMemo(() => ghost && NoteLayout.preview(ghost.note, ghost.clef), [ghost])
+    // A view-only score shows no preview, even one left over from before it went view-only.
+    const activeGhost = interactive ? ghost : null
+    const ghostNote = activeGhost?.note ?? null
+    const ghostLayout = useMemo(() => activeGhost && NoteLayout.preview(activeGhost.note, activeGhost.clef), [activeGhost])
     const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
 
     useObservedWidth(
@@ -130,7 +192,7 @@ export const ScoreView = memo(function ScoreView({
 
     // The current layout snapshot (rebuilt lazily by the model when the score changed)
     const layout = score.layout
-    const showMeasureButtons = !!(onAddMeasure || onRemoveMeasure)
+    const showMeasureButtons = drawMeasureButtons && interactive && !!(onAddMeasure || onRemoveMeasure)
     const rows = layout.rows
     const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
@@ -165,30 +227,74 @@ export const ScoreView = memo(function ScoreView({
 
     useScrollFollow({ svgRef, containerRef, score, selectedNote, playbackCursorRef, mounted: svgMounted })
 
-    // Attribute glyphs only *report* clicks, in container pixels — opening an editing surface
-    // is the parent's business. One stable handler for every measure (a per-measure adapter
-    // would defeat memo(Measure)); it converts the measure-local point to container pixels at
-    // click time, against the layout the click landed on.
-    const handleAttributeClick = useCallback(
-        (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => {
+    // Attribute glyphs only *report* clicks and hovers, in container pixels — opening an
+    // editing surface or a tooltip is the parent's business. One stable handler each for every
+    // measure (a per-measure adapter would defeat memo(Measure)); they convert the measure-local
+    // point to container pixels at event time, against the layout the event landed on.
+    const attributeEvent = useCallback(
+        (measure: MeasureModel, click: AttributeClick, localX: number, localY: number): AttributeClickEvent | null => {
             const svg = svgRef.current
             const container = containerRef.current
-            if (!svg || !container || !onAttributeClick) return
+            if (!svg || !container) return null
             const current = score.layout
             const row = current.rowFor(measure)
             const svgRect = svg.getBoundingClientRect()
             const containerRect = container.getBoundingClientRect()
-            const svgX = row.getMeasureX(measure) + localX
-            const svgY = current.getYForRow(row) + localY
-            onAttributeClick({
+            const rowY = current.getYForRow(row)
+            const toY = (svgY: number) => svgRect.top + svgY * (svgRect.height / current.totalHeight) - containerRect.top
+            return {
                 ...click,
                 measureIndex: score.getIndexForMeasure(measure),
-                x: svgRect.left + svgX * (svgRect.width / current.scoreWidth) - containerRect.left,
-                y: svgRect.top + svgY * (svgRect.height / current.totalHeight) - containerRect.top,
-            })
+                x: svgRect.left + (row.getMeasureX(measure) + localX) * (svgRect.width / current.scoreWidth) - containerRect.left,
+                y: toY(rowY + localY),
+                staffBottom: toY(rowY + Staff.TOP_Y + Staff.HEIGHT),
+            }
         },
-        [score, onAttributeClick],
+        [score],
     )
+    const handleAttributeClick = useCallback(
+        (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => {
+            const event = attributeEvent(measure, click, localX, localY)
+            if (event) onAttributeClick?.(event)
+        },
+        [attributeEvent, onAttributeClick],
+    )
+    const handleAttributeHover = useCallback(
+        (measure: MeasureModel, click: AttributeClick | null, localX: number, localY: number) => {
+            onAttributeHover?.(click && attributeEvent(measure, click, localX, localY))
+        },
+        [attributeEvent, onAttributeHover],
+    )
+    // Going view-only under a hovering pointer leaves no pointerleave to report: clear it here.
+    useEffect(() => {
+        if (!interactive) onAttributeHover?.(null)
+    }, [interactive, onAttributeHover])
+
+    // Report where the bar buttons go, in container pixels (the svg sits at the container's
+    // origin, scaled to its width), so a host can put its own controls there.
+    const measureButtonsLayout = layout.measureButtons
+    const lastRow = layout.rows[layout.rows.length - 1]
+    useEffect(() => {
+        if (!onMeasureButtonsLayout) return
+        if (!svgMounted || !measureButtonsLayout || !lastRow) {
+            onMeasureButtonsLayout(null)
+            return
+        }
+        const scale = containerWidth / layout.scoreWidth
+        const rowY = layout.getYForRow(lastRow)
+        const square = (y: number): PixelSquare => ({
+            x: measureButtonsLayout.x * scale,
+            y: (rowY + y) * scale,
+            size: measureButtonsLayout.size * scale,
+        })
+        onMeasureButtonsLayout({
+            barlineX: (measureButtonsLayout.x - MEASURE_BUTTON_OFFSET) * scale,
+            staffTop: (rowY + Staff.TOP_Y) * scale,
+            staffBottom: (rowY + Staff.TOP_Y + Staff.HEIGHT) * scale,
+            add: square(measureButtonsLayout.addY),
+            remove: square(measureButtonsLayout.removeY),
+        })
+    }, [onMeasureButtonsLayout, svgMounted, measureButtonsLayout, lastRow, containerWidth, layout])
 
     // Resolve the note under a client point (row → measure → note), with the row-local Y.
     const resolveHit = useCallback(
@@ -213,13 +319,20 @@ export const ScoreView = memo(function ScoreView({
     const gestures = useSelectionGestures<Note>({
         targetId: (note) => note.id,
         isSelected: (note) => selectedIds.has(note.id),
-        onSelectionStart,
-        onSelectionExtend,
-        onSelectionMenu: onSelectionMenu && ((gesture) => onSelectionMenu({ note: gesture.target })),
+        isOnlySelected: (note) => selectedIds.size === 1 && selectedIds.has(note.id),
+        onSelectionStart: interactive ? onSelectionStart : undefined,
+        onSelectionExtend: interactive ? onSelectionExtend : undefined,
+        onSelectionMenu: interactive && onSelectionMenu ? (gesture) => onSelectionMenu({ note: gesture.target }) : undefined,
     })
 
     const handlePointerMove = useCallback(
         (e: React.PointerEvent<SVGSVGElement>) => {
+            // View-only: nothing hovers or previews (scrolling is native and needs no handler).
+            if (!interactive) {
+                if (hoveredNote) setHoveredNote(null)
+                if (ghost) setGhost(null)
+                return
+            }
             const hit = resolveHit(e.clientX, e.clientY)
             if (!hit) {
                 gestures.pointerMove(e, null)
@@ -257,15 +370,25 @@ export const ScoreView = memo(function ScoreView({
             const pitch = note.keySignature.spell(note.clef.pitchForLine(hoverLine))
             setGhost({ source: note, line: hoverLine, note: note.clone({ pitch }), clef: note.clef })
         },
-        [resolveHit, gestures, hoveredNote, ghost, selectedNote],
+        [interactive, resolveHit, gestures, hoveredNote, ghost, selectedNote],
     )
 
     const handlePointerDown = useCallback(
         (e: React.PointerEvent<SVGSVGElement>) => {
+            if (!interactive) return
             const hit = resolveHit(e.clientX, e.clientY)
             if (hit) gestures.pointerDown(e, hit.note)
         },
-        [resolveHit, gestures],
+        [interactive, resolveHit, gestures],
+    )
+
+    // A right-click reports the note under it, so the menu opens over that note or its selection.
+    const handleContextMenu = useCallback(
+        (e: React.MouseEvent<SVGSVGElement>) => {
+            const pointerType = 'pointerType' in e.nativeEvent ? (e.nativeEvent as PointerEvent).pointerType : undefined
+            gestures.contextMenu({ preventDefault: () => e.preventDefault(), pointerType }, resolveHit(e.clientX, e.clientY)?.note ?? null)
+        },
+        [gestures, resolveHit],
     )
 
     const handlePointerLeave = useCallback(() => {
@@ -275,13 +398,13 @@ export const ScoreView = memo(function ScoreView({
 
     const handleClick = useCallback(() => {
         // A drag or menu gesture already consumed this press — its trailing click is exhaust.
-        if (gestures.clickSuppressed()) return
+        if (!interactive || gestures.clickSuppressed()) return
         // Clicking the active note at a different staff line commits the previewed (ghost) pitch.
         if (ghostNote?.pitch && selectedNote && onNoteChange) {
             setGhost(null)
             onNoteChange(selectedNote, ghostNote.pitch)
         }
-    }, [gestures, ghostNote, selectedNote, onNoteChange])
+    }, [interactive, gestures, ghostNote, selectedNote, onNoteChange])
 
     // Measure buttons (last row only), placed by the layout
     const measureButtons = showMeasureButtons ? layout.measureButtons : null
@@ -289,10 +412,19 @@ export const ScoreView = memo(function ScoreView({
     const lastRowIndex = rows.length - 1
     // Hover reaches only the hovered note's own measure, so the other measures' memos hold. An
     // edit can detach the hovered note under a still pointer; then nothing is hovered.
-    const hoveredMeasure = hoveredNote?.isAttached ? hoveredNote.measure : null
+    const hoveredMeasure = interactive && hoveredNote?.isAttached ? hoveredNote.measure : null
+    const hoveringSelected = interactive && !!onNoteChange && !!selectedNote && hoveredNote === selectedNote
+    // Layout units per CSS pixel: the svg renders the layout scaled to the container's width.
+    const unitsPerPx = containerWidth > 0 ? layout.scoreWidth / containerWidth : 1
 
     return (
-        <div ref={containerRef} className="relative select-none">
+        <div
+            ref={containerRef}
+            className="relative select-none"
+            role={role}
+            aria-roledescription={ariaRoleDescription}
+            aria-label={ariaLabel}
+            aria-describedby={ariaDescribedBy}>
             {svgMounted && (
                 <svg
                     ref={svgRef}
@@ -303,11 +435,12 @@ export const ScoreView = memo(function ScoreView({
                     // pan-y: vertical touch gestures keep scrolling the page, while taps and
                     // horizontal drags reach the pointer handlers (select / drag-extend).
                     // touch-callout off: an iOS long-press must open the selection menu, not the OS callout.
-                    className="touch-pan-y [-webkit-touch-callout:none]"
+                    // The pointer cursor over the selected note's column says a click there changes it.
+                    className={`touch-pan-y [-webkit-touch-callout:none] ${hoveringSelected ? 'cursor-pointer' : ''}`}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerLeave={handlePointerLeave}
-                    onContextMenu={gestures.contextMenu}
+                    onContextMenu={interactive ? handleContextMenu : undefined}
                     onClick={handleClick}>
                     {/* Pitch-operation emphasis — the lowest layer, a wash behind all ink */}
                     {highlight && <HighlightLayer key={highlight.id} score={score} highlight={highlight} />}
@@ -337,7 +470,8 @@ export const ScoreView = memo(function ScoreView({
                                     layout={layout.measureLayoutFor(measure)}
                                     selectedNoteIds={selectedIds}
                                     hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
-                                    onAttributeClick={onAttributeClick && handleAttributeClick}
+                                    onAttributeClick={interactive && onAttributeClick ? handleAttributeClick : undefined}
+                                    onAttributeHover={onAttributeHover && handleAttributeHover}
                                 />
 
                                 {/* Pointer-transparent: the overlay paints above the measure's tempo
@@ -349,8 +483,20 @@ export const ScoreView = memo(function ScoreView({
                                         className="pointer-events-none"
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
-                                            <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
+                                            <g key={ghostNote.id}>
+                                                <g opacity={GHOST_OPACITY}>
+                                                    <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
+                                                </g>
+                                                {/* The note's name, for anyone who knows letters better than lines. */}
+                                                <text
+                                                    x={ghostLayout.noteRightX + GHOST_LABEL_GAP_PX * unitsPerPx}
+                                                    y={ghostLayout.noteY}
+                                                    fontSize={GHOST_LABEL_PX * unitsPerPx}
+                                                    dominantBaseline="central"
+                                                    fill={INTERACTION_BLUE}
+                                                    className="font-label font-medium select-none">
+                                                    {ghostNote.letterName}
+                                                </text>
                                             </g>
                                         )}
                                         <InputCursor x={inputCursorPos.x} y={inputCursorPos.y} />
@@ -362,7 +508,11 @@ export const ScoreView = memo(function ScoreView({
 
                     {rows.map((row, ri) => (
                         <g key={row.id} transform={`translate(0, ${layout.getYForRow(row)})`}>
-                            <StaffLines lines={row.staffLines} />
+                            {/* Pointer-transparent: the lines cross the clef, key and time hit boxes
+                                drawn below them, and a click right on a line must still reach those. */}
+                            <g className="pointer-events-none">
+                                <StaffLines lines={row.staffLines} />
+                            </g>
 
                             <Barline layout={row.openingBarline} />
 

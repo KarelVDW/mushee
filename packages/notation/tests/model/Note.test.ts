@@ -14,6 +14,42 @@ function placeNote(score: Score, measureIndex: number, name: PitchStep, octave: 
     return placed
 }
 
+describe('Note names', () => {
+    const note = (alter: number, type: Duration['type'] = 'q', dots = 0, ratio?: { actualNotes: number; normalNotes: number }) =>
+        new Note({ duration: new Duration({ type, dots, ratio }), pitch: new Pitch({ name: 'F', octave: 4, alter }) })
+    const restOf = (type: Duration['type'], dots = 0, ratio?: { actualNotes: number; normalNotes: number }) =>
+        new Note({ duration: new Duration({ type, dots, ratio }) })
+
+    it('speaks naturals, sharps and flats by letter', () => {
+        expect(note(0).spokenDescription).toBe('F, quarter note')
+        expect(note(1, 'h', 1).spokenDescription).toBe('F sharp, dotted half note')
+        expect(note(-1, '8').spokenDescription).toBe('F flat, eighth note')
+        expect(note(2).spokenPitch).toBe('F double sharp')
+        expect(note(-2).spokenPitch).toBe('F double flat')
+    })
+
+    it('speaks rests by their value', () => {
+        expect(restOf('q').spokenDescription).toBe('Quarter rest')
+        expect(restOf('8').spokenDescription).toBe('Eighth rest')
+        expect(restOf('h', 1).spokenDescription).toBe('Dotted half rest')
+        expect(restOf('w').spokenPitch).toBe('Rest')
+    })
+
+    it('names triplets and other tuplets', () => {
+        expect(note(0, '8', 0, { actualNotes: 3, normalNotes: 2 }).spokenDescription).toBe('F, triplet eighth note')
+        expect(restOf('8', 0, { actualNotes: 3, normalNotes: 2 }).spokenDescription).toBe('Triplet eighth rest')
+        expect(note(0, '16', 0, { actualNotes: 5, normalNotes: 4 }).spokenDuration).toBe('tuplet 16th note')
+    })
+
+    it('gives the printed letter name for a label, without the octave', () => {
+        expect(note(0).letterName).toBe('F')
+        expect(note(1).letterName).toBe('F♯')
+        expect(note(-1).letterName).toBe('F♭')
+        expect(note(2).letterName).toBe('F♯♯')
+        expect(restOf('q').letterName).toBeNull()
+    })
+})
+
 describe('Note', () => {
     it('has a unique id', () => {
         const a = new Note({ duration: new Duration() })

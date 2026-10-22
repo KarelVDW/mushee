@@ -54,7 +54,7 @@ describe('round-trip properties', () => {
             const bytes = new MidiExporter(score).toBytes()
             if (!score.measures.some((measure) => measure.notes.some((note) => note.pitch))) {
                 // Silence has no MIDI notes to import; the importer says so instead of producing an empty score.
-                expect(() => new MidiImporter(bytes).toScore()).toThrow('contains no notes')
+                expect(() => new MidiImporter(bytes).toScore()).toThrow('has no music in it')
                 return
             }
             const imported = new MidiImporter(bytes).toScore()
