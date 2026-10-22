@@ -56,10 +56,7 @@ export class MeasureMetrics {
         this.baseFlags = {
             showsClef: !previous || previous.lastClef.type !== measure.clef.type,
             showsKeySignature: !previous || previous.lastKey.fifths !== measure.keySignature.fifths,
-            showsTimeSignature:
-                !previous ||
-                previous.timeSignature.beatAmount !== measure.timeSignature.beatAmount ||
-                previous.timeSignature.beatType !== measure.timeSignature.beatType,
+            showsTimeSignature: !previous?.timeSignature.equals(measure.timeSignature),
         }
     }
 
