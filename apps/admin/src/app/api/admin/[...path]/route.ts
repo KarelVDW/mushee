@@ -52,6 +52,16 @@ async function forward(request: NextRequest, path: string[], method: 'GET' | 'PO
         return NextResponse.json({ message: "Can't reach the API." }, { status: 502 })
     }
 
+    // Only this handler's own 401 means "session expired". The API answering
+    // 401 means it refused the console secret — relaying that would send the
+    // client into a login loop that can never succeed.
+    if (res.status === 401) {
+        return NextResponse.json(
+            { message: 'The API rejected the console secret — ADMIN_SECRET differs between apps/admin and apps/api.' },
+            { status: 502 },
+        )
+    }
+
     if (res.status >= 300 && res.status < 400) {
         const location = res.headers.get('Location')
         return new NextResponse(null, { status: res.status, headers: location ? { Location: location } : {} })

@@ -41,9 +41,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
 
     // An expired console session answers 401 on any data route — go back to
-    // the login screen instead of surfacing errors on every widget.
+    // the login screen (returning here afterwards, as the page gate does)
+    // instead of surfacing errors on every widget.
     if (res.status === 401 && path.startsWith('/api/admin') && typeof window !== 'undefined') {
-        window.location.assign('/login')
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`)
     }
 
     if (!res.ok) {
