@@ -94,6 +94,29 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     expect(overflow).toBeLessThanOrEqual(1)
 })
 
+test('Record is disabled with no note selected and enabled again after tapping one', async ({ page }) => {
+    // Refuse the microphone: the take clears the selection as it starts, then fails to open
+    // the mic — leaving the editor with no note selected (the only way to get there by hand).
+    await page.evaluate(() => {
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+            configurable: true,
+            value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+        })
+    })
+    const record = page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record' })
+    await expect(record).toBeEnabled()
+    await record.tap()
+    await expect(page.getByRole('status').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
+    await expect(record).toBeDisabled()
+
+    // Tapping a note on the staff gives a take somewhere to record into again.
+    const svg = page.locator('.max-w-240 svg').first()
+    const box = await svg.boundingBox()
+    expect(box).not.toBeNull()
+    await page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * 0.7, (box?.y ?? 0) + 65)
+    await expect(record).toBeEnabled()
+})
+
 test('pitch actions live in the dock and the transpose sheet spans it', async ({ page }) => {
     // Minimize-accidentals and transpose join the dock's settings well on phones.
     const settings = page.getByRole('group', { name: 'Score settings' })

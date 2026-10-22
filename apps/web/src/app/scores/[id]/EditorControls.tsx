@@ -100,6 +100,8 @@ export interface TransportControlsProps {
     onStop: () => void
     recordingState: RecordingState
     onRecordToggle: () => void
+    /** Record can't start: there is no selected note to record into. A running take always stays stoppable. */
+    recordDisabled?: boolean
     metronome: boolean
     onMetronomeToggle: () => void
     /** Thumb-sized buttons with the record button as the biggest of the set (the mobile dock). */
@@ -114,6 +116,7 @@ export function TransportControls({
     onStop,
     recordingState,
     onRecordToggle,
+    recordDisabled = false,
     metronome,
     onMetronomeToggle,
     large = false,
@@ -137,7 +140,14 @@ export function TransportControls({
                 disabled={isRecording}>
                 <Icon name={isPlaying ? 'pause' : 'play'} size={large ? 20 : 18} />
             </TransportBtn>
-            <TransportBtn size={large ? 54 : 40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record" />
+            <TransportBtn
+                size={large ? 54 : 40}
+                tone="record"
+                active={isRecording}
+                onClick={onRecordToggle}
+                ariaLabel="Record"
+                disabled={recordDisabled}
+            />
             {showMetronome && (
                 <TransportBtn size={large ? 36 : 30} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
                     <Icon name="audio-lines" size={large ? 14 : 12} />

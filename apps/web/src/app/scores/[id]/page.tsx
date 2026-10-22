@@ -333,6 +333,10 @@ export default function ScoreEditorPage() {
         saveToApi,
     })
 
+    // A take records into the selected note's measure, so Record needs one to start — the
+    // take itself clears the selection, which must not lock its own stop button.
+    const recordDisabled = recordingState === 'idle' && !activeNote
+
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
     // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
@@ -427,6 +431,7 @@ export default function ScoreEditorPage() {
                         onStop={stopAll}
                         recordingState={recordingState}
                         onRecordToggle={() => void handleRecordToggle()}
+                        recordDisabled={recordDisabled}
                         metronome={metronome}
                         onMetronomeToggle={() => setMetronome((m) => !m)}
                     />
@@ -607,6 +612,7 @@ export default function ScoreEditorPage() {
                                     onStop: stopAll,
                                     recordingState,
                                     onRecordToggle: () => void handleRecordToggle(),
+                                    recordDisabled,
                                     metronome,
                                     onMetronomeToggle: () => setMetronome((m) => !m),
                                 }}
