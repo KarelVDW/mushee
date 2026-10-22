@@ -211,7 +211,7 @@ export default function SettingsPage() {
 
             <Footer />
 
-            {changePwOpen && <ChangePasswordDialog onCancel={() => setChangePwOpen(false)} onSuccess={() => setChangePwOpen(false)} />}
+            {changePwOpen && <ChangePasswordDialog onClose={() => setChangePwOpen(false)} />}
 
             {deleteOpen && (
                 <DeleteAccountDialog

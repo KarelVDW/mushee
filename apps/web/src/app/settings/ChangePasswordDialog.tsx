@@ -7,11 +7,11 @@ import { DialogPanel, Icon, isAcceptablePassword, NewPasswordFields, PasswordFie
 import { changePassword } from '@/lib/auth-client'
 
 interface ChangePasswordDialogProps {
-    onCancel: () => void
-    onSuccess: () => void
+    /** Cancel, or Done after the password changed — the caller just closes the dialog. */
+    onClose: () => void
 }
 
-export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDialogProps) {
+export function ChangePasswordDialog({ onClose }: ChangePasswordDialogProps) {
     const [current, setCurrent] = useState('')
     const [next, setNext] = useState('')
     const [confirm, setConfirm] = useState('')
@@ -28,7 +28,8 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
         setSubmitting(true)
         setError(null)
         // revokeOtherSessions: sign the user out of every other browser as a
-        // precaution after a password change — matches the mockup's hint copy.
+        // precaution — the success state below says so ("We've signed you out
+        // everywhere else"), as in the design kit's design/ui_kits/web/Settings.jsx.
         const { error: err } = await changePassword({
             currentPassword: current,
             newPassword: next,
@@ -46,14 +47,14 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
         <DialogPanel
             title={saved ? 'Password updated.' : 'Change password'}
             subtitle={saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'}
-            onClose={saved ? undefined : onCancel}
+            onClose={saved ? undefined : onClose}
             width={480}
             footer={
                 saved ? (
-                    <PrimaryButton onClick={onSuccess}>Done</PrimaryButton>
+                    <PrimaryButton onClick={onClose}>Done</PrimaryButton>
                 ) : (
                     <>
-                        <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
+                        <TertiaryButton onClick={onClose}>Cancel</TertiaryButton>
                         <PrimaryButton disabled={!canSubmit} onClick={() => void submit()}>
                             {submitting ? 'Updating…' : 'Update password'}
                         </PrimaryButton>
