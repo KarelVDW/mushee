@@ -24,9 +24,9 @@ export interface TransportControlsProps {
     recordingState: RecordingState
     onRecordToggle: () => void
     /**
-     * Record can't start at all (no microphone, or the day's recording is spent). Never set for
-     * a missing selection: with nothing selected a take carries on after the music. A running
-     * take always stays stoppable.
+     * Record can't start at all (no microphone). Never set for a missing selection — with nothing
+     * selected a take carries on after the music — nor for a spent day: Record stays pressable
+     * and explains itself with the limit dialog. A running take always stays stoppable.
      */
     recordDisabled?: boolean
     /**

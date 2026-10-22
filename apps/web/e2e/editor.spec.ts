@@ -8,6 +8,7 @@ import {
     MOCK_SCORE_ID,
     MOCK_SHARE_TOKEN,
     MOCK_TITLE,
+    mockBilling,
     SELECTION_BANDS,
     test,
     waitForAutosave,
@@ -76,6 +77,40 @@ test('a blocked microphone explains the fix, Record stays live, and the score is
     await expect(record).toBeEnabled()
     await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
     expect(await page.locator(SELECTION_BANDS).first().boundingBox()).toEqual(band)
+})
+
+test('with the day’s recording spent, Record explains at once — no microphone, no count-in, no new bar', async ({ page, apiMock }) => {
+    // Any microphone request would be a setup step for a recording the server refuses.
+    await page.addInitScript(() => {
+        Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+            configurable: true,
+            value: () => {
+                ;(window as unknown as { micAsked: boolean }).micAsked = true
+                return Promise.reject(new DOMException('not in this test', 'NotAllowedError'))
+            },
+        })
+    })
+    const resetsAt = new Date(Date.now() + 3_600_000).toISOString()
+    await mockBilling(page, { credits: { limitSeconds: 180, usedSeconds: 180, remainingSeconds: 0, packSeconds: 0, resetsAt } })
+    const billing = page.waitForResponse((response) => response.url().endsWith('/billing/subscription') && response.status() === 200)
+    await page.reload()
+    await billing
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    const addBar = await page.getByRole('button', { name: 'Add bar' }).boundingBox()
+
+    // Record stays pressable — and says why it can't record, before anything else happens.
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await expect(record).toBeEnabled()
+    await record.click()
+    const dialog = page.getByRole('dialog', { name: "That's your 3 minutes of recording for today." })
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Recording status' })).toHaveCount(0)
+    expect(await page.evaluate(() => (window as unknown as { micAsked?: boolean }).micAsked ?? false)).toBe(false)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    // The score is untouched: no bar was put in for the recording, and nothing was saved.
+    expect(await page.getByRole('button', { name: 'Add bar' }).boundingBox()).toEqual(addBar)
+    expect(apiMock.patches).toHaveLength(0)
 })
 
 test('a take: the strip replaces the tools, Record becomes Stop, and the bar after the take is selected with a summary', async ({

@@ -171,6 +171,33 @@ export function useRecording({
         }
         if (!score) return
 
+        // The day's recording is already spent, packs included: say so at once — no microphone, no
+        // Mic Mode guide, no count-in and no new bar for a recording the server would refuse. Only
+        // a spent budget whose reset is still ahead counts; billing not loaded yet, or a cache that
+        // looks stale, takes the normal path, and the server's limit frame decides. The refresh
+        // corrects a stale cache for the next press.
+        const credits = billing?.credits
+        if (
+            billing &&
+            credits &&
+            credits.remainingSeconds !== null &&
+            credits.remainingSeconds + credits.packSeconds <= 0 &&
+            (!credits.resetsAt || Date.now() < Date.parse(credits.resetsAt))
+        ) {
+            setRecordingHalt({
+                kind: 'limit',
+                info: {
+                    planId: billing.tierId,
+                    planName: billing.tierName,
+                    limitSeconds: credits.limitSeconds,
+                    usedSeconds: credits.usedSeconds,
+                    resetsAt: credits.resetsAt,
+                },
+            })
+            void refreshBilling()
+            return
+        }
+
         // iPhones filter the mic for speech; the fix is a user-only Control
         // Center setting (src/lib/micMode.ts). First take on the device blocks
         // on the walkthrough dialog — confirming it restarts this toggle. The
@@ -250,7 +277,6 @@ export function useRecording({
         waveformStore.reset()
         take.begin()
         saveToApi({ score })
-        const credits = billing?.credits
         const reminder = skipMicModeReminder.current ? false : takeMicModeReminder()
         skipMicModeReminder.current = false
         setStatus({
