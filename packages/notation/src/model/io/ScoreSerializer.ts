@@ -25,12 +25,10 @@ export class MeasureSerializer {
     serialize(): MxmlMeasure {
         const entries: MxmlMeasureEntry[] = []
 
-        const previousMeasure = this.measure.score.getPreviousMeasure(this.measure)
-        // The clef entering this measure is the one *leaving* the previous measure (its last clef), so
-        // a clef carried forward across measures isn't re-emitted as a redundant change.
+        const previousMeasure = this.measure.getPrevious()
+        // Clef and key entering this measure are the ones leaving the previous measure (its last), so
+        // carried-forward values aren't re-emitted; before bar 1 the key is C.
         const previousClefType = previousMeasure?.lastClef.type
-        // Key/clef entering this measure is the one *leaving* the previous measure (its last one), so a
-        // value carried forward isn't re-emitted as a redundant change. Before measure 1, key defaults to C (0).
         const previousKey = previousMeasure?.lastKey
         const previousTimeSignature = previousMeasure?.timeSignature
         // An explicit leading clef/key is a carry-forward boundary and must be emitted even when it equals
@@ -49,7 +47,7 @@ export class MeasureSerializer {
         const includeTranspose = isFirstMeasure && (instrument.chromaticTranspose !== 0 || instrument.diatonicTranspose !== 0)
         if (clefChanged || keyChanged || timeSignatureChanged || includeTranspose) {
             entries.push({
-                _type: 'attributes' as const,
+                _type: 'attributes',
                 divisions: DIVISIONS,
                 ...(clefChanged && { clef: [MeasureSerializer.clefToMxmlClef(this.measure.clef.type)] }),
                 ...(timeSignatureChanged && { time: [MeasureSerializer.timeSignatureToMxmlTime(this.measure.timeSignature)] }),
@@ -66,11 +64,11 @@ export class MeasureSerializer {
         const midClefs = this.measure.midMeasureClefs
         let nextClef = 0
         const emitClef = (type: ClefType) =>
-            entries.push({ _type: 'attributes' as const, divisions: DIVISIONS, clef: [MeasureSerializer.clefToMxmlClef(type)] })
+            entries.push({ _type: 'attributes', divisions: DIVISIONS, clef: [MeasureSerializer.clefToMxmlClef(type)] })
         const midKeys = this.measure.midMeasureKeySignatures
         let nextKey = 0
         const emitKey = (key: KeySignature) =>
-            entries.push({ _type: 'attributes' as const, divisions: DIVISIONS, key: [MeasureSerializer.keyToMxmlKey(key)] })
+            entries.push({ _type: 'attributes', divisions: DIVISIONS, key: [MeasureSerializer.keyToMxmlKey(key)] })
 
         for (const note of this.measure.notes) {
             const beat = this.measure.beatOffsetOf(note)
@@ -79,7 +77,7 @@ export class MeasureSerializer {
             const tempoAtBeat = this.measure.tempoAtBeat(beat)
             if (tempoAtBeat) {
                 entries.push({
-                    _type: 'direction' as const,
+                    _type: 'direction',
                     metronome: {
                         beatUnit: MXML_NOTE_TYPE[tempoAtBeat.pulse.type],
                         beatUnitDots: tempoAtBeat.pulse.dots,
@@ -101,13 +99,13 @@ export class MeasureSerializer {
 
         if (this.measure.endBarline && this.measure.endBarline !== 'single') {
             entries.push({
-                _type: 'barline' as const,
-                location: 'right' as const,
+                _type: 'barline',
+                location: 'right',
                 barStyle: BAR_STYLE[this.measure.endBarline],
             })
         }
 
-        return { number: String(this.measure.score.getIndexForMeasure(this.measure) + 1), entries }
+        return { number: String(this.measure.index + 1), entries }
     }
 
     private static clefToMxmlClef(clef: ClefType): { sign: MxmlClefSign; line: number; clefOctaveChange?: number } {
