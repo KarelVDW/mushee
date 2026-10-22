@@ -71,9 +71,9 @@ describe('NewPasswordFields', () => {
         expect(fields({ confirm: 'correct' })).toContain('Passwords don&#x27;t match yet.')
     })
 
-    it('appends the form’s own confirmation error after the mismatch hint', () => {
+    it('puts the form’s own confirmation error on its own line after the mismatch hint', () => {
         expect(fields({ confirm: 'correct', confirmError: 'Pick something different.' })).toContain(
-            'Passwords don&#x27;t match yet. Pick something different.',
+            '<span class="block">Passwords don&#x27;t match yet.</span><span class="block">Pick something different.</span>',
         )
         expect(fields({ confirm: 'correct-horse', confirmError: 'Pick something different.' })).toContain('Pick something different.')
     })

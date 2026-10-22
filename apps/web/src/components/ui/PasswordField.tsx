@@ -62,7 +62,7 @@ interface NewPasswordFieldsProps {
     shown?: boolean
     onToggleShown?: () => void
     autoFocus?: boolean
-    /** A further error for the confirmation line, after the mismatch hint. */
+    /** A further error for the confirmation field, on its own line after the mismatch hint. */
     confirmError?: string
 }
 
@@ -85,7 +85,8 @@ export function NewPasswordFields({
 }: NewPasswordFieldsProps) {
     const { revealed, toggle } = useReveal(shown, onToggleShown)
     const mismatch = confirm.length > 0 && value !== confirm
-    const errors = [mismatch && "Passwords don't match yet.", confirmError].filter(Boolean).join(' ')
+    // A mismatch and the caller's error can both apply; each keeps its own line.
+    const errors = [mismatch && "Passwords don't match yet.", confirmError].filter((e): e is string => !!e)
     return (
         <>
             <PasswordField
@@ -99,7 +100,21 @@ export function NewPasswordFields({
             <div className="-mt-2">
                 <PasswordStrength password={value} />
             </div>
-            <PasswordField label={confirmLabel} value={confirm} onChange={onConfirmChange} shown={revealed} error={errors || undefined} />
+            <PasswordField
+                label={confirmLabel}
+                value={confirm}
+                onChange={onConfirmChange}
+                shown={revealed}
+                error={
+                    errors.length > 0
+                        ? errors.map((e) => (
+                              <span key={e} className="block">
+                                  {e}
+                              </span>
+                          ))
+                        : undefined
+                }
+            />
         </>
     )
 }

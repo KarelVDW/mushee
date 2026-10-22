@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
-import { AccountExport, type ExportProfile } from './AccountExport'
+import type { ExportProfile } from './AccountExport'
 import {
     type BillingInterval,
     cancelSubscription,
@@ -281,7 +281,9 @@ export function useRequestAccountDeletion() {
 /** Builds the GDPR "download my data" archive (every score, profile and settings) in the browser. */
 export function useExportAccountData() {
     return useMutation({
-        mutationFn: (profile: ExportProfile) => AccountExport.collect(profile),
+        // Loaded on demand: the exporter pulls in the score model and MusicXML writer, and
+        // this module reaches every route through AuthGate's useBetaGate.
+        mutationFn: async (profile: ExportProfile) => (await import('./AccountExport')).AccountExport.collect(profile),
         meta: { errorMessage: "Your data couldn't be exported. Please try again." },
     })
 }
