@@ -633,6 +633,21 @@ export class Score {
         return this._measureStartSeconds.value[index] + this.secondsInto(this.measures[index], index, remaining)
     }
 
+    /**
+     * Where `beats` after the start of `start` falls: the measure and the beat within it, each
+     * measure counted at its meter's length — or null when that lies past the score's last
+     * measure. A position exactly on a barline belongs to the measure it opens.
+     */
+    positionAfter(start: Measure, beats: number): { measure: Measure; beat: number } | null {
+        let remaining = beats
+        for (let index = this.getIndexForMeasure(start); index < this.measures.length; index++) {
+            const measure = this.measures[index]
+            if (remaining < measure.maxBeats) return { measure, beat: remaining }
+            remaining -= measure.maxBeats
+        }
+        return null
+    }
+
     /** Seconds from the start of `measure` (at position `index`) to `beat` in it, integrated over its markings. */
     private secondsInto(measure: Measure, index: number, beat: number): number {
         let seconds = 0

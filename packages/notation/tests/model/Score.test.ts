@@ -1436,6 +1436,31 @@ describe('Score', () => {
         })
     })
 
+    describe('positionAfter', () => {
+        it('stays in the start measure while the beats fit', () => {
+            const score = makeScore(3)
+            const [, m1] = score.measures
+            expect(score.positionAfter(m1, 0)).toEqual({ measure: m1, beat: 0 })
+            expect(score.positionAfter(m1, 3.5)).toEqual({ measure: m1, beat: 3.5 })
+        })
+
+        it('walks on through later measures at each one’s meter length; a barline opens the next measure', () => {
+            const score = new Score()
+            const m0 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
+            const m1 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(4, 4))).complete()
+            expect(score.positionAfter(m0, 3)).toEqual({ measure: m1, beat: 0 })
+            expect(score.positionAfter(m0, 4.25)).toEqual({ measure: m1, beat: 1.25 })
+        })
+
+        it('is null past the last measure', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.positionAfter(m0, 8)).toBeNull()
+            expect(score.positionAfter(m1, 4)).toBeNull()
+            expect(score.positionAfter(m1, 3.99)).toEqual({ measure: m1, beat: 3.99 })
+        })
+    })
+
     describe('secondsAt', () => {
         it('runs at the default tempo before any marking', () => {
             const score = makeScore(2)
