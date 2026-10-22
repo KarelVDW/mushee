@@ -823,11 +823,13 @@ export class ScoreManipulator {
      * {@link selectionNarrowsPitchOps narrows pitch operations} (a single note means the whole
      * score). `Score.transpose` rewrites the affected notes (identities change), so the
      * selection is re-anchored: onto the returned replacements for a selection, or re-resolved
-     * at the same (measure, index) for the whole score — like setInstrument.
+     * at the same (measure, index) for the whole score — like setInstrument. Declined while a
+     * recording runs: it would move the bars already written while the take keeps writing later
+     * ones at the pitch it locked in as it started.
      */
     transpose(interval: Interval, scope: PitchScope): void {
         const score = this._score
-        if (!score) return
+        if (!score || this.historyLocked) return
         const selectionScope = scope === 'selection' && this.selectionNarrowsPitchOps
         const changed = this.commit(() => {
             if (selectionScope) {
@@ -855,10 +857,11 @@ export class ScoreManipulator {
     /**
      * Switch the lead instrument. `Score.setInstrument` rewrites every note (transposition),
      * invalidating the active-note ref, so we re-resolve it at the same (measure, index).
+     * Declined while a recording runs, like {@link transpose}.
      */
     setInstrument(instrument: Instrument): void {
         const score = this._score
-        if (!score) return
+        if (!score || this.historyLocked) return
         this.commit(() => {
             const at = this.addressOf(this._selectedNote)
             score.setInstrument(instrument)

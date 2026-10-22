@@ -98,6 +98,16 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Press Space or')
     await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden()
+    // The header's score-wide changes wait for the recording: shown, but off — the bars it is
+    // writing would land in another key, or the switch would end it. ⇧T goes to the browser.
+    const transpose = page.getByRole('button', { name: 'Transpose', exact: true })
+    const instrument = page.getByRole('button', { name: /^Change instrument/ })
+    await expect(transpose).toHaveAttribute('aria-disabled', 'true')
+    await expect(instrument).toHaveAttribute('aria-disabled', 'true')
+    await instrument.click({ force: true })
+    await page.keyboard.press('Shift+KeyT')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(strip).toContainText('Recording')
 
     await stop.click()
     // The summary names the bar the take added and the next step, with a way to hear it and to take it back.
@@ -112,6 +122,8 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
     // Screen readers hear it too, through the editor's live region.
     await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 2( to 3)?\./)
+    await expect(transpose).not.toHaveAttribute('aria-disabled')
+    await expect(instrument).not.toHaveAttribute('aria-disabled')
 })
 
 test('Record on a score just opened carries on after the tune, and says where before it starts', async ({ page, browserName }) => {

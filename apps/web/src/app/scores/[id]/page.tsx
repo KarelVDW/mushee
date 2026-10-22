@@ -153,9 +153,12 @@ export default function ScoreEditorPage() {
     const [measureButtonsRect, setMeasureButtonsRect] = useState<MeasureButtonsRect | null>(null)
 
     // The transpose shortcut opens the transpose popover — view state the manipulator can't
-    // own, so the command reaches back through this registration.
+    // own, so the command reaches back through this registration. Never while a recording
+    // writes into the score (the header's chip is off then too).
     useEffect(() => {
-        manipulator.onTransposeRequest = () => setTransposeOpen(true)
+        manipulator.onTransposeRequest = () => {
+            if (!manipulator.historyLocked) setTransposeOpen(true)
+        }
         return () => {
             manipulator.onTransposeRequest = undefined
         }
@@ -237,11 +240,14 @@ export default function ScoreEditorPage() {
         manipulator,
     })
 
+    // A new instrument stops playback — but never a recording: the header's chip is off while
+    // one writes into the score, and a change that slipped through is declined here too.
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
+            setInstrumentDialogOpen(false)
+            if (manipulator.historyLocked) return
             stopAll()
             manipulator.setInstrument(instrument)
-            setInstrumentDialogOpen(false)
         },
         [manipulator, stopAll],
     )
@@ -539,7 +545,9 @@ export default function ScoreEditorPage() {
                         saveToApi({ title: v })
                     }}
                     onTitleDone={focusCanvas}
-                    onChangeInstrument={() => setInstrumentDialogOpen(true)}
+                    onChangeInstrument={() => {
+                        if (!manipulator.historyLocked) setInstrumentDialogOpen(true)
+                    }}
                     autosave={autosave}
                     compact={isMobile}
                     transport={transport}

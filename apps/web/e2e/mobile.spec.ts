@@ -140,6 +140,8 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
     await expect(stop).toBeFocused()
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Tap')
+    // The header's instrument chip waits for the recording too: a switch would end it.
+    await expect(page.getByRole('button', { name: /^Change instrument/ })).toHaveAttribute('aria-disabled', 'true')
     await stop.tap()
     // …and back onto the footer's Record once the strip folds away.
     await expect(

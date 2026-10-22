@@ -1,3 +1,4 @@
+import { Instrument, Interval } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -105,6 +106,32 @@ describe('ScoreManipulator settings position', () => {
         expect(new NoteToolStates(manipulator).scoreSettings).toEqual({ active: false, disabled: false })
         manipulator.changeKey(2)
         expect(score.measures[1].keySignature.fifths).toBe(2)
+    })
+
+    it('declines a transpose and an instrument change while a take holds the history, and ⇧T goes to the browser', () => {
+        const { manipulator, notes } = setupPitched()
+        const score = manipulator.score
+        if (!score) throw new Error('expected a score')
+        let opened = 0
+        manipulator.onTransposeRequest = () => {
+            opened++
+        }
+        const transpose = EDITOR_COMMANDS.find((command) => command.id === 'transpose')
+        const release = manipulator.lockHistory()
+        const version = score.version
+        // Half the take in one key and half in another — or a recording ended by an instrument switch — never.
+        manipulator.transpose(Interval.fromSemitones(2), 'score')
+        manipulator.setInstrument(Instrument.Trumpet)
+        expect(score.version).toBe(version)
+        expect(score.instrument).not.toBe(Instrument.Trumpet)
+        expect(transpose?.run(manipulator)).toBe(false)
+        expect(opened).toBe(0)
+
+        release()
+        expect(transpose?.run(manipulator)).not.toBe(false)
+        expect(opened).toBe(1)
+        manipulator.transpose(Interval.fromSemitones(2), 'score')
+        expect(manipulator.score?.firstMeasure?.firstNote?.pitch?.name).not.toBe(notes[0].pitch?.name)
     })
 
     it('is null without a score', () => {
