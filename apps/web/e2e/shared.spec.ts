@@ -74,11 +74,11 @@ test('a copy refused by the score cap offers the upgrade, which opens the plan t
         },
     )
     await page.getByRole('button', { name: 'Save a copy' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Your Sketch plan holds up to 5 scores.' })
+    const dialog = page.getByRole('dialog', { name: 'Your Sketch plan holds 5 scores.' })
     await expect(dialog).toBeVisible()
 
-    // The plan tab and nothing else in the query: the button's click event must never reach the URL as a plan id.
-    await dialog.getByRole('button', { name: 'Upgrade to Songwriter' }).click()
+    // The plan tab and nothing else in the query: the share page lands on the plan tab without picking a tier.
+    await dialog.getByRole('button', { name: 'See Songwriter' }).click()
     await expect(page).toHaveURL(/\/settings\?tab=plan$/)
 })
 

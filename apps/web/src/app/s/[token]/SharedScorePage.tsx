@@ -203,7 +203,7 @@ export function SharedScorePage({ token }: { token: string }) {
             <Footer width="marketing" />
             {limitDialogOpen && (
                 <ScoreLimitDialog
-                    // Every upgrade CTA lands on the plan tab (C9). The dialog's button passes no tier id.
+                    // Every upgrade CTA lands on the plan tab (C9); this page ignores the tier id the dialog passes.
                     onUpgrade={() => router.push(settingsTabPath('plan'))}
                     onClose={() => setLimitDialogOpen(false)}
                 />
