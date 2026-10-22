@@ -156,6 +156,27 @@ Remaining follow-ups:
 24. Webhook-events table pruning is in place — revisit retention when volume is known.
 25. More unit coverage around `RecordingSession`/gateway (the pipeline itself is eval-gated).
 
+**Eval-script adoption of the shipped pipeline settings** (left open by the 2026-10
+Phase 1 refactor, which kept `apps/api/scripts/` out of scope). The pipeline exposes
+the shipped settings, but the eval scripts still keep their own copies:
+
+- `scripts/eval/lib/decodeCached.ts` `cleanupAsProduction` should call
+  `AudioConverter.cleanupFor(false, voiceEnabled() ? c.profile : { ...c.profile, isVoice: false })`
+  plus `maxGridDivisor: 4`, instead of hand-copying it. The copy's voice branch lacks the
+  shipped `adaptiveFloorFraction: 0.3` and `seamFillBeats: 0.6`, so the voice-take eval
+  numbers are measured on a cleanup set that never shipped. `sweep-bands` should adopt the
+  same call. The profiled converters in `evalRun.ts` and `stages-synth.ts` should drop their
+  redundant pitch-option overrides (`AudioConverter.pitchOptionsFor` already applies them).
+  The detect decodes (`sweep-real`, `diagnose-real`, `sweep-voice`, `sweep-reverb`,
+  `stages-synth`, the probes) should use `DETECT_DECODE`/`DETECT_SAMPLE_RATE` from
+  `profiles/profile-resolver.ts`. Every one of these moves numbers, so each needs a
+  measurement-correction note in `scripts/eval/FINDINGS.md`.
+- `scripts/eval/lib/trackCache.ts` should import `type TrajectoryProvider` from
+  `src/recordings/pipeline/providers/pitch-provider` and drop its local interface.
+  Re-add a shared type guard only together with its caller, replacing `hasTrack`.
+  `variantCache`'s `instanceof CrepeProvider` gate stays as it is, because widening it
+  changes the eval cache contents.
+
 <details><summary>Done 2026-07-08 (was items 23–29)</summary>
 
 - billing module reorganized (`polar/` lib subfolder; `polar-webhooks.ts` →

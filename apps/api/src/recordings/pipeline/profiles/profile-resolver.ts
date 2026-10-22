@@ -32,8 +32,9 @@ import { SourceClassifier, YAMNET_SAMPLE_RATE } from './source-classifier'
  * `resolve`. The rate is the source classifier's native one — on any other
  * rate the classifier silently abstains, and routing falls back to the score's
  * instrument prior — and the decode is a 30 Hz rumble high-pass with no
- * loudnorm. Exported so every caller — the pipeline's lock and the eval
- * harness alike — decodes the resolver's input the same way.
+ * loudnorm. Exported so every caller decodes the resolver's input the same
+ * way. The pipeline's lock uses it; the eval scripts still declare their own
+ * DETECT_SR/{ loudnorm: false, highpassHz: 30 } copies pending adoption.
  */
 export const DETECT_SAMPLE_RATE = YAMNET_SAMPLE_RATE
 export const DETECT_DECODE: Readonly<DecodeOptions> = { loudnorm: false, highpassHz: 30 }
