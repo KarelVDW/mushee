@@ -6,15 +6,15 @@
  * components/ holds what two or more routes use (ExportMenu also serves the share page).
  */
 
-import { type AttributeClickEvent, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
+import { type AttributeClickEvent, type MeasureButtonsRect, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
 import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { dismissToast } from '@mushee/ui'
+import { dismissToast, LoadingScreen } from '@mushee/ui'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
+import { ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -24,9 +24,11 @@ import { settingsTabPath } from '../../settings/settingsTabs'
 import { CHANGE_PITCH, LOWER_PITCH, MOVE_NEXT, MOVE_PREVIOUS, RAISE_PITCH } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
-import { EditorAnnouncer } from './EditorAnnouncer'
-import { EditorHeader } from './EditorHeader'
+import { EditorAnnouncer, KeyboardHelp } from './EditorAnnouncer'
+import { EditorEmptyState } from './EditorEmptyState'
+import { EditorHeader, UNTITLED_SCORE } from './EditorHeader'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
+import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
 import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
 import { ConcurrentRecordingDialog, MicBlockedDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
@@ -42,8 +44,12 @@ import { useScoreAutosave } from './useScoreAutosave'
 
 /** How long the phone's tap-again-for-actions tip stays up (the info toast's own default). */
 const SELECTION_TIP_MS = 6000
+/** How long a big edit's Undo toast stays. */
+const UNDO_TOAST_MS = 6000
 /** The gap between the top of the dock and the toast stack above it. */
 const TOAST_GAP_PX = 12
+/** The engraved score's own <svg> inside the canvas — never a chrome icon's that sits after it. */
+const SCORE_SVG = 'svg[data-score-canvas]'
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -56,7 +62,7 @@ export default function ScoreEditorPage() {
     const score = manipulator.score
     const activeNote = manipulator.selectedNote
 
-    const [title, setTitle] = useState('Untitled composition')
+    const [title, setTitle] = useState('')
     const containerRef = useRef<HTMLDivElement>(null)
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
@@ -67,11 +73,12 @@ export default function ScoreEditorPage() {
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
 
-    const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
+    const { data: scoreDocument, error: loadError, refetch, isFetching } = useScoreDocument(id)
 
     useAccountKeybindings(manipulator.keybindings)
 
-    const saveToApi = useScoreAutosave(id)
+    const autosave = useScoreAutosave(id)
+    const saveToApi = autosave.save
 
     // The query owns fetching; this effect turns the fetched document into the live, mutable
     // Score the manipulator works on, wiring its re-render hook and (debounced) autosave.
@@ -134,8 +141,8 @@ export default function ScoreEditorPage() {
         [manipulator, isMobile, showSelectionTip],
     )
     const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
-    const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
-    const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
+    // Where the canvas's Add bar / Remove last bar go: under the final barline, as the score reports it.
+    const [measureButtonsRect, setMeasureButtonsRect] = useState<MeasureButtonsRect | null>(null)
 
     // The transpose shortcut opens the transpose popover — view state the manipulator can't
     // own, so the command reaches back through this registration.
@@ -183,6 +190,8 @@ export default function ScoreEditorPage() {
     }, [manipulator, openSelectionMenu])
     const selectionMenuOpen = selectionMenu !== null
     const scrollAreaRef = useRef<HTMLDivElement>(null)
+    const emptyStateId = useId()
+    const keyboardHelpId = useId()
     // Position is derived from the live selection (not the gesture point) every render, so
     // the bar tracks a growing selection — e.g. Select all moves it over the first row.
     // The layout anchor is in layout units; the SVG renders scaled-to-fit, so scale into
@@ -190,7 +199,7 @@ export default function ScoreEditorPage() {
     const selectionMenuAnchor = (() => {
         if (!selectionMenuOpen || !score) return null
         const anchor = score.layout.selectionMenuAnchor(manipulator.selectedNotes)
-        const svg = scoreAreaRef.current?.querySelector('svg')
+        const svg = scoreAreaRef.current?.querySelector(SCORE_SVG)
         if (!anchor || !svg) return null
         const scale = svg.getBoundingClientRect().width / score.layout.scoreWidth
         return { x: anchor.x * scale, y: anchor.y * scale }
@@ -246,6 +255,78 @@ export default function ScoreEditorPage() {
         touch: isMobile,
     })
     const taking = recordingState !== 'idle'
+
+    // Big edits offer an Undo in a toast (the manipulator says which and what to call it). Its
+    // Undo takes back exactly that step, and the toast goes as soon as any other step commits —
+    // so it can never undo the wrong thing.
+    useEffect(() => {
+        let unwatch: (() => void) | null = null
+        manipulator.onUndoOffer = (offer) => {
+            unwatch?.()
+            const toast = showToast(offer.message, 'info', {
+                duration: UNDO_TOAST_MS,
+                action: { label: 'Undo', ariaLabel: offer.undoLabel, onClick: () => manipulator.undoStep(offer.step) },
+            })
+            const unsubscribe = manipulator.subscribe(() => {
+                if (manipulator.editCount === offer.step) return
+                dismissToast(toast)
+                unsubscribe()
+                unwatch = null
+            })
+            unwatch = unsubscribe
+        }
+        return () => {
+            manipulator.onUndoOffer = undefined
+            unwatch?.()
+        }
+    }, [manipulator])
+
+    // Playback starting, pausing and stopping, for a screen reader — except a stop that a new
+    // selection caused (picking a note stops playback): the note picked is the news then.
+    const lastPlayback = useRef({ state: playbackState, note: activeNote })
+    useEffect(() => {
+        const previous = lastPlayback.current
+        if (previous.state === playbackState) return
+        lastPlayback.current = { state: playbackState, note: activeNote }
+        if (playbackState === 'playing') manipulator.announce('Playing')
+        else if (playbackState === 'paused') manipulator.announce('Paused')
+        else if (previous.note === activeNote) manipulator.announce('Stopped')
+    }, [playbackState, activeNote, manipulator])
+
+    // A save that fails is said once, and so is its recovery — never every save.
+    useEffect(() => {
+        const status = autosave.status
+        let failing = status.state === 'retrying'
+        return status.subscribe(() => {
+            if (status.state === 'retrying' && !failing) {
+                failing = true
+                manipulator.announce('Not saved yet — retrying.')
+            } else if (status.state === 'saved' && failing) {
+                failing = false
+                manipulator.announce('Changes saved again.')
+            }
+        })
+    }, [autosave.status, manipulator])
+
+    // The tab carries the score's name, live as it is renamed; the tab's title goes back as it was on the way out.
+    useEffect(() => {
+        const before = document.title
+        return () => {
+            document.title = before
+        }
+    }, [])
+    useEffect(() => {
+        if (!scoreDocument) return
+        const wanted = `${title.trim() || UNTITLED_SCORE} — Solkey`
+        const apply = () => {
+            if (document.title !== wanted) document.title = wanted
+        }
+        apply()
+        // The route's own metadata title can land after this (streamed in late): keep ours on top.
+        const observer = new MutationObserver(apply)
+        observer.observe(document.head, { childList: true, subtree: true, characterData: true })
+        return () => observer.disconnect()
+    }, [title, scoreDocument])
 
     // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
     // the two can't drift. Record never waits for a selection: with nothing selected a take
@@ -305,6 +386,21 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
+    // Straight from onboarding (?first=1), focus starts on the empty score's Start recording —
+    // once, after the effect above has focused the editor (the keys stay on the editor, which
+    // holds the button).
+    const startRecordingRef = useRef<HTMLButtonElement>(null)
+    const firstVisit = useRef<boolean | null>(null)
+    const editorMounted = !!score && instrumentsReady
+    useEffect(() => {
+        if (!editorMounted) return
+        firstVisit.current ??= new URLSearchParams(window.location.search).get('first') === '1'
+        if (!firstVisit.current) return
+        firstVisit.current = false
+        const frame = requestAnimationFrame(() => startRecordingRef.current?.focus())
+        return () => cancelAnimationFrame(frame)
+    }, [editorMounted])
+
     // A take swaps the dock's contents: the strip replaces the tools (and, on phones, the footer's
     // Record with the strip's record-as-stop), and the take's end swaps them back. Focus on a
     // control that went (or just turned disabled, like Play mid-take) would drop to <body>, out
@@ -355,18 +451,31 @@ export default function ScoreEditorPage() {
         }
     }, [editorReady])
 
+    // Unreachable (offline, or the server down) is no fault: a neutral screen that keeps trying
+    // by itself (the query polls, and coming back online retries). A missing score, or one that
+    // can't be read, is a real fault — with a way back to the library.
+    if (loadError instanceof NetworkError && !scoreDocument) {
+        return (
+            <ErrorScreen
+                tone="unreachable"
+                title="Can't reach the server"
+                message="Solkey isn't answering right now. We'll keep trying every few seconds — your score is safe."
+                onRetry={() => void refetch()}
+                retrying={isFetching}
+                onBack={() => router.push('/scores')}
+                backLabel="Back to library"
+            />
+        )
+    }
     if (loadError || unreadable) {
-        const serverDown = loadError instanceof NetworkError
         const notFound = loadError instanceof ApiError && loadError.status === 404
         return (
             <ErrorScreen
-                title={serverDown ? "Can't reach the server" : notFound ? 'Score not found' : "This score couldn't be loaded"}
+                title={notFound ? 'Score not found' : "This score couldn't be loaded"}
                 message={
-                    serverDown
-                        ? 'Solkey could not connect to its server, so this score can’t be opened right now. Check your internet connection, or try again in a moment.'
-                        : notFound
-                          ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
-                          : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
+                    notFound
+                        ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
+                        : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
                 }
                 onRetry={notFound ? undefined : () => void refetch()}
                 onBack={() => router.push('/scores')}
@@ -377,17 +486,18 @@ export default function ScoreEditorPage() {
 
     // Hold the loading screen until the playback samples (score instrument + metronome
     // woodblock) are in memory: pressing record must click instantly, and a half-ready
-    // editor whose transport buttons play nothing reads as broken.
+    // editor whose transport buttons play nothing reads as broken. It says which wait it is.
     if (!score || !instrumentsReady) {
         return (
-            <div className="min-h-dvh bg-surface flex items-center justify-center">
-                <div className="text-center flex flex-col items-center gap-2">
-                    <Wordmark size={28} />
-                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Loading score…</span>
-                </div>
-            </div>
+            <LoadingScreen
+                testId="editor-loading"
+                message={score ? `Getting the ${score.instrument.displayName.toLowerCase()} sound ready…` : 'Opening your score…'}
+                slowAction={<TertiaryButton onClick={() => window.location.reload()}>Try again</TertiaryButton>}
+            />
         )
     }
+
+    const emptyScore = !score.hasPitchedNotes && !taking && playbackState === 'stopped'
 
     return (
         <div
@@ -411,7 +521,9 @@ export default function ScoreEditorPage() {
                         setTitle(v)
                         saveToApi({ title: v })
                     }}
+                    onTitleDone={() => focusWithoutTooltip(containerRef.current)}
                     onChangeInstrument={() => setInstrumentDialogOpen(true)}
+                    autosave={autosave}
                     compact={isMobile}
                     transport={transport}
                     transposeOpen={transposeOpen}
@@ -419,7 +531,7 @@ export default function ScoreEditorPage() {
                     onTransposeAim={aimTranspose}
                     shortcutsOpen={shortcutsOpen}
                     onOpenShortcuts={() => setShortcutsOpen(true)}
-                    getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+                    getSvg={() => scoreAreaRef.current?.querySelector<SVGSVGElement>(SCORE_SVG) ?? null}
                 />
                 {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
@@ -446,12 +558,36 @@ export default function ScoreEditorPage() {
                                 onSelectionExtend={handleSelectionExtend}
                                 onSelectionMenu={handleSelectionMenu}
                                 onNoteChange={handleNoteChange}
-                                onAddMeasure={handleAddMeasure}
-                                onRemoveMeasure={handleRemoveMeasure}
-                                canRemoveMeasure={score.measures.length > 1}
+                                onMeasureButtonsLayout={setMeasureButtonsRect}
                                 onAttributeClick={setAttributePopover}
                                 onAttributeHover={setAttributeHover}
+                                // The canvas, named for a screen reader: the score's title, how the keys
+                                // work, and — while it is empty — what to do first.
+                                role="application"
+                                aria-roledescription="score editor"
+                                aria-label={title.trim() ? `${title.trim()} — score` : UNTITLED_SCORE}
+                                aria-describedby={
+                                    [emptyScore && emptyStateId, !isMobile && keyboardHelpId].filter(Boolean).join(' ') || undefined
+                                }
                             />
+                            {/* Chrome after the score's <svg> in DOM order — the exports and the selection
+                                bar take the canvas's first svg — and none of it ever exported. */}
+                            {measureButtonsRect && !taking && (
+                                <MeasureControls
+                                    rect={measureButtonsRect}
+                                    canRemove={score.measures.length > 1}
+                                    onAdd={() => manipulator.addMeasure()}
+                                    onRemove={() => manipulator.removeMeasure()}
+                                />
+                            )}
+                            <EditorEmptyState
+                                show={emptyScore}
+                                touch={isMobile}
+                                onStartRecording={toggleRecording}
+                                descriptionId={emptyStateId}
+                                startRef={startRecordingRef}
+                            />
+                            {!isMobile && <KeyboardHelp id={keyboardHelpId} keybindings={manipulator.keybindings} />}
                             <AttributeHoverTip event={attributePopover ? null : attributeHover} />
                             {selectionMenuAnchor && activeNote && (
                                 <SelectionPopover
@@ -469,7 +605,7 @@ export default function ScoreEditorPage() {
                                         closeSelectionMenu()
                                     }}
                                     onDelete={() => {
-                                        manipulator.deleteSelection()
+                                        manipulator.deleteSelection({ offerUndo: true })
                                         closeSelectionMenu()
                                     }}
                                     // Stays open, like the OS menu: growing the selection is a step
