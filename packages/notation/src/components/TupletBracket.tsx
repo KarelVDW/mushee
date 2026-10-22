@@ -1,11 +1,11 @@
 import { memo } from 'react'
 
-import type { Tuplet } from '../model'
+import type { TupletLayout } from '../model/layout/TupletLayout'
 import { NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
-export const TupletBracket = memo(function TupletBracket({ tuplet }: { tuplet: Tuplet; layoutId: string }) {
-    const { bracket, numberGlyphs } = tuplet.layout
+export const TupletBracket = memo(function TupletBracket({ layout }: { layout: TupletLayout }) {
+    const { bracket, numberGlyphs } = layout
     return (
         <g>
             {bracket.map((rect, i) => (

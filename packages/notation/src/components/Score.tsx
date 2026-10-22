@@ -47,6 +47,10 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
 
 interface ScoreProps {
     score: ScoreModel
+    /**
+     * Pass `score.layout.id`. The score mutates in place, so its identity never changes;
+     * this prop is what makes the memo re-render when the score's layout snapshot moves.
+     */
     layoutId: string
     height?: number
     selectedNote?: Note | null
@@ -325,6 +329,9 @@ export const Score = memo(function Score({
     const measureButtons = showMeasureButtons ? layout.measureButtons : null
 
     const lastRowIndex = rows.length - 1
+    // Hover reaches only the hovered note's own measure, so the other measures' memos hold. An
+    // edit can detach the hovered note under a still pointer; then nothing is hovered.
+    const hoveredMeasure = hoveredNote?.isAttached ? hoveredNote.measure : null
 
     return (
         <div ref={containerRef} className="relative select-none">
@@ -368,9 +375,9 @@ export const Score = memo(function Score({
                             <g key={measure.id} transform={`translate(${row.getMeasureX(measure)}, ${layout.getYForRow(row)})`}>
                                 <Measure
                                     measure={measure}
+                                    layout={layout.measureLayoutFor(measure)}
                                     selectedNoteIds={selectedIds}
-                                    hoveredNote={hoveredNote}
-                                    layoutId={measure.layout.id}
+                                    hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
                                     onAttributeClick={onAttributeClick && handleAttributeClick}
                                 />
 
@@ -384,7 +391,7 @@ export const Score = memo(function Score({
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
                                             <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup note={ghostNote} layout={ghostLayout} layoutId={ghostLayout.id} />
+                                                <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
                                             </g>
                                         )}
                                         <CursorIndicator x={cursorPos.x} y={cursorPos.y} />

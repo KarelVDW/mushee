@@ -1,10 +1,10 @@
 import { memo } from 'react'
 
-import type { Clef as ClefModel } from '../model/Clef'
+import type { ClefLayout } from '../model/layout/ClefLayout'
 import { Glyph } from './Glyph'
 
-export const Clef = memo(function Clef({ clef }: { clef: ClefModel; layoutId: string }) {
-    const { glyphName, x, y, octave } = clef.layout
+export const Clef = memo(function Clef({ layout }: { layout: ClefLayout }) {
+    const { glyphName, x, y, octave } = layout
     return (
         <>
             <Glyph name={glyphName} x={x} y={y} />

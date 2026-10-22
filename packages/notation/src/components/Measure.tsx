@@ -1,8 +1,9 @@
 import { memo, type ReactNode } from 'react'
 
-import type { Measure as MeasureModel, Note } from '../model'
+import type { Measure as MeasureModel } from '../model'
 import { Clef as ClefModel } from '../model/Clef'
 import { KeySignature as KeySignatureModel } from '../model/KeySignature'
+import type { MeasureLayout } from '../model/layout/MeasureLayout'
 import { Staff } from '../model/layout/Staff'
 import { TimeSignature as TimeSignatureModel } from '../model/TimeSignature'
 import type { ClefType } from '../model/types'
@@ -38,9 +39,14 @@ export type AttributeClick =
 
 interface MeasureProps {
     measure: MeasureModel
+    /**
+     * The measure's layout snapshot. A rebuilt measure gets a new snapshot (an unchanged one is
+     * reused), so its identity is what keeps this memo honest while the model mutates in place.
+     */
+    layout: MeasureLayout
     selectedNoteIds?: ReadonlySet<string>
-    hoveredNote?: Note | null
-    layoutId: string
+    /** The hovered note, only when it is in this measure — hovering elsewhere leaves this memo intact. */
+    hoveredNoteId?: string
     /**
      * A tempo marking, clef, key or time signature was clicked: what it is, plus the glyph's
      * measure-local x and the row-local y to anchor at. One stable callback serves every glyph,
@@ -77,21 +83,17 @@ function ClickableGlyph({ hitBox, onClick, children }: { hitBox: HitBox; onClick
     )
 }
 
-export const Measure = memo(function Measure({ measure, selectedNoteIds, hoveredNote, onAttributeClick }: MeasureProps) {
-    const layout = measure.layout
+export const Measure = memo(function Measure({ measure, layout, selectedNoteIds, hoveredNoteId, onAttributeClick }: MeasureProps) {
     /** The leaf glyph for one drawn attribute, and what a click on it reports. */
     const attribute = (element: ClefModel | KeySignatureModel | TimeSignatureModel): { glyph: ReactNode; click: AttributeClick } => {
         if (element instanceof ClefModel) {
-            return { glyph: <Clef clef={element} layoutId={element.layout.id} />, click: { kind: 'clef', clef: element.type } }
+            return { glyph: <Clef layout={element.layout} />, click: { kind: 'clef', clef: element.type } }
         }
         if (element instanceof KeySignatureModel) {
-            return {
-                glyph: <KeySignature keySignature={element} layoutId={element.layout.id} />,
-                click: { kind: 'key', fifths: element.fifths },
-            }
+            return { glyph: <KeySignature layout={layout.keyLayoutFor(element)} />, click: { kind: 'key', fifths: element.fifths } }
         }
         return {
-            glyph: <TimeSignature timeSignature={element} layoutId={element.layout.id} />,
+            glyph: <TimeSignature layout={element.layout} />,
             click: { kind: 'time', beatAmount: element.beatAmount, beatType: element.beatType },
         }
     }
@@ -114,7 +116,8 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
 
             {measure.notes.map((note) => {
                 const isSelected = selectedNoteIds?.has(note.id) ?? false
-                const isHovered = !isSelected && note === hoveredNote
+                const isHovered = !isSelected && note.id === hoveredNoteId
+                const noteLayout = layout.noteLayoutFor(note)
                 const beam = layout.beamFor(note)
                 const noteX = layout.getXForElement(note)
                 // Span the band across the note's full allotted slot so a run of selected notes
@@ -134,21 +137,21 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
                             />
                         )}
                         <NoteGroup
-                            note={note}
-                            beam={beam}
+                            layout={noteLayout}
+                            stem={beam?.getStem(note) ?? noteLayout.stem}
+                            beamed={!!beam}
                             color={isSelected || isHovered ? CURSOR_COLOR : undefined}
-                            layoutId={note.layout.id}
                         />
                     </g>
                 )
             })}
 
             {layout.beams.map((beam) => (
-                <BeamGroup key={beam.id} beam={beam} layoutId={beam.id} />
+                <BeamGroup key={beam.id} beam={beam} />
             ))}
 
             {measure.tuplets.map((tuplet, i) => (
-                <TupletBracket key={i} tuplet={tuplet} layoutId={tuplet.layout.id} />
+                <TupletBracket key={i} layout={layout.tupletLayoutFor(tuplet)} />
             ))}
 
             {layout.barline && <Barline layout={layout.barline} />}
@@ -156,21 +159,22 @@ export const Measure = memo(function Measure({ measure, selectedNoteIds, hovered
             {/* Tempo markings, at their beat in the headroom above the staff. The hit box spans the
                 beat-unit note and reaches over the `= 90` text; a click anchors at the marking. */}
             {measure.tempos.map((tempo) => {
-                const { x, y } = tempo.layout
+                const { x, y } = layout.tempoLayoutFor(tempo)
+                const pulse = tempo.pulse
                 return (
                     <g key={`tempo-${tempo.id}`} transform={`translate(${x}, 0)`}>
                         <ClickableGlyph
                             hitBox={{
                                 x: -2,
                                 y: y - BEAT_UNIT_STEM_HEIGHT - 2,
-                                width: beatUnitWidth(tempo.pulse) + TEMPO_TEXT_HIT_WIDTH,
+                                width: beatUnitWidth(pulse) + TEMPO_TEXT_HIT_WIDTH,
                                 height: BEAT_UNIT_STEM_HEIGHT + 4,
                             }}
                             onClick={
                                 onAttributeClick &&
                                 (() => onAttributeClick(measure, { kind: 'tempo', beatPosition: tempo.beatPosition, bpm: tempo.bpm }, x, y))
                             }>
-                            <TempoMarking tempo={tempo} layoutId={tempo.layout.id} />
+                            <TempoMarking y={y} pulse={pulse} pulseBpm={tempo.pulseBpm} />
                         </ClickableGlyph>
                     </g>
                 )

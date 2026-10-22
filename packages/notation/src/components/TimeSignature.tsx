@@ -1,10 +1,10 @@
 import { memo } from 'react'
 
-import type { TimeSignature as TimeSignatureModel } from '../model'
+import type { TimeSignatureLayout } from '../model/layout/TimeSignatureLayout'
 import { Glyph } from './Glyph'
 
-export const TimeSignature = memo(function TimeSignature({ timeSignature }: { timeSignature: TimeSignatureModel; layoutId: string }) {
-    const { topDigits, bottomDigits } = timeSignature.layout
+export const TimeSignature = memo(function TimeSignature({ layout }: { layout: TimeSignatureLayout }) {
+    const { topDigits, bottomDigits } = layout
     return (
         <g>
             {topDigits.map((g, i) => (

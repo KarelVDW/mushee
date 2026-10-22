@@ -1,25 +1,23 @@
 import { memo } from 'react'
 
 import { STEM_WIDTH } from '../engraving/constants'
-import type { Note } from '../model'
-import type { BeamLayout } from '../model/layout/BeamLayout'
 import type { NoteLayout } from '../model/layout/NoteLayout'
+import type { LayoutStem } from '../model/layout/types'
 import { DOT_RADIUS, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {
-    note: Note
-    /** Draw this layout instead of the note's own — the ghost note's NoteLayout.preview. */
-    layout?: NoteLayout
-    beam?: BeamLayout
+    /** The note's layout snapshot — the placed note in a measure, or the ghost note's NoteLayout.preview. */
+    layout: NoteLayout
+    /** The stem to draw: a beam's repositioned stem for a beamed note, else the layout's own (undefined for none). */
+    stem: LayoutStem | undefined
+    /** Beamed notes draw no flag — the beam carries the duration. */
+    beamed: boolean
     color?: string
-    layoutId: string
 }
 
-export const NoteGroup = memo(function NoteGroup({ note, layout, beam, color }: NoteGroupProps) {
-    const { noteX, noteY, glyphName, stem: originalStem, flag, accidental, dots, ledgerLines } = layout ?? note.layout
-    const beamStem = beam?.getStem(note)
-    const stem = beamStem ?? originalStem
+export const NoteGroup = memo(function NoteGroup({ layout, stem, beamed, color }: NoteGroupProps) {
+    const { noteX, noteY, glyphName, flag, accidental, dots, ledgerLines } = layout
     return (
         <>
             {/* Ledger lines (behind everything) */}
@@ -34,7 +32,7 @@ export const NoteGroup = memo(function NoteGroup({ note, layout, beam, color }: 
             {stem && <line x1={stem.x} y1={stem.y1} x2={stem.x} y2={stem.y2} stroke={NOTATION_INK} strokeWidth={STEM_WIDTH} />}
 
             {/* Flag (8th, 16th notes) */}
-            {!beam && flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}
+            {!beamed && flag && <Glyph name={flag.glyphName} x={flag.x} y={flag.y} scale={flag.scale} />}
 
             {/* Augmentation dots */}
             {dots?.map((dot, i) => (
