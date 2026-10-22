@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
 import { expect, focusEditor, MOCK_SCORE_ID, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
+import { mockRecording } from './recording'
 
 /**
  * Mocked-API keyboard e2e: every default editor keybinding from
@@ -158,6 +159,51 @@ test('M minimizes accidentals (respell + re-key across the whole score)', async 
     await page.keyboard.press('m')
     await patch
     await expect(page.getByRole('button', { name: 'Key: D♭ major' })).toBeVisible()
+})
+
+test('Space plays and pauses the score; on a focused button it presses that button instead', async ({ page }) => {
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
+
+    // A focused control keeps the key: Space on the metronome toggles it, and nothing plays.
+    const metronome = page.getByRole('button', { name: 'Metronome' })
+    await metronome.focus()
+    await page.keyboard.press('Space')
+    await expect(metronome).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
+})
+
+test('Shift+R starts a take and Space stops it; Escape stops one too', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    const strip = page.getByRole('group', { name: 'Recording status' })
+
+    await page.keyboard.press('Shift+R')
+    await expect(strip).toBeVisible()
+    await page.keyboard.press('Space')
+    await expect(strip).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible()
+
+    await focusEditor(page)
+    await page.keyboard.press('Shift+R')
+    await expect(strip).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(strip).toHaveCount(0)
+})
+
+test('the shortcuts dialog opens with the Playback group', async ({ page }) => {
+    await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    await expect(dialog.getByText('Playback', { exact: true })).toBeVisible()
+    for (const label of ['Play or pause (also stops a recording)', 'Stop recording']) {
+        await expect(dialog.getByText(label, { exact: true })).toBeVisible()
+        // Fixed: listed as a plain fact, never rebindable.
+        await expect(dialog.getByRole('button', { name: `Change shortcut for ${label}` })).toHaveCount(0)
+    }
+    await expect(dialog.getByRole('button', { name: 'Change shortcut for Record or stop recording' })).toContainText('R')
+    await expect(dialog.getByRole('button', { name: 'Change shortcut for Play from the start' })).toContainText('Space')
 })
 
 test('Shift+T opens the transpose popover; Escape closes it without touching the score', async ({ page, apiMock }) => {

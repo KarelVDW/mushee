@@ -11,13 +11,14 @@ import {
     test,
     waitForAutosave,
 } from './fixtures'
+import { mockRecording } from './recording'
 
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
  * API and auth session are intercepted (see fixtures.ts). Exercises rendering,
- * the record button's selection guard, keyboard pitch editing + debounced
+ * recording (a blocked mic, and a mocked take), keyboard pitch editing + debounced
  * autosave, range selection and the clipboard, shortcut rebinding, the tool
- * dock's popovers, the header's takes / share menus, and exporting.
+ * dock's popovers, the header's recordings / share menus, and exporting.
  */
 
 test.beforeEach(async ({ page, apiMock }) => {
@@ -33,7 +34,7 @@ test('renders the editor chrome and the engraved score', async ({ page }) => {
 
     // Transport + note-input controls are wired up.
     await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Record' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible()
     await expect(page.getByRole('group', { name: 'Note duration' })).toBeVisible()
 
     // The score SVG rendered staff lines and noteheads (fixture has 4 pitched notes).
@@ -49,24 +50,63 @@ test('no mic-source chip: the server classifies voice vs instrument itself', asy
     await expect(page.getByRole('button', { name: /^Mic input:/ })).toHaveCount(0)
 })
 
-// The desktop half of mobile.spec's record guard: the header's Record button.
-test('Record is disabled with no note selected and enabled again after clicking one', async ({ page }) => {
-    // Refuse the microphone: the take clears the selection as it starts, then fails to open
-    // the mic — leaving the editor with no note selected (the only way to get there by hand).
+// The desktop half of mobile.spec's blocked-mic check: the header's Record button.
+test('a blocked microphone explains the fix, Record stays live, and the score is as it was', async ({ page }) => {
+    // Refuse the microphone: the take clears the selection and inserts its bar as it starts,
+    // then fails to open the mic — and takes both back.
     await denyMicrophone(page)
-    // Where the auto-selected first note sits. The failed take's bar displaces it, but the
-    // spot stays on the first bar of the staff, so clicking it selects a note again.
     const band = await page.locator(SELECTION_BANDS).first().boundingBox()
     if (!band) throw new Error('expected the auto-selected note')
 
-    const record = page.getByRole('button', { name: 'Record' })
+    const record = page.getByRole('button', { name: 'Record', exact: true })
     await expect(record).toBeEnabled()
     await record.click()
-    await expect(page.getByRole('alert').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
-    await expect(record).toBeDisabled()
+    const dialog = page.getByRole('dialog', { name: "Solkey can't hear you yet" })
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('Your browser is blocking the microphone for this site.')
 
-    await page.mouse.click(band.x + band.width / 2, band.y + band.height / 2)
+    // Try again presses Record again — still refused, so the dialog comes back.
+    await dialog.getByRole('button', { name: 'Try again' }).click()
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Not now' }).click()
+    await expect(dialog).toHaveCount(0)
+
+    // Never a dead Record; the same note is selected in the same place (the failed take's bar is gone).
     await expect(record).toBeEnabled()
+    await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
+    expect(await page.locator(SELECTION_BANDS).first().boundingBox()).toEqual(band)
+})
+
+test('a take: the strip replaces the tools, Record becomes Stop, and the bar after the take is selected with a summary', async ({
+    page,
+    browserName,
+}) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await record.click()
+
+    // Count-in: the strip stands in for the dock's tools, and the record button is the stop.
+    const strip = page.getByRole('group', { name: 'Recording status' })
+    await expect(strip).toContainText('Get ready')
+    await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
+    const stop = page.getByRole('button', { name: 'Stop recording', exact: true })
+    await expect(stop).toBeVisible()
+    await expect(strip).toContainText('Recording', { timeout: 6000 })
+    await expect(strip).toContainText('Press Space or')
+
+    await stop.click()
+    // The summary names the bar the take added and the next step, with a way to hear it.
+    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Click any note to fix it\./ })
+    await expect(summary).toBeVisible()
+    await expect(summary.getByRole('button', { name: 'Hear it back' })).toBeVisible()
+    // The dock is back, Record is Record again, and the bar after the take is selected.
+    await expect(page.getByRole('group', { name: 'Note tools' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeEnabled()
+    await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
+    // Screen readers hear it too, through the editor's live region.
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 1( to 2)?\./)
 })
 
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
@@ -394,27 +434,32 @@ test('navigates back to the library', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Your scores' })).toBeVisible()
 })
 
-test('takes menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
-    await page.getByRole('button', { name: 'Takes' }).click()
-    const panel = page.getByRole('dialog', { name: 'Takes' })
+test('recordings menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Recordings', exact: true }).click()
+    const panel = page.getByRole('dialog', { name: 'Recordings' })
     await expect(panel).toBeVisible()
-    const rows = panel.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = panel.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(3)
+    // Numbered by age, newest first, so two from the same minute still differ.
+    await expect(rows.nth(0)).toContainText('Recording 3')
     await expect(rows.nth(0)).toContainText('0:42')
+    await expect(rows.nth(1)).toContainText('Recording 2')
     await expect(rows.nth(1)).toContainText('2:05')
-    // A take from before audio archiving cannot be played.
-    await expect(rows.nth(2).getByRole('button', { name: 'Play take' })).toBeDisabled()
+    // A recording from before audio archiving cannot be played.
+    await expect(rows.nth(2).getByRole('button', { name: 'Play recording' })).toBeDisabled()
 
-    // Delete asks first; "Keep" backs out without a request.
-    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    // Delete asks first, says the notes stay, and lands on "Keep", which backs out without a request.
+    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).click()
+    await expect(rows.nth(0)).toContainText('Delete this recording? Your notes stay.')
+    await expect(rows.nth(0).getByRole('button', { name: 'Keep' })).toBeFocused()
     await rows.nth(0).getByRole('button', { name: 'Keep' }).click()
     expect(apiMock.recordingDeletes).toEqual([])
 
-    await rows.nth(0).getByRole('button', { name: 'Delete take' }).click()
+    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).click()
     await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).click()
     await expect(rows).toHaveCount(2)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
-    await expect(page.getByRole('status').first()).toContainText('Take deleted')
+    await expect(page.getByRole('status').first()).toContainText('Recording deleted')
 
     // Escape closes the panel.
     await page.keyboard.press('Escape')

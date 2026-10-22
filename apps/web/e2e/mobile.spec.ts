@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
 import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
+import { mockRecording } from './recording'
 
 /**
  * Mobile editor e2e (mocked API), run by the `mobile-chromium` project at a
@@ -76,13 +77,23 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     // Transport sits inside the dock's action row, not the header.
     const actionRow = page.getByRole('group', { name: 'Note navigation and transport' })
     await expect(actionRow).toBeVisible()
-    const record = actionRow.getByRole('button', { name: 'Record' })
+    const record = actionRow.getByRole('button', { name: 'Record', exact: true })
     await expect(record).toBeVisible()
 
-    // The record button is the largest control in the action row.
+    // The record button is the largest control in the action row; every other one meets the 40px floor.
     const recordBox = await record.boundingBox()
     const playBox = await actionRow.getByRole('button', { name: 'Play' }).boundingBox()
     expect(recordBox?.width ?? 0).toBeGreaterThan(playBox?.width ?? Infinity)
+    for (const name of ['Select previous note', 'Select next note', 'Lower pitch', 'Raise pitch']) {
+        const box = await actionRow.getByRole('button', { name }).boundingBox()
+        expect(box?.width ?? 0, name).toBeGreaterThanOrEqual(40)
+        expect(box?.width ?? Infinity, name).toBeLessThan(recordBox?.width ?? 0)
+    }
+    // The two pairs sit in their own wells, each captioned under it.
+    await expect(actionRow.getByRole('group', { name: 'Note', exact: true }).getByRole('button')).toHaveCount(2)
+    await expect(actionRow.getByRole('group', { name: 'Pitch', exact: true }).getByRole('button')).toHaveCount(2)
+    await expect(actionRow).toContainText('Note')
+    await expect(actionRow).toContainText('Pitch')
 
     // The keyboard-shortcuts entry point is desktop-only.
     await expect(page.getByRole('button', { name: 'Keyboard shortcuts' })).toHaveCount(0)
@@ -92,22 +103,51 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     expect(overflow).toBeLessThanOrEqual(1)
 })
 
-test('Record is disabled with no note selected and enabled again after tapping one', async ({ page }) => {
+test('a blocked microphone explains the fix, Record stays live, and the selection comes back', async ({ page }) => {
     // Refuse the microphone: the take clears the selection as it starts, then fails to open
-    // the mic — leaving the editor with no note selected (the only way to get there by hand).
+    // the mic — and puts the note it started from back.
     await denyMicrophone(page)
-    const record = page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record' })
+    const before = await selectedNoteCenter(page)
+    const record = page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true })
     await expect(record).toBeEnabled()
     await record.tap()
-    await expect(page.getByRole('alert').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
-    await expect(record).toBeDisabled()
+    const dialog = page.getByRole('dialog', { name: "Solkey can't hear you yet" })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Not now' }).tap()
+    await expect(dialog).toHaveCount(0)
 
-    // Tapping a note on the staff gives a take somewhere to record into again.
-    const svg = page.locator('.max-w-240 svg').first()
-    const box = await svg.boundingBox()
-    expect(box).not.toBeNull()
-    await page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * 0.7, (box?.y ?? 0) + 65)
+    // Never a dead Record, and the phone's nudges work at once on the same note.
     await expect(record).toBeEnabled()
+    expect(await selectedNoteCenter(page)).toEqual(before)
+    await expect(page.getByRole('button', { name: 'Raise pitch' })).toBeEnabled()
+})
+
+test('a take folds the dock into the recording strip beside record-as-stop; toasts stay above the dock', async ({ page }) => {
+    await mockRecording(page)
+    await page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true }).tap()
+
+    const strip = page.getByRole('group', { name: 'Recording status' })
+    await expect(strip).toContainText('Get ready')
+    // The tool rows, the navigator and the separate Stop give way to the strip and the one stop control.
+    await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Select previous note' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+    await expect(strip).toContainText('Recording', { timeout: 6000 })
+    await expect(strip).toContainText('Tap')
+    await page.getByRole('button', { name: 'Stop recording', exact: true }).tap()
+
+    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Tap any note to fix it\./ })
+    await expect(summary).toBeVisible()
+    // The dock is back, with a note selected so the nudges and Record work at once.
+    const tools = page.getByRole('group', { name: 'Note tools' })
+    await expect(tools).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Raise pitch' })).toBeEnabled()
+    // No toast covers the dock: the stack sits above its top edge.
+    await expect(async () => {
+        const toast = await summary.boundingBox()
+        const dock = await page.getByRole('group', { name: 'Note navigation and transport' }).boundingBox()
+        expect((toast?.y ?? Infinity) + (toast?.height ?? 0)).toBeLessThanOrEqual(dock?.y ?? 0)
+    }).toPass({ timeout: 5000 })
 })
 
 /** Open the phone dock's More sheet: everything beyond Undo and the note lengths lives there. */
@@ -372,7 +412,7 @@ async function expectHeaderFitsViewport(page: Page): Promise<void> {
     expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
     // The chips themselves stay inside the header's box (a flex row that overflowed
     // would keep the header at viewport width while its children spill out).
-    for (const name of ['Share score', 'Takes', 'Export score']) {
+    for (const name of ['Share score', 'Recordings', 'Export score']) {
         const box = await page.getByRole('button', { name, exact: true }).boundingBox()
         expect(box, name).not.toBeNull()
         expect((box?.x ?? 0) + (box?.width ?? Infinity), name).toBeLessThanOrEqual((headerBox?.x ?? 0) + (headerBox?.width ?? 0) + 1)
@@ -382,7 +422,7 @@ async function expectHeaderFitsViewport(page: Page): Promise<void> {
 }
 
 test('header chips are icon-only on phones and the header fits the viewport', async ({ page }) => {
-    for (const name of ['Share score', 'Takes', 'Export score']) {
+    for (const name of ['Share score', 'Recordings', 'Export score']) {
         const chip = page.getByRole('button', { name, exact: true })
         await expect(chip).toBeVisible()
         // The visible label is dropped in compact mode; the accessible name carries it.
@@ -411,20 +451,21 @@ test('share chip: turn the read-only link on and off from the phone header', asy
     await expectHeaderFitsViewport(page)
 })
 
-test('takes chip: lists the score’s takes and deletes one after confirmation', async ({ page, apiMock }) => {
-    await page.getByRole('button', { name: 'Takes', exact: true }).tap()
-    const panel = page.getByRole('dialog', { name: 'Takes' })
+test('recordings chip: lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
+    await page.getByRole('button', { name: 'Recordings', exact: true }).tap()
+    const panel = page.getByRole('dialog', { name: 'Recordings' })
     await expect(panel).toBeVisible()
-    const rows = panel.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = panel.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(3)
     await expect(rows.nth(0)).toContainText('0:42')
     await expect(rows.nth(1)).toContainText('2:05')
 
-    await rows.nth(0).getByRole('button', { name: 'Delete take' }).tap()
+    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).tap()
+    await expect(rows.nth(0)).toContainText('Your notes stay.')
     await rows.nth(0).getByRole('button', { name: 'Keep' }).tap()
     expect(apiMock.recordingDeletes).toEqual([])
 
-    await rows.nth(0).getByRole('button', { name: 'Delete take' }).tap()
+    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).tap()
     await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).tap()
     await expect(rows).toHaveCount(2)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
