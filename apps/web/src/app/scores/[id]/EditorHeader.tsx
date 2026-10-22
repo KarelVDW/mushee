@@ -8,7 +8,7 @@ import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, Icon, Tooltip, Wordmark } from '@/components/ui'
 
 import { SHOW_SHORTCUTS_KEY } from './commands'
-import { HistoryTools } from './HistoryTools'
+import { HistoryMenu, HistoryTools } from './HistoryTools'
 import { STOP_RECORDING_FIRST } from './NoteToolParts'
 import { PitchTools } from './PitchTools'
 import { RecordingsMenu } from './RecordingsMenu'
@@ -19,6 +19,23 @@ import type { ScoreAutosave } from './useScoreAutosave'
 
 /** What an empty title field shows, and what the tab calls an untitled score. */
 export const UNTITLED_SCORE = 'Untitled score'
+
+/**
+ * How much room the desktop header has, between the phone header (`compact`) and the full one:
+ * the queries the page matches to pick {@link HeaderFit}. Under 1280px the full set of labelled
+ * chips no longer fits beside the centred transport (with a long instrument name, the wordmark
+ * and a title at its floor, the full header needs about 1260px); under 1024px (iPad portrait,
+ * half a laptop) not even with Share, Recordings and Export icon-only.
+ */
+export const HEADER_FIT_QUERIES = { medium: '(max-width: 1279px)', narrow: '(max-width: 1023px)' } as const
+
+/**
+ * The desktop header's layout step. `full` labels everything. `medium` turns Share, Recordings
+ * and Export icon-only (names in their tooltips) and drops the wordmark. `narrow` also turns
+ * Transpose icon-only, folds Undo, Redo and the shortcuts list into one chip, and lets the
+ * transport's hidden Stop give up its slot.
+ */
+export type HeaderFit = 'full' | 'medium' | 'narrow'
 
 /** How long "Saved" stays beside its check before the status shrinks to the check alone. */
 const SAVED_WORD_MS = 3000
@@ -41,6 +58,8 @@ interface EditorHeaderProps {
      * keyboard-shortcuts entry point goes, and the score-level chips turn icon-only.
      */
     compact: boolean
+    /** The desktop header's layout step (ignored on phones, which are `compact`). */
+    fit?: HeaderFit
     transport: TransportControlsProps
     /** The transpose popover's state, kept by the page (the transpose shortcut opens it too). */
     transposeOpen: boolean
@@ -76,6 +95,7 @@ export function EditorHeader({
     onChangeInstrument,
     autosave,
     compact,
+    fit = 'full',
     transport,
     transposeOpen,
     onTransposeOpenChange,
@@ -91,6 +111,8 @@ export function EditorHeader({
     // Only the phone header hands the row over to the title.
     const takenOver = compact && editingTitle
     const fade = `${EDIT_FADE} ${takenOver ? 'opacity-0 pointer-events-none' : 'opacity-100'}`
+    const iconChips = compact || fit !== 'full'
+    const narrow = !compact && fit === 'narrow'
 
     return (
         <header className="relative z-10 flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2">
@@ -98,7 +120,10 @@ export function EditorHeader({
                 aria-hidden
                 className="pointer-events-none absolute inset-0 -z-10 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow"
             />
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+            {/* Desktop: never narrower than its content with the title at its 96px floor (the
+                title's mirror wraps, so it can't widen that floor), so a crowded header compacts
+                (fit) rather than the transport painting over the title and the instrument chip. */}
+            <div className={`flex items-center gap-1.5 sm:gap-2.5 flex-1 ${compact ? 'min-w-0' : ''}`}>
                 <button
                     onClick={() => router.push('/scores')}
                     aria-label="Back to library"
@@ -110,8 +135,9 @@ export function EditorHeader({
                     ].join(' ')}>
                     <Icon name="arrow-left" size={20} />
                 </button>
-                <Wordmark size={19} className="max-[52rem]:hidden" />
-                <div className="w-px h-5 bg-outline-variant/15 max-[52rem]:hidden" />
+                {/* Gone below 1280px (HEADER_FIT_QUERIES.medium), where the chips start to compact. */}
+                <Wordmark size={19} className="max-[80rem]:hidden" />
+                <div className="w-px h-5 bg-outline-variant/15 max-[80rem]:hidden" />
                 <TitleField
                     value={title}
                     onChange={onTitleChange}
@@ -129,20 +155,23 @@ export function EditorHeader({
                     />
                 </div>
             </div>
-            {!compact && <TransportControls {...transport} />}
+            {!compact && <TransportControls {...transport} collapseStop={narrow} />}
             <div inert={takenOver} className={`flex items-center gap-2 shrink-0 sm:flex-1 justify-end ${fade}`}>
                 {/* Pitch and history tools are document-level chrome (see PitchTools /
-                    HistoryTools); on phones they move into the dock instead. */}
-                {!compact && (
+                    HistoryTools); on phones they move into the dock instead. A score of rests
+                    has nothing to transpose: the chip — and its jargon — waits for the first note. */}
+                {!compact && score.hasPitchedNotes && (
                     <PitchTools
                         manipulator={manipulator}
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={onTransposeOpenChange}
                         onTransposeAim={onTransposeAim}
+                        iconOnly={narrow}
                     />
                 )}
-                {!compact && <HistoryTools manipulator={manipulator} />}
-                {!compact && (
+                {narrow && <HistoryMenu manipulator={manipulator} onOpenShortcuts={onOpenShortcuts} />}
+                {!compact && !narrow && <HistoryTools manipulator={manipulator} />}
+                {!compact && !narrow && (
                     <ChipToggle
                         active={shortcutsOpen}
                         onClick={onOpenShortcuts}
@@ -152,9 +181,9 @@ export function EditorHeader({
                         <Icon name="keyboard" size={16} />
                     </ChipToggle>
                 )}
-                <ShareMenu scoreId={scoreId} shareToken={shareToken} compact={compact} />
-                <RecordingsMenu scoreId={scoreId} compact={compact} />
-                <ExportMenu score={score} title={title} compact={compact} getSvg={getSvg} />
+                <ShareMenu scoreId={scoreId} shareToken={shareToken} compact={iconChips} />
+                <RecordingsMenu scoreId={scoreId} compact={iconChips} />
+                <ExportMenu score={score} title={title} compact={iconChips} getSvg={getSvg} />
             </div>
         </header>
     )
@@ -270,14 +299,16 @@ function TitleField({ value, onChange, onDone, compact, onEditingChange }: Title
 
     // The outer box is the header's flex item: it gives way (down to 6rem) when the header is
     // crowded, and lets the tooltip's own wrapper (`> span`) shrink with it, so a long title
-    // ellipsizes instead of running under the transport.
+    // ellipsizes instead of running under the transport. The mirror sizes the field to its text
+    // on one line (clamped there) but may break anywhere, so the title adds only its 6rem floor
+    // to the header's minimum width, never its whole length.
     return (
         <div className="flex min-w-24 max-w-[min(32rem,40vw)] shrink [&>span]:min-w-0 [&>span]:shrink">
             <Tooltip label="Rename" side="bottom">
                 <div ref={wrapperRef} className="group relative min-w-0 w-full">
                     <span
                         aria-hidden
-                        className={`${TITLE_TYPE} invisible block overflow-hidden whitespace-pre px-2 py-2 pointer-fine:pr-6`}>
+                        className={`${TITLE_TYPE} invisible line-clamp-1 whitespace-pre-wrap break-all px-2 py-2 pointer-fine:pr-6`}>
                         {value || UNTITLED_SCORE}
                     </span>
                     {input}
@@ -398,7 +429,8 @@ function InstrumentChip({ name, onClick, locked }: { name: string; onClick: () =
                 className={[
                     'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-3 min-h-8 pointer-coarse:min-h-10',
                     'font-label font-semibold text-[13px] leading-none whitespace-nowrap',
-                    'max-md:max-w-28 min-w-0',
+                    // Long names ellipsize where the header is tight (phones and the narrow desktop step).
+                    'max-lg:max-w-28 min-w-0',
                     locked
                         ? 'cursor-not-allowed opacity-40 bg-secondary-soft/70 text-on-secondary-soft'
                         : 'cursor-pointer bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',

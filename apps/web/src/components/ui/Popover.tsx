@@ -1,6 +1,6 @@
 'use client'
 
-import { Eyebrow, Icon } from '@mushee/ui'
+import { Eyebrow, Icon, TertiaryButton } from '@mushee/ui'
 import {
     createContext,
     type CSSProperties,
@@ -28,6 +28,13 @@ export const SHEET_PICK_CONFIRM_MS = 150
  */
 const SHEET_FRAME_CLASS =
     'fixed inset-x-2 top-[calc(var(--app-header-h,0px)+0.5rem)] bottom-[calc(var(--dock-h,0px)+0.5rem)] z-(--z-popover) flex flex-col justify-end pointer-events-none'
+
+/**
+ * The strip a `leaveRoomAbove` sheet keeps clear at the top of its frame: about one staff
+ * system (140px; the frame itself starts 8px under the header), where the editor scrolls the
+ * selected note's row while the sheet is open.
+ */
+export const SHEET_SYSTEM_ROOM = { px: 140, maxHeight: 'max-h-[calc(100%-8.75rem)]' } as const
 
 /** The host element; `null` while a host is mounting, `undefined` when there is no host above. */
 const SheetHostContext = createContext<HTMLElement | null | undefined>(undefined)
@@ -96,6 +103,11 @@ interface PopoverProps {
     /** Rendered on the far side of the heading, e.g. a live readout. */
     headerRight?: ReactNode
     /**
+     * A way back (the More sheet's "‹ Back"): a sheet puts it at the very top, above its title
+     * and level with Close, where people look for it; an anchored popover leads its content with it.
+     */
+    lead?: ReactNode
+    /**
      * Move focus to the panel's first control on open, and back to the trigger (the first
      * control in `anchorRef`) on close when focus was still inside — for menus opened from a
      * chip (HeaderMenu). Off for the editor's attribute popovers, which leave focus on the score.
@@ -109,6 +121,17 @@ interface PopoverProps {
     variant?: 'anchored' | 'sheet'
     /** Anchored only: keep the panel this many px inside the viewport's left and right edges. */
     viewportGutter?: number
+    /**
+     * Sheet only: stop about one staff system ({@link SHEET_SYSTEM_ROOM}) short of the frame's
+     * top, so the note being fixed stays in view above the sheet while its tools are toggled.
+     */
+    leaveRoomAbove?: boolean
+    /**
+     * The panel's closing row (Transpose's "More options" + Apply). A sheet pins it under its
+     * scrolling body, so the commit button stays in view however long the body grows; an
+     * anchored popover renders it last, inline.
+     */
+    footer?: ReactNode
     children: ReactNode
 }
 
@@ -127,9 +150,12 @@ export function Popover({
     className,
     anchorRef,
     headerRight,
+    lead,
     manageFocus = false,
     variant = 'anchored',
     viewportGutter,
+    leaveRoomAbove = false,
+    footer,
     children,
 }: PopoverProps) {
     const popRef = useRef<HTMLDivElement>(null)
@@ -202,10 +228,11 @@ export function Popover({
                 ref={popRef}
                 role="dialog"
                 aria-label={ariaLabel}
-                className="popover-sheet-enter pointer-events-auto flex flex-col min-h-0 max-h-full rounded-xl bg-surface-container-lowest editorial-shadow"
+                className={`popover-sheet-enter pointer-events-auto flex flex-col min-h-0 ${leaveRoomAbove ? SHEET_SYSTEM_ROOM.maxHeight : 'max-h-full'} rounded-xl bg-surface-container-lowest editorial-shadow`}
                 onMouseDown={(e) => e.stopPropagation()}>
                 <div className="shrink-0 flex items-start gap-3 pl-4 pr-1.5 pt-1.5 pb-2">
-                    <div className="flex-1 min-w-0 flex flex-col gap-1 pt-2.5">
+                    <div className={`flex-1 min-w-0 flex flex-col gap-1 ${lead ? '' : 'pt-2.5'}`}>
+                        {lead}
                         <h2 className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">{title}</h2>
                         {hint && <PopoverHint>{hint}</PopoverHint>}
                     </div>
@@ -221,6 +248,7 @@ export function Popover({
                     </Tooltip>
                 </div>
                 <SheetBody className={className}>{children}</SheetBody>
+                {footer && <div className="shrink-0 px-4 pt-2 pb-4">{footer}</div>}
             </div>
         )
         if (!sheetTarget) return null
@@ -245,7 +273,9 @@ export function Popover({
                 <Eyebrow>{title}</Eyebrow>
             )}
             {hint && <PopoverHint>{hint}</PopoverHint>}
+            {lead}
             {children}
+            {footer}
         </div>
     )
 }
@@ -256,10 +286,14 @@ function PopoverHint({ children }: { children: ReactNode }) {
 
 /**
  * A sheet's scrolling body. Where its content is clipped — below, or above once scrolled — a
- * 16px fade over the edge line says there is more that way.
+ * 16px fade over the edge line says there is more that way. It re-measures whenever the body
+ * or its content changes size (Transpose's "More options" growing the content, a sheet frame
+ * shrinking), not only on scroll and window resize. The content keeps its natural height —
+ * the body scrolls instead of squeezing a child (the transpose preview) to fit.
  */
 function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
     const ref = useRef<HTMLDivElement>(null)
+    const contentRef = useRef<HTMLDivElement>(null)
     const [clipped, setClipped] = useState(false)
     const [scrolled, setScrolled] = useState(false)
     const measure = useCallback(() => {
@@ -271,16 +305,19 @@ function SheetBody({ className, children }: { className?: string; children: Reac
     useLayoutEffect(() => {
         measure()
         window.addEventListener('resize', measure)
-        return () => window.removeEventListener('resize', measure)
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+        for (const el of [ref.current, contentRef.current]) if (el) observer?.observe(el)
+        return () => {
+            window.removeEventListener('resize', measure)
+            observer?.disconnect()
+        }
     }, [measure])
     return (
         <div className="relative flex-1 min-h-0 flex flex-col">
-            <div
-                ref={ref}
-                data-popover-body=""
-                onScroll={measure}
-                className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
-                {children}
+            <div ref={ref} data-popover-body="" onScroll={measure} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                <div ref={contentRef} className={`flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
+                    {children}
+                </div>
             </div>
             {scrolled && (
                 <div
@@ -304,28 +341,52 @@ function SheetBody({ className, children }: { className?: string; children: Reac
  * The horizontal shift that keeps an anchored panel `gutter` px inside the viewport — a
  * right-aligned menu under a chip near the left edge (the phone header's Share) would
  * otherwise spill off screen. Measured before paint, again on resize.
+ *
+ * Idempotent: a measure takes off the shift the DOM carries right now (`applied`, written in
+ * the same commit as the style) and sets the one shift the untransformed panel needs. Two
+ * measures before a re-render — StrictMode's doubled effect, a resize while opening — land
+ * on the same value instead of shifting twice.
  */
 function useViewportClamp(ref: { current: HTMLElement | null }, gutter: number | undefined): CSSProperties | undefined {
     const [dx, setDx] = useState(0)
+    const applied = useRef(0)
+    // Declared before the measuring effect, so a commit's own shift is on record before it measures.
+    useLayoutEffect(() => {
+        applied.current = dx
+    }, [dx])
     useLayoutEffect(() => {
         if (gutter === undefined) return
         const measure = () => {
             const el = ref.current
             if (!el) return
             const rect = el.getBoundingClientRect()
-            setDx((current) => {
-                const left = rect.left - current
-                const right = rect.right - current
-                if (left < gutter || rect.width > window.innerWidth - 2 * gutter) return gutter - left
-                if (right > window.innerWidth - gutter) return window.innerWidth - gutter - right
-                return 0
-            })
+            const left = rect.left - applied.current
+            const right = rect.right - applied.current
+            if (left < gutter || rect.width > window.innerWidth - 2 * gutter) setDx(gutter - left)
+            else if (right > window.innerWidth - gutter) setDx(window.innerWidth - gutter - right)
+            else setDx(0)
         }
         measure()
         window.addEventListener('resize', measure)
         return () => window.removeEventListener('resize', measure)
     }, [ref, gutter])
     return dx ? { transform: `translateX(${dx}px)` } : undefined
+}
+
+/**
+ * A popover's labelled More ("More clefs", "More time signatures", Transpose's "More options"):
+ * a tertiary button whose 12px chevron says it opens more — pointing up once it has, for a
+ * toggle that reads "Fewer options" then.
+ */
+export function PopoverExpander({ expanded = false, onClick, children }: { expanded?: boolean; onClick: () => void; children: ReactNode }) {
+    return (
+        <TertiaryButton onClick={onClick}>
+            <span className="inline-flex items-center gap-1">
+                {children}
+                <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={12} />
+            </span>
+        </TertiaryButton>
+    )
 }
 
 /** Whether a key's default action edits text in `target` (an input, textarea or contenteditable). */

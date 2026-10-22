@@ -272,6 +272,28 @@ export function waitForAutosave(page: Page): Promise<Request> {
     })
 }
 
+/**
+ * The editor header fits the viewport at its current width (a phone's, or a desktop step's):
+ * no horizontal page overflow, and every score-level chip inside the header's box (a flex row
+ * that overflowed would keep the header at viewport width while its children spill out).
+ */
+export async function expectHeaderFitsViewport(page: Page): Promise<void> {
+    const header = page.locator('header')
+    const headerBox = await header.boundingBox()
+    const viewport = page.viewportSize()
+    expect(headerBox).not.toBeNull()
+    expect(viewport).not.toBeNull()
+    expect(headerBox?.x ?? -1).toBeGreaterThanOrEqual(0)
+    expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    for (const name of ['Share score', 'Recordings', 'Export score']) {
+        const box = await page.getByRole('button', { name, exact: true }).boundingBox()
+        expect(box, name).not.toBeNull()
+        expect((box?.x ?? 0) + (box?.width ?? Infinity), name).toBeLessThanOrEqual((headerBox?.x ?? 0) + (headerBox?.width ?? 0) + 1)
+    }
+    const overflow = await page.evaluate(() => (document.scrollingElement?.scrollWidth ?? 0) - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+}
+
 /** Focus the editor container (where the editor's keydown listener sits) and return it. */
 export async function focusEditor(page: Page): Promise<Locator> {
     const editor = page.locator('div[tabindex="0"]').first()

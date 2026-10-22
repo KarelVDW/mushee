@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import {
     denyMicrophone,
     expect,
+    expectHeaderFitsViewport,
     focusEditor,
     MOCK_SCORE_ID,
     MOCK_SHARE_TOKEN,
@@ -470,6 +471,68 @@ test('the dock teaches moving a note until the first pitch edit', async ({ page 
     await expect(hint).toHaveCount(0)
 })
 
+test('pointing at the tempo mark over the selected note draws no ghost note through it', async ({ page }) => {
+    const svg = page.locator('.max-w-240 svg[data-score-canvas]')
+    const ghost = svg.locator('[data-ghost-note]')
+    const band = await svg.locator(SELECTION_BANDS).first().boundingBox()
+    const mark = await svg.locator('text', { hasText: '= 120' }).boundingBox()
+    if (!band || !mark) throw new Error('expected the selected note and the tempo mark above it')
+    // Over the selected note, a line off its pitch: the ghost previews the new pitch.
+    await page.mouse.move(band.x + band.width / 2, band.y + band.height - 4)
+    await expect(ghost).toHaveCount(1)
+    // Onto the mark (its "= 120" text, in the note's column): the ghost steps aside for its tooltip.
+    await page.mouse.move(mark.x + mark.width / 2, mark.y + mark.height / 2, { steps: 4 })
+    await expect(page.getByText('Change tempo', { exact: true })).toBeVisible()
+    await expect(ghost).toHaveCount(0)
+})
+
+// --- The header between phone and full desktop: it compacts rather than overflowing or overlapping ---
+
+for (const { width, step } of [
+    { width: 1024, step: 'icon-only score chips' },
+    { width: 820, step: 'icon-only Transpose, and one chip for undo, redo and shortcuts' },
+] as const) {
+    test(`at ${width}px the header fits with ${step}, the transport clear of the title and instrument`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 800 })
+        await expectHeaderFitsViewport(page)
+        // Share, Recordings and Export drop their labels; the names stay.
+        await expect(page.getByRole('button', { name: 'Share score', exact: true })).toHaveText('')
+        const play = await page.getByRole('button', { name: 'Play', exact: true }).boundingBox()
+        for (const control of [
+            page.getByRole('button', { name: /^Change instrument/ }),
+            page.getByRole('textbox', { name: 'Score title' }),
+        ]) {
+            const box = await control.boundingBox()
+            const apart = (box?.x ?? 0) + (box?.width ?? 0) <= (play?.x ?? 0) || (play?.x ?? 0) + (play?.width ?? 0) <= (box?.x ?? 0)
+            expect(apart, 'Play overlaps the title or the instrument chip').toBe(true)
+        }
+        if (width < 1024) {
+            await expect(page.getByRole('button', { name: 'Transpose', exact: true })).toHaveText('')
+            await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0)
+            await page.getByRole('button', { name: 'Undo, redo and shortcuts' }).click()
+            const menu = page.getByRole('dialog', { name: 'Undo, redo and shortcuts' })
+            await expect(menu.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-disabled', 'true')
+            await menu.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+            await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible()
+        } else {
+            await expect(page.getByRole('button', { name: 'Transpose', exact: true })).toHaveText('Transpose')
+            await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible()
+        }
+    })
+}
+
+test('the narrow header’s history chip undoes in place and stays open for the next one', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 800 })
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await page.getByRole('button', { name: 'Undo, redo and shortcuts' }).click()
+    const menu = page.getByRole('dialog', { name: 'Undo, redo and shortcuts' })
+    await menu.getByRole('button', { name: 'Undo' }).click()
+    await menu.getByRole('button', { name: 'Undo' }).click()
+    await expect(menu.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-disabled', 'true')
+    await expect(menu.getByRole('button', { name: 'Redo' })).not.toHaveAttribute('aria-disabled', 'true')
+})
+
 test('hovering a dock control names it, with its hint and live shortcut', async ({ page }) => {
     await page.getByRole('button', { name: 'Quarter note' }).hover()
     // The tooltip card is decorative (the hidden role=tooltip text describes the control).
@@ -612,11 +675,15 @@ test('share menu creates and copies the read-only link in one press, and turns i
     await page.getByRole('button', { name: 'Share score' }).click()
     const panel = page.getByRole('dialog', { name: 'Share score' })
     await expect(panel).toBeVisible()
-    await expect(panel).toContainText("Anyone with the link can see, play and download this score. They can't change it.")
+    const promise = "Anyone with the link can see, play and download this score. They can't change it. No account needed."
+    await expect(panel).toContainText(promise)
     await panel.getByRole('button', { name: 'Create link and copy' }).click()
 
     const link = panel.getByRole('textbox', { name: 'Share link' })
     await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+    // The same promise once the link exists — no file-format list.
+    await expect(panel).toContainText(promise)
+    await expect(panel).not.toContainText('MusicXML')
     expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
     if (browserName === 'chromium') {
         // Copied in the same press: Copy says so for a moment — and no toast lands over the dock.
@@ -774,6 +841,14 @@ test.describe('an empty score', () => {
         expect(await page.locator('.max-w-240 svg[data-score-canvas]').innerHTML()).not.toContain('Sing, hum')
     })
 
+    test('the selected rest gets no "To move a note" line — one instruction on the first screen', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        await expect(page.getByText(/^To move a note/)).toHaveCount(0)
+        // It is only waiting for a real note: the first one placed brings it.
+        await page.getByRole('button', { name: 'Rest', exact: true }).click()
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toBeVisible()
+    })
+
     test('Start recording starts a take; once notes land the empty state is gone', async ({ page, browserName }) => {
         test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
         await mockRecording(page)
@@ -798,6 +873,48 @@ test.describe('an empty score', () => {
         await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toBeVisible()
         await page.getByRole('button', { name: 'Rest', exact: true }).click()
         await expect(heading).toBeVisible()
+    })
+
+    test('nothing else competes with Start recording: no bar buttons, no pressed Rest, until the first note', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        const add = page.getByRole('button', { name: 'Add bar' })
+        const remove = page.getByRole('button', { name: 'Remove last bar' })
+        await expect(add).toHaveCount(0)
+        await expect(remove).toHaveCount(0)
+        // The selected first rest is the editor's default, not a mode: Rest isn't lit for it.
+        const rest = page.getByRole('button', { name: 'Rest', exact: true })
+        await expect(rest).toHaveAttribute('aria-pressed', 'false')
+
+        await page.getByRole('button', { name: 'Higher', exact: true }).click()
+        await expect(add).toBeVisible()
+        await expect(remove).toBeVisible()
+        // Emptied again, they wait once more.
+        await rest.click()
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        await expect(add).toHaveCount(0)
+        await expect(rest).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    test('the header offers no Transpose until there is a note to move', async ({ page }) => {
+        const transpose = page.getByRole('button', { name: 'Transpose', exact: true })
+        await expect(page.getByRole('button', { name: 'Share score' })).toBeVisible()
+        await expect(transpose).toHaveCount(0)
+        // Its shortcut has nothing to open either.
+        await focusEditor(page)
+        await page.keyboard.press('Shift+T')
+        await expect(page.getByRole('dialog', { name: 'Transpose' })).toHaveCount(0)
+        await page.getByRole('button', { name: 'Rest', exact: true }).click()
+        await expect(transpose).toBeVisible()
+    })
+
+    test('sharp or flat is off on the rest, saying why; Higher turns it into a note', async ({ page }) => {
+        const sharp = page.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })
+        await expect(sharp).toHaveAttribute('aria-disabled', 'true')
+        await expect(sharp).toHaveAccessibleDescription(/Rests have no pitch — use Higher or Lower to make it a note\./)
+        const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+        await page.getByRole('button', { name: 'Higher', exact: true }).click()
+        await expect(heading).toHaveCount(0)
+        await expect(sharp).not.toHaveAttribute('aria-disabled', 'true')
     })
 
     test('from onboarding, focus starts on Start recording', async ({ page }) => {

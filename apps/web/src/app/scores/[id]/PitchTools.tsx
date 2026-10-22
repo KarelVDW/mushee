@@ -23,6 +23,8 @@ interface PitchToolsProps {
     onTransposeOpenChange: (open: boolean) => void
     /** Forwarded to the popover's onScopeChange: the canvas pulse over its target. Keep referentially stable. */
     onTransposeAim: (scope: PitchScope | null) => void
+    /** A narrow header: the chip shows its icon alone, and its tooltip names it ("Transpose — move the whole song…"). */
+    iconOnly?: boolean
 }
 
 /**
@@ -32,7 +34,7 @@ interface PitchToolsProps {
  * phones reach Transpose there too. While a recording writes into the score the chip stays in
  * place but off, saying why — like the dock's clef / key / time / tempo chips.
  */
-export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, onTransposeAim }: PitchToolsProps) {
+export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, onTransposeAim, iconOnly = false }: PitchToolsProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
     const keybindings = manipulator.keybindings
     useSyncExternalStore(keybindings.subscribe, keybindings.getSnapshot, keybindings.getSnapshot)
@@ -44,13 +46,15 @@ export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, 
             ariaLabel="Transpose"
             disabled={manipulator.historyLocked}
             disabledReason={STOP_RECORDING_FIRST}
-            tooltip="Move the whole song higher or lower"
+            // Labelled, the chip names itself and the tooltip says what it does; icon-only, the tooltip names it too.
+            tooltip={iconOnly ? 'Transpose' : 'Move the whole song higher or lower'}
+            hint={iconOnly ? 'move the whole song higher or lower' : undefined}
             shortcut={keybindings.shortcutFor('transpose')}
             tooltipSide="bottom"
             chip={
                 <span className="inline-flex items-center gap-1.5">
                     <Icon name="transpose" size={14} />
-                    Transpose
+                    {!iconOnly && 'Transpose'}
                 </span>
             }
             className={HEADER_POPOVER_POSITION}

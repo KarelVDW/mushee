@@ -1,8 +1,8 @@
 'use client'
 
-import { BeatUnitIcon } from '@mushee/notation/components'
+import { AccidentalIcon, BeatUnitIcon } from '@mushee/notation/components'
 import type { Accidental } from '@mushee/notation/model'
-import { type ReactNode, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -96,7 +96,7 @@ export function MoreNoteTools({ manipulator }: { manipulator: ScoreManipulator }
                             label={SIMPLIFY_LABEL}
                             hint="Fewest possible, same sound"
                             shortcut={keybindings.shortcutFor('minimize-accidentals')}
-                            state={tools.pitch}
+                            state={tools.simplify}
                             onClick={() => {
                                 manipulator.minimizeAccidentals()
                                 close()
@@ -169,13 +169,14 @@ function ToolRow({ icon, label, hint, shortcut, state, toggle = false, onClick }
 type SheetView = 'menu' | 'clef' | 'key' | 'time' | 'tempo'
 
 /**
- * The sharp-or-flat picker's options on the sheet, each glyph captioned in words — None first.
- * The natural's name keeps its caption and the word the dock and shortcuts use: "None (natural)".
+ * The sharp-or-flat picker's options on the sheet, each drawn glyph (AccidentalIcon, by its
+ * alteration) captioned in words — None first. The natural's name keeps its caption and the
+ * word the dock and shortcuts use: "None (natural)".
  */
-const SHEET_ACCIDENTALS: { value: Accidental | undefined; glyph: string; caption: string; name: string }[] = [
-    { value: undefined, glyph: '♮', caption: 'None', name: 'None (natural)' },
-    { value: 'b', glyph: '♭', caption: 'Flat', name: 'Flat' },
-    { value: '#', glyph: '♯', caption: 'Sharp', name: 'Sharp' },
+const SHEET_ACCIDENTALS: { value: Accidental | undefined; alter: -1 | 0 | 1; caption: string; name: string }[] = [
+    { value: undefined, alter: 0, caption: 'None', name: 'None (natural)' },
+    { value: 'b', alter: -1, caption: 'Flat', name: 'Flat' },
+    { value: '#', alter: 1, caption: 'Sharp', name: 'Sharp' },
 ]
 
 interface MoreToolsSheetProps {
@@ -187,15 +188,22 @@ interface MoreToolsSheetProps {
     onTransposeOpenChange: (open: boolean) => void
     /** Forwarded to the transpose picker's onScopeChange: the canvas pulse over its target. Keep referentially stable. */
     onTransposeAim: (scope: PitchScope | null) => void
+    /**
+     * The menu (not a picker) opened or closed — the page then scrolls the selected note's row
+     * into the strip the menu leaves clear above it. Keep referentially stable.
+     */
+    onMenuOpenChange?: (open: boolean) => void
 }
 
 /**
  * The phone dock's "More" tile and the sheet it opens: everything that isn't Undo or a note
  * length, each with a text label and its current value. "This note" holds the note tools
  * (Dotted, Triplet, Rest, Tie and Sharp or flat, each captioned in plain words); "Whole score"
- * the clef / key / time / tempo pickers, Transpose, Simplify sharps and flats, the metronome
- * and Redo. A picker swaps in for the menu with a Back link — sheets never stack — and a pick
- * shows its fill for a beat before the sheet closes.
+ * Redo first (in reach without scrolling), then the clef / key / time / tempo pickers,
+ * Transpose, Simplify sharps and flats and the metronome. A picker swaps in for the menu with a Back link — sheets never stack — and a pick
+ * shows its fill for a beat before the sheet closes. With a note selected the menu stops about
+ * one staff system short of the header (scrolling inside), so the note being fixed stays in
+ * view while its tiles keep the sheet open.
  */
 export function MoreToolsSheet({
     manipulator,
@@ -204,11 +212,16 @@ export function MoreToolsSheet({
     transposeOpen,
     onTransposeOpenChange,
     onTransposeAim,
+    onMenuOpenChange,
 }: MoreToolsSheetProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
     const anchorRef = useRef<HTMLDivElement>(null)
     const [view, setView] = useState<SheetView | null>(null)
     const open = view !== null || transposeOpen
+    const menuOpen = view === 'menu' && !transposeOpen
+    useEffect(() => onMenuOpenChange?.(menuOpen), [menuOpen, onMenuOpenChange])
+    // Gone with the dock's tool row (a take folds it away): the menu is closed then too.
+    useEffect(() => () => onMenuOpenChange?.(false), [onMenuOpenChange])
     const closeAll = () => {
         setView(null)
         if (transposeOpen) onTransposeOpenChange(false)
@@ -376,9 +389,19 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
     // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
     const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
+    // A score of rests has nothing to transpose yet.
+    const emptyScore = !manipulator.score?.hasPitchedNotes
 
     return (
-        <Popover ariaLabel="More tools" title="More tools" onDismiss={onClose} anchorRef={anchorRef} variant="sheet" className="gap-5">
+        <Popover
+            ariaLabel="More tools"
+            title="More tools"
+            onDismiss={onClose}
+            anchorRef={anchorRef}
+            variant="sheet"
+            // The note being fixed stays in view above the sheet ("This note" leads, so it is whole).
+            leaveRoomAbove={!nothingSelected}
+            className="gap-5">
             <section aria-label="This note" className="flex flex-col gap-2.5">
                 <div className="flex items-baseline justify-between gap-3">
                     <Eyebrow>This note</Eyebrow>
@@ -417,19 +440,25 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                     />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                    <span className="font-label font-semibold text-[15px] leading-tight text-on-surface">Sharp or flat</span>
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                        <span className="font-label font-semibold text-[15px] leading-tight text-on-surface">Sharp or flat</span>
+                        {/* On touch a reason is said inline; "Select a note first" is the section's caption already. */}
+                        {accidental.reason && accidental.reason !== NEEDS_A_NOTE && (
+                            <span className="font-body text-[11px] leading-tight text-on-surface-variant">{accidental.reason}</span>
+                        )}
+                    </span>
                     <Segmented
                         ariaLabel="Sharp or flat"
                         value={accidental.value}
                         disabled={accidental.disabled}
                         disabledReason={accidental.reason}
                         onChange={(value) => manipulator.run(SET_ACCIDENTAL, value)}
-                        options={SHEET_ACCIDENTALS.map(({ value, glyph, caption, name }) => ({
+                        options={SHEET_ACCIDENTALS.map(({ value, alter, caption, name }) => ({
                             value,
                             ariaLabel: name,
                             label: (
                                 <span className="flex flex-col items-center gap-1">
-                                    <span className="text-[16px] leading-none">{glyph}</span>
+                                    <AccidentalIcon alter={alter} size={18} />
                                     <span className="font-body font-medium text-[11px] leading-none">{caption}</span>
                                 </span>
                             ),
@@ -441,6 +470,20 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
             <section aria-label="Whole score" className="flex flex-col gap-1">
                 <Eyebrow>Whole score</Eyebrow>
                 <div className="flex flex-col -mx-2">
+                    {/* First, in reach without scrolling: one Undo too many after fixing notes is
+                        taken back from here (Undo itself leads the tool row). */}
+                    <SheetRow
+                        label="Redo"
+                        ariaLabel="Redo"
+                        icon="redo"
+                        hint={manipulator.canRedo ? 'Bring back what Undo took away.' : 'Nothing to redo yet.'}
+                        disabled={!manipulator.canRedo}
+                        action
+                        onClick={() => {
+                            manipulator.redo()
+                            onClose()
+                        }}
+                    />
                     <SheetRow
                         label="Clef"
                         ariaLabel={words.clefLabel}
@@ -478,7 +521,13 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         }
                         onClick={() => onOpen('tempo')}
                     />
-                    <SheetRow label="Transpose" ariaLabel="Transpose" onClick={onTranspose} />
+                    <SheetRow
+                        label="Transpose"
+                        ariaLabel="Transpose"
+                        hint={emptyScore ? 'Record or add some notes first.' : undefined}
+                        disabled={emptyScore}
+                        onClick={onTranspose}
+                    />
                     <SheetRow
                         label={SIMPLIFY_LABEL}
                         ariaLabel={SIMPLIFY_LABEL}
@@ -498,17 +547,6 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                             hint="A steady click while playing and recording."
                         />
                     </div>
-                    <SheetRow
-                        label="Redo"
-                        ariaLabel="Redo"
-                        icon="redo"
-                        disabled={!manipulator.canRedo}
-                        action
-                        onClick={() => {
-                            manipulator.redo()
-                            onClose()
-                        }}
-                    />
                 </div>
             </section>
         </Popover>

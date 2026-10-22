@@ -4,7 +4,7 @@ import { TimeSignatureIcon } from '@mushee/notation/components'
 import { TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, useState } from 'react'
 
-import { Popover, PopoverOption, TertiaryButton } from '@/components/ui'
+import { Popover, PopoverExpander, PopoverOption } from '@/components/ui'
 
 /** The meters a newcomer reaches for, shown first. */
 const COMMON_METERS: TimeSignature[] = [new TimeSignature(4, 4), new TimeSignature(3, 4), new TimeSignature(2, 4), new TimeSignature(6, 8)]
@@ -28,7 +28,7 @@ interface TimeSignaturePopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the options — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -70,15 +70,15 @@ export function TimeSignaturePopover({
             onDismiss={onDismiss}
             anchorRef={anchorRef}
             variant={variant}
+            lead={lead}
             className={sheet ? 'gap-2' : `w-86 gap-2${className ? ` ${className}` : ''}`}>
-            {lead}
             <div role="group" aria-label="Time signature" className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap gap-1.5">{COMMON_METERS.map(cell)}</div>
                 {expanded && <div className="flex flex-wrap gap-1.5">{MORE_METERS.map(cell)}</div>}
             </div>
             {!expanded && (
                 <div>
-                    <TertiaryButton onClick={() => setExpanded(true)}>More time signatures</TertiaryButton>
+                    <PopoverExpander onClick={() => setExpanded(true)}>More time signatures</PopoverExpander>
                 </div>
             )}
         </Popover>

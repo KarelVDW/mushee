@@ -1,6 +1,6 @@
 export { INTERACTION_BLUE, NOTATION_INK, RECORDING_CURSOR_RED, WAVEFORM_COLORS } from './constants'
 export { Glyph } from './Glyph'
 export type { ScoreHighlight } from './HighlightLayer'
-export { BeatUnitIcon, ClefIcon, KeySignatureIcon, TimeSignatureIcon } from './NotationIcons'
+export { AccidentalIcon, BeatUnitIcon, ClefIcon, KeySignatureIcon, TimeSignatureIcon } from './NotationIcons'
 export type { AttributeClickEvent, MeasureButtonsRect, PixelSquare, SelectionMenuEvent } from './ScoreView'
 export { ScoreView } from './ScoreView'

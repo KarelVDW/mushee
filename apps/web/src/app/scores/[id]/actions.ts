@@ -64,26 +64,33 @@ export const MOVE_NEXT: ScoreAction = {
 
 // --- Pitch editing ---
 
+/**
+ * Higher / Lower: every selected note one staff step up or down. A lone selected rest has no
+ * step to take, so it becomes a note on the middle line instead (spelled in the key there) —
+ * on a phone the nudges are the only way to pitch one — while rests inside a run stay silent.
+ */
+function stepSelection(score: Score, notes: Note[], direction: 1 | -1): Note[] {
+    const [only] = notes
+    if (notes.length === 1 && only.isRest)
+        return score.replace(notes, [only.clone({ pitch: only.keySignature.spell(only.clef.middleLinePitch) })])
+    return score.replace(
+        notes,
+        notes.map((note) => note.steppedBy(direction)),
+    )
+}
+
 export const RAISE_PITCH: ScoreAction = {
     id: 'raise-pitch',
     label: 'Higher',
     movesPitch: true,
-    executeBulk: (score, notes) =>
-        score.replace(
-            notes,
-            notes.map((note) => note.steppedBy(1)),
-        ),
+    executeBulk: (score, notes) => stepSelection(score, notes, 1),
 }
 
 export const LOWER_PITCH: ScoreAction = {
     id: 'lower-pitch',
     label: 'Lower',
     movesPitch: true,
-    executeBulk: (score, notes) =>
-        score.replace(
-            notes,
-            notes.map((note) => note.steppedBy(-1)),
-        ),
+    executeBulk: (score, notes) => stepSelection(score, notes, -1),
 }
 
 /**

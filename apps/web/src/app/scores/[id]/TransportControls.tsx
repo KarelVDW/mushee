@@ -40,6 +40,8 @@ export interface TransportControlsProps {
     large?: boolean
     /** The mobile dock hides the metronome here and hosts it in the More sheet instead. */
     showMetronome?: boolean
+    /** A narrow header (EditorHeader `fit`): Stop takes no room at rest instead of keeping its hidden slot. */
+    collapseStop?: boolean
     shortcuts?: TransportShortcuts
 }
 
@@ -90,6 +92,7 @@ export function TransportControls({
     onMetronomeToggle,
     large = false,
     showMetronome = true,
+    collapseStop = false,
     shortcuts,
 }: TransportControlsProps) {
     const isRecording = recordingState !== 'idle'
@@ -97,7 +100,7 @@ export function TransportControls({
     // Stop keeps its slot (the centred transport never shifts) but only shows while playback
     // runs or is paused — at rest there is nothing to stop, and during a recording the record
     // button is the stop (with Space and Escape): a second stop square beside it would leave a
-    // newcomer guessing which one ends the recording.
+    // newcomer guessing which one ends the recording. A narrow header can't spare the slot.
     const canStop = playbackState !== 'stopped'
     const side = large ? 'top' : 'bottom'
 
@@ -105,8 +108,8 @@ export function TransportControls({
         <div className={`flex items-center shrink-0 ${large ? 'gap-1.5' : 'gap-2.5'}`}>
             <span
                 className={[
-                    'inline-flex transition-[opacity,visibility] duration-150 ease-solkey motion-reduce:transition-none',
-                    canStop ? 'visible opacity-100' : 'invisible opacity-0',
+                    'transition-[opacity,visibility] duration-150 ease-solkey motion-reduce:transition-none',
+                    canStop ? 'inline-flex visible opacity-100' : collapseStop ? 'hidden' : 'inline-flex invisible opacity-0',
                 ].join(' ')}>
                 <TransportBtn
                     size={large ? 40 : 36}
@@ -163,8 +166,10 @@ interface MobileEditorActionsProps {
     onNext: () => void
     onPitchUp: () => void
     onPitchDown: () => void
-    /** No note selected (nothing to navigate from or nudge). */
+    /** No note selected (nothing to navigate from). */
     disabled: boolean
+    /** The Pitch nudges' state (NoteToolStates.pitch): off with nothing selected or on a run of rests, saying why. */
+    pitch: { disabled: boolean; reason?: string }
 }
 
 /** One labelled pair of the phone's note controls: the white well, its two buttons, and an 11px caption under it. */
@@ -189,7 +194,7 @@ function LabelledWell({ label, children }: { label: string; children: ReactNode 
  * all) are NOT buttons here — they live in the score's selection popover, opened by
  * long-press / double-tap / drag-release.
  */
-export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled }: MobileEditorActionsProps) {
+export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled, pitch }: MobileEditorActionsProps) {
     const roomy = useMediaQuery('(min-width: 400px)')
     const size = roomy ? 44 : 40
     return (
@@ -204,10 +209,20 @@ export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, 
                     </TransportBtn>
                 </LabelledWell>
                 <LabelledWell label="Pitch">
-                    <TransportBtn size={size} onClick={onPitchDown} ariaLabel="Lower" disabled={disabled}>
+                    <TransportBtn
+                        size={size}
+                        onClick={onPitchDown}
+                        ariaLabel="Lower"
+                        disabled={pitch.disabled}
+                        disabledReason={pitch.reason}>
                         <Icon name="chevron-down" size={18} />
                     </TransportBtn>
-                    <TransportBtn size={size} onClick={onPitchUp} ariaLabel="Higher" disabled={disabled}>
+                    <TransportBtn
+                        size={size}
+                        onClick={onPitchUp}
+                        ariaLabel="Higher"
+                        disabled={pitch.disabled}
+                        disabledReason={pitch.reason}>
                         <Icon name="chevron-up" size={18} />
                     </TransportBtn>
                 </LabelledWell>

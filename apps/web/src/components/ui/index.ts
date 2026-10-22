@@ -7,7 +7,7 @@ export { DialogPanel } from './Dialog'
 export { HeaderMenu } from './HeaderMenu'
 export { isAcceptablePassword, NEW_PASSWORD_HINT, SIGNUP_PASSWORD_HINT } from './Password'
 export { NewPasswordFields, PasswordField } from './PasswordField'
-export { Popover, PopoverOption, PopoverSheetHost, usePickConfirmation } from './Popover'
+export { Popover, PopoverExpander, PopoverOption, PopoverSheetHost, SHEET_SYSTEM_ROOM, usePickConfirmation } from './Popover'
 export { focusWithoutTooltip, Tooltip, type TooltipShortcut } from './Tooltip'
 export {
     Alert,

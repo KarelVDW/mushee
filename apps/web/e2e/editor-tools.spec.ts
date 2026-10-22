@@ -360,6 +360,11 @@ test('changing the instrument through the dialog updates the header chip', async
     await expect(confirm).toHaveAccessibleDescription('Pick a different instrument')
     // No 'Instrument · Piano' readout: the picked tile and the confirm already say it.
     await expect(dialog.getByText(/^Instrument · /)).toHaveCount(0)
+    // One explanation before the choice: the new-score intro ('… change it later') stays out,
+    // while the piano's melody line — a sanctioned moment — stays.
+    await expect(dialog.getByText('What will you sing or play?')).toHaveCount(0)
+    await expect(dialog.getByText(/You can change it later/)).toHaveCount(0)
+    await expect(dialog.getByText('On piano, play the tune one note at a time — Solkey writes melodies.')).toBeVisible()
 
     // Violin is a popular tile; picking it names the confirm after it.
     await dialog.getByRole('button', { name: 'Pick Violin', exact: true }).click()

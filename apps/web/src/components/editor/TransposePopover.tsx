@@ -7,7 +7,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
-import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
+import { Eyebrow, Icon, Popover, PopoverExpander, PopoverOption, PrimaryButton, Segmented } from '@/components/ui'
 
 type TransposeTab = 'interval' | 'key' | 'semitones'
 
@@ -85,7 +85,7 @@ interface TransposePopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the controls — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -209,8 +209,20 @@ export function TransposePopover({
             onKeyDown={handleKey}
             anchorRef={anchorRef}
             variant={variant}
-            className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}>
-            {lead}
+            lead={lead}
+            className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
+            // On a phone sheet this row stays pinned under the scrolling controls: however far
+            // "More options" grows them, Apply is in view.
+            footer={
+                <div className="flex items-center justify-between gap-3">
+                    <PopoverExpander expanded={advanced} onClick={() => (advanced ? setAdvanced(false) : openAdvanced())}>
+                        {advanced ? 'Fewer options' : 'More options'}
+                    </PopoverExpander>
+                    <PrimaryButton onClick={apply} disabled={interval.isUnison}>
+                        Apply
+                    </PrimaryButton>
+                </div>
+            }>
             <p aria-live="polite" className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">
                 {transposeReadout(interval.chromatic, keyAfter)}
             </p>
@@ -252,7 +264,8 @@ export function TransposePopover({
             {advanced && tab === 'interval' && (
                 <>
                     <LabeledRow label="Interval">
-                        <div role="group" aria-label="Interval size" className="flex flex-wrap gap-1">
+                        {/* One row of eight on every width: fluid 37–39px cells, still 40px tall. */}
+                        <div role="group" aria-label="Interval size" className="grid grid-cols-8 gap-1">
                             {DEGREES.map(({ degree: d, label, name }) => (
                                 <PopoverOption
                                     key={d}
@@ -260,7 +273,7 @@ export function TransposePopover({
                                     ariaLabel={name}
                                     title={name}
                                     onClick={() => selectDegree(d)}
-                                    className="justify-center w-10 h-10 text-[13px] font-medium">
+                                    className="justify-center w-full min-w-0 h-10 text-[13px] font-medium">
                                     {label}
                                 </PopoverOption>
                             ))}
@@ -302,7 +315,7 @@ export function TransposePopover({
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>
-                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" />
+                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" fluid={sheet} />
                 </>
             )}
 
@@ -336,21 +349,12 @@ export function TransposePopover({
 
             <div
                 aria-hidden
-                className="bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
+                className="shrink-0 bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
                 <div className="overflow-hidden" style={{ width: previewZoom.width, height: previewZoom.height }}>
                     <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
                         <ScoreView score={preview} layoutId={preview.layout.id} />
                     </div>
                 </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-                <TertiaryButton onClick={() => (advanced ? setAdvanced(false) : openAdvanced())}>
-                    {advanced ? 'Fewer options' : 'More options'}
-                </TertiaryButton>
-                <PrimaryButton onClick={apply} disabled={interval.isUnison}>
-                    Apply
-                </PrimaryButton>
             </div>
         </Popover>
     )

@@ -7,6 +7,7 @@
  */
 
 import { type AttributeClickEvent, type MeasureButtonsRect, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
+import { followScrollBehavior } from '@mushee/notation/lib/useScrollFollow'
 import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
@@ -26,10 +27,11 @@ import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
 import { EditorAnnouncer, KeyboardHelp } from './EditorAnnouncer'
 import { EditorEmptyState } from './EditorEmptyState'
-import { EditorHeader, UNTITLED_SCORE } from './EditorHeader'
+import { EditorHeader, HEADER_FIT_QUERIES, type HeaderFit, UNTITLED_SCORE } from './EditorHeader'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
+import { NoteToolStates } from './NoteToolParts'
 import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
 import { ConcurrentRecordingDialog, MicBlockedDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingStrip } from './RecordingStrip'
@@ -50,6 +52,15 @@ const UNDO_TOAST_MS = 6000
 const TOAST_GAP_PX = 12
 /** The engraved score's own <svg> inside the canvas — never a chrome icon's that sits after it. */
 const SCORE_SVG = 'svg[data-score-canvas]'
+/** The selection's staff band in the score (the first one of a run). */
+const SELECTION_BAND = `${SCORE_SVG} rect[data-selection-band]`
+/**
+ * Where the selection's staff band sits while the phone's More menu is open: 52px under the
+ * header, in the strip the menu leaves clear (8px frame gap + SHEET_SYSTEM_ROOM's 140px) — the
+ * staff mid-strip, with room for ledger lines either side, and its row's top below the 16px the
+ * score's own selection follow keeps, so the two never tug at each other.
+ */
+const REVEAL_BAND_TOP_PX = 52
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -76,10 +87,20 @@ export default function ScoreEditorPage() {
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [transposeOpen, setTransposeOpen] = useState(false)
+    // A score of rests has nothing to transpose (the chip hides and the shortcut declines): a
+    // popover still open as the last note goes closes with it, rather than reopening later.
+    const hasPitchedNotes = !!score?.hasPitchedNotes
+    useEffect(() => {
+        if (!hasPitchedNotes) setTransposeOpen(false)
+    }, [hasPitchedNotes])
     const { highlight: pitchHighlight, aim: aimTranspose } = usePitchHighlight(manipulator)
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
+    // Between the phone and the full desktop header, two compaction steps (HeaderFit).
+    const headerMedium = useMediaQuery(HEADER_FIT_QUERIES.medium)
+    const headerNarrow = useMediaQuery(HEADER_FIT_QUERIES.narrow)
+    const headerFit: HeaderFit = headerNarrow ? 'narrow' : headerMedium ? 'medium' : 'full'
 
     const { data: scoreDocument, error: loadError, refetch, isFetching } = useScoreDocument(id)
 
@@ -209,6 +230,22 @@ export default function ScoreEditorPage() {
     }, [manipulator, openSelectionMenu])
     const selectionMenuOpen = selectionMenu !== null
     const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+    // Phones: while the More menu is open over a selection it stops one staff system short of
+    // the header (SHEET_SYSTEM_ROOM), and the selected note's row scrolls into that strip, so a
+    // note being fixed changes in view. A spacer under the score lets even the last row get
+    // there; it goes with the menu.
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+    const revealingSelection = isMobile && moreMenuOpen && !!activeNote
+    useEffect(() => {
+        if (!revealingSelection) return
+        const band = scoreAreaRef.current?.querySelector(SELECTION_BAND)
+        const scroller = scrollAreaRef.current
+        if (!band || !scroller) return
+        const offset = band.getBoundingClientRect().top - scroller.getBoundingClientRect().top - REVEAL_BAND_TOP_PX
+        if (Math.abs(offset) > 1) scroller.scrollBy({ top: offset, behavior: followScrollBehavior() })
+        // activeNote: a toggle replaces the note (and may move it) — follow it while the menu stays open.
+    }, [revealingSelection, activeNote])
     const emptyStateId = useId()
     const keyboardHelpId = useId()
     // Position is derived from the live selection (not the gesture point) every render, so
@@ -551,6 +588,7 @@ export default function ScoreEditorPage() {
                     }}
                     autosave={autosave}
                     compact={isMobile}
+                    fit={headerFit}
                     transport={transport}
                     transposeOpen={transposeOpen}
                     onTransposeOpenChange={setTransposeOpen}
@@ -615,6 +653,8 @@ export default function ScoreEditorPage() {
                                 <MeasureControls
                                     rect={measureButtonsRect}
                                     canRemove={score.measures.length > 1}
+                                    // Like Transpose, they wait for the first note: an empty score has one next step.
+                                    waiting={!score.hasPitchedNotes}
                                     onAdd={() => manipulator.addMeasure()}
                                     onRemove={() => manipulator.removeMeasure()}
                                 />
@@ -669,6 +709,10 @@ export default function ScoreEditorPage() {
                                 />
                             )}
                         </div>
+                        {/* Room to scroll any row up to the strip above the More menu (see revealingSelection). */}
+                        {revealingSelection && (
+                            <div aria-hidden data-export-exclude className="h-[calc(100dvh-var(--app-header-h,0px)-var(--dock-h,0px))]" />
+                        )}
                     </div>
                 </div>
                 <div ref={dockRef} className="relative shrink-0">
@@ -680,6 +724,7 @@ export default function ScoreEditorPage() {
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
+                        onMoreMenuOpenChange={setMoreMenuOpen}
                         // One instruction at a time: the phone's selection tip, or on an empty score the
                         // first-melody card, keeps the dock's how-to-move-a-note line out — the only
                         // thing selected there is a rest. It shows on the first selection after.
@@ -701,6 +746,7 @@ export default function ScoreEditorPage() {
                                     onPitchUp={() => manipulator.run(RAISE_PITCH)}
                                     onPitchDown={() => manipulator.run(LOWER_PITCH)}
                                     disabled={!activeNote}
+                                    pitch={new NoteToolStates(manipulator).pitch}
                                 />
                             ) : undefined
                         }

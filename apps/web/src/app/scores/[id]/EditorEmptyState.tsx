@@ -15,7 +15,8 @@ export const EMPTY_SCORE_COPY = {
     start: 'Start recording',
     byHand: {
         desktop: 'Or click a beat on the staff to place notes by hand.',
-        touch: 'Or tap the staff to place notes by hand.',
+        // A tap only selects on touch (no hover-to-pitch): the Pitch nudges turn the picked rest into a note.
+        touch: 'Or tap a beat, then use Pitch below to place notes by hand.',
     },
 } as const
 
@@ -67,7 +68,8 @@ export function EditorEmptyState({ show, touch, onStartRecording, descriptionId,
             className={[
                 'mx-auto mb-6 max-w-120 flex flex-col items-center gap-3 text-center',
                 // 56px below the score's last row on desktop. The bar buttons' row (MeasureControls:
-                // 12px + a 32px row, 40px on touch) sits in between, so this margin is what is left.
+                // 12px + a 32px row, 40px on touch) sits in between — held invisible while the score
+                // is empty, so it keeps its room — and this margin is what is left.
                 // Phones keep 24px clear of those 40px buttons — the row alone already takes 52px.
                 touch ? 'mt-6' : 'mt-3 pointer-coarse:mt-1',
                 'transition-[opacity,transform] duration-200 ease-solkey motion-reduce:transition-none',

@@ -46,14 +46,45 @@ export function ClefIcon({ type, size = 30, color = 'currentColor' }: IconProps 
     )
 }
 
+/**
+ * The window every accidental icon shares, in layout units around the glyph's origin (y down):
+ * room for all three — the flat reaches highest (≈17.8 up), the sharp lowest (≈14.1 down), the
+ * sharp is widest (≈10.1) — so ♭ ♮ ♯ draw at one scale and sit as they would on a line.
+ */
+const ACCIDENTAL_WINDOW = { x: -1, y: -19, width: 12.5, height: 34 }
+
+/**
+ * A flat, natural or sharp (`alter` −1, 0, 1) drawn from Bravura, its window `size` px tall —
+ * never the UI font's ♭ ♮ ♯, whose flat and natural come out at half the sharp's height.
+ */
+export function AccidentalIcon({ alter, size = 20, color = 'currentColor' }: IconProps & { alter: -1 | 0 | 1 }) {
+    const glyph = Pitch.glyphForAlter(alter)
+    const { x, y, width, height } = ACCIDENTAL_WINDOW
+    return (
+        <svg width={(size * width) / height} height={size} viewBox={`${x} ${y} ${width} ${height}`} aria-hidden>
+            {glyph && <Glyph name={glyph} x={0} y={0} fill={color} />}
+        </svg>
+    )
+}
+
 /** Horizontal step between the accidentals of a key-signature icon. */
 const KEY_ACCIDENTAL_ADVANCE = 7
 
-/** The run of sharps/flats for a key, drawn on a mini treble staff; C major (no accidentals) is a ♮. */
+/** The run of sharps/flats for a key, drawn on a mini treble staff; C major (no accidentals) is a natural on the middle line. */
 export function KeySignatureIcon({ fifths, size = 30, color = 'currentColor' }: IconProps & { fifths: number }) {
     const accidentals = KeySignature.accidentalsForFifths(fifths)
-    if (accidentals.length === 0) return <span style={{ fontSize: size * 0.5, lineHeight: 1, color }}>♮</span>
-    const viewWidth = accidentals.length * KEY_ACCIDENTAL_ADVANCE + 4
+    const viewWidth = Math.max(1, accidentals.length) * KEY_ACCIDENTAL_ADVANCE + 4
+    if (accidentals.length === 0) {
+        return (
+            <svg
+                width={(size * viewWidth) / STAFF_WINDOW_HEIGHT}
+                height={size}
+                viewBox={`0 ${STAFF_WINDOW_TOP} ${viewWidth} ${STAFF_WINDOW_HEIGHT}`}
+                aria-hidden>
+                <Glyph name="accidentalNatural" x={2} y={Staff.TOP_Y + Staff.HEIGHT / 2} fill={color} />
+            </svg>
+        )
+    }
     return (
         <svg
             width={(size * viewWidth) / STAFF_WINDOW_HEIGHT}

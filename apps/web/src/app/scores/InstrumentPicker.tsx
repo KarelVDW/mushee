@@ -93,6 +93,12 @@ interface InstrumentPickerProps {
     chordHint?: boolean
     /** The 'Instrument · Piano' readout beside the label; off where the dialog already names the current instrument. */
     showCurrentEyebrow?: boolean
+    /**
+     * The new-score intro — 'What will you sing or play?' and its line on what the choice does
+     * ('… You can change it later.'). Off inside Change instrument, whose own subtitle says
+     * that: the group is then named 'Instrument', and the chord line still shows.
+     */
+    showIntro?: boolean
     /** Focus the search field on mount — when the picker opens on request (the import dialog's 'Change'). */
     autoFocusSearch?: boolean
 }
@@ -105,7 +111,14 @@ interface InstrumentPickerProps {
  * the current instrument isn't a popular one; a hidden duplicate a score already uses
  * (an imported Horn in C) still shows, selected, in its family.
  */
-export function InstrumentPicker({ value, onChange, chordHint = true, showCurrentEyebrow = true, autoFocusSearch }: InstrumentPickerProps) {
+export function InstrumentPicker({
+    value,
+    onChange,
+    chordHint = true,
+    showCurrentEyebrow = true,
+    showIntro = true,
+    autoFocusSearch,
+}: InstrumentPickerProps) {
     const labelId = useId()
     const [search, setSearch] = useState('')
     const [initial] = useState(value)
@@ -128,22 +141,30 @@ export function InstrumentPicker({ value, onChange, chordHint = true, showCurren
     const showFamilies = query !== '' || expanded
 
     return (
-        <div role="group" aria-labelledby={labelId} className="flex flex-col gap-3 flex-1 min-h-0">
+        <div
+            role="group"
+            aria-labelledby={showIntro ? labelId : undefined}
+            aria-label={showIntro ? undefined : 'Instrument'}
+            className="flex flex-col gap-3 flex-1 min-h-0">
             <div className="flex flex-col">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
-                        What will you sing or play?
-                    </span>
-                    {showCurrentEyebrow && <Eyebrow>Instrument · {value.displayName}</Eyebrow>}
-                </div>
-                <span className="mt-1 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                    Sets the playback sound and helps Solkey listen. You can change it later.
-                </span>
+                {showIntro && (
+                    <>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
+                                What will you sing or play?
+                            </span>
+                            {showCurrentEyebrow && <Eyebrow>Instrument · {value.displayName}</Eyebrow>}
+                        </div>
+                        <span className="mt-1 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            Sets the playback sound and helps Solkey listen. You can change it later.
+                        </span>
+                    </>
+                )}
                 {chordHint && (
                     // Always mounted, so a screen reader hears the line the moment a chordal pick adds it.
                     <div aria-live="polite">
                         {value.playsChords && (
-                            <div className="mt-1.5">
+                            <div className={showIntro ? 'mt-1.5' : undefined}>
                                 <InstrumentChordHint instrument={value} />
                             </div>
                         )}

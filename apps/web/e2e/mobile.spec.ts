@@ -3,7 +3,17 @@ import { resolve } from 'node:path'
 
 import type { Locator, Page } from '@playwright/test'
 
-import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
+import {
+    denyMicrophone,
+    expect,
+    expectHeaderFitsViewport,
+    MOCK_SCORE_ID,
+    MOCK_SHARE_TOKEN,
+    MOCK_TITLE,
+    SELECTION_BANDS,
+    test,
+    waitForAutosave,
+} from './fixtures'
 import { mockRecording } from './recording'
 
 /**
@@ -204,8 +214,8 @@ test('after a recording at the foot of a long score, the selected bar sits above
     }).toPass({ timeout: 5000 })
 })
 
-test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {
-    // The fixture as rests only: a score without a single pitched note, so the empty state shows.
+/** Serve the fixture as rests only: a score without a single pitched note, so the empty state shows. */
+async function serveRestsOnly(page: Page): Promise<void> {
     const stored = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as {
         parts: { measures: { entries: Record<string, unknown>[] }[] }[]
     }
@@ -225,6 +235,35 @@ test('from onboarding, Start recording hands focus to the dock’s stop as the e
             },
         }),
     )
+}
+
+test('on the empty score the selected rest gets no move hint, and the Pitch nudges make it a note', async ({ page }) => {
+    await serveRestsOnly(page)
+    await page.reload()
+    const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+    await expect(heading).toBeVisible()
+    // One instruction on the first screen: the dock doesn't also talk about moving a note.
+    await expect(page.getByText(/^To move a note/)).toHaveCount(0)
+    // By hand on a phone means the Pitch nudges (a tap only selects), and the line says so.
+    await expect(page.getByText('Or tap a beat, then use Pitch below to place notes by hand.')).toBeVisible()
+    // Nor do the bar buttons compete with Start recording: they wait for the first note.
+    await expect(page.getByRole('button', { name: 'Add bar' })).toHaveCount(0)
+    // Sharp or flat has nothing to act on, and says so inline; the default rest doesn't light Rest.
+    const sheet = await openMore(page)
+    await expect(sheet.getByRole('button', { name: 'Rest', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(sheet.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })).toBeDisabled()
+    await expect(sheet.getByText('Rests have no pitch — use Higher or Lower to make it a note.').first()).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).tap()
+
+    const patch = waitForAutosave(page)
+    await page.getByRole('button', { name: 'Higher', exact: true }).tap()
+    await patch
+    await expect(heading).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add bar' })).toBeVisible()
+})
+
+test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {
+    await serveRestsOnly(page)
     await mockRecording(page)
     await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
     const start = page.getByRole('button', { name: 'Start recording' })
@@ -295,6 +334,69 @@ test('pitch actions live in the More sheet and the transpose sheet swaps in with
     await expect(page.getByRole('dialog', { name: 'More tools' })).toBeVisible()
     await page.getByRole('dialog', { name: 'More tools' }).getByRole('button', { name: 'Close' }).tap()
     await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('transpose’s More options keeps Apply pinned in view, the interval row whole, and fades the clipped body', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: 'Transpose' }).tap()
+    const transpose = page.getByRole('dialog', { name: 'Transpose' })
+    await transpose.getByRole('button', { name: 'More options' }).tap()
+    const apply = transpose.getByRole('button', { name: 'Apply' })
+    await expect(apply).toBeInViewport({ ratio: 1 })
+    // The body grew past the sheet: it scrolls, and the fade says so.
+    await expect(transpose.locator('[data-sheet-fade="bottom"]')).toHaveCount(1)
+    // 1–8 on one row: no lone '8' wrapped under the rest.
+    const sizes = transpose.getByRole('group', { name: 'Interval size' }).getByRole('button')
+    await expect(sizes).toHaveCount(8)
+    const tops = new Set(await sizes.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top))))
+    expect(tops.size).toBe(1)
+})
+
+test('with a note selected the More sheet leaves its row in view, even from the last row of the score', async ({ page }) => {
+    // Enough bars for several rows, then a note on the last one.
+    const add = page.getByRole('button', { name: 'Add bar' })
+    for (let i = 0; i < 4; i++) await add.tap()
+    const svg = page.locator('.max-w-240 svg[data-score-canvas]')
+    await svg.scrollIntoViewIfNeeded()
+    const box = await svg.boundingBox()
+    if (!box) throw new Error('expected the score')
+    await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height - 100)
+    const band = svg.locator(SELECTION_BANDS).first()
+    await expect(band).toBeVisible()
+
+    const sheet = await openMore(page)
+    // "This note" leads the sheet, whole.
+    await expect(sheet.getByRole('button', { name: 'Dotted' })).toBeInViewport({ ratio: 1 })
+    await expect(async () => {
+        const selected = await band.boundingBox()
+        const sheetBox = await sheet.boundingBox()
+        const header = await page.locator('header').boundingBox()
+        expect(selected?.y ?? -1).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? Infinity))
+        expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
+    }).toPass({ timeout: 5000 })
+
+    // Toggling a tile keeps the sheet open and the note in view.
+    await sheet.getByRole('button', { name: 'Dotted' }).tap()
+    await expect(sheet).toBeVisible()
+    const selected = await band.boundingBox()
+    const sheetBox = await sheet.boundingBox()
+    expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
+})
+
+test('one Undo too many is taken back from the top of the More sheet’s Whole score rows', async ({ page }) => {
+    await page.getByRole('button', { name: 'Higher', exact: true }).tap()
+    await page.getByRole('button', { name: 'Undo' }).tap()
+    const sheet = await openMore(page)
+    const redo = sheet.getByRole('button', { name: 'Redo' })
+    // In reach without scrolling, first under "Whole score".
+    await expect(redo).toBeInViewport({ ratio: 1 })
+    const clef = await sheet.getByRole('button', { name: /^Clef:/ }).boundingBox()
+    expect((await redo.boundingBox())?.y ?? Infinity).toBeLessThan(clef?.y ?? 0)
+    const patch = waitForAutosave(page)
+    await redo.tap()
+    await patch
+    await expect(sheet).toHaveCount(0)
 })
 
 test('the More sheet toggles note tools and the metronome', async ({ page }) => {
@@ -468,6 +570,52 @@ test('dock popovers open as sheets that stay on screen', async ({ page }) => {
     await expect(dialog).toHaveCount(0)
 })
 
+test('a picker opened from More puts Back at the top, level with Close, above its title', async ({ page }) => {
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: /^Clef:/ }).tap()
+    const clef = page.getByRole('dialog', { name: 'Select clef' })
+    await expect(clef.getByRole('button', { name: 'Back' })).toBeVisible()
+    // All three in one frame: the sheet rises as it opens.
+    const { back, close, title } = await clef.evaluate((sheet) => {
+        const top = (el: Element | null) => el?.getBoundingClientRect() ?? { top: NaN, bottom: NaN }
+        const buttons = [...sheet.querySelectorAll('button')]
+        const back = top(buttons.find((b) => b.textContent?.trim() === 'Back') ?? null)
+        const close = top(sheet.querySelector('button[aria-label="Close"]'))
+        const title = top(sheet.querySelector('h2'))
+        return { back: { top: back.top, bottom: back.bottom }, close: { top: close.top }, title: { top: title.top } }
+    })
+    expect(back.bottom).toBeLessThanOrEqual(title.top + 1)
+    expect(Math.abs(back.top - close.top)).toBeLessThan(4)
+    // The expander reads as one: a chevron rides with its label.
+    await expect(clef.getByRole('button', { name: 'More clefs' }).locator('svg')).toHaveCount(1)
+})
+
+test('the key sheet reads flats → C → sharps in three rows, none wrapping a key onto a row of its own', async ({ page }) => {
+    // The narrowest phone we design for: seven fixed 48px cells would wrap here.
+    await page.setViewportSize({ width: 360, height: 780 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: /^Key:/ }).tap()
+    const grid = page.getByRole('dialog', { name: 'Select key signature' }).getByRole('group', { name: 'Key signature' })
+    await expect(grid.getByRole('button')).toHaveCount(15)
+    // Every tile's top in one frame: the sheet rises as it opens, so tiles read one by one would drift.
+    const tops = new Map(
+        await grid
+            .getByRole('button')
+            .evaluateAll((els) =>
+                els.map((el) => [el.getAttribute('aria-label') ?? '', Math.round(el.getBoundingClientRect().top)] as const),
+            ),
+    )
+    const rowOf = (names: string[]) => new Set(names.map((name) => tops.get(name)))
+    const flats = rowOf(['C♭ major', 'G♭ major', 'D♭ major', 'A♭ major', 'E♭ major', 'B♭ major', 'F major'])
+    const sharps = rowOf(['G major', 'D major', 'A major', 'E major', 'B major', 'F♯ major', 'C♯ major'])
+    expect(flats.size).toBe(1)
+    expect(sharps.size).toBe(1)
+    // C sits alone in the middle, between the two.
+    const c = tops.get('C major') ?? 0
+    expect(c).toBeGreaterThan([...flats][0] ?? Infinity)
+    expect(c).toBeLessThan([...sharps][0] ?? -Infinity)
+})
+
 test('the first tap on a note teaches where its actions are, once', async ({ page }) => {
     const svg = page.locator('.max-w-240 svg').first()
     const box = await svg.boundingBox()
@@ -494,26 +642,6 @@ test('the first tap on a note teaches where its actions are, once', async ({ pag
 })
 
 // --- Header chips: share / takes / export collapse to icon-only on phones ---
-
-/** The header's chip row must fit the phone viewport: no chip may poke past the right edge. */
-async function expectHeaderFitsViewport(page: Page): Promise<void> {
-    const header = page.locator('header')
-    const headerBox = await header.boundingBox()
-    const viewport = page.viewportSize()
-    expect(headerBox).not.toBeNull()
-    expect(viewport).not.toBeNull()
-    expect(headerBox?.x ?? -1).toBeGreaterThanOrEqual(0)
-    expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
-    // The chips themselves stay inside the header's box (a flex row that overflowed
-    // would keep the header at viewport width while its children spill out).
-    for (const name of ['Share score', 'Recordings', 'Export score']) {
-        const box = await page.getByRole('button', { name, exact: true }).boundingBox()
-        expect(box, name).not.toBeNull()
-        expect((box?.x ?? 0) + (box?.width ?? Infinity), name).toBeLessThanOrEqual((headerBox?.x ?? 0) + (headerBox?.width ?? 0) + 1)
-    }
-    const overflow = await page.evaluate(() => (document.scrollingElement?.scrollWidth ?? 0) - document.documentElement.clientWidth)
-    expect(overflow).toBeLessThanOrEqual(1)
-}
 
 test('header chips are icon-only on phones and the header fits the viewport', async ({ page }) => {
     for (const name of ['Share score', 'Recordings', 'Export score']) {
@@ -547,12 +675,21 @@ test('share chip: create and copy the read-only link, and turn it off after a co
     expect(apiMock.shareToken).toBeNull()
 
     // The panel stays on screen, and the header did not grow to fit it.
-    const box = await panel.boundingBox()
-    const viewport = page.viewportSize()
-    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
-    expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    await expectInsideGutter(page, panel)
     await expectHeaderFitsViewport(page)
 })
+
+/**
+ * A header panel stays 16px inside both viewport edges, whichever chip it hangs from. (A clamp
+ * applied twice shows only under the dev server's StrictMode — a prod build mounts once.)
+ */
+async function expectInsideGutter(page: Page, panel: Locator): Promise<void> {
+    const box = await panel.boundingBox()
+    const width = page.viewportSize()?.width ?? 0
+    expect(box).not.toBeNull()
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(16 - 1)
+    expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual(width - 16 + 1)
+}
 
 test('editing the title takes the header row up to a Done button; Done hands back the chips', async ({ page }) => {
     const title = page.getByRole('textbox', { name: 'Score title' })
@@ -614,10 +751,7 @@ test('recordings chip: lists the score’s recordings and deletes one after conf
     await expect(rows).toHaveCount(2)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
 
-    const panelBox = await panel.boundingBox()
-    const viewport = page.viewportSize()
-    expect(panelBox?.x ?? -1).toBeGreaterThanOrEqual(0)
-    expect((panelBox?.x ?? 0) + (panelBox?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    await expectInsideGutter(page, panel)
     await expectHeaderFitsViewport(page)
 })
 
