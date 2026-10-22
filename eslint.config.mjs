@@ -68,16 +68,12 @@ export default tseslint.config(
         },
     },
 
-    // Browser globals for the web workspaces
+    // Browser globals for every workspace that runs in the browser. typescript-eslint turns
+    // `no-undef` off for TS files (the compiler resolves names), so on these files the list
+    // only feeds `no-global-assign` — it flags writes to read-only browser globals such as
+    // `window` or `document`, which the DOM lib types declare as assignable `var`s.
     {
-        files: [
-            'apps/web/**/*.ts',
-            'apps/web/**/*.tsx',
-            'apps/admin/**/*.ts',
-            'apps/admin/**/*.tsx',
-            'packages/notation/**/*.ts',
-            'packages/notation/**/*.tsx',
-        ],
+        files: ['apps/{web,admin,eval}/**/*.{ts,tsx}', 'packages/{notation,playback,ui}/**/*.{ts,tsx}'],
         languageOptions: {
             globals: { ...globals.browser },
         },
