@@ -55,6 +55,15 @@ test('hero: one action and a free-to-start line; the demo is captioned, named an
     await expect(page.getByRole('button', { name: 'Play demo' })).toBeVisible()
 })
 
+test('signed in, the hero offers the library and drops the sign-up line', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/')
+
+    const main = page.getByRole('main')
+    await expect(main.getByRole('link', { name: 'Open library' }).first()).toBeVisible()
+    await expect(main.getByText('Free to start — no card, nothing to install.')).toHaveCount(0)
+})
+
 test('How it works says "one note at a time" once; Good to know opens on the chords question', async ({ page }) => {
     await stayLocal(page)
     await page.goto('/')
