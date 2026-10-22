@@ -1,11 +1,12 @@
 'use client'
 
+import { Alert, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@mushee/ui'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 
+import { Card } from '@/components/Card'
 import { ScoreView } from '@/components/ScoreView'
-import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@/components/ui'
 import { errorText, type TranscriptionDto } from '@/lib/api'
 import { melodyToScore, playbackInstrument } from '@/lib/buildScore'
 import { melodyDurationSec, withCountIn } from '@/lib/melody'

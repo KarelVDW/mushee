@@ -1,9 +1,7 @@
 'use client'
 
+import { CloseButton, ModalTitle } from '@mushee/ui'
 import { type KeyboardEvent, type ReactNode, useEffect, useEffectEvent, useId, useRef } from 'react'
-
-import { ModalTitle } from './Brand'
-import { CloseButton } from './Buttons'
 
 /** Everything keyboard focus can land on — the dialog's Tab trap cycles through these. */
 export const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'

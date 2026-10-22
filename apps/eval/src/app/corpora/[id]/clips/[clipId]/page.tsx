@@ -1,14 +1,15 @@
 'use client'
 
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
+import { Alert, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@mushee/ui'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
+import { Card } from '@/components/Card'
 import { MetricsPanel } from '@/components/MetricsPanel'
 import { NotesCompare } from '@/components/NotesCompare'
 import { ScoreView } from '@/components/ScoreView'
-import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@/components/ui'
 import { clipAudioUrl, errorText } from '@/lib/api'
 import { melodyToScore, mxmlMeasuresToScore, playbackInstrument } from '@/lib/buildScore'
 import { melodyToTruth } from '@/lib/melody'

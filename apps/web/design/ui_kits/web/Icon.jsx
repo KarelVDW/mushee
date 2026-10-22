@@ -1,6 +1,7 @@
 // Icon component — renders the custom Solkey glyph set ("Precision Maverick"):
 // 24px grid, 2px strokes, squared terminals, mitered joins. Mirrors
-// src/components/ui/Icon.tsx; keep the glyph data in sync with it.
+// packages/ui/src/Icon.tsx (the shared @mushee/ui kit); keep the glyph data
+// in sync with it.
 const GLYPHS = {
     'alert-triangle':
         '<path d="M12 3 21.5 19.5H2.5L12 3Z"/><path d="M12 9.5V14"/><circle cx="12" cy="17" r="1.3" fill="currentColor" stroke="none"/>',

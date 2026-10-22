@@ -1,6 +1,6 @@
 'use client'
 
-import { Eyebrow } from '@/components/ui'
+import { Eyebrow } from '@mushee/ui'
 
 /**
  * The harness's per-clip numbers, shaped like run-eval's report: note F1 and

@@ -1,9 +1,10 @@
 'use client'
 
+import { Alert, Chip, Eyebrow, Spinner } from '@mushee/ui'
 import { useMemo, useState } from 'react'
 
+import { Card } from '@/components/Card'
 import { LegendSwatch } from '@/components/NotesCompare'
-import { Alert, Card, Chip, Eyebrow, Spinner } from '@/components/ui'
 import { errorText, type ReportDto } from '@/lib/api'
 import { useReportDetail, useReports } from '@/lib/queries'
 

@@ -1,9 +1,9 @@
 'use client'
 
+import { Alert, Eyebrow, PrimaryButton, TextField, Wordmark } from '@mushee/ui'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type FormEvent, Suspense, useState } from 'react'
 
-import { Alert, Eyebrow, PrimaryButton, TextField, Wordmark } from '@/components/ui'
 import { ApiError, login, NetworkError } from '@/lib/api'
 import { safeNextPath } from '@/lib/nextPath'
 

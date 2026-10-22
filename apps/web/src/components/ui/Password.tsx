@@ -1,6 +1,6 @@
 'use client'
 
-import { Eyebrow } from './Brand'
+import { Eyebrow } from '@mushee/ui'
 
 const PW_LABELS = ['Too short', 'Weak', 'OK', 'Strong', 'Strong'] as const
 

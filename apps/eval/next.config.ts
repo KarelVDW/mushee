@@ -1,9 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-    // The score model + notation renderer ship as TypeScript source; this app
-    // compiles them along with its own code.
-    transpilePackages: ['@mushee/notation', '@mushee/playback'],
+    // The workspace packages (score model + notation renderer, playback engine,
+    // shared UI kit) ship as TypeScript source; this app compiles them along with
+    // its own code.
+    transpilePackages: ['@mushee/notation', '@mushee/playback', '@mushee/ui'],
     // ffmpeg-static resolves its binary path via __dirname, which bundling
     // rewrites to a phantom /ROOT path — keep it (and pg) as real requires.
     serverExternalPackages: ['ffmpeg-static', 'pg'],

@@ -1,9 +1,9 @@
 'use client'
 
+import { showToast, Toaster } from '@mushee/ui'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 
-import { showToast, Toaster } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 
 function toastMessage(error: unknown, fallback: string): string {

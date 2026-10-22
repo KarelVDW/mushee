@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { Icon, type IconName, iconNames } from '@/components/ui/Icon'
+import { Icon, type IconName, iconNames } from '../src/Icon'
 
 describe('Icon', () => {
     it('renders an svg sized to the requested box', () => {

@@ -1,11 +1,11 @@
 'use client'
 
+import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, showToast, TextField } from '@mushee/ui'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useState } from 'react'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
-import { Alert, Eyebrow, Pill, PrimaryButton, SecondaryButton, showToast, TextField } from '@/components/ui'
 import { formatCount, formatDate, formatDateTime, formatSeconds, plural } from '@/lib/format'
 import { useAdjustCredits, useRevokeSessions, useUser, useUserScores } from '@/lib/queries'
 

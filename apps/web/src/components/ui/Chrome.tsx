@@ -1,13 +1,11 @@
 'use client'
 
+import { Avatar, PageTitle, PrimaryButton, SubHeadline, Wordmark } from '@mushee/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { requestConsentSettings } from '@/lib/consent'
-
-import { Avatar, PageTitle, SubHeadline, Wordmark } from './Brand'
-import { PrimaryButton } from './Buttons'
 
 const NAV_ITEMS = [
     { label: 'Library', href: '/scores' },

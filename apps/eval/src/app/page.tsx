@@ -1,9 +1,10 @@
 'use client'
 
+import { Alert, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner } from '@mushee/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner } from '@/components/ui'
+import { Card } from '@/components/Card'
 import { errorText, type RunDto } from '@/lib/api'
 import { useCorpora, useRuns, useStartRun } from '@/lib/queries'
 

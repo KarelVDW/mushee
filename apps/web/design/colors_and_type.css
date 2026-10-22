@@ -238,7 +238,7 @@ code,
 }
 
 /* Icon utility — inline SVGs from the Solkey glyph set (24px grid, 2px
-   strokes, squared terminals; see src/components/ui/Icon.tsx) */
+   strokes, squared terminals; see packages/ui/src/Icon.tsx) */
 .ico-glyph {
     display: inline-block;
     vertical-align: middle;

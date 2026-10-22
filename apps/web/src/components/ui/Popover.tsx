@@ -1,8 +1,8 @@
 'use client'
 
+import { Eyebrow } from '@mushee/ui'
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react'
 
-import { Eyebrow } from './Brand'
 import { FOCUSABLE_SELECTOR } from './Dialog'
 
 interface PopoverProps {

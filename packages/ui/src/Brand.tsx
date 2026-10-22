@@ -23,7 +23,7 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 }
 
 // In-app page titles are upright Space Grotesk; Newsreader italic is reserved for
-// marketing + auth surfaces — see DESIGN.md §Voice.
+// marketing + auth surfaces — see apps/web/DESIGN.md §Voice.
 export function PageTitle({ children }: { children: ReactNode }) {
     return (
         <h1 className="font-display font-bold text-[34px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
@@ -80,8 +80,7 @@ export function Avatar({
     )
 }
 
-// Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
-// and this file is the copy the shared kit is extracted from.
+// Not in the web app's barrel (it never renders one); the admin console does.
 interface PillProps {
     children: ReactNode
     tone?: 'neutral' | 'cyan' | 'magenta'

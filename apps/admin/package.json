@@ -12,6 +12,7 @@
     },
     "dependencies": {
         "@mushee/notation": "workspace:^",
+        "@mushee/ui": "workspace:^",
         "@tanstack/react-query": "^5.101.0",
         "next": "16.1.6",
         "react": "19.2.3",

@@ -1,10 +1,10 @@
 'use client'
 
+import { Eyebrow, Icon, type IconName, Wordmark } from '@mushee/ui'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 
-import { Eyebrow, Icon, Wordmark } from '@/components/ui'
 import { logout } from '@/lib/api'
 
 const NAV = [
@@ -13,7 +13,7 @@ const NAV = [
     { href: '/waitlist', label: 'Waitlist', icon: 'user-plus' },
     { href: '/announcements', label: 'Announcements', icon: 'send' },
     { href: '/tiers', label: 'Tiers', icon: 'credit-card' },
-] as const
+] as const satisfies readonly { href: string; label: string; icon: IconName }[]
 
 function isActive(pathname: string, href: string): boolean {
     if (href === '/') return pathname === '/'

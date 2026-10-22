@@ -1,9 +1,9 @@
 'use client'
 
+import { Icon, type IconName } from '@mushee/ui'
 import { type ReactNode, useCallback, useRef, useState } from 'react'
 
 import { ChipToggle } from './Controls'
-import { Icon, type IconName } from './Icon'
 import { Popover } from './Popover'
 
 interface HeaderMenuProps {

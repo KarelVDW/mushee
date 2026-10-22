@@ -1,9 +1,10 @@
 'use client'
 
+import { Alert, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, TertiaryButton } from '@mushee/ui'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
-import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, TertiaryButton } from '@/components/ui'
+import { Card } from '@/components/Card'
 import { errorText } from '@/lib/api'
 import { melodyDurationSec, melodyNoteCount } from '@/lib/melody'
 import { useCorpus, useDeleteCorpus, useStartRun } from '@/lib/queries'

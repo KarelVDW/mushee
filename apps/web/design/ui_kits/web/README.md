@@ -8,7 +8,7 @@ High-fidelity React/JSX recreation of the Solkey web app. Cosmetic / interactive
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `index.html`            | Click-thru prototype: Landing → Login (modal) → Onboarding → Library → New Score → Editor → Settings.   |
 | `Brand.jsx`             | `<Wordmark>`, `<Eyebrow>`, `<Pill>` — the typographic primitives.                                       |
-| `Icon.jsx`              | `<Icon>` — the custom Solkey glyph set; kept in sync with `src/components/ui/Icon.tsx`.                 |
+| `Icon.jsx`              | `<Icon>` — the custom Solkey glyph set; kept in sync with `packages/ui/src/Icon.tsx`.                   |
 | `Buttons.jsx`           | `<PrimaryButton>`, `<SecondaryButton>`, `<TertiaryButton>`, `<IconButton>`, `<ToggleButton>`.           |
 | `Inputs.jsx`            | `<TextField>` with the cyan underline + `<TextArea>`.                                                   |
 | `Chrome.jsx`            | `<TopNav>`, `<PageHeader>`, `<Footer>`, `<DialogScrim>` + `<DialogPanel>`.                              |
