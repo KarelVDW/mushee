@@ -34,5 +34,3 @@ export const MEASURE_BUTTON_FILL = 'white'
 export const MEASURE_BUTTON_STROKE = '#dbdddd'
 export const MEASURE_BUTTON_LABEL = '#5a5c5c'
 
-/** Augmentation dot radius in pixels */
-export const DOT_RADIUS = 2

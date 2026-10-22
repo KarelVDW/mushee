@@ -1,4 +1,4 @@
-import { DOT_SPACING, LEDGER_LINE_EXTENSION, NOTE_ELEMENT_GAP } from '@mushee/notation/engraving/constants'
+import { DOT_RADIUS, DOT_SPACING, LEDGER_LINE_EXTENSION, NOTE_ELEMENT_GAP } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
 import { Note } from '@mushee/notation/model/Note'
@@ -28,15 +28,34 @@ describe('NoteWidth', () => {
         expect(new NoteWidth(plain, undefined).accidentalGlyph).toBeUndefined()
     })
 
-    it('dots add gap + dotSpacing × dot count', () => {
+    it('dots reserve a gap, then gap + dotSpacing per dot, up to the last dot’s right edge', () => {
         const plain = new Note({ duration: new Duration({ type: 'q' }) })
         const dotted = new Note({ duration: new Duration({ type: 'q', dots: 1 }) })
         const doubleDot = new Note({ duration: new Duration({ type: 'q', dots: 2 }) })
         const wPlain = new NoteWidth(plain, undefined)
         const wDotted = new NoteWidth(dotted, undefined)
         const wDouble = new NoteWidth(doubleDot, undefined)
-        expect(wDotted.content).toBe(wPlain.content + NOTE_ELEMENT_GAP + DOT_SPACING)
-        expect(wDouble.content).toBe(wPlain.content + NOTE_ELEMENT_GAP + DOT_SPACING * 2)
+        const perDot = NOTE_ELEMENT_GAP + DOT_SPACING
+        expect(wDotted.content).toBe(wPlain.content + NOTE_ELEMENT_GAP + perDot + DOT_RADIUS)
+        expect(wDouble.content).toBe(wPlain.content + NOTE_ELEMENT_GAP + perDot * 2 + DOT_RADIUS)
+    })
+
+    it('lays out the slots left to right: accidental, head, dots — the last dot inside the content', () => {
+        const sharp = new Note({ duration: new Duration({ type: 'q', dots: 3 }), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
+        const w = new NoteWidth(sharp, 'accidentalSharp')
+        expect(w.accidentalX).toBe(w.paddingLeft)
+        expect(w.noteX).toBeGreaterThan(w.paddingLeft + LEDGER_LINE_EXTENSION)
+        expect(w.dotXs).toHaveLength(3)
+        expect(w.dotXs[0]).toBe(w.noteX + w.noteHeadWidth + LEDGER_LINE_EXTENSION + NOTE_ELEMENT_GAP * 2 + DOT_SPACING)
+        expect(w.dotXs[2] - w.dotXs[1]).toBe(NOTE_ELEMENT_GAP + DOT_SPACING)
+        expect(w.dotXs[2] + DOT_RADIUS).toBe(w.paddingLeft + w.content)
+    })
+
+    it('without an accidental the head starts one ledger extension in, and there is no accidental slot', () => {
+        const w = new NoteWidth(new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) }), undefined)
+        expect(w.accidentalX).toBeUndefined()
+        expect(w.noteX).toBe(w.paddingLeft + LEDGER_LINE_EXTENSION)
+        expect(w.dotXs).toEqual([])
     })
 
     it('rest (no pitch) has no accidental contribution', () => {
