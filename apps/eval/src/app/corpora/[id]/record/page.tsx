@@ -82,7 +82,7 @@ function RecordFlow() {
     // Take progress bar — reads the playback clock while a take runs.
     useEffect(() => {
         if (mode !== 'recording' || !built) return
-        const timer = setInterval(() => setProgress(player.midiPlayer.currentTime / built.totalSec), 100)
+        const timer = setInterval(() => setProgress(player.elapsedSec / built.totalSec), 100)
         return () => clearInterval(timer)
     }, [mode, built, player])
 

@@ -43,7 +43,7 @@ class Stopper implements Tickable {
 const TAKE_TAIL_SEC = 0.8
 
 export class EvalPlayer {
-    readonly midiPlayer = new MidiPlayer()
+    private readonly midiPlayer = new MidiPlayer()
     private readonly ticker = new Ticker()
     private readonly scheduler = new ScoreScheduler(this.midiPlayer)
     private readonly metronome = new Metronome(this.midiPlayer)
@@ -56,12 +56,17 @@ export class EvalPlayer {
         return this._mode
     }
 
+    /** Seconds on the playback clock since the current pass started. */
+    get elapsedSec(): number {
+        return this.midiPlayer.currentTime
+    }
+
     /** Pre-fetch samples so replay/click start without a download hiccup. */
     async prepare(instrument: Instrument): Promise<void> {
         await this.midiPlayer.loadInstruments([instrument, Metronome.INSTRUMENT])
     }
 
-    playScore(score: Score, options: { metronome: boolean; onFinish?: () => void }): void {
+    playScore(score: Score, options: { metronome: boolean }): void {
         this.stop()
         this.scheduler.cue(score)
         this.metronome.cue(score)
@@ -71,10 +76,7 @@ export class EvalPlayer {
 
         this.midiPlayer.start()
         this.setMode('playing')
-        this.ticker.play(tickables, () => {
-            this.setMode('idle')
-            options.onFinish?.()
-        })
+        this.ticker.play(tickables, () => this.setMode('idle'))
     }
 
     /**
