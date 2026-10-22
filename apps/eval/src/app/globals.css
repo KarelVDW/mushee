@@ -6,13 +6,3 @@
    are compiled by this app; Tailwind must be told to scan them for classes. */
 @source '../../../../packages/notation/src/components';
 @source '../../../../packages/ui/src';
-
-@theme inline {
-    /* Data marks — cyan is the brand ramp's validated mid step (from the admin
-       console); magenta is the brand `secondary`, validated as its pair
-       (CVD ΔE 12.5 vs the cyan on white cards — dataviz six-checks pass).
-       Series identity additionally rides on position/shape + legend, never on
-       color alone. Hover state uses `primary`. */
-    --color-chart-cyan: #00939f;
-    --color-chart-magenta: #b60052;
-}

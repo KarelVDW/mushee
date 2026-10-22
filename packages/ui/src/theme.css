@@ -57,6 +57,15 @@
     --color-outline: #767777;
     --color-outline-variant: #acadad;
 
+    /* Data marks (the admin console's and eval workbench's charts). Cyan is the brand
+       ramp's mid step, picked to pass the dataviz checks on white cards (lightness band,
+       chroma floor, ≥3:1 contrast): `primary` is too gray for area marks,
+       `primary-container` too light. Magenta is the brand `secondary`, validated as its
+       pair (CVD ΔE 12.5 vs the cyan on white cards). Series identity also rides on
+       position/shape + legend, never on color alone. Hover state uses `primary`. */
+    --color-chart-cyan: #00939f;
+    --color-chart-magenta: #b60052;
+
     /* Corner radii — DESIGN.md scale */
     --radius-sm: 0.25rem;
     --radius-md: 0.5rem;

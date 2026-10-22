@@ -6,11 +6,3 @@
    are compiled by this app; Tailwind must be told to scan them for classes. */
 @source '../../../../packages/notation/src/components';
 @source '../../../../packages/ui/src';
-
-@theme inline {
-    /* Data marks (console-only) — the brand cyan ramp's mid step, picked to
-       pass the dataviz checks on white cards (lightness band, chroma floor,
-       ≥3:1 contrast). `primary` is too gray for area marks; `primary-container`
-       too light. Hover state uses `primary`. */
-    --color-chart-cyan: #00939f;
-}
