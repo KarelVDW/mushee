@@ -2,7 +2,6 @@
 
 import { ScoreView } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
-import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -42,13 +41,13 @@ export function SharedScorePage({ token }: { token: string }) {
     const scoreAreaRef = useRef<HTMLDivElement>(null)
 
     // The score is immutable here, but its layout reflows with the container width
-    // (ScoreView observes it and calls setLayoutWidth), so re-render on change.
+    // (ScoreView observes it and calls setLayoutWidth), so re-render on change. A raw
+    // (non-JSON) stored document can't be engraved; it shows the load-error state instead.
     const [, bump] = useState(0)
-    const score = useMemo<Score | null>(
-        () =>
-            shared.data ? new ScoreDeserializer(shared.data.document as unknown as ScorePartwise).toScore(() => bump((n) => n + 1)) : null,
-        [shared.data],
-    )
+    const stored = shared.data?.document
+    const partwise = stored && !('raw' in stored) ? stored : null
+    const unreadable = stored !== undefined && partwise === null
+    const score = useMemo<Score | null>(() => (partwise ? new ScoreDeserializer(partwise).toScore(() => bump((n) => n + 1)) : null), [partwise])
 
     // One view event per resolved link — the growth loop's top-of-funnel number.
     useEffect(() => {
@@ -70,9 +69,9 @@ export function SharedScorePage({ token }: { token: string }) {
     // A signed-in visitor can take the shared score home as an editable copy of their own.
     const create = useCreateScore()
     const saveCopy = () => {
-        if (!shared.data || create.isPending) return
+        if (!shared.data || !partwise || create.isPending) return
         create.mutate(
-            { title: shared.data.title, score: shared.data.document },
+            { title: shared.data.title, score: partwise },
             {
                 onSuccess: (created) => {
                     track('shared_score_copied')
@@ -146,7 +145,7 @@ export function SharedScorePage({ token }: { token: string }) {
                     </h1>
                 )}
                 {shared.isPending && <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />}
-                {shared.isError && (
+                {(shared.isError || unreadable) && (
                     <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
                         <h2 className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0">
                             {notFound ? 'This link doesn’t open anything.' : 'The score couldn’t be loaded.'}

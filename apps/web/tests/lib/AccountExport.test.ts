@@ -1,3 +1,4 @@
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { MusicXmlImporter } from '@mushee/notation/model/io/MusicXmlImporter'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { makeScore, pitched } from '@mushee/notation/testing'
@@ -39,7 +40,7 @@ describe('AccountExport', () => {
     function document() {
         const score = makeScore(1)
         score.replace([score.measures[0].notes[0]], [pitched('G', 4, 'h')])
-        return JSON.parse(JSON.stringify(new ScoreSerializer(score).toInput())) as Record<string, unknown>
+        return JSON.parse(JSON.stringify(new ScoreSerializer(score).toInput())) as ScorePartwise
     }
 
     it('names the archive by export date', () => {
@@ -92,7 +93,9 @@ describe('AccountExport', () => {
 
     it('keeps an unreadable score as JSON only and says so in the README', async () => {
         const meta = { id: 'x', title: 'Broken', createdAt: '', updatedAt: '' }
-        const archive = await open(new AccountExport(profile, null, [{ meta, document: { parts: 'nonsense' } }], when).toBlob())
+        // A corrupt stored document: the wire type can't express one, hence the cast.
+        const corrupt = { parts: 'nonsense' } as unknown as ScorePartwise
+        const archive = await open(new AccountExport(profile, null, [{ meta, document: corrupt }], when).toBlob())
         expect(archive.names()).toContain('scores/001-broken.json')
         expect(archive.names()).not.toContain('scores/001-broken.musicxml')
         expect(await archive.file('README.txt')).toContain('included as JSON only:\n  - Broken')

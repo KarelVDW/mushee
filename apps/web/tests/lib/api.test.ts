@@ -1,3 +1,4 @@
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOnboarding, updateScore } from '@/lib/api'
@@ -92,11 +93,12 @@ describe('api', () => {
 
     it('createScore() POSTs title + score body to /scores', async () => {
         fetchMock.mockResolvedValue(okResponse({ id: '1' }))
-        await createScore('My Piece', { foo: 1 })
+        const score: ScorePartwise = { partList: { scoreParts: [{ id: 'P1', partName: 'Piano' }] }, parts: [{ id: 'P1', measures: [] }] }
+        await createScore('My Piece', score)
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
         expect(url).toBe(`${BASE}/scores`)
         expect(init.method).toBe('POST')
-        expect(JSON.parse(init.body as string)).toEqual({ title: 'My Piece', score: { foo: 1 } })
+        expect(JSON.parse(init.body as string)).toEqual({ title: 'My Piece', score })
     })
 
     it('updateScore() PATCHes the provided data to /scores/:id', async () => {

@@ -1,4 +1,5 @@
-import type { ScorePatch } from '@mushee/notation/model'
+import type { ScorePatch, StoredScoreDocument } from '@mushee/notation/model'
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 
 import { API_URL } from './env'
 import type { StoredShortcuts } from './Keybindings'
@@ -84,10 +85,13 @@ export interface ScoreMeta {
     shareToken?: string | null
 }
 
-/** What the editor and the data export work from: a score's metadata plus its stored document. */
+/**
+ * What the editor and the data export work from: a score's metadata plus its stored document
+ * (MusicXML-JSON, or the raw MusicXML text of a file the API could not read as JSON).
+ */
 export interface ScoreDocument {
     meta: ScoreMeta
-    document: Record<string, unknown>
+    document: StoredScoreDocument
 }
 
 export function listScores(search?: string): Promise<ScoreMeta[]> {
@@ -99,11 +103,11 @@ export function getScore(id: string): Promise<ScoreMeta> {
     return api(`/scores/${id}`)
 }
 
-export function loadScore(id: string): Promise<Record<string, unknown>> {
+export function loadScore(id: string): Promise<StoredScoreDocument> {
     return api(`/scores/${id}/load`)
 }
 
-export function createScore(title: string, score: Record<string, unknown>): Promise<ScoreMeta> {
+export function createScore(title: string, score: ScorePartwise): Promise<ScoreMeta> {
     return api('/scores', {
         method: 'POST',
         body: JSON.stringify({ title, score }),
@@ -141,7 +145,7 @@ export interface SharedScore {
     id: string
     title: string
     updatedAt: string
-    document: Record<string, unknown>
+    document: StoredScoreDocument
 }
 
 /** Public — no session needed; 404 for unknown or revoked tokens. */

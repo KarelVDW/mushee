@@ -94,7 +94,7 @@ export default function ScoresPage() {
     }
 
     function createFromScore(title: string, score: Score) {
-        const document = new ScoreSerializer(score).toInput() as unknown as Record<string, unknown>
+        const document = new ScoreSerializer(score).toInput()
 
         createMutation.mutate(
             { title, score: document },

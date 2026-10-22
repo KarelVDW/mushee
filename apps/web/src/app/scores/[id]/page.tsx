@@ -17,7 +17,6 @@ import {
     type Pitch,
     TimeSignature,
 } from '@mushee/notation/model'
-import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -114,11 +113,14 @@ export default function ScoreEditorPage() {
     // rewrites the cached meta (keeping `document`'s reference), and re-running here would
     // re-attach the load-time document over every edit made since. The title is seeded in
     // the same effect for the same reason — once per load, not on every meta change.
+    // A raw (non-JSON) stored document is never deserialized: it takes the load-error path
+    // below, so an autosave can't write a reconstruction back over the stored MusicXML.
     const loaded = scoreDocument?.document
+    const unreadable = loaded !== undefined && 'raw' in loaded
     useEffect(() => {
-        if (!scoreDocument || !loaded) return
+        if (!scoreDocument || !loaded || 'raw' in loaded) return
         setTitle(scoreDocument.meta.title)
-        const deserializer = new ScoreDeserializer(loaded as unknown as ScorePartwise)
+        const deserializer = new ScoreDeserializer(loaded)
         const s = deserializer.toScore(manipulator.onScoreChange)
         // The save callback takes the score as a parameter (not a closure over `s`):
         // undo/redo swap the manipulator's Score instance, and the autosave must follow.
@@ -345,7 +347,7 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
-    if (loadError) {
+    if (loadError || unreadable) {
         const serverDown = loadError instanceof NetworkError
         const notFound = loadError instanceof ApiError && loadError.status === 404
         return (
