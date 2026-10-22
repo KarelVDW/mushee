@@ -20,6 +20,13 @@ export const INTERACTION_BLUE = '#1e90ff'
 export const INTERACTION_BLUE_BAND = 'rgba(30, 144, 255, 0.14)'
 
 /**
+ * The playback cursor while a take records: red, the universal "recording" signal, so the
+ * cursor itself says the take is live and that what it passes over is being written. Like
+ * INTERACTION_BLUE it is a transient overlay, `data-export-exclude`d with the cursor rect.
+ */
+export const RECORDING_CURSOR_RED = '#ef4444'
+
+/**
  * The pitch-operation highlight (transpose aim / minimize flash) — the brand magenta, the
  * second sanctioned transient exception to the canvas color ban (after the recording
  * waveform): only ever at low opacity, animated away, and `data-export-exclude`d.
