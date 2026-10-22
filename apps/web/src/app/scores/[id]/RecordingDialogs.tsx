@@ -183,7 +183,8 @@ export function MicModeGuideDialog({ onConfirm, onSkip, onClose }: MicModeGuideD
             <div className="flex flex-col gap-3 pb-2">
                 <WideSpectrumSteps />
                 <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                    Your mic is on, so Mic Mode is in Control Center right now. Set it, come back here, and your iPhone remembers.
+                    {/* Step 3 already says to come back here; this says why the tile is there now, and that it sticks. */}
+                    Your mic is on, so Mic Mode is in Control Center right now. Your iPhone remembers it.
                 </span>
             </div>
         </DialogPanel>
