@@ -3,17 +3,22 @@ import { act, createElement, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+const { push, showToast } = vi.hoisted(() => ({ push: vi.fn(), showToast: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+vi.mock('@mushee/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('@mushee/ui')>()), showToast }))
 vi.mock('@/lib/api', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/api')>()),
+    createScore: vi.fn(),
     getOnboarding: vi.fn(),
     listScores: vi.fn(),
     updateScore: vi.fn(),
     patchOnboarding: vi.fn(),
 }))
 
-import { getOnboarding, listScores, NetworkError, type ScoreMeta, updateScore } from '@/lib/api'
-import { useOnboarding, usePatchOnboarding, useRenameScore, useScores } from '@/lib/queries'
+import { Instrument } from '@mushee/notation/model'
+
+import { ApiError, createScore, getOnboarding, listScores, NetworkError, type ScoreMeta, updateScore } from '@/lib/api'
+import { useOnboarding, usePatchOnboarding, useRenameScore, useScores, useStartFirstMelody } from '@/lib/queries'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -125,5 +130,64 @@ describe('useScores', () => {
         } finally {
             vi.useRealTimers()
         }
+    })
+})
+
+describe('useStartFirstMelody', () => {
+    const CREATED: ScoreMeta = { id: 'first-1', title: 'My first melody', createdAt: '', updatedAt: '' }
+    /** The score that was sent, as text: its part names the instrument it starts on. */
+    const sentScore = () => JSON.stringify(vi.mocked(createScore).mock.calls[0]?.[1])
+
+    it('makes "My first melody" on the first pitched onboarding pick and opens it ready to record', async () => {
+        vi.mocked(getOnboarding).mockResolvedValue({ instruments: ['Woodblock', 'Not an instrument', 'Violin', 'Piano'] })
+        vi.mocked(createScore).mockResolvedValue(CREATED)
+        const melody = renderHook(() => useStartFirstMelody())
+        await settle()
+        act(() => melody.current.start())
+        await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/scores/first-1?first=1'))
+        expect(vi.mocked(createScore).mock.calls[0]?.[0]).toBe('My first melody')
+        expect(sentScore()).toContain('Violin')
+        expect(sentScore()).not.toContain('Woodblock')
+        // Still "Getting it ready…" while the editor opens.
+        expect(melody.current.creating).toBe(true)
+    })
+
+    it('starts on the instrument it is handed, and on the voice when there is no pick at all', async () => {
+        vi.mocked(getOnboarding).mockResolvedValue({ instruments: ['Violin'] })
+        vi.mocked(createScore).mockResolvedValue(CREATED)
+        const handed = renderHook(() => useStartFirstMelody())
+        await settle()
+        act(() => handed.current.start(Instrument.Flute))
+        await vi.waitFor(() => expect(push).toHaveBeenCalled())
+        expect(sentScore()).toContain('Flute')
+        unmount?.()
+
+        client.clear()
+        vi.mocked(createScore).mockClear()
+        vi.mocked(getOnboarding).mockResolvedValue(null)
+        const none = renderHook(() => useStartFirstMelody())
+        await settle()
+        act(() => none.current.start())
+        await vi.waitFor(() => expect(createScore).toHaveBeenCalled())
+        expect(sentScore()).toContain(Instrument.VoiceLead.displayName)
+    })
+
+    it('sends a full library to the library, where the limit dialog explains — no toast', async () => {
+        vi.mocked(getOnboarding).mockResolvedValue(null)
+        vi.mocked(createScore).mockRejectedValue(new ApiError(403, 'Score limit reached', 'score-limit'))
+        const melody = renderHook(() => useStartFirstMelody())
+        act(() => melody.current.start())
+        await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/scores?new=1'))
+        expect(showToast).not.toHaveBeenCalled()
+        expect(melody.current.creating).toBe(false)
+    })
+
+    it('says so in a toast when the score could not be made', async () => {
+        vi.mocked(getOnboarding).mockResolvedValue(null)
+        vi.mocked(createScore).mockRejectedValue(new NetworkError())
+        const melody = renderHook(() => useStartFirstMelody())
+        act(() => melody.current.start())
+        await vi.waitFor(() => expect(showToast).toHaveBeenCalledWith("Couldn't create your score. Please try again."))
+        expect(push).not.toHaveBeenCalled()
     })
 })

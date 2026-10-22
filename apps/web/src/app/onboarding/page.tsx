@@ -1,21 +1,19 @@
 'use client'
 
-import { Instrument, Score } from '@mushee/notation/model'
-import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
+import { Instrument } from '@mushee/notation/model'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import { defaultScoreTitle } from '@/app/scores/NewScoreDialog'
 import { FunnelShell } from '@/components/FunnelShell'
-import { Icon, PrimaryButton, showToast, StepProgress, TertiaryButton } from '@/components/ui'
+import { Icon, PrimaryButton, StepProgress, TertiaryButton } from '@/components/ui'
 import { AuthPrefill } from '@/components/ui/AuthCard'
 import { setUserProperties, track } from '@/lib/analytics'
-import { ApiError, type BillingInterval, type OnboardingPatch } from '@/lib/api'
+import type { BillingInterval, OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { formatMoney } from '@/lib/currency'
 import { LIBRARY_PATH, nextPathFrom, withNext } from '@/lib/nextPath'
 import { BETA_MODE, isPaidTier, type PlanCatalogue, type PlanTier, requestedPlanFrom, withPlan } from '@/lib/plans'
-import { useBetaGate, useCreateScore, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout } from '@/lib/queries'
+import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout, useStartFirstMelody } from '@/lib/queries'
 import { formatAllowance } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
@@ -35,7 +33,7 @@ export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
     const startCheckout = useStartCheckout()
-    const createScore = useCreateScore()
+    const firstMelody = useStartFirstMelody()
     const signOut = useSignOut()
     const plans = usePlanCatalogue()
     const currency = useDisplayCurrency()
@@ -177,20 +175,8 @@ export default function OnboardingPage() {
 
     // The usual end: a new score on the first instrument picked, open and ready to record.
     const destination: DoneDestination = awaitingApproval ? 'beta' : nextPath !== LIBRARY_PATH ? 'next' : 'first-melody'
-    const recordFirstMelody = () => {
-        const score = Score.blank(instruments[0] ?? Instrument.VoiceLead)
-        createScore.mutate(
-            { title: defaultScoreTitle(true), score: new ScoreSerializer(score).toInput() },
-            {
-                onSuccess: (created) => router.push(`/scores/${created.id}?first=1`),
-                onError: (err) => {
-                    // A full library (an older account onboarding again): the library's limit dialog explains.
-                    if (err instanceof ApiError && err.isScoreLimit) router.push('/scores?new=1')
-                    else showToast("Couldn't create your score. Please try again.")
-                },
-            },
-        )
-    }
+    // The picks made on this visit are fresher than the saved answers the hook falls back to.
+    const recordFirstMelody = () => firstMelody.start(instruments[0] ?? Instrument.VoiceLead)
 
     // The plan step's button says what happens next, the price in it for a paid plan.
     const chosenPlan = plans.byId(tier)
@@ -267,7 +253,7 @@ export default function OnboardingPage() {
                     destination={destination}
                     betaPlanName={plans.beta.name}
                     planLine={destination === 'beta' ? null : planLineFor(plans)}
-                    creating={createScore.isPending || createScore.isSuccess}
+                    creating={firstMelody.creating}
                     onRecordFirstMelody={recordFirstMelody}
                     onFinish={leave}
                 />

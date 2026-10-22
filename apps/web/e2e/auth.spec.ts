@@ -415,6 +415,38 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeVisible()
     })
 
+    test('approved off the waitlist, an empty library goes straight into a first melody on the onboarding pick', async ({
+        page,
+        apiMock,
+    }) => {
+        await answer(page, '/onboarding', () => ({ status: 200, body: { instruments: ['Violin'] } }))
+        // An empty library; creating a score still falls through to the fixture mock.
+        await page.route(
+            (url) => url.port === '4999' && url.pathname === '/scores',
+            (route) =>
+                route.request().method() === 'GET'
+                    ? route.fulfill({ status: 200, contentType: 'application/json', headers: corsHeaders(route), body: '[]' })
+                    : route.fallback(),
+        )
+        await page.goto('/beta')
+
+        await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible()
+        await expect(page.getByRole('link', { name: 'Go to my library' })).toHaveAttribute('href', '/scores')
+        await page.getByRole('button', { name: 'Record my first melody' }).click()
+        await expect(page).toHaveURL(/\/scores\/e2e-created-1\?first=1$/)
+        expect(apiMock.creates[0]).toMatchObject({ title: 'My first melody' })
+        expect(JSON.stringify(apiMock.creates[0])).toContain('Violin')
+    })
+
+    test('approved off the waitlist with scores already, the welcome just opens the library', async ({ page, apiMock }) => {
+        await page.goto('/beta')
+
+        await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible()
+        await expect(page.getByRole('link', { name: 'Open my library' })).toHaveAttribute('href', '/scores')
+        await expect(page.getByRole('button', { name: 'Record my first melody' })).toHaveCount(0)
+        expect(apiMock.creates).toHaveLength(0)
+    })
+
     test('verify: a mistyped email starts over at signup with the name filled in, the destination and plan kept', async ({ page }) => {
         await answer(page, '/api/auth/get-session', () => ({ status: 200, body: sessionFor(false) }))
         await page.goto('/onboarding?next=%2Fs%2Fe2e-token&plan=pro')

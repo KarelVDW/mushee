@@ -1,12 +1,15 @@
 'use client'
 
+import type { Instrument } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
+import { showToast } from '@mushee/ui'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
 import type { ExportProfile } from './AccountExport'
 import {
+    ApiError,
     type BillingInterval,
     cancelSubscription,
     changePlan,
@@ -267,6 +270,53 @@ export function usePatchOnboarding() {
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: onboardingKeys.answers }),
         meta: { errorMessage: "Couldn't save your onboarding answers. Please try again." },
     })
+}
+
+/**
+ * "Record my first melody" — the end of onboarding, and the closed beta's welcome once approved:
+ * a new score titled "My first melody", opened ready to record (`?first=1` puts focus on Start
+ * recording). It starts on `instrument` when the caller knows the pick, else on the first
+ * instrument saved in onboarding — the library's rule: percussion skipped, the voice when there
+ * is none. A full library goes to the library, whose limit dialog explains; anything else toasts.
+ */
+export function useStartFirstMelody() {
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const { data: onboarding } = useOnboarding()
+    const mutation = useMutation({
+        // Loaded on demand, like the account export: the score model, its serializer and the
+        // default title stay out of the routes this module reaches through AuthGate.
+        mutationFn: async (instrument?: Instrument) => {
+            const [model, { ScoreSerializer }, { defaultScoreTitle }] = await Promise.all([
+                import('@mushee/notation/model'),
+                import('@mushee/notation/model/io/ScoreSerializer'),
+                import('@/app/scores/NewScoreDialog'),
+            ])
+            const picked =
+                instrument ??
+                onboarding?.instruments
+                    ?.map((name) => model.Instrument.findByDisplayName(name))
+                    .find((i): i is Instrument => i !== undefined && i.category !== 'Percussion') ??
+                model.Instrument.VoiceLead
+            return createScore(defaultScoreTitle(true), new ScoreSerializer(model.Score.blank(picked)).toInput())
+        },
+        onSuccess: (created) => {
+            void queryClient.invalidateQueries({ queryKey: scoreKeys.all })
+            router.push(`/scores/${created.id}?first=1`)
+        },
+        onError: (err) => {
+            // A full library (an older account onboarding again): the library's limit dialog explains.
+            if (err instanceof ApiError && err.isScoreLimit) router.push('/scores?new=1')
+            else showToast("Couldn't create your score. Please try again.")
+        },
+        // The toast above is the one message; the global handler stays out of it.
+        meta: { silentError: true },
+    })
+    return {
+        start: (instrument?: Instrument) => mutation.mutate(instrument),
+        /** The score is being made, or made and the editor is opening: the button says "Getting it ready…". */
+        creating: mutation.isPending || mutation.isSuccess,
+    }
 }
 
 const settingsKeys = {

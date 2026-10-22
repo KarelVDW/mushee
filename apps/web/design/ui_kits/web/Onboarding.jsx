@@ -137,7 +137,11 @@ function TierCard({ plan, active, billing, current, onSelect }) {
                 boxShadow: active ? 'none' : '0 0 24px 0 rgba(45,47,47,0.06)',
                 transition: 'background 150ms var(--ease), transform 150ms var(--ease)',
             }}>
-            {current ? <CardBadge tone="neutral">Current</CardBadge> : plan.popular ? <CardBadge tone="secondary">Best value</CardBadge> : null}
+            {current ? (
+                <CardBadge tone="neutral">Current</CardBadge>
+            ) : plan.popular ? (
+                <CardBadge tone="secondary">Best value</CardBadge>
+            ) : null}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
                     style={{
@@ -701,18 +705,28 @@ function Onboarding({ onComplete, onSkip }) {
                 {step === 5 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ModalTitle>Which instruments do you play?</ModalTitle>
-                        <SubHeadline>
-                            Pick any that apply — or none, if you're more of a listener.
-                        </SubHeadline>
+                        <SubHeadline>Pick any that apply — or none, if you're more of a listener.</SubHeadline>
                         {/* Full model catalogue, grouped by family in a scrollable column, with the
                             survey-only "None of the above" options appended after the real families. */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '45dvh', overflowY: 'auto', paddingRight: 4 }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 14,
+                                maxHeight: '45dvh',
+                                overflowY: 'auto',
+                                paddingRight: 4,
+                            }}>
                             {INSTRUMENTS_BY_CATEGORY.map(([category, names]) => (
                                 <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <Eyebrow>{category}</Eyebrow>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                         {names.map((i) => (
-                                            <Chip key={i} size="md" active={data.instruments.includes(i)} onClick={() => toggleInstrument(i)}>
+                                            <Chip
+                                                key={i}
+                                                size="md"
+                                                active={data.instruments.includes(i)}
+                                                onClick={() => toggleInstrument(i)}>
                                                 {i}
                                             </Chip>
                                         ))}
@@ -853,13 +867,14 @@ function Onboarding({ onComplete, onSkip }) {
                         </div>
                         <ModalTitle>You're all set, {data.name.split(' ')[0] || 'there'}.</ModalTitle>
                         <SubHeadline>
-                            Your library is ready on <strong>{PLAN_TIERS.find((p) => p.id === data.tier)?.name}</strong>. Start a fresh
-                            score, or take the editor for a spin.
+                            Let's get your first melody down. Press record, then sing, hum or play, and Solkey writes the notes.
                         </SubHeadline>
-                        <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                        {/* Production (and the closed beta's "You're in." once approved) opens "My first melody", ready to record. */}
+                        <div style={{ display: 'flex', gap: 20, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <PrimaryButton emphasis="pop" icon="arrow-right" onClick={() => onComplete(data)}>
-                                Open my library
+                                Record my first melody
                             </PrimaryButton>
+                            <TertiaryButton onClick={() => onComplete(data)}>Go to my library</TertiaryButton>
                         </div>
                     </div>
                 )}
