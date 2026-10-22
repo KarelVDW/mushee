@@ -119,7 +119,10 @@ describe('TupletLayout', () => {
 
     it('opens the bracket around a multi-digit number: a 12-tuplet line clears both digits', () => {
         const twelfth = () =>
-            new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 12, normalNotes: 8 } }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            new Note({
+                duration: new Duration({ type: '16', ratio: { actualNotes: 12, normalNotes: 8 } }),
+                pitch: new Pitch({ name: 'C', octave: 4 }),
+            })
         const tuplet = tupletOf(Array.from({ length: 12 }, twelfth))
         const layout = tuplet.layout
         expect(layout.numberGlyphs.map((g) => g.glyphName)).toEqual(['timeSig1', 'timeSig2'])

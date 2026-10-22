@@ -485,9 +485,7 @@ export const Score = memo(function Score({
                                 )}
 
                                 {measure.tempos.map((tempo, ti) => (
-                                    <g
-                                        key={`cursor-${tempo.id}`}
-                                        transform={`translate(${tempo.layout.x}, 0)`}>
+                                    <g key={`cursor-${tempo.id}`} transform={`translate(${tempo.layout.x}, 0)`}>
                                         <TempoMarking
                                             key={`tempo-${ti}`}
                                             tempo={tempo}

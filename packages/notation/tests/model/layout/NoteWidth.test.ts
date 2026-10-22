@@ -46,8 +46,14 @@ describe('NoteWidth', () => {
     })
 
     it('measures the head glyph actually drawn: the notehead for a note, the rest glyph for a rest', () => {
-        const quarter = new NoteWidth(new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) }), undefined)
-        const whole = new NoteWidth(new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }) }), undefined)
+        const quarter = new NoteWidth(
+            new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) }),
+            undefined,
+        )
+        const whole = new NoteWidth(
+            new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }) }),
+            undefined,
+        )
         const quarterRest = new NoteWidth(new Note({ duration: new Duration({ type: 'q' }) }), undefined)
         const wholeRest = new NoteWidth(new Note({ duration: new Duration({ type: 'w' }) }), undefined)
         expect([quarter.headGlyph, quarter.noteHeadWidth]).toEqual(['noteheadBlack', 10])

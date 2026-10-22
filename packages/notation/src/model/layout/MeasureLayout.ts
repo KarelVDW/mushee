@@ -168,10 +168,7 @@ export class MeasureLayout {
 
         // --- Note layouts ---
         for (const note of measure.notes) {
-            this._noteLayouts.set(
-                note,
-                new NoteLayout(note, { line: note.line, width: widthOf(note) as NoteWidth }),
-            )
+            this._noteLayouts.set(note, new NoteLayout(note, { line: note.line, width: widthOf(note) as NoteWidth }))
         }
 
         // --- Key signature layouts (leading + mid-measure) ---

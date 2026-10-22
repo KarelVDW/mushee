@@ -34,7 +34,13 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
             }
             style={onClick ? { cursor: 'pointer' } : undefined}>
             {onClick && (
-                <rect x={-2} y={stemY2 - 2} width={noteWidth + TEMPO_TEXT_HIT_WIDTH} height={BEAT_UNIT_STEM_HEIGHT + 4} fill="transparent" />
+                <rect
+                    x={-2}
+                    y={stemY2 - 2}
+                    width={noteWidth + TEMPO_TEXT_HIT_WIDTH}
+                    height={BEAT_UNIT_STEM_HEIGHT + 4}
+                    fill="transparent"
+                />
             )}
             <g transform={`translate(0, ${y})`}>
                 <BeatUnit duration={tempo.pulse} />

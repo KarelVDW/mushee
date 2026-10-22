@@ -57,7 +57,8 @@ describe('TieLayout', () => {
     it('leaves a whole note from its whole notehead’s right edge', () => {
         const score = makeScore(2)
         const [m0, m1] = score.measures
-        const whole = (tie?: 'start') => new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie })
+        const whole = (tie?: 'start') =>
+            new Note({ duration: new Duration({ type: 'w' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie })
         const [start] = score.replace(m0.notes, [whole('start')])
         score.replace(m1.notes, [whole()])
         const seg = tieStartingAt(score, start).segments[0]

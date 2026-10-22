@@ -132,7 +132,10 @@ describe('ScoreLayout', () => {
 
         it("puts a later row's beats at that row's y offset", () => {
             const score = makeScore(5)
-            expect(score.layout.pointAtBeat(score.measures[4], 0)).toEqual({ x: score.measures[4].layout.getXForBeat(0), rowY: ROW_HEIGHT + ROW_GAP })
+            expect(score.layout.pointAtBeat(score.measures[4], 0)).toEqual({
+                x: score.measures[4].layout.getXForBeat(0),
+                rowY: ROW_HEIGHT + ROW_GAP,
+            })
         })
 
         it('throws for a measure that is not part of the score (callers guard a missing measure)', () => {
