@@ -133,14 +133,6 @@ export function useRecording({
         score.addMeasureAdoptingTempo(measureIndex++).complete()
         saveToApi({ score })
 
-        const resolvePosition = (measureIndex: number, beat: number) => {
-            const measure = score.measures[measureIndex]
-            if (!measure) return null
-            const row = score.layout.rowFor(measure)
-            const measureX = row.getMeasureX(measure)
-            return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
-        }
-
         // Every recording belongs to a score; the gateway requires the id up front.
         const wsUrl =
             (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200').replace(/^http/, 'ws') +
@@ -152,7 +144,6 @@ export function useRecording({
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
-                resolvePosition,
                 wsUrl,
                 onStateChange: (state) => {
                     setRecordingState(state)

@@ -62,11 +62,6 @@ export function useSharedPlayback(score: Score | null) {
             score,
             startNote: null,
             cursorEl,
-            resolvePosition: (pos) => {
-                const measure = score.measures[pos.measureIndex]
-                const row = score.layout.rowFor(measure)
-                return { x: row.getMeasureX(measure) + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
-            },
             onFinish: () => setState('stopped'),
         })
         setState('playing')

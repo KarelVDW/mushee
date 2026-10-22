@@ -73,14 +73,11 @@ function scoreWithNotes(measures = 4): Score {
     return score
 }
 
-const resolvePosition = () => ({ x: 0, rowY: 0 })
-
 function recordingOptions(score: Score, over: Record<string, unknown> = {}) {
     return {
         score,
         startMeasureIndex: 0,
         cursorEl: svgRect(),
-        resolvePosition,
         wsUrl: 'ws://localhost/stream',
         onStateChange: vi.fn(),
         onNeedNewMeasure: vi.fn(),
@@ -120,7 +117,7 @@ describe('Transport', () => {
         const transport = new Transport(player)
         const score = scoreWithNotes()
 
-        transport.playScore({ score, startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score, startNote: null, cursorEl: svgRect() })
         expect(transport.mode).toBe('playing')
         expect(raw.start).toHaveBeenCalled()
 
@@ -128,11 +125,32 @@ describe('Transport', () => {
         expect(raw.scheduled.some((n) => n.instrument === score.instrument)).toBe(true)
     })
 
+    it('each pass draws the cursor into its own element, at the layout point of the playing beat', () => {
+        const { player, raw } = fakePlayer()
+        const transport = new Transport(player)
+        const score = scoreWithNotes()
+        const first = svgRect()
+        const second = svgRect()
+
+        transport.playScore({ score, startNote: null, cursorEl: first })
+        transport.stop()
+        transport.playScore({ score, startNote: null, cursorEl: second })
+        // Schedule the pass, then let the cursor follow it half a quarter in (90bpm).
+        fireFrame()
+        raw.currentTime = 30 / 90
+        fireFrame()
+
+        const point = score.layout.pointAtBeat(score.measures[0], 0.5)
+        expect(second.getAttribute('x')).toBe(String(point.x - 1.5))
+        expect(second.getAttribute('transform')).toBe(`translate(0, ${point.rowY})`)
+        expect(first.getAttribute('x')).toBeNull()
+    })
+
     it('playScore without the metronome enabled schedules no clicks', () => {
         const { player, raw } = fakePlayer()
         const transport = new Transport(player)
 
-        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect() })
         fireFrame()
         expect(raw.scheduled.some((n) => n.instrument === Instrument.Woodblock)).toBe(false)
     })
@@ -142,7 +160,7 @@ describe('Transport', () => {
         const transport = new Transport(player)
         transport.setMetronomeEnabled(true)
 
-        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect() })
         fireFrame()
         expect(raw.scheduled.some((n) => n.instrument === Instrument.Woodblock)).toBe(true)
     })
@@ -153,7 +171,7 @@ describe('Transport', () => {
         const score = scoreWithNotes()
 
         // A playback pass primes the scheduler with the score and its notes…
-        transport.playScore({ score, startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score, startNote: null, cursorEl: svgRect() })
         fireFrame()
         transport.stop()
         raw.scheduled.length = 0
@@ -183,7 +201,7 @@ describe('Transport', () => {
         const { player, raw } = fakePlayer()
         const transport = new Transport(player)
 
-        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect() })
         transport.pause()
         expect(transport.mode).toBe('paused')
         expect(raw.pause).toHaveBeenCalled()
@@ -204,7 +222,7 @@ describe('Transport', () => {
         const transport = new Transport(player)
         const score = scoreWithNotes()
 
-        transport.playScore({ score, startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score, startNote: null, cursorEl: svgRect() })
         // 90bpm default: 3 seconds in = 4.5 beats already elapsed.
         raw.currentTime = 3
         transport.setMetronomeEnabled(true)
@@ -298,7 +316,7 @@ describe('Transport', () => {
     it('dispose stops everything and releases the player', () => {
         const { player, raw } = fakePlayer()
         const transport = new Transport(player)
-        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect(), resolvePosition })
+        transport.playScore({ score: scoreWithNotes(), startNote: null, cursorEl: svgRect() })
         transport.dispose()
         expect(transport.mode).toBe('stopped')
         expect(raw.dispose).toHaveBeenCalled()

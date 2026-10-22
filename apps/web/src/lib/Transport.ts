@@ -5,7 +5,7 @@ import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 import { Ticker } from '@mushee/playback/Ticker'
 
-import { CursorManager } from './CursorManager'
+import { PlaybackCursor } from './PlaybackCursor'
 import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
@@ -14,8 +14,8 @@ export interface PlayScoreOptions {
     score: Score
     /** Note to start from; null = top of the score. */
     startNote: Note | null
+    /** The score's cursor rect; the pass's PlaybackCursor draws into it. */
     cursorEl: SVGRectElement
-    resolvePosition: (pos: { measureIndex: number; beat: number }) => { x: number; rowY: number } | null
     /** Fired when the pass plays through to the end (not on stop()). */
     onFinish?: () => void
 }
@@ -39,7 +39,7 @@ export class Transport {
     private readonly ticker = new Ticker()
     private readonly scheduler: ScoreScheduler
     private readonly metronome: Metronome
-    private readonly cursor: CursorManager
+    private readonly cursor: PlaybackCursor
     private readonly recorder: RecordingEngine
 
     private _mode: TransportMode = 'stopped'
@@ -49,8 +49,8 @@ export class Transport {
         this.midiPlayer = midiPlayer
         this.scheduler = new ScoreScheduler(midiPlayer)
         this.metronome = new Metronome(midiPlayer)
-        this.cursor = new CursorManager(midiPlayer, this.scheduler)
-        this.recorder = new RecordingEngine(midiPlayer)
+        this.cursor = new PlaybackCursor(midiPlayer, this.scheduler)
+        this.recorder = new RecordingEngine(midiPlayer, this.cursor)
     }
 
     get mode(): TransportMode {
@@ -72,7 +72,8 @@ export class Transport {
 
         this.scheduler.cue(score, startNote)
         this.metronome.cue(score, startNote?.measure.index ?? 0, startNote ? startNote.measure.beatOffsetOf(startNote) : 0)
-        this.cursor.bind(options.cursorEl, options.resolvePosition)
+        this.cursor.attach(options.cursorEl)
+        this.cursor.follow(score)
 
         const tickables: Tickable[] = [this.scheduler, this.cursor]
         if (this._metronomeEnabled) tickables.push(this.metronome)
@@ -110,6 +111,7 @@ export class Transport {
      */
     async record(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         this.stop()
+        this.cursor.attach(options.cursorEl)
         let mic: MediaTrackSettings | null
         try {
             mic = await this.recorder.start(options)
@@ -136,7 +138,7 @@ export class Transport {
         this.ticker.stop()
         this.recorder.stop()
         this.midiPlayer.stop()
-        this.cursor.hideCursor()
+        this.cursor.hide()
         this._mode = 'stopped'
     }
 

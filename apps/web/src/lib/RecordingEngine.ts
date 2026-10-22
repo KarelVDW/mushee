@@ -4,6 +4,7 @@ import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
 import { Microphone } from './Microphone'
+import type { PlaybackCursor } from './PlaybackCursor'
 
 const CHUNK_MS = 100
 
@@ -96,16 +97,12 @@ export interface RecordingLimitInfo {
 /** Reasons the gateway refuses a recording connection. */
 export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
 
-export interface ResolveRecordingPosition {
-    (measureIndex: number, beat: number): { x: number; rowY: number } | null
-}
-
 export interface RecordingOptions {
     score: Score
     /** Index of the freshly inserted empty count-off measure. */
     startMeasureIndex: number
+    /** The score's cursor rect; Transport attaches the take's PlaybackCursor to it. */
     cursorEl: SVGRectElement
-    resolvePosition: ResolveRecordingPosition
     wsUrl: string
     onStateChange: (state: RecordingState) => void
     /** Fired when the cursor is about to run off the last available measure. */
@@ -192,7 +189,10 @@ export class RecordingEngine implements Tickable {
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
 
-    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime'>) {
+    constructor(
+        midiPlayer: Pick<MidiPlayer, 'currentTime'>,
+        private readonly cursor: PlaybackCursor,
+    ) {
         this.midiPlayer = midiPlayer
     }
 
@@ -273,8 +273,8 @@ export class RecordingEngine implements Tickable {
         this.lastSampleTime = -Infinity
         this.waveformPeak = 0
 
-        this.paintCursor(options, '#ef4444')
-        this.moveCursor(options, options.startMeasureIndex, 0)
+        this.cursor.setTone('recording')
+        this.cursor.moveTo(options.score, options.startMeasureIndex, 0)
 
         this._state = 'countoff'
         options.onStateChange(this._state)
@@ -354,11 +354,9 @@ export class RecordingEngine implements Tickable {
         this.analyser = null
         this.analyserData = null
 
-        if (this.options) {
-            this.options.cursorEl.setAttribute('display', 'none')
-            this.options.cursorEl.removeAttribute('fill-opacity')
-            this.paintCursor(this.options, '#3b82f6')
-        }
+        this.cursor.hide()
+        this.cursor.setOpacity(null)
+        this.cursor.setTone('playback')
         this.meta = null
         this.startMeasure = null
 
@@ -378,10 +376,10 @@ export class RecordingEngine implements Tickable {
                 this._state = 'recording'
                 this.options.onStateChange(this._state)
                 // The moving cursor is its own beat feedback from here on.
-                this.options.cursorEl.removeAttribute('fill-opacity')
+                this.cursor.setOpacity(null)
                 this.startCapture()
             } else {
-                this.pulseCursor(this.options, elapsed)
+                this.pulseCursor(elapsed)
             }
             return false
         }
@@ -396,7 +394,7 @@ export class RecordingEngine implements Tickable {
         }
         const measureIndex = pos.measure.index
 
-        this.moveCursor(this.options, measureIndex, pos.beat)
+        this.cursor.moveTo(this.options.score, measureIndex, pos.beat)
 
         if (pos.beat >= pos.measure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
             this.lastNewMeasureTriggeredFor = measureIndex
@@ -626,21 +624,8 @@ export class RecordingEngine implements Tickable {
      * motion to show yet. Reads the same clock the clicks are scheduled on, so
      * the two can't drift.
      */
-    private pulseCursor(options: RecordingOptions, elapsed: number): void {
+    private pulseCursor(elapsed: number): void {
         const beatPhase = ((elapsed * this.bpm) / 60 / this.pulseBeats) % 1
-        const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
-        options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
-    }
-
-    private moveCursor(options: RecordingOptions, measureIndex: number, beat: number): void {
-        const pos = options.resolvePosition(measureIndex, beat)
-        if (!pos) return
-        options.cursorEl.setAttribute('x', String(pos.x - 1.5))
-        options.cursorEl.setAttribute('transform', `translate(0, ${pos.rowY})`)
-        options.cursorEl.setAttribute('display', '')
-    }
-
-    private paintCursor(options: RecordingOptions, color: string): void {
-        options.cursorEl.setAttribute('fill', color)
+        this.cursor.setOpacity(PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3))
     }
 }

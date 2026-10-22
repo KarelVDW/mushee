@@ -100,20 +100,12 @@ export function usePlayback({
         const cursorEl = playbackCursorRef.current
         if (!cursorEl) return
 
-        const resolvePosition = (pos: { measureIndex: number; beat: number }) => {
-            const measure = score.measures[pos.measureIndex]
-            const row = score.layout.rowFor(measure)
-            const measureX = row.getMeasureX(measure)
-            return { x: measureX + measure.layout.getXForBeat(pos.beat), rowY: score.layout.getYForRow(row) }
-        }
-
         // Launching from a stop begins at the selected note (falling back to the top of the
         // score when nothing is selected); resume/pause above keep their place instead.
         transport.playScore({
             score,
             startNote: activeNote,
             cursorEl,
-            resolvePosition,
             onFinish: () => setPlaybackState('stopped'),
         })
         setPlaybackState('playing')
