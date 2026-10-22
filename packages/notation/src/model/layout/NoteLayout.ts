@@ -9,6 +9,7 @@ import {
     STEM_WIDTH,
 } from '../../engraving/constants'
 import type { Clef } from '../Clef'
+import type { Duration } from '../Duration'
 import { Note } from '../Note'
 import { STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import type { StemDirection } from '../types'
@@ -80,7 +81,7 @@ export class NoteLayout {
                     glyphName: flagName,
                     x: this.stem.x,
                     y: this.noteY + (stemDir === 'up' ? -1 : 1) * STEM_HEIGHT,
-                    scale: note.duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined,
+                    scale: NoteLayout.flagScale(note.duration),
                 }
             }
         }
@@ -100,6 +101,11 @@ export class NoteLayout {
                 cursorX += offset
             }
         }
+    }
+
+    /** The flag's glyph scale: dotted notes draw a smaller flag so it clears the dot; undefined = the default scale. */
+    static flagScale(duration: Duration): number | undefined {
+        return duration.dots > 0 ? DOTTED_FLAG_SCALE : undefined
     }
 
     /**

@@ -62,6 +62,12 @@ describe('NoteLayout', () => {
         expect(layoutOf(n).flag?.scale).toBe(DOTTED_FLAG_SCALE)
     })
 
+    it('flagScale owns the dotted-flag rule (shared with the tempo marking’s beat unit)', () => {
+        expect(NoteLayout.flagScale(new Duration({ type: '8' }))).toBeUndefined()
+        expect(NoteLayout.flagScale(new Duration({ type: '8', dots: 1 }))).toBe(DOTTED_FLAG_SCALE)
+        expect(NoteLayout.flagScale(new Duration({ type: 'q', dots: 2 }))).toBe(DOTTED_FLAG_SCALE)
+    })
+
     it('rests have no stem and no flag', () => {
         const n = new Note({ duration: new Duration({ type: '8' }) })
         expect(layoutOf(n).stem).toBeUndefined()
