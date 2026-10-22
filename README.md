@@ -63,13 +63,15 @@ Prereqs: Node 22 + pnpm, Docker Desktop.
 
 ```sh
 pnpm install
+cp apps/api/.env.example apps/api/.env.development   # required: the api scripts load it with --env-file
 pnpm bootstrap    # start dev Postgres (:5632) + fresh schema + demo data
 pnpm dev          # web on :3200, admin on :3500, eval on :3600, api on :4200 (in-process inference)
 ```
 
-Optionally copy `apps/api/.env.example` → `apps/api/.env.development` (and the
-same in `apps/web` and `apps/admin`) to tweak settings; the defaults work out
-of the box.
+The api env file must exist (an empty one also works), but its values are the
+code's defaults — edit it only to tweak settings. Copying `.env.example` →
+`.env.development` in `apps/web` and `apps/admin` is optional, except that the
+admin console needs `ADMIN_SECRET` to sign in (see [Admin console](#admin-console)).
 
 ### Admin console
 
