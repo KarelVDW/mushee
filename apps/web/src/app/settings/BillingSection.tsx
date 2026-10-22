@@ -138,6 +138,7 @@ export function BillingSection({
             )}
             {packsOpen && canPurchase && (
                 <PacksDialog
+                    billing={billing}
                     onClose={() => setPacksOpen(false)}
                     onSeePlans={() => {
                         setPacksOpen(false)
