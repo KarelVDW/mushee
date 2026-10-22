@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 
-import { Icon, ToolGroup, type TooltipShortcut,TransportBtn } from '@/components/ui'
+import { Icon, ToolGroup, type TooltipShortcut, TransportBtn } from '@/components/ui'
 import type { RecordingState } from '@/lib/RecordingEngine'
 import type { PlaybackState } from '@/lib/Transport'
 import { useMediaQuery } from '@/lib/useMediaQuery'
