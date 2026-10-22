@@ -304,22 +304,30 @@ function SheetBody({ className, children }: { className?: string; children: Reac
  * The horizontal shift that keeps an anchored panel `gutter` px inside the viewport — a
  * right-aligned menu under a chip near the left edge (the phone header's Share) would
  * otherwise spill off screen. Measured before paint, again on resize.
+ *
+ * Idempotent: a measure takes off the shift the DOM carries right now (`applied`, written in
+ * the same commit as the style) and sets the one shift the untransformed panel needs. Two
+ * measures before a re-render — StrictMode's doubled effect, a resize while opening — land
+ * on the same value instead of shifting twice.
  */
 function useViewportClamp(ref: { current: HTMLElement | null }, gutter: number | undefined): CSSProperties | undefined {
     const [dx, setDx] = useState(0)
+    const applied = useRef(0)
+    // Declared before the measuring effect, so a commit's own shift is on record before it measures.
+    useLayoutEffect(() => {
+        applied.current = dx
+    }, [dx])
     useLayoutEffect(() => {
         if (gutter === undefined) return
         const measure = () => {
             const el = ref.current
             if (!el) return
             const rect = el.getBoundingClientRect()
-            setDx((current) => {
-                const left = rect.left - current
-                const right = rect.right - current
-                if (left < gutter || rect.width > window.innerWidth - 2 * gutter) return gutter - left
-                if (right > window.innerWidth - gutter) return window.innerWidth - gutter - right
-                return 0
-            })
+            const left = rect.left - applied.current
+            const right = rect.right - applied.current
+            if (left < gutter || rect.width > window.innerWidth - 2 * gutter) setDx(gutter - left)
+            else if (right > window.innerWidth - gutter) setDx(window.innerWidth - gutter - right)
+            else setDx(0)
         }
         measure()
         window.addEventListener('resize', measure)

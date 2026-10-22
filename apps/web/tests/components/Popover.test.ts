@@ -1,4 +1,4 @@
-import { act, createElement } from 'react'
+import { act, createElement, StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -274,5 +274,53 @@ describe('usePickConfirmation', () => {
         act(() => root.render(createElement(Probe, { dismiss, enabled: true })))
         confirm()
         expect(dismiss).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('Popover viewport clamp', () => {
+    let host: HTMLElement
+    let root: Root
+    const innerWidth = window.innerWidth
+
+    /** The inline translateX the panel carries now — what a real layout adds to its box. */
+    const shiftOf = (el: HTMLElement) => Number(/translateX\((-?[\d.]+)px\)/.exec(el.style.transform)?.[1] ?? 0)
+
+    beforeEach(() => {
+        host = document.createElement('div')
+        document.body.appendChild(host)
+        root = createRoot(host)
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+        // A 320px panel laid out from x = -50 (a right-aligned menu under a chip near the left
+        // edge), moved by whatever shift it carries — as the browser would report it.
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+            const left = -50 + shiftOf(this)
+            return { left, right: left + 320, width: 320, top: 0, bottom: 100, height: 100, x: left, y: 0, toJSON: () => ({}) } as DOMRect
+        })
+    })
+
+    afterEach(() => {
+        act(() => root.unmount())
+        host.remove()
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: innerWidth })
+        vi.restoreAllMocks()
+    })
+
+    it('shifts the panel once, even when StrictMode measures twice before a re-render', () => {
+        const popover = createElement(Popover, {
+            ariaLabel: 'Share score',
+            title: 'Share',
+            onDismiss: () => undefined,
+            viewportGutter: 16,
+            children: null,
+        })
+        act(() => root.render(createElement(StrictMode, null, popover)))
+        const panel = host.querySelector<HTMLElement>('[role="dialog"]')
+        if (!panel) throw new Error('expected the panel')
+        // 16px in from the left edge: 16 - (-50), never twice that.
+        expect(panel.style.transform).toBe('translateX(66px)')
+
+        // Measuring the shifted panel again (a resize) keeps the one shift.
+        act(() => window.dispatchEvent(new Event('resize')))
+        expect(panel.style.transform).toBe('translateX(66px)')
     })
 })
