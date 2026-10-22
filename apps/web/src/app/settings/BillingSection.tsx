@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Alert, Icon, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
 import type { BillingState } from '@/lib/api'
-import { BETA_PLAN, planById, planPrice } from '@/lib/plans'
+import { BETA_PLAN, planById, planPrice, type PlanTier } from '@/lib/plans'
 import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
@@ -13,14 +13,22 @@ import { ChangePlanDialog } from './ChangePlanDialog'
 import { PacksDialog } from './PacksDialog'
 import { SettingsSection } from './SettingsSection'
 
-/** Live Polar-backed subscription state: plan, renewal, credits, actions. */
-export function BillingSection() {
+/**
+ * Live Polar-backed subscription state: plan, renewal, credits, actions.
+ * `requestedPlan` — a tier a pricing card sent the visitor here for: the plan
+ * dialog opens on arrival, wherever plans can be bought.
+ */
+export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id'] | null }) {
     const { data: billing, isPending, isError, refetch } = useBillingState()
     const portal = useBillingPortal()
     const resume = useResumeSubscription()
     const [changePlanOpen, setChangePlanOpen] = useState(false)
     const [packsOpen, setPacksOpen] = useState(false)
     const currency = useDisplayCurrency()
+
+    useEffect(() => {
+        if (requestedPlan) setChangePlanOpen(true)
+    }, [requestedPlan])
 
     if (isPending) {
         return (
@@ -100,7 +108,7 @@ export function BillingSection() {
                 </p>
             )}
 
-            {changePlanOpen && (
+            {changePlanOpen && canPurchase && (
                 <ChangePlanDialog
                     billing={billing}
                     onClose={() => setChangePlanOpen(false)}

@@ -13,6 +13,8 @@ import {
     planFeatures,
     planPrice,
     recordingBudgetLabel,
+    requestedPlanFrom,
+    withPlan,
 } from '@/lib/plans'
 
 describe('plan catalogue', () => {
@@ -124,6 +126,24 @@ describe('tier ids', () => {
         expect(PLAN_TIERS.every((p) => isPlanTierId(p.id))).toBe(true)
         expect(isPlanTierId('beta')).toBe(false)
         expect(isPlanTierId('team')).toBe(false)
+    })
+})
+
+describe('the ?plan= a pricing card carries', () => {
+    it('is read back only when it names a static tier', () => {
+        expect(requestedPlanFrom('?plan=studio')).toBe('studio')
+        expect(requestedPlanFrom('?next=%2Fs%2Fabc&plan=free')).toBe('free')
+        expect(requestedPlanFrom('')).toBeNull()
+        expect(requestedPlanFrom('?plan=beta')).toBeNull()
+        expect(requestedPlanFrom('?plan=%2F%2Fevil.example')).toBeNull()
+    })
+
+    it('joins whatever query the path already has', () => {
+        expect(withPlan('/signup', 'pro')).toBe('/signup?plan=pro')
+        expect(withPlan('/signup?next=%2Fs%2Fabc', 'pro')).toBe('/signup?next=%2Fs%2Fabc&plan=pro')
+        expect(withPlan('/signup', null)).toBe('/signup')
+        expect(withPlan('/signup', undefined)).toBe('/signup')
+        expect(requestedPlanFrom(withPlan('/onboarding?next=%2Fscores%2F1', 'arranger').slice('/onboarding'.length))).toBe('arranger')
     })
 })
 

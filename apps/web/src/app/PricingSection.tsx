@@ -2,10 +2,18 @@
 
 import { useState } from 'react'
 
-import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { Badge, Eyebrow, Icon } from '@/components/ui'
 import { type Currency, formatMoney } from '@/lib/currency'
 import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+
+interface PricingProps {
+    /** The tier cards' `location` on landing_cta_clicked. */
+    ctaLocation: string
+    /** The section's own eyebrow + headline; off when the page already frames it (the /pricing hero). */
+    intro?: boolean
+}
 
 /**
  * The pricing section — the tier cards, the professional tier, the one-time
@@ -13,8 +21,7 @@ import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
  * Renders straight from the static plan catalogue so both pages work without
  * the API; in-app surfaces use the DB-driven `usePlanCatalogue()` instead.
  */
-/** `intro` — the section's own eyebrow + headline; off when a page already frames it (the /pricing hero). */
-export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => void; intro?: boolean }) {
+export function Pricing({ ctaLocation, intro = true }: PricingProps) {
     const currency = useDisplayCurrency()
     return (
         <section id="pricing" className={intro ? 'py-14 sm:py-22 px-5 sm:px-8' : 'pt-10 pb-14 sm:pt-12 sm:pb-22 px-5 sm:px-8'}>
@@ -34,12 +41,12 @@ export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => vo
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
                     {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
-                        <PricingCard key={tier.id} tier={tier} currency={currency} onGetStarted={onGetStarted} />
+                        <PricingCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} />
                     ))}
                 </div>
 
                 {PLAN_TIERS.filter((tier) => tier.professional).map((tier) => (
-                    <ProfessionalCard key={tier.id} tier={tier} currency={currency} onGetStarted={onGetStarted} />
+                    <ProfessionalCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} />
                 ))}
 
                 <PacksTeaser currency={currency} />
@@ -57,7 +64,8 @@ export function Pricing({ onGetStarted, intro = true }: { onGetStarted: () => vo
 /** The pricing section while the closed beta runs: the tier ladder and all
  *  prices stay hidden — they may still change as real costs surface — so the
  *  section only says what the beta costs (nothing) and that pricing follows
- *  at launch. Keeps the #pricing anchor the nav and terms page link to. */
+ *  at launch. Keeps the section's id="pricing", so a /#pricing link still
+ *  lands on it (the site's own links go to /pricing). */
 export function BetaPricing() {
     return (
         <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
@@ -77,7 +85,7 @@ export function BetaPricing() {
 
 /** The professional tier: present enough to anchor the ladder, slim enough
  *  not to compete with the consumer cards. */
-function ProfessionalCard({ tier, currency, onGetStarted }: { tier: PlanTier; currency: Currency; onGetStarted: () => void }) {
+function ProfessionalCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency: Currency; ctaLocation: string }) {
     return (
         <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
             <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
@@ -99,7 +107,7 @@ function ProfessionalCard({ tier, currency, onGetStarted }: { tier: PlanTier; cu
                     / month · {formatMoney(tier.priceYearly, currency)}/yr
                 </span>
             </div>
-            <SecondaryButton onClick={onGetStarted}>{`Go ${tier.name}`}</SecondaryButton>
+            <GetStartedButton location={ctaLocation} plan={tier.id} variant="secondary">{`Go ${tier.name}`}</GetStartedButton>
         </div>
     )
 }
@@ -141,7 +149,7 @@ function PacksTeaser({ currency }: { currency: Currency }) {
     )
 }
 
-function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currency: Currency; onGetStarted: () => void }) {
+function PricingCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency: Currency; ctaLocation: string }) {
     const emphasis = tier.popular === true
     const cta = tier.priceMonthly === 0 ? 'Start sketching' : `Go ${tier.name}`
     return (
@@ -179,15 +187,9 @@ function PricingCard({ tier, currency, onGetStarted }: { tier: PlanTier; currenc
                 ))}
             </ul>
             <div className="mt-auto pt-2">
-                {emphasis ? (
-                    <PrimaryButton onClick={onGetStarted} fullWidth>
-                        {cta}
-                    </PrimaryButton>
-                ) : (
-                    <SecondaryButton onClick={onGetStarted} fullWidth>
-                        {cta}
-                    </SecondaryButton>
-                )}
+                <GetStartedButton location={ctaLocation} plan={tier.id} variant={emphasis ? 'primary' : 'secondary'} fullWidth>
+                    {cta}
+                </GetStartedButton>
             </div>
         </div>
     )

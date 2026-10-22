@@ -1,6 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -24,6 +25,7 @@ import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
 import { signOut, updateUser, useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
+import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
 import { billingKeys, useAllRecordings, useScores } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
@@ -63,10 +65,23 @@ export default function SettingsPage() {
         }
     }
 
-    // Coming back from a successful Polar checkout: land on the account tab.
+    // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan
+    // dialog. Dropped on the first tab switch, so coming back to the account tab doesn't reopen it.
+    const [requestedPlan, setRequestedPlan] = useState<PlanTier['id'] | null>(null)
+    const switchTab = (next: Tab) => {
+        setTab(next)
+        setRequestedPlan(null)
+    }
+
+    // Coming back from a successful Polar checkout, or from a pricing card: land on the account tab.
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        if (params.get('checkout') === 'success') {
+        const plan = requestedPlanFrom(window.location.search)
+        if (plan) {
+            setTab('account')
+            setRequestedPlan(plan)
+            window.history.replaceState(null, '', '/settings')
+        } else if (params.get('checkout') === 'success') {
             setTab('account')
             showToast('Payment confirmed — welcome to your new plan!', 'info')
             window.history.replaceState(null, '', '/settings')
@@ -116,7 +131,7 @@ export default function SettingsPage() {
                 <PageHeader title="Settings" subtitle="Tweak your profile and account." />
 
                 <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 md:gap-8 items-start">
-                    <SideNav tab={tab} onTab={setTab} />
+                    <SideNav tab={tab} onTab={switchTab} />
                     <div className="flex flex-col gap-4">
                         {tab === 'profile' && (
                             <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
@@ -143,7 +158,7 @@ export default function SettingsPage() {
 
                         {tab === 'account' && (
                             <>
-                                <BillingSection />
+                                <BillingSection requestedPlan={requestedPlan} />
                                 <SettingsSection title="Password" subtitle="Update the password you use to sign in.">
                                     <div>
                                         <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
@@ -157,9 +172,11 @@ export default function SettingsPage() {
                                             <Icon name="mail" size={16} />
                                             support@solkey.io
                                         </a>
-                                        <a href="/contact" className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        <Link
+                                            href="/contact"
+                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
                                             All contact options
-                                        </a>
+                                        </Link>
                                     </div>
                                 </SettingsSection>
                                 <SettingsSection title="Sign out" subtitle="Log out of this browser.">
@@ -243,20 +260,21 @@ function RecordingsInventory() {
     )
 }
 
+const TABS: readonly { readonly id: Tab; readonly label: string; readonly icon: IconName }[] = [
+    { id: 'profile', label: 'Profile', icon: 'user' },
+    { id: 'account', label: 'Account', icon: 'shield' },
+]
+
 function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
-    const items: [Tab, string, IconName][] = [
-        ['profile', 'Profile', 'user'],
-        ['account', 'Account', 'shield'],
-    ]
     return (
         <nav className="flex flex-row md:flex-col gap-1 md:sticky md:top-24">
-            {items.map(([k, label, icon]) => {
-                const active = tab === k
+            {TABS.map(({ id, label, icon }) => {
+                const active = tab === id
                 return (
                     <button
-                        key={k}
+                        key={id}
                         type="button"
-                        onClick={() => onTab(k)}
+                        onClick={() => onTab(id)}
                         className={[
                             'border-0 rounded-md px-3.5 py-2.5 text-left cursor-pointer',
                             'flex items-center gap-2.5',

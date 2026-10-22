@@ -5,7 +5,8 @@ import { Geist_Mono, Manrope, Newsreader, Space_Grotesk } from 'next/font/google
 
 import { AuthGate } from '@/components/AuthGate'
 import { HydrationMarker } from '@/components/HydrationMarker'
-import { SITE_URL } from '@/lib/siteUrl'
+import { BRAND } from '@/lib/brandColors'
+import { SITE_URL } from '@/lib/env'
 
 import { Providers } from './providers'
 
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-    themeColor: '#f6f6f6',
+    themeColor: BRAND.surface,
 }
 
 export default function RootLayout({

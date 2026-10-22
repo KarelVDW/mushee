@@ -1,20 +1,28 @@
 // The BACKGROUNDS/GOALS/REFERRAL_SOURCES keys are enum-validated by the API
 // (apps/api/src/onboarding/dto/update-onboarding.dto.ts) — change both sides together.
-export const BACKGROUNDS: [string, string, string][] = [
-    ['curious', 'Just curious', 'I tinker with melodies sometimes.'],
-    ['hobbyist', 'Hobbyist', 'I play for myself — a few years in.'],
-    ['student', 'Student', 'Studying music formally right now.'],
-    ['teacher', 'Teacher', 'I teach others to play or compose.'],
-    ['composer', 'Composer / arranger', 'I write or arrange music regularly.'],
-    ['professional', 'Performing musician', 'I gig, record, or perform for a living.'],
+
+/** One answer card: the key the API stores, and the copy the card shows. */
+interface OnboardingOption {
+    readonly key: string
+    readonly title: string
+    readonly body: string
+}
+
+export const BACKGROUNDS: readonly OnboardingOption[] = [
+    { key: 'curious', title: 'Just curious', body: 'I tinker with melodies sometimes.' },
+    { key: 'hobbyist', title: 'Hobbyist', body: 'I play for myself — a few years in.' },
+    { key: 'student', title: 'Student', body: 'Studying music formally right now.' },
+    { key: 'teacher', title: 'Teacher', body: 'I teach others to play or compose.' },
+    { key: 'composer', title: 'Composer / arranger', body: 'I write or arrange music regularly.' },
+    { key: 'professional', title: 'Performing musician', body: 'I gig, record, or perform for a living.' },
 ]
 
-export const GOALS: [string, string, string][] = [
-    ['transcribe', 'Capture my playing', 'Record what I play or hum and turn it into notation.'],
-    ['compose', 'Write new music', 'Compose original pieces from scratch.'],
-    ['arrange', 'Arrange existing music', 'Adapt pieces for my instrument or ensemble.'],
-    ['teach', 'Make teaching materials', 'Create exercises and pieces for my students.'],
-    ['learn', 'Learn notation', 'Get comfortable reading and writing sheet music.'],
+export const GOALS: readonly OnboardingOption[] = [
+    { key: 'transcribe', title: 'Capture my playing', body: 'Record what I play or hum and turn it into notation.' },
+    { key: 'compose', title: 'Write new music', body: 'Compose original pieces from scratch.' },
+    { key: 'arrange', title: 'Arrange existing music', body: 'Adapt pieces for my instrument or ensemble.' },
+    { key: 'teach', title: 'Make teaching materials', body: 'Create exercises and pieces for my students.' },
+    { key: 'learn', title: 'Learn notation', body: 'Get comfortable reading and writing sheet music.' },
 ]
 
 // The instruments themselves come from the shared model list (`Instrument.selectableByCategory()`),
@@ -23,14 +31,14 @@ export const GOALS: [string, string, string][] = [
 export const NO_INSTRUMENT_OPTION = "I don't play (yet)"
 export const NON_INSTRUMENT_OPTIONS = ['Other', NO_INSTRUMENT_OPTION]
 
-export const REFERRAL_SOURCES: [string, string][] = [
-    ['friend', 'A friend told me'],
-    ['search', 'Found it on a search engine'],
-    ['social', 'Saw it on social media'],
-    ['youtube', 'Saw it on YouTube'],
-    ['teacher', 'My teacher recommended it'],
-    ['blog', 'Read about it in an article'],
-    ['other', 'Somewhere else'],
+export const REFERRAL_SOURCES: readonly { readonly key: string; readonly label: string }[] = [
+    { key: 'friend', label: 'A friend told me' },
+    { key: 'search', label: 'Found it on a search engine' },
+    { key: 'social', label: 'Saw it on social media' },
+    { key: 'youtube', label: 'Saw it on YouTube' },
+    { key: 'teacher', label: 'My teacher recommended it' },
+    { key: 'blog', label: 'Read about it in an article' },
+    { key: 'other', label: 'Somewhere else' },
 ]
 
 // Steps in order: verify email, mic permission, name, background, goal, instruments, source, tier.

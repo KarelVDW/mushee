@@ -181,6 +181,21 @@ export function isPlanTierId(id: string): id is PlanTier['id'] {
 }
 
 /**
+ * The tier a pricing card asked for (`?plan=<id>`): carried through signup into
+ * onboarding's plan step, or to Settings' plan dialog for a signed-in visitor.
+ * Honoured only when it names one of the tiers above.
+ */
+export function requestedPlanFrom(search: string): PlanTier['id'] | null {
+    const plan = new URLSearchParams(search).get('plan')
+    return plan && isPlanTierId(plan) ? plan : null
+}
+
+/** `path` with `plan=<id>` added to its query (beside a `?next=`), or unchanged without a plan. */
+export function withPlan(path: string, plan: PlanTier['id'] | null | undefined): string {
+    return plan ? `${path}${path.includes('?') ? '&' : '?'}plan=${plan}` : path
+}
+
+/**
  * The tier catalogue as in-app surfaces show it. The database decides which
  * tiers exist, their names and the limits the server enforces; the static
  * entries only decorate them (icons, taglines, display prices) and stand in

@@ -24,7 +24,7 @@ export default function TermsPage() {
             <h2>1. What Solkey is</h2>
             <p>
                 Solkey is a sheet-music editor with live audio-to-notation recording: you play or sing, and Solkey transcribes it into
-                editable notation. Features vary by plan (see <Link href="/#pricing">pricing</Link>); recording time is limited per day
+                editable notation. Features vary by plan (see <Link href="/pricing">pricing</Link>); recording time is limited per day
                 depending on your plan.
             </p>
 

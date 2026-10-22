@@ -1,85 +1,30 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-
-import { Eyebrow, Footer, Icon, type IconName, PrimaryButton, TertiaryButton, Wordmark } from '@/components/ui'
-import { track } from '@/lib/analytics'
-import { useSession } from '@/lib/auth-client'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { SignInLink } from '@/components/marketing/SignInLink'
+import { Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
 import { BetaPricing, Pricing } from './PricingSection'
 
+/** The landing page. Static apart from its client islands: the CTAs, sign-in links, demo and pricing. */
 export function LandingPage() {
-    const router = useRouter()
-    const { data: session } = useSession()
-    const authed = !!session?.user
-
-    const onSignIn = () => router.push('/login')
-    const onGetStarted = (location: string) => {
-        track('landing_cta_clicked', { location, beta: BETA_MODE })
-        router.push(authed ? '/scores' : '/signup')
-    }
-
-    const primaryCta = authed ? 'Open library' : BETA_MODE ? 'Request beta access' : 'Start free'
-
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <LandingNav
-                authed={authed}
-                cta={authed ? 'Open library' : BETA_MODE ? 'Request access' : 'Start free'}
-                onSignIn={onSignIn}
-                onGetStarted={() => onGetStarted('nav')}
-            />
+            <MarketingNav sectionLinks />
             <main className="flex-1">
-                <Hero authed={authed} cta={primaryCta} onSignIn={onSignIn} onGetStarted={() => onGetStarted('hero')} />
+                <Hero />
                 <HowItWorks />
                 <FeatureGrid />
-                {BETA_MODE ? <BetaPricing /> : <Pricing onGetStarted={() => onGetStarted('pricing')} />}
-                <FinalCTA cta={primaryCta} onGetStarted={() => onGetStarted('footer')} />
+                {BETA_MODE ? <BetaPricing /> : <Pricing ctaLocation="pricing" />}
+                <FinalCTA />
             </main>
             <Footer width="marketing" />
         </div>
     )
 }
 
-function LandingNav({
-    authed,
-    cta,
-    onSignIn,
-    onGetStarted,
-}: {
-    authed: boolean
-    cta: string
-    onSignIn: () => void
-    onGetStarted: () => void
-}) {
-    const navLinkClass = 'font-body font-medium text-[14px] leading-none text-on-surface-variant no-underline whitespace-nowrap'
-    return (
-        <nav aria-label="Primary" className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
-            <div className="max-w-320 mx-auto px-4 sm:px-8 py-4 sm:py-5 flex justify-between items-center gap-3">
-                <Wordmark size={28} />
-                <div className="flex items-center gap-4 sm:gap-6">
-                    <a href="#how" className={`${navLinkClass} max-md:hidden`}>
-                        How it works
-                    </a>
-                    <a href="#features" className={`${navLinkClass} max-md:hidden`}>
-                        Features
-                    </a>
-                    <a href="/pricing" className={`${navLinkClass} max-md:hidden`}>
-                        Pricing
-                    </a>
-                    {!authed && <TertiaryButton onClick={onSignIn}>Sign in</TertiaryButton>}
-                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
-                        {cta}
-                    </PrimaryButton>
-                </div>
-            </div>
-        </nav>
-    )
-}
-
-function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: string; onSignIn: () => void; onGetStarted: () => void }) {
+function Hero() {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
@@ -95,10 +40,8 @@ function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: s
                         Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
-                        <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                            {cta}
-                        </PrimaryButton>
-                        {!authed && <TertiaryButton onClick={onSignIn}>Already have an account?</TertiaryButton>}
+                        <GetStartedButton location="hero" size="lg" emphasis="pop" />
+                        <SignInLink>Already have an account?</SignInLink>
                     </div>
                     {BETA_MODE && (
                         <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
@@ -112,24 +55,58 @@ function Hero({ authed, cta, onSignIn, onGetStarted }: { authed: boolean; cta: s
     )
 }
 
+const HOW_STEPS: readonly { readonly num: string; readonly title: string; readonly body: string }[] = [
+    {
+        num: '01',
+        title: 'Press record',
+        body: 'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
+    },
+    {
+        num: '02',
+        title: 'Play or sing',
+        body: 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.',
+    },
+    {
+        num: '03',
+        title: 'Polish & keep',
+        body: "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go.",
+    },
+]
+
+const FEATURES: readonly { readonly icon: IconName; readonly title: string; readonly body: string }[] = [
+    {
+        icon: 'mic',
+        title: 'Live transcription',
+        body: 'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
+    },
+    {
+        icon: 'music',
+        title: 'Real engraving',
+        body: 'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
+    },
+    {
+        icon: 'keyboard',
+        title: 'Keyboard-first editing',
+        body: 'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
+    },
+    {
+        icon: 'audio-lines',
+        title: 'Hear it back',
+        body: 'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
+    },
+    {
+        icon: 'cloud',
+        title: 'Saved as you go',
+        body: 'Every change is stored instantly. Close the tab mid-phrase and pick up on another device without losing a note.',
+    },
+    {
+        icon: 'shield',
+        title: 'Yours, privately',
+        body: 'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
+    },
+]
+
 function HowItWorks() {
-    const steps: [string, string, string][] = [
-        [
-            '01',
-            'Press record',
-            'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
-        ],
-        [
-            '02',
-            'Play or sing',
-            'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.',
-        ],
-        [
-            '03',
-            'Polish & keep',
-            "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go.",
-        ],
-    ]
     return (
         <section id="how" className="py-14 sm:py-22 px-5 sm:px-8">
             <div className="max-w-320 mx-auto">
@@ -140,7 +117,7 @@ function HowItWorks() {
                     </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {steps.map(([num, title, body]) => (
+                    {HOW_STEPS.map(({ num, title, body }) => (
                         <div key={num} className="flex flex-col gap-3">
                             <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
                             <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
@@ -156,38 +133,6 @@ function HowItWorks() {
 }
 
 function FeatureGrid() {
-    const features: [IconName, string, string][] = [
-        [
-            'mic',
-            'Live transcription',
-            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
-        ],
-        [
-            'music',
-            'Real engraving',
-            'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
-        ],
-        [
-            'keyboard',
-            'Keyboard-first editing',
-            'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
-        ],
-        [
-            'audio-lines',
-            'Hear it back',
-            'Play your score with the sound of the right instrument to check your work by ear before anyone else does.',
-        ],
-        [
-            'cloud',
-            'Saved as you go',
-            'Every change is stored instantly. Close the tab mid-phrase and pick up on another device without losing a note.',
-        ],
-        [
-            'shield',
-            'Yours, privately',
-            'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
-        ],
-    ]
     return (
         <section id="features" className="py-14 sm:py-22 px-5 sm:px-8 bg-surface-container-lowest">
             <div className="max-w-320 mx-auto">
@@ -198,7 +143,7 @@ function FeatureGrid() {
                     Everything you need to catch an idea before it evaporates.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {features.map(([icon, title, body]) => (
+                    {FEATURES.map(({ icon, title, body }) => (
                         <div key={title} className="bg-surface rounded-lg p-6 flex flex-col gap-3">
                             <div className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                                 <Icon name={icon} size={22} />
@@ -215,7 +160,7 @@ function FeatureGrid() {
     )
 }
 
-function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void }) {
+function FinalCTA() {
     return (
         <section className="py-16 sm:py-24 px-5 sm:px-8 relative overflow-hidden">
             <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
@@ -229,9 +174,7 @@ function FinalCTA({ cta, onGetStarted }: { cta: string; onGetStarted: () => void
                     Sign up now and get it on paper before it slips away.
                 </p>
                 <div className="mt-2">
-                    <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onGetStarted}>
-                        {cta}
-                    </PrimaryButton>
+                    <GetStartedButton location="footer" size="lg" emphasis="pop" />
                 </div>
             </div>
         </section>

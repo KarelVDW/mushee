@@ -22,21 +22,23 @@ const CHANNELS: { label: string; email: string; blurb: string }[] = [
 
 export default function ContactPage() {
     return (
-        <PublicPageShell title="Contact">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose m-0 mb-8">
-                {CHANNELS.map((c) => (
-                    <div key={c.label} className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 flex flex-col gap-2">
-                        <Eyebrow>{c.label}</Eyebrow>
-                        <a
-                            href={`mailto:${c.email}`}
-                            className="font-headline font-semibold text-[18px] leading-[1.2] text-primary no-underline">
-                            {c.email}
-                        </a>
-                        <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">{c.blurb}</p>
-                    </div>
-                ))}
-            </div>
-
+        <PublicPageShell
+            title="Contact"
+            lead={
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {CHANNELS.map((c) => (
+                        <div key={c.label} className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 flex flex-col gap-2">
+                            <Eyebrow>{c.label}</Eyebrow>
+                            <a
+                                href={`mailto:${c.email}`}
+                                className="font-headline font-semibold text-[18px] leading-[1.2] text-primary no-underline">
+                                {c.email}
+                            </a>
+                            <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">{c.blurb}</p>
+                        </div>
+                    ))}
+                </div>
+            }>
             <h2>In the app</h2>
             <p>
                 Signed in? You&apos;ll find the same support links under <strong>Settings → Account → Support</strong>.

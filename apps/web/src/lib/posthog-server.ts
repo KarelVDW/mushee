@@ -1,5 +1,7 @@
 import { PostHog } from 'posthog-node'
 
+import { POSTHOG_HOST, POSTHOG_KEY } from './env'
+
 /**
  * Server-side PostHog client (error tracking for server/render errors via
  * instrumentation.ts). Flushes immediately — serverless-safe. Returns null
@@ -10,10 +12,9 @@ let client: PostHog | null | undefined
 
 export function getPostHogServer(): PostHog | null {
     if (client !== undefined) return client
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
-    client = key
-        ? new PostHog(key, {
-              host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com',
+    client = POSTHOG_KEY
+        ? new PostHog(POSTHOG_KEY, {
+              host: POSTHOG_HOST,
               flushAt: 1,
               flushInterval: 0,
           })

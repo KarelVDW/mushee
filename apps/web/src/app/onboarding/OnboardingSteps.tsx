@@ -182,8 +182,8 @@ export function BackgroundStep({ value, onChange }: { value: string | null; onCh
             title="Where are you in your musical life?"
             subtitle="We tune the editor's defaults and tutorials to your level — pick the closest match.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {BACKGROUNDS.map(([k, t, b]) => (
-                    <OptionCard key={k} active={value === k} onClick={() => onChange(k)} title={t} body={b} />
+                {BACKGROUNDS.map(({ key, title, body }) => (
+                    <OptionCard key={key} active={value === key} onClick={() => onChange(key)} title={title} body={body} />
                 ))}
             </div>
         </StepShell>
@@ -197,8 +197,8 @@ export function GoalStep({ value, onChange }: { value: string | null; onChange: 
             title="What do you want to do first?"
             subtitle="We'll point you at the right starting place — you can do all of it later.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {GOALS.map(([k, t, b]) => (
-                    <OptionCard key={k} active={value === k} onClick={() => onChange(k)} title={t} body={b} />
+                {GOALS.map(({ key, title, body }) => (
+                    <OptionCard key={key} active={value === key} onClick={() => onChange(key)} title={title} body={body} />
                 ))}
             </div>
         </StepShell>
@@ -254,8 +254,8 @@ export function SourceStep({
     return (
         <StepShell title="How did you find Solkey?" subtitle="Helps us know what's working — entirely optional, no wrong answers.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {REFERRAL_SOURCES.map(([k, label]) => (
-                    <OptionCard key={k} active={source === k} onClick={() => onSourceChange(k)} title={label} />
+                {REFERRAL_SOURCES.map(({ key, label }) => (
+                    <OptionCard key={key} active={source === key} onClick={() => onSourceChange(key)} title={label} />
                 ))}
             </div>
             {source && (

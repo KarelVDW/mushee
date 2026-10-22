@@ -1,64 +1,49 @@
 import type { Metadata } from 'next'
 
+import { JsonLd } from '@/components/marketing/JsonLd'
 import { formatMoney } from '@/lib/currency'
-import { BETA_MODE, CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS } from '@/lib/plans'
-import { SITE_URL } from '@/lib/siteUrl'
+import { SITE_URL } from '@/lib/env'
+import { BETA_MODE, CHEAPEST_PACK, PLAN_TIERS } from '@/lib/plans'
+import { solkeyApplicationJsonLd } from '@/lib/structuredData'
 
-import { PRICING_FAQ } from './faq'
+import { PRICING_FAQ_SHOWN } from './faq'
 import { PricingPage } from './PricingPage'
 
 /** The cheapest paid plan's monthly price — the "plans from …" figure. */
 const PLANS_FROM = Math.min(...PLAN_TIERS.filter((tier) => tier.priceMonthly > 0).map((tier) => tier.priceMonthly))
 
-export const metadata: Metadata = {
-    title: 'Pricing',
-    description:
-        'Solkey plans: pay for recording time, nothing else. Sketch is free forever; Songwriter, Studio and Arranger add daily recording budget. One-time minute packs never expire.',
-    alternates: { canonical: '/pricing' },
-    openGraph: {
-        title: 'Solkey pricing — pay for recording time, nothing else',
-        description: `Free to start. Plans from ${formatMoney(PLANS_FROM, 'usd')} a month, one-time minute packs from ${formatMoney(CHEAPEST_PACK.price, 'usd')}. Every plan gets the full editor.`,
-    },
-}
+// During the closed beta the tiers and their prices stay unannounced (they may still change), so
+// the page's search and social copy says only what the beta costs: nothing.
+export const metadata: Metadata = BETA_MODE
+    ? {
+          title: 'Pricing',
+          description:
+              'Solkey is free while the closed beta runs: the full editor, live audio-to-notation and playback, no card needed. Paid plans arrive at launch.',
+          alternates: { canonical: '/pricing' },
+          openGraph: {
+              title: 'Solkey pricing — free while the beta runs',
+              description:
+                  'Every beta account gets the full editor, live audio-to-notation and playback, free of charge. Paid plans arrive at launch.',
+          },
+      }
+    : {
+          title: 'Pricing',
+          description:
+              'Solkey plans: pay for recording time, nothing else. Sketch is free forever; Songwriter, Studio and Arranger add daily recording budget. One-time minute packs never expire.',
+          alternates: { canonical: '/pricing' },
+          openGraph: {
+              title: 'Solkey pricing — pay for recording time, nothing else',
+              description: `Free to start. Plans from ${formatMoney(PLANS_FROM, 'usd')} a month, one-time minute packs from ${formatMoney(CHEAPEST_PACK.price, 'usd')}. Every plan gets the full editor.`,
+          },
+      }
 
-/** Structured data: the offer ladder (hidden during the beta) and the FAQ, for rich results. */
+/** Structured data: the product with its offer ladder (hidden during the beta) and the FAQ, for rich results. */
 const jsonLd = [
-    {
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'Solkey',
-        url: `${SITE_URL}/pricing`,
-        applicationCategory: 'MultimediaApplication',
-        operatingSystem: 'Web',
-        offers: BETA_MODE
-            ? [{ '@type': 'Offer', name: 'Solkey Beta', price: 0, priceCurrency: 'USD' }]
-            : [
-                  ...PLAN_TIERS.map((tier) => ({
-                      '@type': 'Offer',
-                      name: `Solkey ${tier.name}`,
-                      price: tier.priceMonthly,
-                      priceCurrency: 'USD',
-                      ...(tier.priceMonthly > 0 && {
-                          priceSpecification: {
-                              '@type': 'UnitPriceSpecification',
-                              price: tier.priceMonthly,
-                              priceCurrency: 'USD',
-                              billingDuration: 'P1M',
-                          },
-                      }),
-                  })),
-                  ...CREDIT_PACKS.map((pack) => ({
-                      '@type': 'Offer',
-                      name: `Solkey ${pack.name} pack (${pack.minutes} min)`,
-                      price: pack.price,
-                      priceCurrency: 'USD',
-                  })),
-              ],
-    },
+    solkeyApplicationJsonLd(`${SITE_URL}/pricing`),
     {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
-        mainEntity: PRICING_FAQ.map((item) => ({
+        mainEntity: PRICING_FAQ_SHOWN.map((item) => ({
             '@type': 'Question',
             name: item.question,
             acceptedAnswer: { '@type': 'Answer', text: item.answer },
@@ -69,7 +54,7 @@ const jsonLd = [
 export default function Page() {
     return (
         <>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <JsonLd data={jsonLd} />
             <PricingPage />
         </>
     )

@@ -20,12 +20,12 @@ test('unauthed landing: sign-in and the hero CTA route to the auth pages', async
     await stayLocal(page)
     await page.goto('/')
 
-    await expect(page.getByRole('button', { name: 'Start free' }).first()).toBeVisible()
-    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByRole('link', { name: 'Start free' }).first()).toBeVisible()
+    await page.getByRole('link', { name: 'Sign in' }).click()
     await expect(page).toHaveURL(/\/login$/)
 
     await page.goBack()
-    await page.getByRole('button', { name: 'Start free' }).first().click()
+    await page.getByRole('link', { name: 'Start free' }).first().click()
     await expect(page).toHaveURL(/\/signup$/)
 })
 
@@ -48,7 +48,7 @@ test('cookie banner: "Essential only" saves and stays dismissed across a reload'
     await expect(banner).toHaveCount(0)
 
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Start free' }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Start free' }).first()).toBeVisible()
     await expect(page.getByRole('dialog', { name: 'Cookie consent' })).toHaveCount(0)
 })
 
