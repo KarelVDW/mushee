@@ -102,14 +102,6 @@ export class BeamLayout {
         this.secondaries = segments
     }
 
-    get firstNote() {
-        return this.notes[0]
-    }
-
-    get lastNote() {
-        return this.notes[this.notes.length - 1]
-    }
-
     getStem(note: Note) {
         return this._stemByNote.get(note)
     }

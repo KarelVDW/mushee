@@ -415,7 +415,7 @@ describe('ScoreLayout', () => {
             const start = tieWithin(score, score.measures[0])
             expect(score.layout.ties).toHaveLength(1)
             expect(score.layout.ties[0].note).toBe(start)
-            expect(score.layout.ties[0].nextNote).toBe(score.tiePartner(start))
+            expect(score.tiePartner(score.layout.ties[0].note)).toBe(score.measures[0].notes[1])
         })
 
         it('reuses the tie instance when an unrelated row changes', () => {

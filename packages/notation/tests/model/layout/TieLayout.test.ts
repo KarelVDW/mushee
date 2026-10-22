@@ -19,6 +19,13 @@ function tieStartingAt(score: Score, note: Note): TieLayout {
     return tie
 }
 
+/** The note `tie` runs into — the score's semantic pairing, which the layout does not carry. */
+function endNoteOf(score: Score, tie: TieLayout): Note {
+    const end = score.tiePartner(tie.note)
+    if (!end) throw new Error('expected the tie to have an end note')
+    return end
+}
+
 /**
  * Replace the first measure's rests with two pitched half-notes, the first tied to the second,
  * and return the resulting TieLayout. Both notes land in the same row.
@@ -78,10 +85,10 @@ describe('TieLayout', () => {
     })
 
     it('shifts both endpoints by TIE_Y_SHIFT in the tie direction', () => {
-        const { tie } = sameRowTie()
+        const { score, tie } = sameRowTie()
         const seg = tie.segments[0]
         expect(seg.startY).toBe(tie.note.layout.noteY + TIE_Y_SHIFT * tie.direction)
-        expect(seg.endY).toBe(tie.nextNote.layout.noteY + TIE_Y_SHIFT * tie.direction)
+        expect(seg.endY).toBe(endNoteOf(score, tie).layout.noteY + TIE_Y_SHIFT * tie.direction)
     })
 
     it('curves upward (direction 1) for a stem-up note', () => {
@@ -120,7 +127,7 @@ describe('TieLayout', () => {
         expect(tie.segments).toHaveLength(2)
         const [seg0, seg1] = tie.segments
         const startRow = score.layout.rowFor(tie.note.measure)
-        const endRow = score.layout.rowFor(tie.nextNote.measure)
+        const endRow = score.layout.rowFor(endNoteOf(score, tie).measure)
         expect(seg0.rowIndex).toBe(startRow.index)
         expect(seg1.rowIndex).toBe(endRow.index)
         expect(seg0.rowIndex).not.toBe(seg1.rowIndex)
@@ -138,10 +145,10 @@ describe('TieLayout', () => {
         // Seg 1 begins at the end row's left edge (x = 0, row-local).
         expect(seg1.startX).toBe(0)
         // And reaches the tied-into note inside its measure.
-        const endRow = score.layout.rowFor(tie.nextNote.measure)
-        const endMeasureLayout = score.layout.measureLayoutFor(tie.nextNote.measure)
-        const expectedEndX =
-            endRow.getMeasureX(tie.nextNote.measure) + endMeasureLayout.getXForElement(tie.nextNote) + tie.nextNote.layout.noteX
+        const end = endNoteOf(score, tie)
+        const endRow = score.layout.rowFor(end.measure)
+        const endMeasureLayout = score.layout.measureLayoutFor(end.measure)
+        const expectedEndX = endRow.getMeasureX(end.measure) + endMeasureLayout.getXForElement(end) + end.layout.noteX
         expect(seg1.endX).toBeCloseTo(expectedEndX)
     })
 

@@ -24,7 +24,6 @@ describe('MeasureLayout', () => {
         if (!m) throw new Error('expected firstMeasure')
         expect(m.layout.measureX).toBe(0)
         expect(m.layout.measureWidth).toBeGreaterThan(0)
-        expect(m.layout.rowIndex).toBe(0)
     })
 
     it('positions notes left to right in measure-relative coordinates', () => {
@@ -358,7 +357,6 @@ describe('MeasureLayout', () => {
             return {
                 x: 0,
                 width: 300,
-                rowIndex: 0,
                 showsClef: false,
                 showsKeySignature: false,
                 showsTimeSignature: false,

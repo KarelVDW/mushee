@@ -42,8 +42,9 @@ describe('BeamLayout', () => {
         const { measure, beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
         const { primary } = beam
 
-        const first = beam.firstNote
-        const last = beam.lastNote
+        const first = beam.notes[0]
+        const last = beam.notes.at(-1)
+        if (!last) throw new Error('expected a beamed note')
         const firstStem = first.layout.getStem(beam.stemDir)
         const lastStem = last.layout.getStem(beam.stemDir)
         if (!firstStem || !lastStem) throw new Error('expected stems')

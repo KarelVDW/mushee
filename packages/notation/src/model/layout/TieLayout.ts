@@ -37,7 +37,6 @@ export class TieLayout {
 
     constructor(
         readonly note: Note,
-        readonly nextNote: Note,
         context: TieLayoutContext,
     ) {
         this.direction = context.direction

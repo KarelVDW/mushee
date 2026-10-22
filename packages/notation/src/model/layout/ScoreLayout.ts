@@ -8,7 +8,6 @@ import {
     MEASURE_BUTTON_SPACING,
     ROW_GAP,
     ROW_HEIGHT,
-    SCORE_WIDTH,
     TEMPO_MARKING_Y,
 } from '../../engraving/constants'
 import type { KeySignature } from '../KeySignature'
@@ -80,7 +79,7 @@ export class ScoreLayout {
     private readonly _tiesByKey = new Map<string, TieLayout>()
     private readonly _tieSegmentsByRow = new Map<number, Array<{ tie: TieLayout; segment: TieSegment }>>()
 
-    constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
+    constructor(score: Score, previous: ScoreLayout | undefined, scoreWidth: number) {
         const plans = ScoreLayout.buildPlans(score)
 
         // A measure denser than the packing budget cannot fit any row at the requested
@@ -144,7 +143,6 @@ export class ScoreLayout {
             const context = {
                 x: row.getMeasureX(plan.measure),
                 width: row.getMeasureWidth(plan.measure),
-                rowIndex: row.index,
                 showsClef: flags[i].showsClef,
                 showsKeySignature: flags[i].showsKeySignature,
                 showsTimeSignature: flags[i].showsTimeSignature,
@@ -154,7 +152,6 @@ export class ScoreLayout {
                     plan.measure.version,
                     row.getMeasureX(plan.measure),
                     row.getMeasureWidth(plan.measure),
-                    row.index,
                     flags[i].showsClef,
                     flags[i].showsKeySignature,
                     flags[i].showsTimeSignature,
@@ -177,7 +174,7 @@ export class ScoreLayout {
                 const key = `${note.id}|${nextNote.id}`
                 const previousTie = previous?._tiesByKey.get(key)
                 const tie =
-                    previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, nextNote, context)
+                    previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, context)
                 this._tiesByKey.set(key, tie)
                 this.ties.push(tie)
                 for (const segment of tie.segments) {

@@ -20,7 +20,7 @@ import { TempoLayout } from './TempoLayout'
 import { TupletLayout } from './TupletLayout'
 
 /** An element that occupies horizontal space within a measure. */
-export type MeasureElement = Clef | KeySignature | TimeSignature | Note
+type MeasureElement = Clef | KeySignature | TimeSignature | Note
 
 /** A drawn clef, key signature or time signature: its measure-local x and the width it occupies. */
 export interface MeasureAttribute {
@@ -33,7 +33,6 @@ export interface MeasureLayoutContext {
     /** x of this measure within its row (row-local). */
     x: number
     width: number
-    rowIndex: number
     showsClef: boolean
     showsKeySignature: boolean
     showsTimeSignature: boolean
@@ -54,7 +53,6 @@ export class MeasureLayout {
     readonly id = crypto.randomUUID()
     readonly measureX: number
     readonly measureWidth: number
-    readonly rowIndex: number
     readonly showsClef: boolean
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
@@ -77,7 +75,6 @@ export class MeasureLayout {
     ) {
         this.measureX = context.x
         this.measureWidth = context.width
-        this.rowIndex = context.rowIndex
         this.showsClef = context.showsClef
         this.showsKeySignature = context.showsKeySignature
         this.showsTimeSignature = context.showsTimeSignature
