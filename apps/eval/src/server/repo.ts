@@ -52,26 +52,16 @@ const CORPUS_SELECT = `
 `
 
 export async function listCorpora(): Promise<Corpus[]> {
-    return query<Corpus & Record<string, unknown>>(`${CORPUS_SELECT} GROUP BY c.id ORDER BY c.created_at DESC`)
+    return query<Corpus>(`${CORPUS_SELECT} GROUP BY c.id ORDER BY c.created_at DESC`)
 }
 
 export async function getCorpus(id: string): Promise<Corpus | null> {
-    const rows = await query<Corpus & Record<string, unknown>>(`${CORPUS_SELECT} WHERE c.id = $1 GROUP BY c.id`, [id])
+    const rows = await query<Corpus>(`${CORPUS_SELECT} WHERE c.id = $1 GROUP BY c.id`, [id])
     return rows[0] ?? null
 }
 
 export async function createCorpus(
-    corpus: {
-        id: string
-        label: string
-        kind: string
-        instrumentId: string | null
-        tier: string
-        bpm: number
-        beatsPerMeasure: number
-        params: GeneratorParams
-        notes: string | null
-    },
+    corpus: Omit<Corpus, 'createdAt' | 'clipCount' | 'recordedCount'>,
     clips: GeneratedClip[],
 ): Promise<void> {
     await query(
@@ -112,11 +102,11 @@ const CLIP_SELECT = `
 `
 
 export async function listClips(corpusId: string): Promise<Clip[]> {
-    return query<Clip & Record<string, unknown>>(`${CLIP_SELECT} WHERE corpus_id = $1 ORDER BY sort_order`, [corpusId])
+    return query<Clip>(`${CLIP_SELECT} WHERE corpus_id = $1 ORDER BY sort_order`, [corpusId])
 }
 
 export async function getClip(id: string): Promise<Clip | null> {
-    const rows = await query<Clip & Record<string, unknown>>(`${CLIP_SELECT} WHERE id = $1`, [id])
+    const rows = await query<Clip>(`${CLIP_SELECT} WHERE id = $1`, [id])
     return rows[0] ?? null
 }
 
@@ -138,7 +128,7 @@ export async function insertTranscription(
 }
 
 export async function latestTranscription(clipId: string): Promise<Transcription | null> {
-    const rows = await query<Transcription & Record<string, unknown>>(
+    const rows = await query<Transcription>(
         `SELECT id, clip_id AS "clipId", created_at AS "createdAt", notes, measures, metrics, config
          FROM eval.transcription WHERE clip_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
         [clipId],
@@ -180,7 +170,7 @@ export async function insertRun(run: { label: string; scope: string | null; repo
 }
 
 export async function listRuns(limit = 50): Promise<Run[]> {
-    return query<Run & Record<string, unknown>>(
+    return query<Run>(
         `SELECT id, created_at AS "createdAt", label, scope, report_path AS "reportPath", summary
          FROM eval.run ORDER BY created_at DESC LIMIT $1`,
         [limit],
