@@ -143,6 +143,17 @@ export function reactivateAccount(): Promise<AccountDeletionStatus> {
     return api('/account/reactivate', { method: 'POST' })
 }
 
+/** What the account answered in onboarding, as the API stores it; every field may be unanswered. */
+export interface OnboardingAnswers {
+    /** Instrument display names, in the order picked (survey-only options like 'Other' included). */
+    instruments?: string[] | null
+}
+
+/** The account's stored onboarding answers; null when it has none yet (the API answers an empty body). */
+export async function getOnboarding(): Promise<OnboardingAnswers | null> {
+    return (await api<OnboardingAnswers | null | undefined>('/onboarding')) ?? null
+}
+
 export interface OnboardingPatch {
     background?: string
     goal?: string

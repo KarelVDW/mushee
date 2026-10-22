@@ -7,7 +7,6 @@ import { useCallback, useMemo } from 'react'
 
 import type { ExportProfile } from './AccountExport'
 import {
-    api,
     type BillingInterval,
     cancelSubscription,
     changePlan,
@@ -21,6 +20,7 @@ import {
     getAccountDeletionStatus,
     getBetaStatus,
     getBillingState,
+    getOnboarding,
     getScore,
     getSettings,
     getSharedScore,
@@ -247,12 +247,6 @@ const onboardingKeys = {
     answers: ['onboarding'] as const,
 }
 
-/** What the account answered in onboarding, as the API stores it; every field may be unanswered. */
-export interface OnboardingAnswers {
-    /** Instrument display names, in the order picked (survey-only options like 'Other' included). */
-    instruments?: string[] | null
-}
-
 /**
  * The account's onboarding answers (GET /onboarding) — the library starts a new score on the
  * first instrument picked there. Null when the account has none yet.
@@ -260,8 +254,7 @@ export interface OnboardingAnswers {
 export function useOnboarding() {
     return useQuery({
         queryKey: onboardingKeys.answers,
-        // The API answers an empty body when nothing is stored yet; the cache needs a value.
-        queryFn: async () => (await api<OnboardingAnswers | null | undefined>('/onboarding')) ?? null,
+        queryFn: getOnboarding,
         // The answers change only when onboarding saves them, which refreshes this query.
         staleTime: Infinity,
     })
