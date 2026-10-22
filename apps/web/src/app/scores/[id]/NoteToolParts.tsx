@@ -90,8 +90,14 @@ export class NoteToolStates {
         return { active, disabled: !this.note?.canToggleTuplet }
     }
 
+    /**
+     * Pressed on a selected rest — save on a score of nothing but rests (the first, empty score),
+     * whose selected rest is the editor's default rather than a choice: a lit Rest would read as
+     * a mode beside the empty state's "Start recording". It still acts: a press makes it a note.
+     */
     get rest(): ToolState {
-        return this.needsNote() ?? { active: this.note?.isRest ?? false, disabled: false }
+        const active = !!this.note?.isRest && !!this.manipulator.score?.hasPitchedNotes
+        return this.needsNote() ?? { active, disabled: false }
     }
 
     get tie(): ToolState {

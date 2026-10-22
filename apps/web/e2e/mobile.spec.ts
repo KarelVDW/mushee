@@ -202,8 +202,11 @@ test('on the empty score the selected rest gets no move hint, and the Pitch nudg
     await expect(page.getByText(/^To move a note/)).toHaveCount(0)
     // By hand on a phone means the Pitch nudges (a tap only selects), and the line says so.
     await expect(page.getByText('Or tap a beat, then use Pitch below to place notes by hand.')).toBeVisible()
-    // Sharp or flat has nothing to act on, and says so inline.
+    // Nor do the bar buttons compete with Start recording: they wait for the first note.
+    await expect(page.getByRole('button', { name: 'Add bar' })).toHaveCount(0)
+    // Sharp or flat has nothing to act on, and says so inline; the default rest doesn't light Rest.
     const sheet = await openMore(page)
+    await expect(sheet.getByRole('button', { name: 'Rest', exact: true })).toHaveAttribute('aria-pressed', 'false')
     await expect(sheet.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })).toBeDisabled()
     await expect(sheet.getByText('Rests have no pitch — use Higher or Lower to make it a note.').first()).toBeVisible()
     await sheet.getByRole('button', { name: 'Close' }).tap()
@@ -212,6 +215,7 @@ test('on the empty score the selected rest gets no move hint, and the Pitch nudg
     await page.getByRole('button', { name: 'Higher', exact: true }).tap()
     await patch
     await expect(heading).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add bar' })).toBeVisible()
 })
 
 test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {

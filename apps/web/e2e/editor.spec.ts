@@ -777,6 +777,26 @@ test.describe('an empty score', () => {
         await expect(heading).toBeVisible()
     })
 
+    test('nothing else competes with Start recording: no bar buttons, no pressed Rest, until the first note', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        const add = page.getByRole('button', { name: 'Add bar' })
+        const remove = page.getByRole('button', { name: 'Remove last bar' })
+        await expect(add).toHaveCount(0)
+        await expect(remove).toHaveCount(0)
+        // The selected first rest is the editor's default, not a mode: Rest isn't lit for it.
+        const rest = page.getByRole('button', { name: 'Rest', exact: true })
+        await expect(rest).toHaveAttribute('aria-pressed', 'false')
+
+        await page.getByRole('button', { name: 'Higher', exact: true }).click()
+        await expect(add).toBeVisible()
+        await expect(remove).toBeVisible()
+        // Emptied again, they wait once more.
+        await rest.click()
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        await expect(add).toHaveCount(0)
+        await expect(rest).toHaveAttribute('aria-pressed', 'false')
+    })
+
     test('the header offers no Transpose until there is a note to move', async ({ page }) => {
         const transpose = page.getByRole('button', { name: 'Transpose', exact: true })
         await expect(page.getByRole('button', { name: 'Share score' })).toBeVisible()

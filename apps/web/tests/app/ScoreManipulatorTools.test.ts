@@ -420,6 +420,26 @@ describe('NoteToolStates', () => {
         expect(mixed.accidental.disabled).toBe(false)
     })
 
+    it('presses Rest on a selected rest, but not on the first, empty score — where a press still makes it a note', () => {
+        const { manipulator, notes } = setup(undefined, 2)
+        manipulator.select(notes[4]) // bar 2's first rest, in a score with notes
+        expect(new NoteToolStates(manipulator).rest).toEqual({ active: true, disabled: false })
+
+        const rests = makeScore(1)
+        const empty = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:tools', isMac: false }))
+        empty.attach(rests, () => undefined)
+        // The editor's default selection on a score of rests: Rest stays unpressed, and still acts.
+        expect(empty.selectedNote?.isRest).toBe(true)
+        expect(new NoteToolStates(empty).rest).toEqual({ active: false, disabled: false })
+        empty.run(TOGGLE_REST)
+        expect(empty.selectedNote?.isRest).toBe(false)
+        expect(new NoteToolStates(empty).rest).toEqual({ active: false, disabled: false })
+        // Back to all rests: still unpressed — the empty score again.
+        empty.run(TOGGLE_REST)
+        expect(empty.selectedNote?.isRest).toBe(true)
+        expect(new NoteToolStates(empty).rest.active).toBe(false)
+    })
+
     it('enables Tie where it binds', () => {
         const { manipulator, notes } = setup([pitched('C', 5), pitched('C', 5), pitched('E', 5), pitched('F', 5)])
         manipulator.select(notes[0])

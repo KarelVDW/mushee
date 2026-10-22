@@ -637,6 +637,8 @@ export default function ScoreEditorPage() {
                                 <MeasureControls
                                     rect={measureButtonsRect}
                                     canRemove={score.measures.length > 1}
+                                    // Like Transpose, they wait for the first note: an empty score has one next step.
+                                    waiting={!score.hasPitchedNotes}
                                     onAdd={() => manipulator.addMeasure()}
                                     onRemove={() => manipulator.removeMeasure()}
                                 />

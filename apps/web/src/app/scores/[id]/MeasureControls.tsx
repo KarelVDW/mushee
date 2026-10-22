@@ -9,6 +9,13 @@ interface MeasureControlsProps {
     rect: MeasureButtonsRect
     /** False with one bar left: a score always keeps one. */
     canRemove: boolean
+    /**
+     * Held back while the score has no pitched note: the empty state's "Start recording" is the
+     * first screen's one next step. Laid out but invisible — out of the tab order and the
+     * accessibility tree — so the empty state below keeps its place, and the buttons fade in
+     * where they stay as the first note lands.
+     */
+    waiting: boolean
     onAdd: () => void
     onRemove: () => void
 }
@@ -20,11 +27,15 @@ interface MeasureControlsProps {
  * so the remove is never a slip of the finger from the add. Removing a bar that held notes
  * offers an Undo (ScoreManipulator.removeMeasure).
  */
-export function MeasureControls({ rect, canRemove, onAdd, onRemove }: MeasureControlsProps) {
+export function MeasureControls({ rect, canRemove, waiting, onAdd, onRemove }: MeasureControlsProps) {
     return (
         <div
             data-export-exclude
-            className="mt-3 flex min-w-max items-center justify-end gap-4"
+            className={[
+                'mt-3 flex min-w-max items-center justify-end gap-4',
+                'transition-[opacity,visibility] duration-200 ease-solkey motion-reduce:transition-none',
+                waiting ? 'invisible opacity-0' : 'visible opacity-100',
+            ].join(' ')}
             style={{ width: Math.max(0, rect.barlineX) }}>
             <Tooltip hint="Add an empty bar at the end">
                 <button
