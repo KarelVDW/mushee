@@ -1,6 +1,6 @@
 'use client'
 
-import { BeatUnitIcon } from '@mushee/notation/components'
+import { AccidentalIcon, BeatUnitIcon } from '@mushee/notation/components'
 import type { Accidental } from '@mushee/notation/model'
 import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
@@ -169,13 +169,14 @@ function ToolRow({ icon, label, hint, shortcut, state, toggle = false, onClick }
 type SheetView = 'menu' | 'clef' | 'key' | 'time' | 'tempo'
 
 /**
- * The sharp-or-flat picker's options on the sheet, each glyph captioned in words — None first.
- * The natural's name keeps its caption and the word the dock and shortcuts use: "None (natural)".
+ * The sharp-or-flat picker's options on the sheet, each drawn glyph (AccidentalIcon, by its
+ * alteration) captioned in words — None first. The natural's name keeps its caption and the
+ * word the dock and shortcuts use: "None (natural)".
  */
-const SHEET_ACCIDENTALS: { value: Accidental | undefined; glyph: string; caption: string; name: string }[] = [
-    { value: undefined, glyph: '♮', caption: 'None', name: 'None (natural)' },
-    { value: 'b', glyph: '♭', caption: 'Flat', name: 'Flat' },
-    { value: '#', glyph: '♯', caption: 'Sharp', name: 'Sharp' },
+const SHEET_ACCIDENTALS: { value: Accidental | undefined; alter: -1 | 0 | 1; caption: string; name: string }[] = [
+    { value: undefined, alter: 0, caption: 'None', name: 'None (natural)' },
+    { value: 'b', alter: -1, caption: 'Flat', name: 'Flat' },
+    { value: '#', alter: 1, caption: 'Sharp', name: 'Sharp' },
 ]
 
 interface MoreToolsSheetProps {
@@ -452,12 +453,12 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         disabled={accidental.disabled}
                         disabledReason={accidental.reason}
                         onChange={(value) => manipulator.run(SET_ACCIDENTAL, value)}
-                        options={SHEET_ACCIDENTALS.map(({ value, glyph, caption, name }) => ({
+                        options={SHEET_ACCIDENTALS.map(({ value, alter, caption, name }) => ({
                             value,
                             ariaLabel: name,
                             label: (
                                 <span className="flex flex-col items-center gap-1">
-                                    <span className="text-[16px] leading-none">{glyph}</span>
+                                    <AccidentalIcon alter={alter} size={18} />
                                     <span className="font-body font-medium text-[11px] leading-none">{caption}</span>
                                 </span>
                             ),

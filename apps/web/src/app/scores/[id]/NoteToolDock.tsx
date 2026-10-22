@@ -1,6 +1,6 @@
 'use client'
 
-import { BeatUnitIcon, ClefIcon } from '@mushee/notation/components'
+import { AccidentalIcon, BeatUnitIcon, ClefIcon } from '@mushee/notation/components'
 import type { Accidental, DurationType } from '@mushee/notation/model'
 import { type ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 
@@ -27,11 +27,11 @@ const DURATION_NAMES: Record<DurationType, { name: string; quarterBeats: string 
     '16': { name: 'Sixteenth note', quarterBeats: 'a quarter of a beat' },
 }
 
-/** The sharp-or-flat picker, lower to higher: its glyphs are notation (the one sanctioned unicode chrome). */
-const ACCIDENTALS: { value: Accidental | undefined; glyph: string; name: string; hint: string; command: string }[] = [
-    { value: 'b', glyph: '♭', name: 'Flat', hint: 'a half step lower', command: 'set-accidental:flat' },
-    { value: undefined, glyph: '♮', name: 'Natural', hint: 'no sharp or flat', command: 'set-accidental:natural' },
-    { value: '#', glyph: '♯', name: 'Sharp', hint: 'a half step higher', command: 'set-accidental:sharp' },
+/** The sharp-or-flat picker, lower to higher, each drawn as notation (AccidentalIcon, by its alteration). */
+const ACCIDENTALS: { value: Accidental | undefined; alter: -1 | 0 | 1; name: string; hint: string; command: string }[] = [
+    { value: 'b', alter: -1, name: 'Flat', hint: 'a half step lower', command: 'set-accidental:flat' },
+    { value: undefined, alter: 0, name: 'Natural', hint: 'no sharp or flat', command: 'set-accidental:natural' },
+    { value: '#', alter: 1, name: 'Sharp', hint: 'a half step higher', command: 'set-accidental:sharp' },
 ]
 
 /** The first-selection hint (contract C10), per input: the mouse can aim at the staff, a finger uses the nudges. */
@@ -270,7 +270,12 @@ export function NoteToolDock({
                             onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
                             options={ACCIDENTALS.map((a) => ({
                                 value: a.value,
-                                label: a.glyph,
+                                // 20px window in the button's 14px line: the -my keeps the well as tall as before.
+                                label: (
+                                    <span className="inline-flex -my-0.75">
+                                        <AccidentalIcon alter={a.alter} size={20} />
+                                    </span>
+                                ),
                                 ariaLabel: a.name,
                                 hint: a.hint,
                                 shortcut: shortcut(a.command),
@@ -297,7 +302,14 @@ export function NoteToolDock({
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
                                 tooltip={`${words.clef} clef`}
-                                chip={<ClefIcon type={settings.clef} size={22} />}>
+                                // ClefIcon's size is its staff window's height, of which a treble clef's
+                                // ink fills about 0.77: 28 draws it at the planned 22px, in on-surface ink.
+                                // The -my keeps the chip as tall as its neighbours.
+                                chip={
+                                    <span className="inline-flex -my-0.75 text-on-surface">
+                                        <ClefIcon type={settings.clef} size={28} />
+                                    </span>
+                                }>
                                 {({ anchorRef, className, close }) => (
                                     <ClefPopover
                                         active={settings.clef}
