@@ -4,6 +4,7 @@ import { DataSource, DataSourceOptions } from 'typeorm'
 
 import { AccountDeletion } from '../account/entities/account-deletion.entity'
 import { ProcessedWebhookEvent } from '../billing/entities/processed-webhook-event.entity'
+import { positiveIntSetting } from '../common/env'
 import { UserOnboarding } from '../onboarding/entities/user-onboarding.entity'
 import { ActiveRecording } from '../recordings/entities/active-recording.entity'
 import { CreditBalance } from '../recordings/entities/credit-balance.entity'
@@ -34,7 +35,9 @@ export const dataSourceOptions: DataSourceOptions = {
     ssl: postgresSsl(),
     // Per-replica pool cap; two pools run per replica (TypeORM + better-auth),
     // so size against the server's max_connections before scaling replicas.
-    extra: { max: parseInt(process.env.POSTGRES_POOL_SIZE ?? '10', 10) },
+    // positiveIntSetting, not a bare parseInt: pg-pool takes a negative max as
+    // given, and a pool that is always full makes every query wait forever.
+    extra: { max: positiveIntSetting(process.env.POSTGRES_POOL_SIZE, 10) },
     entities: [
         AccountDeletion,
         ActiveRecording,
