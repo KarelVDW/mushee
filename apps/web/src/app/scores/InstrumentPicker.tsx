@@ -137,7 +137,7 @@ export function InstrumentPicker({ value, onChange, chordHint = true, showCurren
                     {showCurrentEyebrow && <Eyebrow>Instrument · {value.displayName}</Eyebrow>}
                 </div>
                 <span className="mt-1 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                    Sets the playback sound and helps Solkey listen. You can change it later.
+                    Sets the playback sound and helps Solkey listen.
                 </span>
                 {chordHint && (
                     // Always mounted, so a screen reader hears the line the moment a chordal pick adds it.

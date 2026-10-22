@@ -62,7 +62,7 @@ function setPointer(fine: boolean) {
 const newScore = (props: Partial<React.ComponentProps<typeof NewScoreDialog>> = {}) =>
     createElement(NewScoreDialog, {
         title: 'New score',
-        subtitle: "Pick what you'll sing or play. You can change both later.",
+        subtitle: 'You can change both later.',
         initialInstrument: Instrument.VoiceLead,
         onCancel: () => {},
         onCreate: () => {},

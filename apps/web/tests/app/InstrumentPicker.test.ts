@@ -76,7 +76,8 @@ describe('InstrumentPicker', () => {
         const host = renderPicker(Instrument.VoiceLead)
         const group = host.querySelector('[role="group"][aria-labelledby]')
         expect(document.getElementById(group?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('What will you sing or play?')
-        expect(host.textContent).toContain('Sets the playback sound and helps Solkey listen. You can change it later.')
+        expect(host.textContent).toContain('Sets the playback sound and helps Solkey listen.')
+        expect(host.textContent).not.toContain('change it later')
         expect(host.textContent).toContain('Instrument · Voice')
         // The search field has a real name, not just a placeholder.
         expect(search(host).placeholder).toBe('Filter instruments…')

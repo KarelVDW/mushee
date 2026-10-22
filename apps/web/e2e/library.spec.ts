@@ -297,7 +297,7 @@ test('the create dialog takes an optional title, submits on Enter, and can be ca
     await page.getByRole('button', { name: 'New score' }).click()
     const dialog = page.getByRole('dialog', { name: 'New score' })
     await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText("Pick what you'll sing or play. You can change both later.")
+    await expect(dialog).toContainText('You can change both later.')
 
     // The title is optional: Create is enabled from the start, and the field says so.
     const create = page.getByRole('button', { name: 'Create score' })
@@ -340,7 +340,7 @@ test('the picker leads with popular tiles, the voice picked, and keeps the rest 
     const dialog = page.getByRole('dialog', { name: 'New score' })
 
     await expect(dialog.getByText('What will you sing or play?')).toBeVisible()
-    await expect(dialog.getByText('Sets the playback sound and helps Solkey listen. You can change it later.')).toBeVisible()
+    await expect(dialog.getByText('Sets the playback sound and helps Solkey listen.', { exact: true })).toBeVisible()
     // No onboarding answer: a new score starts on the voice.
     await expect(dialog.getByRole('button', { name: 'Pick Voice', exact: true })).toHaveAttribute('aria-pressed', 'true')
     for (const name of ['Piano', 'Guitar', 'Violin', 'Flute', 'Recorder', 'Alto Saxophone', 'Trumpet']) {

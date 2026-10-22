@@ -269,7 +269,7 @@ export default function ScoresPage() {
             {createDialogOpen && (
                 <NewScoreDialog
                     title="New score"
-                    subtitle="Pick what you'll sing or play. You can change both later."
+                    subtitle="You can change both later."
                     initialInstrument={defaultInstrument}
                     titlePlaceholder={titlePlaceholder}
                     onCancel={() => setCreateDialogOpen(false)}
