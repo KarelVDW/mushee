@@ -80,28 +80,26 @@ function CreateScoreDialog({ onCancel, onCreate }) {
     const [instrument, setInstrument] = useState('Piano')
     const canSubmit = title.trim().length > 0
     return (
-        <DialogScrim onDismiss={onCancel}>
-            <DialogPanel
-                title="New score"
-                subtitle="Give it a name and pick a lead instrument."
-                onClose={onCancel}
-                width={620}
-                footer={
-                    <>
-                        <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                        <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={() => canSubmit && onCreate(title.trim(), instrument)}>
-                            Create score
-                        </PrimaryButton>
-                    </>
-                }>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minHeight: 0, paddingBottom: 12 }}>
-                    <TextField label="Title" value={title} onChange={setTitle} placeholder="Untitled composition" autoFocus />
-                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                        <InstrumentPicker value={instrument} onChange={setInstrument} />
-                    </div>
+        <DialogPanel
+            title="New score"
+            subtitle="Give it a name and pick a lead instrument."
+            onClose={onCancel}
+            width={620}
+            footer={
+                <>
+                    <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
+                    <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={() => canSubmit && onCreate(title.trim(), instrument)}>
+                        Create score
+                    </PrimaryButton>
+                </>
+            }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minHeight: 0, paddingBottom: 12 }}>
+                <TextField label="Title" value={title} onChange={setTitle} placeholder="Untitled composition" autoFocus />
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    <InstrumentPicker value={instrument} onChange={setInstrument} />
                 </div>
-            </DialogPanel>
-        </DialogScrim>
+            </div>
+        </DialogPanel>
     )
 }
 

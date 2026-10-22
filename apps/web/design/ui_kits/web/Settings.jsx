@@ -319,98 +319,86 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, 
             : 'Continue to Polar checkout'
 
     return (
-        <DialogScrim onDismiss={phase === 'redirecting' || phase === 'done' ? undefined : onCancel}>
-            <DialogPanel
-                title={
-                    phase === 'done'
-                        ? isCancel
-                            ? 'Cancellation scheduled.'
-                            : 'Plan updated.'
-                        : phase === 'redirecting'
-                          ? isDowngrade || isCancel
-                              ? 'Updating your subscription…'
-                              : 'Redirecting to Polar…'
-                          : 'Change plan'
-                }
-                subtitle={
-                    phase === 'done'
-                        ? `You're now on ${nextPlan.name}.`
-                        : phase === 'redirecting'
-                          ? null
-                          : 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
-                }
-                onClose={phase === 'redirecting' || phase === 'done' ? undefined : onCancel}
-                width={720}
-                footer={
-                    phase === 'choose' || phase === 'error' ? (
-                        <>
-                            <TertiaryButton onClick={onCancel}>Keep current plan</TertiaryButton>
-                            <PrimaryButton
-                                emphasis="pop"
-                                disabled={isSame}
-                                danger={isCancel}
-                                icon={!isDowngrade && !isCancel ? 'external-link' : undefined}
-                                onClick={apply}>
-                                {ctaLabel}
-                            </PrimaryButton>
-                        </>
-                    ) : null
-                }>
-                {phase === 'choose' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 8 }}>
-                        <div
-                            role="radiogroup"
-                            aria-label="Billing cadence"
-                            style={{
-                                display: 'inline-flex',
-                                padding: 3,
-                                borderRadius: 9999,
-                                background: 'var(--color-surface-container-low)',
-                                alignSelf: 'flex-start',
-                            }}>
-                            {[
-                                ['monthly', 'Monthly'],
-                                ['yearly', 'Yearly · save 17%'],
-                            ].map(([k, label]) => {
-                                const active = billing === k
-                                return (
-                                    <button
-                                        key={k}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={active}
-                                        onClick={() => setBilling(k)}
-                                        style={{
-                                            background: active ? 'var(--color-primary-container)' : 'transparent',
-                                            color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
-                                            border: 0,
-                                            padding: '7px 14px',
-                                            borderRadius: 9999,
-                                            cursor: 'pointer',
-                                            font: '600 12px/1 var(--font-label)',
-                                            transition: 'background 150ms var(--ease), color 150ms var(--ease)',
-                                        }}>
-                                        {label}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                        {/* Three consumer tiers side by side; Arranger as a slim selectable row
-                            below — the same ladder as onboarding and the landing page (PlanPicker.tsx). */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                            {SETTINGS_PLAN_TIERS.filter((p) => !p.professional).map((p) => (
-                                <PlanTierCard
-                                    key={p.id}
-                                    plan={p}
-                                    billing={billing}
-                                    active={selected === p.id}
-                                    current={p.id === currentPlanId && billing === currentBilling}
-                                    onSelect={() => setSelected(p.id)}
-                                />
-                            ))}
-                        </div>
-                        {SETTINGS_PLAN_TIERS.filter((p) => p.professional).map((p) => (
-                            <ProTierRow
+        <DialogPanel
+            title={
+                phase === 'done'
+                    ? isCancel
+                        ? 'Cancellation scheduled.'
+                        : 'Plan updated.'
+                    : phase === 'redirecting'
+                      ? isDowngrade || isCancel
+                          ? 'Updating your subscription…'
+                          : 'Redirecting to Polar…'
+                      : 'Change plan'
+            }
+            subtitle={
+                phase === 'done'
+                    ? `You're now on ${nextPlan.name}.`
+                    : phase === 'redirecting'
+                      ? null
+                      : 'Switch tiers, change billing cadence, or cancel. Payments are processed securely by Polar.'
+            }
+            onClose={phase === 'redirecting' || phase === 'done' ? undefined : onCancel}
+            width={720}
+            footer={
+                phase === 'choose' || phase === 'error' ? (
+                    <>
+                        <TertiaryButton onClick={onCancel}>Keep current plan</TertiaryButton>
+                        <PrimaryButton
+                            emphasis="pop"
+                            disabled={isSame}
+                            danger={isCancel}
+                            icon={!isDowngrade && !isCancel ? 'external-link' : undefined}
+                            onClick={apply}>
+                            {ctaLabel}
+                        </PrimaryButton>
+                    </>
+                ) : null
+            }>
+            {phase === 'choose' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 8 }}>
+                    <div
+                        role="radiogroup"
+                        aria-label="Billing cadence"
+                        style={{
+                            display: 'inline-flex',
+                            padding: 3,
+                            borderRadius: 9999,
+                            background: 'var(--color-surface-container-low)',
+                            alignSelf: 'flex-start',
+                        }}>
+                        {[
+                            ['monthly', 'Monthly'],
+                            ['yearly', 'Yearly · save 17%'],
+                        ].map(([k, label]) => {
+                            const active = billing === k
+                            return (
+                                <button
+                                    key={k}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={active}
+                                    onClick={() => setBilling(k)}
+                                    style={{
+                                        background: active ? 'var(--color-primary-container)' : 'transparent',
+                                        color: active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)',
+                                        border: 0,
+                                        padding: '7px 14px',
+                                        borderRadius: 9999,
+                                        cursor: 'pointer',
+                                        font: '600 12px/1 var(--font-label)',
+                                        transition: 'background 150ms var(--ease), color 150ms var(--ease)',
+                                    }}>
+                                    {label}
+                                </button>
+                            )
+                        })}
+                    </div>
+                    {/* Three consumer tiers side by side; Arranger as a slim selectable row
+                        below — the same ladder as onboarding and the landing page (PlanPicker.tsx). */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        {SETTINGS_PLAN_TIERS.filter((p) => !p.professional).map((p) => (
+                            <PlanTierCard
                                 key={p.id}
                                 plan={p}
                                 billing={billing}
@@ -419,128 +407,138 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, 
                                 onSelect={() => setSelected(p.id)}
                             />
                         ))}
-                        {onShowPacks && (
-                            <p
-                                style={{
-                                    font: '400 12px/1.5 var(--font-body)',
-                                    color: 'var(--color-on-surface-variant)',
-                                    margin: 0,
-                                }}>
-                                Just need a few minutes once?{' '}
-                                <button
-                                    type="button"
-                                    onClick={onShowPacks}
-                                    style={{
-                                        border: 0,
-                                        background: 'transparent',
-                                        padding: 0,
-                                        cursor: 'pointer',
-                                        font: '500 12px/1.5 var(--font-body)',
-                                        color: 'var(--color-primary)',
-                                        textDecoration: 'underline',
-                                    }}>
-                                    One-time minute packs
-                                </button>
-                            </p>
-                        )}
-                        {isCancel && (
-                            <div
-                                style={{
-                                    background: 'var(--color-error-container)',
-                                    color: 'var(--color-on-error-container)',
-                                    borderRadius: 8,
-                                    padding: '12px 14px',
-                                    font: '400 13px/1.5 var(--font-body)',
-                                }}>
-                                You'll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then drop to
-                                Sketch. Your scores are never deleted.
-                            </div>
-                        )}
-                        {isDowngrade && !isCancel && (
-                            <div
-                                style={{
-                                    background: 'var(--color-surface-container-low)',
-                                    borderRadius: 8,
-                                    padding: '12px 14px',
-                                    font: '400 13px/1.5 var(--font-body)',
-                                    color: 'var(--color-on-surface-variant)',
-                                }}>
-                                The switch takes effect right away; Polar prorates the difference on your next invoice.
-                            </div>
-                        )}
                     </div>
-                )}
-                {phase === 'redirecting' && (
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: 14,
-                            padding: '24px 16px',
-                        }}>
+                    {SETTINGS_PLAN_TIERS.filter((p) => p.professional).map((p) => (
+                        <ProTierRow
+                            key={p.id}
+                            plan={p}
+                            billing={billing}
+                            active={selected === p.id}
+                            current={p.id === currentPlanId && billing === currentBilling}
+                            onSelect={() => setSelected(p.id)}
+                        />
+                    ))}
+                    {onShowPacks && (
+                        <p
+                            style={{
+                                font: '400 12px/1.5 var(--font-body)',
+                                color: 'var(--color-on-surface-variant)',
+                                margin: 0,
+                            }}>
+                            Just need a few minutes once?{' '}
+                            <button
+                                type="button"
+                                onClick={onShowPacks}
+                                style={{
+                                    border: 0,
+                                    background: 'transparent',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    font: '500 12px/1.5 var(--font-body)',
+                                    color: 'var(--color-primary)',
+                                    textDecoration: 'underline',
+                                }}>
+                                One-time minute packs
+                            </button>
+                        </p>
+                    )}
+                    {isCancel && (
                         <div
                             style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 9999,
-                                border: '3px solid var(--color-surface-container)',
-                                borderTopColor: 'var(--color-primary)',
-                                animation: 'solkey-spin 700ms linear infinite',
-                            }}
-                        />
-                        <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
-                        <span
+                                background: 'var(--color-error-container)',
+                                color: 'var(--color-on-error-container)',
+                                borderRadius: 8,
+                                padding: '12px 14px',
+                                font: '400 13px/1.5 var(--font-body)',
+                            }}>
+                            You'll keep <strong>{currentPlan.name}</strong> features until the end of your billing period, then drop to
+                            Sketch. Your scores are never deleted.
+                        </div>
+                    )}
+                    {isDowngrade && !isCancel && (
+                        <div
                             style={{
+                                background: 'var(--color-surface-container-low)',
+                                borderRadius: 8,
+                                padding: '12px 14px',
                                 font: '400 13px/1.5 var(--font-body)',
                                 color: 'var(--color-on-surface-variant)',
-                                textAlign: 'center',
-                                maxWidth: 360,
                             }}>
-                            {isDowngrade || isCancel
-                                ? 'Talking to Polar to update your subscription.'
-                                : "Sending you to Polar's secure checkout…"}
-                        </span>
-                    </div>
-                )}
-                {phase === 'done' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0 16px' }}>
-                        <span
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 9999,
-                                flexShrink: 0,
-                                background: 'var(--color-primary-container)',
-                                color: 'var(--color-on-primary-container)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                            <Icon name="check" size={20} />
-                        </span>
-                        <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            {isCancel
-                                ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
-                                : 'Polar has the new plan on file. Receipt follows by email.'}
-                        </span>
-                    </div>
-                )}
-                {phase === 'error' && (
+                            The switch takes effect right away; Polar prorates the difference on your next invoice.
+                        </div>
+                    )}
+                </div>
+            )}
+            {phase === 'redirecting' && (
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 14,
+                        padding: '24px 16px',
+                    }}>
                     <div
                         style={{
-                            background: 'var(--color-error-container)',
-                            color: 'var(--color-on-error-container)',
-                            borderRadius: 8,
-                            padding: '12px 14px',
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            border: '3px solid var(--color-surface-container)',
+                            borderTopColor: 'var(--color-primary)',
+                            animation: 'solkey-spin 700ms linear infinite',
+                        }}
+                    />
+                    <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
+                    <span
+                        style={{
                             font: '400 13px/1.5 var(--font-body)',
-                            marginBottom: 12,
+                            color: 'var(--color-on-surface-variant)',
+                            textAlign: 'center',
+                            maxWidth: 360,
                         }}>
-                        {errorMsg || "Polar didn't respond. Try again in a moment."}
-                    </div>
-                )}
-            </DialogPanel>
-        </DialogScrim>
+                        {isDowngrade || isCancel
+                            ? 'Talking to Polar to update your subscription.'
+                            : "Sending you to Polar's secure checkout…"}
+                    </span>
+                </div>
+            )}
+            {phase === 'done' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0 16px' }}>
+                    <span
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            flexShrink: 0,
+                            background: 'var(--color-primary-container)',
+                            color: 'var(--color-on-primary-container)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                        <Icon name="check" size={20} />
+                    </span>
+                    <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        {isCancel
+                            ? 'Your subscription ends at the close of the current billing period. You can resume any time before then.'
+                            : 'Polar has the new plan on file. Receipt follows by email.'}
+                    </span>
+                </div>
+            )}
+            {phase === 'error' && (
+                <div
+                    style={{
+                        background: 'var(--color-error-container)',
+                        color: 'var(--color-on-error-container)',
+                        borderRadius: 8,
+                        padding: '12px 14px',
+                        font: '400 13px/1.5 var(--font-body)',
+                        marginBottom: 12,
+                    }}>
+                    {errorMsg || "Polar didn't respond. Try again in a moment."}
+                </div>
+            )}
+        </DialogPanel>
     )
 }
 
@@ -563,110 +561,108 @@ function PacksDialog({ onCancel, onSeePlans }) {
     }
 
     return (
-        <DialogScrim onDismiss={locked ? undefined : onCancel}>
-            <DialogPanel
-                title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
-                subtitle={
-                    phase === 'choose'
-                        ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
-                        : null
-                }
-                onClose={locked ? undefined : onCancel}
-                width={640}
-                footer={
-                    phase === 'choose' ? (
-                        <>
-                            {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
-                            <PrimaryButton icon="external-link" onClick={buy}>
-                                {`Buy ${pack.name} · $${pack.price}`}
-                            </PrimaryButton>
-                        </>
-                    ) : null
-                }>
-                {phase === 'choose' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 8 }}>
-                        <div
-                            style={{
-                                background: 'var(--color-surface-container-low)',
-                                color: 'var(--color-on-surface-variant)',
-                                borderRadius: 8,
-                                padding: '12px 14px',
-                                font: '400 13px/1.5 var(--font-body)',
-                            }}>
-                            Recording regularly? <strong>Songwriter</strong> gives you 20 minutes <em>every day</em> for $9/month — packs
-                            are for the once-in-a-while.
-                        </div>
-                        <div role="radiogroup" aria-label="Minute pack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                            {SETTINGS_CREDIT_PACKS.map((p) => {
-                                const active = selected === p.id
-                                return (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={active}
-                                        onClick={() => setSelected(p.id)}
+        <DialogPanel
+            title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
+            subtitle={
+                phase === 'choose'
+                    ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
+                    : null
+            }
+            onClose={locked ? undefined : onCancel}
+            width={640}
+            footer={
+                phase === 'choose' ? (
+                    <>
+                        {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
+                        <PrimaryButton icon="external-link" onClick={buy}>
+                            {`Buy ${pack.name} · $${pack.price}`}
+                        </PrimaryButton>
+                    </>
+                ) : null
+            }>
+            {phase === 'choose' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 8 }}>
+                    <div
+                        style={{
+                            background: 'var(--color-surface-container-low)',
+                            color: 'var(--color-on-surface-variant)',
+                            borderRadius: 8,
+                            padding: '12px 14px',
+                            font: '400 13px/1.5 var(--font-body)',
+                        }}>
+                        Recording regularly? <strong>Songwriter</strong> gives you 20 minutes <em>every day</em> for $9/month — packs
+                        are for the once-in-a-while.
+                    </div>
+                    <div role="radiogroup" aria-label="Minute pack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                        {SETTINGS_CREDIT_PACKS.map((p) => {
+                            const active = selected === p.id
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={active}
+                                    onClick={() => setSelected(p.id)}
+                                    style={{
+                                        textAlign: 'left',
+                                        background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
+                                        color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
+                                        border: 0,
+                                        borderRadius: 12,
+                                        padding: 16,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 8,
+                                        boxShadow: active ? 'none' : 'var(--shadow-tonal)',
+                                    }}>
+                                    <span style={{ font: '600 14px/1.2 var(--font-body)' }}>{p.name}</span>
+                                    <span
                                         style={{
-                                            textAlign: 'left',
-                                            background: active ? 'var(--color-primary-soft)' : 'var(--color-surface-container-lowest)',
-                                            color: active ? 'var(--color-on-primary-soft)' : 'var(--color-on-surface)',
-                                            border: 0,
-                                            borderRadius: 12,
-                                            padding: 16,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 8,
-                                            boxShadow: active ? 'none' : 'var(--shadow-tonal)',
+                                            fontFamily: 'var(--font-mono)',
+                                            fontWeight: 600,
+                                            fontSize: 22,
+                                            lineHeight: 1,
+                                            letterSpacing: '-0.01em',
                                         }}>
-                                        <span style={{ font: '600 14px/1.2 var(--font-body)' }}>{p.name}</span>
-                                        <span
-                                            style={{
-                                                fontFamily: 'var(--font-mono)',
-                                                fontWeight: 600,
-                                                fontSize: 22,
-                                                lineHeight: 1,
-                                                letterSpacing: '-0.01em',
-                                            }}>
-                                            ${p.price}
-                                        </span>
-                                        <span style={{ font: '400 13px/1.4 var(--font-body)' }}>{p.minutes} min of recording</span>
-                                        <span style={{ font: '400 12px/1.4 var(--font-body)', opacity: 0.8 }}>{p.blurb}</span>
-                                    </button>
-                                )
-                            })}
-                        </div>
-                        <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
-                            {pack.compare}
-                        </p>
+                                        ${p.price}
+                                    </span>
+                                    <span style={{ font: '400 13px/1.4 var(--font-body)' }}>{p.minutes} min of recording</span>
+                                    <span style={{ font: '400 12px/1.4 var(--font-body)', opacity: 0.8 }}>{p.blurb}</span>
+                                </button>
+                            )
+                        })}
                     </div>
-                )}
-                {phase === 'redirecting' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '24px 16px' }}>
-                        <div
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 9999,
-                                border: '3px solid var(--color-surface-container)',
-                                borderTopColor: 'var(--color-primary)',
-                                animation: 'solkey-spin 700ms linear infinite',
-                            }}
-                        />
-                        <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
-                        <span
-                            style={{
-                                font: '400 13px/1.5 var(--font-body)',
-                                color: 'var(--color-on-surface-variant)',
-                                textAlign: 'center',
-                                maxWidth: 360,
-                            }}>
-                            Sending you to Polar's secure checkout…
-                        </span>
-                    </div>
-                )}
-            </DialogPanel>
-        </DialogScrim>
+                    <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                        {pack.compare}
+                    </p>
+                </div>
+            )}
+            {phase === 'redirecting' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '24px 16px' }}>
+                    <div
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            border: '3px solid var(--color-surface-container)',
+                            borderTopColor: 'var(--color-primary)',
+                            animation: 'solkey-spin 700ms linear infinite',
+                        }}
+                    />
+                    <style>{`@keyframes solkey-spin { to { transform: rotate(360deg); } }`}</style>
+                    <span
+                        style={{
+                            font: '400 13px/1.5 var(--font-body)',
+                            color: 'var(--color-on-surface-variant)',
+                            textAlign: 'center',
+                            maxWidth: 360,
+                        }}>
+                        Sending you to Polar's secure checkout…
+                    </span>
+                </div>
+            )}
+        </DialogPanel>
     )
 }
 
@@ -769,124 +765,122 @@ function ChangePasswordDialog({ onCancel, onSuccess }) {
     )
 
     return (
-        <DialogScrim onDismiss={onCancel}>
-            <DialogPanel
-                title={saved ? 'Password updated.' : 'Change password'}
-                subtitle={
-                    saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'
-                }
-                onClose={onCancel}
-                width={480}
-                footer={
-                    saved ? (
-                        <PrimaryButton emphasis="pop" onClick={onSuccess}>
-                            Done
-                        </PrimaryButton>
-                    ) : (
-                        <>
-                            <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                            <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={submit}>
-                                Update password
-                            </PrimaryButton>
-                        </>
-                    )
-                }>
-                {saved ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16 }}>
-                        <span
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 9999,
-                                background: 'var(--color-primary-container)',
-                                color: 'var(--color-on-primary-container)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                            }}>
-                            <Icon name="check" size={20} />
-                        </span>
-                        <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            We've signed you out everywhere else as a precaution.
-                        </span>
-                    </div>
+        <DialogPanel
+            title={saved ? 'Password updated.' : 'Change password'}
+            subtitle={
+                saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'
+            }
+            onClose={onCancel}
+            width={480}
+            footer={
+                saved ? (
+                    <PrimaryButton emphasis="pop" onClick={onSuccess}>
+                        Done
+                    </PrimaryButton>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-                        <TextField
-                            label="Current password"
-                            value={current}
-                            onChange={setCurrent}
-                            type={showPw ? 'text' : 'password'}
-                            placeholder="••••••••••••"
-                            autoFocus
-                        />
-                        <TextField
-                            label="New password"
-                            value={next}
-                            onChange={setNext}
-                            type={showPw ? 'text' : 'password'}
-                            placeholder="••••••••••••"
-                            rightSlot={eye}
-                        />
-                        {/* Strength meter — same pattern as PasswordResetCard set-new */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -8 }}>
-                            {[0, 1, 2, 3].map((i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        height: 3,
-                                        flex: 1,
-                                        borderRadius: 3,
-                                        background:
-                                            i < pwScore
-                                                ? pwScore <= 1
-                                                    ? 'var(--color-error-container)'
-                                                    : pwScore === 2
-                                                      ? 'var(--color-secondary-soft)'
-                                                      : 'var(--color-primary-container)'
-                                                : 'var(--color-surface-container)',
-                                        transition: 'background 180ms var(--ease)',
-                                    }}
-                                />
-                            ))}
-                            <Eyebrow style={{ marginLeft: 4 }}>{PW_LABELS[pwScore]}</Eyebrow>
-                        </div>
-                        <TextField
-                            label="Confirm new password"
-                            value={confirm}
-                            onChange={setConfirm}
-                            type={showPw ? 'text' : 'password'}
-                            placeholder="••••••••••••"
-                        />
-                        {confirm.length > 0 && !pwMatch && (
-                            <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)', marginTop: -8 }}>
-                                Passwords don't match yet.
-                            </span>
-                        )}
-                        {next.length > 0 && next === current && (
-                            <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)', marginTop: -8 }}>
-                                Pick something different from your current password.
-                            </span>
-                        )}
-                        {error && <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)' }}>{error}</span>}
-                        <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            Forgot your current password?{' '}
-                            <a
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    onCancel()
+                    <>
+                        <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
+                        <PrimaryButton emphasis="pop" disabled={!canSubmit} onClick={submit}>
+                            Update password
+                        </PrimaryButton>
+                    </>
+                )
+            }>
+            {saved ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16 }}>
+                    <span
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            background: 'var(--color-primary-container)',
+                            color: 'var(--color-on-primary-container)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                        }}>
+                        <Icon name="check" size={20} />
+                    </span>
+                    <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        We've signed you out everywhere else as a precaution.
+                    </span>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+                    <TextField
+                        label="Current password"
+                        value={current}
+                        onChange={setCurrent}
+                        type={showPw ? 'text' : 'password'}
+                        placeholder="••••••••••••"
+                        autoFocus
+                    />
+                    <TextField
+                        label="New password"
+                        value={next}
+                        onChange={setNext}
+                        type={showPw ? 'text' : 'password'}
+                        placeholder="••••••••••••"
+                        rightSlot={eye}
+                    />
+                    {/* Strength meter — same pattern as PasswordResetCard set-new */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -8 }}>
+                        {[0, 1, 2, 3].map((i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    height: 3,
+                                    flex: 1,
+                                    borderRadius: 3,
+                                    background:
+                                        i < pwScore
+                                            ? pwScore <= 1
+                                                ? 'var(--color-error-container)'
+                                                : pwScore === 2
+                                                  ? 'var(--color-secondary-soft)'
+                                                  : 'var(--color-primary-container)'
+                                            : 'var(--color-surface-container)',
+                                    transition: 'background 180ms var(--ease)',
                                 }}
-                                style={{ color: 'var(--color-primary)' }}>
-                                Send a reset link by email
-                            </a>{' '}
-                            instead.
-                        </span>
+                            />
+                        ))}
+                        <Eyebrow style={{ marginLeft: 4 }}>{PW_LABELS[pwScore]}</Eyebrow>
                     </div>
-                )}
-            </DialogPanel>
-        </DialogScrim>
+                    <TextField
+                        label="Confirm new password"
+                        value={confirm}
+                        onChange={setConfirm}
+                        type={showPw ? 'text' : 'password'}
+                        placeholder="••••••••••••"
+                    />
+                    {confirm.length > 0 && !pwMatch && (
+                        <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)', marginTop: -8 }}>
+                            Passwords don't match yet.
+                        </span>
+                    )}
+                    {next.length > 0 && next === current && (
+                        <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)', marginTop: -8 }}>
+                            Pick something different from your current password.
+                        </span>
+                    )}
+                    {error && <span style={{ font: '500 12px/1.4 var(--font-body)', color: 'var(--color-error)' }}>{error}</span>}
+                    <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Forgot your current password?{' '}
+                        <a
+                            href="#"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                onCancel()
+                            }}
+                            style={{ color: 'var(--color-primary)' }}>
+                            Send a reset link by email
+                        </a>{' '}
+                        instead.
+                    </span>
+                </div>
+            )}
+        </DialogPanel>
     )
 }
 
@@ -913,109 +907,107 @@ function DeleteAccountDialog({ user, onCancel, onConfirm }) {
     }
 
     return (
-        <DialogScrim onDismiss={stage === 'done' ? undefined : onCancel}>
-            <DialogPanel
-                title={stage === 'done' ? 'Account scheduled for deletion.' : 'Delete your account?'}
-                subtitle={
-                    stage === 'done'
-                        ? 'Signing you out…'
-                        : 'Your account is deactivated today and permanently deleted after 7 days. Signing back in before then undoes it.'
-                }
-                onClose={stage === 'done' ? undefined : onCancel}
-                width={520}
-                footer={
-                    stage === 'done' ? null : (
-                        <>
-                            <TertiaryButton onClick={onCancel}>Keep my account</TertiaryButton>
-                            <PrimaryButton danger disabled={!canSubmit} onClick={submit}>
-                                Delete account
-                            </PrimaryButton>
-                        </>
-                    )
-                }>
-                {stage === 'done' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16 }}>
-                        <span
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 9999,
-                                background: 'var(--color-surface-container)',
-                                color: 'var(--color-on-surface-variant)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                            }}>
-                            <Icon name="check" size={20} />
-                        </span>
-                        <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            Thanks for being here. Changed your mind? Sign back in with{' '}
-                            <strong style={{ color: 'var(--color-on-surface)' }}>{email}</strong> before{' '}
-                            <strong style={{ color: 'var(--color-on-surface)' }}>{purgeDate}</strong> and everything will be right where
-                            you left it.
-                        </span>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-                        {/* Loss summary — small inventory of what disappears */}
-                        <div
-                            style={{
-                                background: 'var(--color-surface-container-low)',
-                                borderRadius: 8,
-                                padding: 16,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 10,
-                            }}>
-                            <Eyebrow>After 7 days you'll lose</Eyebrow>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {[
-                                    ['music', 'All your scores and recordings'],
-                                    ['download', 'All MIDI and PDF exports'],
-                                    ['link', 'Share links — they stop working once deletion completes'],
-                                ].map(([icon, text]) => (
-                                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <Icon name={icon} size={16} />
-                                        <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                            {text}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+        <DialogPanel
+            title={stage === 'done' ? 'Account scheduled for deletion.' : 'Delete your account?'}
+            subtitle={
+                stage === 'done'
+                    ? 'Signing you out…'
+                    : 'Your account is deactivated today and permanently deleted after 7 days. Signing back in before then undoes it.'
+            }
+            onClose={stage === 'done' ? undefined : onCancel}
+            width={520}
+            footer={
+                stage === 'done' ? null : (
+                    <>
+                        <TertiaryButton onClick={onCancel}>Keep my account</TertiaryButton>
+                        <PrimaryButton danger disabled={!canSubmit} onClick={submit}>
+                            Delete account
+                        </PrimaryButton>
+                    </>
+                )
+            }>
+            {stage === 'done' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16 }}>
+                    <span
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 9999,
+                            background: 'var(--color-surface-container)',
+                            color: 'var(--color-on-surface-variant)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                        }}>
+                        <Icon name="check" size={20} />
+                    </span>
+                    <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Thanks for being here. Changed your mind? Sign back in with{' '}
+                        <strong style={{ color: 'var(--color-on-surface)' }}>{email}</strong> before{' '}
+                        <strong style={{ color: 'var(--color-on-surface)' }}>{purgeDate}</strong> and everything will be right where
+                        you left it.
+                    </span>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+                    {/* Loss summary — small inventory of what disappears */}
+                    <div
+                        style={{
+                            background: 'var(--color-surface-container-low)',
+                            borderRadius: 8,
+                            padding: 16,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 10,
+                        }}>
+                        <Eyebrow>After 7 days you'll lose</Eyebrow>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {[
+                                ['music', 'All your scores and recordings'],
+                                ['download', 'All MIDI and PDF exports'],
+                                ['link', 'Share links — they stop working once deletion completes'],
+                            ].map(([icon, text]) => (
+                                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <Icon name={icon} size={16} />
+                                    <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                        {text}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
-
-                        <TextField
-                            label={
-                                <>
-                                    Type{' '}
-                                    <span style={{ font: '500 13px/1 var(--font-mono)', color: 'var(--color-on-surface)' }}>{phrase}</span>{' '}
-                                    to confirm
-                                </>
-                            }
-                            value={typed}
-                            onChange={setTyped}
-                            placeholder={phrase}
-                            autoFocus
-                        />
-                        <TextField label="Your password" value={pw} onChange={setPw} type="password" placeholder="••••••••••••" />
-
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={ack}
-                                onChange={(e) => setAck(e.target.checked)}
-                                style={{ marginTop: 3, accentColor: 'var(--color-error)' }}
-                            />
-                            <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                I understand that after the 7-day grace period this can't be undone, and that exporting my scores first is
-                                recommended.
-                            </span>
-                        </label>
                     </div>
-                )}
-            </DialogPanel>
-        </DialogScrim>
+
+                    <TextField
+                        label={
+                            <>
+                                Type{' '}
+                                <span style={{ font: '500 13px/1 var(--font-mono)', color: 'var(--color-on-surface)' }}>{phrase}</span>{' '}
+                                to confirm
+                            </>
+                        }
+                        value={typed}
+                        onChange={setTyped}
+                        placeholder={phrase}
+                        autoFocus
+                    />
+                    <TextField label="Your password" value={pw} onChange={setPw} type="password" placeholder="••••••••••••" />
+
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={ack}
+                            onChange={(e) => setAck(e.target.checked)}
+                            style={{ marginTop: 3, accentColor: 'var(--color-error)' }}
+                        />
+                        <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            I understand that after the 7-day grace period this can't be undone, and that exporting my scores first is
+                            recommended.
+                        </span>
+                    </label>
+                </div>
+            )}
+        </DialogPanel>
     )
 }
 

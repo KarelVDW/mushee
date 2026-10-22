@@ -200,27 +200,25 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
             </div>
 
             {deleteTarget && (
-                <DialogScrim onDismiss={() => setDeleteTarget(null)}>
-                    <DialogPanel
-                        title="Delete this score?"
-                        subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
-                        width={440}
-                        onClose={() => setDeleteTarget(null)}
-                        footer={
-                            <>
-                                <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
-                                <PrimaryButton
-                                    danger
-                                    onClick={() => {
-                                        onDelete(deleteTarget)
-                                        setDeleteTarget(null)
-                                    }}>
-                                    Delete score
-                                </PrimaryButton>
-                            </>
-                        }
-                    />
-                </DialogScrim>
+                <DialogPanel
+                    title="Delete this score?"
+                    subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
+                    width={440}
+                    onClose={() => setDeleteTarget(null)}
+                    footer={
+                        <>
+                            <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
+                            <PrimaryButton
+                                danger
+                                onClick={() => {
+                                    onDelete(deleteTarget)
+                                    setDeleteTarget(null)
+                                }}>
+                                Delete score
+                            </PrimaryButton>
+                        </>
+                    }
+                />
             )}
 
             {limitOpen && <ScoreLimitDialog onUpgrade={() => setLimitOpen(false)} onClose={() => setLimitOpen(false)} />}
@@ -233,63 +231,61 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
 // target come from the database catalogue via GET /plans.
 function ScoreLimitDialog({ planName = 'Sketch', limit = SKETCH_SCORE_LIMIT, nextPlanName = 'Songwriter', onUpgrade, onClose }) {
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title={`Your ${planName} plan holds up to ${limit} scores.`}
-                subtitle="Everything you've written is safe and stays fully editable."
-                onClose={onClose}
-                width={480}
-                footer={
-                    <>
-                        <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
-                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
-                            Upgrade to {nextPlanName}
-                        </PrimaryButton>
-                    </>
-                }>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
-                    <div
+        <DialogPanel
+            title={`Your ${planName} plan holds up to ${limit} scores.`}
+            subtitle="Everything you've written is safe and stays fully editable."
+            onClose={onClose}
+            width={480}
+            footer={
+                <>
+                    <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
+                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
+                        Upgrade to {nextPlanName}
+                    </PrimaryButton>
+                </>
+            }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 14,
+                        background: 'var(--color-surface-container-low)',
+                        borderRadius: 10,
+                        padding: 16,
+                    }}>
+                    <span
                         style={{
-                            display: 'flex',
+                            width: 44,
+                            height: 44,
+                            borderRadius: 9999,
+                            flexShrink: 0,
+                            background: 'var(--color-error-container)',
+                            color: 'var(--color-on-error-container)',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 14,
-                            background: 'var(--color-surface-container-low)',
-                            borderRadius: 10,
-                            padding: 16,
+                            justifyContent: 'center',
                         }}>
-                        <span
-                            style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 9999,
-                                flexShrink: 0,
-                                background: 'var(--color-error-container)',
-                                color: 'var(--color-on-error-container)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                            <Icon name="file-music" size={20} />
+                        <Icon name="file-music" size={20} />
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                            No room for a new score right now
                         </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                No room for a new score right now
-                            </span>
-                            <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                Editing, playback, recording, and export keep working on every score you already have.
-                            </span>
-                        </div>
+                        <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            Editing, playback, recording, and export keep working on every score you already have.
+                        </span>
                     </div>
-                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                        Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
-                        immediately.
-                    </span>
-                    <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                        Prefer to stay on {planName}? Deleting a score you no longer need frees up a slot.
-                    </span>
                 </div>
-            </DialogPanel>
-        </DialogScrim>
+                <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                    Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
+                    immediately.
+                </span>
+                <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                    Prefer to stay on {planName}? Deleting a score you no longer need frees up a slot.
+                </span>
+            </div>
+        </DialogPanel>
     )
 }
 
