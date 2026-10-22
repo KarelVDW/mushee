@@ -31,12 +31,13 @@ Every decision answers to this person: what we build, what we leave out, where a
 
 ## Sources
 
-| Source              | Path                                                       | Notes                                                                                                                            |
-| ------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Production codebase | `apps/web/`                                                | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.     |
-| Color tokens        | `apps/web/src/app/globals.css`                             | M3-style palette with cyan + magenta accents.                                                                                    |
-| Type loader         | `apps/web/src/app/layout.tsx`                              | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded. |
-| Notation glyphs     | `packages/notation/src/components/fonts/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                        |
+| Source              | Path                                                | Notes                                                                                                                            |
+| ------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Production codebase | `apps/web/`                                         | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.     |
+| Color tokens        | `packages/ui/src/theme.css`                         | M3-style palette with cyan + magenta accents — the shared theme each app's `globals.css` imports.                                |
+| UI primitives       | `packages/ui/src/`                                  | The shared `@mushee/ui` kit: buttons, inputs, feedback, icons, toasts. Web-only pieces live in `apps/web/src/components/ui/`.    |
+| Type loader         | `apps/web/src/app/layout.tsx`                       | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded. |
+| Notation glyphs     | `packages/notation/src/engraving/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                        |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -194,9 +195,9 @@ Phones get the same design language, restructured — never a shrunken desktop. 
 
 ### Focus
 
-Every interactive element carries the shared keyboard-focus ring, the `focus-ring` utility (defined in `apps/web/src/app/globals.css`: a 2px `primary` outline at 2px offset, on `:focus-visible` only) — the dark teal reads on white and on both neon fills. Dialogs are built from `DialogPanel`, which renders its own scrim and owns the modal a11y contract (role/aria-modal/labelling, focus trap, Escape, focus restore; one `onClose` drives Escape, backdrop click and ×). Anchored popovers (the clef / key / time / tempo pickers) are built from `Popover`/`PopoverOption`, which own the transient-surface contract (dialog role/labelling, Escape and outside-click dismissal, keys kept from the editor's shortcuts while open, `aria-pressed` option cells).
+Every interactive element carries the shared keyboard-focus ring, the `focus-ring` utility (defined in `packages/ui/src/theme.css`: a 2px `primary` outline at 2px offset, on `:focus-visible` only) — the dark teal reads on white and on both neon fills. Dialogs are built from `DialogPanel`, which renders its own scrim and owns the modal a11y contract (role/aria-modal/labelling, focus trap, Escape, focus restore; one `onClose` drives Escape, backdrop click and ×). Anchored popovers (the clef / key / time / tempo pickers) are built from `Popover`/`PopoverOption`, which own the transient-surface contract (dialog role/labelling, Escape and outside-click dismissal, keys kept from the editor's shortcuts while open, `aria-pressed` option cells).
 
-Stacking uses the named layers in `apps/web/src/app/globals.css`, lowest first: `--z-sticky` (sticky nav) = `--z-popover` (50) < `--z-banner` (cookie / browser-support banners, 60) < `--z-dialog` (the dialog scrim, 100) < `--z-toast` (110, so toasts stay readable and clickable over an open dialog). Overlay surfaces apply them as `z-(--z-dialog)` etc.; small stacking inside one component (`z-2`, the editor's header and dock) stays numeric.
+Stacking uses the named layers in `packages/ui/src/theme.css`, lowest first: `--z-sticky` (sticky nav) = `--z-popover` (50) < `--z-banner` (cookie / browser-support banners, 60) < `--z-dialog` (the dialog scrim, 100) < `--z-toast` (110, so toasts stay readable and clickable over an open dialog). Overlay surfaces apply them as `z-(--z-dialog)` etc.; small stacking inside one component (`z-2`, the editor's header and dock) stays numeric.
 
 ### Hover & press states
 
@@ -259,7 +260,7 @@ A Solkey card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`
 
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`chevron-*`, `menu`, `more-horizontal`, `settings`), editing (`copy`, `scissors`, `undo`, `redo`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`, `metronome`), files & sharing (`upload`, `file-music`, `folder`, `printer`, `share-2`, `send`), social (`user-plus`, `globe`, `heart`, `star`, `bookmark`), status (`alert-triangle`, `check-circle`, `help-circle`, `loader`, `zap`), billing (`credit-card`, `crown`, `gift`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
-**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`packages/notation/src/components/fonts/bravura_glyphs.ts`, the shared `@mushee/notation` workspace package) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `@mushee/notation` if you actually need to render notation.
+**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`packages/notation/src/engraving/bravura_glyphs.ts`, the shared `@mushee/notation` workspace package) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. We did not copy this 1MB+ glyph file into the design system — re-import from `@mushee/notation` if you actually need to render notation.
 
 **No emoji.** Solkey's voice is plain, but it's not casual in that way.
 
@@ -273,4 +274,4 @@ The registry also carries **reserved glyphs** with no call sites yet — navigat
 
 - **Fonts are CDN-only.** The codebase uses `next/font/google` to fetch Space Grotesk, Manrope, Newsreader, and Geist Mono at build time; no `.woff2` files are committed. The design system imports them via Google Fonts `@import`, which serves the same files. If you need an offline / paid-license version, source `.woff2`s yourself and drop them in `fonts/` with a matching `@font-face` block.
 - **Production has a full marketing surface.** The landing + pricing page ships in the app (`apps/web/src/app/LandingPage.tsx`); the UI kit's Landing screen approximates it but is not a 1:1 recreation. The Onboarding kit screens remain Solkey-shaped extensions with no production counterpart. There is still no native mobile app — phones get the responsive web app (see `../DESIGN.md` §4b).
-- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the `@mushee/notation` package (`packages/notation/src/components/fonts/`).
+- **Notation glyph rendering is not part of the kit.** A static placeholder staff renders in the editor recreation; for real notation, pull `bravura_glyphs.ts` from the `@mushee/notation` package (`packages/notation/src/engraving/`).

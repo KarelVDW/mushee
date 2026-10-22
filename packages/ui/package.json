@@ -5,7 +5,8 @@
     "description": "Solkey's shared design-system kit for the web app, the admin console and the eval workbench: the primitives (Brand, Buttons, Feedback, Icon, Inputs, Toast, RenderBoundary). Shipped as TypeScript source — consuming apps compile it with their own bundler (Next: transpilePackages).",
     "type": "module",
     "exports": {
-        ".": "./src/index.ts"
+        ".": "./src/index.ts",
+        "./theme.css": "./src/theme.css"
     },
     "scripts": {
         "type-check": "tsc --noEmit",
