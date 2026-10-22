@@ -1,13 +1,14 @@
 // The shared kit (@mushee/ui) next to the web-only pieces, so call sites import one place.
 export { AuthCard, type AuthCredentials, AuthFrame, AuthShell } from './AuthCard'
 export { Badge } from './Badge'
-export { Footer, PageHeader, TopNav } from './Chrome'
+export { Footer, PageHeader, SkipLink, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
 export { DialogPanel } from './Dialog'
 export { HeaderMenu } from './HeaderMenu'
-export { isAcceptablePassword } from './Password'
+export { isAcceptablePassword, NEW_PASSWORD_HINT, SIGNUP_PASSWORD_HINT } from './Password'
 export { NewPasswordFields, PasswordField } from './PasswordField'
-export { Popover, PopoverOption } from './Popover'
+export { Popover, PopoverOption, PopoverSheetHost, usePickConfirmation } from './Popover'
+export { focusWithoutTooltip, Tooltip, type TooltipShortcut } from './Tooltip'
 export {
     Alert,
     Avatar,
