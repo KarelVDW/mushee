@@ -5,6 +5,7 @@ import {
     BETA_PLAN,
     CHEAPEST_PACK,
     CREDIT_PACKS,
+    dailyMinutes,
     isPaidTier,
     isPlanTierId,
     PLAN_TIERS,
@@ -105,6 +106,13 @@ describe('credit packs', () => {
         expect(CREDIT_PACKS[0].compare('eur')).toBe('Songwriter gives you 20 min every day for €3 more a month.')
     })
 
+    it("compares packs against the Songwriter it is handed — in-app, the database's name and budget", () => {
+        const songwriter = { ...planById('pro'), name: 'Writer', dailyRecordingSeconds: 1500 }
+        expect(CREDIT_PACKS[0].compare('usd', songwriter)).toBe('Writer gives you 25 min every day for $3 more a month.')
+        expect(CREDIT_PACKS[1].compare('usd', songwriter)).toBe('Roughly 7 weeks of Writer costs the same.')
+        expect(dailyMinutes(songwriter)).toBe(25)
+    })
+
     it('prices larger packs at a gently declining per-minute rate', () => {
         const rates = CREDIT_PACKS.map((p) => p.price / p.minutes)
         for (let i = 1; i < rates.length; i++) {
@@ -175,6 +183,12 @@ describe('PlanCatalogue', () => {
         expect(free?.priceMonthly).toBe(0)
         expect(plans.byId('pro')?.priceMonthly).toBe(planById('pro').priceMonthly)
         expect(plans.byId('beta')).toBeUndefined()
+    })
+
+    it('serves Songwriter merged with the database, or the static entry when the API lacks it', () => {
+        expect(new PlanCatalogue(API_PLANS).songwriter).toMatchObject({ id: 'pro', dailyRecordingSeconds: 1500 })
+        expect(new PlanCatalogue(undefined).songwriter).toBe(planById('pro'))
+        expect(new PlanCatalogue(API_PLANS.filter((p) => p.id !== 'pro')).songwriter).toBe(planById('pro'))
     })
 
     it('merges the database beta plan into its static decoration', () => {

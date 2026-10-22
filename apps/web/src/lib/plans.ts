@@ -104,14 +104,21 @@ export interface CreditPack {
     minutes: number
     price: number
     blurb: string
-    /** The honest subscription comparison shown on the card. */
-    compare(this: CreditPack, currency: Currency): string
+    /**
+     * The honest subscription comparison shown on the card, against Songwriter as the
+     * surface knows it: in-app the catalogue's merged entry (PlanCatalogue.songwriter),
+     * on the marketing pages the static one (the default).
+     */
+    compare(this: CreditPack, currency: Currency, songwriter?: PlanTier): string
 }
 
-/** Songwriter — the subscription the pack copy measures the packs against. */
+/** Songwriter — the subscription the pack copy measures the packs against (its static entry). */
 export const SONGWRITER = planById('pro')
-/** Songwriter's daily budget in minutes (a fixed allowance, never unlimited). */
-export const SONGWRITER_DAILY_MINUTES = Math.round((SONGWRITER.dailyRecordingSeconds ?? 0) / 60)
+
+/** A tier's daily recording budget in whole minutes; Songwriter's is a fixed allowance, never unlimited. */
+export function dailyMinutes(plan: Pick<PlanTier, 'dailyRecordingSeconds'>): number {
+    return Math.round((plan.dailyRecordingSeconds ?? 0) / 60)
+}
 
 export const CREDIT_PACKS: CreditPack[] = [
     {
@@ -120,9 +127,9 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 15,
         price: 6,
         blurb: 'One song, with plenty of retakes.',
-        compare(c) {
-            const extra = formatMoney(SONGWRITER.priceMonthly - this.price, c)
-            return `${SONGWRITER.name} gives you ${SONGWRITER_DAILY_MINUTES} min every day for ${extra} more a month.`
+        compare(c, songwriter = SONGWRITER) {
+            const extra = formatMoney(songwriter.priceMonthly - this.price, c)
+            return `${songwriter.name} gives you ${dailyMinutes(songwriter)} min every day for ${extra} more a month.`
         },
     },
     {
@@ -131,7 +138,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 45,
         price: 15,
         blurb: 'A weekend writing session.',
-        compare: () => 'Roughly 7 weeks of Songwriter costs the same.',
+        compare: (_c, songwriter = SONGWRITER) => `Roughly 7 weeks of ${songwriter.name} costs the same.`,
     },
     {
         id: 'album',
@@ -139,7 +146,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         minutes: 150,
         price: 39,
         blurb: 'A whole project, start to finish.',
-        compare: () => 'Four months of Songwriter costs the same.',
+        compare: (_c, songwriter = SONGWRITER) => `Four months of ${songwriter.name} costs the same.`,
     },
 ]
 
@@ -239,6 +246,11 @@ export class PlanCatalogue {
     /** A sellable tier by id. */
     byId(id: string): PlanTier | undefined {
         return this.sellable.find((p) => p.id === id)
+    }
+
+    /** Songwriter under its database name and budget — what the in-app pack copy measures against. */
+    get songwriter(): PlanTier {
+        return this.byId(SONGWRITER.id) ?? SONGWRITER
     }
 
     /** The next tier up the ladder — what a limit dialog offers as the upgrade.

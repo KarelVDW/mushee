@@ -5,8 +5,8 @@ import { useState } from 'react'
 import { BusyNotice, DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { formatMoney } from '@/lib/currency'
-import { CREDIT_PACKS, type CreditPack, SONGWRITER, SONGWRITER_DAILY_MINUTES } from '@/lib/plans'
-import { useStartPackCheckout } from '@/lib/queries'
+import { CREDIT_PACKS, type CreditPack, dailyMinutes } from '@/lib/plans'
+import { usePlanCatalogue, useStartPackCheckout } from '@/lib/queries'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 type Phase = 'choose' | 'redirecting'
@@ -28,6 +28,7 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
     const [phase, setPhase] = useState<Phase>('choose')
     const currency = useDisplayCurrency()
     const startCheckout = useStartPackCheckout()
+    const songwriter = usePlanCatalogue().songwriter
 
     const pack = CREDIT_PACKS.find((p) => p.id === selected) ?? CREDIT_PACKS[0]
     const locked = phase !== 'choose'
@@ -63,8 +64,8 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
             {phase === 'choose' && (
                 <div className="flex flex-col gap-4 pb-2">
                     <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                        Recording regularly? <strong>{SONGWRITER.name}</strong> gives you {SONGWRITER_DAILY_MINUTES} minutes{' '}
-                        <em>every day</em> for {formatMoney(SONGWRITER.priceMonthly, currency)}/month — packs are for the once-in-a-while.
+                        Recording regularly? <strong>{songwriter.name}</strong> gives you {dailyMinutes(songwriter)} minutes{' '}
+                        <em>every day</em> for {formatMoney(songwriter.priceMonthly, currency)}/month — packs are for the once-in-a-while.
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
@@ -96,7 +97,9 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
                         })}
                     </div>
 
-                    <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">{pack.compare(currency)}</p>
+                    <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                        {pack.compare(currency, songwriter)}
+                    </p>
                 </div>
             )}
 
