@@ -13,7 +13,7 @@ export function LandingPage() {
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
             <MarketingNav sectionLinks />
-            <main className="flex-1">
+            <main id="content" className="flex-1">
                 <Hero />
                 <HowItWorks />
                 <FeatureGrid />

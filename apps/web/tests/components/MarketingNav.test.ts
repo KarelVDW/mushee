@@ -41,6 +41,22 @@ describe('MarketingNav', () => {
         expect(markup).toContain('href="/scores"')
     })
 
+    it('starts with a skip link to the page’s main content', () => {
+        const host = document.createElement('div')
+        host.innerHTML = html({ sectionLinks: true })
+        const first = host.querySelector('a, button')
+        expect(first?.textContent).toBe('Skip to content')
+        expect(first?.getAttribute('href')).toBe('#content')
+    })
+
+    it('grows the wordmark and section links to a 40px target on touch', () => {
+        const host = document.createElement('div')
+        host.innerHTML = html({ sectionLinks: true })
+        for (const selector of ['a[aria-label="Solkey home"]', 'a[href="#how"]', 'a[href="#features"]', 'a[href="/pricing"]']) {
+            expect(host.querySelector(selector)?.className, selector).toContain('pointer-coarse:min-h-10')
+        }
+    })
+
     it('renders the given actions in place of the defaults', () => {
         const markup = html({}, 'Back to Solkey')
         expect(markup).toContain('Back to Solkey')
