@@ -56,30 +56,32 @@ describe('GetStartedButton', () => {
         expect(hrefOf(html({ location: 'shared-score', next: '/s/abc' }))).toBe('/scores')
     })
 
-    it('takes the tier a pricing card names to signup, or to the plan dialog when signed in', () => {
-        expect(hrefOf(html({ location: 'pricing', plan: 'studio', children: 'Go Studio' }))).toBe('/signup?plan=studio')
+    it('takes the tier a pricing card names to signup, or to the plan tab’s plan dialog when signed in', () => {
+        expect(hrefOf(html({ location: 'pricing', plan: 'studio', children: 'Choose Studio' }))).toBe('/signup?plan=studio')
         expect(hrefOf(html({ location: 'pricing', plan: 'pro', next: '/s/abc' }))).toBe(
             `/signup?next=${encodeURIComponent('/s/abc')}&plan=pro`,
         )
         visitor.authed = true
-        expect(hrefOf(html({ location: 'pricing', plan: 'arranger', children: 'Go Arranger' }))).toBe('/settings?plan=arranger')
+        expect(hrefOf(html({ location: 'pricing', plan: 'arranger', children: 'Choose Arranger' }))).toBe(
+            '/settings?tab=plan&plan=arranger',
+        )
     })
 
     it('keeps the Sketch card a library link when signed in, never a cancel-preselected plan dialog', () => {
-        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start sketching' }))).toBe('/signup?plan=free')
+        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start free' }))).toBe('/signup?plan=free')
         visitor.authed = true
-        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start sketching' }))).toBe('/scores')
+        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start free' }))).toBe('/scores')
     })
 
     it('lets children replace the label and its arrow; secondary keeps the link', () => {
         const generic = html({ location: 'nav' })
-        const named = html({ location: 'pricing', children: 'Go Studio' })
+        const named = html({ location: 'pricing', children: 'Choose Studio' })
         expect(generic).toContain('<svg')
-        expect(named).toContain('Go Studio')
+        expect(named).toContain('Choose Studio')
         expect(named).not.toContain('Start free')
         expect(named).not.toContain('<svg')
 
-        const secondary = html({ location: 'pricing', variant: 'secondary', fullWidth: true, children: 'Start sketching' })
+        const secondary = html({ location: 'pricing', variant: 'secondary', fullWidth: true, children: 'Start free' })
         expect(secondary).toMatch(/^<a /)
         expect(secondary).toContain('w-full')
     })

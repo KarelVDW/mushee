@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 
+import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { PrimaryButton, SecondaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
@@ -26,9 +27,10 @@ interface GetStartedButtonProps {
     next?: string
     /**
      * The tier this CTA names (a pricing card's): signup carries it into onboarding's plan
-     * step, and for a paid tier a signed-in visitor goes to Settings' plan dialog instead of
-     * the library. Sketch stays a library link when signed in: preselecting it would greet a
-     * subscriber with a "Cancel subscription" CTA, and a free user with nothing to change.
+     * step, and for a paid tier a signed-in visitor goes to the plan dialog on Settings' plan
+     * tab instead of the library. Sketch stays a library link when signed in: preselecting it
+     * would greet a subscriber with a "Cancel subscription" CTA, and a free user with nothing
+     * to change. (Once the visitor's plan is known, the pricing cards name it themselves.)
      */
     plan?: PlanTier['id']
     /** Replaces the label table (the tier cards name their tier instead), and drops the forward arrow with it. */
@@ -56,7 +58,7 @@ export function GetStartedButton({
 
     const href = authed
         ? plan && isPaidTier(plan)
-            ? withPlan('/settings', plan)
+            ? withPlan(settingsTabPath('plan'), plan)
             : LIBRARY_PATH
         : withPlan(withNext('/signup', next), plan)
     const onClick = () => track('landing_cta_clicked', { location, beta: BETA_MODE })

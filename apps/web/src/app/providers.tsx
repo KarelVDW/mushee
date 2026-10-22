@@ -38,11 +38,12 @@ export function Providers({ children }: { children: ReactNode }) {
     return (
         <QueryClientProvider client={queryClient}>
             <SessionCacheScope />
+            {/* First, ahead of the page: in the flow on document pages, so it covers no nav or CTA. */}
+            <BrowserSupportBanner />
             {children}
             <Toaster />
             <AnalyticsIdentitySync />
             <CookieConsent />
-            <BrowserSupportBanner />
         </QueryClientProvider>
     )
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { Eyebrow, Footer } from '@/components/ui'
@@ -19,21 +20,22 @@ export function PricingPage() {
         <div className="bg-surface min-h-dvh flex flex-col">
             <MarketingNav ctaLocation="pricing-nav" />
 
-            <header className="pt-14 sm:pt-20 px-5 sm:px-8">
-                <div className="max-w-190 mx-auto text-center flex flex-col gap-4 items-center">
-                    <Eyebrow className="text-primary">Pricing</Eyebrow>
-                    <h1 className="font-display font-bold text-[40px] sm:text-[56px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
-                        Simple plans,
-                        <br />
-                        <em className="font-serif font-normal">priced by the minute you record.</em>
-                    </h1>
-                    <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                        Every plan has the whole editor. You only pay for how much you can record each day — and you can start for free.
-                    </p>
-                </div>
-            </header>
+            {/* The page heading sits inside <main>, so the skip link lands on it. */}
+            <main id="content" className="flex-1">
+                <header className="pt-14 sm:pt-20 px-5 sm:px-8">
+                    <div className="max-w-190 mx-auto text-center flex flex-col gap-4 items-center">
+                        <Eyebrow className="text-primary">Pricing</Eyebrow>
+                        <h1 className="font-display font-bold text-[40px] sm:text-[56px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
+                            Simple plans.
+                            <br />
+                            <em className="font-serif font-normal">Free to start.</em>
+                        </h1>
+                        <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
+                            Every plan has the whole editor. Plans differ only in how much you can record each day.
+                        </p>
+                    </div>
+                </header>
 
-            <main className="flex-1">
                 {BETA_MODE ? <BetaPricing /> : <Pricing intro={false} ctaLocation="pricing-page" />}
                 <PricingFaq />
                 <section className="py-16 sm:py-20 px-5 sm:px-8">
@@ -72,16 +74,7 @@ function PricingFaq() {
                     className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
                     Questions, answered.
                 </h2>
-                <dl className="m-0 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                    {PRICING_FAQ_SHOWN.map((item) => (
-                        <div key={item.question} className="flex flex-col gap-2">
-                            <dt className="font-headline font-semibold text-[17px] leading-[1.3] tracking-[-0.005em] text-on-surface">
-                                {item.question}
-                            </dt>
-                            <dd className="m-0 font-body font-normal text-[14px] leading-[1.6] text-on-surface-variant">{item.answer}</dd>
-                        </div>
-                    ))}
-                </dl>
+                <FaqList items={PRICING_FAQ_SHOWN} tone="low" />
             </div>
         </section>
     )

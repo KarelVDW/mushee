@@ -5,22 +5,27 @@ import type { Score } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { ExportMenu } from '@/components/ExportMenu'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
-import { Footer, Icon, IconButton, SecondaryButton, showToast, TertiaryButton, TransportBtn, Wordmark } from '@/components/ui'
+import { Footer, Icon, PrimaryButton, SecondaryButton, showToast, SkipLink, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
+import { LIBRARY_PATH, withNext } from '@/lib/nextPath'
+import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 import { useTransport } from '@/lib/useTransport'
 
 /**
- * What a share link opens: the score, engraved read-only, with its title, an
- * export menu (the recipient can take the chart home as PDF/MusicXML/MIDI) and
- * a quiet path into Solkey. No editing surface, no selection, no recording.
+ * What a share link opens: the score, engraved read-only, with its title, a
+ * labelled player bar above it — Play/Pause, Stop once playing, Download (the
+ * recipient can take the chart home as PDF/MIDI/MusicXML) and, signed in, Save
+ * a copy — and a quiet path into Solkey. The header holds only the wordmark and
+ * one CTA. No editing surface, no selection, no recording.
  */
 export function SharedScorePage({ token }: { token: string }) {
     const router = useRouter()
@@ -77,79 +82,99 @@ export function SharedScorePage({ token }: { token: string }) {
     // The editor's transport binding, minus selection, recording and the metronome (so no
     // click samples to fetch). There is no selected note, so playback starts at the top.
     const playback = useTransport(score, { metronome: false })
+    const playing = playback.state === 'playing'
+    const backHere = `/s/${token}`
+
+    // Stop leaves the bar the moment playback stops, and the focus it held would fall to <body>. A keyboard
+    // or screen-reader user lands back on Play instead, whose name says playback is over: Stop hands focus
+    // over itself, and when the score plays out with Stop focused, the effect does (only if focus did fall
+    // to <body>, so a user who has moved on stays put). PrimaryButton takes no ref, so its group is the handle.
+    const transportGroupRef = useRef<HTMLDivElement>(null)
+    const stopHasFocus = useRef(false)
+    const focusPlay = useCallback(() => transportGroupRef.current?.querySelector('button')?.focus(), [])
+    useEffect(() => {
+        if (playback.state !== 'stopped' || !stopHasFocus.current) return
+        stopHasFocus.current = false
+        if (!document.activeElement || document.activeElement === document.body) focusPlay()
+    }, [playback.state, focusPlay])
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
             <header className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl">
-                <div className="max-w-320 mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
-                    <Link href="/" className="no-underline shrink-0" aria-label="Solkey home">
+                <SkipLink />
+                <div className="max-w-320 mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4">
+                    <Link
+                        href="/"
+                        className="no-underline shrink-0 inline-flex items-center pointer-coarse:min-h-10"
+                        aria-label="Solkey home">
                         <Wordmark size={24} />
                     </Link>
-                    <span className="flex-1" />
-                    {score && (
-                        <span className="inline-flex items-center gap-1.5">
-                            <TransportBtn size={32} onClick={playback.stop} ariaLabel="Stop" disabled={playback.state === 'stopped'}>
-                                <Icon name="square" size={12} />
-                            </TransportBtn>
-                            <TransportBtn
-                                size={40}
-                                tone="play"
-                                active={playback.state === 'playing'}
-                                onClick={() => {
-                                    if (playback.state === 'stopped') track('shared_score_played')
-                                    playback.toggle(null)
-                                }}
-                                ariaLabel={playback.state === 'playing' ? 'Pause' : 'Play'}
-                                disabled={!playback.ready}>
-                                <Icon name={playback.state === 'playing' ? 'pause' : 'play'} size={16} />
-                            </TransportBtn>
-                        </span>
+                    {/* One CTA. Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done. */}
+                    {authed ? (
+                        <TertiaryButton href={LIBRARY_PATH}>Open library</TertiaryButton>
+                    ) : (
+                        <GetStartedButton location="shared-score" next={backHere} />
                     )}
-                    {score && shared.data && (
-                        <ExportMenu
-                            score={score}
-                            title={shared.data.title}
-                            getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
-                            compact
-                        />
-                    )}
-                    {authed && score && (
-                        <>
-                            <span className="max-sm:hidden">
-                                <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
-                            </span>
-                            <span className="sm:hidden">
-                                <IconButton icon="copy" ariaLabel="Save a copy" onClick={saveCopy} />
-                            </span>
-                        </>
-                    )}
-                    {/* Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done. */}
-                    <GetStartedButton location="shared-score" next={`/s/${token}`} />
                 </div>
             </header>
 
-            <main className="flex-1 w-full max-w-320 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
-                {(shared.data || notFound) && (
+            <main id="content" className="flex-1 w-full max-w-320 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
+                {shared.data && (
                     <h1 className="font-display font-bold text-[26px] sm:text-[34px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0 w-full max-w-240 mx-auto">
-                        {shared.data?.title ?? 'Shared score'}
+                        {shared.data.title}
                     </h1>
                 )}
                 {shared.isPending && <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />}
                 {(shared.isError || unreadable) && (
-                    <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
-                        <h2 className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0">
-                            {notFound ? 'This link doesn’t open anything.' : 'The score couldn’t be loaded.'}
-                        </h2>
-                        <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant m-0">
-                            {notFound
-                                ? 'The owner may have turned sharing off, or the address is incomplete. Ask them for a fresh link.'
-                                : 'Something went wrong on our side. Try again in a moment.'}
-                        </p>
-                        {!notFound && <TertiaryButton onClick={() => void shared.refetch()}>Try again</TertiaryButton>}
-                    </section>
+                    <LoadProblem
+                        notFound={notFound}
+                        headingLevel={shared.data ? 2 : 1}
+                        onRetry={notFound ? undefined : () => void shared.refetch()}
+                    />
                 )}
-                {score && (
+                {score && shared.data && (
                     <>
+                        {/* The recipient's main actions, labelled, above the score; on phones the bar wraps and keeps every label. */}
+                        <div className="w-full max-w-240 mx-auto flex flex-wrap items-center gap-3">
+                            <div ref={transportGroupRef} className="flex items-center gap-2">
+                                <PrimaryButton
+                                    size="lg"
+                                    onClick={() => {
+                                        if (playback.state === 'stopped') track('shared_score_played')
+                                        playback.toggle(null)
+                                    }}
+                                    disabled={!playback.ready}>
+                                    <span className="inline-flex items-center gap-2">
+                                        <Icon name={playing ? 'pause' : 'play'} size={18} />
+                                        {playing ? 'Pause' : 'Play'}
+                                    </span>
+                                </PrimaryButton>
+                                {playback.state !== 'stopped' && (
+                                    <span className="contents" onFocus={() => (stopHasFocus.current = true)}>
+                                        <SecondaryButton
+                                            onClick={() => {
+                                                playback.stop()
+                                                focusPlay()
+                                            }}>
+                                            Stop
+                                        </SecondaryButton>
+                                    </span>
+                                )}
+                            </div>
+                            <span className="flex-1" />
+                            <div className="flex items-center gap-2">
+                                <ExportMenu
+                                    score={score}
+                                    title={shared.data.title}
+                                    getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+                                    label="Download"
+                                    ariaLabel="Download score"
+                                />
+                                {authed && (
+                                    <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
+                                )}
+                            </div>
+                        </div>
                         <div
                             ref={scoreAreaRef}
                             className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden w-full max-w-240 mx-auto"
@@ -157,15 +182,51 @@ export function SharedScorePage({ token }: { token: string }) {
                             <ScoreView score={score} layoutId={score.layout.id} playbackCursorRef={playback.playbackCursorRef} />
                         </div>
                         <p className="m-0 text-center font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                            Shared read-only from Solkey —{' '}
-                            {authed ? 'open your library to write your own.' : 'sing or play a melody and get sheet music like this, live.'}
+                            {authed ? (
+                                'Want to change it? Save a copy to your library.'
+                            ) : (
+                                <>
+                                    Made with Solkey — hum, sing or play a melody and get sheet music like this.{' '}
+                                    <Link
+                                        href={withNext('/signup', backHere)}
+                                        onClick={() => track('landing_cta_clicked', { location: 'shared-score-footer', beta: BETA_MODE })}
+                                        className="text-primary underline">
+                                        {BETA_MODE ? 'Request access' : 'Try it free'}
+                                    </Link>
+                                </>
+                            )}
                         </p>
                     </>
                 )}
             </main>
 
             <Footer width="marketing" />
-            {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
+            {limitDialogOpen && (
+                <ScoreLimitDialog
+                    // Every upgrade CTA lands on the plan tab (C9). The dialog's button passes no tier id.
+                    onUpgrade={() => router.push(settingsTabPath('plan'))}
+                    onClose={() => setLimitDialogOpen(false)}
+                />
+            )}
         </div>
+    )
+}
+
+/** Why the link shows no score: gone (a revoked or mistyped link) or a load that failed. */
+function LoadProblem({ notFound, headingLevel, onRetry }: { notFound: boolean; headingLevel: 1 | 2; onRetry?: () => void }) {
+    const Heading = headingLevel === 1 ? 'h1' : 'h2'
+    return (
+        <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
+            <Heading className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0">
+                {notFound ? 'This link doesn’t open anything.' : 'The score couldn’t be loaded.'}
+            </Heading>
+            <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant m-0">
+                {notFound
+                    ? 'The owner may have turned sharing off, or the address is incomplete. Ask them for a fresh link.'
+                    : 'Something went wrong on our side. Try again in a moment.'}
+            </p>
+            {notFound && <PrimaryButton href="/">See what Solkey does</PrimaryButton>}
+            {onRetry && <TertiaryButton onClick={onRetry}>Try again</TertiaryButton>}
+        </section>
     )
 }

@@ -1,19 +1,44 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { PublicPageShell } from '@/components/PublicPageShell'
+import { PublicPageShell, ShortVersion } from '@/components/PublicPageShell'
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy',
+    title: 'Privacy policy',
     description: 'How Solkey collects, uses, and protects your personal data — including audio recordings, analytics, and cookies.',
     alternates: { canonical: '/privacy' },
 }
 
 const LAST_UPDATED = '5 September 2026'
 
+/** The facts a normal person cares about, each restating a section below (keep them in step with it). */
+const SHORT_VERSION = [
+    'We only listen while you’re recording — never in the background.',
+    'Your recordings are kept with your account and help us improve how Solkey hears music. You can ask us not to use them for that.',
+    'Nothing is sold or shown to other people. A score is only public if you turn on its share link.',
+    'Session replays are off unless you say yes.',
+    'Delete your account any time from Settings. After a 7-day grace period your account, scores and recordings are permanently deleted.',
+]
+
+const SECTIONS = [
+    { id: 'controller', title: 'Who is responsible' },
+    { id: 'data-we-collect', title: 'What we collect and why' },
+    { id: 'cookies', title: 'Cookies' },
+    { id: 'processors', title: 'Who processes data' },
+    { id: 'retention', title: 'How long we keep it' },
+    { id: 'rights', title: 'Your rights' },
+    { id: 'security', title: 'Security' },
+    { id: 'children', title: 'Children' },
+    { id: 'changes', title: 'Changes' },
+    { id: 'contact', title: 'Contact' },
+]
+
 export default function PrivacyPolicyPage() {
     return (
-        <PublicPageShell title="Privacy Policy" subtitle={`Last updated: ${LAST_UPDATED}`}>
+        <PublicPageShell
+            title="Privacy policy"
+            subtitle={`Last updated: ${LAST_UPDATED}`}
+            lead={<ShortVersion points={SHORT_VERSION} closing="The full policy below is the one that counts." sections={SECTIONS} />}>
             <p>
                 Solkey is a sheet-music editor that turns what you play or sing into notation. Doing that requires handling some of your
                 personal data — this policy explains exactly what we collect, why, how long we keep it, and the rights you have over it.

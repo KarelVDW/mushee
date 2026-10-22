@@ -2,6 +2,10 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const nav = vi.hoisted(() => ({ pathname: '/' as string | null }))
+
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }))
+
 import { BrowserSupportBanner, meetsBrowserFloor } from '@/components/BrowserSupportBanner'
 
 // React's act() refuses to run outside a test-aware environment.
@@ -44,6 +48,7 @@ describe('BrowserSupportBanner', () => {
     let root: Root
 
     beforeEach(() => {
+        nav.pathname = '/'
         window.sessionStorage.clear()
         container = document.createElement('div')
         document.body.appendChild(container)
@@ -66,11 +71,34 @@ describe('BrowserSupportBanner', () => {
         return container.querySelector('[role="status"]')
     }
 
-    it('shows the warning on a browser below the floor', () => {
+    it('advises an update on a browser below the floor, iPhone included', () => {
         stubFloor({ colorMix: false, propertyRule: false })
         render()
         expect(banner()).not.toBeNull()
-        expect(banner()?.textContent).toContain('older than Solkey supports')
+        expect(banner()?.getAttribute('aria-label')).toBe('Unsupported browser')
+        expect(banner()?.textContent).toContain('Your browser is a bit old for Solkey')
+        expect(banner()?.textContent).toContain('on iPhone or iPad, that means updating iOS')
+    })
+
+    it('reads as advice, not a crash: a neutral strip with a 40px dismiss', () => {
+        stubFloor({ colorMix: false, propertyRule: false })
+        render()
+        expect(banner()?.className).toContain('bg-surface-container-high')
+        expect(banner()?.querySelector('.bg-error-container')).toBeNull()
+        expect(container.querySelector('button[aria-label="Dismiss"]')?.className).toContain('w-10 h-10')
+    })
+
+    it('sits in the flow of a document page, covering nothing', () => {
+        stubFloor({ colorMix: false, propertyRule: false })
+        render()
+        expect(banner()?.className).not.toContain('fixed')
+    })
+
+    it('floats over the full-height editor and library, so their docked chrome stays on screen', () => {
+        stubFloor({ colorMix: false, propertyRule: false })
+        nav.pathname = '/scores/abc'
+        render()
+        expect(banner()?.className).toContain('fixed')
     })
 
     it('renders nothing on a supported browser', () => {
