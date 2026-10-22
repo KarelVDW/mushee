@@ -104,7 +104,10 @@ export default function SettingsPage() {
             (archive) => {
                 downloadBlob(archive.toBlob(), archive.filename)
                 track('data_export_downloaded', { scores: archive.scores.length })
-                showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
+                showToast(
+                    `Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`,
+                    'info',
+                )
             },
             () => undefined,
         )

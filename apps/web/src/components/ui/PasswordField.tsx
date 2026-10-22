@@ -88,7 +88,14 @@ export function NewPasswordFields({
     const errors = [mismatch && "Passwords don't match yet.", confirmError].filter(Boolean).join(' ')
     return (
         <>
-            <PasswordField label="New password" value={value} onChange={onChange} shown={revealed} onToggleShown={toggle} autoFocus={autoFocus} />
+            <PasswordField
+                label="New password"
+                value={value}
+                onChange={onChange}
+                shown={revealed}
+                onToggleShown={toggle}
+                autoFocus={autoFocus}
+            />
             <div className="-mt-2">
                 <PasswordStrength password={value} />
             </div>
