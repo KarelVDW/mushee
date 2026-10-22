@@ -113,14 +113,14 @@ describe('TakesList playback', () => {
         await click(0)
         await settle(() => FakeAudio.instances[0]?.failPlay('NotAllowedError'))
         expect(labels()).toEqual(['Play take', 'Play take'])
-        expect(showToast).toHaveBeenCalledWith("This take's audio couldn't be played.")
+        expect(showToast).toHaveBeenCalledWith("This recording's audio couldn't be played.")
     })
 
     it('a load error on the current take resets the row and toasts', async () => {
         await click(1)
         await settle(() => FakeAudio.instances[0]?.onerror?.())
         expect(labels()).toEqual(['Play take', 'Play take'])
-        expect(showToast).toHaveBeenCalledWith("This take's audio couldn't be loaded.")
+        expect(showToast).toHaveBeenCalledWith("This recording's audio couldn't be loaded.")
     })
 
     it('ending the current take resets its row', async () => {
@@ -174,5 +174,49 @@ describe('TakesList score names', () => {
         act(() => root.render(createElement(TakesList, { takes: [take('a')] })))
         expect(container.querySelector('a')).toBeNull()
         expect(rowText(0)).not.toContain('·')
+    })
+})
+
+describe('TakesList on a per-score panel', () => {
+    let container: HTMLElement
+    let root: Root
+
+    beforeEach(() => {
+        container = document.createElement('div')
+        document.body.appendChild(container)
+        root = createRoot(container)
+    })
+
+    afterEach(() => {
+        act(() => root.unmount())
+        container.remove()
+    })
+
+    const at = (id: string, minute: number, seconds: number): RecordingSummary => ({
+        ...take(id),
+        startedAt: new Date(2026, 9, 22, 12, minute).toISOString(),
+        seconds,
+    })
+    const rows = () => [...container.querySelectorAll('li')]
+
+    it('numbers the recordings oldest-first while listing them newest-first, length and date below', () => {
+        const takes = [at('c', 43, 4), at('b', 42, 9), at('a', 10, 61)]
+        act(() => root.render(createElement(TakesList, { takes, numbered: true, noun: 'recording' })))
+        expect(container.querySelector('ul')?.getAttribute('aria-label')).toBe('Recordings')
+        expect(rows().map((row) => row.querySelector('.truncate')?.textContent)).toEqual(['Recording 3', 'Recording 2', 'Recording 1'])
+        expect(rows()[2]?.textContent).toContain('1:01 · ')
+        expect(rows()[0]?.querySelector('button')?.getAttribute('aria-label')).toBe('Play recording')
+    })
+
+    it('asks before deleting, says the notes stay, focuses Keep, and hands focus back to the bin', () => {
+        act(() => root.render(createElement(TakesList, { takes: [at('a', 1, 4)], numbered: true, noun: 'recording' })))
+        const bin = () => container.querySelector<HTMLButtonElement>('[aria-label="Delete recording"]')
+        act(() => bin()?.click())
+        expect(rows()[0]?.textContent).toContain('Delete this recording? Your notes stay.')
+        const keep = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Keep')
+        expect(document.activeElement).toBe(keep)
+        act(() => keep?.click())
+        expect(rows()[0]?.textContent).not.toContain('Your notes stay')
+        expect(document.activeElement).toBe(bin())
     })
 })
