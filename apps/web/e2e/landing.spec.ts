@@ -21,6 +21,25 @@ test('unauthed landing: sign-in and the hero CTA route to the auth pages', async
     await expect(page).toHaveURL(/\/signup$/)
 })
 
+test('the first Tab lands on a visible "Skip to content" that jumps past the nav', async ({ page, browserName }) => {
+    await stayLocal(page)
+    await page.goto('/')
+
+    // Safari's Tab skips links unless asked.
+    await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab')
+    const skip = page.getByRole('link', { name: 'Skip to content' })
+    await expect(skip).toBeFocused()
+    await expect(skip).toBeVisible()
+    const box = await skip.boundingBox()
+    expect(box && box.width > 40 && box.height > 20).toBe(true)
+
+    await page.keyboard.press('Enter')
+    await expect(page.locator('main#content')).toBeFocused()
+    // Back to visually hidden once focus has moved on.
+    const hidden = await skip.boundingBox()
+    expect(hidden && hidden.width <= 1 && hidden.height <= 1).toBe(true)
+})
+
 test('hero: one action and a free-to-start line; the demo is captioned, named and can be paused', async ({ page }) => {
     await stayLocal(page)
     await page.goto('/')

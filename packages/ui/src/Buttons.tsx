@@ -141,13 +141,12 @@ export function SecondaryButton({ children, onClick, href, disabled, fullWidth =
     )
 }
 
-interface TertiaryButtonProps {
+type TertiaryButtonProps = {
     children?: ReactNode
     onClick?: () => void
     danger?: boolean
-    /** Renders a next/link `<Link>` with the same look (see ButtonOrLink). */
-    href?: string
-}
+    // `href` renders a next/link `<Link>` with the same look; `disabled` is button-only (see ButtonOrLink).
+} & ButtonOrLink<{ disabled?: boolean }>
 
 function tertiaryClasses({ danger }: { danger: boolean }) {
     return [
@@ -158,11 +157,15 @@ function tertiaryClasses({ danger }: { danger: boolean }) {
         'font-body font-medium text-[13px] leading-none',
         'transition-colors duration-150 ease-solkey',
         'focus-ring rounded-sm',
-        danger ? 'text-secondary hover:text-secondary-container' : 'text-on-surface-variant hover:text-primary',
+        // Disabled: dimmed like the capsule buttons, and the hover colour holds still.
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        danger
+            ? 'text-secondary hover:text-secondary-container disabled:hover:text-secondary'
+            : 'text-on-surface-variant hover:text-primary disabled:hover:text-on-surface-variant',
     ].join(' ')
 }
 
-export function TertiaryButton({ children, onClick, danger = false, href }: TertiaryButtonProps) {
+export function TertiaryButton({ children, onClick, danger = false, href, disabled }: TertiaryButtonProps) {
     const className = tertiaryClasses({ danger })
     if (href != null) {
         return (
@@ -172,7 +175,7 @@ export function TertiaryButton({ children, onClick, danger = false, href }: Tert
         )
     }
     return (
-        <button type="button" onClick={onClick} className={className}>
+        <button type="button" disabled={disabled} onClick={onClick} className={className}>
             {children}
         </button>
     )

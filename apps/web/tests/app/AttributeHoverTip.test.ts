@@ -47,6 +47,15 @@ describe('AttributeHoverTip', () => {
         expect(tip.style.top).toBe('32px')
     })
 
+    it('is drawn in the shared tooltip card, anchored above the glyph', () => {
+        render(keyGlyph)
+        advance(TOOLTIP_HOVER_DELAY_MS)
+        const tip = host.firstElementChild as HTMLElement
+        expect(tip.className).toContain('tooltip-enter absolute z-(--z-popover) -translate-x-1/2 -translate-y-full')
+        expect(tip.className).toContain('rounded-md bg-surface-container-lowest editorial-shadow')
+        expect(tip.querySelector('.font-label.font-semibold')?.textContent).toBe('Change key')
+    })
+
     it('restarts the delay for the next glyph, and goes at once when the pointer leaves', () => {
         render(keyGlyph)
         advance(TOOLTIP_HOVER_DELAY_MS)

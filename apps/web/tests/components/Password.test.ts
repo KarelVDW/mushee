@@ -74,6 +74,24 @@ describe('PasswordField', () => {
         )
     })
 
+    it('hands autofill and form attributes through to the input', () => {
+        const input = /<input[^>]*>/.exec(
+            html(
+                createElement(PasswordField, {
+                    label: 'Password',
+                    value: '',
+                    autoComplete: 'current-password',
+                    name: 'password',
+                    required: true,
+                }),
+            ),
+        )?.[0]
+        expect(input).toContain('type="password"')
+        expect(input).toContain('autoComplete="current-password"')
+        expect(input).toContain('name="password"')
+        expect(input).toContain('required=""')
+    })
+
     it('gives the reveal button a 40px hit area', () => {
         const markup = html(createElement(PasswordField, { label: 'Password', value: '' }))
         expect(markup).toMatch(/<button[^>]*class="size-10 /)
@@ -117,6 +135,12 @@ describe('NewPasswordFields', () => {
         expect(markup).toContain('Confirm password')
         expect(markup).toContain(NEW_PASSWORD_HINT)
         expect(markup).toContain('>Strong</span>')
+    })
+
+    it('marks both fields as a new password for password managers', () => {
+        const inputs = fields({}).match(/<input[^>]*>/g) ?? []
+        expect(inputs).toHaveLength(2)
+        for (const input of inputs) expect(input).toContain('autoComplete="new-password"')
     })
 
     it('shows no meter before anything is typed', () => {

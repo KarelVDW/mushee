@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { type CSSProperties, type ReactNode, useId } from 'react'
 
 import { Tooltip, type TooltipShortcut } from './Tooltip'
 
@@ -235,6 +235,11 @@ interface TransportBtnProps extends TooltipProps, DisableableProps {
     pressed?: boolean
     onClick?: () => void
     ariaLabel: string
+    /**
+     * A longer spoken description (aria-describedby), separate from the tooltip's `hint`:
+     * what a screen reader hears after the name, never shown on screen.
+     */
+    description?: string
     /** The glyph; `record` draws its own (a dot, or the stop square while `active`). */
     children?: ReactNode
 }
@@ -248,6 +253,7 @@ export function TransportBtn({
     pressed,
     onClick,
     ariaLabel,
+    description,
     children,
     disabled,
     disabledReason,
@@ -255,6 +261,7 @@ export function TransportBtn({
 }: TransportBtnProps) {
     const classes = TONE_CLASSES[tone]
     const state = disabledState({ disabled, disabledReason })
+    const descriptionId = useId()
     // Runtime sizes, so they ride in as CSS variables; the classes pick fine vs coarse.
     const sizes = {
         '--transport-size': `${size}px`,
@@ -267,6 +274,8 @@ export function TransportBtn({
                 aria-label={ariaLabel}
                 aria-pressed={pressed}
                 aria-disabled={state.aria}
+                // The tooltip adds its own hint/key/reason id after this one, and again when this changes.
+                aria-describedby={description ? descriptionId : undefined}
                 onClick={state.off ? undefined : onClick}
                 disabled={state.native}
                 className={[
@@ -281,6 +290,11 @@ export function TransportBtn({
                 style={sizes}>
                 {tone === 'record' ? <RecordGlyph active={active} /> : children}
             </button>
+            {description && (
+                <span id={descriptionId} hidden>
+                    {description}
+                </span>
+            )}
         </Tooltip>
     )
 }
@@ -316,19 +330,40 @@ interface SwitchProps {
     checked: boolean
     onChange: (v: boolean) => void
     label: ReactNode
+    /** One plain line under the label saying what the switch does; also its aria-describedby. */
+    hint?: string
 }
 
-export function Switch({ checked, onChange, label }: SwitchProps) {
+/**
+ * An on/off switch with its label (and optional hint) on the left. The whole row is a
+ * `<label>`, so a press anywhere toggles it; the switch is named by the label alone and
+ * described by the hint.
+ */
+export function Switch({ checked, onChange, label, hint }: SwitchProps) {
+    const id = useId()
+    const labelId = `${id}-label`
+    const hintId = `${id}-hint`
     return (
         <label className="flex justify-between items-center gap-4 cursor-pointer">
-            <span className="font-body font-normal text-[14px] leading-[1.4] text-on-surface">{label}</span>
+            <span className="flex flex-col gap-0.5 min-w-0">
+                <span id={labelId} className="font-body font-normal text-[14px] leading-[1.4] text-on-surface">
+                    {label}
+                </span>
+                {hint && (
+                    <span id={hintId} className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                        {hint}
+                    </span>
+                )}
+            </span>
             <button
                 type="button"
                 role="switch"
                 aria-checked={checked}
+                aria-labelledby={labelId}
+                aria-describedby={hint ? hintId : undefined}
                 onClick={() => onChange(!checked)}
                 className={[
-                    'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative',
+                    'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative shrink-0',
                     'transition-colors duration-150 ease-solkey',
                     'focus-ring',
                     checked ? 'bg-primary-container' : 'bg-surface-container-high',

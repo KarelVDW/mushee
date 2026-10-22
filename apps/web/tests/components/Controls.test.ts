@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ChipToggle, Segmented, TransportBtn } from '@/components/ui/Controls'
+import { ChipToggle, Segmented, Switch, TransportBtn } from '@/components/ui/Controls'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -163,5 +163,118 @@ describe('TransportBtn', () => {
         const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
         expect(play).toContain('motion-safe:hover:scale-105')
         expect(play).not.toMatch(/ hover:scale-105/)
+    })
+})
+
+describe('TransportBtn description', () => {
+    let host: HTMLElement
+    let root: Root
+
+    beforeEach(() => {
+        host = document.createElement('div')
+        document.body.appendChild(host)
+        root = createRoot(host)
+    })
+
+    afterEach(() => {
+        act(() => root.unmount())
+        host.remove()
+    })
+
+    const describedBy = (button: HTMLElement) =>
+        (button.getAttribute('aria-describedby') ?? '')
+            .split(' ')
+            .filter(Boolean)
+            .map((id) => document.getElementById(id)?.textContent)
+
+    it('is spoken through aria-describedby and never shown', () => {
+        act(() => {
+            root.render(
+                createElement(TransportBtn, {
+                    size: 36,
+                    ariaLabel: 'Metronome',
+                    description: 'A steady click while playing and recording.',
+                }),
+            )
+        })
+        const button = host.querySelector('button') as HTMLButtonElement
+        expect(describedBy(button)).toEqual(['A steady click while playing and recording.'])
+        const text = document.getElementById(button.getAttribute('aria-describedby') as string) as HTMLElement
+        expect(text.hidden).toBe(true)
+    })
+
+    it('keeps its own description ahead of the tooltip hint', () => {
+        act(() => {
+            root.render(
+                createElement(TransportBtn, {
+                    size: 36,
+                    ariaLabel: 'Metronome',
+                    hint: 'click along',
+                    description: 'A steady click while playing and recording.',
+                }),
+            )
+        })
+        const button = host.querySelector('button') as HTMLButtonElement
+        expect(describedBy(button)).toEqual(['A steady click while playing and recording.', 'click along'])
+    })
+
+    it('keeps the tooltip hint while the description comes, changes and goes', () => {
+        const renderWith = (description?: string) =>
+            act(() => root.render(createElement(TransportBtn, { size: 36, ariaLabel: 'Metronome', hint: 'click along', description })))
+        renderWith()
+        const button = host.querySelector('button') as HTMLButtonElement
+        expect(describedBy(button)).toEqual(['click along'])
+        renderWith('A steady click.')
+        expect(describedBy(button)).toEqual(['A steady click.', 'click along'])
+        renderWith('A steady click while playing and recording.')
+        expect(describedBy(button)).toEqual(['A steady click while playing and recording.', 'click along'])
+        renderWith(undefined)
+        expect(describedBy(button)).toEqual(['click along'])
+        // The same button throughout, so focus would never have moved.
+        expect(host.querySelector('button')).toBe(button)
+    })
+
+    it('leaves aria-describedby off without a description or tooltip', () => {
+        act(() => root.render(createElement(TransportBtn, { size: 36, ariaLabel: 'Stop' })))
+        expect((host.querySelector('button') as HTMLButtonElement).hasAttribute('aria-describedby')).toBe(false)
+    })
+})
+
+describe('Switch', () => {
+    const mount = (props: Partial<Parameters<typeof Switch>[0]> = {}) => {
+        const box = document.createElement('div')
+        box.innerHTML = html(createElement(Switch, { checked: false, onChange: noop, label: 'Metronome', ...props }))
+        document.body.appendChild(box)
+        return { box, button: box.querySelector('[role="switch"]') as HTMLButtonElement }
+    }
+
+    it('is named by its label alone and described by its visible hint', () => {
+        const { box, button } = mount({ hint: 'A steady click while playing and recording.' })
+        expect(document.getElementById(button.getAttribute('aria-labelledby') as string)?.textContent).toBe('Metronome')
+        const hint = document.getElementById(button.getAttribute('aria-describedby') as string) as HTMLElement
+        expect(hint.textContent).toBe('A steady click while playing and recording.')
+        expect(hint.hidden).toBe(false)
+        expect(hint.className).toContain('text-[12px]')
+        expect(hint.className).toContain('text-on-surface-variant')
+        box.remove()
+    })
+
+    it('renders no hint and no description without one', () => {
+        const { box, button } = mount()
+        expect(button.hasAttribute('aria-describedby')).toBe(false)
+        expect(box.textContent).toBe('Metronome')
+        box.remove()
+    })
+
+    it('toggles from anywhere on its row', () => {
+        const onChange = vi.fn()
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const root = createRoot(host)
+        act(() => root.render(createElement(Switch, { checked: false, onChange, label: 'Metronome', hint: 'A steady click.' })))
+        act(() => (host.querySelector('label span span:last-child') as HTMLElement).click())
+        expect(onChange).toHaveBeenCalledWith(true)
+        act(() => root.unmount())
+        host.remove()
     })
 })

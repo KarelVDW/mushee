@@ -3,7 +3,6 @@
 import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
-import { LoadingStatus } from '@mushee/ui'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -13,6 +12,7 @@ import {
     ErrorScreen,
     Footer,
     Icon,
+    LoadingStatus,
     PageHeader,
     Popover,
     PrimaryButton,
