@@ -132,9 +132,16 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
     await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Select previous note' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+    // Focus follows the record button into the strip — it never drops to the page.
+    const stop = page.getByRole('button', { name: 'Stop recording', exact: true })
+    await expect(stop).toBeFocused()
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Tap')
-    await page.getByRole('button', { name: 'Stop recording', exact: true }).tap()
+    await stop.tap()
+    // …and back onto the footer's Record once the strip folds away.
+    await expect(
+        page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true }),
+    ).toBeFocused()
 
     const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Tap any note to fix it\./ })
     await expect(summary).toBeVisible()

@@ -84,9 +84,10 @@ interface TakesListProps {
      */
     numbered?: boolean
     /**
-     * What a row is called in the list's names and copy: 'recording', the glossary's word.
-     * 'take' keeps the older names ('Takes', 'Play take', 'Delete take') for the Settings list
-     * until it moves over.
+     * What a row is called in the list's accessible names (and the no-audio title): 'recording',
+     * the glossary's word. 'take' keeps the older names ('Takes', 'Play take', 'Delete take') that
+     * the Settings list's tests assert until it moves over. Visible copy (the delete question,
+     * toasts) always says 'recording'.
      */
     noun?: 'recording' | 'take'
 }
@@ -166,7 +167,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                             // wrap under it rather than squeezing it.
                             <div className="flex flex-1 min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
                                 <span className="font-body font-medium text-[13px] leading-snug text-on-surface">
-                                    Delete this {noun}? Your notes stay.
+                                    Delete this recording? Your notes stay.
                                 </span>
                                 <span className="inline-flex items-center gap-1">
                                     <TertiaryButton danger onClick={() => confirmDelete(take)}>

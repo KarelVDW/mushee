@@ -31,11 +31,10 @@ export type StripHint =
     | { kind: 'stop'; touch: boolean }
 
 /**
- * What the recording strip says at one moment of a take: its state word (also the strip's
- * live-region text) and its single hint line. One line at a time, by priority: a transcription
- * warning or recovery first; then, in the count-in, the iPhone Mic Mode reminder; while
- * recording on a capped plan with a minute or less left, the time left today; otherwise how
- * to stop.
+ * What the recording strip says at one moment of a take: its state word, its live-region news
+ * and its single hint line. One line at a time, by priority: a transcription warning or
+ * recovery first; then, in the count-in, the iPhone Mic Mode reminder; while recording on a
+ * capped plan with a minute or less left, the time left today; otherwise how to stop.
  */
 export class RecordingStripCopy {
     /** The time left today shows once this little is left (seconds). */
@@ -57,11 +56,15 @@ export class RecordingStripCopy {
         return this.status.phase === 'countoff' ? 'Get ready' : 'Recording'
     }
 
-    /** The live region's text: the state word, or the transcription warning / recovery while one is up. */
-    get state(): string {
+    /**
+     * The strip's live-region text: the transcription warning or recovery while one is up, else
+     * nothing. The state words ('Count-in', 'Recording') reach screen readers through the
+     * editor's announcer (contract C11) alone, so no state is ever spoken twice.
+     */
+    get news(): string | null {
         if (this.status.health === 'down') return RecordingStripCopy.WARNING
         if (this.status.health === 'back') return RecordingStripCopy.RECOVERED
-        return this.label
+        return null
     }
 
     /** Recording left today right now (never below zero), or null on an uncapped plan. */

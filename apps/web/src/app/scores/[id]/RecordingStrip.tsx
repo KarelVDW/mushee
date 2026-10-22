@@ -29,7 +29,8 @@ function CountoffDots({ countoff }: { countoff: RecordingStatus['countoff'] }) {
                     key={i}
                     className={[
                         'size-2.5 rounded-full motion-safe:transition-colors motion-safe:duration-150 ease-solkey',
-                        i <= countoff.beat ? 'bg-error' : 'bg-surface-container-high',
+                        // Unfilled dots in `outline` (4.5:1 on the white well): the count reads before the clicks fill it.
+                        i <= countoff.beat ? 'bg-error' : 'bg-outline',
                     ].join(' ')}
                 />
             ))}
@@ -62,7 +63,8 @@ function HintLine({ hint }: { hint: StripHint }) {
  * ready' over one dot per click (the engine's own clock fills them), then 'Recording' with a
  * slowly pulsing red dot and the elapsed time; one hint line says how to stop, how much of
  * today is left, or what the server's transcription is doing. Screen readers hear the state
- * through the strip's own polite status (the elapsed clock stays silent).
+ * changes once, through the editor's announcer (contract C11); the strip's own polite status
+ * carries only the transcription news, and the elapsed clock stays silent.
  */
 export function RecordingStrip({ status, touch }: { status: RecordingStatus; touch: boolean }) {
     const elapsed = useElapsedSeconds(status.captureStartedAt)
@@ -91,7 +93,7 @@ export function RecordingStrip({ status, touch }: { status: RecordingStatus; tou
             </div>
             {hint && <HintLine hint={hint} />}
             <span role="status" aria-live="polite" className="sr-only">
-                {copy.state}
+                {copy.news}
             </span>
         </div>
     )

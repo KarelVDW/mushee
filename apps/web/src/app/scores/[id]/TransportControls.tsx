@@ -38,6 +38,9 @@ export interface TransportControlsProps {
     shortcuts?: TransportShortcuts
 }
 
+/** Finds the record button (idle or as the stop) inside a container — where the page hands focus when a take swaps the phone dock. */
+export const RECORD_BUTTON_SELECTOR = '[data-record-button] button'
+
 /**
  * Record, and while a take runs (count-in and recording alike) the same button as Stop: the
  * white dot crossfades into a white stop square and the button's name follows ('Record' ↔
@@ -52,17 +55,19 @@ export function RecordButton({
 }: Pick<TransportControlsProps, 'recordingState' | 'onRecordToggle' | 'recordDisabled' | 'large' | 'shortcuts'>) {
     const live = recordingState !== 'idle'
     return (
-        <TransportBtn
-            size={large ? 54 : 48}
-            tone="record"
-            active={live}
-            onClick={onRecordToggle}
-            ariaLabel={live ? 'Stop recording' : 'Record'}
-            tooltip={live ? 'Stop recording' : 'Record a melody'}
-            shortcut={live ? shortcuts?.playPause : shortcuts?.record}
-            tooltipSide={large ? 'top' : 'bottom'}
-            disabled={!live && recordDisabled}
-        />
+        <span data-record-button className="contents">
+            <TransportBtn
+                size={large ? 54 : 48}
+                tone="record"
+                active={live}
+                onClick={onRecordToggle}
+                ariaLabel={live ? 'Stop recording' : 'Record'}
+                tooltip={live ? 'Stop recording' : 'Record a melody'}
+                shortcut={live ? shortcuts?.playPause : shortcuts?.record}
+                tooltipSide={large ? 'top' : 'bottom'}
+                disabled={!live && recordDisabled}
+            />
+        </span>
     )
 }
 

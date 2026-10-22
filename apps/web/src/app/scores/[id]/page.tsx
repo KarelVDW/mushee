@@ -14,7 +14,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ErrorScreen, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
+import { ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -33,7 +33,7 @@ import { ConcurrentRecordingDialog, MicBlockedDialog, MicModeGuideDialog, Record
 import { RecordingStrip } from './RecordingStrip'
 import { AttributeHoverTip, ScoreAttributePopover } from './ScoreAttributePopover'
 import { ScoreManipulator } from './ScoreManipulator'
-import { MobileEditorActions, RecordButton, type TransportControlsProps } from './TransportControls'
+import { MobileEditorActions, RECORD_BUTTON_SELECTOR, RecordButton, type TransportControlsProps } from './TransportControls'
 import { useAccountKeybindings } from './useAccountKeybindings'
 import { usePitchHighlight } from './usePitchHighlight'
 import { usePlayback } from './usePlayback'
@@ -275,7 +275,6 @@ export default function ScoreEditorPage() {
                     return true
                 case 'from-start':
                     if (taking) return false
-                    stopAll()
                     playFrom(null)
                     return true
                 case 'record':
@@ -306,11 +305,35 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
+    // A take swaps the dock's contents: the strip replaces the tools (and, on phones, the footer's
+    // Record with the strip's record-as-stop), and the take's end swaps them back. Focus on a
+    // control that went (or just turned disabled, like Play mid-take) would drop to <body>, out
+    // of reach of the editor's keys — so the record button in the dock takes it (phones), or else
+    // the editor itself, where Space and Escape still stop the take. Only focus the swap lost (or
+    // that sits on the editor itself) moves; an open dialog keeps its own. Declared after the
+    // listener effect above, which focuses the editor when the Mic Mode guide closes on the take
+    // it starts.
+    const dockRef = useRef<HTMLDivElement>(null)
+    const stripUp = recordingStatus !== null
+    const stripWasUp = useRef(stripUp)
+    useEffect(() => {
+        if (stripWasUp.current === stripUp) return
+        stripWasUp.current = stripUp
+        const editor = containerRef.current
+        const focused = document.activeElement
+        const lost =
+            !focused || focused === document.body || focused === editor || (focused instanceof HTMLButtonElement && focused.disabled)
+        if (dialogOpen || !editor || !lost) return
+        const recordButton = dockRef.current?.querySelector<HTMLElement>(RECORD_BUTTON_SELECTOR)
+        // Without scrolling: the phone dock's rows are still animating to their new height inside a clipped frame.
+        if (recordButton) recordButton.focus({ preventScroll: true })
+        else focusWithoutTooltip(editor)
+    }, [stripUp, dialogOpen])
+
     // Phone sheets live between the header and the dock (Popover's sheet frame reads
     // --app-header-h / --dock-h): measured, and re-measured whenever either bar changes size.
     // Toasts rise above the dock the same way (--toast-bottom, read by the app-wide Toaster on
     // the root element), so no toast ever covers the record button or a tool.
-    const dockRef = useRef<HTMLDivElement>(null)
     const editorReady = !!score && instrumentsReady
     useEffect(() => {
         const root = containerRef.current

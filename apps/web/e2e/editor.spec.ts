@@ -109,6 +109,24 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 1( to 2)?\./)
 })
 
+test('a take that heard no notes says so and offers to undo it', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page, { notes: false })
+    await page.getByRole('button', { name: 'Record', exact: true }).click()
+    const stop = page.getByRole('button', { name: 'Stop recording', exact: true })
+    await expect(page.getByRole('group', { name: 'Recording status' })).toContainText('Recording', { timeout: 6000 })
+    await stop.click()
+
+    const summary = page.getByRole('status').filter({ hasText: 'No notes this time' })
+    await expect(summary).toBeVisible()
+    // Named for what it undoes (the glossary's 'recording'), so it never clashes with the header's Undo.
+    const undo = summary.getByRole('button', { name: 'Undo this recording', exact: true })
+    await expect(undo).toBeVisible()
+    await expect(summary.getByRole('button', { name: 'Hear it back' })).toHaveCount(0)
+    await undo.click()
+    await expect(summary).toHaveCount(0)
+})
+
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
     const patch = waitForAutosave(page)
 

@@ -142,7 +142,7 @@ export function useRecording({
             manipulator.moveNoteHint.markSeen()
             const action = take.wrotePitchedNotes
                 ? { label: 'Hear it back', onClick: () => playFrom(first.firstNote) }
-                : { label: 'Undo', ariaLabel: 'Undo this take', onClick: () => manipulator.undo() }
+                : { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => manipulator.undo() }
             const toast = showToast(copy.toast, 'info', { duration: SUMMARY_MS, action })
             summaryWatch.current?.()
             const edits = manipulator.editCount

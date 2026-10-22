@@ -170,6 +170,13 @@ describe('TakesList score names', () => {
         expect(link?.querySelector('.truncate')?.textContent).toBe('Scale Study')
     })
 
+    it("asks about a 'recording' even while the list keeps its older 'take' names", () => {
+        act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Delete take"]')?.click())
+        expect(rowText(0)).toContain('Delete this recording? Your notes stay.')
+        expect(rowText(0)).not.toMatch(/\btake\b/i)
+    })
+
     it('shows no score name on a per-score list', () => {
         act(() => root.render(createElement(TakesList, { takes: [take('a')] })))
         expect(container.querySelector('a')).toBeNull()

@@ -49,8 +49,19 @@ export function usePlayback({
     // Launching from a stop begins at the selected note (falling back to the top of the
     // score when nothing is selected); pause/resume keep their place instead.
     const handlePlayToggle = useCallback(() => toggle(activeNote), [toggle, activeNote])
-    /** Play from `note` (null = the top of the score) — "Hear it back" after a take; pauses a running pass instead, like the Play button. */
-    const playFrom = useCallback((note: Note | null) => toggle(note), [toggle])
+    /**
+     * Play from `note` (null = the top of the score) — "Hear it back" after a take, and ⇧Space:
+     * always a fresh pass from there, never a pause or a resume of the pass that was running.
+     * Ignored while a take records, which only its own stop may end.
+     */
+    const playFrom = useCallback(
+        (note: Note | null) => {
+            if (transportRef.current?.isRecording) return
+            stopAll()
+            toggle(note)
+        },
+        [transportRef, stopAll, toggle],
+    )
     const toggleMetronome = useCallback(() => setMetronome((on) => !on), [])
 
     return {

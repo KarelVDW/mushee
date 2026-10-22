@@ -14,13 +14,14 @@ const status = (over: Partial<RecordingStatus> = {}): RecordingStatus => ({
 })
 
 describe('RecordingStripCopy', () => {
-    it('reads "Get ready" through the count-in and "Recording" after, as its live-region text too', () => {
+    it('reads "Get ready" through the count-in and "Recording" after, leaving the state words out of its live region', () => {
         const countoff = new RecordingStripCopy(status({ phase: 'countoff', captureStartedAt: null }), 0, false)
         expect(countoff.label).toBe('Get ready')
-        expect(countoff.state).toBe('Get ready')
+        // The editor's announcer says 'Count-in' and 'Recording': the strip's region stays quiet, so neither is heard twice.
+        expect(countoff.news).toBeNull()
         const live = new RecordingStripCopy(status(), 7, false)
         expect(live.label).toBe('Recording')
-        expect(live.state).toBe('Recording')
+        expect(live.news).toBeNull()
     })
 
     it('says how to stop while recording — by tap on a phone, by Space or the stop square elsewhere', () => {
@@ -52,10 +53,10 @@ describe('RecordingStripCopy', () => {
     it('puts a transcription outage first — line and live region — then "Notes are back."', () => {
         const down = new RecordingStripCopy(status({ health: 'down', phase: 'countoff', micModeReminder: true }), 0, true)
         expect(down.hint).toEqual({ kind: 'warning', text: RecordingStripCopy.WARNING })
-        expect(down.state).toBe("Solkey can't write notes right now. Your audio is still being saved, and this time won't count.")
+        expect(down.news).toBe("Solkey can't write notes right now. Your audio is still being saved, and this time won't count.")
         const back = new RecordingStripCopy(status({ health: 'back', secondsLeftAtStart: 10 }), 5, true)
         expect(back.hint).toEqual({ kind: 'recovered', text: 'Notes are back.' })
-        expect(back.state).toBe('Notes are back.')
+        expect(back.news).toBe('Notes are back.')
     })
 })
 

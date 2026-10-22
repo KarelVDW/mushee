@@ -193,6 +193,22 @@ test('Shift+R starts a take and Space stops it; Escape stops one too', async ({ 
     await expect(strip).toHaveCount(0)
 })
 
+test('Shift+R from a focused dock tool keeps the keys on the editor: Space still stops the take', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    const strip = page.getByRole('group', { name: 'Recording status' })
+
+    // The focused tool goes with the dock's tool rows; focus lands on the editor, not <body>.
+    await page.getByRole('button', { name: 'Rest', exact: true }).focus()
+    await page.keyboard.press('Shift+R')
+    await expect(strip).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
+    await expect(page.locator('div[tabindex="0"]').first()).toBeFocused()
+    await page.keyboard.press('Space')
+    await expect(strip).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible()
+})
+
 test('the shortcuts dialog opens with the Playback group', async ({ page }) => {
     await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
     const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
