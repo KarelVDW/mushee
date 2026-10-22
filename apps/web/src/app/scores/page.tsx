@@ -4,11 +4,11 @@ import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
 import {
     Alert,
-    DialogPanel,
     ErrorScreen,
     Footer,
     Icon,
@@ -27,9 +27,9 @@ import { useCreateScore, useDeleteScore, useDuplicateScore, useScores } from '@/
 import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
-import { CreateScoreDialog } from './CreateScoreDialog'
+import { DeleteScoreDialog } from './DeleteScoreDialog'
 import { ImportScoreDialog } from './ImportScoreDialog'
-import { ScoreLimitDialog } from './ScoreLimitDialog'
+import { NewScoreDialog } from './NewScoreDialog'
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -60,20 +60,22 @@ export default function ScoresPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const debouncedSearch = useDebouncedValue(search, 300)
-    const { data: scores, isPending, error, refetch } = useScores(debouncedSearch || undefined)
+    const { data: scores, isPending, isPlaceholderData, error, refetch } = useScores(debouncedSearch || undefined)
     const createMutation = useCreateScore()
     const deleteMutation = useDeleteScore()
     const duplicateMutation = useDuplicateScore()
 
+    // "New score" on other pages lands here as /scores?new=1. The flag is read from
+    // window.location in a mount effect, not useSearchParams, so the page needs no
+    // Suspense boundary; dropping it right away keeps a reload from reopening the dialog.
+    useEffect(() => {
+        if (!new URLSearchParams(window.location.search).has('new')) return
+        setCreateDialogOpen(true)
+        router.replace('/scores')
+    }, [router])
+
     function handleCreate(title: string, instrument: Instrument) {
-        // Build the starting score through the model so a new score opens with the
-        // same default measure as completing one in the editor (e.g. four quarter
-        // rests in 4/4, six eighth rests in 6/8).
-        const score = new Score()
-        score.seedInstrument(instrument)
-        const measure = score.addMeasure().complete()
-        score.setTempo(measure?.firstNote, 120)
-        createFromScore(title, score)
+        createFromScore(title, Score.blank(instrument))
     }
 
     /** Read a picked MusicXML/MIDI file into a score; the import dialog then confirms title and instrument. */
@@ -101,7 +103,7 @@ export default function ScoresPage() {
                 onError: (err) => {
                     // The server refuses the create when the plan's score cap is
                     // reached — that's an upgrade conversation, not a failure toast.
-                    if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                    if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
                     else showToast('Could not create the score. Please try again.')
                 },
             },
@@ -113,7 +115,7 @@ export default function ScoresPage() {
             onSuccess: (copy) => showToast(`Created “${copy.title}”.`, 'info', 'check'),
             onError: (err) => {
                 // A copy is a new score, so it hits the same plan cap as a create.
-                if (err instanceof ApiError && err.code === 'score-limit') setLimitDialogOpen(true)
+                if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
                 else showToast('Could not duplicate the score. Please try again.')
             },
         })
@@ -169,64 +171,32 @@ export default function ScoresPage() {
 
                 {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
                 {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
-                {isPending && !error ? (
-                    <EmptyCard>
-                        <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                            Loading your scores…
-                        </span>
-                    </EmptyCard>
-                ) : scores === undefined ? null : scores.length === 0 ? (
-                    search ? (
-                        <EmptyCard>
-                            <span className="text-outline-variant">
-                                <Icon name="search" size={32} />
-                            </span>
-                            <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
-                                No scores match &ldquo;{search}&rdquo;.
-                            </span>
-                        </EmptyCard>
-                    ) : (
-                        <FirstScoreEmpty onCreate={() => setCreateDialogOpen(true)} onImport={() => fileInputRef.current?.click()} />
-                    )
-                ) : (
-                    <div role="table" aria-label="Your scores" className="flex flex-col gap-4">
-                        <div role="rowgroup">
-                            <div
-                                role="row"
-                                className="grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-4 sm:px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
-                                <span role="columnheader">Title</span>
-                                <span role="columnheader" className="max-md:hidden">
-                                    Created
-                                </span>
-                                <span role="columnheader" className="max-md:hidden">
-                                    Updated
-                                </span>
-                                <span role="columnheader" aria-label="Actions" />
-                            </div>
-                        </div>
-                        <div role="rowgroup" className="flex flex-col gap-3">
-                            {scores.map((score) => (
-                                <ScoreRow
-                                    key={score.id}
-                                    score={score}
-                                    onOpen={() => router.push(`/scores/${score.id}`)}
-                                    onDuplicate={() => handleDuplicate(score)}
-                                    onDelete={() => setDeleteTarget(score)}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <LibraryBody
+                    scores={scores}
+                    isPending={isPending}
+                    error={error}
+                    query={debouncedSearch}
+                    isPlaceholderData={isPlaceholderData}
+                    onCreate={() => setCreateDialogOpen(true)}
+                    onImport={() => fileInputRef.current?.click()}
+                    onOpen={(score) => router.push(`/scores/${score.id}`)}
+                    onDuplicate={handleDuplicate}
+                    onDelete={setDeleteTarget}
+                />
             </main>
 
-            <CreateScoreDialog
-                open={createDialogOpen}
-                onCancel={() => setCreateDialogOpen(false)}
-                onCreate={(title, instrument) => {
-                    setCreateDialogOpen(false)
-                    handleCreate(title, instrument)
-                }}
-            />
+            {createDialogOpen && (
+                <NewScoreDialog
+                    title="New score"
+                    subtitle="Give it a name and pick a lead instrument."
+                    initialInstrument={Instrument.Piano}
+                    onCancel={() => setCreateDialogOpen(false)}
+                    onCreate={(title, instrument) => {
+                        setCreateDialogOpen(false)
+                        handleCreate(title, instrument)
+                    }}
+                />
+            )}
 
             {importedFile && (
                 <ImportScoreDialog
@@ -242,23 +212,96 @@ export default function ScoresPage() {
             {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
 
             {deleteTarget && (
-                <DialogPanel
-                    title="Delete this score?"
-                    subtitle={`“${deleteTarget.title}” will be gone for good — there's no undo.`}
-                    width={440}
-                    onClose={() => setDeleteTarget(null)}
-                    footer={
-                        <>
-                            <TertiaryButton onClick={() => setDeleteTarget(null)}>Keep it</TertiaryButton>
-                            <PrimaryButton danger onClick={() => handleDeleteConfirmed(deleteTarget)}>
-                                Delete score
-                            </PrimaryButton>
-                        </>
-                    }
+                <DeleteScoreDialog
+                    score={deleteTarget}
+                    onCancel={() => setDeleteTarget(null)}
+                    onConfirm={() => handleDeleteConfirmed(deleteTarget)}
                 />
             )}
 
             <Footer />
+        </div>
+    )
+}
+
+interface LibraryBodyProps {
+    scores: ScoreMeta[] | undefined
+    isPending: boolean
+    error: Error | null
+    /** The search the results were asked for — the debounced text, not the live field. */
+    query: string
+    /** The list on screen is still the previous search's (keepPreviousData) while this one loads. */
+    isPlaceholderData: boolean
+    onCreate: () => void
+    onImport: () => void
+    onOpen: (score: ScoreMeta) => void
+    onDuplicate: (score: ScoreMeta) => void
+    onDelete: (score: ScoreMeta) => void
+}
+
+/** The library under the header: loading, nothing, an empty result, or the score table. */
+function LibraryBody({
+    scores,
+    isPending,
+    error,
+    query,
+    isPlaceholderData,
+    onCreate,
+    onImport,
+    onOpen,
+    onDuplicate,
+    onDelete,
+}: LibraryBodyProps) {
+    if (isPending && !error) {
+        return (
+            <EmptyCard>
+                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">Loading your scores…</span>
+            </EmptyCard>
+        )
+    }
+    if (scores === undefined) return null
+    if (scores.length === 0) {
+        // An empty placeholder is a previous search's miss, not an empty library — keep
+        // the onboarding card away until the unfiltered list has actually come back.
+        if (!query && !isPlaceholderData) return <FirstScoreEmpty onCreate={onCreate} onImport={onImport} />
+        return (
+            <EmptyCard>
+                <span className="text-outline-variant">
+                    <Icon name="search" size={32} />
+                </span>
+                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
+                    No scores match{query && <> &ldquo;{query}&rdquo;</>}.
+                </span>
+            </EmptyCard>
+        )
+    }
+    return (
+        <div role="table" aria-label="Your scores" className="flex flex-col gap-4">
+            <div role="rowgroup">
+                <div
+                    role="row"
+                    className="grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-4 sm:px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                    <span role="columnheader">Title</span>
+                    <span role="columnheader" className="max-md:hidden">
+                        Created
+                    </span>
+                    <span role="columnheader" className="max-md:hidden">
+                        Updated
+                    </span>
+                    <span role="columnheader" aria-label="Actions" />
+                </div>
+            </div>
+            <div role="rowgroup" className="flex flex-col gap-3">
+                {scores.map((score) => (
+                    <ScoreRow
+                        key={score.id}
+                        score={score}
+                        onOpen={() => onOpen(score)}
+                        onDuplicate={() => onDuplicate(score)}
+                        onDelete={() => onDelete(score)}
+                    />
+                ))}
+            </div>
         </div>
     )
 }
@@ -328,7 +371,7 @@ function ScoreRow({
                         'font-body font-medium text-[16px] leading-[1.3]',
                         'text-on-surface group-hover:text-primary',
                         'transition-colors duration-150 ease-solkey',
-                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm',
+                        'focus-ring rounded-sm',
                     ].join(' ')}>
                     {score.title}
                     {score.shareToken && (

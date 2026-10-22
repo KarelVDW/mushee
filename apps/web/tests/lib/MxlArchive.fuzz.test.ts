@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { ZipWriter } from '@/lib/AccountExport'
 import { MxlArchive } from '@/lib/MxlArchive'
+import { ZipWriter } from '@/lib/ZipWriter'
 
 /**
  * A user's .mxl upload may be truncated or damaged; the zip reader must answer

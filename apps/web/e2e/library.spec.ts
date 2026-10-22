@@ -268,6 +268,16 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await expect(page).toHaveURL(/\/settings$/)
 })
 
+// "New score" on other pages (settings' top nav) lands here as /scores?new=1. Driven by URL
+// so this spec covers the library's half alone; the settings click lives with that page.
+test('/scores?new=1 opens the library with the create dialog open', async ({ page }) => {
+    await page.goto('/scores?new=1')
+
+    await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
+    // The ?new=1 flag is dropped once read, so a reload doesn't reopen the dialog.
+    await expect(page).toHaveURL(/\/scores$/)
+})
+
 /**
  * Import through the visible button and the browser's file chooser, as a user would.
  * Setting files straight on the hidden input never fired `change` on Linux WebKit in CI.

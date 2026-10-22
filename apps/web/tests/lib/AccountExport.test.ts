@@ -3,8 +3,9 @@ import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
-import { AccountExport, ZipWriter } from '@/lib/AccountExport'
+import { AccountExport } from '@/lib/AccountExport'
 import { MxlArchive } from '@/lib/MxlArchive'
+import { ZipWriter } from '@/lib/ZipWriter'
 
 async function open(blob: Blob): Promise<MxlArchive> {
     return new MxlArchive(new Uint8Array(await blob.arrayBuffer()))
