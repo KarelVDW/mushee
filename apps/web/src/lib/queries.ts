@@ -333,7 +333,7 @@ export function usePlanCatalogue(): PlanCatalogue {
 
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
 
-export const billingKeys = {
+const billingKeys = {
     subscription: ['billing', 'subscription'] as const,
 }
 
@@ -342,6 +342,16 @@ export function useBillingState() {
         queryKey: billingKeys.subscription,
         queryFn: getBillingState,
     })
+}
+
+/**
+ * Refetches the subscription state, for a change that lands server-side rather than
+ * through one of the billing mutations below (a pack's minutes arriving via the Polar
+ * webhook after checkout).
+ */
+export function useRefreshBillingState() {
+    const queryClient = useQueryClient()
+    return useCallback(() => queryClient.invalidateQueries({ queryKey: billingKeys.subscription }), [queryClient])
 }
 
 /** Creates a Polar checkout and sends the browser there. */
