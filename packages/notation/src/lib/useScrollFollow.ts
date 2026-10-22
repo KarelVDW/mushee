@@ -24,6 +24,16 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
     return null
 }
 
+/**
+ * How much of the scroller's viewport something else covers, top and bottom: its CSS
+ * `scroll-padding` (the host sets it — a toast sitting over the foot of the score, say). The
+ * followed row stays clear of it; `auto` and unset read as none.
+ */
+export function scrollPaddingOf(scroller: HTMLElement): { top: number; bottom: number } {
+    const style = getComputedStyle(scroller)
+    return { top: parseFloat(style.scrollPaddingTop) || 0, bottom: parseFloat(style.scrollPaddingBottom) || 0 }
+}
+
 interface ScrollFollowOptions {
     /** The rendered score svg, in layout coordinates scaled to its on-screen width. */
     svgRef: React.RefObject<SVGSVGElement | null>
@@ -41,7 +51,9 @@ interface ScrollFollowOptions {
 /**
  * Keep the score's active row on screen: scroll the nearest scrollable ancestor so the
  * selected note's row, and the playback/recording cursor's row while it plays, sit inside
- * the viewport (no-op when they already do) — how both stay in view on small screens.
+ * the viewport (no-op when they already do) — how both stay in view on small screens. The
+ * scroller's scroll padding marks what is covered (see {@link scrollPaddingOf}): the row sits
+ * inside the rest, and a row taller than that keeps its top in view.
  */
 export function useScrollFollow({ svgRef, containerRef, score, selectedNote, playbackCursorRef, mounted }: ScrollFollowOptions) {
     // Scroll so the row at `layoutY` (its top, in layout coordinates) fits the viewport.
@@ -54,10 +66,14 @@ export function useScrollFollow({ svgRef, containerRef, score, selectedNote, pla
             const svgTop = svg.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
             const rowTop = svgTop + layoutY * scale
             const rowBottom = rowTop + score.layout.rowHeight * scale
-            if (rowTop < scroller.scrollTop + FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: followScrollBehavior() })
-            } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: followScrollBehavior() })
+            const padding = scrollPaddingOf(scroller)
+            // The highest scroll that still shows the row's top below the covered top edge.
+            const topInView = rowTop - padding.top - FOLLOW_SCROLL_MARGIN
+            if (topInView < scroller.scrollTop) {
+                scroller.scrollTo({ top: Math.max(0, topInView), behavior: followScrollBehavior() })
+            } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - padding.bottom - FOLLOW_SCROLL_MARGIN) {
+                const bottomInView = rowBottom - scroller.clientHeight + padding.bottom + FOLLOW_SCROLL_MARGIN
+                scroller.scrollTo({ top: Math.min(bottomInView, topInView), behavior: followScrollBehavior() })
             }
         },
         [svgRef, containerRef, score],

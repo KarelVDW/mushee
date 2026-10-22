@@ -272,6 +272,7 @@ export default function ScoreEditorPage() {
         activeNote,
         transportRef,
         playbackCursorRef,
+        scrollAreaRef,
         stopAll,
         saveToApi,
         playFrom,
@@ -560,11 +561,16 @@ export default function ScoreEditorPage() {
                 />
                 {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
-                against a flex-sized (height-less) scroll container. */}
-                <div ref={scrollAreaRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col">
+                against a flex-sized (height-less) scroll container. While the after-recording
+                summary is up, --toast-clearance (ToastClearance) is the room it takes over the
+                score's foot: the follow-scroll keeps its row above it, and the canvas grows by
+                as much underneath, so even the last row can rise clear of the toast. */}
+                <div
+                    ref={scrollAreaRef}
+                    className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col scroll-pb-(--toast-clearance)">
                     <div
                         ref={scoreAreaRef}
-                        className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
+                        className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 pb-[calc(0.75rem+var(--toast-clearance,0px))] sm:pb-[calc(2.5rem+var(--toast-clearance,0px))] tonal-layer-glow manuscript-canvas">
                         {/* The click events carry coordinates relative to the ScoreView's own
                         container, so the popovers anchor inside this exact wrapper. */}
                         <div className="relative">

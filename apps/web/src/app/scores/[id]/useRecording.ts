@@ -4,6 +4,7 @@ import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformSt
 import type { Note, Score } from '@mushee/notation/model'
 import { useRouter } from 'next/navigation'
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 
 import { dismissToast, showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
@@ -25,12 +26,15 @@ import type { Transport } from '@/lib/Transport'
 
 import { MicFailure, type RecordingStatus, RecordingStripCopy, TakeSummaryCopy } from './RecordingCopy'
 import type { ScoreManipulator } from './ScoreManipulator'
+import { ToastClearance } from './ToastClearance'
 
 /** Why the recording was cut short (or refused, or couldn't hear) — drives which dialog shows. */
 export type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | { kind: 'mic-blocked' }
 
 /** How long the after-take summary stays (it pauses while hovered or focused). */
 const SUMMARY_MS = 10_000
+/** The summary's Undo, named for what it undoes — never the header's bare 'Undo'; it also finds the toast on screen. */
+const UNDO_RECORDING_LABEL = 'Undo this recording'
 /** How long "Notes are back." stays in the strip once transcription recovers. */
 const RECOVERED_MS = 3000
 /** Waveform samples quieter than this are silence: no bar, so a pause never draws a dotted rule through the staff. */
@@ -54,6 +58,7 @@ export function useRecording({
     activeNote,
     transportRef,
     playbackCursorRef,
+    scrollAreaRef,
     stopAll,
     saveToApi,
     playFrom,
@@ -65,6 +70,8 @@ export function useRecording({
     activeNote: Note | null
     transportRef: RefObject<Transport | null>
     playbackCursorRef: RefObject<SVGRectElement | null>
+    /** The score's scroller — kept clear of the after-take summary while it is up (ToastClearance). */
+    scrollAreaRef: RefObject<HTMLElement | null>
     stopAll: () => void
     saveToApi: (changes: { title?: string; score?: Score }) => void
     /** Play from a note — the summary's "Hear it back". */
@@ -125,7 +132,8 @@ export function useRecording({
      * a way to hear it back and to undo it (with no notes, only the undo). Undo takes the whole
      * take back in one step — the history folds a take into one. Showing it teaches what the
      * dock's first-selection hint would have; the next edit retires it, so its actions only ever
-     * mean this take.
+     * mean this take. It goes up at once (flushed), before the bar after the take is selected, so
+     * the selection's follow-scroll already keeps that bar — and the take's last rows — above it.
      */
     const summarize = useCallback(
         (take: RecordingTake) => {
@@ -143,13 +151,18 @@ export function useRecording({
             manipulator.announce(copy.announcement)
             manipulator.moveNoteHint.markSeen()
             retireSummary.current?.()
-            const undo = { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => manipulator.undo() }
+            const undo = { label: 'Undo', ariaLabel: UNDO_RECORDING_LABEL, onClick: () => manipulator.undo() }
             const actions = take.wrotePitchedNotes ? [{ label: 'Hear it back', onClick: () => playFrom(first.firstNote) }, undo] : [undo]
-            const toast = showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions })
+            const toast = flushSync(() => showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions }))
+            const scroller = scrollAreaRef.current
+            const marker = [...document.querySelectorAll(`[role="status"] button[aria-label="${UNDO_RECORDING_LABEL}"]`)].at(-1)
+            const clearance = scroller && marker ? new ToastClearance(scroller) : null
+            if (marker) clearance?.hold(marker)
             const edits = manipulator.editCount
             const retire = () => {
                 unsubscribe()
                 dismissToast(toast)
+                clearance?.release()
                 if (retireSummary.current === retire) retireSummary.current = null
             }
             const unsubscribe = manipulator.subscribe(() => {
@@ -157,7 +170,7 @@ export function useRecording({
             })
             retireSummary.current = retire
         },
-        [manipulator, playFrom, touch],
+        [manipulator, playFrom, touch, scrollAreaRef],
     )
 
     const handleRecordToggle = useCallback(async () => {
@@ -253,12 +266,11 @@ export function useRecording({
             }
         }
         /**
-         * The bar after the take, quietly selected — Record, the dock and the phone's nudges work
-         * at once — once the bars recorded after the last note are gone (RecordingTake.dropTrailingRests).
-         * A note picked while the take drained stays picked, unless it was in one of those bars.
+         * The bar after the take, quietly selected — Record, the dock and the phone's nudges work at
+         * once. A note picked while the take drained stays picked, unless it was in one of the bars
+         * recorded after the last note, which are gone by now (RecordingTake.dropTrailingRests).
          */
         const carryOn = () => {
-            take.dropTrailingRests()
             const next = take.noteAfter()
             saveToApi({ score })
             const picked = manipulator.selectedNote
@@ -275,8 +287,10 @@ export function useRecording({
             // Record was pressed again before this take finished draining: the new take owns the
             // selection and the strip now, so this one only leaves its notes behind.
             if (transport.isRecording) return
-            carryOn()
+            take.dropTrailingRests()
+            // The summary first: the quiet select that follows scrolls with the toast already up.
             if (end === 'stopped') summarize(take)
+            carryOn()
         }
 
         manipulator.select(null)
