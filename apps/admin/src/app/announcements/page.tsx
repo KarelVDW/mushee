@@ -171,9 +171,7 @@ export default function AnnouncementsPage() {
                                 {audience.data?.sample.length ? ` · e.g. ${audience.data.sample.map((s) => s.email).join(', ')}` : ''}
                             </span>
                         </div>
-                        <a href={audienceCsvUrl(filters)} className="no-underline">
-                            <SecondaryButton onClick={() => undefined}>Export CSV</SecondaryButton>
-                        </a>
+                        <SecondaryButton onClick={() => window.location.assign(audienceCsvUrl(filters))}>Export CSV</SecondaryButton>
                     </div>
                     {audience.isError && <Alert onRetry={() => void audience.refetch()}>Couldn&apos;t count the audience.</Alert>}
                     <p className="m-0 font-body text-[12px] leading-normal text-on-surface-variant">
