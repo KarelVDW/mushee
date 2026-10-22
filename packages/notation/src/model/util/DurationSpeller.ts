@@ -36,8 +36,9 @@ export class DurationSpeller {
 
     /** Written values for `beats` of time starting `startBeat` into the bar (quarter-note beats). */
     spell(startBeat: number, beats: number): Duration[] {
+        // The shared WRITABLE instances come back as they are: Duration is an immutable value object.
         return this.spellUnits(Math.round(startBeat / Duration.GRID_BEATS), Math.round(beats / Duration.GRID_BEATS)).map(
-            ({ duration }) => new Duration({ type: duration.type, dots: duration.dots }),
+            ({ duration }) => duration,
         )
     }
 

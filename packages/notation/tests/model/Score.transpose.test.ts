@@ -1,6 +1,6 @@
 import { Interval } from '@mushee/notation/model/Interval'
 import { Score } from '@mushee/notation/model/Score'
-import { fill, makeScore, p, q } from '@mushee/notation/testing'
+import { fill, keyAt, makeScore, p, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 const spellingsIn = (score: Score, measureIndex: number) =>
@@ -66,7 +66,7 @@ describe('Score.transpose', () => {
         expect(score.measures[1].leadingKeyExplicit).toBe(false)
         score.transpose(Interval.fromParts(2, 'major')) // F♯ → +8 → A♭; B → +7 stays C♯
         expect(score.measures[0].keySignature.fifths).toBe(-4)
-        expect(score.measures[0].keyAtBeat(2)?.fifths).toBe(7)
+        expect(keyAt(score.measures[0], 2)?.fifths).toBe(7)
         expect(score.measures[1].keySignature.fifths).toBe(7) // re-derived by propagation
         expect(spellingsIn(score, 1)).toEqual(['E#5', 'rest', 'rest', 'rest'])
     })
@@ -163,7 +163,7 @@ describe('Score.minimizeAccidentals', () => {
         score.minimizeAccidentals()
         // Region 2 (beat 2 onward + measure 2 via… propagation from the last key −5): the beat-2
         // region holds F♯,C♯ and re-keys; the trailing −5 region governs measure 2's G♯.
-        expect(score.measures[0].keyAtBeat(2)?.fifths).toBe(2) // D major covers F♯ + C♯
+        expect(keyAt(score.measures[0], 2)?.fifths).toBe(2) // D major covers F♯ + C♯
         expect(spellingsIn(score, 1)[0]).toBe('Ab4') // measure 2 sits in the A♭-side region
     })
 
@@ -193,7 +193,7 @@ describe('Score.minimizeAccidentals', () => {
         fill(score, 0, [q(p('C', 4)), q(), q(), q()])
         m.addKeySignature(3.5, 3) // a region opening after the last note — nothing to weigh
         score.minimizeAccidentals()
-        expect(m.keyAtBeat(3.5)?.fifths).toBe(3)
+        expect(keyAt(m, 3.5)?.fifths).toBe(3)
     })
 
     it('an empty selection is a no-op', () => {

@@ -59,7 +59,7 @@ function checkLayout(score: Score, width: number): string[] {
             walk(ml.keyLayoutFor(key), `measure[${measure.index}].key`, seen, problems)
         for (const tuplet of measure.tuplets) walk(ml.tupletLayoutFor(tuplet), `measure[${measure.index}].tuplet`, seen, problems)
         walk(measure.clef.layout, `measure[${measure.index}].clef`, seen, problems)
-        for (const tempo of measure.tempos) walk(tempo.layout, `measure[${measure.index}].tempo`, seen, problems)
+        for (const tempo of measure.tempos) walk(ml.tempoLayoutFor(tempo), `measure[${measure.index}].tempo`, seen, problems)
     }
     // Reading order within each row: x strictly increases measure by measure.
     for (const row of layout.rows) {

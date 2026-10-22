@@ -114,11 +114,13 @@ export class Score {
     }
 
     /**
-     * A detached one-measure copy of `measure` — its leading clef, key (fifths and mode) and
-     * meter, with cloned notes — for previewing an edit without touching the live score.
-     * `notes` are the copies of the given `notes` that belong to `measure`, mirrored by
-     * position (every copied note when none are given), ready to hand to the excerpt's
-     * own mutators.
+     * A detached one-measure copy of `measure` — its leading clef, key (fifths and mode),
+     * meter and mid-measure clef and key changes, with cloned notes — for previewing an edit
+     * without touching the live score. The pitch context is all copied, so a transposition or
+     * respelling of the excerpt lands where the same edit of the live measure does. Tempo
+     * markings are left out: no pitch edit reads them. `notes` are the copies of the given
+     * `notes` that belong to `measure`, mirrored by position (every copied note when none
+     * are given), ready to hand to the excerpt's own mutators.
      */
     static excerpt(measure: Measure, notes?: Note[]): { score: Score; notes: Note[] } {
         const score = new Score()
@@ -131,6 +133,8 @@ export class Score {
             leadingKeyExplicit: true,
         })
         copy.addNotes(measure.notes.map((note) => note.clone({})))
+        for (const clef of measure.midMeasureClefs) copy.addClef(clef.beatPosition, clef.type)
+        for (const midKey of measure.midMeasureKeySignatures) copy.addKeySignature(midKey.beatPosition, midKey.fifths, midKey.mode)
         score.appendMeasure(copy)
         const mirrored = notes
             ? notes.filter((note) => note.measure === measure).map((note) => copy.notes[measure.notes.indexOf(note)])

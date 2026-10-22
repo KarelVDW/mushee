@@ -341,8 +341,14 @@ describe('ScoreLayout', () => {
 
         it('a time signature change in beat amount or beat type shows the time signature', () => {
             const score = makeScore(3)
-            score.measures[1].setTimeSignature(new TimeSignature(3, 4)) // beat amount changes
-            score.measures[2].setTimeSignature(new TimeSignature(3, 8)) // beat type changes
+            score.setTimeSignature(score.measures[1], new TimeSignature(3, 4)) // beat amount changes
+            score.setTimeSignature(score.measures[2], new TimeSignature(3, 8)) // beat type changes
+            // The rebars reflow the bars; the first three now read 4/4 | 3/4 | 3/8.
+            expect(score.measures.slice(0, 3).map((m) => [m.timeSignature.beatAmount, m.timeSignature.beatType])).toEqual([
+                [4, 4],
+                [3, 4],
+                [3, 8],
+            ])
             expect(score.measures[1].layout.showsTimeSignature).toBe(true)
             expect(score.measures[2].layout.showsTimeSignature).toBe(true)
         })

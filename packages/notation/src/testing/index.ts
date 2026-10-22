@@ -61,12 +61,22 @@ export function roundTrip(score: Score): Score {
     return new ScoreDeserializer(new ScoreSerializer(score).toInput()).toScore()
 }
 
+/** The clef stored exactly at `beatPosition` in `measure` (including a redundant one), if any. */
+export function clefAt(measure: Measure, beatPosition: number): Clef | undefined {
+    return measure.clefs.find((c) => c.beatPosition === beatPosition)
+}
+
+/** The key signature stored exactly at `beatPosition` in `measure` (including a redundant one), if any. */
+export function keyAt(measure: Measure, beatPosition: number): KeySignature | undefined {
+    return measure.keySignatures.find((k) => k.beatPosition === beatPosition)
+}
+
 /** Convenience: a Clef attached to a throwaway measure (clefs require a measure, like tempos). */
 export function clef(type: ClefType = 'treble', beatPosition = 0): Clef {
     const measure = new Measure(new Score(), beatPosition === 0 ? type : 'treble', new TimeSignature(4, 4))
     if (beatPosition === 0) return measure.clef
     measure.addClef(beatPosition, type)
-    return measure.clefAtBeat(beatPosition) as Clef
+    return clefAt(measure, beatPosition) as Clef
 }
 
 /** Convenience: a KeySignature attached to a throwaway measure (keys require a measure, like clefs). */
@@ -79,5 +89,5 @@ export function key(fifths = 0, mode?: string, beatPosition = 0): KeySignature {
     )
     if (beatPosition === 0) return measure.keySignature
     measure.addKeySignature(beatPosition, fifths, mode)
-    return measure.keyAtBeat(beatPosition) as KeySignature
+    return keyAt(measure, beatPosition) as KeySignature
 }

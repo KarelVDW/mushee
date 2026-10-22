@@ -34,11 +34,12 @@ src/model/util/     model infrastructure (Derived, BeatPositionedList, LeadingTr
                     and the engraver), DurationSpeller (metrical spelling for the importers)
 src/model/layout/   the ink: layout snapshots, the intrinsic widths they pack with, the Staff
                     coordinate system, and the helpers that build them (BeamFinder, Resizer,
-                    MeasureMetrics)
+                    MeasureMetrics, DisplayedAccidentals, DigitRun)
 src/engraving/      glyph metrics, Bravura font data and engraving constants
 src/components/     the React renderer, which draws layout snapshots, and its palette
 src/lib/            React hooks and stores shared by the renderer and the apps
-src/testing/        score builders for tests
+src/testing/        score builders for tests, and the shared Bravura glyph-metrics test double
+                    (glyphMetricsMock, outside the barrel)
 ```
 
 The model (layout included) reads `engraving/` for its metrics and never reads `components/` or
@@ -55,11 +56,13 @@ The model (layout included) reads `engraving/` for its metrics and never reads `
    construction — an edit replaces the child, and the owning measure's `touch()` records it.
    `Tuplet` is not stored state at all: it is a per-version snapshot `TupletFinder` derives
    from its measure's notes. Derived state is held **only** in `Derived<T>` values
-   (`model/util/Derived.ts`): a lazy compute paired with a version check. Every public mutator
-   ends in exactly one `touch()` — the single choke point that bumps the version. Nothing is
-   eagerly rebuilt inside a mutator; private helpers never touch. If you find yourself writing
-   `invalidateX()` or calling a rebuild from a mutator, you are reintroducing the old bug
-   class — use a version.
+   (`model/util/Derived.ts`): a lazy compute paired with a version check. Every public `Score`
+   mutator ends in exactly one `touch()` — the choke point that bumps the version and fires
+   `onChange`. A primitive `Measure` mutator ends in its own `touch()`; a measure composite
+   (`complete()`) may touch once per step, and the carry-forward applicators never touch (see
+   below). Nothing is eagerly rebuilt inside a mutator; private helpers never touch. If you find
+   yourself writing `invalidateX()` or calling a rebuild from a mutator, you are reintroducing
+   the old bug class — use a version.
 
     The two choke points differ, and the difference matters to callers:
     - `Score.touch()` bumps the score version and fires `onChange`. Every public `Score`
@@ -81,8 +84,9 @@ The model (layout included) reads `engraving/` for its metrics and never reads `
    never change after construction: it is _replaced_, never mutated or partially invalidated.
    Staleness is decided in one place: `ScoreLayout` compares model versions (plus the explicit
    context signatures in its reuse check) and **reuses** previous sub-layouts whose inputs are
-   unchanged, so memoized React subtrees stay stable. The folder's other modules (`Staff`,
-   `BeamFinder`, `Resizer`, `MeasureMetrics`) are pure inputs to a rebuild; nothing keeps them.
+   unchanged, so memoized React subtrees stay stable. The folder's non-snapshot modules
+   (`Staff`, `BeamFinder`, `Resizer`, `MeasureMetrics`, `DisplayedAccidentals`, `DigitRun`) are
+   pure inputs to a rebuild; nothing keeps them.
 
 `Score.layout` is the only gateway into the layout layer. The gateway carries one presentation
 input: `Score.layoutWidth` (set via `setLayoutWidth`), the row-packing budget used for responsive
@@ -94,10 +98,11 @@ not a guarantee: a single measure denser than the packing budget widens the effe
 so the score shrinks on screen). Layout must always resolve — it never throws on any
 model + width combination.
 
-The `layout` getters on `Measure`, `Note`, `KeySignature`, `Tuplet` and `Tempo` are conveniences
-that delegate into the current `ScoreLayout` (a tempo marking's layout is built by its
-measure's layout, which places it at its beat); they own no cache of their own. A note outside
-the score has no layout — the editor's ghost note is drawn from `NoteLayout.preview(note, clef)`.
+The `layout` getters on `Measure` and `Note` are conveniences that delegate into the current
+`ScoreLayout`; they own no cache of their own. A key signature, tuplet or tempo marking is laid
+out by its measure's layout (`keyLayoutFor`, `tupletLayoutFor`, `tempoLayoutFor` — the
+renderer reads those), so they carry no getter. A note outside the score has no layout — the
+editor's ghost note is drawn from `NoteLayout.preview(note, clef)`.
 Only `Clef` and `TimeSignature` layouts are context-free — they depend only on the clef type and
 the digits — so they are shared: `ClefLayout.of(type)` keeps one per clef type, and a
 `TimeSignature` caches its own forever, per tier 1 semantics. Widths are ink, so each layout
@@ -122,7 +127,7 @@ recurses into the `ScoreLayout` under construction.
 ```
 Score mutator   → private helpers + Measure mutators → this.touch()   (exactly once, at the end)
 Score.touch()   → score version++ → fire onChange
-Measure mutator → mutate plain fields → this.touch()                 (exactly once, at the end)
+Measure mutator → mutate plain fields → this.touch()                 (once per primitive, at its end)
 Measure.touch() → measure version++ → score.measureChanged(): score version++, mark dirty (no onChange)
 read of derived value → Derived checks version → recompute if stale
 read of score.layout  → rebuild ScoreLayout if score.version or layoutWidth moved, reusing unchanged parts

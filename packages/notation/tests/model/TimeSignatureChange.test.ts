@@ -6,13 +6,12 @@ import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { TieType } from '@mushee/notation/model/types'
-import { makeScore, pitched, rest, roundTrip, triplet } from '@mushee/notation/testing'
+import { clefAt, keyAt, makeScore, pitched, rest, roundTrip, triplet } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Swap a measure's content for an exact note list (tests may leave measures under-full). */
 function fill(measure: Measure, notes: Note[]) {
-    measure.removeNotes([...measure.notes])
-    measure.addNotes(notes)
+    measure.replaceNotes([...measure.notes], notes)
 }
 
 function tied(note: Note, tie: TieType): Note {
@@ -410,8 +409,8 @@ describe('Score.setTimeSignature', () => {
             score.setKeySignature(score.measures[0].notes[2], 2) // absolute beat 2 (mid-measure key)
             score.measures[1].setTempo(2, 100) // absolute beat 6
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
-            expect(score.measures[0].clefAtBeat(2)?.type).toBe('bass')
-            expect(score.measures[0].keyAtBeat(2)?.fifths).toBe(2)
+            expect(clefAt(score.measures[0], 2)?.type).toBe('bass')
+            expect(keyAt(score.measures[0], 2)?.fifths).toBe(2)
             expect(score.measures[2].tempoAtBeat(0)?.bpm).toBe(100)
         })
 
@@ -431,7 +430,7 @@ describe('Score.setTimeSignature', () => {
             score.setTimeSignature(score.measures[0], new TimeSignature(2, 4))
             // Absolute beat 5 → measure 2, beat 1. The carried clef there is bass, so the
             // treble change is a real one and must survive the redundancy check.
-            expect(score.measures[2].clefAtBeat(1)?.type).toBe('treble')
+            expect(clefAt(score.measures[2], 1)?.type).toBe('treble')
             expect(score.measures[3].clef.type).toBe('treble')
         })
 
@@ -439,7 +438,7 @@ describe('Score.setTimeSignature', () => {
             const score = makeScore(1)
             score.measures[0].addClef(4, 'bass')
             score.setTimeSignature(score.measures[0], new TimeSignature(2, 4))
-            expect(score.measures[1].clefAtBeat(2)?.type).toBe('bass')
+            expect(clefAt(score.measures[1], 2)?.type).toBe('bass')
         })
     })
 

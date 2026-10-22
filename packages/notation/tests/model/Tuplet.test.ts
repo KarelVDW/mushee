@@ -30,17 +30,17 @@ describe('Tuplet', () => {
         expect(tuplet.lastNote).toBe(c)
     })
 
-    it('layout delegates into the score layout and is stable without mutation', () => {
-        const { tuplet } = setup()
-        expect(tuplet.layout).toBe(tuplet.layout)
+    it("its measure's layout keeps one tuplet layout without mutation", () => {
+        const { measure, tuplet } = setup()
+        expect(measure.layout.tupletLayoutFor(tuplet)).toBe(measure.layout.tupletLayoutFor(tuplet))
     })
 
     it('a measure mutation produces a fresh tuplet group with a fresh layout', () => {
         const { measure, tuplet } = setup()
-        const layoutBefore = tuplet.layout
+        const layoutBefore = measure.layout.tupletLayoutFor(tuplet)
         measure.addNotes([new Note({ duration: new Duration({ type: 'q' }) })])
         const after = measure.tuplets[0]
         expect(after).not.toBe(tuplet) // groups are re-derived per measure version
-        expect(after.layout).not.toBe(layoutBefore)
+        expect(measure.layout.tupletLayoutFor(after)).not.toBe(layoutBefore)
     })
 })

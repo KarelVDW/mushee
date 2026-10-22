@@ -10,7 +10,7 @@ import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { DurationType } from '@mushee/notation/model/types'
-import { fill, makeScore, p, pitched, q } from '@mushee/notation/testing'
+import { clefAt, fill, keyAt, makeScore, p, pitched, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** A C4 written under a 3:2 ratio. */
@@ -201,9 +201,7 @@ describe('Score', () => {
 
         it('inherits clef, key (incl. mode) and time signature from the previous measure', () => {
             const score = new Score()
-            const a = score.addMeasure()
-            a.complete()
-            a.setTimeSignature(new TimeSignature(3, 4))
+            const a = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
             score.setClef(a.firstNote, 'bass')
             score.setKeySignature(a.firstNote, 3, 'minor')
             const b = score.addMeasure()
@@ -1042,10 +1040,10 @@ describe('Score', () => {
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             score.setClef(m.noteAtBeat(2), 'bass')
-            expect(m.clefAtBeat(2)?.type).toBe('bass')
+            expect(clefAt(m, 2)?.type).toBe('bass')
             // Active clef before beat 2 is the treble leading clef — setting beat 2 to treble drops it.
             score.setClef(m.noteAtBeat(2), 'treble')
-            expect(m.clefAtBeat(2)).toBeUndefined()
+            expect(clefAt(m, 2)).toBeUndefined()
         })
 
         it('stops drawing a mid-measure clef that became a no-op after the leading clef changed', () => {
@@ -1209,7 +1207,7 @@ describe('Score', () => {
                 if (!m) throw new Error('expected firstMeasure')
                 score.setKeySignature(m.firstNote, 1) // leading G major
                 score.setKeySignature(m.noteAtBeat(2), 0) // mid-measure back to C
-                const midKey = m.keyAtBeat(2)
+                const midKey = keyAt(m, 2)
                 if (!midKey) throw new Error('expected mid-measure key')
                 expect(KeySignatureLayout.drawnAccidentalsFor(midKey).map((a) => a.glyphName)).toEqual(['accidentalNatural'])
             })
@@ -1218,9 +1216,10 @@ describe('Score', () => {
                 const score = makeScore(2)
                 score.setKeySignature(score.measures[0].firstNote, 1) // G major
                 score.setKeySignature(score.measures[1].firstNote, 0) // C major cancels F♯
-                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(1) // 1 natural
+                const second = score.measures[1]
+                expect(second.layout.keyLayoutFor(second.keySignature).accidentals).toHaveLength(1) // 1 natural
                 score.setKeySignature(score.measures[0].firstNote, 2) // earlier key → D major (F♯, C♯)
-                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(2) // now cancels both
+                expect(second.layout.keyLayoutFor(second.keySignature).accidentals).toHaveLength(2) // now cancels both
             })
         })
     })
@@ -1305,6 +1304,42 @@ describe('Score', () => {
             expect(notes).toHaveLength(1)
             expect(notes[0].pitch?.name).toBe('A')
             expect(notes[0].measure.score).not.toBe(score)
+        })
+
+        it('carries mid-measure clef and key changes, so a transposed excerpt matches the live result', () => {
+            const spelled = (notes: Note[]) => notes.map((n) => (n.pitch ? `${n.pitch.name}${n.pitch.octave}:${n.pitch.alter}` : 'rest'))
+            const build = () => {
+                const score = makeScore(1)
+                fill(score, 0, [q(p('C', 4)), q(p('D', 4)), q(p('F', 4)), q(p('A', 4))])
+                const m = score.measures[0]
+                score.setKeySignature(m.noteAtBeat(2), 4) // E major from beat 2: F♯ is in the key there
+                score.setClef(m.noteAtBeat(3), 'bass')
+                return score
+            }
+            const step = Interval.fromSemitones(1) // a minor second: F → G♭ before respelling
+
+            // Selection scope: the key stays, so the F after the mid-bar key respells as F♯, not G♭.
+            const live = build()
+            const target = live.measures[0].noteAtBeat(2)
+            if (!target) throw new Error('expected a note at beat 2')
+            const excerpt = Score.excerpt(live.measures[0], [target])
+            const [copy] = excerpt.score.measures
+            expect(copy.midMeasureKeySignatures.map((k) => [k.beatPosition, k.fifths])).toEqual([[2, 4]])
+            expect(copy.midMeasureClefs.map((c) => [c.beatPosition, c.type])).toEqual([[3, 'bass']])
+            const previewed = excerpt.score.transpose(step, excerpt.notes)
+            const applied = live.transpose(step, [target])
+            expect(spelled(previewed)).toEqual(['F4:1'])
+            expect(spelled(previewed)).toEqual(spelled(applied))
+
+            // Score scope: the mid-bar key is re-keyed too, and every note lands the same.
+            const whole = build()
+            const wholeExcerpt = Score.excerpt(whole.measures[0])
+            wholeExcerpt.score.transpose(step)
+            whole.transpose(step)
+            const [previewBar] = wholeExcerpt.score.measures
+            const [liveBar] = whole.measures
+            expect(previewBar.midMeasureKeySignatures.map((k) => k.fifths)).toEqual(liveBar.midMeasureKeySignatures.map((k) => k.fifths))
+            expect(spelled(previewBar.notes)).toEqual(spelled(liveBar.notes))
         })
     })
 
