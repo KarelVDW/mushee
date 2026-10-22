@@ -56,6 +56,8 @@ export interface TranscriptionHandlers {
  */
 export class TranscriptionSocket {
     private readonly ws: WebSocket
+    /** Settles on the socket's first `open` or `error` event; see handshake(). */
+    private readonly settled: Promise<void>
     /** Encoded chunks captured before the socket finished connecting, flushed behind the meta frame. */
     private pendingChunks: Blob[] = []
     /** True once the `meta` frame has gone out, so it is sent exactly once. */
@@ -69,6 +71,12 @@ export class TranscriptionSocket {
         private readonly handlers: TranscriptionHandlers,
     ) {
         this.ws = new WebSocket(url)
+        // Listened for from construction, so a handshake() call made after the
+        // socket already opened (or failed) still settles.
+        this.settled = new Promise<void>((resolve) => {
+            this.ws.addEventListener('open', () => resolve(), { once: true })
+            this.ws.addEventListener('error', () => resolve(), { once: true })
+        })
         // A close while the take still counts on this socket means the connection
         // died under the user — surface it instead of letting them keep singing
         // into a dead socket.
@@ -80,12 +88,9 @@ export class TranscriptionSocket {
         this.ws.addEventListener('message', (event) => this.dispatch(event))
     }
 
-    /** Settles once the handshake does, opened or failed — {@link isOpen} tells which. */
+    /** Settles once the handshake does, opened or failed — {@link isOpen} tells which. Any number of calls, at any time, share it. */
     handshake(): Promise<void> {
-        return new Promise<void>((resolve) => {
-            this.ws.addEventListener('open', () => resolve(), { once: true })
-            this.ws.addEventListener('error', () => resolve(), { once: true })
-        })
+        return this.settled
     }
 
     get isOpen(): boolean {
