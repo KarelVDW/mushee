@@ -7,8 +7,8 @@
  */
 
 import { type AttributeClickEvent, type MeasureButtonsRect, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
-import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { followScrollBehavior } from '@mushee/notation/lib/useScrollFollow'
+import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'

@@ -320,7 +320,9 @@ describe('Popover viewport clamp', () => {
         expect(panel.style.transform).toBe('translateX(66px)')
 
         // Measuring the shifted panel again (a resize) keeps the one shift.
-        act(() => window.dispatchEvent(new Event('resize')))
+        act(() => {
+            window.dispatchEvent(new Event('resize'))
+        })
         expect(panel.style.transform).toBe('translateX(66px)')
     })
 })
