@@ -9,6 +9,9 @@ import { useShareScore, useUnshareScore } from '@/lib/queries'
 /** How long Copy reads 'Copied' after a copy. */
 const COPIED_MS = 2000
 
+/** What a share link lets people do — said the same way before and after the link exists, file formats left to Download. */
+const SHARE_PROMISE = "Anyone with the link can see, play and download this score. They can't change it. No account needed."
+
 /** The public address of a shared score, on whatever host the app is served from. */
 function shareLinkFor(token: string): string {
     return `${window.location.origin}/s/${token}`
@@ -137,10 +140,7 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
         <div ref={panelRef} className="contents">
             {link ? (
                 <>
-                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                        Anyone with this link can see the score, play it and download it as PDF, MusicXML or MIDI. They can&apos;t change
-                        it, and they don&apos;t need an account.
-                    </p>
+                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{SHARE_PROMISE}</p>
                     <div className="flex items-center gap-2">
                         <input
                             readOnly
@@ -204,9 +204,7 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
                 </>
             ) : (
                 <>
-                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                        Anyone with the link can see, play and download this score. They can&apos;t change it.
-                    </p>
+                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{SHARE_PROMISE}</p>
                     <span data-share-focus="create" className="contents">
                         <PrimaryButton onClick={createAndCopy} fullWidth>
                             {share.isPending ? 'Creating link…' : 'Create link and copy'}

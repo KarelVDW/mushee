@@ -518,11 +518,15 @@ test('share menu creates and copies the read-only link in one press, and turns i
     await page.getByRole('button', { name: 'Share score' }).click()
     const panel = page.getByRole('dialog', { name: 'Share score' })
     await expect(panel).toBeVisible()
-    await expect(panel).toContainText("Anyone with the link can see, play and download this score. They can't change it.")
+    const promise = "Anyone with the link can see, play and download this score. They can't change it. No account needed."
+    await expect(panel).toContainText(promise)
     await panel.getByRole('button', { name: 'Create link and copy' }).click()
 
     const link = panel.getByRole('textbox', { name: 'Share link' })
     await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+    // The same promise once the link exists — no file-format list.
+    await expect(panel).toContainText(promise)
+    await expect(panel).not.toContainText('MusicXML')
     expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
     if (browserName === 'chromium') {
         // Copied in the same press: Copy says so for a moment — and no toast lands over the dock.
