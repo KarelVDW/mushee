@@ -1,3 +1,4 @@
+import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { SignInLink } from '@/components/marketing/SignInLink'
@@ -5,6 +6,7 @@ import { Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
+import { LANDING_FAQ_SHOWN } from './pricing/faq'
 import { BetaPricing, Pricing } from './PricingSection'
 
 /** The landing page. Static apart from its client islands: the CTAs, sign-in links, demo and pricing. */
@@ -16,6 +18,7 @@ export function LandingPage() {
                 <Hero />
                 <HowItWorks />
                 <FeatureGrid />
+                <GoodToKnow />
                 {BETA_MODE ? <BetaPricing /> : <Pricing ctaLocation="pricing" />}
                 <FinalCTA />
             </main>
@@ -161,6 +164,22 @@ function FeatureGrid() {
                         </div>
                     ))}
                 </div>
+            </div>
+        </section>
+    )
+}
+
+/** The questions a newcomer asks before trying Solkey — the same list the page's FAQPage structured data reads. */
+function GoodToKnow() {
+    return (
+        <section id="faq" aria-labelledby="faq-title" className="py-14 sm:py-22 px-5 sm:px-8">
+            <div className="max-w-190 mx-auto">
+                <h2
+                    id="faq-title"
+                    className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
+                    Good to know.
+                </h2>
+                <FaqList items={LANDING_FAQ_SHOWN} />
             </div>
         </section>
     )

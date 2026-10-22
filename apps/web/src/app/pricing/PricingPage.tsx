@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { Eyebrow, Footer } from '@/components/ui'
@@ -72,16 +73,7 @@ function PricingFaq() {
                     className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
                     Questions, answered.
                 </h2>
-                <dl className="m-0 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                    {PRICING_FAQ_SHOWN.map((item) => (
-                        <div key={item.question} className="flex flex-col gap-2">
-                            <dt className="font-headline font-semibold text-[17px] leading-[1.3] tracking-[-0.005em] text-on-surface">
-                                {item.question}
-                            </dt>
-                            <dd className="m-0 font-body font-normal text-[14px] leading-[1.6] text-on-surface-variant">{item.answer}</dd>
-                        </div>
-                    ))}
-                </dl>
+                <FaqList items={PRICING_FAQ_SHOWN} tone="low" />
             </div>
         </section>
     )

@@ -20,6 +20,22 @@ export function solkeyApplicationJsonLd(url: string) {
 }
 
 /**
+ * A page's questions and answers as a schema.org FAQPage — built from the same list the
+ * page renders (app/pricing/faq.ts), so the rich result never says what the page doesn't.
+ */
+export function faqPageJsonLd(items: readonly { question: string; answer: string }[]) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: items.map((item) => ({
+            '@type': 'Question',
+            name: item.question,
+            acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+    }
+}
+
+/**
  * The offer ladder: every tier (paid ones billed monthly) and the one-time
  * minute packs. During the closed beta the ladder is unannounced (prices may
  * still change), so search results only see the one truthful offer: free.
