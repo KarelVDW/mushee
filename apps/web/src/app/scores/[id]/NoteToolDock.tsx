@@ -14,7 +14,7 @@ import {
     type Score,
     TimeSignature,
 } from '@mushee/notation/model'
-import { type ReactNode, useMemo, useRef, useState } from 'react'
+import { type ReactNode, type RefObject, useMemo, useRef, useState } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -173,6 +173,12 @@ export function NoteToolDock({
     history,
     footer,
 }: NoteToolDockProps) {
+    // The tempo chip and popover write the tempo in the meter's felt beat (♩. = 60 in 6/8).
+    const timeSignature = useMemo(() => new TimeSignature(time.beatAmount, time.beatType), [time.beatAmount, time.beatType])
+    const pulse = timeSignature.pulse
+    const pulseBpm = Math.round(timeSignature.pulseBpmOf(bpm))
+    const pulseUnit = pulse.beats === 1 ? '' : `${pulse.name.replace(' ', '-')} `
+
     return (
         <div className="shrink-0 z-20 px-3 sm:px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div
@@ -208,24 +214,104 @@ export function NoteToolDock({
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
                 <ToolGroup ariaLabel="Score settings">
-                    <ClefControl clef={clef} onSet={onClefSet} disabled={selectionDisabled} compact={compact} />
-                    <KeySignatureControl fifths={keyFifths} onSet={onKeySet} disabled={selectionDisabled} compact={compact} />
-                    <TimeSignatureControl time={time} onSet={onTimeSet} disabled={selectionDisabled} compact={compact} />
-                    <TempoControl bpm={bpm} time={time} onSet={onTempoSet} disabled={selectionDisabled} compact={compact} />
+                    <PopoverChip plain compact={compact} disabled={selectionDisabled} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`} chip={<ClefIcon type={clef} size={26} />}>
+                        {({ anchorRef, className, close }) => (
+                            <ClefPopover
+                                active={clef}
+                                anchorRef={anchorRef}
+                                className={className}
+                                onSelect={(type) => {
+                                    onClefSet(type)
+                                    close()
+                                }}
+                                onDismiss={close}
+                            />
+                        )}
+                    </PopoverChip>
+                    <PopoverChip
+                        plain
+                        compact={compact}
+                        disabled={selectionDisabled}
+                        ariaLabel={`Key signature: ${keySignatureLabel(keyFifths)}`}
+                        chip={keyFifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureIcon fifths={keyFifths} size={24} />}>
+                        {({ anchorRef, className, close }) => (
+                            <KeySignaturePopover
+                                active={keyFifths}
+                                anchorRef={anchorRef}
+                                className={className}
+                                onSelect={(value) => {
+                                    onKeySet(value)
+                                    close()
+                                }}
+                                onDismiss={close}
+                            />
+                        )}
+                    </PopoverChip>
+                    <PopoverChip
+                        plain
+                        compact={compact}
+                        disabled={selectionDisabled}
+                        ariaLabel={`Time signature: ${time.beatAmount}/${time.beatType}`}
+                        chip={<TimeSignatureIcon beatAmount={time.beatAmount} beatType={time.beatType} size={22} />}>
+                        {({ anchorRef, className, close }) => (
+                            <TimeSignaturePopover
+                                active={time}
+                                anchorRef={anchorRef}
+                                className={className}
+                                onSelect={(beatAmount, beatType) => {
+                                    onTimeSet(beatAmount, beatType)
+                                    close()
+                                }}
+                                onDismiss={close}
+                            />
+                        )}
+                    </PopoverChip>
+                    <PopoverChip
+                        plain
+                        compact={compact}
+                        disabled={selectionDisabled}
+                        ariaLabel={`Tempo: ${pulseBpm} ${pulseUnit}bpm`}
+                        chip={
+                            <span className="inline-flex items-center gap-1">
+                                <BeatUnitIcon duration={pulse} size={16} />= {pulseBpm}
+                            </span>
+                        }>
+                        {({ anchorRef, className, close }) => (
+                            <TempoPopover
+                                initialBpm={bpm}
+                                timeSignature={timeSignature}
+                                anchorRef={anchorRef}
+                                className={className}
+                                onSubmit={(value) => {
+                                    onTempoSet(value)
+                                    close()
+                                }}
+                                onDismiss={close}
+                            />
+                        )}
+                    </PopoverChip>
                     {pitch && (
                         <>
                             <ChipToggle plain onClick={pitch.onMinimize} disabled={selectionDisabled} ariaLabel="Minimize accidentals">
                                 <Icon name="natural" size={14} />
                             </ChipToggle>
-                            <TransposeControl
-                                score={pitch.score}
-                                selectedNotes={pitch.selectedNotes}
-                                selectionNarrowsPitchOps={pitch.selectionNarrowsPitchOps}
-                                onApply={pitch.onTranspose}
-                                onScopeChange={pitch.onTransposeAim}
-                                disabled={selectionDisabled}
-                                compact={compact}
-                            />
+                            <PopoverChip plain compact={compact} disabled={selectionDisabled} ariaLabel="Transpose" chip={<Icon name="transpose" size={14} />}>
+                                {({ anchorRef, className, close }) => (
+                                    <TransposePopover
+                                        score={pitch.score}
+                                        selectedNotes={pitch.selectedNotes}
+                                        selectionNarrowsPitchOps={pitch.selectionNarrowsPitchOps}
+                                        anchorRef={anchorRef}
+                                        className={className}
+                                        onApply={(interval, scope) => {
+                                            pitch.onTranspose(interval, scope)
+                                            close()
+                                        }}
+                                        onDismiss={close}
+                                        onScopeChange={pitch.onTransposeAim}
+                                    />
+                                )}
+                            </PopoverChip>
                         </>
                     )}
                     {metronome && (
@@ -267,208 +353,57 @@ function popoverPosition(compact: boolean): string {
     return compact ? `fixed! ${COMPACT_POPOVER_SHEET}` : 'right-0 bottom-[calc(100%+0.75rem)]'
 }
 
-// --- Clef control ---
+// --- Popover chip: a ChipToggle that opens an anchored popover ---
 
-interface ClefControlProps {
-    clef: ClefType
-    onSet: (clef: ClefType) => void
-    disabled: boolean
+interface PopoverChipProps {
+    ariaLabel: string
+    disabled?: boolean
+    /** Phone layout: the popover opens as the dock-wide sheet (see {@link popoverPosition}). */
     compact: boolean
+    /** Transparent at rest, for a chip inside a ToolGroup well (see ChipToggle). */
+    plain?: boolean
+    /** The chip's face. */
+    chip: ReactNode
+    /** Positioning classes for the popover; defaults to the dock's {@link popoverPosition}. */
+    className?: string
+    /** Controlled open state, for a popover something else can open too (Shift+T opens transpose). */
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    /** The popover, mounted only while open: anchor it at `anchorRef`, position it with `className`, dismiss with `close`. */
+    children: (popover: { anchorRef: RefObject<HTMLDivElement | null>; className: string; close: () => void }) => ReactNode
 }
 
-function ClefControl({ clef, onSet, disabled, compact }: ClefControlProps) {
+/**
+ * A chip that toggles an anchored popover — the one place the toggle and dismissal wiring
+ * lives. The anchor wraps the chip, so the popover's outside-click dismissal ignores the chip
+ * and its own toggle isn't fought. Owns its open state unless `open` is passed.
+ */
+export function PopoverChip({
+    ariaLabel,
+    disabled,
+    compact,
+    plain = false,
+    chip,
+    className,
+    open: controlledOpen,
+    onOpenChange,
+    children,
+}: PopoverChipProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
-    const [open, setOpen] = useState(false)
+    const [ownOpen, setOwnOpen] = useState(false)
+    const open = controlledOpen ?? ownOpen
+    const setOpen = (next: boolean) => {
+        if (controlledOpen === undefined) setOwnOpen(next)
+        onOpenChange?.(next)
+    }
+    const close = () => setOpen(false)
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle
-                plain
-                active={open}
-                disabled={disabled}
-                onClick={() => setOpen((o) => !o)}
-                ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
-                <ClefIcon type={clef} size={26} />
+            <ChipToggle plain={plain} active={open} disabled={disabled} onClick={() => setOpen(!open)} ariaLabel={ariaLabel}>
+                {chip}
             </ChipToggle>
-            {open && (
-                <ClefPopover
-                    active={clef}
-                    anchorRef={anchorRef}
-                    className={popoverPosition(compact)}
-                    onSelect={(type) => {
-                        onSet(type)
-                        setOpen(false)
-                    }}
-                    onDismiss={() => setOpen(false)}
-                />
-            )}
-        </div>
-    )
-}
-
-// --- Key signature control ---
-
-interface KeySignatureControlProps {
-    fifths: number
-    onSet: (fifths: number) => void
-    disabled: boolean
-    compact: boolean
-}
-
-function KeySignatureControl({ fifths, onSet, disabled, compact }: KeySignatureControlProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const [open, setOpen] = useState(false)
-
-    return (
-        <div ref={anchorRef} className="relative">
-            <ChipToggle
-                plain
-                active={open}
-                disabled={disabled}
-                onClick={() => setOpen((o) => !o)}
-                ariaLabel={`Key signature: ${keySignatureLabel(fifths)}`}>
-                {fifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureIcon fifths={fifths} size={24} />}
-            </ChipToggle>
-            {open && (
-                <KeySignaturePopover
-                    active={fifths}
-                    anchorRef={anchorRef}
-                    className={popoverPosition(compact)}
-                    onSelect={(value) => {
-                        onSet(value)
-                        setOpen(false)
-                    }}
-                    onDismiss={() => setOpen(false)}
-                />
-            )}
-        </div>
-    )
-}
-
-// --- Time signature control ---
-
-interface TimeSignatureControlProps {
-    time: { beatAmount: number; beatType: number }
-    onSet: (beatAmount: number, beatType: number) => void
-    disabled: boolean
-    compact: boolean
-}
-
-function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureControlProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const [open, setOpen] = useState(false)
-
-    return (
-        <div ref={anchorRef} className="relative">
-            <ChipToggle
-                plain
-                active={open}
-                disabled={disabled}
-                onClick={() => setOpen((o) => !o)}
-                ariaLabel={`Time signature: ${time.beatAmount}/${time.beatType}`}>
-                <TimeSignatureIcon beatAmount={time.beatAmount} beatType={time.beatType} size={22} />
-            </ChipToggle>
-            {open && (
-                <TimeSignaturePopover
-                    active={time}
-                    anchorRef={anchorRef}
-                    className={popoverPosition(compact)}
-                    onSelect={(beatAmount, beatType) => {
-                        onSet(beatAmount, beatType)
-                        setOpen(false)
-                    }}
-                    onDismiss={() => setOpen(false)}
-                />
-            )}
-        </div>
-    )
-}
-
-// --- Transpose control (the dock's trigger; the desktop header hosts its own) ---
-
-interface TransposeControlProps {
-    score: Score
-    selectedNotes: Note[]
-    selectionNarrowsPitchOps: boolean
-    onApply: (interval: Interval, scope: PitchScope) => void
-    onScopeChange?: (scope: PitchScope | null) => void
-    disabled: boolean
-    compact: boolean
-}
-
-function TransposeControl({ score, selectedNotes, selectionNarrowsPitchOps, onApply, onScopeChange, disabled, compact }: TransposeControlProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const [open, setOpen] = useState(false)
-
-    return (
-        <div ref={anchorRef} className="relative">
-            <ChipToggle plain active={open} disabled={disabled} onClick={() => setOpen((o) => !o)} ariaLabel="Transpose">
-                <Icon name="transpose" size={14} />
-            </ChipToggle>
-            {open && (
-                <TransposePopover
-                    score={score}
-                    selectedNotes={selectedNotes}
-                    selectionNarrowsPitchOps={selectionNarrowsPitchOps}
-                    anchorRef={anchorRef}
-                    className={popoverPosition(compact)}
-                    onApply={(interval, scope) => {
-                        onApply(interval, scope)
-                        setOpen(false)
-                    }}
-                    onDismiss={() => setOpen(false)}
-                    onScopeChange={onScopeChange}
-                />
-            )}
-        </div>
-    )
-}
-
-// --- Tempo control ---
-
-interface TempoControlProps {
-    /** Quarter-note bpm in effect at the selection. */
-    bpm: number
-    /** The meter at the selection: the chip and popover write the tempo in its felt beat (♩. = 60 in 6/8). */
-    time: { beatAmount: number; beatType: number }
-    onSet: (bpm: number) => void
-    disabled: boolean
-    compact: boolean
-}
-
-function TempoControl({ bpm, time, onSet, disabled, compact }: TempoControlProps) {
-    const anchorRef = useRef<HTMLDivElement | null>(null)
-    const [open, setOpen] = useState(false)
-    const timeSignature = useMemo(() => new TimeSignature(time.beatAmount, time.beatType), [time.beatAmount, time.beatType])
-    const beat = timeSignature.pulse
-    const pulseBpm = Math.round(timeSignature.pulseBpmOf(bpm))
-    const unit = beat.beats === 1 ? '' : `${beat.name.replace(' ', '-')} `
-
-    return (
-        <div ref={anchorRef} className="relative">
-            <ChipToggle
-                plain
-                active={open}
-                disabled={disabled}
-                onClick={() => setOpen((o) => !o)}
-                ariaLabel={`Tempo: ${pulseBpm} ${unit}bpm`}>
-                <span className="inline-flex items-center gap-1">
-                    <BeatUnitIcon duration={beat} size={16} />= {pulseBpm}
-                </span>
-            </ChipToggle>
-            {open && (
-                <TempoPopover
-                    initialBpm={bpm}
-                    timeSignature={timeSignature}
-                    anchorRef={anchorRef}
-                    className={popoverPosition(compact)}
-                    onSubmit={(value) => {
-                        onSet(value)
-                        setOpen(false)
-                    }}
-                    onDismiss={() => setOpen(false)}
-                />
-            )}
+            {open && children({ anchorRef, className: className ?? popoverPosition(compact), close })}
         </div>
     )
 }
