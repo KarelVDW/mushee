@@ -1,65 +1,127 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
-import { type Dispatch, type ReactNode, type SetStateAction, useState } from 'react'
+import { type KeyboardEvent, type ReactNode, type Ref, useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 
-import { BetaPlanCard } from '@/components/BetaPlanCard'
+import { InstrumentChordHint, PopularInstrumentTiles } from '@/app/scores/InstrumentPicker'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
 import { emailOtp } from '@/lib/auth-client'
-import type { BetaPlan, PlanTier } from '@/lib/plans'
+import { AuthErrorCopy } from '@/lib/AuthErrorCopy'
+import { isIPhone, markMicModeGuideConfirmed } from '@/lib/micMode'
+import { Microphone } from '@/lib/Microphone'
+import type { PlanTier } from '@/lib/plans'
+import { formatAllowance } from '@/lib/recordingTime'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { type RadioProps, useRadioGroup } from '@/lib/useRadioGroup'
 
-import { BACKGROUNDS, GOALS, NON_INSTRUMENT_OPTIONS, REFERRAL_SOURCES } from './onboarding-data'
+import { BACKGROUNDS, GOALS, REFERRAL_SOURCES } from './onboarding-data'
 
 export type MicState = 'idle' | 'requesting' | 'granted' | 'denied'
 
-// 'verify' — verify email
+/** Every step's heading takes focus when the step opens, so a screen reader reads the new question first. */
+interface StepProps {
+    titleRef: Ref<HTMLHeadingElement>
+}
+
+/** How long the "Email verified" row shows before the flow moves on by itself (no animation, so reduced motion keeps it). */
+export const VERIFIED_ADVANCE_MS = 600
+
+/** better-auth's code for a verification code past its 10 minutes; a fresh one is sent at once. */
+const OTP_EXPIRED = 'OTP_EXPIRED'
+
+// 'verify' — the emailed 6-digit code. It submits itself: no Verify button and no Continue.
 export function VerifyStep({
     userEmail,
     sessionEmail,
     verified,
     onVerified,
-}: {
+    onAdvance,
+    onStartOver,
+    titleRef,
+}: StepProps & {
     userEmail: string
     sessionEmail: string | null
     verified: boolean
     onVerified: () => void | Promise<void>
+    /** Moves on once the verified row has shown for a moment. */
+    onAdvance: () => void
+    /** "Wrong email? Start over": back to signup with the name handed over. */
+    onStartOver: () => void
 }) {
     const [code, setCode] = useState('')
-    const [otpError, setOtpError] = useState<string | null>(null)
+    const [codeError, setCodeError] = useState<string | null>(null)
     const [verifying, setVerifying] = useState(false)
-    const [resending, setResending] = useState(false)
-    const [resent, setResent] = useState(false)
+    const [resend, setResend] = useState<'idle' | 'sending' | 'sent'>('idle')
+    const inputRef = useRef<HTMLInputElement | null>(null)
 
-    const submitCode = async () => {
-        if (!/^\d{6}$/.test(code) || !sessionEmail || verifying) return
-        setOtpError(null)
+    // Verified — just now, or already when the page opened: show the row, then move on.
+    const advance = useEffectEvent(onAdvance)
+    useEffect(() => {
+        if (!verified) return
+        const timer = window.setTimeout(() => advance(), VERIFIED_ADVANCE_MS)
+        return () => window.clearTimeout(timer)
+    }, [verified])
+
+    const sendNewCode = async (): Promise<boolean> => {
+        if (!sessionEmail) return false
+        // A new code makes the last error stale; clearing it also lets a repeat of it be read out again.
+        setCodeError(null)
+        setResend('sending')
+        try {
+            const { error } = await emailOtp.sendVerificationOtp({ email: sessionEmail, type: 'email-verification' })
+            if (error) {
+                setCodeError(AuthErrorCopy.for(error).message)
+                setResend('idle')
+                return false
+            }
+        } catch (err) {
+            setCodeError(AuthErrorCopy.for(err).message)
+            setResend('idle')
+            return false
+        }
+        setResend('sent')
+        return true
+    }
+
+    const submit = async (value: string) => {
+        if (!/^\d{6}$/.test(value) || !sessionEmail || verifying) return
+        setCodeError(null)
         setVerifying(true)
-        const { error } = await emailOtp.verifyEmail({ email: sessionEmail, otp: code })
-        if (error) {
-            setOtpError(error.message ?? "That code didn't work. Try again or request a new one.")
-            setVerifying(false)
-            return
+        let failure: unknown = null
+        try {
+            const { error } = await emailOtp.verifyEmail({ email: sessionEmail, otp: value })
+            failure = error
+        } catch (err) {
+            failure = err
         }
         setVerifying(false)
-        await onVerified()
-    }
-    const resendCode = async () => {
-        if (!sessionEmail || resending) return
-        setOtpError(null)
-        setResending(true)
-        const { error } = await emailOtp.sendVerificationOtp({ email: sessionEmail, type: 'email-verification' })
-        setResending(false)
-        if (error) {
-            setOtpError(error.message ?? 'Could not send a new code.')
+        if (!failure) {
+            await onVerified()
             return
         }
-        setResent(true)
+        // Typing again replaces the code rather than appending to it.
+        inputRef.current?.select()
+        const expired = typeof failure === 'object' && 'code' in failure && failure.code === OTP_EXPIRED
+        if (expired && (await sendNewCode())) {
+            setCode('')
+            setCodeError("That code has expired, so we've sent you a new one.")
+            return
+        }
+        setCodeError(AuthErrorCopy.for(failure).message)
+    }
+
+    // The 6th digit submits — typed, pasted or filled in from the email by the phone.
+    const change = (raw: string) => {
+        const digits = raw.replace(/\D/g, '').slice(0, 6)
+        setCode(digits)
+        if (digits.length === 6 && digits !== code) void submit(digits)
     }
 
     return (
         <StepShell
+            titleRef={titleRef}
             title="Verify your email."
             subtitle={
                 <>
@@ -67,60 +129,217 @@ export function VerifyStep({
                     step protects your scores.
                 </>
             }>
-            {!verified ? (
-                <>
-                    <div className="max-w-70">
-                        <TextField
-                            label="Verification code"
-                            value={code}
-                            onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="••••••"
-                            autoFocus
-                            error={otpError}
-                        />
-                    </div>
-                    <div className="flex gap-3 items-center flex-wrap">
-                        <PrimaryButton disabled={!/^\d{6}$/.test(code) || verifying} onClick={() => void submitCode()}>
-                            {verifying ? 'Verifying…' : 'Verify'}
-                        </PrimaryButton>
-                        <TertiaryButton onClick={() => void resendCode()}>
-                            {resending ? 'Sending…' : resent ? 'Code sent again' : 'Resend code'}
-                        </TertiaryButton>
-                    </div>
-                </>
-            ) : (
-                <div className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3.5">
-                    <span className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
-                        <Icon name="check" size={16} />
-                    </span>
-                    <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface">
-                        Email verified. You can continue.
-                    </span>
+            {/*
+             * No gap of its own: the status region is always there (so "Email verified." is read out
+             * when it lands, rather than mounting with its text), and takes no room while empty.
+             */}
+            <div className="flex flex-col">
+                <div role="status" className="flex flex-col">
+                    {verified && (
+                        <div className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3.5 self-start min-w-0 max-w-full">
+                            <span className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+                                <Icon name="check" size={16} />
+                            </span>
+                            <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface">Email verified.</span>
+                        </div>
+                    )}
                 </div>
-            )}
+                {!verified && (
+                    <div className="flex flex-col gap-5">
+                        <CodeField
+                            value={code}
+                            onChange={change}
+                            onEnter={() => void submit(code)}
+                            error={codeError}
+                            busy={verifying}
+                            inputRef={inputRef}
+                        />
+                        {/* Spaced apart on touch, so the two links' tap areas (INLINE_BUTTON) don't overlap. */}
+                        <div className="flex flex-col gap-1.5 pointer-coarse:gap-6 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                            <p className="m-0" aria-live="polite">
+                                Can&apos;t find it? Check your spam folder, or{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => void sendNewCode()}
+                                    disabled={resend === 'sending'}
+                                    className={INLINE_BUTTON}>
+                                    {resend === 'sending' ? 'sending a new code…' : resend === 'sent' ? 'new code sent' : 'send a new code'}
+                                </button>
+                                .
+                            </p>
+                            {/*
+                             * No account is deleted here: the API has no way for an unverified account to remove
+                             * itself yet. The mistyped address keeps an unverified account, and its real owner can
+                             * claim it through "reset your password" (the email proves the address is theirs).
+                             */}
+                            <p className="m-0">
+                                Wrong email?{' '}
+                                <button type="button" onClick={onStartOver} className={INLINE_BUTTON}>
+                                    Start over
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </StepShell>
     )
 }
 
-// 'mic' — mic permission. The state itself lives in the page: `canAdvance`
-// depends on it, and it must survive navigating away from this step and back.
-export function MicStep({ micState, setMicState }: { micState: MicState; setMicState: (s: MicState) => void }) {
+/**
+ * A link-styled button inside a sentence of help text. On touch an invisible ::after grows its
+ * tap area past 40px tall (DESIGN.md §4b) without spreading the sentence's lines apart.
+ */
+const INLINE_BUTTON = [
+    'relative bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline underline-offset-2 rounded-sm focus-ring disabled:cursor-default',
+    "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-3 pointer-coarse:after:content-['']",
+].join(' ')
+
+// The kit's centre-out focus stroke, in `primary` (the neon fails 3:1 on the field's fill).
+const FOCUS_STROKE =
+    'absolute bottom-0 left-1/2 right-1/2 peer-focus:left-0 peer-focus:right-0 h-0.5 bg-primary transition-[left,right] duration-300 ease-solkey motion-reduce:transition-none'
+
+/**
+ * The verification code field: the kit's input look (fill, focus stroke, eyebrow label, error
+ * wired through aria-describedby), with a numeric keypad, the phone's one-time-code autofill,
+ * and 22px Geist Mono digits in a box sized to six of them.
+ */
+function CodeField({
+    value,
+    onChange,
+    onEnter,
+    error,
+    busy,
+    inputRef,
+}: {
+    value: string
+    onChange: (v: string) => void
+    onEnter: () => void
+    error: string | null
+    busy: boolean
+    inputRef: Ref<HTMLInputElement>
+}) {
+    const id = useId()
+    const errorId = `${id}-error`
+    const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            onEnter()
+        }
+    }
+    return (
+        <div className="flex flex-col">
+            <label
+                htmlFor={id}
+                className="mb-1.5 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                6-digit code
+            </label>
+            <div className="relative self-start bg-surface-container-low rounded-sm">
+                <input
+                    id={id}
+                    ref={inputRef}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    enterKeyHint="done"
+                    pattern="[0-9]*"
+                    autoFocus
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                    aria-busy={busy || undefined}
+                    className="peer block bg-transparent border-0 outline-0 px-3 py-3 font-mono font-medium text-[22px] leading-none tracking-[0.3em] text-on-surface w-[calc(6ch+1.8em+1.5rem)]"
+                />
+                <div className={FOCUS_STROKE} />
+            </div>
+            {/*
+             * Always mounted and live: the code submits itself and focus stays put, so a wrong or
+             * expired code is read out as it lands (aria-describedby alone waits for the next focus).
+             */}
+            <div aria-live="polite">
+                {error && (
+                    <span id={errorId} className="block mt-1.5 font-body font-medium text-[12px] leading-[1.4] text-error">
+                        {error}
+                    </span>
+                )}
+            </div>
+        </div>
+    )
+}
+
+/** The Mic Mode walkthrough, inline in the mic step on iPhones (the editor's dialog then never needs to interrupt a first take). */
+const MIC_MODE_STEPS = [
+    'Swipe down from the top-right corner to open Control Center.',
+    'Tap Mic Mode.',
+    'Choose Wide Spectrum, then come back here.',
+] as const
+
+// 'mic' — mic permission. The state itself lives in the page: the footer reads it, and it
+// must survive navigating away from this step and back.
+export function MicStep({
+    micState,
+    setMicState,
+    onGuideOpenChange,
+    onAdvance,
+    titleRef,
+}: StepProps & {
+    micState: MicState
+    setMicState: (s: MicState) => void
+    /** Whether the iPhone walkthrough is showing, with its own buttons in place of the footer's Continue. */
+    onGuideOpenChange: (open: boolean) => void
+    /** 'Not now' and 'Done — Wide Spectrum is on' move on to the next step. */
+    onAdvance: () => void
+}) {
+    // On iPhones the granted stream stays open while the walkthrough shows: Control Center only
+    // offers Mic Mode while an app is capturing. Every way out of the step lets go of it.
+    const guideStream = useRef<MediaStream | null>(null)
+    const [guideOpen, setGuideOpen] = useState(false)
+
+    const release = () => {
+        const stream = guideStream.current
+        guideStream.current = null
+        if (!stream) return
+        stream.getTracks().forEach((t) => t.stop())
+        Microphone.endSession()
+        setGuideOpen(false)
+        onGuideOpenChange(false)
+    }
+    // Back, 'Skip setup' or any other way off the step.
+    const releaseOnLeave = useEffectEvent(release)
+    useEffect(() => () => releaseOnLeave(), [])
+
     const requestMic = async () => {
         setMicState('requesting')
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            // Release the track right away — we only needed the permission grant.
-            stream.getTracks().forEach((t) => t.stop())
+            const stream = await Microphone.open({ audio: true })
+            if (isIPhone()) {
+                guideStream.current = stream
+                setGuideOpen(true)
+                onGuideOpenChange(true)
+            } else {
+                // Only the permission grant was needed.
+                stream.getTracks().forEach((t) => t.stop())
+                Microphone.endSession()
+            }
             setMicState('granted')
         } catch {
             setMicState('denied')
         }
     }
 
+    const leave = (confirmedWideSpectrum: boolean) => {
+        if (confirmedWideSpectrum) markMicModeGuideConfirmed()
+        release()
+        onAdvance()
+    }
+
     return (
         <StepShell
+            titleRef={titleRef}
             title="Allow microphone access."
-            subtitle="Solkey listens through your microphone to transcribe what you play or hum into notation. We only record while you tap Record — never in the background.">
+            subtitle="Solkey uses your microphone to hear you sing, hum, whistle or play. It only listens while you press Record, never in the background.">
             <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
                 <span
                     className={[
@@ -133,7 +352,7 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
                     ].join(' ')}>
                     <Icon name={micState === 'granted' ? 'check' : micState === 'denied' ? 'mic-off' : 'mic'} size={22} />
                 </span>
-                <div className="flex flex-col gap-1.5 flex-1">
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0" role="status">
                     <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
                         {micState === 'granted' && 'Microphone connected.'}
                         {micState === 'denied' && 'Microphone blocked.'}
@@ -141,7 +360,10 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
                         {micState === 'idle' && 'Microphone access needed'}
                     </span>
                     <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                        {micState === 'granted' && "You're ready to record. Tap Continue."}
+                        {micState === 'granted' &&
+                            (guideOpen
+                                ? 'One iPhone setting first. Your iPhone tunes its mic for phone calls, which hides whistling and instruments. Switch it once and it stays that way.'
+                                : "You're ready to record. Tap Continue.")}
                         {micState === 'denied' &&
                             'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
                         {micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
@@ -149,184 +371,311 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
                     </span>
                 </div>
             </div>
-            <div className="flex gap-3 items-center flex-wrap">
-                {micState !== 'granted' && (
-                    <PrimaryButton
-                        onClick={() => void requestMic()}
-                        disabled={micState === 'requesting'}
-                        icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                        {micState === 'denied' ? 'Try again' : micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
-                    </PrimaryButton>
-                )}
-                <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                    You can change this any time in your browser&apos;s site settings.
-                </span>
-            </div>
-        </StepShell>
-    )
-}
 
-// 'name' — name
-export function NameStep({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-    return (
-        <StepShell title="What should we call you?" subtitle="So we can greet you properly.">
-            <TextField label="Name" value={value} onChange={onChange} placeholder="Anya Mokri" autoFocus />
-        </StepShell>
-    )
-}
-
-// 'background' — musical background
-export function BackgroundStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
-    return (
-        <StepShell
-            title="Where are you in your musical life?"
-            subtitle="We tune the editor's defaults and tutorials to your level — pick the closest match.">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {BACKGROUNDS.map(({ key, title, body }) => (
-                    <OptionCard key={key} active={value === key} onClick={() => onChange(key)} title={title} body={body} />
-                ))}
-            </div>
-        </StepShell>
-    )
-}
-
-// 'goal' — primary goal
-export function GoalStep({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
-    return (
-        <StepShell
-            title="What do you want to do first?"
-            subtitle="We'll point you at the right starting place — you can do all of it later.">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {GOALS.map(({ key, title, body }) => (
-                    <OptionCard key={key} active={value === key} onClick={() => onChange(key)} title={title} body={body} />
-                ))}
-            </div>
-        </StepShell>
-    )
-}
-
-// 'instruments' — instruments
-export function InstrumentsStep({ value, onChange }: { value: string[]; onChange: Dispatch<SetStateAction<string[]>> }) {
-    const toggleInstrument = (i: string) => {
-        onChange((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
-    }
-
-    const renderChips = (names: string[]) => (
-        <div className="flex flex-wrap gap-2">
-            {names.map((i) => (
-                <Chip key={i} size="md" active={value.includes(i)} onClick={() => toggleInstrument(i)}>
-                    {i}
-                </Chip>
-            ))}
-        </div>
-    )
-
-    return (
-        <StepShell title="Which instruments do you play?" subtitle="Pick any that apply — or none, if you're more of a listener.">
-            <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
-                {Instrument.selectableByCategory().map(({ category, instruments }) => (
-                    <div key={category} className="flex flex-col gap-2">
-                        <Eyebrow>{category}</Eyebrow>
-                        {renderChips(instruments.map((i) => i.displayName))}
+            {micState === 'granted' && guideOpen && (
+                <div className="flex flex-col gap-3">
+                    <ol className="m-0 pl-0 list-none flex flex-col gap-2.5">
+                        {MIC_MODE_STEPS.map((text, index) => (
+                            <li
+                                key={text}
+                                className="flex items-start gap-3 font-body font-normal text-[15px] leading-normal text-on-surface">
+                                <span
+                                    aria-hidden="true"
+                                    className="size-6 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center font-mono text-[12px] font-semibold">
+                                    {index + 1}
+                                </span>
+                                {text}
+                            </li>
+                        ))}
+                    </ol>
+                    <p className="m-0 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                        Solkey has the mic open only so this setting shows up. Nothing is recorded until you press Record.
+                    </p>
+                    <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
+                        <PrimaryButton onClick={() => leave(true)}>Done — Wide Spectrum is on</PrimaryButton>
+                        <TertiaryButton onClick={() => leave(false)}>Not now</TertiaryButton>
                     </div>
-                ))}
-                <div className="flex flex-col gap-2">
-                    <Eyebrow>None of the above</Eyebrow>
-                    {renderChips(NON_INSTRUMENT_OPTIONS)}
                 </div>
+            )}
+
+            {micState !== 'granted' && (
+                <div className="flex flex-col gap-3">
+                    <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
+                        <PrimaryButton
+                            onClick={() => void requestMic()}
+                            disabled={micState === 'requesting'}
+                            icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
+                            {micState === 'denied' ? 'Try again' : micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
+                        </PrimaryButton>
+                        {/* Skipping the mic skips only the mic; the footer's Continue takes over once the browser has answered. */}
+                        {micState !== 'denied' && <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>}
+                    </div>
+                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                        You can change this any time in your browser&apos;s site settings.
+                    </span>
+                </div>
+            )}
+        </StepShell>
+    )
+}
+
+/** The instrument a chordal pick names in the melody line (C13): the first picked one that plays chords. */
+function firstChordal(instruments: ReadonlyArray<Instrument>): Instrument | undefined {
+    return instruments.find((i) => i.playsChords)
+}
+
+// 'instruments' — "What will you record?": the popular tiles, the rest behind "All instruments".
+export function InstrumentsStep({
+    value,
+    onChange,
+    titleRef,
+}: StepProps & {
+    value: ReadonlyArray<Instrument>
+    onChange: (instruments: Instrument[]) => void
+}) {
+    const popular = Instrument.popular()
+    const [expanded, setExpanded] = useState(() => value.some((i) => !popular.includes(i)))
+    const others = Instrument.byCategory(Instrument.pickable().filter((i) => !popular.includes(i)))
+    const toggle = (instrument: Instrument) =>
+        onChange(value.includes(instrument) ? value.filter((i) => i !== instrument) : [...value, instrument])
+    const chordal = firstChordal(value)
+
+    return (
+        <StepShell
+            titleRef={titleRef}
+            title="What will you record?"
+            subtitle="Pick any that apply — or none. Your first pick becomes your first score's instrument.">
+            <div className="flex flex-col gap-3">
+                <PopularInstrumentTiles multiple value={value} onChange={onChange} />
+                {/* Always mounted, so a screen reader hears the line the moment a chordal pick adds it. */}
+                <div aria-live="polite">{chordal && <InstrumentChordHint instrument={chordal} />}</div>
+                <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded((open) => !open)}
+                    className={[
+                        'self-start inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer py-2 px-0 pointer-coarse:min-h-10',
+                        'font-body font-medium text-[13px] leading-none text-on-surface-variant hover:text-primary',
+                        'transition-colors duration-150 ease-solkey focus-ring rounded-sm',
+                    ].join(' ')}>
+                    All instruments
+                    <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
+                </button>
+                {expanded && (
+                    <div className="flex flex-col gap-3.5 max-h-[45dvh] overflow-y-auto pr-1">
+                        {others.map(({ category, instruments }) => (
+                            <div key={category} className="flex flex-col gap-2">
+                                <Eyebrow>{category}</Eyebrow>
+                                <div className="flex flex-wrap gap-2">
+                                    {instruments.map((i) => (
+                                        <Chip
+                                            key={i.id}
+                                            size="md"
+                                            active={value.includes(i)}
+                                            onClick={() => toggle(i)}
+                                            ariaLabel={`Pick ${i.displayName}`}>
+                                            {i.displayName}
+                                        </Chip>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </StepShell>
     )
 }
 
-// 'source' — referral source
-export function SourceStep({
+// 'about' — the optional survey: three single-choice rows on one screen, nothing chosen up front.
+export function AboutStep({
+    background,
+    onBackgroundChange,
+    goal,
+    onGoalChange,
     source,
     onSourceChange,
     sourceDetail,
     onSourceDetailChange,
-}: {
+    titleRef,
+}: StepProps & {
+    background: string | null
+    onBackgroundChange: (v: string) => void
+    goal: string | null
+    onGoalChange: (v: string) => void
     source: string | null
     onSourceChange: (v: string) => void
     sourceDetail: string
     onSourceDetailChange: (v: string) => void
 }) {
     return (
-        <StepShell title="How did you find Solkey?" subtitle="Helps us know what's working — entirely optional, no wrong answers.">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {REFERRAL_SOURCES.map(({ key, label }) => (
-                    <OptionCard key={key} active={source === key} onClick={() => onSourceChange(key)} title={label} />
-                ))}
+        <StepShell titleRef={titleRef} title="A bit about you." subtitle="Optional. It helps us build the right things.">
+            <div className="flex flex-col gap-6">
+                <ChoiceRow label="Where are you with music?" options={BACKGROUNDS} value={background} onChange={onBackgroundChange} />
+                <ChoiceRow label="What do you want to do first?" options={GOALS} value={goal} onChange={onGoalChange} />
+                <div className="flex flex-col gap-3">
+                    <ChoiceRow label="How did you find Solkey?" options={REFERRAL_SOURCES} value={source} onChange={onSourceChange} />
+                    {source && (
+                        <TextField
+                            label="Anything else? (optional)"
+                            value={sourceDetail}
+                            onChange={onSourceDetailChange}
+                            placeholder={source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
+                        />
+                    )}
+                </div>
             </div>
-            {source && (
-                <TextField
-                    label="Anything else? (optional)"
-                    value={sourceDetail}
-                    onChange={onSourceDetailChange}
-                    placeholder={source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
-                />
-            )}
         </StepShell>
     )
 }
 
-// 'plan' — pick a plan (outside beta mode)
+/** A question with its single-choice answers: a radiogroup named by the question, one Tab stop, arrows move. */
+function ChoiceRow({
+    label,
+    options,
+    value,
+    onChange,
+}: {
+    label: string
+    options: ReadonlyArray<{ key: string; label: string }>
+    value: string | null
+    onChange: (key: string) => void
+}) {
+    const labelId = useId()
+    const radios = useRadioGroup(
+        options.map((o) => o.key),
+        value,
+        onChange,
+    )
+    return (
+        <div className="flex flex-col gap-2.5">
+            <span id={labelId} className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+                {label}
+            </span>
+            <div role="radiogroup" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+                {options.map((option, index) => (
+                    <ChoiceChip
+                        key={option.key}
+                        radio={radios.radioProps(index)}
+                        checked={value === option.key}
+                        onClick={() => onChange(option.key)}>
+                        {option.label}
+                    </ChoiceChip>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+/** One answer: the soft fill when chosen, and an 18px ring that fills with a check, so the choice never rests on colour alone. */
+function ChoiceChip({
+    radio,
+    checked,
+    onClick,
+    children,
+}: {
+    radio: RadioProps
+    checked: boolean
+    onClick: () => void
+    children: ReactNode
+}) {
+    return (
+        <button
+            {...radio}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            onClick={onClick}
+            className={[
+                'inline-flex items-center gap-2 rounded-full border-0 pl-2.5 pr-4 py-2 min-h-9 pointer-coarse:min-h-10 cursor-pointer text-left',
+                'font-body font-medium text-[14px] leading-tight transition-colors duration-150 ease-solkey focus-ring',
+                checked ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container text-on-surface hover:bg-surface-container-high',
+            ].join(' ')}>
+            <span
+                aria-hidden="true"
+                className={[
+                    'size-4.5 shrink-0 rounded-full inline-flex items-center justify-center',
+                    checked ? 'bg-primary-container text-on-primary-container' : 'border-2 border-solid border-outline',
+                ].join(' ')}>
+                {checked && <Icon name="check" size={12} />}
+            </span>
+            {children}
+        </button>
+    )
+}
+
+/** The plan step's subtitle: what the free plan holds, from the catalogue (never hard-coded). */
+function freePlanSummary(free: PlanTier): string {
+    const recording =
+        free.dailyRecordingSeconds === null
+            ? 'no daily recording limit'
+            : `${formatAllowance(free.dailyRecordingSeconds)} of recording a day`
+    const scores = free.maxScores === null ? 'as many scores as you like' : `up to ${free.maxScores} scores`
+    return `${free.name} is free forever: ${recording} and ${scores}. Upgrade any time in Settings.`
+}
+
+// 'plan' — only for a visitor who picked a paid plan on the pricing page; that tier comes chosen.
 export function PlanStep({
     plans,
+    freePlan,
     billing,
     onBillingChange,
     tier,
     onTierChange,
-}: {
+    titleRef,
+}: StepProps & {
     plans: PlanTier[]
+    freePlan: PlanTier
     billing: BillingInterval
     onBillingChange: (b: BillingInterval) => void
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
+    // Phones get radio rows, so the chosen plan and the button that acts on it share one screen.
+    const phone = useMediaQuery('(max-width: 767px)')
     return (
-        <StepShell title="Pick a plan to start with." subtitle="You can switch or cancel any time from Settings.">
-            <PlanPicker plans={plans} billing={billing} onBillingChange={onBillingChange} selected={tier} onSelect={onTierChange} />
-        </StepShell>
-    )
-}
-
-// 'plan' in beta mode: nothing to pick, nothing to pay
-export function BetaPlanStep({ betaPlan, awaitingApproval }: { betaPlan: BetaPlan; awaitingApproval: boolean }) {
-    return (
-        <StepShell
-            title="You're on the Beta plan."
-            subtitle="During the closed beta there's nothing to pick and nothing to pay — every account gets the same plan.">
-            <BetaPlanCard
-                plan={betaPlan}
-                title={
-                    <>
-                        {betaPlan.name} — {betaPlan.tagline.toLowerCase()}
-                    </>
-                }
+        <StepShell titleRef={titleRef} title="Start free, or pick a plan." subtitle={freePlanSummary(freePlan)}>
+            <PlanPicker
+                plans={plans}
+                billing={billing}
+                onBillingChange={onBillingChange}
+                selected={tier}
+                onSelect={onTierChange}
+                compact={phone}
             />
-            {awaitingApproval && (
-                <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3.5 font-body font-normal text-[13px] leading-normal">
-                    One more thing: beta access is granted personally. Your account is on the waitlist — we&apos;ll email you the moment
-                    it&apos;s approved.
-                </div>
-            )}
         </StepShell>
     )
 }
 
-// Success screen shown after the last step
+/** Which way the done screen sends the user on. */
+export type DoneDestination =
+    /** Straight into a new score, ready to record (the usual end). */
+    | 'first-melody'
+    /** The closed-beta waiting room. */
+    | 'beta'
+    /** Wherever they were heading before signup (a shared score), via ?next=. */
+    | 'next'
+
+// The screen after the last step.
 export function DoneStep({
     name,
-    awaitingApproval,
+    destination,
     betaPlanName,
-    planName,
+    planLine,
+    creating,
+    onRecordFirstMelody,
     onFinish,
-}: {
+    titleRef,
+}: StepProps & {
     name: string
-    awaitingApproval: boolean
+    destination: DoneDestination
     betaPlanName: string
-    planName: string | undefined
+    /** The 13px line naming the plan the account is on ("You're on Sketch — free, …"); null to leave it out. */
+    planLine: string | null
+    /** The first melody's score is being created. */
+    creating: boolean
+    onRecordFirstMelody: () => void
+    /** The library, the waiting room or the ?next= destination. */
     onFinish: () => void
 }) {
     return (
@@ -334,64 +683,62 @@ export function DoneStep({
             <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
                 <Icon name="check" size={28} />
             </div>
-            <ModalTitle>You&apos;re all set, {name.split(' ')[0] || 'there'}.</ModalTitle>
-            <SubHeadline>
-                {awaitingApproval ? (
-                    <>
-                        Your account is ready on the <strong>{betaPlanName}</strong> plan — it just needs a nod from us. We&apos;ll email
-                        you the moment your beta access is approved.
-                    </>
-                ) : (
-                    <>
-                        Your library is ready on <strong>{planName}</strong>. Start a fresh score, or take the editor for a spin.
-                    </>
-                )}
-            </SubHeadline>
-            <div className="flex gap-3 mt-2">
-                <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onFinish}>
-                    {awaitingApproval ? 'View my status' : 'Open my library'}
-                </PrimaryButton>
+            <ModalTitle ref={titleRef} tabIndex={-1}>
+                You&apos;re all set, {name.trim().split(/\s+/)[0] || 'there'}.
+            </ModalTitle>
+            <div className="flex flex-col gap-2">
+                <SubHeadline>
+                    {destination === 'beta' ? (
+                        <>
+                            Your account is ready on the <strong>{betaPlanName}</strong> plan — it just needs a nod from us. We&apos;ll
+                            email you the moment your beta access is approved.
+                        </>
+                    ) : destination === 'next' ? (
+                        <>Your library is ready. Start a fresh score, or take the editor for a spin.</>
+                    ) : (
+                        <>Let&apos;s get your first melody down. Press record, then sing, hum or play, and Solkey writes the notes.</>
+                    )}
+                </SubHeadline>
+                {planLine && <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{planLine}</p>}
             </div>
+            {destination === 'first-melody' ? (
+                <div className="flex gap-x-5 gap-y-2 mt-2 items-center flex-wrap">
+                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onRecordFirstMelody} disabled={creating}>
+                        {creating ? 'Getting it ready…' : 'Record my first melody'}
+                    </PrimaryButton>
+                    <TertiaryButton onClick={onFinish}>Go to my library</TertiaryButton>
+                </div>
+            ) : (
+                <div className="flex gap-3 mt-2">
+                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onFinish}>
+                        {destination === 'beta' ? 'View my status' : 'Open my library'}
+                    </PrimaryButton>
+                </div>
+            )}
         </div>
     )
 }
 
 // Building blocks of the steps above
 
-function StepShell({ title, subtitle, children }: { title: ReactNode; subtitle: ReactNode; children: ReactNode }) {
+function StepShell({
+    title,
+    subtitle,
+    titleRef,
+    children,
+}: StepProps & {
+    title: ReactNode
+    subtitle: ReactNode
+    children: ReactNode
+}) {
     return (
         <div className="flex flex-col gap-5">
-            <ModalTitle>{title}</ModalTitle>
+            {/* Focusable by script only (no ring): the page moves focus here when the step opens. */}
+            <ModalTitle ref={titleRef} tabIndex={-1}>
+                {title}
+            </ModalTitle>
             <SubHeadline>{subtitle}</SubHeadline>
             {children}
         </div>
-    )
-}
-
-function OptionCard({ active, onClick, title, body }: { active?: boolean; onClick?: () => void; title: ReactNode; body?: ReactNode }) {
-    return (
-        <button
-            onClick={onClick}
-            type="button"
-            className={[
-                'text-left border-0 rounded-md px-5 py-4.5 cursor-pointer flex gap-3.5 items-start transition-colors duration-150 ease-solkey',
-                'focus-ring',
-                active
-                    ? 'bg-primary-soft text-on-primary-soft'
-                    : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
-            ].join(' ')}>
-            <div className="flex flex-col gap-1">
-                <span className="font-body font-semibold text-[15px] leading-[1.2]">{title}</span>
-                {body && (
-                    <span
-                        className={[
-                            'font-body font-normal text-[13px] leading-[1.4] opacity-85',
-                            active ? 'text-on-primary-soft' : 'text-on-surface-variant',
-                        ].join(' ')}>
-                        {body}
-                    </span>
-                )}
-            </div>
-        </button>
     )
 }

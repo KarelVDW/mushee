@@ -38,10 +38,12 @@ export default function BetaWaitingPage() {
                     </div>
                     <ModalTitle>You&apos;re in.</ModalTitle>
                     <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
-                    <div>
-                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores">
-                            Open my library
+                    {/* The real first step is a score to record into, not an empty library. */}
+                    <div className="flex items-center gap-5 flex-wrap">
+                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores?new=1">
+                            Make your first score
                         </PrimaryButton>
+                        <TertiaryButton href="/scores">Open my library</TertiaryButton>
                     </div>
                 </>
             ) : (
@@ -56,10 +58,28 @@ export default function BetaWaitingPage() {
 
                     <BetaPlanCard plan={betaPlan} title={<>Waiting for you: the {betaPlan.name} plan</>} />
 
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <PrimaryButton onClick={() => void gate.refetch()} disabled={gate.isFetching} icon="refresh-cw">
-                            {gate.isFetching ? 'Checking…' : 'Check my status'}
-                        </PrimaryButton>
+                    <div className="flex flex-col gap-1.5">
+                        <h3 className="m-0 font-body font-semibold text-[15px] leading-[1.3] text-on-surface">While you wait</h3>
+                        <p className="m-0 font-body font-normal text-[15px] leading-normal text-on-surface-variant">
+                            Think of a tune to try first — something you can hum or play. You&apos;ll be recording a minute after
+                            you&apos;re in.
+                        </p>
+                    </div>
+
+                    {/*
+                     * The page already checks by itself, so checking by hand stays a quiet option. A
+                     * click while a check runs does nothing (refetch would cancel it and start over).
+                     */}
+                    <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                        <TertiaryButton
+                            onClick={() => {
+                                if (!gate.isFetching) void gate.refetch()
+                            }}>
+                            <span className="inline-flex items-center gap-1.5">
+                                <Icon name="refresh-cw" size={13} />
+                                {gate.isFetching ? 'Checking…' : 'Check my status'}
+                            </span>
+                        </TertiaryButton>
                         <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                             This page checks automatically every 30 seconds. Questions?{' '}
                             <a href="mailto:support@solkey.io" className="text-primary underline">

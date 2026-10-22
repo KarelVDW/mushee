@@ -4,8 +4,11 @@ import { Alert, PrimaryButton, TertiaryButton, TextField, Wordmark } from '@mush
 import Link from 'next/link'
 import { type FormEvent, type ReactNode, useState } from 'react'
 
+import type { AuthErrorAction, AuthErrorMessage } from '@/lib/AuthErrorCopy'
 import { withNext } from '@/lib/nextPath'
+import { BETA_MODE } from '@/lib/plans'
 
+import { SIGNUP_PASSWORD_HINT } from './Password'
 import { PasswordField } from './PasswordField'
 
 type AuthMode = 'signin' | 'signup'
@@ -30,6 +33,35 @@ const AUTH_COPY: Record<
         switchLabel: 'Sign in',
         switchHref: '/login',
     },
+}
+
+/** What the visitor already typed, handed from one auth form to the next. */
+export interface AuthPrefillFields {
+    email?: string
+    name?: string
+}
+
+/**
+ * What one auth form hands the next when it sends the visitor on — "Sign in instead",
+ * "reset your password", onboarding's "Start over" — so they needn't type their email or
+ * name again. Held in memory for the client-side navigation that follows, never put in the
+ * URL, where an address would end up in the history, server logs and analytics page views.
+ * A form reads it when it mounts; submitting a form clears it.
+ */
+export class AuthPrefill {
+    private static fields: AuthPrefillFields = {}
+
+    static offer(fields: AuthPrefillFields): void {
+        AuthPrefill.fields = { ...fields }
+    }
+
+    static read(): AuthPrefillFields {
+        return AuthPrefill.fields
+    }
+
+    static clear(): void {
+        AuthPrefill.fields = {}
+    }
 }
 
 interface AuthFrameProps {
@@ -67,7 +99,16 @@ function BrandPanel({ headline, tagline, mobileTagline }: Omit<AuthFrameProps, '
                 'md:w-[42%] bg-surface-container-high p-6 md:p-12 justify-between gap-4',
                 compact ? 'flex flex-row md:flex-col items-center md:items-stretch relative overflow-hidden' : 'flex flex-col',
             ].join(' ')}>
-            <Wordmark size={32} />
+            {/* The way home: the only other one was the browser's Back button. */}
+            <Link
+                href="/"
+                aria-label="Solkey home"
+                className={[
+                    'no-underline inline-flex items-center rounded-sm focus-ring pointer-coarse:min-h-10',
+                    compact ? 'md:self-start' : 'self-start',
+                ].join(' ')}>
+                <Wordmark size={32} />
+            </Link>
             <div className={compact ? 'flex flex-col gap-4 max-md:hidden' : 'flex flex-col gap-4'}>
                 <h1
                     className={[
@@ -98,14 +139,18 @@ export interface AuthCredentials {
 
 interface AuthCardProps {
     mode: AuthMode
-    /** Optional banner above the form (e.g. closed-beta note). */
+    /** Optional note above the form (the closed-beta note, the "Signed out" after a declined reactivation); announced politely. */
     notice?: ReactNode
     loading?: boolean
     /** Blocks submission for a reason other than loading (e.g. a CAPTCHA still to be solved). */
     submitDisabled?: boolean
     /** Rendered between the fields and the submit button (the signup CAPTCHA). */
     beforeSubmit?: ReactNode
-    error?: string | null
+    /**
+     * The last failure, in Solkey's words (AuthErrorCopy — never the server's message): under
+     * its field when it names one, otherwise in the alert, with its next step as a link.
+     */
+    error?: AuthErrorMessage | null
     /** Where the visitor is headed after auth (?next=), carried over when they switch between sign-in and sign-up. */
     next?: string
     onSubmit: (credentials: AuthCredentials) => void
@@ -115,35 +160,82 @@ interface AuthCardProps {
 export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, error, next, onSubmit }: AuthCardProps) {
     const copy = AUTH_COPY[mode]
     const isSignup = mode === 'signup'
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
+    // A form that sent the visitor here may have handed over what they already typed.
+    const [name, setName] = useState(() => (isSignup ? (AuthPrefill.read().name ?? '') : ''))
+    const [email, setEmail] = useState(() => AuthPrefill.read().email ?? '')
     const [password, setPassword] = useState('')
 
     const submit = (e: FormEvent) => {
         e.preventDefault()
+        AuthPrefill.clear()
         onSubmit({ name, email, password })
     }
+
+    const fieldError = (field: 'email' | 'password') => (error?.field === field ? error.message : undefined)
+    const alert = error && error.field !== 'email' && error.field !== 'password' ? error : null
+    const fieldMessage = fieldError('email') ?? fieldError('password')
 
     return (
         <AuthFrame headline={copy.headline} tagline="The fastest way to get a melody on the page." mobileTagline={copy.headline.join(' ')}>
             <Tabs mode={mode} next={next} />
 
+            {/* Always mounted, so a notice that appears later (after a declined reactivation) is read out. */}
+            <div role="status">
+                {notice && (
+                    <div className="mb-5 bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body font-normal text-[13px] leading-normal">
+                        {notice}
+                    </div>
+                )}
+            </div>
+
             <form onSubmit={submit} className="flex flex-col gap-5 flex-1">
                 <div className="flex flex-col gap-4.5 flex-1 justify-center">
-                    {notice && (
-                        <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body font-normal text-[13px] leading-normal">
-                            {notice}
-                        </div>
+                    {isSignup && (
+                        <TextField
+                            label="Your name"
+                            value={name}
+                            onChange={setName}
+                            placeholder="Anya Mokri"
+                            autoComplete="name"
+                            name="name"
+                            required
+                        />
                     )}
-                    {isSignup && <TextField label="Your name" value={name} onChange={setName} placeholder="Anya Mokri" />}
-                    <TextField label="Email" value={email} onChange={setEmail} placeholder="you@email.com" type="email" />
-                    <PasswordField label="Password" value={password} onChange={setPassword} />
+                    <TextField
+                        label="Email"
+                        value={email}
+                        onChange={setEmail}
+                        placeholder="you@email.com"
+                        type="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        name="email"
+                        required
+                        error={fieldError('email')}
+                    />
+                    <PasswordField
+                        label="Password"
+                        value={password}
+                        onChange={setPassword}
+                        autoComplete={isSignup ? 'new-password' : 'current-password'}
+                        name="password"
+                        required
+                        hint={isSignup ? SIGNUP_PASSWORD_HINT : undefined}
+                        error={fieldError('password')}
+                    />
                     {!isSignup && (
                         <div className="flex justify-end -mt-2">
-                            <TertiaryButton href="/reset-password">Forgot password?</TertiaryButton>
+                            <TertiaryButton href={withNext('/reset-password', next)} onClick={() => AuthPrefill.offer({ email })}>
+                                Forgot password?
+                            </TertiaryButton>
                         </div>
                     )}
-                    {error && <Alert>{error}</Alert>}
+                    {alert && (
+                        <Alert>
+                            <AuthErrorText error={alert} email={email} next={next} />
+                        </Alert>
+                    )}
+                    <FieldErrorAnnouncement label={error?.field === 'email' ? 'Email' : 'Password'} message={fieldMessage} />
                 </div>
 
                 <div className="flex flex-col gap-3.5 pt-2">
@@ -151,13 +243,80 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
                     <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
                         {loading ? copy.submitting : copy.submit}
                     </PrimaryButton>
+                    {isSignup && <SignupTerms />}
                     <div className="flex justify-between items-center">
                         <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{copy.switchPrompt}</span>
-                        <TertiaryButton href={withNext(copy.switchHref, next)}>{copy.switchLabel}</TertiaryButton>
+                        <TertiaryButton href={withNext(copy.switchHref, next)} onClick={() => AuthPrefill.offer({ email })}>
+                            {copy.switchLabel}
+                        </TertiaryButton>
                     </div>
                 </div>
             </form>
         </AuthFrame>
+    )
+}
+
+/**
+ * Reads a field's error out the moment it arrives, naming the field ("Password: Use at least 8
+ * characters."). The message under the field is tied to it by aria-describedby, which a screen
+ * reader only reads when the field next takes focus — and the form leaves focus where it was.
+ * Always mounted and visually hidden; the page clears its error before each try, so a repeat
+ * of the same problem is read out again.
+ */
+export function FieldErrorAnnouncement({ label, message }: { label: string; message?: string }) {
+    return (
+        <div aria-live="polite" className="sr-only">
+            {message ? `${label}: ${message}` : ''}
+        </div>
+    )
+}
+
+/** What signing up costs (nothing) and what it agrees to, under the Create account button. */
+function SignupTerms() {
+    return (
+        <div className="flex flex-col gap-1 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+            <p className="m-0">{BETA_MODE ? 'Free during the beta.' : 'Free to start — no card needed.'}</p>
+            <p className="m-0">
+                By creating an account you agree to the{' '}
+                <Link href="/terms" className={INLINE_LINK}>
+                    Terms
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className={INLINE_LINK}>
+                    Privacy policy
+                </Link>
+                .
+            </p>
+        </div>
+    )
+}
+
+/** An inline text link inside a sentence; inherits the sentence's colour on tinted surfaces (the alert). */
+const INLINE_LINK = 'text-inherit font-medium underline underline-offset-2 hover:no-underline rounded-sm focus-ring'
+
+/** The words of an error message that become its next step's link, and where that link goes. */
+const ACTION_LINKS: Partial<Record<AuthErrorAction, { phrase: string; path: string }>> = {
+    reset: { phrase: 'reset your password', path: '/reset-password' },
+    'sign-in': { phrase: 'Sign in instead', path: '/login' },
+}
+
+/**
+ * An error message with its next step linked in place ("…, or reset your password." /
+ * "Sign in instead?"). Following the link hands the typed email to the next form, and the
+ * ?next= destination rides along.
+ */
+function AuthErrorText({ error, email, next }: { error: AuthErrorMessage; email: string; next?: string }) {
+    const link = error.action ? ACTION_LINKS[error.action] : undefined
+    const at = link ? error.message.indexOf(link.phrase) : -1
+    if (!link || at < 0) return <>{error.message}</>
+    return (
+        <>
+            {error.message.slice(0, at)}
+            <Link href={withNext(link.path, next)} onClick={() => AuthPrefill.offer({ email })} className={INLINE_LINK}>
+                {link.phrase}
+            </Link>
+            {error.message.slice(at + link.phrase.length)}
+        </>
     )
 }
 

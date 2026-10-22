@@ -320,7 +320,7 @@ export function useExportAccountData() {
     })
 }
 
-/** Saves the account's display name — the one Settings edits and onboarding asks for. */
+/** Saves the account's display name — the one signup asks for and Settings edits. */
 export function useUpdateProfile() {
     return useMutation({
         mutationFn: async (name: string) => {
