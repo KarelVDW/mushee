@@ -777,12 +777,6 @@ describe('Score', () => {
             expect(score.flushDirty()).toBeNull()
         })
 
-        it('clearDirty drops pending changes without serializing them', () => {
-            const score = makeScore(1)
-            score.flushDirty()
-            expect(score.flushDirty()).toBeNull()
-        })
-
         it('redirty restores a failed measures flush so the next flush retries it', () => {
             const score = makeScore(2)
             score.flushDirty()
