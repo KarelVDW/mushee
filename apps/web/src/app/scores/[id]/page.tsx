@@ -41,10 +41,7 @@ import {
     MOVE_PREVIOUS,
     RAISE_PITCH,
     SET_ACCIDENTAL,
-    SET_CLEF,
     SET_DURATION,
-    SET_KEY,
-    SET_TEMPO,
     TOGGLE_DOT,
     TOGGLE_REST,
     TOGGLE_TIE,
@@ -135,13 +132,33 @@ export default function ScoreEditorPage() {
     const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
     const handleTieToggle = useCallback(() => manipulator.run(TOGGLE_TIE), [manipulator])
     const handleRestToggle = useCallback(() => manipulator.run(TOGGLE_REST), [manipulator])
-    const handleTempoSet = useCallback((bpm: number) => manipulator.run(SET_TEMPO, bpm), [manipulator])
-    const handleClefSet = useCallback((type: ClefType) => manipulator.run(SET_CLEF, type), [manipulator])
-    const handleKeySet = useCallback((fifths: number) => manipulator.run(SET_KEY, fifths), [manipulator])
+    // The dock's measure-context edits apply at the active note's position (mid-measure for
+    // clef / key / tempo), through the same setters as the in-score glyph popovers.
+    const handleTempoSet = useCallback(
+        (bpm: number) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setTempoAt(at.measureIndex, at.beat, bpm)
+        },
+        [manipulator],
+    )
+    const handleClefSet = useCallback(
+        (type: ClefType) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setClefAt(at.measureIndex, type, at.beat)
+        },
+        [manipulator],
+    )
+    const handleKeySet = useCallback(
+        (fifths: number) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setKeyAt(at.measureIndex, fifths, at.beat)
+        },
+        [manipulator],
+    )
     const handleTimeSet = useCallback(
         (beatAmount: number, beatType: number) => {
-            const measure = manipulator.selectedNote?.measure
-            if (measure) manipulator.setTimeSignatureAt(measure.index, beatAmount, beatType)
+            const at = manipulator.activePosition
+            if (at) manipulator.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
         },
         [manipulator],
     )

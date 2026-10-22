@@ -23,9 +23,10 @@ const MAX_RANGE = 100_000
  * monotonic version that bumps on any selection or score change. The page reads the live
  * `score` / `selectedNote` / `selectedNotes` off the instance after each notification.
  *
- * Score-wide structure (add/remove measure, set tempo at a position, change instrument) lives
- * in dedicated methods rather than the action array, because those operations don't act on a
- * single selected note.
+ * Score-wide structure (add/remove measure, change instrument) and measure-context edits
+ * (clef / key / meter / tempo at a position — the in-score glyph popovers and the dock alike)
+ * live in dedicated methods rather than as actions, because they act on a position rather
+ * than on the selected notes, and leave the selection as it is.
  *
  * Every mutation runs through {@link manipulate}, which registers it as one step with the
  * {@link ManipulationHistoryManager}; {@link undo}/{@link redo} travel that history by
@@ -87,6 +88,16 @@ export class ScoreManipulator {
     /** Every selected note in score order (one entry for a single selection). Stable per selection. */
     get selectedNotes(): Note[] {
         return this._selectedNotes
+    }
+
+    /**
+     * Where the active note sits — its measure index and beat offset — for the measure-context
+     * setters below, so a dock clef/key/tempo change lands mid-measure at the active note.
+     */
+    get activePosition(): { measureIndex: number; beat: number } | null {
+        const note = this._selectedNote
+        const at = this.addressOf(note)
+        return note && at ? { measureIndex: at.measureIndex, beat: note.measure.beatOffsetOf(note) } : null
     }
 
     /** Bind a freshly loaded score and its (debounced) autosave, selecting the first note. */
@@ -320,7 +331,7 @@ export class ScoreManipulator {
         this.emit()
     }
 
-    /** Set a tempo at an explicit position (the in-score tempo marking popover). */
+    /** Set a tempo at an explicit position (the in-score tempo marking popover, or the dock at {@link activePosition}). */
     setTempoAt(measureIndex: number, beatPosition: number, bpm: number): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
@@ -329,21 +340,27 @@ export class ScoreManipulator {
         this.save(score)
     }
 
-    /** Change the clef from the start of a measure (the in-score clef glyph popover). */
-    setClefAt(measureIndex: number, type: ClefType): void {
+    /**
+     * Change the clef at a position: from the start of a measure (the in-score clef glyph
+     * popover), or mid-measure at a beat (the dock, at {@link activePosition}).
+     */
+    setClefAt(measureIndex: number, type: ClefType, beat = 0): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setClef(measure.noteAtBeat(0), type))
+        this.manipulate(() => score.setClef(measure.noteAtBeat(beat), type))
         this.save(score)
     }
 
-    /** Change the key signature from the start of a measure (the in-score key glyph popover). */
-    setKeyAt(measureIndex: number, fifths: number): void {
+    /**
+     * Change the key signature at a position: from the start of a measure (the in-score key
+     * glyph popover), or mid-measure at a beat (the dock, at {@link activePosition}).
+     */
+    setKeyAt(measureIndex: number, fifths: number, beat = 0): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setKeySignature(measure.noteAtBeat(0), fifths))
+        this.manipulate(() => score.setKeySignature(measure.noteAtBeat(beat), fifths))
         this.save(score)
     }
 

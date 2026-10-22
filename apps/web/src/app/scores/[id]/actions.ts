@@ -1,4 +1,4 @@
-import { type Accidental, type ClefType, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
+import { type Accidental, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
 
 /**
  * A single editing operation on the score, performed relative to the selection.
@@ -12,7 +12,7 @@ import { type Accidental, type ClefType, type DurationType, Note, type Pitch, ty
  * An action comes in one of two shapes: `execute` acts on the active note alone (a
  * multi-note selection collapses onto it), while `executeBulk` receives the whole
  * selection and owns how it is applied. `arg` carries the action's parameter — a
- * duration, accidental token, bpm, clef, key, or pitch; parameterless actions ignore it.
+ * duration, accidental token, or pitch; parameterless actions ignore it.
  */
 interface ScoreActionBase {
     id: string
@@ -188,36 +188,4 @@ export const TOGGLE_REST: ScoreAction = {
             notes,
             notes.map((note) => note.clone({ pitch: note.isRest ? note.clef.middleLinePitch : undefined })),
         ),
-}
-
-// --- Measure context (clef / key / tempo at the active note; selection stays put) ---
-
-/** `arg`: bpm. */
-export const SET_TEMPO: ScoreAction = {
-    id: 'set-tempo',
-    label: 'Set tempo',
-    execute: (score, note, arg) => {
-        score.setTempo(note, arg as number)
-        return note
-    },
-}
-
-/** `arg`: the target {@link ClefType}. */
-export const SET_CLEF: ScoreAction = {
-    id: 'set-clef',
-    label: 'Set clef',
-    execute: (score, note, arg) => {
-        score.setClef(note, arg as ClefType)
-        return note
-    },
-}
-
-/** `arg`: number of fifths (positive = sharps, negative = flats). */
-export const SET_KEY: ScoreAction = {
-    id: 'set-key',
-    label: 'Set key signature',
-    execute: (score, note, arg) => {
-        score.setKeySignature(note, arg as number)
-        return note
-    },
 }

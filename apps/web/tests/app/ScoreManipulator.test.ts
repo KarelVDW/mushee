@@ -491,6 +491,33 @@ describe('ScoreManipulator in-score attribute setters', () => {
         manipulator.setTempoAt(9, 0, 132)
         expect(allNotes(manipulator)[0].clef.type).toBe('treble')
     })
+
+    it('reports the active note position as its measure index and beat offset', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[2])
+        expect(manipulator.activePosition).toEqual({ measureIndex: 0, beat: 2 })
+        manipulator.select(null)
+        expect(manipulator.activePosition).toBeNull()
+    })
+
+    it('applies a mid-measure clef change at the active position (the dock path)', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[2])
+        const at = manipulator.activePosition
+        if (!at) throw new Error('expected an active position')
+        manipulator.setClefAt(at.measureIndex, 'bass', at.beat)
+        expect(allNotes(manipulator).map((n) => n.clef.type)).toEqual(['treble', 'treble', 'bass', 'bass'])
+    })
+
+    it('keeps a range selection across a measure-context edit', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[1])
+        manipulator.extendSelectionTo(notes[3])
+        const at = manipulator.activePosition
+        if (!at) throw new Error('expected an active position')
+        manipulator.setKeyAt(at.measureIndex, 2, at.beat)
+        expect(ids(manipulator.selectedNotes)).toEqual([notes[1].id, notes[2].id, notes[3].id])
+    })
 })
 
 describe('ScoreManipulator pitch operations (transpose / minimize accidentals)', () => {
