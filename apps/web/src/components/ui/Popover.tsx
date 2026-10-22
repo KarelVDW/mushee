@@ -1,26 +1,99 @@
 'use client'
 
-import { Eyebrow } from '@mushee/ui'
-import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react'
+import { Eyebrow, Icon } from '@mushee/ui'
+import {
+    createContext,
+    type CSSProperties,
+    type ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from 'react'
+import { createPortal } from 'react-dom'
 
 import { FOCUSABLE_SELECTOR } from './Dialog'
+import { focusWithoutTooltip } from './Tooltip'
+
+/** How long a phone sheet shows the picked cell's active fill before it closes. */
+export const SHEET_PICK_CONFIRM_MS = 150
+
+/**
+ * Where phone sheets render: one fixed frame between the measured header and dock
+ * (`--app-header-h`, `--dock-h`, set by the editor page), outside every backdrop-filter
+ * subtree so a sheet is never clipped by, or stacked under, the chrome it was opened from.
+ * The frame only positions — it lets taps through; the sheet inside takes them.
+ */
+const SHEET_FRAME_CLASS =
+    'fixed inset-x-2 top-[calc(var(--app-header-h,0px)+0.5rem)] bottom-[calc(var(--dock-h,0px)+0.5rem)] z-(--z-popover) flex flex-col justify-end pointer-events-none'
+
+/** The host element; `null` while a host is mounting, `undefined` when there is no host above. */
+const SheetHostContext = createContext<HTMLElement | null | undefined>(undefined)
+
+/**
+ * The single host every phone sheet in its subtree portals into (contract C3). Mount it at
+ * the editor root, outside the header's and dock's blurred subtrees; it renders its children
+ * plus the empty sheet frame. Without a host, sheets portal into <body> in the same frame.
+ */
+export function PopoverSheetHost({ children }: { children: ReactNode }) {
+    const [host, setHost] = useState<HTMLElement | null>(null)
+    return (
+        <SheetHostContext.Provider value={host}>
+            {children}
+            <div ref={setHost} data-popover-sheet-host="" className={SHEET_FRAME_CLASS} />
+        </SheetHostContext.Provider>
+    )
+}
+
+/**
+ * `dismiss` delayed by {@link SHEET_PICK_CONFIRM_MS}, so a phone sheet shows what was picked
+ * before it closes — immediate when `enabled` is false (anchored popovers) or under reduced motion.
+ */
+export function usePickConfirmation(dismiss: () => void, enabled: boolean): () => void {
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    useEffect(
+        () => () => {
+            if (timer.current) clearTimeout(timer.current)
+        },
+        [],
+    )
+    return useCallback(() => {
+        if (!enabled || prefersReducedMotion()) {
+            dismiss()
+            return
+        }
+        if (timer.current) clearTimeout(timer.current)
+        timer.current = setTimeout(dismiss, SHEET_PICK_CONFIRM_MS)
+    }, [dismiss, enabled])
+}
+
+function prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
 
 interface PopoverProps {
     /** Accessible dialog name, e.g. "Select clef". */
     ariaLabel: string
-    /** Eyebrow heading. */
+    /** The heading: an eyebrow on an anchored popover, a sentence-case title on a sheet. */
     title: ReactNode
+    /** One plain line under the heading that explains the notation term ("How many beats in each bar."). */
+    hint?: ReactNode
     onDismiss: () => void
     /**
      * Handles keys beyond Escape (which always dismisses) — the only way popover content sees
      * keydown (see the listener below). Keep referentially stable — it re-binds the window listener.
      */
     onKeyDown?: (e: KeyboardEvent) => void
-    /** Width/gap plus positioning classes (e.g. `w-max gap-2 right-0 top-full`). */
+    /**
+     * Anchored: width/gap plus positioning classes (e.g. `w-max gap-2 right-0 top-full`).
+     * Sheet: layout classes for the scrolling body (e.g. `gap-2`); the host positions the sheet.
+     */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
     anchorRef?: { current: HTMLElement | null }
-    /** Rendered on the far side of the eyebrow, e.g. a live readout. */
+    /** Rendered on the far side of the heading, e.g. a live readout. */
     headerRight?: ReactNode
     /**
      * Move focus to the panel's first control on open, and back to the trigger (the first
@@ -28,26 +101,42 @@ interface PopoverProps {
      * chip (HeaderMenu). Off for the editor's attribute popovers, which leave focus on the score.
      */
     manageFocus?: boolean
+    /**
+     * `anchored` (default) sits next to its trigger. `sheet` is the phone form: portalled into
+     * the {@link PopoverSheetHost}, as tall as the room between header and dock allows (its body
+     * scrolls, with a fade at the clipped edge), headed by a title, the hint and a 40px Close.
+     */
+    variant?: 'anchored' | 'sheet'
+    /** Anchored only: keep the panel this many px inside the viewport's left and right edges. */
+    viewportGutter?: number
     children: ReactNode
 }
 
 /**
- * Anchored transient panel: dialog role + eyebrow heading on a glass panel, dismissed
- * by Escape or clicking outside. The chrome mirror of `DialogPanel` for
- * non-modal surfaces.
+ * Anchored transient panel: dialog role + eyebrow heading on an opaque card, dismissed by
+ * Escape or clicking outside. The chrome mirror of `DialogPanel` for non-modal surfaces.
+ * Opaque (surface-container-lowest + editorial shadow), never glass: it opens inside blurred
+ * chrome, where a glass panel would show the staff lines straight through its text.
  */
 export function Popover({
     ariaLabel,
     title,
+    hint,
     onDismiss,
     onKeyDown,
     className,
     anchorRef,
     headerRight,
     manageFocus = false,
+    variant = 'anchored',
+    viewportGutter,
     children,
 }: PopoverProps) {
     const popRef = useRef<HTMLDivElement>(null)
+    const sheet = variant === 'sheet'
+    const host = useContext(SheetHostContext)
+    // Where a sheet renders: its host, or <body> when there is none. Null while the host mounts.
+    const sheetTarget = !sheet ? null : host === undefined ? (typeof document === 'undefined' ? null : document.body) : host
 
     // A layout effect, not a passive one: its cleanup runs while the panel is still in the
     // document, so it can tell whether focus was inside it when the popover closed.
@@ -55,12 +144,18 @@ export function Popover({
         const panel = popRef.current
         if (!manageFocus || !panel) return
         const trigger = anchorRef?.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ?? null
-        panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+        const body = panel.querySelector<HTMLElement>('[data-popover-body]') ?? panel
+        ;(body.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ?? panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR))?.focus()
         return () => {
             // Only steal focus back when it is still inside the closing panel (not when the user clicked elsewhere).
-            if (panel.contains(document.activeElement)) trigger?.focus()
+            if (!panel.contains(document.activeElement)) return
+            focusWithoutTooltip(trigger)
+            // A trigger hidden while its sheet was open (the phone tool row) shows again in this same
+            // commit: try once more on the next frame, once it can take focus.
+            if (trigger && document.activeElement !== trigger) requestAnimationFrame(() => focusWithoutTooltip(trigger))
         }
-    }, [manageFocus, anchorRef])
+        // sheetTarget: a sheet whose host mounts in the same commit renders one commit later.
+    }, [manageFocus, anchorRef, sheetTarget])
 
     // While a popover is open no key reaches the editor shortcuts underneath. The listener
     // sits on window in the capture phase, so it runs before the editor container's own
@@ -99,12 +194,45 @@ export function Popover({
         }
     }, [onDismiss, anchorRef])
 
+    const shift = useViewportClamp(popRef, sheet ? undefined : viewportGutter)
+
+    if (sheet) {
+        const panel = (
+            <div
+                ref={popRef}
+                role="dialog"
+                aria-label={ariaLabel}
+                className="popover-sheet-enter pointer-events-auto flex flex-col min-h-0 max-h-full rounded-xl bg-surface-container-lowest editorial-shadow"
+                onMouseDown={(e) => e.stopPropagation()}>
+                <div className="shrink-0 flex items-start gap-3 pl-4 pr-1.5 pt-1.5 pb-2">
+                    <div className="flex-1 min-w-0 flex flex-col gap-1 pt-2.5">
+                        <h2 className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">{title}</h2>
+                        {hint && <PopoverHint>{hint}</PopoverHint>}
+                    </div>
+                    {headerRight && <div className="shrink-0 pt-2.5">{headerRight}</div>}
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        onClick={onDismiss}
+                        className="shrink-0 size-10 inline-flex items-center justify-center rounded-full border-0 bg-transparent cursor-pointer text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-150 ease-solkey focus-ring">
+                        <Icon name="x" size={20} />
+                    </button>
+                </div>
+                <SheetBody className={className}>{children}</SheetBody>
+            </div>
+        )
+        if (!sheetTarget) return null
+        if (host) return createPortal(panel, host)
+        return createPortal(<div className={SHEET_FRAME_CLASS}>{panel}</div>, sheetTarget)
+    }
+
     return (
         <div
             ref={popRef}
             role="dialog"
             aria-label={ariaLabel}
-            className={`glass-panel tonal-layer-glow absolute z-(--z-popover) flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
+            style={shift}
+            className={`bg-surface-container-lowest editorial-shadow absolute z-(--z-popover) flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             {headerRight ? (
                 <div className="flex justify-between items-center">
@@ -114,9 +242,77 @@ export function Popover({
             ) : (
                 <Eyebrow>{title}</Eyebrow>
             )}
+            {hint && <PopoverHint>{hint}</PopoverHint>}
             {children}
         </div>
     )
+}
+
+function PopoverHint({ children }: { children: ReactNode }) {
+    return <p className="m-0 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{children}</p>
+}
+
+/**
+ * A sheet's scrolling body. When its content is clipped at the bottom, a 16px fade over the
+ * last line says there is more below.
+ */
+function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null)
+    const [clipped, setClipped] = useState(false)
+    const measure = useCallback(() => {
+        const el = ref.current
+        if (el) setClipped(el.scrollTop + el.clientHeight < el.scrollHeight - 1)
+    }, [])
+    useLayoutEffect(() => {
+        measure()
+        window.addEventListener('resize', measure)
+        return () => window.removeEventListener('resize', measure)
+    }, [measure])
+    return (
+        <div className="relative flex-1 min-h-0 flex flex-col">
+            <div
+                ref={ref}
+                data-popover-body=""
+                onScroll={measure}
+                className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
+                {children}
+            </div>
+            {clipped && (
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-xl bg-linear-to-t from-surface-container-lowest to-transparent"
+                />
+            )}
+        </div>
+    )
+}
+
+/**
+ * The horizontal shift that keeps an anchored panel `gutter` px inside the viewport — a
+ * right-aligned menu under a chip near the left edge (the phone header's Share) would
+ * otherwise spill off screen. Measured before paint, again on resize.
+ */
+function useViewportClamp(ref: { current: HTMLElement | null }, gutter: number | undefined): CSSProperties | undefined {
+    const [dx, setDx] = useState(0)
+    useLayoutEffect(() => {
+        if (gutter === undefined) return
+        const measure = () => {
+            const el = ref.current
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            setDx((current) => {
+                const left = rect.left - current
+                const right = rect.right - current
+                if (left < gutter || rect.width > window.innerWidth - 2 * gutter) return gutter - left
+                if (right > window.innerWidth - gutter) return window.innerWidth - gutter - right
+                return 0
+            })
+        }
+        measure()
+        window.addEventListener('resize', measure)
+        return () => window.removeEventListener('resize', measure)
+    }, [ref, gutter])
+    return dx ? { transform: `translateX(${dx}px)` } : undefined
 }
 
 /** Whether a key's default action edits text in `target` (an input, textarea or contenteditable). */
