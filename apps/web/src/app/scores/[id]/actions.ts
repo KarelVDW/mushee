@@ -1,5 +1,4 @@
 import { type Accidental, type ClefType, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
-import type { ReactNode } from 'react'
 
 /**
  * A single editing operation on the score, performed relative to the selection.
@@ -7,7 +6,7 @@ import type { ReactNode } from 'react'
  * Actions are pure intent: they delegate to the model's own mutators (`Score.replace`,
  * `setDuration`, `setClef`, …) and return the note(s) to select afterward.
  * They never touch React, autosave, or playback — the {@link ScoreManipulator} owns that
- * orchestration. Listeners (keyboard handlers, control-bar buttons) live in the page and
+ * orchestration. Listeners (keyboard handlers, dock buttons) live in the page and
  * dispatch into the manipulator, which runs the matching action here.
  *
  * An action comes in one of two shapes: `execute` acts on the active note alone (a
@@ -19,8 +18,6 @@ interface ScoreActionBase {
     id: string
     /** Human-readable name (tooltips / future command palette). */
     label: string
-    /** Optional button content, derived from the current score + selection. */
-    display?: (props: { score: Score; selectedNote: Note }) => ReactNode
 }
 
 /** An action on the active note alone. Returns the note to select next. */
@@ -76,18 +73,8 @@ export const LOWER_PITCH: ScoreAction = {
         ),
 }
 
-export const CLEAR_PITCH: ScoreAction = {
-    id: 'clear-pitch',
-    label: 'Clear pitch',
-    executeBulk: (score, notes) =>
-        score.replace(
-            notes,
-            notes.map((note) => note.clone({ pitch: undefined })),
-        ),
-}
-
 /**
- * Remove the notes: clear their pitches like {@link CLEAR_PITCH}, and restructure every
+ * Remove the notes: clear their pitches to rests, and restructure every
  * measure that is left holding only rests back to its time signature's natural rhythm —
  * the same fill a freshly added measure gets (four quarter rests in 4/4). The
  * Backspace/delete gesture.
@@ -234,24 +221,3 @@ export const SET_KEY: ScoreAction = {
         return note
     },
 }
-
-/** Every editing action, in control-bar / keyboard order. */
-export const SCORE_ACTIONS: ScoreAction[] = [
-    MOVE_PREVIOUS,
-    MOVE_NEXT,
-    RAISE_PITCH,
-    LOWER_PITCH,
-    CLEAR_PITCH,
-    REMOVE_NOTE,
-    CHANGE_PITCH,
-    SET_ACCIDENTAL,
-    MINIMIZE_ACCIDENTALS,
-    SET_DURATION,
-    TOGGLE_DOT,
-    TOGGLE_TUPLET,
-    TOGGLE_TIE,
-    TOGGLE_REST,
-    SET_TEMPO,
-    SET_CLEF,
-    SET_KEY,
-]

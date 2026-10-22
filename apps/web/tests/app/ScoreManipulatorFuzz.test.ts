@@ -4,7 +4,6 @@ import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 import {
-    CLEAR_PITCH,
     LOWER_PITCH,
     MOVE_NEXT,
     MOVE_PREVIOUS,
@@ -118,7 +117,6 @@ function randomEdit(manipulator: ScoreManipulator, rng: Rng): string {
     if (roll < 0.63) return (manipulator.run(TOGGLE_TIE), 'tie')
     if (roll < 0.69) return (manipulator.run(TOGGLE_REST), 'rest')
     if (roll < 0.73) return (manipulator.run(SET_ACCIDENTAL, rng.pick(['#', 'b', undefined])), 'accidental')
-    if (roll < 0.76) return (manipulator.run(CLEAR_PITCH), 'clear pitch')
     if (roll < 0.8) return (manipulator.run(REMOVE_NOTE), 'remove note')
     if (roll < 0.84) return (manipulator.deleteSelection(), 'delete selection')
     if (roll < 0.87) {

@@ -35,8 +35,8 @@ const MAX_RANGE = 100_000
 export class ScoreManipulator {
     private _score: Score | null = null
     // Selection is the contiguous run from `_anchorNote` (the fixed end, where a drag/shift
-    // started) to `_selectedNote` (the moving end — the "active" note used by the cursor, control
-    // bar, and preview). `_selectedNotes` is that run in score order, recomputed only on a
+    // started) to `_selectedNote` (the moving end — the "active" note used by the cursor, dock,
+    // and preview). `_selectedNotes` is that run in score order, recomputed only on a
     // selection change so its array reference stays stable for memoized rendering.
     private _anchorNote: Note | null = null
     private _selectedNote: Note | null = null
@@ -79,7 +79,7 @@ export class ScoreManipulator {
         return this._score
     }
 
-    /** The active note: the moving end of the selection (cursor / control-bar / preview anchor). */
+    /** The active note: the moving end of the selection (cursor / dock / preview anchor). */
     get selectedNote(): Note | null {
         return this._selectedNote
     }
@@ -259,7 +259,7 @@ export class ScoreManipulator {
 
     // --- Clipboard ---
 
-    /** Whether {@link paste} would do anything (drives a future paste button's enabled state). */
+    /** Whether {@link paste} would do anything (drives the SelectionPopover's Paste enabled state). */
     get canPaste(): boolean {
         return this._clipboard.length > 0
     }

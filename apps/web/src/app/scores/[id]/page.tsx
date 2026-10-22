@@ -123,7 +123,7 @@ export default function ScoreEditorPage() {
         manipulator.attach(s, (score) => saveToApi({ score }))
     }, [scoreDocument, manipulator, saveToApi])
 
-    // Listeners are thin: each maps a control-bar callback or mouse event to a manipulator
+    // Listeners are thin: each maps a dock callback or mouse event to a manipulator
     // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
     // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
