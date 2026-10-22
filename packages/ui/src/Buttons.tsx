@@ -53,7 +53,8 @@ function primaryClasses({
     return [
         'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
         'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
-        size === 'lg' ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
+        // Touch: md grows by padding to 41px (44px with its icon) — the 40px floor, same type size.
+        size === 'lg' ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3.5',
         'leading-none',
         'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
         'focus-ring',
@@ -115,7 +116,7 @@ function secondaryClasses({ fullWidth }: { fullWidth: boolean }) {
         'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
         'border-0 rounded-full font-label font-semibold',
         'bg-surface-container-low text-on-surface hover:bg-surface-container',
-        'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3',
+        'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3.5',
         'leading-none',
         'transition-colors duration-150 ease-solkey',
         'focus-ring',
@@ -150,8 +151,10 @@ interface TertiaryButtonProps {
 
 function tertiaryClasses({ danger }: { danger: boolean }) {
     return [
-        // inline-block is a button's UA default; spelled out so the <Link> form's padding takes up space too.
-        'inline-block bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
+        // inline-flex so the <Link> form's padding takes up space too, and so the touch floor
+        // (40×40 on coarse pointers, DESIGN.md §4b) centres the label; desktop keeps py-2.
+        'inline-flex items-center justify-center bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
+        'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
         'font-body font-medium text-[13px] leading-none',
         'transition-colors duration-150 ease-solkey',
         'focus-ring rounded-sm',
@@ -206,8 +209,9 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
             className={[
                 // shrink-0: the box is a fixed circle — in a crowded flex row it must not squash.
                 'inline-flex items-center justify-center shrink-0 cursor-pointer border-0 rounded-full',
-                // Touch: extend the hit area past the visual circle (small sizes stay tappable).
-                'relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 pointer-coarse:after:content-[""] pointer-coarse:after:rounded-full',
+                // Touch: a 40px floor on the circle itself (min-* wins over the inline size), so
+                // neighbouring buttons' hit areas never overlap the way an invisible halo would.
+                'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
                 'text-on-surface',
                 idleClassName ?? 'bg-surface-container',
                 ICON_BUTTON_HOVER[hoverTone],
@@ -240,8 +244,10 @@ export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: Close
             aria-label={ariaLabel}
             onClick={onClick}
             className={[
-                'bg-transparent border-0 cursor-pointer inline-flex shrink-0 rounded-full',
+                'bg-transparent border-0 cursor-pointer inline-flex items-center justify-center shrink-0 rounded-full',
                 size === 'md' ? 'p-1' : 'p-1.5',
+                // Touch: a 40×40 hit area (DESIGN.md §4b floor).
+                'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
                 'text-on-surface-variant hover:text-on-surface transition-colors duration-150 ease-solkey',
                 'focus-ring',
             ].join(' ')}>
