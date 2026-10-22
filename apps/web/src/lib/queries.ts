@@ -41,7 +41,7 @@ import {
     unshareScore,
     updateScore,
 } from './api'
-import { signOut } from './auth-client'
+import { signOut, updateUser } from './auth-client'
 import type { StoredShortcuts } from './Keybindings'
 import { PlanCatalogue } from './plans'
 
@@ -260,6 +260,17 @@ export function useRequestAccountDeletion() {
         onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         // The dialog shows wrong-password feedback inline; a toast would double up.
         meta: { silentError: true },
+    })
+}
+
+/** Saves the account's display name — the one Settings edits and onboarding asks for. */
+export function useUpdateProfile() {
+    return useMutation({
+        mutationFn: async (name: string) => {
+            const { error } = await updateUser({ name })
+            if (error) throw new Error(error.message ?? 'Update failed')
+        },
+        meta: { errorMessage: "Your profile couldn't be saved. Please try again." },
     })
 }
 

@@ -23,10 +23,10 @@ import {
 } from '@/components/ui'
 import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
-import { updateUser, useSession } from '@/lib/auth-client'
+import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { billingKeys, useAllRecordings, useScores, useSignOut } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -43,7 +43,7 @@ export default function SettingsPage() {
     const [tab, setTab] = useState<Tab>('profile')
 
     const [name, setName] = useState(session?.user?.name ?? '')
-    const [saving, setSaving] = useState(false)
+    const updateProfile = useUpdateProfile()
     const [changePwOpen, setChangePwOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -53,17 +53,8 @@ export default function SettingsPage() {
         if (sessionName !== undefined) setName(sessionName)
     }, [sessionName])
 
-    async function handleSaveProfile() {
-        setSaving(true)
-        try {
-            const { error } = await updateUser({ name: name.trim() })
-            if (error) throw new Error(error.message ?? 'Update failed')
-            showToast('Profile updated.', 'info')
-        } catch {
-            showToast("Your profile couldn't be saved. Please try again.")
-        } finally {
-            setSaving(false)
-        }
+    function handleSaveProfile() {
+        updateProfile.mutate(name.trim(), { onSuccess: () => showToast('Profile updated.', 'info') })
     }
 
     // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan
@@ -146,8 +137,8 @@ export default function SettingsPage() {
                                     </span>
                                 </div>
                                 <div className="flex justify-end">
-                                    <PrimaryButton onClick={() => void handleSaveProfile()} disabled={saving || !name.trim()}>
-                                        {saving ? 'Saving…' : 'Save changes'}
+                                    <PrimaryButton onClick={handleSaveProfile} disabled={updateProfile.isPending || !name.trim()}>
+                                        {updateProfile.isPending ? 'Saving…' : 'Save changes'}
                                     </PrimaryButton>
                                 </div>
                             </SettingsSection>
