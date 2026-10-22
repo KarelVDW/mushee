@@ -198,6 +198,13 @@ export class Score {
         return this._tiePartners.value.get(note) ?? null
     }
 
+    /** How long `note` sounds, in beats: its own value plus every note its tie chain sustains into. */
+    tiedBeats(note: Note): number {
+        let beats = note.duration.effectiveBeats
+        for (let partner = this.tiePartner(note); partner; partner = this.tiePartner(partner)) beats += partner.duration.effectiveBeats
+        return beats
+    }
+
     /**
      * Whether a tie from `note` would bind: it and the note after it are pitched and sound the
      * same (C♯ to D♭ included). The editor offers tying on only where this holds.

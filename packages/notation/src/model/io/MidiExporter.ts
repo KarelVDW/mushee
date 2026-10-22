@@ -13,10 +13,10 @@ interface TrackEvent {
 }
 
 /**
- * Renders the score as a format-0 Standard MIDI File. Mirrors ScoreScheduler's
- * playback semantics: written pitch is transposed to sounding pitch, tied notes
- * sound once for their combined length, and tempo markings take effect at their
- * beat (defaulting to Score.DEFAULT_BPM before the first marking).
+ * Renders the score as a format-0 Standard MIDI File, with the model's sounding facts:
+ * each note at its instrument's sounding pitch (`Instrument.soundingMidi`), a tie chain
+ * sounding once for its combined length (`Score.tiedBeats`), and tempo markings taking
+ * effect at their beat (Score.DEFAULT_BPM before the first marking).
  */
 export class MidiExporter {
     constructor(readonly score: Score) {}
@@ -86,11 +86,8 @@ export class MidiExporter {
                 position += note.duration.effectiveBeats
                 // A note tying back already sounds as part of the note that started the tie chain.
                 if (!note.pitch || note.tiesBack) continue
-                let end = start + note.duration.effectiveBeats
-                for (let partner = this.score.tiePartner(note); partner; partner = this.score.tiePartner(partner)) {
-                    end += partner.duration.effectiveBeats
-                }
-                const midi = Math.max(0, Math.min(127, note.pitch.toMidi() + instrument.chromaticTranspose))
+                const end = start + this.score.tiedBeats(note)
+                const midi = Math.max(0, Math.min(127, instrument.soundingMidi(note.pitch)))
                 events.push({ tick: MidiExporter.toTicks(start), order: 2, data: [0x90 | CHANNEL, midi, VELOCITY] })
                 events.push({ tick: MidiExporter.toTicks(end), order: 1, data: [0x80 | CHANNEL, midi, 0] })
             }

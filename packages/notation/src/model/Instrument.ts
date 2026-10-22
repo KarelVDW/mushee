@@ -1,3 +1,5 @@
+import type { Pitch } from './Pitch'
+
 /** User-facing instrument family, used to group every instrument picker in the app. */
 export type InstrumentCategory = 'Keyboard' | 'Strings' | 'Woodwinds' | 'Brass' | 'Voice' | 'Folk & World' | 'Percussion'
 
@@ -63,6 +65,11 @@ export class Instrument {
     static findByDisplayName(name: string): Instrument | undefined {
         const lower = name.trim().toLowerCase()
         return Instrument._all.find((i) => i.displayName.toLowerCase() === lower)
+    }
+
+    /** The MIDI note `written` sounds at on this instrument: `sounding = written + chromaticTranspose`. */
+    soundingMidi(written: Pitch): number {
+        return written.toMidi() + this.chromaticTranspose
     }
 
     /** Default instrument; the fallback for unknown GM programs. */

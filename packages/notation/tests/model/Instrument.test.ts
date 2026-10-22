@@ -1,4 +1,5 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { Pitch } from '@mushee/notation/model/Pitch'
 import { describe, expect, it } from 'vitest'
 
 describe('Instrument', () => {
@@ -38,6 +39,13 @@ describe('Instrument', () => {
 
     it('findByDisplayName returns undefined for an unknown name', () => {
         expect(Instrument.findByDisplayName('Theremin')).toBeUndefined()
+    })
+
+    it('soundingMidi adds the instrument’s chromatic transposition to the written pitch', () => {
+        const c5 = new Pitch({ name: 'C', octave: 5 })
+        expect(Instrument.Piano.soundingMidi(c5)).toBe(72)
+        expect(Instrument.Trumpet.soundingMidi(c5)).toBe(70) // written C sounds B♭
+        expect(Instrument.Guitar.soundingMidi(c5)).toBe(60) // an octave below written
     })
 
     it('guitar and bass guitar sound an octave below written', () => {
