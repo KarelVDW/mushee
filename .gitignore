@@ -5,6 +5,8 @@ build/
 # Next dist dirs: .next plus the NEXT_DIST_DIR side builds, .next-e2e (Playwright)
 # and .next-verify (side-port verification, see .claude/skills/verify)
 **/.next*/
+# Rewritten by Next on every dev/build/typegen with the active dist dir
+next-env.d.ts
 out/
 .eslintcache
 *.tsbuildinfo
