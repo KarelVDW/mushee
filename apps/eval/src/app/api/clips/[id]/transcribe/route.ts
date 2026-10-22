@@ -1,6 +1,7 @@
 import { existsSync } from 'fs'
 import { NextResponse } from 'next/server'
 
+import { errorText } from '@/lib/api'
 import { melodyToTruth } from '@/lib/melody'
 import { clipWavPath, pipelineInstrumentId } from '@/server/fixtures'
 import { getClip, getCorpus, insertTranscription, latestTranscription } from '@/server/repo'
@@ -35,6 +36,6 @@ export async function POST(_request: Request, { params }: Params) {
         const transcription = await latestTranscription(id)
         return NextResponse.json({ transcription })
     } catch (err) {
-        return NextResponse.json({ error: String(err) }, { status: 500 })
+        return NextResponse.json({ error: errorText(err) }, { status: 500 })
     }
 }

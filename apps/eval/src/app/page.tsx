@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner } from '@/components/ui'
-import type { RunDto } from '@/lib/api'
+import { errorText, type RunDto } from '@/lib/api'
 import { useCorpora, useRuns, useStartRun } from '@/lib/queries'
 
 export default function CorporaPage() {
@@ -27,9 +27,11 @@ export default function CorporaPage() {
                 </div>
             </div>
 
-            {startRun.isError && <Alert>{String(startRun.error)}</Alert>}
+            {startRun.isError && <Alert>{errorText(startRun.error)}</Alert>}
 
-            {corpora.isError && <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {String(corpora.error)}</Alert>}
+            {corpora.isError && (
+                <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {errorText(corpora.error)}</Alert>
+            )}
             {corpora.isPending && (
                 <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
                     <Spinner /> Loading corpora…
@@ -46,7 +48,7 @@ export default function CorporaPage() {
             )}
 
             {corpora.data && corpora.data.length > 0 && (
-                <Card className="p-0 overflow-hidden">
+                <Card flush className="overflow-hidden">
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="text-left">
@@ -105,7 +107,6 @@ function LatestRun({ runs }: { runs?: RunDto[] }) {
     const latest = runs?.[0]
     if (!latest) return null
     const scenarios = latest.summary.perScenario.filter((s) => s.clips > 0)
-    const max = Math.max(0.001, ...scenarios.map((s) => s.f1))
     return (
         <Card>
             <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -124,11 +125,9 @@ function LatestRun({ runs }: { runs?: RunDto[] }) {
                             {s.scenario}
                             {!s.pooled && <span className="text-outline"> †</span>}
                         </span>
+                        {/* Absolute 0–1 scale, the same one the Reports page draws F1 on. */}
                         <div className="h-4 flex items-center">
-                            <div
-                                className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5"
-                                style={{ width: `${Math.max(1, (s.f1 / max) * 100)}%` }}
-                            />
+                            <div className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5" style={{ width: `${Math.max(1, s.f1 * 100)}%` }} />
                         </div>
                         <span className="font-mono text-[13px] leading-none text-on-surface-variant text-right">{s.f1.toFixed(2)}</span>
                     </div>

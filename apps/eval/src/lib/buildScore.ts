@@ -11,22 +11,10 @@ import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 
 import type { ClipMelody, MelodyEvent } from './melody'
 
-/** One un-tied duration per generated beat length (generator only emits these). */
-const BEATS_TO_DURATION: Record<string, { type: 'w' | 'h' | 'q' | '8' | '16'; dots?: number }> = {
-    '4': { type: 'w' },
-    '3': { type: 'h', dots: 1 },
-    '2': { type: 'h' },
-    '1.5': { type: 'q', dots: 1 },
-    '1': { type: 'q' },
-    '0.75': { type: '8', dots: 1 },
-    '0.5': { type: '8' },
-    '0.25': { type: '16' },
-}
-
+/** One un-tied duration per event: the generator only emits single written values. */
 function eventToNote(event: MelodyEvent): Note {
-    const mapped = BEATS_TO_DURATION[String(event.beats)]
-    if (!mapped) throw new Error(`no single duration spans ${event.beats} beats`)
-    const duration = new Duration({ type: mapped.type, dots: mapped.dots })
+    const [duration, ...extra] = Duration.fromBeats(event.beats)
+    if (!duration || extra.length) throw new Error(`no single duration spans ${event.beats} beats`)
     if (!event.pitch) return new Note({ duration })
     return new Note({
         duration,

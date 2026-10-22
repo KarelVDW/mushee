@@ -20,6 +20,7 @@ interface NotesCompareProps {
 }
 
 const ONSET_TOL_SEC = 0.1
+const WIDTH = 860
 const ROW_HEIGHT = 14
 const LANE_HEIGHT = 5
 const AXIS_HEIGHT = 22
@@ -79,8 +80,7 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
     const rows = model.maxMidi - model.minMidi + 1
     const plotHeight = rows * ROW_HEIGHT
     const height = plotHeight + AXIS_HEIGHT
-    const width = 860
-    const plotWidth = width - LABEL_WIDTH
+    const plotWidth = WIDTH - LABEL_WIDTH
     const xFor = (sec: number) => LABEL_WIDTH + (sec / model.endSec) * plotWidth
     const rowFor = (midi: number) => (model.maxMidi - midi) * ROW_HEIGHT
     const seconds = Array.from({ length: Math.floor(model.endSec) + 1 }, (_, i) => i)
@@ -116,7 +116,7 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                 <span className="font-body text-[12px] text-on-surface-variant">hollow = unmatched at ±100 ms / exact pitch</span>
             </div>
             <div className="relative overflow-x-auto">
-                <svg viewBox={`0 0 ${width} ${height}`} width="100%" role="img" aria-label="Expected vs pipeline notes">
+                <svg viewBox={`0 0 ${WIDTH} ${height}`} width="100%" role="img" aria-label="Expected vs pipeline notes">
                     {/* Row bands + pitch labels — recessive, ink for text. */}
                     {Array.from({ length: rows }, (_, i) => {
                         const midi = model.maxMidi - i
@@ -177,7 +177,7 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                     <div
                         className="absolute z-10 pointer-events-none bg-inverse-surface text-inverse-on-surface rounded-md px-2.5 py-1.5 whitespace-nowrap"
                         style={{
-                            left: `${(hover.x / width) * 100}%`,
+                            left: `${(hover.x / WIDTH) * 100}%`,
                             top: Math.max(0, (hover.y / height) * 100 - 8) + '%',
                             transform: 'translate(-50%, -100%)',
                         }}>

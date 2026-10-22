@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { ScoreView } from '@/components/ScoreView'
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, TextArea, TextField } from '@/components/ui'
+import { errorText } from '@/lib/api'
 import { melodyToScore, playbackInstrument } from '@/lib/buildScore'
 import { generateClips, type GeneratorParams, REGISTER_PRESETS } from '@/lib/generator'
 import { melodyNoteCount } from '@/lib/melody'
@@ -68,7 +69,7 @@ export default function NewCorpusPage() {
                 error: null as string | null,
             }
         } catch (err) {
-            return { clips: [], error: String(err) }
+            return { clips: [], error: errorText(err) }
         }
     }, [params, kind, instrumentId])
 
@@ -156,7 +157,7 @@ export default function NewCorpusPage() {
                     rows={3}
                 />
 
-                {create.isError && <Alert>{String(create.error)}</Alert>}
+                {create.isError && <Alert>{errorText(create.error)}</Alert>}
                 <PrimaryButton emphasis="pop" disabled={!label.trim() || create.isPending || !!preview.error} onClick={submit}>
                     {create.isPending ? 'Creating…' : `Create ${params.clipCount} clips`}
                 </PrimaryButton>

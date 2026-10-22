@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ScoreView } from '@/components/ScoreView'
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@/components/ui'
-import type { TranscriptionDto } from '@/lib/api'
+import { errorText, type TranscriptionDto } from '@/lib/api'
 import { melodyToScore, playbackInstrument } from '@/lib/buildScore'
 import { melodyDurationSec, withCountIn } from '@/lib/melody'
 import { useCorpus, useTranscribe, useUploadTake } from '@/lib/queries'
@@ -14,7 +14,7 @@ import { useEvalPlayer } from '@/lib/useEvalPlayer'
 
 /**
  * The streamlined recording session: expected notes big on screen, replay and
- * record one keypress apart, a metronome under both, and a straight path to
+ * record one click apart, a metronome under both, and a straight path to
  * the next clip without touching the list pages. Every finished take uploads,
  * lands in the fixtures tree, and is transcribed in place so a bad take is
  * visible before moving on.
@@ -22,6 +22,7 @@ import { useEvalPlayer } from '@/lib/useEvalPlayer'
 
 type FlowState =
     | { step: 'ready' }
+    // A take in flight: from the Record click until it is delivered or cancelled.
     | { step: 'recording' }
     | { step: 'uploading' }
     | { step: 'transcribing' }
@@ -31,6 +32,7 @@ type FlowState =
 const COUNT_IN_MEASURES = 1
 
 export default function RecordFlowPage() {
+    // useSearchParams needs a Suspense boundary for the page to prerender.
     return (
         <Suspense>
             <RecordFlow />
@@ -40,23 +42,29 @@ export default function RecordFlowPage() {
 
 function RecordFlow() {
     const { id } = useParams<{ id: string }>()
-    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+    const clipId = useSearchParams().get('clip')
     const detail = useCorpus(id)
     const uploadTake = useUploadTake()
     const transcribe = useTranscribe()
     const { player, mode } = useEvalPlayer()
 
-    const [currentClipId, setCurrentClipId] = useState<string | null>(searchParams.get('clip'))
     const [flow, setFlow] = useState<FlowState>({ step: 'ready' })
     const [metronomeOn, setMetronomeOn] = useState(true)
     const [progress, setProgress] = useState(0)
 
     const clips = detail.data?.clips
     const corpus = detail.data?.corpus
-    const clip = useMemo(() => {
-        if (!clips?.length) return null
-        return clips.find((c) => c.id === currentClipId) ?? clips.find((c) => c.status === 'pending') ?? clips[0]
-    }, [clips, currentClipId])
+    const clip = useMemo(() => clips?.find((c) => c.id === clipId) ?? null, [clips, clipId])
+
+    // The URL owns the current clip, so a refetch after a take can't move the
+    // page off the clip just recorded. With no (or a stale) ?clip, land on the
+    // first pending clip once.
+    const defaultClipId = clips?.length && !clip ? (clips.find((c) => c.status === 'pending') ?? clips[0]).id : null
+    useEffect(() => {
+        if (defaultClipId) router.replace(`${pathname}?clip=${defaultClipId}`)
+    }, [defaultClipId, pathname, router])
 
     const built = useMemo(() => {
         if (!clip || !corpus) return null
@@ -74,22 +82,20 @@ function RecordFlow() {
     // Take progress bar — reads the playback clock while a take runs.
     useEffect(() => {
         if (mode !== 'recording' || !built) return
-        const timer = setInterval(() => setProgress(player.midiPlayer.currentTime / built.totalSec), 100)
+        const timer = setInterval(() => setProgress(player.elapsedSec / built.totalSec), 100)
         return () => clearInterval(timer)
     }, [mode, built, player])
 
-    // Keep a reference to the freshest clip for the async take-finished chain.
-    const clipRef = useRef(clip)
-    clipRef.current = clip
-
-    if (detail.isPending)
-        return (
-            <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
-                <Spinner /> Loading corpus…
-            </div>
-        )
-    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
-    if (!clips || !clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
+    const loading = (
+        <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
+            <Spinner /> Loading corpus…
+        </div>
+    )
+    if (detail.isPending) return loading
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {errorText(detail.error)}</Alert>
+    if (!clips?.length || !corpus) return <Alert>This corpus has no clips.</Alert>
+    // Until the default ?clip lands.
+    if (!clip || !built) return loading
 
     const clipIndex = clips.findIndex((c) => c.id === clip.id)
     const nextClip = clips[clipIndex + 1] ?? null
@@ -113,26 +119,24 @@ function RecordFlow() {
                     countInSec: built.countInSec,
                     totalSec: built.totalSec,
                     onFinish: (take) => {
-                        const takenClip = clipRef.current
-                        if (!takenClip) return
                         setFlow({ step: 'uploading' })
                         uploadTake.mutate(
-                            { clipId: takenClip.id, take: take.blob, trimSec: take.trimSec },
+                            { clipId: clip.id, take: take.blob, trimSec: take.trimSec },
                             {
                                 onSuccess: () => {
                                     setFlow({ step: 'transcribing' })
-                                    transcribe.mutate(takenClip.id, {
+                                    transcribe.mutate(clip.id, {
                                         onSuccess: ({ transcription }) => setFlow({ step: 'done', transcription }),
-                                        onError: (err) => setFlow({ step: 'error', message: `transcription failed: ${String(err)}` }),
+                                        onError: (err) => setFlow({ step: 'error', message: `transcription failed: ${errorText(err)}` }),
                                     })
                                 },
-                                onError: (err) => setFlow({ step: 'error', message: `upload failed: ${String(err)}` }),
+                                onError: (err) => setFlow({ step: 'error', message: `upload failed: ${errorText(err)}` }),
                             },
                         )
                     },
                 }),
             )
-            .catch((err) => setFlow({ step: 'error', message: `mic failed: ${String(err)}` }))
+            .catch((err) => setFlow({ step: 'error', message: `mic failed: ${errorText(err)}` }))
     }
 
     const cancelTake = () => {
@@ -143,11 +147,12 @@ function RecordFlow() {
     const goNext = () => {
         if (!nextClip) return
         player.stop()
-        setCurrentClipId(nextClip.id)
+        router.replace(`${pathname}?clip=${nextClip.id}`)
         setFlow({ step: 'ready' })
         setProgress(0)
     }
 
+    const busy = flow.step === 'recording' || flow.step === 'uploading' || flow.step === 'transcribing'
     const doneF1 = flow.step === 'done' ? (flow.transcription?.metrics as { f1?: number } | null)?.f1 : undefined
     const inCountIn = mode === 'recording' && progress * built.totalSec < built.countInSec
 
@@ -191,15 +196,11 @@ function RecordFlow() {
 
             <Card className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                    <SecondaryButton onClick={replay} disabled={mode === 'recording'}>
+                    <SecondaryButton onClick={replay} disabled={busy || mode === 'recording'}>
                         {mode === 'playing' ? 'Stop replay' : 'Replay expected'}
                     </SecondaryButton>
                     {mode !== 'recording' && (
-                        <PrimaryButton
-                            emphasis="pop"
-                            icon="mic"
-                            onClick={startTake}
-                            disabled={flow.step === 'uploading' || flow.step === 'transcribing'}>
+                        <PrimaryButton emphasis="pop" icon="mic" onClick={startTake} disabled={busy}>
                             {clip.status === 'recorded' ? 'Record new take' : 'Record'} (1 measure count-in)
                         </PrimaryButton>
                     )}

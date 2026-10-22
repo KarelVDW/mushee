@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 
 import { LegendSwatch } from '@/components/NotesCompare'
 import { Alert, Card, Chip, Eyebrow, Spinner } from '@/components/ui'
-import type { ReportDto } from '@/lib/api'
+import { errorText, type ReportDto } from '@/lib/api'
 import { useReportDetail, useReports } from '@/lib/queries'
 
 /**
@@ -14,23 +14,22 @@ import { useReportDetail, useReports } from '@/lib/queries'
  * more than two runs side by side is a table job anyway.
  */
 
-type Ref = { root: string; file: string }
+type ReportRef = { root: string; file: string }
 
-const sameRef = (a: Ref | null, b: Ref) => a?.root === b.root && a?.file === b.file
+const sameRef = (a: ReportRef | null, b: ReportRef) => a?.root === b.root && a?.file === b.file
 
 export default function ReportsPage() {
     const reports = useReports()
-    const [baseRef, setBaseRef] = useState<Ref | null>(null)
-    const [candidateRef, setCandidateRef] = useState<Ref | null>(null)
+    const [baseRef, setBaseRef] = useState<ReportRef | null>(null)
+    const [candidateRef, setCandidateRef] = useState<ReportRef | null>(null)
     const base = useReportDetail(baseRef)
     const candidate = useReportDetail(candidateRef)
 
-    const toggle = (ref: Ref) => {
+    const toggle = (ref: ReportRef) => {
         if (sameRef(baseRef, ref)) setBaseRef(null)
         else if (sameRef(candidateRef, ref)) setCandidateRef(null)
         else if (!baseRef) setBaseRef(ref)
-        else if (!candidateRef) setCandidateRef(ref)
-        else setCandidateRef(ref)
+        else setCandidateRef(ref) // a third pick replaces the candidate
     }
 
     return (
@@ -43,7 +42,9 @@ export default function ReportsPage() {
                 </p>
             </div>
 
-            {reports.isError && <Alert onRetry={() => void reports.refetch()}>Couldn&apos;t list reports: {String(reports.error)}</Alert>}
+            {reports.isError && (
+                <Alert onRetry={() => void reports.refetch()}>Couldn&apos;t list reports: {errorText(reports.error)}</Alert>
+            )}
             {reports.isPending && (
                 <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
                     <Spinner /> Scanning fixtures…
@@ -51,7 +52,7 @@ export default function ReportsPage() {
             )}
 
             {reports.data && (
-                <Card className="p-0 overflow-hidden">
+                <Card flush className="overflow-hidden">
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="text-left">
@@ -123,11 +124,12 @@ function Comparison({
     candidateName: string
 }) {
     const rows = useMemo(() => {
-        const byScenario = new Map(base.perScenario.map((s) => [s.scenario, s]))
-        const scenarios = new Set([...base.perScenario.map((s) => s.scenario), ...candidate.perScenario.map((s) => s.scenario)])
+        const baseBy = new Map(base.perScenario.map((s) => [s.scenario, s]))
+        const candidateBy = new Map(candidate.perScenario.map((s) => [s.scenario, s]))
+        const scenarios = new Set([...baseBy.keys(), ...candidateBy.keys()])
         return [...scenarios].sort().map((scenario) => {
-            const baseRow = byScenario.get(scenario)
-            const candidateRow = candidate.perScenario.find((s) => s.scenario === scenario)
+            const baseRow = baseBy.get(scenario)
+            const candidateRow = candidateBy.get(scenario)
             return {
                 scenario,
                 base: baseRow?.f1 ?? null,
@@ -193,9 +195,9 @@ function PairBar({ value, color }: { value: number | null; color: string }) {
 }
 
 function DeltaLabel({ delta, digits }: { delta: number; digits: number }) {
-    const magnitude = Math.abs(delta) < 0.5 / 10 ** digits
+    const negligible = Math.abs(delta) < 0.5 / 10 ** digits
     return (
-        <span className={magnitude ? 'text-on-surface-variant' : delta > 0 ? 'text-primary' : 'text-secondary'}>
+        <span className={negligible ? 'text-on-surface-variant' : delta > 0 ? 'text-primary' : 'text-secondary'}>
             {delta >= 0 ? '+' : ''}
             {delta.toFixed(digits)}
         </span>

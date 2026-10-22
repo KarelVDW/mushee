@@ -71,11 +71,13 @@ const MIGRATIONS: Array<{ name: string; sql: string }> = [
     },
 ]
 
+/** Serializes concurrent boots (dev server + a route both racing to migrate). */
+const MIGRATION_LOCK_KEY = 727272
+
 async function migrate(pool: Pool): Promise<void> {
     const client = await pool.connect()
     try {
-        // Serialize concurrent boots (dev server + a route both racing here).
-        await client.query('SELECT pg_advisory_lock(727272)')
+        await client.query(`SELECT pg_advisory_lock(${MIGRATION_LOCK_KEY})`)
         await client.query('CREATE SCHEMA IF NOT EXISTS eval')
         await client.query(
             'CREATE TABLE IF NOT EXISTS eval.migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())',
@@ -94,7 +96,7 @@ async function migrate(pool: Pool): Promise<void> {
             }
         }
     } finally {
-        await client.query('SELECT pg_advisory_unlock(727272)').catch(() => {})
+        await client.query(`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`).catch(() => {})
         client.release()
     }
 }
@@ -102,7 +104,7 @@ async function migrate(pool: Pool): Promise<void> {
 /** Survives Next dev-server HMR: one pool, migrated exactly once per process. */
 const globalDb = globalThis as unknown as { __evalDb?: { pool: Pool; ready: Promise<void> } }
 
-export function getDb(): { pool: Pool; ready: Promise<void> } {
+function getDb(): { pool: Pool; ready: Promise<void> } {
     if (!globalDb.__evalDb) {
         const pool = buildPool()
         globalDb.__evalDb = { pool, ready: migrate(pool) }
@@ -110,7 +112,7 @@ export function getDb(): { pool: Pool; ready: Promise<void> } {
     return globalDb.__evalDb
 }
 
-export async function query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
+export async function query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
     const { pool, ready } = getDb()
     await ready
     const result = await pool.query(sql, params)

@@ -118,6 +118,17 @@ export class ApiError extends Error {
     }
 }
 
+/**
+ * An error as display text, the same on both sides of the wire: routes return
+ * it as `{ error }`, pages render it. String(err) would prefix a generic
+ * 'Error: ' on each side and double it; a specific name (NotAllowedError,
+ * TypeError) is kept because it is part of the diagnosis.
+ */
+export function errorText(err: unknown): string {
+    if (!(err instanceof Error)) return String(err)
+    return err.name && err.name !== 'Error' ? `${err.name}: ${err.message}` : err.message
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(path, init)
     if (!response.ok) {

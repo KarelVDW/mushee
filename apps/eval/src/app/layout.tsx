@@ -22,10 +22,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-    title: {
-        default: 'Solkey Eval',
-        template: '%s · Solkey Eval',
-    },
+    title: 'Solkey Eval',
     description: 'Corpus and benchmarking workbench for the recording pipeline.',
     robots: {
         index: false,

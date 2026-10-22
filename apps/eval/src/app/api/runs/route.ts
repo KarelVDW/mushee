@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { join } from 'path'
 import { promisify } from 'util'
 
+import { errorText } from '@/lib/api'
 import { API_DIR, API_TSX_BIN, REAL_ROOT } from '@/server/paths'
 import { getCorpus, insertRun, listRuns } from '@/server/repo'
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (err) {
-        return NextResponse.json({ error: String(err) }, { status: 500 })
+        return NextResponse.json({ error: errorText(err) }, { status: 500 })
     }
 
     const report = JSON.parse(readFileSync(outPath, 'utf8')) as {
