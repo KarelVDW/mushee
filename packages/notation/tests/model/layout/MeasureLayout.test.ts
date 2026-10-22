@@ -1,6 +1,7 @@
 import { BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import type { KeySignature } from '@mushee/notation/model/KeySignature'
 import { BarlineLayout } from '@mushee/notation/model/layout/BarlineLayout'
+import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
 import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
@@ -48,18 +49,18 @@ describe('MeasureLayout', () => {
             if (!m) throw new Error('expected firstMeasure')
             score.setKeySignature(m.firstNote, 2)
             const layout = m.layout
-            const keyWidth = new KeySignatureWidth(m.keySignature.drawnAccidentals).total
+            const keyWidth = new KeySignatureWidth(KeySignatureLayout.drawnAccidentalsFor(m.keySignature)).total
             expect(layout.getXForElement(m.clef)).toBe(0)
             expect(layout.getXForElement(m.keySignature)).toBe(m.clef.layout.width.total)
             expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total + keyWidth)
         })
 
-        it('skips a C-major key signature even when the shows-flag is set', () => {
+        it('does not show a C-major key signature with nothing to cancel, even at the score start', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            expect(m.layout.showsKeySignature).toBe(true)
-            expect(m.keySignature.drawnAccidentals).toHaveLength(0)
+            expect(KeySignatureLayout.drawnAccidentalsFor(m.keySignature)).toHaveLength(0)
+            expect(m.layout.showsKeySignature).toBe(false)
             // Nothing is drawn, so the key occupies no slot.
             expect(() => m.layout.getXForElement(m.keySignature)).toThrow('Element not spaced in measure')
             // The time signature follows the clef directly.

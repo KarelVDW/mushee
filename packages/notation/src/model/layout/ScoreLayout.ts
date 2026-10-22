@@ -16,6 +16,7 @@ import type { Note } from '../Note'
 import type { Score } from '../Score'
 import { BarlineLayout } from './BarlineLayout'
 import { DisplayedAccidentals } from './DisplayedAccidentals'
+import { KeySignatureLayout } from './KeySignatureLayout'
 import { KeySignatureWidth } from './KeySignatureWidth'
 import { MeasureLayout } from './MeasureLayout'
 import { NoteWidth } from './NoteWidth'
@@ -227,9 +228,10 @@ export class ScoreLayout {
         return score.measures.map((measure) => {
             const accidentals = new DisplayedAccidentals(measure).byNote
             const notePairs = measure.notes.map((note) => [note, new NoteWidth(note, accidentals.get(note))] as [Note, NoteWidth])
-            const leadingKeyWidth = new KeySignatureWidth(measure.keySignature.drawnAccidentals)
+            const leadingKeyAccidentals = KeySignatureLayout.drawnAccidentalsFor(measure.keySignature)
+            const leadingKeyWidth = new KeySignatureWidth(leadingKeyAccidentals)
             const midKeyPairs = measure.midMeasureKeySignatures.map(
-                (key) => [key, new KeySignatureWidth(key.drawnAccidentals)] as [KeySignature, KeySignatureWidth],
+                (key) => [key, new KeySignatureWidth(KeySignatureLayout.drawnAccidentalsFor(key))] as [KeySignature, KeySignatureWidth],
             )
             const noteWidths = new Map(notePairs)
             const keyWidths = new Map<KeySignature, KeySignatureWidth>([[measure.keySignature, leadingKeyWidth], ...midKeyPairs])
@@ -256,7 +258,7 @@ export class ScoreLayout {
                 leadingKeyWidth,
                 fixedWidth,
                 base,
-                leadingKeyDrawnSignature: measure.keySignature.drawnAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
+                leadingKeyDrawnSignature: leadingKeyAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
             }
         })
     }

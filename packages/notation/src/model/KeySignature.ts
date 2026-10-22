@@ -71,17 +71,6 @@ export class KeySignature {
         return (key?.fifths ?? 0) === fifths && key?.mode === mode
     }
 
-    /** Fifths of the key in effect immediately before this one — the previous measure's last key, or the key earlier in this measure. */
-    get precedingFifths(): number {
-        if (this.beatPosition > 0) return this.measure.keyBefore(this.beatPosition).fifths
-        return this.measure.getPrevious()?.lastKey.fifths ?? 0
-    }
-
-    /** The accidentals drawn for this key, in left-to-right order, with the pitch each occupies. */
-    get accidentals(): KeyAccidental[] {
-        return KeySignature.accidentalsForFifths(this.fifths)
-    }
-
     /** The accidentals (glyph + canonical treble pitch) a key of `fifths` draws, left to right. */
     static accidentalsForFifths(fifths: number): KeyAccidental[] {
         if (fifths > 0) return SHARP_PITCHES.slice(0, fifths).map((p) => ({ glyphName: 'accidentalSharp', ...p }))
@@ -98,18 +87,6 @@ export class KeySignature {
         const letter = SHARP_ORDER[(((fifths + 1) % 7) + 7) % 7]
         const alter = KeySignature.alterInKey(fifths, letter)
         return letter + (alter > 0 ? '♯' : alter < 0 ? '♭' : '')
-    }
-
-    /**
-     * The accidentals actually drawn on the staff for this key in context. Only a switch *to* C major draws
-     * cancellation naturals (one for each of the preceding key's sharps/flats, to mark the transition); every
-     * other key just draws its own accidentals.
-     */
-    get drawnAccidentals(): KeyAccidental[] {
-        if (this.fifths !== 0) return this.accidentals
-        const preceding = this.precedingFifths
-        if (preceding === 0) return [] // C major with nothing before it to cancel
-        return KeySignature.accidentalsForFifths(preceding).map((a) => ({ glyphName: 'accidentalNatural', name: a.name, octave: a.octave }))
     }
 
     /** Semitone alteration this key signature applies to the given note name (+1 sharp, −1 flat, 0 natural). */

@@ -257,9 +257,9 @@ describe('ScoreLayout', () => {
             expect(layout.rows.map((row) => row.measures.length)).toEqual([3, 2, 1])
             expect(layout.rows[1].measures[0]).toBe(score.measures[3])
             expect(layout.rows[2].measures[0]).toBe(score.measures[5])
-            // Every row start shows clef + key signature; mid-row measures show neither.
+            // Every row start shows its clef (its C-major key draws nothing); mid-row measures show neither.
             expect(score.measures[3].layout.showsClef).toBe(true)
-            expect(score.measures[3].layout.showsKeySignature).toBe(true)
+            expect(score.measures[3].layout.showsKeySignature).toBe(false)
             expect(score.measures[5].layout.showsClef).toBe(true)
             expect(score.measures[4].layout.showsClef).toBe(false)
         })
@@ -293,12 +293,14 @@ describe('ScoreLayout', () => {
     })
 
     describe('shows-flags (diff-based against the previous measure)', () => {
-        it('the first measure shows clef, key signature, and time signature', () => {
+        it('the first measure shows clef and time signature, and its key once it has accidentals', () => {
             const score = makeScore(2)
             const layout = score.measures[0].layout
             expect(layout.showsClef).toBe(true)
-            expect(layout.showsKeySignature).toBe(true)
+            expect(layout.showsKeySignature).toBe(false) // C major draws nothing
             expect(layout.showsTimeSignature).toBe(true)
+            score.setKeySignature(score.measures[0].firstNote, 1)
+            expect(score.measures[0].layout.showsKeySignature).toBe(true)
         })
 
         it('a mid-row measure with unchanged context shows none of them', () => {
@@ -346,6 +348,7 @@ describe('ScoreLayout', () => {
 
         it('a row start forces clef and key but not the time signature', () => {
             const score = makeScore(5)
+            score.setKeySignature(score.measures[0].firstNote, 1) // G major carries to the row start
             const rowStart = score.layout.rows[1].measures[0]
             expect(rowStart.layout.showsClef).toBe(true)
             expect(rowStart.layout.showsKeySignature).toBe(true)

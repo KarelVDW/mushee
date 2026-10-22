@@ -54,6 +54,7 @@ export class MeasureLayout {
     readonly measureX: number
     readonly measureWidth: number
     readonly showsClef: boolean
+    /** The leading key is drawn: its flag is set (changed, or a row start) and it has something to draw — C major with nothing to cancel draws nothing. */
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
     readonly barline: BarlineLayout | null
@@ -76,16 +77,16 @@ export class MeasureLayout {
         this.measureX = context.x
         this.measureWidth = context.width
         this.showsClef = context.showsClef
-        this.showsKeySignature = context.showsKeySignature
         this.showsTimeSignature = context.showsTimeSignature
         this.reuseSignature = context.reuseSignature
 
+        const keyWidthOf = (key: KeySignature): KeySignatureWidth => {
+            const width = context.keyWidths.get(key)
+            if (!width) throw new Error('Key signature width missing from layout context')
+            return width
+        }
         const widthOf = (el: MeasureElement): PhysicalWidth => {
-            if (el instanceof KeySignature) {
-                const width = context.keyWidths.get(el)
-                if (!width) throw new Error('Key signature width missing from layout context')
-                return width
-            }
+            if (el instanceof KeySignature) return keyWidthOf(el)
             if (el instanceof Note) {
                 const width = context.noteWidths.get(el)
                 if (!width) throw new Error('Note width missing from layout context')
@@ -99,7 +100,8 @@ export class MeasureLayout {
         // (at equal beats: clefs before keys before the note). ---
         const leading: Array<Clef | KeySignature | TimeSignature> = []
         if (context.showsClef) leading.push(measure.clef)
-        if (context.showsKeySignature && measure.keySignature.drawnAccidentals.length > 0) leading.push(measure.keySignature)
+        this.showsKeySignature = context.showsKeySignature && keyWidthOf(measure.keySignature).drawnAccidentals.length > 0
+        if (this.showsKeySignature) leading.push(measure.keySignature)
         if (context.showsTimeSignature) leading.push(measure.timeSignature)
 
         const mids: Array<{ el: Clef | KeySignature; beat: number; precedence: number }> = [
