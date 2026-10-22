@@ -31,7 +31,7 @@ describe('ScoreScheduler', () => {
     it('endTime is -1 until scheduling completes, then equals the last note end', () => {
         const { player } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)])
+        scheduler.cue(scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)]))
         scheduler.reset()
 
         expect(scheduler.endTime).toBe(-1)
@@ -48,7 +48,7 @@ describe('ScoreScheduler', () => {
     it('schedules a midi note per pitched note and skips rests', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4), rest('q'), pitched('E', 4), rest('q')])
+        scheduler.cue(scoreWithNotes([pitched('C', 4), rest('q'), pitched('E', 4), rest('q')]))
         scheduler.reset()
 
         player.currentTime = 100
@@ -73,7 +73,7 @@ describe('ScoreScheduler', () => {
         // (setInstrument would rewrite the note to preserve the sounding pitch instead).
         score.seedInstrument(Instrument.Clarinet)
         expect(Instrument.Clarinet.chromaticTranspose).not.toBe(0)
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
         player.currentTime = 100
         scheduler.tick()
@@ -85,7 +85,7 @@ describe('ScoreScheduler', () => {
     it('records the correct timeline entry fields', () => {
         const { player } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
+        scheduler.cue(scoreWithNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')]))
         scheduler.reset()
         player.currentTime = 100
         scheduler.tick()
@@ -102,7 +102,7 @@ describe('ScoreScheduler', () => {
         const firstMeasure = score.firstMeasure
         if (!firstMeasure) throw new Error('expected a first measure')
         firstMeasure.setTempo(0, 120)
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -118,7 +118,7 @@ describe('ScoreScheduler', () => {
         const firstMeasure = score.firstMeasure
         if (!firstMeasure) throw new Error('expected a first measure')
         firstMeasure.setTempo(0, 60)
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -134,7 +134,7 @@ describe('ScoreScheduler', () => {
         const m = score.firstMeasure
         if (!m) throw new Error('expected a first measure')
         m.setTempo(2, 180) // change tempo at beat 2
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -152,7 +152,7 @@ describe('ScoreScheduler', () => {
         const score = scoreWithNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
         score.measures[0].setTempo(0, 60)
         score.measures[0].addTempo(1, 120) // mid-way through the C
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -171,8 +171,8 @@ describe('ScoreScheduler', () => {
         score.measures[0].addTempo(1.5, 120) // between the D and E onsets
         const scheduler = new ScoreScheduler(notes.player)
         const metronome = new Metronome(clicks.player)
-        scheduler.score = score
-        metronome.score = score
+        scheduler.cue(score)
+        metronome.cue(score)
         scheduler.reset()
         metronome.reset()
 
@@ -195,8 +195,7 @@ describe('ScoreScheduler', () => {
         const onsets = (startNote: Note | null) => {
             const { player, scheduled } = fakePlayer()
             const scheduler = new ScoreScheduler(player)
-            scheduler.score = score
-            scheduler.startNote = startNote
+            scheduler.cue(score, startNote)
             scheduler.reset()
             player.currentTime = 100
             scheduler.tick()
@@ -218,7 +217,7 @@ describe('ScoreScheduler', () => {
         const start = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
         const stop = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'stop' })
         m.addNotes([start, stop])
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -239,7 +238,7 @@ describe('ScoreScheduler', () => {
         const start = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
         const continuation = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
         m.addNotes([start, continuation])
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -258,7 +257,7 @@ describe('ScoreScheduler', () => {
         const into = new Note({ duration: new Duration({ type: 'h' }), pitch: new Pitch({ name: 'C', octave: 4 }) })
         const score = scoreWithNotes([pitched('E', 4, 'h'), held], [into, rest('h')])
         score.measures[1].setTempo(0, 120)
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -276,7 +275,7 @@ describe('ScoreScheduler', () => {
         const m = score.addMeasure(0)
         const lonely = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 4 }), tie: 'start' })
         m.addNotes([lonely])
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -295,7 +294,7 @@ describe('ScoreScheduler', () => {
         // A stray 'stop' after a different pitch is not a continuation of anything: it must sound.
         const stray = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'E', octave: 4 }), tie: 'stop' })
         m.addNotes([start, stop, stray])
-        scheduler.score = score
+        scheduler.cue(score)
         scheduler.reset()
 
         player.currentTime = 100
@@ -308,7 +307,7 @@ describe('ScoreScheduler', () => {
     it('advances measureIdx when the current measure is exhausted, and finishes', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4)], [pitched('D', 4)])
+        scheduler.cue(scoreWithNotes([pitched('C', 4)], [pitched('D', 4)]))
         scheduler.reset()
 
         player.currentTime = 100
@@ -321,7 +320,7 @@ describe('ScoreScheduler', () => {
     it('schedules incrementally as the clock advances within the look-ahead window', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)])
+        scheduler.cue(scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)]))
         scheduler.reset()
 
         player.currentTime = 0
@@ -340,7 +339,7 @@ describe('ScoreScheduler', () => {
     it('reset() handles an empty score with no first measure', () => {
         const { player } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = new Score() // no measures => firstMeasure is null
+        scheduler.cue(new Score()) // no measures => firstMeasure is null
         expect(() => scheduler.reset()).not.toThrow()
     })
 
@@ -348,8 +347,7 @@ describe('ScoreScheduler', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
         const score = scoreWithNotes([pitched('C', 4), pitched('D', 4), pitched('E', 4), pitched('F', 4)])
-        scheduler.score = score
-        scheduler.startNote = score.measures[0].notes[2] // start at the E
+        scheduler.cue(score, score.measures[0].notes[2]) // start at the E
         scheduler.reset()
 
         player.currentTime = 100
@@ -366,8 +364,7 @@ describe('ScoreScheduler', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
         const score = scoreWithNotes([pitched('C', 4)], [pitched('D', 4)])
-        scheduler.score = score
-        scheduler.startNote = score.measures[1].notes[0]
+        scheduler.cue(score, score.measures[1].notes[0])
         scheduler.reset()
 
         player.currentTime = 100
@@ -381,8 +378,7 @@ describe('ScoreScheduler', () => {
         const scheduler = new ScoreScheduler(player)
         const score = scoreWithNotes([pitched('C', 4), pitched('D', 4)], [pitched('E', 4), pitched('F', 4)])
         score.measures[0].setTempo(0, 60) // carries into measure 1
-        scheduler.score = score
-        scheduler.startNote = score.measures[1].notes[0]
+        scheduler.cue(score, score.measures[1].notes[0])
         scheduler.reset()
 
         player.currentTime = 100
@@ -394,10 +390,9 @@ describe('ScoreScheduler', () => {
     it('startNote from a different score is ignored (falls back to the top)', () => {
         const { player, scheduled } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4), pitched('D', 4)])
         // A stale selection left over from another score must not redirect playback.
         const otherScore = scoreWithNotes([pitched('G', 4)])
-        scheduler.startNote = otherScore.measures[0].notes[0]
+        scheduler.cue(scoreWithNotes([pitched('C', 4), pitched('D', 4)]), otherScore.measures[0].notes[0])
         scheduler.reset()
 
         player.currentTime = 100
@@ -409,7 +404,7 @@ describe('ScoreScheduler', () => {
     it('reset() clears prior entries and re-reads tempo', () => {
         const { player } = fakePlayer()
         const scheduler = new ScoreScheduler(player)
-        scheduler.score = scoreWithNotes([pitched('C', 4)])
+        scheduler.cue(scoreWithNotes([pitched('C', 4)]))
         scheduler.reset()
         player.currentTime = 100
         scheduler.tick()

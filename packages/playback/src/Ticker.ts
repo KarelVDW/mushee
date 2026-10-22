@@ -77,7 +77,7 @@ export class Ticker {
         this.animationId = requestAnimationFrame(this.tick)
     }
 
-    /** Join `tickable` to the pass in flight (e.g. the metronome toggled on mid-playback). */
+    /** Join `tickable` to the pass in flight (e.g. the metronome toggled on mid-playback, see Metronome.joinAt). */
     addTickable(tickable: Tickable) {
         this.tickables.add(tickable)
     }

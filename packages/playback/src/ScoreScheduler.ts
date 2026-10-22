@@ -30,9 +30,8 @@ export interface TimelineEntry {
  * every tempo marking wherever a pass starts.
  */
 export class ScoreScheduler implements Tickable {
-    score: Score | null = null
-    /** Note to begin playback from on the next pass. Null = start of score. */
-    startNote: Note | null = null
+    private score: Score | null = null
+    private startNote: Note | null = null
     readonly entries: TimelineEntry[] = []
 
     private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
@@ -45,6 +44,16 @@ export class ScoreScheduler implements Tickable {
 
     constructor(midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>) {
         this.midiPlayer = midiPlayer
+    }
+
+    /**
+     * Set up the next pass: play `score` from `startNote`, or from the top when
+     * it is null (or belongs to another score). The pass begins on the next
+     * reset() (Ticker.play).
+     */
+    cue(score: Score, startNote: Note | null = null): void {
+        this.score = score
+        this.startNote = startNote
     }
 
     /** Time at which the last note ends, or -1 if still scheduling. */

@@ -63,11 +63,8 @@ export class EvalPlayer {
 
     playScore(score: Score, options: { metronome: boolean; onFinish?: () => void }): void {
         this.stop()
-        this.scheduler.score = score
-        this.scheduler.startNote = null
-        this.metronome.score = score
-        this.metronome.startMeasureIndex = 0
-        this.metronome.startBeat = 0
+        this.scheduler.cue(score)
+        this.metronome.cue(score)
 
         const tickables: Tickable[] = [this.scheduler]
         if (options.metronome) tickables.push(this.metronome)
@@ -93,9 +90,7 @@ export class EvalPlayer {
         this.stop()
         await this.recorder.start()
 
-        this.metronome.score = clickScore
-        this.metronome.startMeasureIndex = 0
-        this.metronome.startBeat = 0
+        this.metronome.cue(clickScore)
 
         this.midiPlayer.start()
         const clockStartMs = performance.now()

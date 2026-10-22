@@ -21,11 +21,9 @@ const EPSILON = 1e-6
  * notes ScoreScheduler plays whatever tempo markings sit between them.
  */
 export class Metronome implements Tickable {
-    score: Score | null = null
-    /** Measure index to begin ticking from. Default 0 = start of score. */
-    startMeasureIndex = 0
-    /** Beat (quarter units) within the start measure to begin ticking from. Default 0 = downbeat. */
-    startBeat = 0
+    private score: Score | null = null
+    private startMeasureIndex = 0
+    private startBeat = 0
 
     private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
     private measureIdx = 0
@@ -37,6 +35,17 @@ export class Metronome implements Tickable {
         this.midiPlayer = midiPlayer
     }
 
+    /**
+     * Set up the next pass: click through `score` from `startBeat` (quarter
+     * units) of measure `startMeasureIndex` — by default the top of the score.
+     * The pass begins on the next reset() (Ticker.play) or joinAt().
+     */
+    cue(score: Score, startMeasureIndex = 0, startBeat = 0): void {
+        this.score = score
+        this.startMeasureIndex = startMeasureIndex
+        this.startBeat = startBeat
+    }
+
     reset() {
         this.measureIdx = this.startMeasureIndex
         this.beat = this.startBeat
@@ -45,12 +54,13 @@ export class Metronome implements Tickable {
     }
 
     /**
-     * Fast-forward past clicks up to `elapsed` without scheduling them. Used
-     * when the metronome joins a pass already in flight (toggled on
-     * mid-playback) — without this, tick() would burst-schedule every click
-     * since the pass began.
+     * Restart the cued pass and fast-forward past the clicks up to `elapsed`
+     * without scheduling them. Used when the metronome joins a pass already in
+     * flight (toggled on mid-playback) — without this, tick() would
+     * burst-schedule every click since the pass began.
      */
-    syncTo(elapsed: number): void {
+    joinAt(elapsed: number): void {
+        this.reset()
         for (let click = this.nextClick(); click && click.time <= elapsed; click = this.nextClick()) {
             this.beat = click.beat + click.pulse
         }

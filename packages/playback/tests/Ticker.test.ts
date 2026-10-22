@@ -185,7 +185,7 @@ describe('Ticker', () => {
         fireFrame()
 
         expect(late.tickCount).toBe(1)
-        // Joining does not reset — the caller aligns state itself (e.g. Metronome.syncTo).
+        // Joining does not reset — the caller aligns state itself (e.g. Metronome.joinAt).
         expect(late.resetCount).toBe(0)
     })
 

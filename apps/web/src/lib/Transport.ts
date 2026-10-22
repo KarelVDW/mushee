@@ -70,11 +70,8 @@ export class Transport {
         this.stop()
         const { score, startNote } = options
 
-        this.scheduler.score = score
-        this.scheduler.startNote = startNote
-        this.metronome.score = score
-        this.metronome.startMeasureIndex = startNote?.measure.index ?? 0
-        this.metronome.startBeat = startNote ? startNote.measure.beatOffsetOf(startNote) : 0
+        this.scheduler.cue(score, startNote)
+        this.metronome.cue(score, startNote?.measure.index ?? 0, startNote ? startNote.measure.beatOffsetOf(startNote) : 0)
         this.cursor.bind(options.cursorEl, options.resolvePosition)
 
         const tickables: Tickable[] = [this.scheduler, this.cursor]
@@ -124,9 +121,7 @@ export class Transport {
         // engine already released the stream, so don't start a zombie pass.
         if (this.recorder.state === 'idle') return null
 
-        this.metronome.score = options.score
-        this.metronome.startMeasureIndex = options.startMeasureIndex
-        this.metronome.startBeat = 0
+        this.metronome.cue(options.score, options.startMeasureIndex)
 
         this.midiPlayer.start()
         this._mode = 'recording'
@@ -155,8 +150,7 @@ export class Transport {
         if (this._mode !== 'playing' && this._mode !== 'paused') return
         if (enabled) {
             // Joining mid-pass: skip the clicks that already elapsed.
-            this.metronome.reset()
-            this.metronome.syncTo(this.midiPlayer.currentTime)
+            this.metronome.joinAt(this.midiPlayer.currentTime)
             this.ticker.addTickable(this.metronome)
         } else {
             this.ticker.removeTickable(this.metronome)
