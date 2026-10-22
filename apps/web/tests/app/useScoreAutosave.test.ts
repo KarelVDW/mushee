@@ -4,13 +4,13 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useScoreAutosave } from '@/app/scores/[id]/useScoreAutosave'
+import { type AutosaveStatus, useScoreAutosave } from '@/app/scores/[id]/useScoreAutosave'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 type PatchBody = Record<string, unknown>
-type MutateOptions = { onError?: (error: unknown) => void }
+type MutateOptions = { onSuccess?: () => void; onError?: (error: unknown) => void }
 
 // The PATCH mutation, captured: each call's body, and its options so a test can fail it.
 const { mutate } = vi.hoisted(() => ({ mutate: vi.fn<(body: PatchBody, options?: MutateOptions) => void>() }))
@@ -31,6 +31,8 @@ function editedScore(index = 1): Score {
 const body = (call: number): PatchBody => mutate.mock.calls[call][0]
 /** Settle call `call`'s PATCH as failed, the way React Query reports it. */
 const fail = (call: number) => act(() => mutate.mock.calls[call][1]?.onError?.(new Error('offline')))
+/** Settle call `call`'s PATCH as saved. */
+const succeed = (call: number) => act(() => mutate.mock.calls[call][1]?.onSuccess?.())
 const advance = (ms: number) =>
     act(() => {
         vi.advanceTimersByTime(ms)
@@ -39,10 +41,15 @@ const advance = (ms: number) =>
 describe('useScoreAutosave', () => {
     let container: HTMLElement
     let root: Root
-    let saveToApi: ReturnType<typeof useScoreAutosave>
+    let saveToApi: ReturnType<typeof useScoreAutosave>['save']
+    let retryNow: () => void
+    let status: AutosaveStatus
 
     function Harness() {
-        saveToApi = useScoreAutosave('score-1')
+        const autosave = useScoreAutosave('score-1')
+        saveToApi = autosave.save
+        retryNow = autosave.retryNow
+        status = autosave.status
         return null
     }
 
@@ -126,5 +133,75 @@ describe('useScoreAutosave', () => {
         advance(DEBOUNCE_MS)
         expect(mutate).toHaveBeenCalledTimes(2)
         expect(body(1)).toEqual(newerPatch)
+    })
+
+    describe('status', () => {
+        it('reads saving from the first change, through the debounce and the request, then saved', () => {
+            expect(status.getSnapshot()).toEqual({ state: 'saved', landed: 0 })
+            saveToApi({ title: 'Renamed' })
+            expect(status.state).toBe('saving')
+            advance(DEBOUNCE_MS)
+            expect(mutate).toHaveBeenCalledTimes(1)
+            expect(status.state).toBe('saving')
+            succeed(0)
+            expect(status.getSnapshot()).toEqual({ state: 'saved', landed: 1 })
+        })
+
+        it('stays saving while newer changes wait, and lands once they are sent', () => {
+            saveToApi({ title: 'First' })
+            advance(DEBOUNCE_MS)
+            saveToApi({ title: 'Second' })
+            succeed(0)
+            expect(status.state).toBe('saving')
+            advance(DEBOUNCE_MS)
+            succeed(1)
+            expect(status.getSnapshot()).toEqual({ state: 'saved', landed: 1 })
+        })
+
+        it('settles back to saved without a landing when there was nothing to send', () => {
+            saveToApi({})
+            expect(status.state).toBe('saving')
+            advance(DEBOUNCE_MS)
+            expect(status.getSnapshot()).toEqual({ state: 'saved', landed: 0 })
+        })
+
+        it('turns retrying on a failure and stays so through new edits until a save gets through', () => {
+            saveToApi({ title: 'Renamed' })
+            advance(DEBOUNCE_MS)
+            fail(0)
+            expect(status.state).toBe('retrying')
+            saveToApi({ score: editedScore() })
+            expect(status.state).toBe('retrying')
+            advance(DEBOUNCE_MS)
+            expect(status.state).toBe('retrying')
+            succeed(1)
+            expect(status.getSnapshot()).toEqual({ state: 'saved', landed: 1 })
+        })
+
+        it('retries now on request, without waiting out the retry delay or the debounce', () => {
+            saveToApi({ title: 'Renamed' })
+            advance(DEBOUNCE_MS)
+            const sent = body(0)
+            fail(0)
+            act(() => retryNow())
+            expect(mutate).toHaveBeenCalledTimes(2)
+            expect(body(1)).toEqual(sent)
+            succeed(1)
+            expect(status.state).toBe('saved')
+            // The scheduled retry was called off: nothing more goes out.
+            advance(RETRY_MS + DEBOUNCE_MS)
+            expect(mutate).toHaveBeenCalledTimes(2)
+        })
+
+        it('notifies subscribers on a change and not on a repeat', () => {
+            const listener = vi.fn()
+            const unsubscribe = status.subscribe(listener)
+            saveToApi({ title: 'a' })
+            saveToApi({ title: 'b' })
+            expect(listener).toHaveBeenCalledTimes(1)
+            unsubscribe()
+            advance(DEBOUNCE_MS)
+            expect(listener).toHaveBeenCalledTimes(1)
+        })
     })
 })
