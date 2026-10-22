@@ -1,15 +1,17 @@
+import { BadRequestException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
 
-import { AnnouncementsController } from '../../src/admin/announcements.controller'
+import { AudienceFilterDto } from '../../src/admin/dto/audience-filter.dto'
 
 /**
  * GET /admin/audience and the CSV export take the audience filter as query
  * parameters (the console's `audienceQuery` produces them). The parser must
- * accept exactly that form and ignore anything else.
+ * accept exactly that form and ignore anything else, except a malformed date,
+ * which is a 400 rather than a silently wider audience.
  */
-describe('AnnouncementsController.filtersFromQuery', () => {
+describe('AudienceFilterDto.fromQuery', () => {
     it('parses the console query form field by field', () => {
-        const f = AnnouncementsController.filtersFromQuery({
+        const f = AudienceFilterDto.fromQuery({
             tiers: 'beta, free,,studio ',
             betaStatus: 'approved',
             signedUpAfter: '2026-07-01',
@@ -28,7 +30,7 @@ describe('AnnouncementsController.filtersFromQuery', () => {
     })
 
     it('an empty query is an empty filter with the booleans false', () => {
-        const f = AnnouncementsController.filtersFromQuery({})
+        const f = AudienceFilterDto.fromQuery({})
         expect(f.tiers).toBeUndefined()
         expect(f.betaStatus).toBeUndefined()
         expect(f.activeWithinDays).toBeUndefined()
@@ -37,7 +39,7 @@ describe('AnnouncementsController.filtersFromQuery', () => {
     })
 
     it('drops unknown beta statuses, non-positive or fractional day counts, and non-"true" booleans', () => {
-        const f = AnnouncementsController.filtersFromQuery({
+        const f = AudienceFilterDto.fromQuery({
             betaStatus: 'admin',
             activeWithinDays: '-3',
             verifiedOnly: '1',
@@ -47,8 +49,15 @@ describe('AnnouncementsController.filtersFromQuery', () => {
         expect(f.activeWithinDays).toBeUndefined()
         expect(f.verifiedOnly).toBe(false)
         expect(f.includeDeletionRequested).toBe(false)
-        expect(AnnouncementsController.filtersFromQuery({ activeWithinDays: '2.5' }).activeWithinDays).toBeUndefined()
-        expect(AnnouncementsController.filtersFromQuery({ activeWithinDays: 'abc' }).activeWithinDays).toBeUndefined()
-        expect(AnnouncementsController.filtersFromQuery({ tiers: ' , ' }).tiers).toEqual([])
+        expect(AudienceFilterDto.fromQuery({ activeWithinDays: '2.5' }).activeWithinDays).toBeUndefined()
+        expect(AudienceFilterDto.fromQuery({ activeWithinDays: 'abc' }).activeWithinDays).toBeUndefined()
+        expect(AudienceFilterDto.fromQuery({ tiers: ' , ' }).tiers).toEqual([])
+    })
+
+    it('rejects a malformed sign-up date instead of widening the audience', () => {
+        expect(() => AudienceFilterDto.fromQuery({ signedUpAfter: 'garbage' })).toThrow(BadRequestException)
+        expect(() => AudienceFilterDto.fromQuery({ signedUpAfter: 'garbage' })).toThrow('signedUpAfter must be an ISO 8601 date')
+        expect(() => AudienceFilterDto.fromQuery({ signedUpBefore: '01/09/2026' })).toThrow('signedUpBefore must be an ISO 8601 date')
+        expect(AudienceFilterDto.fromQuery({ signedUpAfter: '2026-07-01T00:00:00.000Z' }).signedUpAfter).toBe('2026-07-01T00:00:00.000Z')
     })
 })

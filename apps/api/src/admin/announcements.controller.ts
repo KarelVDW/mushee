@@ -3,7 +3,7 @@ import type { FastifyReply } from 'fastify'
 
 import { AdminSecretGuard } from './admin-secret.guard'
 import { AnnouncementsService } from './announcements.service'
-import { AudienceFilterDto, BETA_STATUS_FILTERS, type BetaStatusFilter } from './dto/audience-filter.dto'
+import { AudienceFilterDto } from './dto/audience-filter.dto'
 import { PreviewAnnouncementDto } from './dto/preview-announcement.dto'
 import { SendAnnouncementDto } from './dto/send-announcement.dto'
 
@@ -20,13 +20,13 @@ export class AnnouncementsController {
     /** Who a filter reaches — count and a sample — before anything is sent. */
     @Get('audience')
     audience(@Query() query: Record<string, string | undefined>) {
-        return this.announcementsService.audience(AnnouncementsController.filtersFromQuery(query))
+        return this.announcementsService.audience(AudienceFilterDto.fromQuery(query))
     }
 
     /** The same audience as a CSV download (for SendGrid Marketing Campaigns and the like). */
     @Get('audience/export.csv')
     async audienceCsv(@Query() query: Record<string, string | undefined>, @Res() reply: FastifyReply) {
-        const csv = await this.announcementsService.audienceCsv(AnnouncementsController.filtersFromQuery(query))
+        const csv = await this.announcementsService.audienceCsv(AudienceFilterDto.fromQuery(query))
         return reply
             .type('text/csv; charset=utf-8')
             .header('Content-Disposition', `attachment; filename="solkey-audience-${new Date().toISOString().slice(0, 10)}.csv"`)
@@ -53,26 +53,5 @@ export class AnnouncementsController {
     @Get('announcements')
     announcements() {
         return this.announcementsService.listAnnouncements()
-    }
-
-    /** Query-string form of the audience filter (`tiers` comma-separated, booleans as 'true'). */
-    static filtersFromQuery(query: Record<string, string | undefined>): AudienceFilterDto {
-        const filters = new AudienceFilterDto()
-        if (query.tiers)
-            filters.tiers = query.tiers
-                .split(',')
-                .map((t) => t.trim())
-                .filter(Boolean)
-        if (query.betaStatus && (BETA_STATUS_FILTERS as readonly string[]).includes(query.betaStatus))
-            filters.betaStatus = query.betaStatus as BetaStatusFilter
-        if (query.signedUpAfter) filters.signedUpAfter = query.signedUpAfter
-        if (query.signedUpBefore) filters.signedUpBefore = query.signedUpBefore
-        if (query.activeWithinDays) {
-            const days = Number(query.activeWithinDays)
-            if (Number.isInteger(days) && days > 0) filters.activeWithinDays = days
-        }
-        filters.verifiedOnly = query.verifiedOnly === 'true'
-        filters.includeDeletionRequested = query.includeDeletionRequested === 'true'
-        return filters
     }
 }
