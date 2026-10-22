@@ -181,15 +181,19 @@ export default function OnboardingPage() {
     // The picks made on this visit are fresher than the saved answers the hook falls back to.
     const recordFirstMelody = () => firstMelody.start(instruments[0] ?? Instrument.VoiceLead)
 
-    // The plan step's button says what happens next, the price in it for a paid plan.
+    // The button says what happens next: the optional survey is skipped until something in it
+    // is picked, and the plan step names the price for a paid plan.
     const chosenPlan = plans.byId(tier)
     const paidChoice = stepName === 'plan' && !!chosenPlan && isPaidTier(tier)
+    const surveyAnswered = background !== null || goal !== null || source !== null
     const ctaLabel =
-        stepName !== 'plan' || !chosenPlan
-            ? 'Continue'
-            : paidChoice
-              ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
-              : 'Start free'
+        stepName === 'about' && !surveyAnswered
+            ? 'Skip'
+            : stepName !== 'plan' || !chosenPlan
+              ? 'Continue'
+              : paidChoice
+                ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
+                : 'Start free'
     // The verify step moves on by itself; the mic step's own buttons lead until the browser has
     // answered, and a fresh yes moves on by itself too (Back stays meanwhile).
     const showContinue =

@@ -321,11 +321,14 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0)
         await page.getByRole('button', { name: 'Not now' }).click()
 
-        // The optional survey: single-choice rows, nothing chosen up front, Continue always on.
+        // The optional survey: single-choice rows, nothing chosen up front, the way on always there —
+        // 'Skip' until something is picked, then 'Continue'.
         await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
         const background = page.getByRole('radiogroup', { name: 'Where are you with music?' })
         await expect(background.getByRole('radio', { checked: true })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Skip', exact: true })).toBeVisible()
         await background.getByRole('radio', { name: 'Hobbyist' }).click()
+        await expect(page.getByRole('button', { name: 'Skip', exact: true })).toHaveCount(0)
         await expect(background.getByRole('radio', { name: 'Hobbyist' })).toHaveAttribute('aria-checked', 'true')
         await page.getByRole('button', { name: 'Continue' }).click()
 
@@ -348,7 +351,8 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuetext', 'Step 2 of 5')
         await page.getByRole('button', { name: 'Continue' }).click()
         await page.getByRole('button', { name: 'Not now' }).click()
-        await page.getByRole('button', { name: 'Continue' }).click()
+        // Nothing picked in the survey: its button skips it.
+        await page.getByRole('button', { name: 'Skip', exact: true }).click()
 
         await expect(page.getByRole('heading', { name: 'Start free, or pick a plan.' })).toBeVisible()
         await expect(
