@@ -26,7 +26,9 @@ function tier(dailyRecordingCredits: number | null): SubscriptionTier {
 /**
  * Hand-rolled fakes with real arithmetic: the usage upsert accumulates per
  * (user, day) and the pack drawdown clamps at zero, mirroring the SQL the
- * service runs, so the overflow logic is exercised against real state.
+ * service runs, so the overflow logic is exercised against real state. Each
+ * query answers in the shape TypeORM's Postgres driver returns: rows for an
+ * INSERT, `[rows, rowCount]` for an UPDATE.
  */
 function makeService(t: SubscriptionTier, packSeconds = 0) {
     const state = { used: 0, pack: packSeconds }
@@ -46,7 +48,7 @@ function makeService(t: SubscriptionTier, packSeconds = 0) {
                 return Promise.resolve([])
             }
             state.pack = Math.max(0, state.pack - (params[1] as number))
-            return Promise.resolve([{ seconds: state.pack }])
+            return Promise.resolve([[{ seconds: state.pack }], 1])
         }),
         findOneBy: vi.fn(() => Promise.resolve({ seconds: state.pack })),
         delete: vi.fn(() => Promise.resolve({})),
@@ -114,6 +116,15 @@ describe('spend', () => {
         expect(balance.exhausted).toBe(false)
     })
 
+    it('keeps the take going past the daily budget while pack seconds remain', async () => {
+        // The meter's own view of the drawdown: a spend result that read the
+        // UPDATE's answer wrong would report 0 pack seconds and stop the take.
+        const { service, state } = makeService(tier(600), 120)
+        state.used = 600
+        const balance = await service.spend('u1', 1)
+        expect(balance).toMatchObject({ remaining: 0, packSeconds: 119, exhausted: false })
+    })
+
     it('exhausts when the last pack second is drawn', async () => {
         const { service, state } = makeService(tier(600), 1)
         state.used = 600
@@ -147,6 +158,14 @@ describe('pack grants and revocations', () => {
         await service.grantPackSeconds('u1', 900)
         await service.grantPackSeconds('u1', 2700)
         expect(state.pack).toBe(3600)
+    })
+
+    it('revokes inside the caller’s transaction when given one', async () => {
+        const { service, state, balanceRepo } = makeService(tier(600), 300)
+        const manager = { getRepository: vi.fn(() => balanceRepo) }
+        await service.revokePackSeconds('u1', 100, manager as never)
+        expect(manager.getRepository).toHaveBeenCalledTimes(1)
+        expect(state.pack).toBe(200)
     })
 
     it('clamps revocations at zero', async () => {

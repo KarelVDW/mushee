@@ -76,7 +76,7 @@ export class RecordingCreditsService {
         if (limit !== null && used >= limit) {
             // The slice of THIS tick that fell beyond the daily budget (the first
             // tick past the boundary is usually only partially beyond it).
-            const overflow = used - limit - Math.max(0, used - credits - limit)
+            const overflow = Math.min(credits, used - limit)
             packSeconds = overflow > 0 ? await this.drawPackSeconds(userId, overflow) : await this.packSecondsOf(userId)
         }
         return this.toBalance(tier, used, packSeconds)
@@ -104,13 +104,7 @@ export class RecordingCreditsService {
      * that was already partly recorded with can't go negative.
      */
     async revokePackSeconds(userId: string, seconds: number, manager?: EntityManager): Promise<void> {
-        const repo = manager?.getRepository(CreditBalance) ?? this.balanceRepo
-        await repo.query(
-            `UPDATE credit_balances
-       SET seconds = GREATEST(seconds - $2, 0), "updatedAt" = now()
-       WHERE "userId" = $1`,
-            [userId, seconds],
-        )
+        await this.drawPackSeconds(userId, seconds, manager?.getRepository(CreditBalance))
     }
 
     /** Remove all usage rows and the pack balance for a user (account purge). */
@@ -122,8 +116,9 @@ export class RecordingCreditsService {
     /** Atomically draw up to `seconds` from the pack balance; returns what is
      *  left. Clamped at zero — the final tick may be only partly covered, the
      *  same one-tick overshoot the daily budget already tolerates. */
-    private async drawPackSeconds(userId: string, seconds: number): Promise<number> {
-        const rows: Array<{ seconds: number }> = await this.balanceRepo.query(
+    private async drawPackSeconds(userId: string, seconds: number, repo: Repository<CreditBalance> = this.balanceRepo): Promise<number> {
+        // TypeORM's Postgres driver answers an UPDATE with [rows, rowCount], not the rows alone.
+        const [rows]: [Array<{ seconds: number }>, number] = await repo.query(
             `UPDATE credit_balances
        SET seconds = GREATEST(seconds - $2, 0), "updatedAt" = now()
        WHERE "userId" = $1

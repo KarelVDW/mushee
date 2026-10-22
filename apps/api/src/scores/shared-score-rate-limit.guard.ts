@@ -1,6 +1,8 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
+import { positiveIntSetting } from '../common/env'
+
 /** Requests per IP per window on the public share endpoint (default 30/min);
  *  tighter than the global limiter, which keys per-user and allows 120/min. */
 export const SHARED_RATE_LIMIT_MAX = positiveIntSetting(process.env.SHARED_RATE_LIMIT_MAX, 30)
@@ -8,12 +10,6 @@ export const SHARED_RATE_LIMIT_WINDOW_MS = positiveIntSetting(process.env.SHARED
 
 /** Distinct client keys the guard tracks before it forgets everything: bounds memory under an IP flood. */
 export const SHARED_RATE_LIMIT_MAX_TRACKED = 50_000
-
-/** A positive integer from the environment, or the default — a typo must not silently disable the limiter (`count > NaN` is never true). */
-export function positiveIntSetting(raw: string | undefined, fallback: number): number {
-    const n = parseInt(raw ?? '', 10)
-    return Number.isFinite(n) && n > 0 ? n : fallback
-}
 
 /**
  * Fixed-window per-IP counter for the unauthenticated share route. The global

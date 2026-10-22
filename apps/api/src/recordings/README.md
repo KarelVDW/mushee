@@ -6,23 +6,27 @@ into two layers with a deliberate boundary between them.
 ## Root: NestJS transport + persistence
 
 - `recordings.gateway.ts` — WebSocket gateway that receives audio chunks and
-  streams score updates back to the client. Frames to the client:
-  `score-update`, `recording-source`, `recording-health` (transcription
-  down/back — the session stops metering credits while it is down),
-  `recording-limit`, `recording-capped`, `recording-error`, `recording-complete`.
+  streams score updates back to the client. Every frame it sends is a member of
+  its `RecordingServerFrame` union, each documented there.
 - `recordings.controller.ts` — the owner's takes over HTTP: list per score,
   replay the archived audio (signed URL or stream), delete one (audio first,
   then the row).
-- `recordings.service.ts` — wires sessions together: resolves a pipeline
-  profile, builds the pipeline, and enforces credits and locks; also the takes
-  queries behind the controller.
-- `recording-credits.service.ts` / `recording-locks.service.ts` — daily credit
-  accounting (per subscription tier) and the one-recording-per-user lock.
-- `recording-session.ts` — bridges one live session to the pipeline and
-  persists results via the TypeORM `Recording` repository.
+- `recording-sessions.service.ts` — the live-recording engine: owns the pitch
+  model registry and profile resolver, and opens one session per take (slot
+  lock, credit check, pipeline); the gateway's only service.
+- `recordings.service.ts` — the takes behind the controller (list, replay,
+  delete) and the account purge.
+- `recording-credits.service.ts` / `recording-locks.service.ts` — credit
+  accounting (the daily budget per tier plus purchased pack seconds) and the
+  one-recording-per-user lock.
+- `recording-session.ts` — one live take: feeds the pipeline, meters credits
+  while audio streams, enforces the hard caps, and persists the `Recording` row.
+- `dto/recording-meta.dto.ts` — validation for the client's `meta` frame (the
+  socket bypasses Nest's ValidationPipe).
 - `recording-archiver.ts` — archives raw session audio and the debug bundle
-  through the `StorageService`; implements the pipeline's `PipelineArchive`
-  port, so the dependency runs root → pipeline only.
+  through the `StorageService`, and owns the take-folder layout (`folderFor`);
+  implements the pipeline's `PipelineArchive` port, so the dependency runs
+  root → pipeline only.
 - `entities/` — TypeORM entities (registered in `database/data-source.ts`).
 
 ## `pipeline/`: audio → notated measures

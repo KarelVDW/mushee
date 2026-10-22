@@ -7,8 +7,8 @@ import { describeError } from './pipeline/describe-error'
 import type { DebugBundle, PipelineArchive } from './pipeline/recording-pipeline'
 
 /**
- * Archives one recording session to blob storage under
- * `recordings/<userId>/<scoreId>/<recordingId>/`:
+ * Archives one recording session to blob storage under its take folder
+ * (`folderFor`, `recordings/<userId>/<scoreId>/<recordingId>/`):
  *
  * - `audio.<ext>` — the encoded stream, uploaded chunk-by-chunk as it arrives
  *   so memory stays flat regardless of take length.
@@ -32,6 +32,17 @@ export class RecordingArchiver implements PipelineArchive {
         private readonly storage: StorageService,
         readonly basePath: string,
     ) {}
+
+    /** Where all of a user's take audio lives — what the account purge deletes. No trailing slash. */
+    static folderForUser(userId: string): string {
+        return `recordings/${userId}`
+    }
+
+    /** The folder of a user's takes in one score, or of one take when `recordingId` is given. No trailing slash. */
+    static folderFor(userId: string, scoreId: string, recordingId?: string): string {
+        const scoreFolder = `${RecordingArchiver.folderForUser(userId)}/${scoreId}`
+        return recordingId ? `${scoreFolder}/${recordingId}` : scoreFolder
+    }
 
     /**
      * The object key of the fully uploaded audio, known after `finalize()`.
@@ -107,7 +118,6 @@ export class RecordingArchiver implements PipelineArchive {
     }
 }
 
-/** Container sniffing from the stream's first bytes (magic numbers). */
 /**
  * The containers browsers' MediaRecorder produces, by magic bytes: the same table
  * names the object's extension when the audio is written and its content type
@@ -132,6 +142,7 @@ const CONTAINERS: ReadonlyArray<{ extension: string; contentType: string; matche
 ]
 const UNKNOWN_CONTAINER = { extension: '.bin', contentType: 'application/octet-stream' }
 
+/** Container sniffing from the stream's first bytes (magic numbers). */
 export function sniffContainer(buffer: Buffer): { extension: string; contentType: string } {
     if (buffer.length < 4) return UNKNOWN_CONTAINER
     const match = CONTAINERS.find((container) => container.matches(buffer))

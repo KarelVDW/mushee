@@ -96,6 +96,47 @@ export interface SourceResolution {
 }
 
 /**
+ * What a client may tell the pipeline about the take it is about to stream.
+ * Every field is optional: a field left out keeps the pipeline's default (or
+ * the value an earlier `setMeta` gave it).
+ */
+export interface RecordingMeta {
+    bpm?: number
+    timeSignature?: { beats: number; beatType: number } | null
+    /** Sounding − written, in semitones. Trumpet B♭ = −2, French Horn = −7, Piccolo = +12. */
+    chromaticTranspose?: number
+    /** Selected instrument id (e.g. 'trumpet'). Optional hint that seeds the
+     *  adaptive profile's frequency window; auto-detection stays authoritative. */
+    instrumentId?: string
+    /**
+     * Explicit declaration of what is being recorded. Unlike `instrumentId` this
+     * is NOT just a window hint: singing and playing want different note
+     * segmentation (see `VoiceNoteDecoder`), and the choice is worth ~0.10 COnP
+     * on real singing.
+     *
+     * Since the audio source classifier (`SourceClassifier`, 2026-08) the web
+     * client no longer sends this — absent means "classify from the audio, fall
+     * back to the score's instrument family on abstain". Kept as an accepted
+     * field because an explicit declaration still wins outright when a caller
+     * (the eval harness, a future API client) genuinely knows the source.
+     */
+    sourceKind?: 'voice' | 'instrument' | null
+    /**
+     * The score's key signature at the recording start, in fifths (positive =
+     * sharps). Sung takes are spelled on the singer's own tuning grid, and for
+     * the notes still ambiguous after that normalization the key gets a vote —
+     * a user recording into a D-major score almost certainly means F♯, not the
+     * F they sang 40 cents flat. Optional: without it, spelling still
+     * normalizes, it just cannot key-snap.
+     */
+    keyFifths?: number | null
+    /** MediaRecorder encoding the client negotiated (e.g. 'audio/webm;codecs=opus',
+     *  Safari: 'audio/mp4'). Seeds ffmpeg's input-format hint; `null`/absent means
+     *  the browser default was used and ffmpeg probes the container. */
+    mimeType?: string | null
+}
+
+/**
  * One pipeline per recording session. Audio is decoded once, incrementally, by a
  * long-lived `StreamingDecoder` (each byte decoded exactly once into a growing
  * PCM buffer) rather than by re-decoding the whole container every pass.
@@ -184,15 +225,7 @@ export class RecordingPipeline {
         private readonly resolver: ProfileResolver,
     ) {}
 
-    setMeta(meta: {
-        bpm?: number
-        timeSignature?: { beats: number; beatType: number } | null
-        chromaticTranspose?: number
-        instrumentId?: string
-        sourceKind?: 'voice' | 'instrument' | null
-        keyFifths?: number | null
-        mimeType?: string | null
-    }): void {
+    setMeta(meta: RecordingMeta): void {
         if (meta.bpm) this.bpm = meta.bpm
         if (meta.timeSignature) {
             this.beats = meta.timeSignature.beats

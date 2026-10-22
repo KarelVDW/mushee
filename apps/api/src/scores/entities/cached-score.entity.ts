@@ -1,9 +1,9 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 
 /**
- * Hot cache for scores under active editing. The full JSON score structure
- * lives in `data`; a cron flushes stale rows to MusicXML storage and deletes
- * them.
+ * The authoritative copy of a score's unsaved edits (the full JSON document in
+ * `data`), not a disposable cache. The flush cron writes idle rows to storage
+ * (JSON, see ScoresService's storage-format note) and only then deletes them.
  */
 @Entity('cached_scores')
 @Index('IDX_cached_scores_updatedAt', ['updatedAt'])
