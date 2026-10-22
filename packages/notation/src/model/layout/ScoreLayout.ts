@@ -140,7 +140,7 @@ export class ScoreLayout {
         const end = this.noteSpan(nextNote)
         const startNoteLayout = startLayout.noteLayoutFor(note)
         const endNoteLayout = this.measureLayoutFor(nextNote.measure).noteLayoutFor(nextNote)
-        const stemDir = startLayout.beamFor(note)?.stemDir ?? note.stemDir
+        const stemDir = startLayout.stemDirFor(note)
         return {
             direction: stemDir === 'up' ? 1 : -1,
             startRowIndex: start.row.index,

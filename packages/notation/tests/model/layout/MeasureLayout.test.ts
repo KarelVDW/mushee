@@ -341,6 +341,23 @@ describe('MeasureLayout', () => {
             expect(() => m.layout.tupletLayoutFor(strangerTuplet)).toThrow('Tuplet not part of this measure layout')
         })
 
+        it('stemFor/stemDirFor give a beamed note its beam’s stem and direction, others their own', () => {
+            const { m } = registeredMeasure()
+            // Three C4 sixteenths and a C6 beam stems-up (average line); C6 alone would stem down. The quarter is unbeamed.
+            m.addNotes([pitched('C', 4, '16'), pitched('C', 4, '16'), pitched('C', 4, '16'), pitched('C', 6, '16'), pitched('C', 6, 'q')])
+            const layout = m.layout
+            const [low, , , high, quarter] = m.notes
+            const beam = layout.beamFor(high)
+            if (!beam) throw new Error('expected a beam')
+            expect(high.stemDir).toBe('down')
+            expect(layout.stemDirFor(high)).toBe('up')
+            expect(layout.stemFor(high)).toBe(beam.getStem(high))
+            expect(layout.stemFor(low)).toBe(beam.getStem(low))
+            expect(layout.stemDirFor(quarter)).toBe('down')
+            expect(layout.stemFor(quarter)).toBe(layout.noteLayoutFor(quarter).stem)
+            expect(() => layout.stemFor(pitched('C', 4, 'q'))).toThrow('Note not part of this measure layout')
+        })
+
         it('beamFor maps beamed notes to their beam and others to undefined', () => {
             const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, '8'), pitched('C', 4, '8'), pitched('C', 4, 'q')])

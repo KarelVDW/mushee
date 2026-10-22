@@ -48,8 +48,8 @@ describe('TupletLayout', () => {
     })
 
     it('a low (stem-up) triplet brackets above the staff, its ticks hanging down toward the notes', () => {
-        // C4 (line 0 < 3) → stems up → bracket placed above (min stem-tip minus offset).
-        const notes = [tripletNote('8', 'C'), tripletNote('8', 'C'), tripletNote('8', 'C')]
+        // C4 (line 0 < 3) → stems up → bracket placed above (min stem-tip minus offset). Quarters: no beam joins them.
+        const notes = [tripletNote('q', 'C'), tripletNote('q', 'C'), tripletNote('q', 'C')]
         const tuplet = tupletOf(notes)
         const layout = tuplet.layout
         const [leftTick, leftLine, rightLine, rightTick] = layout.bracket
@@ -67,7 +67,7 @@ describe('TupletLayout', () => {
 
     it('a high (stem-down) triplet brackets below the staff, its ticks rising toward the notes', () => {
         // A5 (line 5.5 >= 3) → stems down → bracket placed below (max stem-tip plus offset).
-        const notes = [tripletNote('8', 'A', 5), tripletNote('8', 'A', 5), tripletNote('8', 'A', 5)]
+        const notes = [tripletNote('q', 'A', 5), tripletNote('q', 'A', 5), tripletNote('q', 'A', 5)]
         const tuplet = tupletOf(notes)
         const layout = tuplet.layout
         expect(notes.every((n) => n.stemDir === 'down')).toBe(true)
@@ -79,8 +79,8 @@ describe('TupletLayout', () => {
     })
 
     it('chooses the majority stem direction (down) when more notes point down', () => {
-        // Two high (down) notes vs one low (up) note → upCount 1 < 3/2 → group stems down.
-        const notes = [tripletNote('8', 'A', 5), tripletNote('8', 'A', 5), tripletNote('8', 'C', 4)]
+        // Two high (down) notes vs one low (up) note, unbeamed → upCount 1 < 3/2 → group stems down.
+        const notes = [tripletNote('q', 'A', 5), tripletNote('q', 'A', 5), tripletNote('q', 'C', 4)]
         const tuplet = tupletOf(notes)
         expect(notes.filter((n) => n.stemDir === 'up')).toHaveLength(1)
         const stemTips = notes.map((n) => n.layout.stem?.y2 ?? n.layout.noteY)
@@ -88,18 +88,43 @@ describe('TupletLayout', () => {
         expect(tuplet.layout.bracket[0].y).toBe(tuplet.layout.y - TUPLET_BRACKET_HEIGHT)
     })
 
-    it('is not bracketed when every note is a flagless beamable note (all eighth rests)', () => {
-        // Eighth rests are beamable yet draw no flag, so an all-rest triplet needs no bracket.
-        const notes = [tripletNote('8'), tripletNote('8'), tripletNote('8')]
+    it('a beamed eighth triplet draws the number only, beyond the beam', () => {
+        const notes = [tripletNote('8', 'C'), tripletNote('8', 'C'), tripletNote('8', 'C')]
         const tuplet = tupletOf(notes)
-        expect(notes.every((n) => n.layout.flag === undefined && n.duration.isBeamable)).toBe(true)
+        const beam = notes[0].measure.layout.beamFor(notes[0])
+        if (!beam) throw new Error('expected the triplet to be beamed')
+        expect(notes.every((n) => n.measure.layout.beamFor(n) === beam)).toBe(true)
         expect(tuplet.layout.bracketed).toBe(false)
         expect(tuplet.layout.bracket).toEqual([])
         expect(tuplet.layout.numberGlyphs).toHaveLength(1) // the number still shows
+        // Stems up: the number sits above the beam line, not among the stems.
+        expect(tuplet.layout.y).toBeCloseTo(Math.min(beam.primary.y1, beam.primary.y2) - TUPLET_OFFSET)
+    })
+
+    it('places the number above the beam when a beam overrides a note’s own stem (C4, C4, C6)', () => {
+        // C6 on its own would stem down; under the group's up beam its stem rises to the beam.
+        const notes = [tripletNote('8', 'C'), tripletNote('8', 'C'), tripletNote('8', 'C', 6)]
+        const tuplet = tupletOf(notes)
+        const measureLayout = notes[0].measure.layout
+        const beam = measureLayout.beamFor(notes[2])
+        if (!beam) throw new Error('expected the triplet to be beamed')
+        expect(notes[2].stemDir).toBe('down')
+        expect(measureLayout.stemDirFor(notes[2])).toBe('up')
+        const beamTop = Math.min(beam.primary.y1, beam.primary.y2)
+        expect(tuplet.layout.y).toBeCloseTo(beamTop - TUPLET_OFFSET)
+        expect(tuplet.layout.bracketed).toBe(false)
+    })
+
+    it('brackets an all-rest triplet: no beam joins it (eighth rests)', () => {
+        const notes = [tripletNote('8'), tripletNote('8'), tripletNote('8')]
+        const tuplet = tupletOf(notes)
+        expect(notes.every((n) => n.measure.layout.beamFor(n) === undefined)).toBe(true)
+        expect(tuplet.layout.bracketed).toBe(true)
+        expect(tuplet.layout.numberGlyphs).toHaveLength(1)
     })
 
     it('is bracketed when notes are not beamable (quarter triplet)', () => {
-        // Quarter notes are not beamable → the all-beamed condition fails → bracket is drawn.
+        // Quarter notes are never beamed → nothing joins the group → bracket is drawn.
         const notes = [tripletNote('q', 'C'), tripletNote('q', 'C'), tripletNote('q', 'C')]
         const tuplet = tupletOf(notes)
         expect(notes.every((n) => n.duration.isBeamable)).toBe(false)
@@ -123,7 +148,10 @@ describe('TupletLayout', () => {
                 duration: new Duration({ type: '16', ratio: { actualNotes: 12, normalNotes: 8 } }),
                 pitch: new Pitch({ name: 'C', octave: 4 }),
             })
-        const tuplet = tupletOf(Array.from({ length: 12 }, twelfth))
+        // A rest mid-group splits the beam, so the group is bracketed.
+        const rest16 = new Note({ duration: new Duration({ type: '16', ratio: { actualNotes: 12, normalNotes: 8 } }) })
+        const tuplet = tupletOf(Array.from({ length: 12 }, (_, i) => (i === 5 ? rest16 : twelfth())))
+        expect(tuplet.layout.bracketed).toBe(true)
         const layout = tuplet.layout
         expect(layout.numberGlyphs.map((g) => g.glyphName)).toEqual(['timeSig1', 'timeSig2'])
         const [, leftLine, rightLine] = layout.bracket
@@ -140,7 +168,13 @@ describe('TupletLayout', () => {
         // Every member placed at x 0: the span is one notehead, narrower than the number plus its clearance.
         const notes = [tripletNote('q', 'C'), tripletNote('q', 'C'), tripletNote('q', 'C')]
         const tuplet = tupletOf(notes)
-        const layout = new TupletLayout(tuplet, { xOf: () => 0, layoutOf: (n) => n.layout })
+        const layout = new TupletLayout(tuplet, {
+            xOf: () => 0,
+            layoutOf: (n) => n.layout,
+            stemOf: (n) => n.layout.stem,
+            stemDirOf: (n) => n.stemDir,
+            beamOf: () => undefined,
+        })
         expect(layout.bracket).toHaveLength(2) // the two ticks only
         expect(layout.bracket.every((rect) => rect.height === TUPLET_BRACKET_HEIGHT)).toBe(true)
     })

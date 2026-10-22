@@ -7,9 +7,11 @@ import {
 } from '../../engraving/constants'
 import type { Note } from '../Note'
 import type { Tuplet } from '../Tuplet'
+import type { StemDirection } from '../types'
+import type { BeamLayout } from './BeamLayout'
 import { DigitRun } from './DigitRun'
 import type { NoteLayout } from './NoteLayout'
-import type { LayoutGlyph } from './types'
+import type { LayoutGlyph, LayoutStem } from './types'
 
 /** A filled rectangle of the bracket: a tick or one half of the line. */
 export interface BracketRect {
@@ -19,10 +21,20 @@ export interface BracketRect {
     height: number
 }
 
+/** What TupletLayout reads about each member note, as MeasureLayout resolved it. */
+export interface TupletLayoutContext {
+    xOf: (note: Note) => number
+    layoutOf: (note: Note) => NoteLayout
+    /** The stem the note is drawn with — its beam's, when beamed. */
+    stemOf: (note: Note) => LayoutStem | undefined
+    stemDirOf: (note: Note) => StemDirection
+    beamOf: (note: Note) => BeamLayout | undefined
+}
+
 /**
  * The bracket and ratio number above (or below) a tuplet group. Built by
- * MeasureLayout with explicit context — the x position and layout of each
- * member note.
+ * MeasureLayout with explicit context — each member's x, layout and
+ * effective (beam-aware) stem.
  */
 export class TupletLayout {
     readonly id = crypto.randomUUID()
@@ -38,19 +50,20 @@ export class TupletLayout {
     readonly bracket: BracketRect[]
     readonly numberGlyphs: LayoutGlyph[]
 
-    constructor(tuplet: Tuplet, context: { xOf: (note: Note) => number; layoutOf: (note: Note) => NoteLayout }) {
-        const upCount = tuplet.notes.filter((n) => n.stemDir === 'up').length
+    constructor(tuplet: Tuplet, context: TupletLayoutContext) {
+        // Placed on the stem side the majority of the drawn stems point to.
+        const upCount = tuplet.notes.filter((n) => context.stemDirOf(n) === 'up').length
         const stemDir = upCount >= tuplet.notes.length / 2 ? 'up' : 'down'
         const firstLayout = context.layoutOf(tuplet.firstNote)
         const lastLayout = context.layoutOf(tuplet.lastNote)
         this.x1 = context.xOf(tuplet.firstNote) + firstLayout.noteX
         this.x2 = context.xOf(tuplet.lastNote) + lastLayout.noteRightX
-        const stemTips = tuplet.notes.map((n) => {
-            const layout = context.layoutOf(n)
-            return layout.stem?.y2 ?? layout.noteY
-        })
+        // Clear of every drawn stem tip — the beam line, for beamed notes — or the notehead of a stemless note.
+        const stemTips = tuplet.notes.map((n) => context.stemOf(n)?.y2 ?? context.layoutOf(n).noteY)
         this.y = stemDir === 'up' ? Math.min(...stemTips) - TUPLET_OFFSET : Math.max(...stemTips) + TUPLET_OFFSET
-        this.bracketed = !tuplet.notes.every((n) => context.layoutOf(n).flag === undefined && n.duration.isBeamable)
+        // A group under one beam is already joined by it: the number alone marks the tuplet.
+        const firstBeam = context.beamOf(tuplet.firstNote)
+        this.bracketed = !(firstBeam !== undefined && tuplet.notes.every((n) => context.beamOf(n) === firstBeam))
 
         const number = new DigitRun(tuplet.firstNote.duration.ratio.actualNotes, TUPLET_NUMBER_SCALE)
         const centreX = (this.x1 + this.x2) / 2

@@ -7,6 +7,7 @@ import { Note } from '../Note'
 import type { Tempo } from '../Tempo'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
+import type { StemDirection } from '../types'
 import { BarlineLayout } from './BarlineLayout'
 import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
@@ -17,6 +18,7 @@ import type { PhysicalWidth } from './PhysicalWidth'
 import { Resizer, type Sizeable } from './Resizer'
 import { TempoLayout } from './TempoLayout'
 import { TupletLayout } from './TupletLayout'
+import type { LayoutStem } from './types'
 
 /** An element that occupies horizontal space within a measure. */
 type MeasureElement = Clef | KeySignature | TimeSignature | Note
@@ -67,6 +69,7 @@ export class MeasureLayout {
     private readonly _tupletLayouts = new Map<Tuplet, TupletLayout>()
     private readonly _tempoLayouts = new Map<Tempo, TempoLayout>()
     private readonly _beamByNote = new Map<Note, BeamLayout>()
+    private readonly _effectiveStems = new Map<Note, { stem: LayoutStem | undefined; dir: StemDirection }>()
 
     constructor(
         readonly measure: Measure,
@@ -112,9 +115,24 @@ export class MeasureLayout {
             for (const note of beam.notes) this._beamByNote.set(note, beam)
         }
 
+        // --- Effective stems: a beam repositions its members' stems and decides their direction ---
+        for (const note of measure.notes) {
+            const beam = this._beamByNote.get(note)
+            this._effectiveStems.set(
+                note,
+                beam ? { stem: beam.getStem(note), dir: beam.stemDir } : { stem: this.noteLayoutFor(note).stem, dir: note.stemDir },
+            )
+        }
+
         // --- Tuplet layouts ---
+        const tupletContext = {
+            ...memberContext,
+            stemOf: (note: Note) => this.stemFor(note),
+            stemDirOf: (note: Note) => this.stemDirFor(note),
+            beamOf: (note: Note) => this.beamFor(note),
+        }
         for (const tuplet of measure.tuplets) {
-            this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, memberContext))
+            this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, tupletContext))
         }
 
         // --- Tempo markings, at their beat ---
@@ -277,5 +295,21 @@ export class MeasureLayout {
 
     beamFor(note: Note): BeamLayout | undefined {
         return this._beamByNote.get(note)
+    }
+
+    /** The stem `note` is drawn with: its beam's repositioned stem, else its own (undefined for rests and whole notes). */
+    stemFor(note: Note): LayoutStem | undefined {
+        return this.effectiveStemOf(note).stem
+    }
+
+    /** The direction `note`'s stem points: its beam's shared direction, else its own. */
+    stemDirFor(note: Note): StemDirection {
+        return this.effectiveStemOf(note).dir
+    }
+
+    private effectiveStemOf(note: Note): { stem: LayoutStem | undefined; dir: StemDirection } {
+        const effective = this._effectiveStems.get(note)
+        if (!effective) throw new Error('Note not part of this measure layout')
+        return effective
     }
 }
