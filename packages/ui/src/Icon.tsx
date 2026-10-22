@@ -584,6 +584,18 @@ const GLYPHS = {
             <path d="m21 9.5-5 5" />
         </>
     ),
+    // Offline (no connection at all); `globe` is "can't reach Solkey".
+    'wifi-off': (
+        <>
+            <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+            <path d="M5 13a10 10 0 0 1 5.2-2.7" />
+            <path d="M19 13a10 10 0 0 0-2-1.5" />
+            <path d="M2 9a15 15 0 0 1 4.2-2.6" />
+            <path d="M22 9a15 15 0 0 0-11.3-3.8" />
+            <path d="m3 3 18 18" />
+            <circle cx="12" cy="20" r="1.3" fill="currentColor" stroke="none" />
+        </>
+    ),
     x: (
         <>
             <path d="m5.5 5.5 13 13" />
