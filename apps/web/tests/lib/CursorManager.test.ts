@@ -1,4 +1,3 @@
-import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,8 +13,7 @@ function fakeScheduler(entries: TimelineEntry[], endTime = -1) {
 }
 
 function fakePlayer(currentTime = 0) {
-    const raw = { currentTime }
-    return { player: raw as unknown as MidiPlayer, raw }
+    return { player: { currentTime } }
 }
 
 const entry = (over: Partial<TimelineEntry>): TimelineEntry => ({

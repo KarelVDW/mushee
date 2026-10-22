@@ -1,7 +1,7 @@
 import type { Note } from '@mushee/notation/model/Note'
 import type { Score } from '@mushee/notation/model/Score'
 
-import { MidiPlayer } from './MidiPlayer'
+import type { MidiPlayer } from './MidiPlayer'
 import { type Tickable, Ticker } from './Ticker'
 
 const DEFAULT_BPM = 90
@@ -33,14 +33,14 @@ export class ScoreScheduler implements Tickable {
     startNote: Note | null = null
     readonly entries: TimelineEntry[] = []
 
-    private midiPlayer: MidiPlayer
+    private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
     private measureIdx = 0
     private noteIdx = 0
     private nextNoteTime = 0
     private bpm = DEFAULT_BPM
     private _done = false
 
-    constructor(midiPlayer: MidiPlayer) {
+    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>) {
         this.midiPlayer = midiPlayer
     }
 

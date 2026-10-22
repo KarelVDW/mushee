@@ -1,6 +1,5 @@
 import { Score, TimeSignature } from '@mushee/notation/model'
 import { makeScore } from '@mushee/notation/testing'
-import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
@@ -117,8 +116,8 @@ function fakeStream(settings: MediaTrackSettings = { echoCancellation: false, no
 }
 
 function fakePlayer(currentTime = 0) {
-    const raw = { currentTime }
-    return { player: raw as unknown as MidiPlayer, raw }
+    const player = { currentTime }
+    return { player, raw: player }
 }
 
 function svgRect(): SVGRectElement {

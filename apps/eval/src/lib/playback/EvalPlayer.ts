@@ -31,7 +31,7 @@ export interface FinishedRecording {
 /** Ends a pass at a fixed clock time — the take's full length plus tail. */
 class Stopper implements Tickable {
     constructor(
-        private readonly midiPlayer: MidiPlayer,
+        private readonly midiPlayer: Pick<MidiPlayer, 'currentTime'>,
         private readonly endSec: number,
     ) {}
 

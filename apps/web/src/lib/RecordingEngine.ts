@@ -1,6 +1,6 @@
 import type { Score } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
-import { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
 const DEFAULT_BPM = 90
@@ -173,7 +173,7 @@ export class RecordingEngine implements Tickable {
     private _state: RecordingState = 'idle'
     private options: RecordingOptions | null = null
 
-    private midiPlayer: MidiPlayer
+    private midiPlayer: Pick<MidiPlayer, 'currentTime'>
     private bpm = DEFAULT_BPM
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
@@ -210,7 +210,7 @@ export class RecordingEngine implements Tickable {
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
 
-    constructor(midiPlayer: MidiPlayer) {
+    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime'>) {
         this.midiPlayer = midiPlayer
     }
 

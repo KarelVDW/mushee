@@ -1,7 +1,7 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
 import type { Score } from '@mushee/notation/model/Score'
 
-import { MidiPlayer } from './MidiPlayer'
+import type { MidiPlayer } from './MidiPlayer'
 import { type Tickable, Ticker } from './Ticker'
 
 const DEFAULT_BPM = 90
@@ -26,13 +26,13 @@ export class Metronome implements Tickable {
     /** Beat (quarter units) within the start measure to begin ticking from. Default 0 = downbeat. */
     startBeat = 0
 
-    private midiPlayer: MidiPlayer
+    private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
     private measureIdx = 0
     private beat = 0
     private nextClickTime = 0
     private bpm = DEFAULT_BPM
 
-    constructor(midiPlayer: MidiPlayer) {
+    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>) {
         this.midiPlayer = midiPlayer
     }
 

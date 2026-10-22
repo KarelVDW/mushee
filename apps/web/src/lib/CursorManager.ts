@@ -1,4 +1,4 @@
-import { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 
@@ -8,12 +8,12 @@ interface PlaybackPosition {
 }
 
 export class CursorManager implements Tickable {
-    private midiPlayer: MidiPlayer
+    private midiPlayer: Pick<MidiPlayer, 'currentTime'>
     private cursorEl: SVGRectElement | null = null
     private resolvePosition: ((pos: PlaybackPosition) => { x: number; rowY: number } | null) | null = null
     private scheduler: ScoreScheduler
 
-    constructor(midiPlayer: MidiPlayer, scheduler: ScoreScheduler) {
+    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime'>, scheduler: ScoreScheduler) {
         this.midiPlayer = midiPlayer
         this.scheduler = scheduler
     }

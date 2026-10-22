@@ -1,4 +1,4 @@
-import { Instrument } from '@mushee/notation/model/Instrument'
+import type { Instrument } from '@mushee/notation/model/Instrument'
 import { Soundfont, type StopFn } from 'smplr'
 
 import { AudioSession } from './AudioSession'
