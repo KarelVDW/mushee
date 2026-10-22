@@ -23,6 +23,11 @@ interface PitchToolsProps {
     /** Phone layout: the transpose popover opens as the dock-wide sheet. */
     compact?: boolean
     /**
+     * Transpose needs a selected note, like the dock's other tools (no selected note, no tool).
+     * Off in the header, whose transpose stays available: the whole score needs no selection.
+     */
+    requireSelection?: boolean
+    /**
      * Transpose popover state, kept by the page so the transpose shortcut opens whichever
      * instance is rendered (header or dock).
      */
@@ -41,6 +46,7 @@ export function PitchTools({
     manipulator,
     plain = false,
     compact = false,
+    requireSelection = false,
     transposeOpen,
     onTransposeOpenChange,
     onTransposeAim,
@@ -62,9 +68,7 @@ export function PitchTools({
             <PopoverChip
                 plain={plain}
                 compact={compact}
-                // In the dock it follows the dock's rule — no selected note, no tool; the header's
-                // stays available, since transposing the whole score needs no selection.
-                disabled={plain && !manipulator.selectedNote}
+                disabled={requireSelection && !manipulator.selectedNote}
                 ariaLabel="Transpose"
                 chip={<Icon name="transpose" size={iconSize} />}
                 className={plain ? undefined : HEADER_POPOVER_POSITION}

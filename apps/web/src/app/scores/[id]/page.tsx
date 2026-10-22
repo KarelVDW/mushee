@@ -328,6 +328,7 @@ export default function ScoreEditorPage() {
                                     manipulator={manipulator}
                                     plain
                                     compact
+                                    requireSelection
                                     transposeOpen={transposeOpen}
                                     onTransposeOpenChange={setTransposeOpen}
                                     onTransposeAim={aimTranspose}
