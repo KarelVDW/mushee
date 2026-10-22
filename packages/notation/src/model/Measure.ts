@@ -21,8 +21,10 @@ import { TupletFinder } from './util/TupletFinder'
  * semantic — geometry, widths, beams, and displayed accidentals live in the
  * layout layer.
  *
- * Every public mutator ends in exactly one `touch()` (the single choke point,
- * see ARCHITECTURE.md); derived state recomputes lazily off the version.
+ * Each primitive mutator ends in its own `touch()` (the measure's choke point,
+ * see ARCHITECTURE.md); a composite such as `complete()` may touch several
+ * times (once per padding step), and the carry-forward applicators never
+ * touch. Derived state recomputes lazily off the version.
  */
 export class Measure {
     readonly id = crypto.randomUUID()
@@ -82,7 +84,7 @@ export class Measure {
         return this._version
     }
 
-    /** The single mutation choke point — every public mutator ends here exactly once. */
+    /** The measure's mutation choke point — each primitive mutator ends here once. */
     private touch() {
         this._version++
         this.score.measureChanged(this)
@@ -338,7 +340,11 @@ export class Measure {
         this.touch()
     }
 
-    /** Re-key every key signature in the measure by a (chromatic, diatonic) interval — for instrument transposition. */
+    /**
+     * Re-key every key signature in the measure by a (chromatic, diatonic) interval — Score's
+     * whole-score transposition (`transpose`, `setInstrument`). Overflow folding and
+     * carry-forward are Score's job.
+     */
     transposeKeySignatures(chromatic: number, diatonic: number) {
         this._keys.map((k) => new KeySignature(this, k.beatPosition, KeySignature.transposedFifths(k.fifths, chromatic, diatonic), k.mode))
         this.touch()
