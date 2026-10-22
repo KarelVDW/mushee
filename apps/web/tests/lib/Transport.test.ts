@@ -278,15 +278,21 @@ describe('Transport', () => {
         expect(transport.mode).toBe('stopped')
     })
 
-    it('exposes the granted mic settings while a take is live', async () => {
+    it('record resolves to the granted mic settings, or null when the take never started', async () => {
         const { player } = fakePlayer()
         const transport = new Transport(player)
 
-        expect(transport.micSettings).toBeNull()
-        await transport.record(recordingOptions(scoreWithNotes()))
-        expect(transport.micSettings).toEqual({})
+        await expect(transport.record(recordingOptions(scoreWithNotes()))).resolves.toEqual({})
         transport.stop()
-        expect(transport.micSettings).toBeNull()
+
+        let releaseMic: (value: ReturnType<typeof fakeStream>) => void = () => {}
+        vi.stubGlobal('navigator', {
+            mediaDevices: { getUserMedia: vi.fn(() => new Promise((resolve) => (releaseMic = resolve))) },
+        })
+        const pending = transport.record(recordingOptions(scoreWithNotes()))
+        transport.stop() // the user bails while the permission prompt is open
+        releaseMic(fakeStream())
+        await expect(pending).resolves.toBeNull()
     })
 
     it('dispose stops everything and releases the player', () => {

@@ -1023,29 +1023,24 @@ describe('RecordingEngine', () => {
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
     })
 
-    it('exposes the granted mic settings during a take and clears them on stop', async () => {
+    it('start() resolves to the mic settings the browser granted', async () => {
         const { player } = fakePlayer()
         const engine = new RecordingEngine(player)
         const { options } = makeOptions()
         // A device that forced voice processing back on despite the constraints.
         getUserMedia.mockResolvedValueOnce(fakeStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: false }))
 
-        expect(engine.micSettings).toBeNull()
-        await engine.start(options)
-        expect(engine.micSettings).toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
-        engine.stop()
-        expect(engine.micSettings).toBeNull()
+        await expect(engine.start(options)).resolves.toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
     })
 
-    it('tolerates a stream without audio tracks (micSettings stays null)', async () => {
+    it('tolerates a stream without audio tracks (start() resolves to null)', async () => {
         const { player } = fakePlayer()
         const engine = new RecordingEngine(player)
         const { options } = makeOptions()
         const stream = fakeStream()
         getUserMedia.mockResolvedValueOnce({ ...stream, getAudioTracks: () => [] })
 
-        await engine.start(options)
-        expect(engine.micSettings).toBeNull()
+        await expect(engine.start(options)).resolves.toBeNull()
         expect(engine.state).toBe('countoff')
     })
 
@@ -1098,11 +1093,10 @@ describe('RecordingEngine', () => {
         expect(audioSession.type).toBe('auto')
         const stream = fakeStream()
         resolvePrompt(stream)
-        await started
-        // The raced start released the stream and left the session restored.
+        // The raced start released the stream, reports no take and left the session restored.
+        await expect(started).resolves.toBeNull()
         expect(stream.track.stop).toHaveBeenCalled()
         expect(audioSession.type).toBe('auto')
-        expect(engine.micSettings).toBeNull()
     })
 
     it('start() throws RecordingUnsupportedError when mediaDevices is unavailable', async () => {

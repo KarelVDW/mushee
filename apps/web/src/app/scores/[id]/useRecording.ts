@@ -146,8 +146,9 @@ export function useRecording({
             (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200').replace(/^http/, 'ws') +
             `/recording?scoreId=${encodeURIComponent(id)}`
 
+        let mic: MediaTrackSettings | null
         try {
-            await transport.record({
+            mic = await transport.record({
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
@@ -250,7 +251,6 @@ export function useRecording({
         // the ones that switch into a call-style route and duck the metronome
         // (Android communication mode, iOS play-and-record) — this measures how
         // common that is before we engineer around it further.
-        const mic = transport.micSettings
         track('recording_started', {
             micEchoCancellation: mic?.echoCancellation ?? null,
             micNoiseSuppression: mic?.noiseSuppression ?? null,

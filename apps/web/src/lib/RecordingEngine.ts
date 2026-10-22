@@ -187,7 +187,6 @@ export class RecordingEngine implements Tickable {
     private lastSampleTime = -Infinity
     /** Running voiced-RMS peak of the take; calibrates the waveform gain (see sampleAmplitude). */
     private waveformPeak = 0
-    private _micSettings: MediaTrackSettings | null = null
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
@@ -201,23 +200,18 @@ export class RecordingEngine implements Tickable {
     }
 
     /**
-     * The mic settings the browser actually granted for the live take (`null`
-     * outside a session). {@link MIC_CONSTRAINTS} are only hints: devices that
-     * force voice processing back on are the ones that switch into a call-style
-     * audio route and duck playback — surfaced so telemetry can measure how
-     * common that is.
-     */
-    get micSettings(): MediaTrackSettings | null {
-        return this._micSettings
-    }
-
-    /**
      * Begin a recording session. Caller is responsible for:
      *   1. inserting the empty count-off measure so `score.measures[startMeasureIndex]` is it
      *   2. inserting the first empty recording measure at `startMeasureIndex + 1`
      *   3. calling `midiPlayer.start()` and running the Ticker afterwards
+     *
+     * Resolves to the mic settings the browser actually granted for the take
+     * (`null` when stop() won the permission race or the stream has no audio
+     * track). {@link MIC_CONSTRAINTS} are only hints: devices that force voice
+     * processing back on are the ones that switch into a call-style audio route
+     * and duck playback — surfaced so telemetry can measure how common that is.
      */
-    async start(options: RecordingOptions): Promise<void> {
+    async start(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         const token = ++this.lifecycle
         this.options = options
 
@@ -234,10 +228,9 @@ export class RecordingEngine implements Tickable {
             // stop() ran while the permission prompt was open and already ended the
             // session; without this the stream is never stopped and the mic indicator stays lit.
             Microphone.stopTracks(stream)
-            return
+            return null
         }
         this.stream = stream
-        this._micSettings = stream.getAudioTracks()[0]?.getSettings() ?? null
 
         const measure = options.score.measures[options.startMeasureIndex]
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
@@ -294,6 +287,7 @@ export class RecordingEngine implements Tickable {
         // 500 ms, so it could shift a whole take by most of a beat. The count-off
         // is at least a measure long, which is ample slack for the handshake.
         void this.connect(options)
+        return stream.getAudioTracks()[0]?.getSettings() ?? null
     }
 
     stop(): void {
@@ -304,7 +298,6 @@ export class RecordingEngine implements Tickable {
         Microphone.endSession()
         if (this._state === 'idle') return
 
-        this._micSettings = null
         // Anything still queued belongs to the take being abandoned.
         this.pendingChunks = []
         this.metaSent = false
@@ -437,7 +430,7 @@ export class RecordingEngine implements Tickable {
         const rms = Math.sqrt(sumSquares / this.analyserData.length)
         // Self-calibrating gain: desktop mics deliver RMS around 0.1–0.2, but
         // iOS forces its voice-processing capture path back on (see
-        // micSettings) and yields a fraction of that — a fixed gain leaves
+        // start()'s mic settings) and yields a fraction of that — a fixed gain leaves
         // mobile bars barely visible. Normalize against the take's own voiced
         // peak so the loudest singing fills the staff on every device; the
         // gain never drops below the desktop tuning, so hot mics render

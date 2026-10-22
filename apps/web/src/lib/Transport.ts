@@ -65,11 +65,6 @@ export class Transport {
         return this.recorder.state !== 'idle'
     }
 
-    /** The mic settings the browser actually granted for the live take (`null` when idle). */
-    get micSettings(): MediaTrackSettings | null {
-        return this.recorder.micSettings
-    }
-
     /** Play the score from `startNote` (or the top). Stops whatever ran before. */
     playScore(options: PlayScoreOptions): void {
         this.stop()
@@ -113,18 +108,21 @@ export class Transport {
      * unsupported browser), then run the recording engine with the count-off
      * metronome. The metronome always clicks during a take, whatever its
      * playback toggle says. Rethrows engine start failures after cleaning up.
+     * Resolves to the mic settings granted for the take (see
+     * {@link RecordingEngine.start}), or null when no take started.
      */
-    async record(options: RecordingOptions): Promise<void> {
+    async record(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         this.stop()
+        let mic: MediaTrackSettings | null
         try {
-            await this.recorder.start(options)
+            mic = await this.recorder.start(options)
         } catch (err) {
             this.stop()
             throw err
         }
         // stop() may have run while the mic permission prompt was open; the
         // engine already released the stream, so don't start a zombie pass.
-        if (this.recorder.state === 'idle') return
+        if (this.recorder.state === 'idle') return null
 
         this.metronome.score = options.score
         this.metronome.startMeasureIndex = options.startMeasureIndex
@@ -135,6 +133,7 @@ export class Transport {
         this.ticker.play([this.recorder, this.metronome], () => {
             this._mode = 'stopped'
         })
+        return mic
     }
 
     /** Stop everything: clock, playback pass, recording session, cursor. Idempotent. */
