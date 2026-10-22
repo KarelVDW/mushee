@@ -496,6 +496,8 @@ test('transport: Stop is hidden at rest and shows while something plays; Record 
 test('transport: the metronome has its own glyph and a pressed state, and says what it does', async ({ page }) => {
     const metronome = page.getByRole('button', { name: 'Metronome' })
     await expect(metronome).toHaveAttribute('aria-pressed', 'false')
+    // A screen reader hears the whole story, tooltip or not.
+    await expect(metronome).toHaveAccessibleDescription(/^Clicks during playback\. Recording always counts you in\./)
     // Hovering names it and says it only governs playback (a take always counts in and clicks).
     await metronome.hover()
     await expect(page.getByText('clicks during playback').filter({ visible: true })).toBeVisible()

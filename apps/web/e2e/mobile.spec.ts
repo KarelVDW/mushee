@@ -87,8 +87,8 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
     const recordBox = await record.boundingBox()
     const playBox = await actionRow.getByRole('button', { name: 'Play' }).boundingBox()
     expect(recordBox?.width ?? 0).toBeGreaterThan(playBox?.width ?? Infinity)
-    for (const name of ['Select previous note', 'Select next note', 'Lower pitch', 'Raise pitch']) {
-        const box = await actionRow.getByRole('button', { name }).boundingBox()
+    for (const name of ['Select previous note', 'Select next note', 'Lower', 'Higher']) {
+        const box = await actionRow.getByRole('button', { name, exact: true }).boundingBox()
         expect(box?.width ?? 0, name).toBeGreaterThanOrEqual(40)
         expect(box?.width ?? Infinity, name).toBeLessThan(recordBox?.width ?? 0)
     }
@@ -122,7 +122,7 @@ test('a blocked microphone explains the fix, Record stays live, and the selectio
     // Never a dead Record, and the phone's nudges work at once on the same note.
     await expect(record).toBeEnabled()
     expect(await selectedNoteCenter(page)).toEqual(before)
-    await expect(page.getByRole('button', { name: 'Raise pitch' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Higher', exact: true })).toBeEnabled()
 })
 
 test('a take folds the dock into the recording strip beside record-as-stop; toasts stay above the dock', async ({ page }) => {
@@ -151,7 +151,7 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
     // The dock is back, with a note selected so the nudges and Record work at once.
     const tools = page.getByRole('group', { name: 'Note tools' })
     await expect(tools).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Raise pitch' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Higher', exact: true })).toBeEnabled()
     // No toast covers the dock: the stack sits above its top edge.
     await expect(async () => {
         const toast = await summary.boundingBox()
@@ -263,6 +263,9 @@ test('the More sheet toggles note tools and the metronome', async ({ page }) => 
 
     const metronome = sheet.getByRole('switch', { name: 'Metronome' })
     await expect(metronome).toHaveAttribute('aria-checked', 'false')
+    // Its hint is on screen and is the switch's description.
+    await expect(sheet.getByText('A steady click while playing and recording.')).toBeVisible()
+    await expect(metronome).toHaveAccessibleDescription('A steady click while playing and recording.')
     await metronome.tap()
     await expect(metronome).toHaveAttribute('aria-checked', 'true')
 })
@@ -283,7 +286,7 @@ test('note navigator and pitch nudges edit the score and autosave', async ({ pag
     await page.getByRole('button', { name: 'Select next note' }).tap()
 
     const patch = waitForAutosave(page)
-    await page.getByRole('button', { name: 'Raise pitch' }).tap()
+    await page.getByRole('button', { name: 'Higher', exact: true }).tap()
     const body = (await patch).postDataJSON() as Record<string, unknown>
     expect(body.measures ?? body.allMeasures).toBeTruthy()
 })
