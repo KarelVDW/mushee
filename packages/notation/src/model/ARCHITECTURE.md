@@ -141,9 +141,10 @@ measure — propagation is a Score responsibility, never a side effect of layout
 Dirty tracking leaves the model through one typed payload, `ScorePatch` (`io/MusicXml.ts`):
 `Score.flushDirty()` returns the dirty measures keyed by index — or every measure after a
 structural change — plus the part list after an instrument change, then clears the dirty state
-(`null` when nothing changed). `redirty(patch)` puts a failed save's patch back, and
-`markInstrumentDirty()` is the one way to mark dirt from outside a mutator (a score rebuilt from
-a snapshot whose instrument differs from the saved one). Clearing is private to the flush.
+(`null` when nothing changed). Only two calls mark dirt from outside a mutator:
+`redirty(patch)` puts a failed save's patch back, and `markInstrumentDirty()` flags the part list
+of a score rebuilt from a snapshot whose instrument differs from the saved one. Clearing is
+private to the flush.
 
 ## Navigation
 

@@ -43,15 +43,14 @@ test('no mic-source chip: the server classifies voice vs instrument itself', asy
 test('Record is disabled with no note selected and enabled again after clicking one', async ({ page }) => {
     // Refuse the microphone: the take clears the selection as it starts, then fails to open
     // the mic — leaving the editor with no note selected (the only way to get there by hand).
-    // Both desktop engines run this; the refusal is installed whether or not the engine exposes
-    // mediaDevices on its own.
+    // The refusal goes on the prototype, not on navigator.mediaDevices: WebKit garbage-collects
+    // that wrapper and hands out a fresh one, dropping an own-property stub, so the take would
+    // reach the real permission request, which never settles under automation.
     await page.evaluate(() => {
-        const getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))
-        if (navigator.mediaDevices) {
-            Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: getUserMedia })
-        } else {
-            Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia } })
-        }
+        Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+            configurable: true,
+            value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+        })
     })
     // Where the auto-selected first note sits. The failed take's bar displaces it, but the
     // spot stays on the first bar of the staff, so clicking it selects a note again.
