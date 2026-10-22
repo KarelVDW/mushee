@@ -6,12 +6,12 @@ ENV CI=1
 RUN corepack enable
 WORKDIR /repo
 
-# Manifests first for layer caching. Every workspace package.json must be present
-# for --frozen-lockfile, even ones we don't build. tsconfig.base.json is needed
-# because apps/api/tsconfig.json extends it (strict, skipLibCheck etc.).
+# Manifests first for layer caching. The filtered --frozen-lockfile install needs
+# only the manifests of the API's own workspace subtree (api + inference-proto),
+# not the other apps'. tsconfig.base.json is needed because
+# apps/api/tsconfig.json extends it (strict, skipLibCheck etc.).
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
 COPY packages/inference-proto/package.json packages/inference-proto/
 # Install only the API's subtree (its deps incl. the linked @mushee/inference-proto).
 RUN pnpm install --frozen-lockfile --filter @mushee/api...
