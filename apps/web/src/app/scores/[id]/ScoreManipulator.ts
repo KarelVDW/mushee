@@ -27,13 +27,13 @@ const MAX_RANGE = 100_000
  * Score-wide structure (add/remove measure, change instrument) and measure-context edits
  * (clef / key / meter / tempo at a position — the in-score glyph popovers and the dock alike)
  * live in dedicated methods rather than as actions, because they act on a position rather
- * than on the selected notes, and leave the selection as it is.
+ * than on the selected notes. Clef / key / tempo leave the selection as it is; a meter change
+ * rebars, so it re-anchors on the active note (or the changed measure's first note).
  *
  * Every public mutator runs through {@link commit}, so each edit is tracked as one step with
  * the {@link ManipulationHistoryManager}, autosaved, and announced; {@link undo}/{@link redo}
- * travel that history by
- * swapping in a rebuilt Score (note identities change wholesale, so the selection is
- * re-resolved by position).
+ * travel that history by swapping in a rebuilt Score (note identities change wholesale, so
+ * the selection is re-resolved by position).
  */
 export class ScoreManipulator {
     private _score: Score | null = null
