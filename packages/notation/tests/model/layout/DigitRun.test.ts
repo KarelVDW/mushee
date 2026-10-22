@@ -11,6 +11,12 @@ describe('DigitRun', () => {
         expect(new DigitRun(10).glyphNames).toEqual(['timeSig1', 'timeSig0'])
     })
 
+    it('refuses a number with no digit figures: a sign, a decimal point, NaN', () => {
+        expect(() => new DigitRun(-3)).toThrow('DigitRun engraves whole numbers; got -3')
+        expect(() => new DigitRun(1.5)).toThrow('got 1.5')
+        expect(() => new DigitRun(NaN)).toThrow('got NaN')
+    })
+
     it('is as wide as its digits laid side by side', () => {
         expect(new DigitRun(8).width).toBe(7)
         expect(new DigitRun(12).width).toBe(12)

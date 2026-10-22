@@ -1,9 +1,6 @@
 'use client'
 
-import { Glyph } from '@mushee/notation/components'
-import { TimeSignature } from '@mushee/notation/model'
-import { Staff } from '@mushee/notation/model/layout/Staff'
-import { useMemo } from 'react'
+import { TimeSignatureIcon } from '@mushee/notation/components'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -24,39 +21,6 @@ const TIME_SIGNATURE_ROWS: Array<Array<[number, number]>> = [
         [12, 8],
     ],
 ]
-
-/** Room kept around the digits on every side of the glyph's window. */
-const GLYPH_MARGIN = 2
-
-/** Stacked meter digits (e.g. 6 over 8), drawn from the same layout the staff uses. */
-export function TimeSignatureGlyph({
-    beatAmount,
-    beatType,
-    size = 30,
-    color = 'currentColor',
-}: {
-    beatAmount: number
-    beatType: number
-    size?: number
-    color?: string
-}) {
-    const layout = useMemo(() => new TimeSignature(beatAmount, beatType).layout, [beatAmount, beatType])
-    const { topDigits, bottomDigits } = layout
-    const { paddingLeft, content } = layout.width
-    // Window over the digits' content box (the staff padding trimmed) and the staff band:
-    // the digits sit on lines 1 and 3, each spanning a space up and down.
-    const left = paddingLeft - GLYPH_MARGIN
-    const width = content + 2 * GLYPH_MARGIN
-    const top = Staff.TOP_Y - GLYPH_MARGIN
-    const height = Staff.HEIGHT + 2 * GLYPH_MARGIN
-    return (
-        <svg width={(size * width) / height} height={size} viewBox={`${left} ${top} ${width} ${height}`} aria-hidden>
-            {[...topDigits, ...bottomDigits].map((digit, i) => (
-                <Glyph key={i} name={digit.glyphName} x={digit.x} y={digit.y} scale={digit.scale} fill={color} />
-            ))}
-        </svg>
-    )
-}
 
 interface TimeSignaturePopoverProps {
     active: { beatAmount: number; beatType: number }
@@ -87,7 +51,7 @@ export function TimeSignaturePopover({ active, onSelect, onDismiss, className, a
                                 title={`${beatAmount}/${beatType}`}
                                 onClick={() => onSelect(beatAmount, beatType)}
                                 className="justify-center w-11 h-12">
-                                <TimeSignatureGlyph beatAmount={beatAmount} beatType={beatType} size={30} />
+                                <TimeSignatureIcon beatAmount={beatAmount} beatType={beatType} size={30} />
                             </PopoverOption>
                         ))}
                     </div>

@@ -1,9 +1,9 @@
-import { Bravura } from '../../engraving/Bravura'
+import { Bravura, type GlyphName } from '../../engraving/Bravura'
 import { CLEF_DEFS, type ClefSign } from '../clefs'
 import type { ClefType } from '../types'
 import type { PhysicalWidth } from './PhysicalWidth'
 
-const CLEF_GLYPH: Record<ClefSign, string> = { G: 'gClef', F: 'fClef', C: 'cClef' }
+const CLEF_GLYPH: Record<ClefSign, GlyphName> = { G: 'gClef', F: 'fClef', C: 'cClef' }
 
 /**
  * A clef's horizontal footprint, and the glyph it measured (which ClefLayout
@@ -14,7 +14,7 @@ export class ClefWidth implements PhysicalWidth {
 
     readonly paddingLeft: number = 4
     readonly paddingRight: number = 4
-    readonly glyphName: string
+    readonly glyphName: GlyphName
     readonly content: number
     readonly total: number
 

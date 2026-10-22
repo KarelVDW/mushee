@@ -1,3 +1,4 @@
+import type { GlyphName } from '../../engraving/Bravura'
 import { CLEF_DEFS } from '../clefs'
 import type { ClefType } from '../types'
 import { ClefWidth } from './ClefWidth'
@@ -13,7 +14,7 @@ export class ClefLayout {
 
     readonly id = crypto.randomUUID()
     readonly width: ClefWidth
-    readonly glyphName: string
+    readonly glyphName: GlyphName
     readonly x: number
     readonly y: number
     /** The 8/15 octave marker drawn above or below the glyph, if the clef transposes. */

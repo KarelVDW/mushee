@@ -1,13 +1,14 @@
 'use client'
 
-import { Glyph, INTERACTION_BLUE } from '@mushee/notation/components'
+import { Glyph, INTERACTION_BLUE, WAVEFORM_COLORS } from '@mushee/notation/components'
 import { useEffect, useState } from 'react'
 
 /**
  * The hero demo: an idealised loop of a real recording session in the Solkey
  * editor — the recording cursor sweeps the staff, live waveform bars (the
- * editor's cyan/magenta) sprout under it, and a strict beat-and-a-half later
- * each beat's bars burst away as clean engraved notation takes their place.
+ * editor's cyan/magenta) sprout under it, and about 1.5 s later (under three
+ * beats at ♩ = 110) each beat's bars burst away as clean engraved notation
+ * takes their place.
  * The melody is Frère Jacques (Broeder Jakob). Everything is driven by one
  * generated CSS timeline so the loop is smooth and cheap; the REC clock is the
  * only JS ticker. Respects prefers-reduced-motion by showing the finished sheet.
@@ -19,9 +20,8 @@ interface DemoNote {
     x: number
     /** Vertical center of the notehead (10px staff spacing, like the editor). */
     cy: number
-    /** Beats this note lasts (quarter = 1). */
+    /** Beats this note lasts (quarter = 1); a 2-beat note is drawn as a half note. */
     beats: number
-    half?: boolean
     /** Middle C sits on a ledger line below the staff. */
     ledger?: boolean
 }
@@ -34,7 +34,7 @@ const NOTES: DemoNote[] = [
     { x: 296, cy: 105, beats: 1, ledger: true },
     { x: 392, cy: 95, beats: 1 },
     { x: 458, cy: 90, beats: 1 },
-    { x: 524, cy: 85, beats: 2, half: true },
+    { x: 524, cy: 85, beats: 2 },
 ]
 
 // --- Timeline (ms within one loop) ---
@@ -72,7 +72,7 @@ const BARS: DemoBar[] = NOTES.flatMap((note, i) => {
     return Array.from({ length: count }, (_, k) => ({
         x: note.x - 10 + k * 13,
         h: BAR_HEIGHTS[(i + k) % BAR_HEIGHTS.length],
-        color: (i * 4 + k) % 2 === 0 ? '#00DBE9' : '#FF2079',
+        color: WAVEFORM_COLORS[(i * 4 + k) % WAVEFORM_COLORS.length],
         inMs: noteOnsets[i] + k * ((note.beats * BEAT_MS - 120) / count),
         outMs: noteLands[i] + k * 30,
         name: `demo-bar-${i}-${k}`,
@@ -134,8 +134,8 @@ const TIMELINE_CSS = [
 
 const WAVE_PATTERN = [6, 14, 9, 18, 11, 22, 8, 16, 12, 20, 7, 15, 10, 19, 13, 9, 17, 8, 21, 11, 14, 7, 18, 10, 16, 9, 13, 6]
 
-const loopAnim = (name: string, extra = ''): React.CSSProperties => ({
-    animation: `${name} ${LOOP_MS}ms linear infinite${extra}`,
+const loopAnim = (name: string): React.CSSProperties => ({
+    animation: `${name} ${LOOP_MS}ms linear infinite`,
 })
 
 export function HeroDemo() {
@@ -193,7 +193,7 @@ export function HeroDemo() {
                     </div>
                 </div>
 
-                {/* The staff: waveform lands under the cursor, notation follows a beat behind */}
+                {/* The staff: waveform lands under the cursor, notation follows about 1.5 s behind */}
                 <svg viewBox="0 0 640 165" width="100%">
                     {[0, 1, 2, 3, 4].map((i) => (
                         <line key={i} x1={16} x2={624} y1={55 + i * 10} y2={55 + i * 10} stroke="var(--color-on-surface)" strokeWidth={1} />
@@ -222,7 +222,7 @@ export function HeroDemo() {
                             </g>
                         ))}
 
-                    {/* The engraved result, landing a strict beat-and-a-half after the sound */}
+                    {/* The engraved result, landing about 1.5 s (under three beats) after the sound */}
                     {NOTES.map((note, i) => (
                         <g key={note.x} style={animate ? loopAnim(`demo-note-${i}`) : undefined} opacity={animate ? 0 : 1}>
                             {note.ledger && (
@@ -236,7 +236,7 @@ export function HeroDemo() {
                                 />
                             )}
                             <Glyph
-                                name={note.half ? 'noteheadHalf' : 'noteheadBlack'}
+                                name={note.beats === 2 ? 'noteheadHalf' : 'noteheadBlack'}
                                 x={note.x}
                                 y={note.cy}
                                 fill="var(--color-on-surface)"
@@ -270,9 +270,7 @@ export function HeroDemo() {
                             style={{
                                 width: 4,
                                 height: h,
-                                ...(animate
-                                    ? { animation: `demo-meter ${LOOP_MS}ms linear infinite`, animationDelay: `${i * 30}ms` }
-                                    : { transform: 'scaleY(0.18)' }),
+                                ...(animate ? { ...loopAnim('demo-meter'), animationDelay: `${i * 30}ms` } : { transform: 'scaleY(0.18)' }),
                             }}>
                             <span
                                 className="block w-full h-full origin-bottom rounded-full bg-primary-container"

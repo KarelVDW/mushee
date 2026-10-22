@@ -1,5 +1,6 @@
 import { sumBy } from 'lodash-es'
 
+import type { GlyphName } from '../../engraving/Bravura'
 import { MAX_MEASURES_PER_ROW } from '../../engraving/constants'
 import type { KeyAccidental, KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
@@ -25,7 +26,7 @@ export interface MeasureFlags {
  */
 export class MeasureMetrics {
     /** The accidental glyph each note draws, resolved in measure context. */
-    readonly accidentals: Map<Note, string | undefined>
+    readonly accidentals: Map<Note, GlyphName | undefined>
     /** Width per note, carrying its drawn accidental. */
     readonly noteWidths: Map<Note, NoteWidth>
     /** Contextual width per key signature (leading + mid-measure), each carrying its drawn accidentals. */

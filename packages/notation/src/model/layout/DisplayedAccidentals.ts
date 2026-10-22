@@ -1,3 +1,4 @@
+import type { GlyphName } from '../../engraving/Bravura'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import { Pitch } from '../Pitch'
@@ -13,10 +14,10 @@ import { CarriedAccidentals } from '../util/CarriedAccidentals'
  * resets the carried accidentals.
  */
 export class DisplayedAccidentals {
-    readonly byNote: Map<Note, string | undefined>
+    readonly byNote: Map<Note, GlyphName | undefined>
 
     constructor(measure: Measure) {
-        const result = new Map<Note, string | undefined>()
+        const result = new Map<Note, GlyphName | undefined>()
         const carried = new CarriedAccidentals(measure.keySignature.fifths)
         for (const note of measure.notes) {
             if (!note.pitch) {

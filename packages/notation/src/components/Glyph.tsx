@@ -1,11 +1,11 @@
 'use client'
 
-import { Bravura } from '../engraving/Bravura'
+import { Bravura, type GlyphName } from '../engraving/Bravura'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import { NOTATION_INK } from './constants'
 
 interface GlyphProps {
-    name: string
+    name: GlyphName
     x: number
     y: number
     scale?: number

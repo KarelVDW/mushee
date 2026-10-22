@@ -1,8 +1,6 @@
 'use client'
 
-import { Glyph } from '@mushee/notation/components'
-import { KeySignature, Pitch } from '@mushee/notation/model'
-import { Staff } from '@mushee/notation/model/layout/Staff'
+import { KeySignatureIcon } from '@mushee/notation/components'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
@@ -31,34 +29,6 @@ export const KEY_NAMES: Record<number, string> = {
 export function keySignatureLabel(fifths: number): string {
     if (fifths === 0) return '♮'
     return fifths > 0 ? `${fifths}♯` : `${-fifths}♭`
-}
-
-const STAFF_TOP = 10
-const STAFF_VIEW_HEIGHT = 92
-const GLYPH_ADVANCE = 7
-
-/** The run of sharps/flats for a key, drawn on a mini treble staff (used in the control and picker). */
-export function KeySignatureGlyph({ fifths, size = 30, color = 'currentColor' }: { fifths: number; size?: number; color?: string }) {
-    const accidentals = KeySignature.accidentalsForFifths(fifths)
-    if (accidentals.length === 0) return <span style={{ fontSize: size * 0.5, lineHeight: 1, color }}>♮</span>
-    const viewWidth = accidentals.length * GLYPH_ADVANCE + 4
-    return (
-        <svg
-            width={(size * viewWidth) / STAFF_VIEW_HEIGHT}
-            height={size}
-            viewBox={`0 ${STAFF_TOP} ${viewWidth} ${STAFF_VIEW_HEIGHT}`}
-            aria-hidden>
-            {accidentals.map((a, i) => (
-                <Glyph
-                    key={i}
-                    name={a.glyphName}
-                    x={2 + i * GLYPH_ADVANCE}
-                    y={Staff.yForNoteLine(new Pitch({ name: a.name, octave: a.octave }).line)}
-                    fill={color}
-                />
-            ))}
-        </svg>
-    )
 }
 
 interface KeySignaturePopoverProps {
@@ -91,7 +61,7 @@ export function KeySignaturePopover({ active, onSelect, onDismiss, className, an
                                 onClick={() => onSelect(fifths)}
                                 className="flex-col justify-end gap-0.5 w-12 h-14 px-1 py-1.5">
                                 <span className="flex flex-1 items-center">
-                                    <KeySignatureGlyph fifths={fifths} size={32} />
+                                    <KeySignatureIcon fifths={fifths} size={32} />
                                 </span>
                                 <span className="text-[11px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
                             </PopoverOption>

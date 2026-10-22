@@ -1,3 +1,5 @@
+import type { GlyphName } from '../engraving/Bravura'
+
 /** A pitch's letter name — MusicXML's `<step>`. */
 export type PitchStep = 'C' | 'D' | 'E' | 'F' | 'G' | 'A' | 'B'
 
@@ -19,7 +21,7 @@ const INDEX_TO_NOTE: readonly PitchStep[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 export type Accidental = '#' | 'b' | '##' | 'bb' | 'n'
 
 /** The one accidental vocabulary: each token with its semitone alteration and SMuFL glyph. */
-const ACCIDENTALS: ReadonlyArray<{ token: Accidental; alter: number; glyph: string }> = [
+const ACCIDENTALS: ReadonlyArray<{ token: Accidental; alter: number; glyph: GlyphName }> = [
     { token: '#', alter: 1, glyph: 'accidentalSharp' },
     { token: 'b', alter: -1, glyph: 'accidentalFlat' },
     { token: '##', alter: 2, glyph: 'accidentalDoubleSharp' },
@@ -66,7 +68,7 @@ export class Pitch {
     }
 
     /** SMuFL glyph name for a given alteration (0 → natural, shown only when it cancels a prior accidental). */
-    static glyphForAlter(alter: number): string | undefined {
+    static glyphForAlter(alter: number): GlyphName | undefined {
         return ACCIDENTALS.find((a) => a.alter === alter)?.glyph
     }
 

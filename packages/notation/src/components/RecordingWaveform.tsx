@@ -5,10 +5,8 @@ import { useSyncExternalStore } from 'react'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import type { Score as ScoreModel } from '../model'
 import { Staff } from '../model/layout/Staff'
-import { HIGHLIGHT_MAGENTA, WAVEFORM_CYAN } from './constants'
+import { WAVEFORM_COLORS } from './constants'
 
-/** Brand accents (loud tier) — one of the two sanctioned brand-accent exceptions inside the canvas (see constants.ts). */
-const BAR_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA]
 const BAR_WIDTH = 2.5
 /** Tallest bar: half the staff height on either side of the middle line. */
 const MAX_RADIUS = Staff.HEIGHT / 2
@@ -25,6 +23,13 @@ const MIN_RADIUS = 1.5
  * fade, and hand the pixels over to the notes that replaced them.
  * Positions resolve at render time from the live layout, so bars stay glued
  * to their beat when rows reflow as measures fill up.
+ *
+ * The motion is the host's CSS, not this package's: the `.waveform-bar` /
+ * `.waveform-bar-exit` classes, their keyframes and the `--waveform-burst`
+ * factor live in apps/web/src/app/globals.css (shared with the landing-page
+ * demo). The exit animation's `animationend → store.remove` is the only path
+ * that drops an exiting bar, so a host without those styles leaks bars —
+ * any new host must import them.
  */
 export function RecordingWaveform({ store, score }: { store: RecordingWaveformStore; score: ScoreModel }) {
     const bars = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
@@ -50,7 +55,7 @@ export function RecordingWaveform({ store, score }: { store: RecordingWaveformSt
                         width={BAR_WIDTH}
                         height={radius * 2}
                         rx={BAR_WIDTH / 2}
-                        fill={BAR_COLORS[bar.seq % BAR_COLORS.length]}
+                        fill={WAVEFORM_COLORS[bar.seq % WAVEFORM_COLORS.length]}
                         onAnimationEnd={bar.exiting ? () => store.remove(bar.id) : undefined}
                     />
                 )
