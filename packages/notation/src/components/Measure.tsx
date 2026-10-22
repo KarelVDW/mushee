@@ -18,11 +18,13 @@ import { TEMPO_TEXT_HIT_WIDTH, TempoMarking } from './TempoMarking'
 import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
 
-// Selection highlight band: a soft, rounded blue strip behind selected noteheads. Its height
-// spans the staff (matching the playback cursor); adjacent selected notes' bands abut into a
-// continuous run because each spans the full gap to the next note.
-const SELECTION_BAND_Y = Staff.TOP_Y - 6
-const SELECTION_BAND_HEIGHT = Staff.HEIGHT + 12
+// The full staff band, with a little air above and below: the vertical extent of both the
+// selection highlight (a soft, rounded blue strip behind selected noteheads, matching the
+// playback cursor's height) and the click targets of clefs, keys and time signatures.
+// Adjacent selected notes' bands abut into a continuous run because each spans the full gap
+// to the next note.
+const STAFF_BAND_Y = Staff.TOP_Y - 6
+const STAFF_BAND_HEIGHT = Staff.HEIGHT + 12
 
 /**
  * What a clicked attribute glyph reports about itself. The score adds the measure index and
@@ -51,10 +53,6 @@ interface MeasureProps {
      */
     onAttributeClick?: (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => void
 }
-
-// Hit-area vertical extent for clefs, keys and time signatures: the full staff band (matches the selection band).
-const HIT_Y = Staff.TOP_Y - 6
-const HIT_HEIGHT = Staff.HEIGHT + 12
 
 interface HitBox {
     x: number
@@ -103,7 +101,7 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                 return (
                     <g key={element instanceof TimeSignatureModel ? `time-${i}` : element.id} transform={`translate(${x}, 0)`}>
                         <ClickableGlyph
-                            hitBox={{ x: 0, y: HIT_Y, width, height: HIT_HEIGHT }}
+                            hitBox={{ x: 0, y: STAFF_BAND_Y, width, height: STAFF_BAND_HEIGHT }}
                             onClick={onAttributeClick && (() => onAttributeClick(measure, click, x, Staff.TOP_Y))}>
                             {glyph}
                         </ClickableGlyph>
@@ -126,9 +124,9 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                                 data-export-exclude
                                 data-selection-band
                                 x={0}
-                                y={SELECTION_BAND_Y}
+                                y={STAFF_BAND_Y}
                                 width={bandWidth}
-                                height={SELECTION_BAND_HEIGHT}
+                                height={STAFF_BAND_HEIGHT}
                                 rx={3}
                                 fill={INTERACTION_BLUE_BAND}
                             />
