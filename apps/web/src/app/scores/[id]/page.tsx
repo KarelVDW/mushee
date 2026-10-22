@@ -332,9 +332,7 @@ export default function ScoreEditorPage() {
     // The tab carries the score's name, live as it is renamed ('Untitled score' when empty, which
     // is also the route's own title until the score loads — see layout.tsx); a missing score says so.
     const scoreMissing = loadError instanceof ApiError && loadError.status === 404
-    useDocumentTitle(
-        scoreDocument ? `${title.trim() || UNTITLED_SCORE} — Solkey` : scoreMissing ? 'Score not found — Solkey' : null,
-    )
+    useDocumentTitle(scoreDocument ? `${title.trim() || UNTITLED_SCORE} — Solkey` : scoreMissing ? 'Score not found — Solkey' : null)
 
     // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
     // the two can't drift. Record never waits for a selection: with nothing selected a take

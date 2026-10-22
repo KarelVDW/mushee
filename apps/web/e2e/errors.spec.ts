@@ -45,7 +45,10 @@ test('a score that does not exist says so, on the page and in the tab', async ({
         return route.fulfill({
             status: 404,
             contentType: 'application/json',
-            headers: { 'access-control-allow-origin': route.request().headers()['origin'] ?? '*', 'access-control-allow-credentials': 'true' },
+            headers: {
+                'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                'access-control-allow-credentials': 'true',
+            },
             body: JSON.stringify({ message: 'Score not found' }),
         })
     })
