@@ -186,7 +186,7 @@ function Library({ scores, onOpen, onCreate, onDelete }) {
                                     No scores yet.
                                 </span>
                                 <span style={{ font: '400 14px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    Compose your first one.
+                                    Start a score, press record, and hum, sing or play — Solkey writes your melody down.
                                 </span>
                             </div>
                             <PrimaryButton icon="plus" onClick={handleCreate}>

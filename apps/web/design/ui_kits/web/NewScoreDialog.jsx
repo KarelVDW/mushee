@@ -2,11 +2,13 @@
 // Representative subset of the app's real catalogue, grouped the way the app groups
 // it: display names + families from Instrument.selectableByCategory(), which lives in
 // packages/notation/src/model/Instrument.ts (imported app-side as `@mushee/notation/model`).
-// Picker order: Keyboard · Brass · Woodwinds · Voice · Strings · Folk & World, alphabetical
+// Picker order: Voice · Keyboard · Strings · Woodwinds · Brass · Folk & World, alphabetical
 // within each group. Guitar and Bass Guitar are real Strings entries; Harp is not offered.
+// (Production leads with eight popular tiles and keeps these families behind "All instruments".)
 const INSTRUMENT_CATEGORIES = [
+    ['Voice', ['Voice']],
     ['Keyboard', ['Piano']],
-    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
+    ['Strings', ['Bass Guitar', 'Cello', 'Double Bass', 'Guitar', 'Viola', 'Violin']],
     [
         'Woodwinds',
         [
@@ -26,8 +28,7 @@ const INSTRUMENT_CATEGORIES = [
             'Tenor Saxophone',
         ],
     ],
-    ['Voice', ['Voice']],
-    ['Strings', ['Bass Guitar', 'Cello', 'Contrabass', 'Guitar', 'Viola', 'Violin']],
+    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
     ['Folk & World', ['Bagpipe', 'Dizi Flute', 'Erhu', 'Harmonica', 'Ocarina', 'Pan Flute', 'Shakuhachi Flute', 'Tin Whistle']],
 ]
 

@@ -2,24 +2,27 @@
 //
 // Chrome grammar (mirrors apps/web/src/app/scores/[id]):
 //   header (slim, py-2) → back · wordmark · title · instrument chip
-//                          | transport centred: [stop 30] [play 40] [● record 40] [metro 30]
+//                          | transport centred: [stop 36, only while playing/recording]
+//                            [play 40] [● record 48 — the largest] [metronome 36]
 //                          | keyboard-shortcuts chip · Export menu
 //   dock (bottom, in-flow) → every selection-scoped edit control in one bar along the
-//                            editor's bottom edge: durations (SVG note icons) · dot/tuplet/
-//                            rest/tie · accidentals · clef/key/tempo. Each group sits in a
-//                            white capsule well (surface-container-lowest + tonal glow); the
-//                            wells are separated by space — no dividers — and wrap onto extra
-//                            rows. Controls inside a well are transparent at rest; standalone
-//                            chrome controls carry the white fill themselves. Popovers open
-//                            UPWARD, away from the dock.
+//                            editor's bottom edge, left to right: Pitch (Higher · Lower) ·
+//                            Length (durations as SVG note icons + Dotted) · ♭ ♮ ♯ · Rest ·
+//                            More (Triplet, Tie, Simplify sharps and flats) · clef/key/tempo.
+//                            Each group sits in a white capsule well (surface-container-lowest
+//                            + tonal glow); the wells are separated by space — no dividers —
+//                            and wrap onto extra rows. Controls inside a well are transparent
+//                            at rest; standalone chrome controls carry the white fill
+//                            themselves. Popovers open UPWARD, away from the dock, on the
+//                            opaque card (never glass).
 //   Both chrome surfaces are the same tonal mirror: surface-container-low @ 85% +
-//   backdrop blur + tonal shadow. Saving is silent autosave — no Save or Share buttons.
+//   backdrop blur + tonal shadow. Saving is autosave with a quiet status — no Save button.
 //
-// Mobile (<768px), not depicted in this desktop kit: the transport moves out of the
-// header into the dock as a thumb-sized action row (record grows to 54px, the biggest
-// control on screen) alongside note-nav (◀ ▶), pitch-nudge (▼ ▲), and a delete-icon
-// "Remove note" button; the metronome joins the tool strip, and the dock popovers
-// become full-width sheets instead of anchored panels.
+// Not depicted in this kit (see ../../DESIGN.md §4 and §4b): the save status, Share /
+// Recordings chips, tooltips, the dock's hint line, the recording strip that replaces
+// the tool wells during a take, the editor empty state, and the phone layout (a tool row
+// — Undo · lengths · More — over the action row: Note ◀ ▶, Pitch ▼ ▲, stop 40 / play 46 /
+// record 54, with everything else in the "More tools" sheet).
 
 // Chrome mirror surface — shared by the header and the dock.
 const CHROME_SURFACE = {
@@ -55,8 +58,9 @@ function ToolGroup({ ariaLabel, children }) {
 
 // Segmented pill track — itself a capsule well: white fill + tonal glow, options
 // transparent at rest and hovering *away* from the page (surface_container_high),
-// active option in loud cyan.
-function Segmented({ value, onChange, options, ariaLabel }) {
+// active option in loud cyan. `bare` drops the track when the Segmented shares a
+// ToolGroup well with other controls (Length + Dotted).
+function Segmented({ value, onChange, options, ariaLabel, bare }) {
     const [hovered, setHovered] = useState(null)
     return (
         <div
@@ -65,10 +69,10 @@ function Segmented({ value, onChange, options, ariaLabel }) {
             style={{
                 display: 'inline-flex',
                 gap: 2,
-                padding: 3,
+                padding: bare ? 0 : 3,
                 borderRadius: 9999,
-                background: 'var(--color-surface-container-lowest)',
-                boxShadow: 'var(--shadow-tonal)',
+                background: bare ? 'transparent' : 'var(--color-surface-container-lowest)',
+                boxShadow: bare ? 'none' : 'var(--shadow-tonal)',
             }}>
             {options.map(([k, g]) => {
                 const active = value === k
@@ -154,8 +158,9 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
 
     if (tone === 'record') {
         // Concentric "rec light": white shell, thick red ring, solid red core.
-        // Active state fills the whole button.
-        const dotSize = Math.round(size * 0.42)
+        // Active state fills the whole button, and the core becomes a white stop
+        // square — while a take runs, Record is the stop ("Stop recording").
+        const dotSize = Math.round(size * (active ? 0.36 : 0.42))
         return (
             <button
                 type="button"
@@ -184,7 +189,7 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                     style={{
                         width: dotSize,
                         height: dotSize,
-                        borderRadius: 9999,
+                        borderRadius: active ? '22%' : 9999,
                         background: active ? 'var(--color-on-error)' : 'var(--color-error-container)',
                         transition: 'background 200ms var(--ease)',
                         boxShadow: active ? 'none' : 'inset 0 -2px 4px rgba(0,0,0,0.18)',
@@ -228,12 +233,18 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
 
     // Neutral satellite (stop / metronome) — a standalone white circle on the
     // chrome (surface_container_lowest), hovering away to surface_container_high.
-    const bg = hovering ? 'var(--color-surface-container-high)' : 'var(--color-surface-container-lowest)'
-    const fg = active ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'
+    // A pressed toggle (the metronome) shows its on state as the loud cyan fill.
+    const bg = active
+        ? 'var(--color-primary-container)'
+        : hovering
+          ? 'var(--color-surface-container-high)'
+          : 'var(--color-surface-container-lowest)'
+    const fg = active ? 'var(--color-on-primary-container)' : 'var(--color-on-surface-variant)'
     return (
         <button
             type="button"
             aria-label={ariaLabel}
+            aria-pressed={active}
             onClick={onClick}
             disabled={disabled}
             onMouseEnter={() => setHover(true)}
@@ -258,23 +269,27 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
     )
 }
 
-// Transport cluster — lives centred in the header on desktop. Record is the same
-// size as play here; it only headlines (54px) in the mobile dock.
+// Transport cluster — lives centred in the header on desktop. Record is the largest
+// control here too (48px vs 40px play; 54px in the mobile dock). Stop keeps its slot
+// but shows only while something plays or records; while a take runs, Record is the
+// stop. The metronome wears its own glyph (audio-lines means recorded audio).
 function TransportControls({ playing, onPlay, onStop, recording, onRec, metro, onMetro }) {
     const canStop = playing || recording
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <TransportBtn size={30} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
-                <Icon name="square" size={12} />
-            </TransportBtn>
+            <span style={{ display: 'inline-flex', visibility: canStop ? 'visible' : 'hidden' }}>
+                <TransportBtn size={36} onClick={onStop} ariaLabel="Stop" disabled={!canStop}>
+                    <Icon name="square" size={14} />
+                </TransportBtn>
+            </span>
             <TransportBtn size={40} tone="play" active={playing} onClick={onPlay} ariaLabel={playing ? 'Pause' : 'Play'} disabled={recording}>
                 <Icon name={playing ? 'pause' : 'play'} size={18} />
             </TransportBtn>
-            <TransportBtn size={40} tone="record" active={recording} onClick={onRec} ariaLabel="Record">
+            <TransportBtn size={48} tone="record" active={recording} onClick={onRec} ariaLabel={recording ? 'Stop recording' : 'Record'}>
                 <Icon name="circle" size={16} />
             </TransportBtn>
-            <TransportBtn size={30} active={metro} onClick={onMetro} ariaLabel="Metronome">
-                <Icon name="audio-lines" size={12} />
+            <TransportBtn size={36} active={metro} onClick={onMetro} ariaLabel="Metronome">
+                <Icon name="metronome" size={16} />
             </TransportBtn>
         </div>
     )
@@ -343,9 +358,11 @@ function RestIcon() {
     )
 }
 
-// Upward glass popover shared by the dock's clef / key / tempo controls.
-// Production positions these `bottom-[calc(100%+0.75rem)] right-0` so they can
-// never hang over the dock; on mobile they become full-width sheets instead.
+// Upward popover shared by the dock's clef / key / tempo / More controls — on the
+// opaque card (surface-container-lowest + editorial shadow), never glass: blur
+// doesn't nest inside the dock's own backdrop blur. Production positions these
+// `bottom-[calc(100%+0.75rem)] right-0` so they can never hang over the dock; on
+// mobile they become sheets instead.
 function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
     const popRef = React.useRef(null)
     React.useEffect(() => {
@@ -369,7 +386,6 @@ function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
             ref={popRef}
             role="dialog"
             aria-label={ariaLabel}
-            className="glass-panel"
             style={{
                 position: 'absolute',
                 bottom: 'calc(100% + 12px)',
@@ -378,7 +394,8 @@ function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
                 padding: 16,
                 width,
                 zIndex: 50,
-                boxShadow: 'var(--shadow-tonal)',
+                background: 'var(--color-surface-container-lowest)',
+                boxShadow: 'var(--shadow-editorial)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
@@ -563,7 +580,7 @@ const KEY_OPTIONS = [
     [3, '3♯', 'A major'],
     [2, '2♯', 'D major'],
     [1, '1♯', 'G major'],
-    [0, '♮', 'C major'],
+    [0, '', 'C major'],
     [-1, '1♭', 'F major'],
     [-2, '2♭', 'B♭ major'],
     [-3, '3♭', 'E♭ major'],
@@ -640,8 +657,8 @@ function KeySignatureControl({ fifths, onSet }) {
     const current = KEY_OPTIONS.find(([v]) => v === fifths) ?? KEY_OPTIONS[3]
     return (
         <div style={{ position: 'relative' }}>
-            <ChipToggle plain active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Key signature: ${current[2]}`}>
-                {current[1]}
+            <ChipToggle plain active={open} onClick={() => setOpen((o) => !o)} ariaLabel={`Key: ${current[2]}`}>
+                {current[2]}
             </ChipToggle>
             {open && (
                 <DockPopover ariaLabel="Select key signature" onDismiss={() => setOpen(false)} width={240}>
@@ -681,9 +698,9 @@ function TempoControl({ bpm, onSet }) {
 // Export menu — replaces the old Save/Share pair; production autosaves silently,
 // so the only document action left in the header is getting the score out.
 const EXPORT_FORMATS = [
-    ['MusicXML', 'For other notation apps (.musicxml)'],
-    ['PDF', 'Print-ready sheet music (.pdf)'],
-    ['MIDI', 'For DAWs and players (.mid)'],
+    ['PDF', 'Print it or send it as sheet music (.pdf)'],
+    ['MIDI', 'Open it in GarageBand or other music apps (.mid)'],
+    ['MusicXML', 'Keep editing in MuseScore or other notation apps (.musicxml)'],
 ]
 
 function ExportMenu() {
@@ -712,7 +729,6 @@ function ExportMenu() {
                 <div
                     role="dialog"
                     aria-label="Export score"
-                    className="glass-panel"
                     style={{
                         position: 'absolute',
                         top: 'calc(100% + 8px)',
@@ -720,12 +736,13 @@ function ExportMenu() {
                         borderRadius: 12,
                         padding: 16,
                         zIndex: 50,
-                        boxShadow: 'var(--shadow-tonal)',
+                        background: 'var(--color-surface-container-lowest)',
+                        boxShadow: 'var(--shadow-editorial)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
                     }}>
-                    <Eyebrow>Export as</Eyebrow>
+                    <Eyebrow>Download as</Eyebrow>
                     <div role="group" aria-label="Export format" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {EXPORT_FORMATS.map(([label, description]) => (
                             <ExportOption key={label} label={label} description={description} onClick={() => setOpen(false)} />
@@ -760,7 +777,7 @@ function ExportOption({ label, description, onClick }) {
                 transition: 'background 150ms var(--ease)',
             }}>
             <span style={{ font: '600 13px/1 var(--font-label)', color: 'var(--color-on-surface)' }}>{label}</span>
-            <span style={{ font: '400 11px/1 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{description}</span>
+            <span style={{ font: '400 11px/1.3 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{description}</span>
         </button>
     )
 }
@@ -790,6 +807,8 @@ function NoteToolDock({
     onKey,
     bpm,
     onBpm,
+    onHigher = () => {},
+    onLower = () => {},
 }) {
     return (
         <div style={{ ...CHROME_SURFACE, flexShrink: 0, zIndex: 20, padding: '10px 16px' }}>
@@ -803,48 +822,126 @@ function NoteToolDock({
                     columnGap: 24,
                     rowGap: 8,
                 }}>
-                <Segmented
-                    ariaLabel="Note duration"
-                    value={duration}
-                    onChange={onDuration}
-                    options={[
-                        ['w', <DurationIcon dur="w" />],
-                        ['h', <DurationIcon dur="h" />],
-                        ['q', <DurationIcon dur="q" />],
-                        ['8', <DurationIcon dur="8" />],
-                        ['16', <DurationIcon dur="16" />],
-                    ]}
-                />
-                <ToolGroup ariaLabel="Note modifiers">
+                <ToolGroup ariaLabel="Pitch">
+                    <ChipToggle plain onClick={onHigher} ariaLabel="Higher">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="chevron-up" size={12} />
+                            Higher
+                        </span>
+                    </ChipToggle>
+                    <ChipToggle plain onClick={onLower} ariaLabel="Lower">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="chevron-down" size={12} />
+                            Lower
+                        </span>
+                    </ChipToggle>
+                </ToolGroup>
+                <ToolGroup ariaLabel="Length">
+                    <Segmented
+                        bare
+                        ariaLabel="Note duration"
+                        value={duration}
+                        onChange={onDuration}
+                        options={[
+                            ['w', <DurationIcon dur="w" />],
+                            ['h', <DurationIcon dur="h" />],
+                            ['q', <DurationIcon dur="q" />],
+                            ['8', <DurationIcon dur="8" />],
+                            ['16', <DurationIcon dur="16" />],
+                        ]}
+                    />
                     <ChipToggle plain active={dotted} onClick={onDot} ariaLabel="Dotted">
-                        ·
-                    </ChipToggle>
-                    <ChipToggle plain active={tuplet} onClick={onTuplet} ariaLabel="Triplet">
-                        <TupletIcon />
-                    </ChipToggle>
-                    <ChipToggle plain active={rest} onClick={onRest} ariaLabel="Rest">
-                        <RestIcon />
-                    </ChipToggle>
-                    <ChipToggle plain active={tied} onClick={onTie}>
-                        Tie
+                        <DottedIcon />
                     </ChipToggle>
                 </ToolGroup>
                 <Segmented
-                    ariaLabel="Accidental"
+                    ariaLabel="Sharp or flat"
                     value={accidental}
                     onChange={onAccidental}
                     options={[
-                        ['', '♮'],
                         ['b', '♭'],
+                        ['', '♮'],
                         ['#', '♯'],
                     ]}
                 />
+                <ChipToggle active={rest} onClick={onRest} ariaLabel="Rest">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <RestIcon />
+                        Rest
+                    </span>
+                </ChipToggle>
+                <MoreNoteTools tuplet={tuplet} onTuplet={onTuplet} tied={tied} onTie={onTie} />
                 <ToolGroup ariaLabel="Score settings">
                     <ClefControl clef={clef} onSet={onClef} />
                     <KeySignatureControl fifths={keyFifths} onSet={onKey} />
                     <TempoControl bpm={bpm} onSet={onBpm} />
                 </ToolGroup>
             </div>
+        </div>
+    )
+}
+
+// The dotted control is a drawn glyph — a quarter note with its dot — never a "·".
+function DottedIcon() {
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 1 }}>
+            <DurationIcon dur="q" />
+            <svg width={4} height={20} viewBox="0 0 4 20" aria-hidden="true">
+                <circle cx={2} cy={16} r={1.6} fill="currentColor" />
+            </svg>
+        </span>
+    )
+}
+
+// "More" — Triplet, Tie and Simplify sharps and flats behind one labelled chip,
+// opening the upward "More note tools" popover: 44px rows, each with a plain hint.
+function MoreNoteTools({ tuplet, onTuplet, tied, onTie }) {
+    const [open, setOpen] = useState(false)
+    const rows = [
+        { label: 'Triplet', hint: 'Three notes in the time of two', pressed: tuplet, onClick: onTuplet },
+        { label: 'Tie', hint: 'Hold into the next note of the same pitch', pressed: tied, onClick: onTie },
+        { label: 'Simplify sharps and flats', hint: 'Fewest possible, same sound', onClick: () => setOpen(false) },
+    ]
+    return (
+        <div style={{ position: 'relative' }}>
+            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel="More note tools">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    More
+                    <Icon name="chevron-up" size={12} />
+                </span>
+            </ChipToggle>
+            {open && (
+                <DockPopover ariaLabel="More note tools" onDismiss={() => setOpen(false)} width={300}>
+                    <Eyebrow>More note tools</Eyebrow>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {rows.map((row) => (
+                            <button
+                                key={row.label}
+                                type="button"
+                                aria-pressed={row.pressed}
+                                onClick={row.onClick}
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'center',
+                                    gap: 4,
+                                    minHeight: 44,
+                                    border: 0,
+                                    borderRadius: 8,
+                                    padding: '8px 12px',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    background: row.pressed ? 'var(--color-primary-container)' : 'var(--color-surface-container-low)',
+                                    color: row.pressed ? 'var(--color-on-primary-container)' : 'var(--color-on-surface)',
+                                }}>
+                                <span style={{ font: '600 13px/1.2 var(--font-label)' }}>{row.label}</span>
+                                <span style={{ font: '400 11px/1.3 var(--font-body)', opacity: 0.8 }}>{row.hint}</span>
+                            </button>
+                        ))}
+                    </div>
+                </DockPopover>
+            )}
         </div>
     )
 }
@@ -1043,24 +1140,25 @@ function WideSpectrumWalkthrough() {
 // a warm-up mic stream *before* this dialog so the Control Center tile exists and
 // the steps are performable now — which is what lets the confirm button attest the
 // setting rather than a bare "OK".
-function MicModeGuideDialog({ onConfirm, onClose }) {
+function MicModeGuideDialog({ onConfirm, onClose, onSkip = onClose }) {
     return (
         <DialogPanel
-            title="iPhone user"
-            subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+            title="One quick iPhone setting"
+            subtitle="iPhones tune the mic for phone calls, which can hide whistling and instruments. Switch it to Wide Spectrum once and you're set."
             onClose={onClose}
             width={480}
             footer={
-                <PrimaryButton icon="mic" onClick={onConfirm}>
-                    I've set Wide Spectrum — record
-                </PrimaryButton>
+                <>
+                    <TertiaryButton onClick={onSkip}>Record without it</TertiaryButton>
+                    <PrimaryButton icon="mic" onClick={onConfirm}>
+                        Done — start recording
+                    </PrimaryButton>
+                </>
             }>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
                 <WideSpectrumWalkthrough />
                 <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                    Without <strong style={{ color: 'var(--color-on-surface)' }}>Wide Spectrum</strong>, iOS removes whistling and
-                    instrument notes before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control
-                    Center — set it now, come back, and your iPhone remembers the choice for this browser.
+                    Your mic is on, so Mic Mode is in Control Center right now. Set it, come back here, and your iPhone remembers.
                 </span>
             </div>
         </DialogPanel>
@@ -1145,16 +1243,22 @@ function PlaceholderStaff() {
     )
 }
 
-// Add/remove-measure controls — small icon buttons sitting in the score area at
-// the end of the last staff (production draws them inside the score SVG itself).
+// Add / remove-bar controls — HTML chrome under the last row's final barline
+// (export-excluded, neutral tones, never inside the score SVG): a labelled
+// "Add bar" chip and, 16px away, an icon-only "Remove last bar".
 function MeasureButtons({ onAdd, onRemove }) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '4px 8px 0 0' }}>
-            <IconButton icon="plus" size={28} ariaLabel="Add measure" onClick={onAdd} idleBg="var(--color-surface-container-low)" />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, padding: '12px 8px 0 0' }}>
+            <ChipToggle onClick={onAdd} ariaLabel="Add bar">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="plus" size={12} />
+                    Add bar
+                </span>
+            </ChipToggle>
             <IconButton
                 icon="minus"
                 size={28}
-                ariaLabel="Remove last measure"
+                ariaLabel="Remove last bar"
                 onClick={onRemove}
                 idleBg="var(--color-surface-container-low)"
             />
