@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { DialogPanel, Eyebrow, Icon, type IconName, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 import { ApiError } from '@/lib/api'
+import { formatPurgeDate } from '@/lib/dates'
 import { useRequestAccountDeletion } from '@/lib/queries'
 
 interface DeleteAccountDialogProps {
@@ -16,21 +17,16 @@ const PHRASE = 'delete my account'
 
 const LOSS_ITEMS: [icon: IconName, text: string][] = [
     ['music', 'All your scores and recordings'],
-    ['download', 'All MIDI and PDF exports'],
+    ['user', 'Your profile, settings and plan'],
     ['link', 'Share links — they stop working once deletion completes'],
 ]
 
-function formatPurgeDate(iso?: string): string {
-    if (!iso) return 'in 7 days'
-    return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
-}
-
 export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccountDialogProps) {
-    const [stage, setStage] = useState<'confirm' | 'done'>('confirm')
     const [typed, setTyped] = useState('')
     const [pw, setPw] = useState('')
     const [ack, setAck] = useState(false)
     const deletion = useRequestAccountDeletion()
+    const done = deletion.isSuccess
 
     const phraseMatch = typed.trim().toLowerCase() === PHRASE
     const canSubmit = phraseMatch && pw.length > 0 && ack && !deletion.isPending
@@ -39,7 +35,6 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
         if (!canSubmit) return
         deletion.mutate(pw, {
             onSuccess: () => {
-                setStage('done')
                 // Give the goodbye note a beat to land; sessions are already
                 // revoked server-side, so onConfirm just signs out + redirects.
                 setTimeout(() => onConfirm(), 3000)
@@ -61,16 +56,16 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
 
     return (
         <DialogPanel
-            title={stage === 'done' ? 'Account scheduled for deletion.' : 'Delete your account?'}
+            title={done ? 'Account scheduled for deletion.' : 'Delete your account?'}
             subtitle={
-                stage === 'done'
+                done
                     ? 'Signing you out…'
                     : 'Your account is deactivated today and permanently deleted after 7 days. Signing back in before then undoes it.'
             }
-            onClose={stage === 'done' ? undefined : onCancel}
+            onClose={done ? undefined : onCancel}
             width={520}
             footer={
-                stage === 'done' ? null : (
+                done ? null : (
                     <>
                         <TertiaryButton onClick={onCancel}>Keep my account</TertiaryButton>
                         <PrimaryButton danger disabled={!canSubmit} onClick={submit}>
@@ -79,7 +74,7 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                     </>
                 )
             }>
-            {stage === 'done' ? (
+            {done ? (
                 <div className="flex items-center gap-3.5 pb-4">
                     <span className="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant inline-flex items-center justify-center shrink-0">
                         <Icon name="check" size={20} />
@@ -87,7 +82,7 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                     <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
                         Thanks for being here. Changed your mind? Sign back in with{' '}
                         <strong className="text-on-surface">{email ?? 'your email'}</strong> before{' '}
-                        <strong className="text-on-surface">{formatPurgeDate(deletion.data?.purgeAfter)}</strong> and everything will be
+                        <strong className="text-on-surface">{formatPurgeDate(deletion.data?.purgeAfter, 'in 7 days')}</strong> and everything will be
                         right where you left it.
                     </span>
                 </div>

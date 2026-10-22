@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { signOut } from '@/lib/auth-client'
+import { formatPurgeDate } from '@/lib/dates'
 import { useReactivateAccount } from '@/lib/queries'
 
 interface ReactivateAccountDialogProps {
@@ -24,7 +25,7 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
     const reactivation = useReactivateAccount()
     const [declining, setDeclining] = useState(false)
 
-    const purgeDate = purgeAfter ? new Date(purgeAfter).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'soon'
+    const purgeDate = formatPurgeDate(purgeAfter, 'soon')
 
     const decline = async () => {
         if (declining || reactivation.isPending) return
