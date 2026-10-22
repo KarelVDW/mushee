@@ -248,9 +248,14 @@ export class PlanCatalogue {
         return index >= 0 ? this.sellable[index + 1] : undefined
     }
 
-    /** The score cap of any tier, beta and other unsold tiers included; the static cap stands in. */
+    /**
+     * The score cap of any tier, beta and other unsold tiers included (null = no cap). The
+     * API's answer wins, its null included; without one the static cap stands in.
+     */
     maxScoresFor(id: string): number | null {
-        return this.apiPlans?.find((p) => p.id === id)?.maxScores ?? planById(id).maxScores
+        if (id === BETA_PLAN.id) return this.beta.maxScores
+        const apiPlan = this.apiPlans?.find((p) => p.id === id)
+        return apiPlan ? apiPlan.maxScores : planById(id).maxScores
     }
 }
 

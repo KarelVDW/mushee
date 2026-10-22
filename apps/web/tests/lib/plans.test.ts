@@ -198,4 +198,11 @@ describe('PlanCatalogue', () => {
         expect(plans.maxScoresFor('beta')).toBe(50)
         expect(plans.maxScoresFor('arranger')).toBe(planById('arranger').maxScores)
     })
+
+    it("keeps an API 'no cap' (null) over the static cap, and beta uncapped until the API answers", () => {
+        const uncapped = new PlanCatalogue(API_PLANS.map((p) => (p.id === 'free' ? { ...p, maxScores: null } : p)))
+        expect(uncapped.maxScoresFor('free')).toBeNull()
+        expect(new PlanCatalogue(undefined).maxScoresFor('beta')).toBe(BETA_PLAN.maxScores)
+        expect(new PlanCatalogue(API_PLANS.filter((p) => p.id !== 'beta')).maxScoresFor('beta')).toBeNull()
+    })
 })
