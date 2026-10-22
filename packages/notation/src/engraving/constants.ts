@@ -54,6 +54,15 @@ export const TUPLET_OFFSET = 15
 /** Scale for tuplet number glyphs (3/5 of normal notation scale) */
 export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5)
 
+/** Tuplet bracket vertical tick height in pixels */
+export const TUPLET_BRACKET_HEIGHT = 10
+
+/** Stroke thickness of the tuplet bracket's ticks and lines */
+export const TUPLET_BRACKET_THICKNESS = 1
+
+/** Horizontal clearance between the bracket lines and the ratio number on either side */
+export const TUPLET_NUMBER_CLEARANCE = 5
+
 /** Y position of tempo markings within headroom above staff */
 export const TEMPO_MARKING_Y = 15
 

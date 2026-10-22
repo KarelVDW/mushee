@@ -37,9 +37,3 @@ export const MEASURE_BUTTON_LABEL = '#5a5c5c'
 /** Augmentation dot radius in pixels */
 export const DOT_RADIUS = 2
 
-/** Tuplet bracket vertical tick height in pixels */
-export const TUPLET_BRACKET_HEIGHT = 10
-
-/** Horizontal gap between bracket lines and the number */
-export const TUPLET_NUMBER_GAP = 5
-
