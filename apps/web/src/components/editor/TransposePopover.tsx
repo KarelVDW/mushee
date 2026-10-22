@@ -1,10 +1,10 @@
 'use client'
 
 import { ScoreView } from '@mushee/notation/components'
-import { Interval, type IntervalQuality, KeySignature, type Note, Score } from '@mushee/notation/model'
+import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
+import { KeyName, KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
 import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
@@ -35,6 +35,7 @@ const QUALITY_LABELS: Record<IntervalQuality, string> = {
 
 const MAX_SEMITONES = 24
 const MAX_EXTRA_OCTAVES = 3
+const OCTAVE = 12
 
 /** Width the preview's layout packs against — px at zoom 1 (the model's reflow floor). */
 const PREVIEW_LAYOUT_WIDTH = 340
@@ -47,6 +48,19 @@ const PREVIEW_MAX_ZOOM = 1.2
  * ledger lines while dropping the mostly-empty tail.
  */
 const PREVIEW_CROP_HEIGHT = 128
+/** On a phone sheet the preview leaves the room to the controls: never taller than this (px). */
+const SHEET_PREVIEW_MAX_HEIGHT = 96
+
+/**
+ * What a transposition does, in plain words: "2 half steps higher", plus the key the score
+ * lands in when the whole score moves ("— now in D major"); "No change yet" before any move.
+ */
+export function transposeReadout(chromatic: number, keyAfter: string | null): string {
+    if (chromatic === 0) return 'No change yet'
+    const steps = Math.abs(chromatic)
+    const move = `${steps} half ${steps === 1 ? 'step' : 'steps'} ${chromatic > 0 ? 'higher' : 'lower'}`
+    return keyAfter ? `${move} — now in ${keyAfter}` : move
+}
 
 interface TransposePopoverProps {
     score: Score
@@ -65,18 +79,22 @@ interface TransposePopoverProps {
      * target of the pending transposition is always visible. Keep referentially stable.
      */
     onScopeChange?: (scope: PitchScope | null) => void
-    /** Extra positioning/layout classes (e.g. `right-0 top-[calc(100%+0.5rem)]`). */
+    /** Extra positioning/layout classes (e.g. `right-0 top-[calc(100%+0.5rem)]`); ignored by a sheet, which its host positions. */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
     anchorRef?: { current: HTMLElement | null }
+    /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
+    variant?: 'anchored' | 'sheet'
+    /** Rendered above the controls — the More sheet's Back link. */
+    lead?: ReactNode
 }
 
 /**
- * The transpose panel. Simple by default — a signed semitone count plus a live preview —
- * with an advanced mode offering the full vocabulary (by interval, by target key, by
- * semitones) behind one toggle. Whatever the input mode, the engine receives a single
- * {@link Interval} and always respells the result minimally, so the preview
- * below is exactly what Apply produces.
+ * The transpose panel. Simple by default — half a step or an octave at a time, said in plain
+ * words ("2 half steps higher — now in D major"), over a live preview — with "More options"
+ * offering the full vocabulary (by interval, by target key, by semitones). Whatever the input
+ * mode, the engine receives a single {@link Interval} and always respells the result
+ * minimally, so the preview below is exactly what Apply produces.
  */
 export function TransposePopover({
     score,
@@ -87,7 +105,10 @@ export function TransposePopover({
     onScopeChange,
     className,
     anchorRef,
+    variant = 'anchored',
+    lead,
 }: TransposePopoverProps) {
+    const sheet = variant === 'sheet'
     const [advanced, setAdvanced] = useState(false)
     const [tab, setTab] = useState<TransposeTab>('interval')
     const [scope, setScope] = useState<PitchScope>('score')
@@ -99,10 +120,9 @@ export function TransposePopover({
     const [targetFifths, setTargetFifths] = useState<number | null>(null)
 
     const effectiveScope: PitchScope = selectionNarrowsPitchOps && scope === 'selection' ? 'selection' : 'score'
-    const currentFifths =
-        (effectiveScope === 'selection' && selectedNotes[0]
-            ? selectedNotes[0].keySignature.fifths
-            : score.firstMeasure?.keySignature.fifths) ?? 0
+    const currentKey =
+        effectiveScope === 'selection' && selectedNotes[0] ? selectedNotes[0].keySignature : (score.firstMeasure?.keySignature ?? null)
+    const currentFifths = currentKey?.fifths ?? 0
 
     const interval = useMemo(() => {
         if (!advanced || tab === 'semitones') return Interval.fromSemitones(semitones)
@@ -129,19 +149,26 @@ export function TransposePopover({
     }, [score, previewVersion, selectedNotes, interval, effectiveScope])
     // A lone measure fills only a slice of the layout width, so the view is zoomed until the
     // measure's actually-used width fills the preview box (the box crops the empty remainder
-    // and centers the visible slice).
+    // and centers the visible slice). A phone sheet also caps its height.
     const previewZoom = useMemo(() => {
         const first = preview.measures[0]?.layout
         const used = first ? first.measureX + first.measureWidth : PREVIEW_LAYOUT_WIDTH
-        const scale = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
-        return { scale, width: used * scale, height: Math.min(preview.layout.totalHeight, PREVIEW_CROP_HEIGHT) * scale }
-    }, [preview])
+        const cropped = Math.min(preview.layout.totalHeight, PREVIEW_CROP_HEIGHT)
+        const fit = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
+        const scale = sheet ? Math.min(fit, SHEET_PREVIEW_MAX_HEIGHT / cropped) : fit
+        return { scale, width: used * scale, height: cropped * scale }
+    }, [preview, sheet])
+    // The key the whole score lands in, read off the preview — it ran the very same transpose.
+    const landingKey = preview.firstMeasure?.keySignature
+    const keyAfter = effectiveScope === 'score' && !interval.isUnison && landingKey ? KeyName.of(landingKey).long : null
 
     // Aim the canvas pulse at the current scope while open; clear it on close.
     useEffect(() => {
         onScopeChange?.(effectiveScope)
     }, [onScopeChange, effectiveScope])
     useEffect(() => () => onScopeChange?.(null), [onScopeChange])
+
+    const nudge = (delta: number) => setSemitones((current) => Math.max(-MAX_SEMITONES, Math.min(MAX_SEMITONES, current + delta)))
 
     const selectDegree = (next: number) => {
         setDegree(next)
@@ -151,7 +178,7 @@ export function TransposePopover({
     }
 
     const openAdvanced = () => {
-        // Carry a dialed-in semitone count into the advanced mode's matching tab.
+        // Carry a dialed-in half-step count into the advanced mode's matching tab.
         if (semitones !== 0) setTab('semitones')
         setAdvanced(true)
     }
@@ -177,15 +204,38 @@ export function TransposePopover({
         <Popover
             ariaLabel="Transpose"
             title="Transpose"
+            hint="Move every note higher or lower."
             onDismiss={onDismiss}
             onKeyDown={handleKey}
             anchorRef={anchorRef}
-            className={`w-90 gap-3${className ? ` ${className}` : ''}`}
-            headerRight={
-                <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
-                    {interval.isUnison ? 'No change' : `${interval.chromatic > 0 ? '+' : ''}${interval.chromatic} st`}
-                </span>
-            }>
+            variant={variant}
+            className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}>
+            {lead}
+            <p aria-live="polite" className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">
+                {transposeReadout(interval.chromatic, keyAfter)}
+            </p>
+
+            {!advanced && (
+                <>
+                    <div className="grid grid-cols-2 gap-2">
+                        <StepButton icon="chevron-down" disabled={semitones <= -MAX_SEMITONES} onClick={() => nudge(-1)}>
+                            Half step lower
+                        </StepButton>
+                        <StepButton icon="chevron-up" disabled={semitones >= MAX_SEMITONES} onClick={() => nudge(1)}>
+                            Half step higher
+                        </StepButton>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <OctaveChip disabled={semitones - OCTAVE < -MAX_SEMITONES} onClick={() => nudge(-OCTAVE)}>
+                            Down an octave
+                        </OctaveChip>
+                        <OctaveChip disabled={semitones + OCTAVE > MAX_SEMITONES} onClick={() => nudge(OCTAVE)}>
+                            Up an octave
+                        </OctaveChip>
+                    </div>
+                </>
+            )}
+
             {advanced && (
                 <Segmented
                     ariaLabel="Transpose by"
@@ -202,7 +252,7 @@ export function TransposePopover({
             {advanced && tab === 'interval' && (
                 <>
                     <LabeledRow label="Interval">
-                        <div role="group" aria-label="Interval size" className="flex gap-1">
+                        <div role="group" aria-label="Interval size" className="flex flex-wrap gap-1">
                             {DEGREES.map(({ degree: d, label, name }) => (
                                 <PopoverOption
                                     key={d}
@@ -210,7 +260,7 @@ export function TransposePopover({
                                     ariaLabel={name}
                                     title={name}
                                     onClick={() => selectDegree(d)}
-                                    className="justify-center w-8 h-8 text-[13px] font-medium">
+                                    className="justify-center w-10 h-10 text-[13px] font-medium">
                                     {label}
                                 </PopoverOption>
                             ))}
@@ -224,7 +274,7 @@ export function TransposePopover({
                                     active={quality === value}
                                     ariaLabel={QUALITY_LABELS[value]}
                                     onClick={() => setQuality(value)}
-                                    className="justify-center px-2.5 h-8 text-[12px] font-medium">
+                                    className="justify-center px-3 h-10 text-[13px] font-medium">
                                     {QUALITY_LABELS[value]}
                                 </PopoverOption>
                             ))}
@@ -248,7 +298,8 @@ export function TransposePopover({
                 <>
                     <div className="flex items-center justify-between gap-3">
                         <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                            From <span className="font-medium text-on-surface">{KeySignature.majorKeyName(currentFifths)} major</span> to:
+                            From <span className="font-medium text-on-surface">{currentKey ? KeyName.of(currentKey).long : 'C major'}</span>{' '}
+                            to:
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>
@@ -256,7 +307,7 @@ export function TransposePopover({
                 </>
             )}
 
-            {(!advanced || tab === 'semitones') && (
+            {advanced && tab === 'semitones' && (
                 <NumberStepper
                     ariaLabel="Semitones"
                     value={semitones}
@@ -296,13 +347,56 @@ export function TransposePopover({
 
             <div className="flex items-center justify-between gap-3">
                 <TertiaryButton onClick={() => (advanced ? setAdvanced(false) : openAdvanced())}>
-                    {advanced ? 'Fewer options' : 'Advanced options'}
+                    {advanced ? 'Fewer options' : 'More options'}
                 </TertiaryButton>
                 <PrimaryButton onClick={apply} disabled={interval.isUnison}>
                     Apply
                 </PrimaryButton>
             </div>
         </Popover>
+    )
+}
+
+interface StepControlProps {
+    disabled: boolean
+    onClick: () => void
+    children: ReactNode
+}
+
+/** The simple mode's 44px "Half step lower / higher" buttons: the tonal capsule with a chevron. */
+function StepButton({ icon, disabled, onClick, children }: StepControlProps & { icon: 'chevron-up' | 'chevron-down' }) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            className={[
+                'h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-full border-0 cursor-pointer',
+                'bg-surface-container-low text-on-surface font-label font-semibold text-[13px] leading-none whitespace-nowrap',
+                'enabled:hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40',
+                'transition-colors duration-150 ease-solkey focus-ring',
+            ].join(' ')}>
+            <Icon name={icon} size={16} />
+            {children}
+        </button>
+    )
+}
+
+/** A whole-octave jump ("Up an octave") — the most common fix for a whistled or high-voice take. */
+function OctaveChip({ disabled, onClick, children }: StepControlProps) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            className={[
+                'h-10 px-4 inline-flex items-center rounded-full border-0 cursor-pointer',
+                'bg-transparent text-on-surface font-label font-medium text-[13px] leading-none whitespace-nowrap',
+                'enabled:hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40',
+                'transition-colors duration-150 ease-solkey focus-ring',
+            ].join(' ')}>
+            {children}
+        </button>
     )
 }
 
@@ -337,7 +431,7 @@ interface NumberStepperProps {
     ariaLabel: string
     /** Unit label rendered inside the field. */
     suffix: string
-    /** Let the field stretch to the row's width (the simple mode's single control). */
+    /** Let the field stretch to the row's width (the semitones tab's single control). */
     grow?: boolean
 }
 
@@ -355,7 +449,7 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
             disabled={delta > 0 ? value >= max : value <= min}
             onClick={() => onChange(clamp(value + delta))}
             className={[
-                'w-9 self-stretch inline-flex items-center justify-center rounded-sm border-0 shrink-0',
+                'w-10 self-stretch inline-flex items-center justify-center rounded-sm border-0 shrink-0',
                 'bg-surface-container-low text-on-surface cursor-pointer',
                 'enabled:hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40',
                 'transition-colors duration-150 ease-solkey',
@@ -379,7 +473,7 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
                 min={min}
                 max={max}
                 size="sm"
-                className={grow ? 'flex-1' : 'w-24'}
+                className={grow ? 'flex-1 h-10' : 'w-24 h-10'}
             />
             {stepButton(-1)}
             {stepButton(1)}
