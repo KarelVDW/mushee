@@ -2,11 +2,12 @@
     "name": "@mushee/ui",
     "version": "0.0.0",
     "private": true,
-    "description": "Solkey's shared design-system kit for the web app, the admin console and the eval workbench: the primitives (Brand, Buttons, Feedback, Icon, Inputs, Toast, RenderBoundary), the theme tokens, and the HTTP error model + QueryClient setup. Shipped as TypeScript source — consuming apps compile it with their own bundler (Next: transpilePackages).",
+    "description": "Solkey's shared design-system kit for the web app, the admin console and the eval workbench: the primitives (Brand, Buttons, Feedback, Icon, Inputs, Toast, RenderBoundary), the theme tokens, the HTTP error model + QueryClient setup, and the open-redirect guard. Shipped as TypeScript source — consuming apps compile it with their own bundler (Next: transpilePackages).",
     "type": "module",
     "exports": {
         ".": "./src/index.ts",
         "./http": "./src/http.ts",
+        "./nextPath": "./src/nextPath.ts",
         "./theme.css": "./src/theme.css"
     },
     "scripts": {

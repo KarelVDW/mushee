@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { nextPathFrom, withNext } from '@/lib/nextPath'
+import { safeNextPath } from '../src/nextPath'
 
 /**
  * `?next=` is attacker-controlled (it arrives in a link). Whatever it holds,
@@ -41,18 +41,20 @@ const PIECES = [
     'ftp:',
 ]
 
-describe('nextPathFrom — same-origin invariant (fuzz)', () => {
+describe('safeNextPath — same-origin invariant (fuzz)', () => {
     it('never yields a path that resolves off-origin, over 3000 seeded values', () => {
         const origin = 'https://solkey.io'
+        const fallback = '/scores'
         for (let seed = 1; seed <= 3000; seed++) {
             const rng = mulberry32(seed)
             const next = Array.from({ length: 1 + Math.floor(rng() * 5) }, () => PIECES[Math.floor(rng() * PIECES.length)]).join('')
-            const result = nextPathFrom(`?next=${encodeURIComponent(next)}`)
+            const result = safeNextPath(next, fallback)
             const resolved = new URL(result, `${origin}/login`)
             expect(resolved.origin, `seed ${seed}: next=${JSON.stringify(next)} → ${result}`).toBe(origin)
             expect(result.startsWith('/')).toBe(true)
-            // and the round trip through withNext keeps the accepted value
-            if (result !== '/scores') expect(nextPathFrom(withNext('/signup', result).replace('/signup', ''))).toBe(result)
+            // and an accepted value survives the round trip through a `?next=` link unchanged
+            const query = new URLSearchParams(`next=${encodeURIComponent(result)}`)
+            if (result !== fallback) expect(safeNextPath(query.get('next'), fallback)).toBe(result)
         }
     })
 })
