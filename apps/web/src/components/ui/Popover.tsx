@@ -15,7 +15,7 @@ import {
 import { createPortal } from 'react-dom'
 
 import { FOCUSABLE_SELECTOR } from './Dialog'
-import { focusWithoutTooltip } from './Tooltip'
+import { focusWithoutTooltip, Tooltip } from './Tooltip'
 
 /** How long a phone sheet shows the picked cell's active fill before it closes. */
 export const SHEET_PICK_CONFIRM_MS = 150
@@ -210,13 +210,15 @@ export function Popover({
                         {hint && <PopoverHint>{hint}</PopoverHint>}
                     </div>
                     {headerRight && <div className="shrink-0 pt-2.5">{headerRight}</div>}
-                    <button
-                        type="button"
-                        aria-label="Close"
-                        onClick={onDismiss}
-                        className="shrink-0 size-10 inline-flex items-center justify-center rounded-full border-0 bg-transparent cursor-pointer text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-150 ease-solkey focus-ring">
-                        <Icon name="x" size={20} />
-                    </button>
+                    <Tooltip label="Close" side="bottom">
+                        <button
+                            type="button"
+                            aria-label="Close"
+                            onClick={onDismiss}
+                            className="shrink-0 size-10 inline-flex items-center justify-center rounded-full border-0 bg-transparent cursor-pointer text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-150 ease-solkey focus-ring">
+                            <Icon name="x" size={20} />
+                        </button>
+                    </Tooltip>
                 </div>
                 <SheetBody className={className}>{children}</SheetBody>
             </div>
@@ -253,15 +255,18 @@ function PopoverHint({ children }: { children: ReactNode }) {
 }
 
 /**
- * A sheet's scrolling body. When its content is clipped at the bottom, a 16px fade over the
- * last line says there is more below.
+ * A sheet's scrolling body. Where its content is clipped — below, or above once scrolled — a
+ * 16px fade over the edge line says there is more that way.
  */
 function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
     const ref = useRef<HTMLDivElement>(null)
     const [clipped, setClipped] = useState(false)
+    const [scrolled, setScrolled] = useState(false)
     const measure = useCallback(() => {
         const el = ref.current
-        if (el) setClipped(el.scrollTop + el.clientHeight < el.scrollHeight - 1)
+        if (!el) return
+        setClipped(el.scrollTop + el.clientHeight < el.scrollHeight - 1)
+        setScrolled(el.scrollTop > 1)
     }, [])
     useLayoutEffect(() => {
         measure()
@@ -277,9 +282,17 @@ function SheetBody({ className, children }: { className?: string; children: Reac
                 className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
                 {children}
             </div>
+            {scrolled && (
+                <div
+                    aria-hidden="true"
+                    data-sheet-fade="top"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-linear-to-b from-surface-container-lowest to-transparent"
+                />
+            )}
             {clipped && (
                 <div
                     aria-hidden="true"
+                    data-sheet-fade="bottom"
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-xl bg-linear-to-t from-surface-container-lowest to-transparent"
                 />
             )}

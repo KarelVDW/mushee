@@ -29,6 +29,22 @@ describe('password policy', () => {
         expect(isAcceptablePassword('eightchr', 'eightchr')).toBe(false)
         expect(isAcceptablePassword('', '')).toBe(false)
     })
+
+    it('accepts exactly what the new-password hint promises', () => {
+        const ok = (pw: string) => isAcceptablePassword(pw, pw)
+        expect(NEW_PASSWORD_HINT).toBe(
+            'At least 8 characters, with a number, a symbol or both upper and lower case — or 12 characters or more.',
+        )
+        // 8 characters with a number, a symbol, or both cases…
+        expect(ok('abcdefg1')).toBe(true)
+        expect(ok('abcdefg!')).toBe(true)
+        expect(ok('ABCDefgh')).toBe(true)
+        // …but one case alone isn't enough: capitals only fall short, just like lowercase only.
+        expect(ok('ABCDEFGH')).toBe(false)
+        expect(ok('abcdefgh')).toBe(false)
+        // Or simply 12 characters.
+        expect(ok('abcdefghijkl')).toBe(true)
+    })
 })
 
 describe('PasswordStrength', () => {

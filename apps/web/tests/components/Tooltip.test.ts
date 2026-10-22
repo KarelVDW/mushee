@@ -1,5 +1,6 @@
-import { act, createElement } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
+import { act, createElement, useState } from 'react'
+import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -124,6 +125,41 @@ describe('Tooltip', () => {
         expect(card()).toBeNull()
     })
 
+    it('closes when the control is used from the keyboard, Enter or Space', () => {
+        render()
+        act(() => button().focus())
+        expect(card()).not.toBeNull()
+        // Enter on a focused button: keydown, then the click it activates (detail 0, no pointer).
+        act(() => {
+            button().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+            button().click()
+        })
+        expect(onClick).toHaveBeenCalledTimes(1)
+        expect(card()).toBeNull()
+        expect(document.activeElement).toBe(button())
+    })
+
+    it('inside a modal dialog, Escape closes the tooltip and still reaches the dialog', () => {
+        const dialogKeys: string[] = []
+        const onDocumentKey = (e: KeyboardEvent) => dialogKeys.push(e.key)
+        document.addEventListener('keydown', onDocumentKey)
+        host.setAttribute('aria-modal', 'true')
+        try {
+            render()
+            act(() => button().focus())
+            const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+            act(() => {
+                button().dispatchEvent(event)
+            })
+            expect(card()).toBeNull()
+            expect(event.defaultPrevented).toBe(false)
+            expect(dialogKeys).toEqual(['Escape'])
+        } finally {
+            document.removeEventListener('keydown', onDocumentKey)
+            host.removeAttribute('aria-modal')
+        }
+    })
+
     it('consumes Escape: the tooltip closes and the editor never sees the key', () => {
         const editorKeys: string[] = []
         host.addEventListener('keydown', (e) => editorKeys.push(e.key))
@@ -179,6 +215,56 @@ describe('Tooltip', () => {
         pointer(wrapper, 'pointerover')
         advance(TOOLTIP_HOVER_DELAY_MS)
         expect(card()?.textContent).toContain('Quarter note')
+    })
+
+    describe('on a control that opens a panel (aria-expanded)', () => {
+        /** A popover chip: a press toggles its panel and aria-expanded with it. */
+        function PopupChip() {
+            const [expanded, setExpanded] = useState(false)
+            return createElement(
+                'button',
+                {
+                    type: 'button',
+                    'aria-label': 'Clef',
+                    'aria-haspopup': 'dialog',
+                    'aria-expanded': expanded,
+                    onClick: () => setExpanded((v) => !v),
+                },
+                '𝄞',
+            )
+        }
+        const renderChip = () =>
+            act(() => {
+                root.render(createElement(Tooltip, { label: 'Clef', hint: 'Treble', children: createElement(PopupChip) }))
+            })
+
+        it('a touch hold that opens the panel takes its bubble down at once, not after the linger', async () => {
+            renderChip()
+            pointer(button(), 'pointerdown', { pointerType: 'touch', clientX: 10, clientY: 10 })
+            advance(TOOLTIP_HOLD_DELAY_MS)
+            expect(card()).not.toBeNull()
+            pointer(button(), 'pointerup', { pointerType: 'touch', clientX: 10, clientY: 10 })
+            await act(async () => {
+                button().click()
+                await Promise.resolve()
+            })
+            expect(button().getAttribute('aria-expanded')).toBe('true')
+            expect(card()).toBeNull()
+        })
+
+        it('stays shut over an open panel, on hover and on keyboard focus', () => {
+            renderChip()
+            act(() => button().click())
+            expect(button().getAttribute('aria-expanded')).toBe('true')
+            pointer(button(), 'pointerover')
+            advance(TOOLTIP_HOVER_DELAY_MS)
+            expect(card()).toBeNull()
+            act(() => button().focus())
+            expect(card()).toBeNull()
+            pointer(button(), 'pointerdown', { pointerType: 'touch' })
+            advance(TOOLTIP_HOLD_DELAY_MS)
+            expect(card()).toBeNull()
+        })
     })
 
     describe('press-and-hold on touch', () => {
@@ -239,6 +325,39 @@ describe('Tooltip', () => {
             expect(menu.defaultPrevented).toBe(true)
             expect((button().parentElement as HTMLElement).className).toContain('[-webkit-touch-callout:none]')
         })
+    })
+})
+
+describe('Tooltip server rendering', () => {
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('renders the key the same on server and client, then names it the Apple way after hydration', async () => {
+        vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel')
+        const redo = Shortcut.parse('Mod+Shift+KeyZ', true)
+        const tooltip = () =>
+            createElement(Tooltip, {
+                label: 'Redo',
+                shortcut: redo,
+                children: createElement('button', { type: 'button', 'aria-label': 'Redo' }, '↷'),
+            })
+        const container = document.createElement('div')
+        container.innerHTML = renderToString(tooltip())
+        document.body.append(container)
+        // The server can't know the platform: it names the key the non-Apple way.
+        expect(container.querySelector('[role="tooltip"]')?.textContent).toBe(shortcutText(redo, false))
+
+        const hydrationErrors: unknown[] = []
+        let root: Root | undefined
+        await act(async () => {
+            root = hydrateRoot(container, tooltip(), { onRecoverableError: (error) => hydrationErrors.push(error) })
+            await Promise.resolve()
+        })
+        expect(hydrationErrors).toEqual([])
+        expect(container.querySelector('[role="tooltip"]')?.textContent).toBe('⇧⌘Z')
+        act(() => root?.unmount())
+        container.remove()
     })
 })
 

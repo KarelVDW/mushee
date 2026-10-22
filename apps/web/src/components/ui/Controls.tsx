@@ -272,7 +272,8 @@ export function TransportBtn({
                 className={[
                     'rounded-full inline-flex items-center justify-center shrink-0',
                     'size-(--transport-size) pointer-coarse:size-(--transport-size-coarse)',
-                    state.off ? 'cursor-not-allowed opacity-40' : `cursor-pointer ${classes.hover}`,
+                    // A pressed toggle keeps its fill under the pointer, as ChipToggle does.
+                    state.off ? 'cursor-not-allowed opacity-40' : pressed ? 'cursor-pointer' : `cursor-pointer ${classes.hover}`,
                     'focus-ring',
                     classes.look,
                     pressed ? PRESSED_CLASS : active ? classes.active : classes.idle,

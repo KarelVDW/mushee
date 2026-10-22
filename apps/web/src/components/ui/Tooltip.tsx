@@ -12,6 +12,7 @@ import {
     useLayoutEffect,
     useRef,
     useState,
+    useSyncExternalStore,
 } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -28,8 +29,21 @@ export const TOOLTIP_SLIDE_CANCEL_PX = 10
 /** Gap between the control and its tooltip, and the minimum distance from the viewport edge. */
 const GAP_PX = 8
 
-/** True on macOS/iOS — shortcuts render as ⇧⌘Z there and as Ctrl+Shift+Z elsewhere. */
-const IS_APPLE = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+/** True on macOS/iOS — shortcuts render as ⇧⌘Z there and as Ctrl+Shift+Z elsewhere. False on the server. */
+function isApplePlatform(): boolean {
+    return typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+}
+
+const noSubscription = () => () => {}
+
+/**
+ * {@link isApplePlatform} for rendering: false on the server and through hydration, so the
+ * server's markup and the client's first render name the key alike; the Apple form follows
+ * straight after.
+ */
+function useIsApple(): boolean {
+    return useSyncExternalStore(noSubscription, isApplePlatform, () => false)
+}
 
 /**
  * The key a tooltip names: a live binding from the editor's Keybindings (so a rebound command
@@ -71,7 +85,7 @@ export function focusWithoutTooltip(el: HTMLElement | null | undefined): void {
 }
 
 /** The shortcut as the text a tooltip shows: ⇧⌘Z on Apple platforms, Ctrl+Shift+Z elsewhere. */
-export function shortcutText(shortcut: TooltipShortcut | undefined, isApple: boolean = IS_APPLE): string | null {
+export function shortcutText(shortcut: TooltipShortcut | undefined, isApple: boolean = isApplePlatform()): string | null {
     if (!shortcut) return null
     const parts = isShortcutParts(shortcut) ? shortcut : shortcut.displayParts(null, isApple)
     if (parts.length === 0) return null
@@ -87,12 +101,15 @@ function isShortcutParts(shortcut: Shortcut | readonly string[]): shortcut is re
  *
  * - Fine pointers: opens after {@link TOOLTIP_HOVER_DELAY_MS} of mouse hover, or at once on
  *   keyboard focus (`:focus-visible` only — focus a popover or dialog hands back doesn't count,
- *   see {@link focusWithoutTooltip}). Closes on pointer-leave, blur, a press, or Escape, which
- *   it consumes so the editor's own Escape binding doesn't also fire.
+ *   see {@link focusWithoutTooltip}). Closes on pointer-leave, blur, a press (mouse, Enter or
+ *   Space), or Escape, which it consumes so the editor's own Escape binding doesn't also fire —
+ *   except inside a modal dialog, where the same Escape closes the dialog as well.
  * - Coarse pointers: never on hover. Holding a finger on the control for
  *   {@link TOOLTIP_HOLD_DELAY_MS} names it in a bubble above it, kept while held and for
  *   {@link TOOLTIP_HOLD_LINGER_MS} after release. Releasing on the control still acts; sliding
  *   off first cancels both.
+ * - Never over the panel its control opened: while the trigger has aria-expanded="true" (a
+ *   popover chip, a menu) the tooltip closes and stays shut, the touch bubble included.
  *
  * The trigger keeps its aria-label as its name; the hint, key or reason reach assistive tech
  * through aria-describedby on a hidden role=tooltip element that is always mounted, so the
@@ -110,7 +127,8 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
     /** Set when a held finger slid off: swallow the click its release would still fire. */
     const cancelNextClick = useRef(false)
 
-    const keys = reason ? null : shortcutText(shortcut)
+    const isApple = useIsApple()
+    const keys = reason ? null : shortcutText(shortcut, isApple)
     const description = reason ?? ([hint, keys].filter(Boolean).join(', ') || null)
     const empty = !label && !hint && !keys && !reason
 
@@ -128,26 +146,51 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
 
     useEffect(() => clearTimers, [clearTimers])
 
+    /** The control the tooltip names: the wrapped child's first focusable element. */
+    const trigger = useCallback(() => wrapperRef.current?.querySelector<HTMLElement>(TRIGGER_SELECTOR) ?? null, [])
+    /** Open, unless the control's own panel is showing — the tooltip would cover it. */
+    const open = useCallback(
+        (by: OpenedBy) => {
+            if (trigger()?.getAttribute('aria-expanded') !== 'true') setOpenedBy(by)
+        },
+        [trigger],
+    )
+
+    // A control that opens a panel while its tooltip shows (a touch hold, a hover, or focus
+    // kept on a chip) closes the tooltip, which would otherwise sit over that panel.
+    useEffect(() => {
+        const el = openedBy ? trigger() : null
+        if (!el) return
+        const observer = new MutationObserver(() => {
+            if (el.getAttribute('aria-expanded') === 'true') close()
+        })
+        observer.observe(el, { attributes: true, attributeFilter: ['aria-expanded'] })
+        return () => observer.disconnect()
+    }, [openedBy, trigger, close])
+
     // Describe the trigger: its first focusable element points at the hidden tooltip text.
     useLayoutEffect(() => {
-        const trigger = wrapperRef.current?.querySelector<HTMLElement>(TRIGGER_SELECTOR)
-        if (!trigger || !description) return
-        const previous = trigger.getAttribute('aria-describedby')
-        trigger.setAttribute('aria-describedby', previous ? `${previous} ${descriptionId}` : descriptionId)
+        const el = trigger()
+        if (!el || !description) return
+        const previous = el.getAttribute('aria-describedby')
+        el.setAttribute('aria-describedby', previous ? `${previous} ${descriptionId}` : descriptionId)
         return () => {
-            if (previous) trigger.setAttribute('aria-describedby', previous)
-            else trigger.removeAttribute('aria-describedby')
+            if (previous) el.setAttribute('aria-describedby', previous)
+            else el.removeAttribute('aria-describedby')
         }
-    }, [description, descriptionId])
+    }, [trigger, description, descriptionId])
 
     // Escape closes only the tooltip: consumed in the capture phase, before the editor's shortcuts.
+    // Inside a modal dialog there are no editor shortcuts to shield, so the key goes on and the
+    // same press closes the dialog too, as it did before the tooltip was there.
     useEffect(() => {
         if (!openedBy) return
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return
+            close()
+            if (wrapperRef.current?.closest('[aria-modal="true"]')) return
             e.preventDefault()
             e.stopPropagation()
-            close()
         }
         const onScroll = () => close()
         window.addEventListener('keydown', onKey, { capture: true })
@@ -163,7 +206,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
     const onPointerEnter = (e: ReactPointerEvent) => {
         if (e.pointerType !== 'mouse' || openedBy) return
         clearTimers()
-        hoverTimer.current = setTimeout(() => setOpenedBy('hover'), TOOLTIP_HOVER_DELAY_MS)
+        hoverTimer.current = setTimeout(() => open('hover'), TOOLTIP_HOVER_DELAY_MS)
     }
     const onPointerLeave = (e: ReactPointerEvent) => {
         if (e.pointerType === 'mouse' && openedBy !== 'hold') close()
@@ -176,7 +219,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
         }
         clearTimers()
         holdStart.current = { x: e.clientX, y: e.clientY }
-        holdTimer.current = setTimeout(() => setOpenedBy('hold'), TOOLTIP_HOLD_DELAY_MS)
+        holdTimer.current = setTimeout(() => open('hold'), TOOLTIP_HOLD_DELAY_MS)
     }
     const onPointerMove = (e: ReactPointerEvent) => {
         const start = holdStart.current
@@ -203,6 +246,11 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
         e.preventDefault()
         e.stopPropagation()
     }
+    // The control was used — by Enter or Space too, not only a mouse press — so its name has
+    // done its job. A touch hold's bubble keeps its linger (unless the press opened a panel).
+    const onClick = () => {
+        if (openedBy && openedBy !== 'hold') close()
+    }
     const onContextMenu = (e: ReactMouseEvent) => {
         // A held finger raises the context menu on Android and the callout on iOS — never here.
         if (holdStart.current || openedBy === 'hold') e.preventDefault()
@@ -210,7 +258,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
     const onFocus = (e: ReactFocusEvent) => {
         if (suppressFocusTooltip || !(e.target instanceof HTMLElement) || !matchesFocusVisible(e.target)) return
         clearTimers()
-        setOpenedBy('focus')
+        open('focus')
     }
     const onBlur = () => {
         if (openedBy !== 'hold') close()
@@ -227,6 +275,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerCancel}
             onClickCapture={onClickCapture}
+            onClick={onClick}
             onContextMenu={onContextMenu}
             onFocus={onFocus}
             onBlur={onBlur}>

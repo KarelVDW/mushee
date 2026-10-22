@@ -132,6 +132,11 @@ describe('TransportBtn', () => {
         const on = html(createElement(TransportBtn, { size: 36, ariaLabel: 'Metronome', pressed: true }))
         expect(on).toContain('aria-pressed="true"')
         expect(on).toContain('bg-primary-container')
+        // Hover never swaps the on-state fill for grey, so the on state stays visible under the pointer.
+        expect(on).not.toContain('hover:bg-surface-container-high')
+        expect(html(createElement(TransportBtn, { size: 36, ariaLabel: 'Metronome', pressed: false }))).toContain(
+            'hover:bg-surface-container-high',
+        )
         expect(html(createElement(TransportBtn, { size: 36, ariaLabel: 'Stop' }))).not.toContain('aria-pressed')
     })
 

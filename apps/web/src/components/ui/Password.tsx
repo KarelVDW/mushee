@@ -7,7 +7,7 @@ export const PASSWORD_MIN_LENGTH = 8
 export const SIGNUP_PASSWORD_HINT = 'At least 8 characters.'
 
 /** The rule {@link isAcceptablePassword} applies where a new password is asked for twice (reset, change). */
-export const NEW_PASSWORD_HINT = 'At least 8 characters, with a capital letter, a number or a symbol — or 12 characters or more.'
+export const NEW_PASSWORD_HINT = 'At least 8 characters, with a number, a symbol or both upper and lower case — or 12 characters or more.'
 
 /** Meter labels by score; a password still under the minimum reads "Keep going" (see {@link PasswordStrength}). */
 const PW_LABELS = ['Too short', 'Weak', 'OK', 'Strong', 'Strong'] as const

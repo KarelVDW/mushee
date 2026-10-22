@@ -182,8 +182,27 @@ describe('Popover surfaces', () => {
             expect(sheet.textContent).toContain('Which notes the lines stand for.')
             const close = sheet.querySelector<HTMLButtonElement>('button[aria-label="Close"]') as HTMLButtonElement
             expect(close.className).toContain('size-10')
+            // Icon-only, so it wears a tooltip: a touch hold names it.
+            expect(close.parentElement?.className).toContain('[-webkit-touch-callout:none]')
             act(() => close.click())
             expect(onDismiss).toHaveBeenCalledTimes(1)
+        })
+
+        it('fades the top edge once the body is scrolled, and not before', () => {
+            renderSheet(vi.fn())
+            const body = host.querySelector<HTMLElement>('[data-popover-body]') as HTMLElement
+            const topFade = () => host.querySelector('[data-sheet-fade="top"]')
+            expect(topFade()).toBeNull()
+            act(() => {
+                body.scrollTop = 40
+                body.dispatchEvent(new Event('scroll'))
+            })
+            expect(topFade()).not.toBeNull()
+            act(() => {
+                body.scrollTop = 0
+                body.dispatchEvent(new Event('scroll'))
+            })
+            expect(topFade()).toBeNull()
         })
 
         it('focuses the first option, not Close, and hands focus back to the trigger on close', () => {
