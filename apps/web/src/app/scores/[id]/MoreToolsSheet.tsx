@@ -376,6 +376,8 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
     // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
     const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
+    // A score of rests has nothing to transpose yet.
+    const emptyScore = !manipulator.score?.hasPitchedNotes
 
     return (
         <Popover ariaLabel="More tools" title="More tools" onDismiss={onClose} anchorRef={anchorRef} variant="sheet" className="gap-5">
@@ -484,7 +486,13 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         }
                         onClick={() => onOpen('tempo')}
                     />
-                    <SheetRow label="Transpose" ariaLabel="Transpose" onClick={onTranspose} />
+                    <SheetRow
+                        label="Transpose"
+                        ariaLabel="Transpose"
+                        hint={emptyScore ? 'Record or add some notes first.' : undefined}
+                        disabled={emptyScore}
+                        onClick={onTranspose}
+                    />
                     <SheetRow
                         label={SIMPLIFY_LABEL}
                         ariaLabel={SIMPLIFY_LABEL}

@@ -710,6 +710,18 @@ test.describe('an empty score', () => {
         await expect(heading).toBeVisible()
     })
 
+    test('the header offers no Transpose until there is a note to move', async ({ page }) => {
+        const transpose = page.getByRole('button', { name: 'Transpose', exact: true })
+        await expect(page.getByRole('button', { name: 'Share score' })).toBeVisible()
+        await expect(transpose).toHaveCount(0)
+        // Its shortcut has nothing to open either.
+        await focusEditor(page)
+        await page.keyboard.press('Shift+T')
+        await expect(page.getByRole('dialog', { name: 'Transpose' })).toHaveCount(0)
+        await page.getByRole('button', { name: 'Rest', exact: true }).click()
+        await expect(transpose).toBeVisible()
+    })
+
     test('sharp or flat is off on the rest, saying why; Higher turns it into a note', async ({ page }) => {
         const sharp = page.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })
         await expect(sharp).toHaveAttribute('aria-disabled', 'true')

@@ -257,6 +257,26 @@ describe('the shortcuts list from the keyboard', () => {
     })
 })
 
+describe('the transpose shortcut', () => {
+    it('opens the popover, but declines on a score of rests — nothing to move', () => {
+        const { manipulator } = setup([pitched('C', 5), pitched('D', 5), pitched('E', 5), pitched('F', 5)])
+        const open = vi.fn()
+        manipulator.onTransposeRequest = open
+        const withNotes = keydown({ code: 'KeyT', key: 'T', shiftKey: true })
+        manipulator.handleKeyDown(withNotes)
+        expect(open).toHaveBeenCalledTimes(1)
+        expect(withNotes.defaultPrevented).toBe(true)
+
+        const empty = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:tools', isMac: false }))
+        empty.attach(makeScore(1), () => undefined)
+        empty.onTransposeRequest = open
+        const onRests = keydown({ code: 'KeyT', key: 'T', shiftKey: true })
+        empty.handleKeyDown(onRests)
+        expect(open).toHaveBeenCalledTimes(1)
+        expect(onRests.defaultPrevented).toBe(false)
+    })
+})
+
 describe('the move-a-note hint', () => {
     it('stays until the first pitch edit, then is gone for good on this device', () => {
         const { manipulator } = setup()

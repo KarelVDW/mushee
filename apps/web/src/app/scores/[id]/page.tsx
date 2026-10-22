@@ -77,6 +77,12 @@ export default function ScoreEditorPage() {
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [transposeOpen, setTransposeOpen] = useState(false)
+    // A score of rests has nothing to transpose (the chip hides and the shortcut declines): a
+    // popover still open as the last note goes closes with it, rather than reopening later.
+    const hasPitchedNotes = !!score?.hasPitchedNotes
+    useEffect(() => {
+        if (!hasPitchedNotes) setTransposeOpen(false)
+    }, [hasPitchedNotes])
     const { highlight: pitchHighlight, aim: aimTranspose } = usePitchHighlight(manipulator)
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.

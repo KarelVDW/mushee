@@ -130,8 +130,9 @@ export function EditorHeader({
             {!compact && <TransportControls {...transport} />}
             <div inert={takenOver} className={`flex items-center gap-2 shrink-0 sm:flex-1 justify-end ${fade}`}>
                 {/* Pitch and history tools are document-level chrome (see PitchTools /
-                    HistoryTools); on phones they move into the dock instead. */}
-                {!compact && (
+                    HistoryTools); on phones they move into the dock instead. A score of rests
+                    has nothing to transpose: the chip — and its jargon — waits for the first note. */}
+                {!compact && score.hasPitchedNotes && (
                     <PitchTools
                         manipulator={manipulator}
                         transposeOpen={transposeOpen}

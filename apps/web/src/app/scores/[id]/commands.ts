@@ -206,8 +206,10 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         label: 'Transpose…',
         group: 'Edit notes',
         defaultShortcut: 'Shift+KeyT',
-        // Opens the transpose popover (no direct edit); declined until the editor registers it.
-        run: (manipulator) => (manipulator.onTransposeRequest ? manipulator.onTransposeRequest() : false),
+        // Opens the transpose popover (no direct edit); declined until the editor registers it, and
+        // on a score of rests, which has nothing to move (the header hides its chip until a note lands).
+        run: (manipulator) =>
+            manipulator.onTransposeRequest && manipulator.score?.hasPitchedNotes ? manipulator.onTransposeRequest() : false,
     },
     ...DURATION_COMMANDS,
     fromAction(TOGGLE_DOT, { group: 'Note length', shortcut: 'Period', singleNote: true }),
