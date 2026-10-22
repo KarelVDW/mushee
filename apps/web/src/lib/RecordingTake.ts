@@ -1,13 +1,35 @@
-import type { Clef, Score } from '@mushee/notation/model'
+import type { Clef, Measure, Note, Score } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 
 /**
- * One take's write-back into the score: the measures it adds as the cursor runs, and the
- * transcription updates the server streams back, landed on those measures. React-free, so
- * the hook that drives a take (useRecording) only orchestrates — state, toasts, autosave.
+ * One take's write-back into the score: where it starts, the measures it adds as the cursor
+ * runs, the transcription updates the server streams back (landed on those measures), and
+ * what is left once it is over — the bar to carry on from, or nothing at all when the take
+ * never got going. React-free, so the hook that drives a take (useRecording) only
+ * orchestrates — state, toasts, autosave.
  */
 export class RecordingTake {
+    /**
+     * The take Record starts. With a note selected it records into that note's measure and
+     * clef (displacing the measure). With nothing selected it carries on after the music: it
+     * starts at the bar after the last one that holds a pitched note — bar 1 of an empty score,
+     * a fresh bar at the end when the last bar is written — in the clef in effect there. Null
+     * only for a score without a single bar.
+     */
+    static startingAt(score: Score, note: Note | null): RecordingTake | null {
+        if (note) return new RecordingTake(score, note.measure.index, note.clef)
+        const last = score.lastMeasure
+        if (!last) return null
+        const index = score.measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure)) + 1
+        const clef = score.measures[index]?.clefAtOrBefore(0) ?? last.lastClef
+        return new RecordingTake(score, index, clef)
+    }
+
+    private static holdsPitchedNotes(measure: Measure): boolean {
+        return measure.notes.some((note) => !note.isRest)
+    }
+
     /** Where the next measure the take needs goes. */
     private nextMeasureIndex: number
     /**
@@ -40,6 +62,42 @@ export class RecordingTake {
     /** Add the next measure as the cursor is about to run off the last one. */
     appendMeasure(): void {
         this.score.addMeasure(this.nextMeasureIndex++).complete()
+    }
+
+    /** The measures the take added, in order (empty before {@link begin}). */
+    get measures(): Measure[] {
+        return this.score.measures.slice(this.startIndex, this.nextMeasureIndex)
+    }
+
+    /** Whether any of the take's measures holds a pitched note — false for a take that heard nothing. */
+    get wrotePitchedNotes(): boolean {
+        return this.measures.some((measure) => RecordingTake.holdsPitchedNotes(measure))
+    }
+
+    /**
+     * The first note of the bar right after the take — where pressing Record again carries on,
+     * since a take inserts before the bar it starts in. A take that started from a selection
+     * displaced that bar, so it is always there; a take that ran off the end of the score gets
+     * one empty bar added after it first (part of the take, so one Undo takes both away).
+     */
+    noteAfter(): Note | null {
+        if (this.nextMeasureIndex === this.startIndex) return null
+        if (!this.score.measures[this.nextMeasureIndex]) this.score.addMeasure(this.nextMeasureIndex).complete()
+        return this.score.measures[this.nextMeasureIndex]?.firstNote ?? null
+    }
+
+    /**
+     * Take the take back out when it never wrote a note — refused by the server, a microphone
+     * that wouldn't open, a limit already spent — so a failed start leaves the score exactly
+     * as it was (the displaced bar's tempo marking moves back onto it). A take that wrote any
+     * pitched note is kept. Returns whether anything was removed.
+     */
+    discardIfEmpty(): boolean {
+        const measures = this.measures
+        if (measures.length === 0 || this.wrotePitchedNotes) return false
+        this.score.removeMeasures(measures)
+        this.nextMeasureIndex = this.startIndex
+        return true
     }
 
     /**
