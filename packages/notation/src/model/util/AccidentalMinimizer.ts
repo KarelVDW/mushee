@@ -1,13 +1,13 @@
-import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import { Pitch } from '../Pitch'
+import { CarriedAccidentals } from './CarriedAccidentals'
 
 /**
  * Chooses enharmonic spellings for a set of notes so the fewest accidentals are drawn,
- * replaying the exact rules `DisplayedAccidentals` uses to decide what ink appears — the
+ * counting ink by the same {@link CarriedAccidentals} rule the engraver draws with — the
  * key signature's alteration is free, an accidental carries for the rest of the bar on its
- * (name, octave), a bar line or key change resets — without reaching into the layout layer.
+ * (name, octave), a bar line or key change resets.
  *
  * Pure analysis over an ordered walk of notes: nothing is mutated, the caller applies
  * {@link respelled} through `Score.replace`. Notes outside `targets` keep their spelling
@@ -39,32 +39,27 @@ export class AccidentalMinimizer {
         fifthsOf: (note: Note) => number,
         private readonly basis: 'spelling' | 'sounding' = 'spelling',
     ) {
-        let inEffect = new Map<string, number>() // "name+octave" → alteration sounding in the bar
+        let carried = new CarriedAccidentals(0)
         let measure: Measure | null = null
-        let fifths: number | null = null
         let count = 0
 
         for (const note of notes) {
             const pitch = note.pitch
             if (!pitch) continue
+            const noteFifths = fifthsOf(note)
             if (note.measure !== measure) {
                 measure = note.measure
-                inEffect = new Map() // bar line: carried accidentals expire
-            }
-            const noteFifths = fifthsOf(note)
-            if (noteFifths !== fifths) {
-                inEffect = new Map() // a key change cancels carried accidentals
-                fifths = noteFifths
+                carried = new CarriedAccidentals(noteFifths) // bar line: carried accidentals expire
+            } else if (noteFifths !== carried.fifths) {
+                carried.reset(noteFifths) // a key change cancels carried accidentals
             }
 
             let best: Pitch | null = null
             let bestRank: number[] = []
             for (const candidate of this.candidatesFor(note, pitch, targets)) {
-                const slot = candidate.name + candidate.octave
-                const prevailing = inEffect.get(slot) ?? KeySignature.alterInKey(noteFifths, candidate.name)
                 const keepsCurrent = basis === 'spelling' && candidate.spelledLike(pitch)
                 const withKey = noteFifths >= 0 ? candidate.alter >= 0 : candidate.alter <= 0
-                const rank = [candidate.alter === prevailing ? 0 : 1, keepsCurrent ? 0 : 1, Math.abs(candidate.alter), withKey ? 0 : 1]
+                const rank = [carried.draws(candidate) ? 1 : 0, keepsCurrent ? 0 : 1, Math.abs(candidate.alter), withKey ? 0 : 1]
                 if (!best || AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
                     best = candidate
                     bestRank = rank
@@ -74,7 +69,7 @@ export class AccidentalMinimizer {
             if (!best) continue
 
             count += bestRank[0]
-            inEffect.set(best.name + best.octave, best.alter)
+            carried.record(best)
             this.chosen.set(note, best)
             if (targets.has(note) && !best.spelledLike(pitch)) {
                 this.respelled.set(note, best)
