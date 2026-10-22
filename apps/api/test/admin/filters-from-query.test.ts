@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { AdminController } from '../../src/admin/admin.controller'
+import { AnnouncementsController } from '../../src/admin/announcements.controller'
 
 /**
  * GET /admin/audience and the CSV export take the audience filter as query
  * parameters (the console's `audienceQuery` produces them). The parser must
  * accept exactly that form and ignore anything else.
  */
-describe('AdminController.filtersFromQuery', () => {
+describe('AnnouncementsController.filtersFromQuery', () => {
     it('parses the console query form field by field', () => {
-        const f = AdminController.filtersFromQuery({
+        const f = AnnouncementsController.filtersFromQuery({
             tiers: 'beta, free,,studio ',
             betaStatus: 'approved',
             signedUpAfter: '2026-07-01',
@@ -28,7 +28,7 @@ describe('AdminController.filtersFromQuery', () => {
     })
 
     it('an empty query is an empty filter with the booleans false', () => {
-        const f = AdminController.filtersFromQuery({})
+        const f = AnnouncementsController.filtersFromQuery({})
         expect(f.tiers).toBeUndefined()
         expect(f.betaStatus).toBeUndefined()
         expect(f.activeWithinDays).toBeUndefined()
@@ -37,7 +37,7 @@ describe('AdminController.filtersFromQuery', () => {
     })
 
     it('drops unknown beta statuses, non-positive or fractional day counts, and non-"true" booleans', () => {
-        const f = AdminController.filtersFromQuery({
+        const f = AnnouncementsController.filtersFromQuery({
             betaStatus: 'admin',
             activeWithinDays: '-3',
             verifiedOnly: '1',
@@ -47,8 +47,8 @@ describe('AdminController.filtersFromQuery', () => {
         expect(f.activeWithinDays).toBeUndefined()
         expect(f.verifiedOnly).toBe(false)
         expect(f.includeDeletionRequested).toBe(false)
-        expect(AdminController.filtersFromQuery({ activeWithinDays: '2.5' }).activeWithinDays).toBeUndefined()
-        expect(AdminController.filtersFromQuery({ activeWithinDays: 'abc' }).activeWithinDays).toBeUndefined()
-        expect(AdminController.filtersFromQuery({ tiers: ' , ' }).tiers).toEqual([])
+        expect(AnnouncementsController.filtersFromQuery({ activeWithinDays: '2.5' }).activeWithinDays).toBeUndefined()
+        expect(AnnouncementsController.filtersFromQuery({ activeWithinDays: 'abc' }).activeWithinDays).toBeUndefined()
+        expect(AnnouncementsController.filtersFromQuery({ tiers: ' , ' }).tiers).toEqual([])
     })
 })
