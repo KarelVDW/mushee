@@ -2,7 +2,7 @@
 
 import { BeatUnitIcon } from '@mushee/notation/components'
 import type { Accidental } from '@mushee/notation/model'
-import { type ReactNode, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -187,6 +187,11 @@ interface MoreToolsSheetProps {
     onTransposeOpenChange: (open: boolean) => void
     /** Forwarded to the transpose picker's onScopeChange: the canvas pulse over its target. Keep referentially stable. */
     onTransposeAim: (scope: PitchScope | null) => void
+    /**
+     * The menu (not a picker) opened or closed — the page then scrolls the selected note's row
+     * into the strip the menu leaves clear above it. Keep referentially stable.
+     */
+    onMenuOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -195,7 +200,9 @@ interface MoreToolsSheetProps {
  * (Dotted, Triplet, Rest, Tie and Sharp or flat, each captioned in plain words); "Whole score"
  * the clef / key / time / tempo pickers, Transpose, Simplify sharps and flats, the metronome
  * and Redo. A picker swaps in for the menu with a Back link — sheets never stack — and a pick
- * shows its fill for a beat before the sheet closes.
+ * shows its fill for a beat before the sheet closes. With a note selected the menu stops about
+ * one staff system short of the header (scrolling inside), so the note being fixed stays in
+ * view while its tiles keep the sheet open.
  */
 export function MoreToolsSheet({
     manipulator,
@@ -204,11 +211,16 @@ export function MoreToolsSheet({
     transposeOpen,
     onTransposeOpenChange,
     onTransposeAim,
+    onMenuOpenChange,
 }: MoreToolsSheetProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
     const anchorRef = useRef<HTMLDivElement>(null)
     const [view, setView] = useState<SheetView | null>(null)
     const open = view !== null || transposeOpen
+    const menuOpen = view === 'menu' && !transposeOpen
+    useEffect(() => onMenuOpenChange?.(menuOpen), [menuOpen, onMenuOpenChange])
+    // Gone with the dock's tool row (a take folds it away): the menu is closed then too.
+    useEffect(() => () => onMenuOpenChange?.(false), [onMenuOpenChange])
     const closeAll = () => {
         setView(null)
         if (transposeOpen) onTransposeOpenChange(false)
@@ -380,7 +392,15 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
     const emptyScore = !manipulator.score?.hasPitchedNotes
 
     return (
-        <Popover ariaLabel="More tools" title="More tools" onDismiss={onClose} anchorRef={anchorRef} variant="sheet" className="gap-5">
+        <Popover
+            ariaLabel="More tools"
+            title="More tools"
+            onDismiss={onClose}
+            anchorRef={anchorRef}
+            variant="sheet"
+            // The note being fixed stays in view above the sheet ("This note" leads, so it is whole).
+            leaveRoomAbove={!nothingSelected}
+            className="gap-5">
             <section aria-label="This note" className="flex flex-col gap-2.5">
                 <div className="flex items-baseline justify-between gap-3">
                     <Eyebrow>This note</Eyebrow>

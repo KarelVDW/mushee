@@ -295,6 +295,37 @@ test('transpose’s More options keeps Apply pinned in view, the interval row wh
     expect(tops.size).toBe(1)
 })
 
+test('with a note selected the More sheet leaves its row in view, even from the last row of the score', async ({ page }) => {
+    // Enough bars for several rows, then a note on the last one.
+    const add = page.getByRole('button', { name: 'Add bar' })
+    for (let i = 0; i < 4; i++) await add.tap()
+    const svg = page.locator('.max-w-240 svg[data-score-canvas]')
+    await svg.scrollIntoViewIfNeeded()
+    const box = await svg.boundingBox()
+    if (!box) throw new Error('expected the score')
+    await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height - 100)
+    const band = svg.locator(SELECTION_BANDS).first()
+    await expect(band).toBeVisible()
+
+    const sheet = await openMore(page)
+    // "This note" leads the sheet, whole.
+    await expect(sheet.getByRole('button', { name: 'Dotted' })).toBeInViewport({ ratio: 1 })
+    await expect(async () => {
+        const selected = await band.boundingBox()
+        const sheetBox = await sheet.boundingBox()
+        const header = await page.locator('header').boundingBox()
+        expect(selected?.y ?? -1).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? Infinity))
+        expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
+    }).toPass({ timeout: 5000 })
+
+    // Toggling a tile keeps the sheet open and the note in view.
+    await sheet.getByRole('button', { name: 'Dotted' }).tap()
+    await expect(sheet).toBeVisible()
+    const selected = await band.boundingBox()
+    const sheetBox = await sheet.boundingBox()
+    expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
+})
+
 test('the More sheet toggles note tools and the metronome', async ({ page }) => {
     const sheet = await openMore(page)
     const rest = sheet.getByRole('button', { name: 'Rest', exact: true })

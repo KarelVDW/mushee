@@ -61,6 +61,8 @@ interface NoteToolDockProps {
     transposeOpen: boolean
     onTransposeOpenChange: (open: boolean) => void
     onTransposeAim: (scope: PitchScope | null) => void
+    /** Phones: the More sheet's menu opened or closed (MoreToolsSheet `onMenuOpenChange`). Keep referentially stable. */
+    onMoreMenuOpenChange?: (open: boolean) => void
     /**
      * The one line along the dock's top edge (contract C10). A hint passed here wins over the
      * dock's own first-selection hint; null keeps the slot empty.
@@ -127,6 +129,7 @@ export function NoteToolDock({
     transposeOpen,
     onTransposeOpenChange,
     onTransposeAim,
+    onMoreMenuOpenChange,
     hint,
     recording,
     footer,
@@ -195,6 +198,7 @@ export function NoteToolDock({
                                     transposeOpen={transposeOpen}
                                     onTransposeOpenChange={onTransposeOpenChange}
                                     onTransposeAim={onTransposeAim}
+                                    onMenuOpenChange={onMoreMenuOpenChange}
                                 />
                             </div>
                             {footer}

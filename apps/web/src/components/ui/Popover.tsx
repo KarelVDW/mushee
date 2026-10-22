@@ -29,6 +29,13 @@ export const SHEET_PICK_CONFIRM_MS = 150
 const SHEET_FRAME_CLASS =
     'fixed inset-x-2 top-[calc(var(--app-header-h,0px)+0.5rem)] bottom-[calc(var(--dock-h,0px)+0.5rem)] z-(--z-popover) flex flex-col justify-end pointer-events-none'
 
+/**
+ * The strip a `leaveRoomAbove` sheet keeps clear at the top of its frame: about one staff
+ * system (140px; the frame itself starts 8px under the header), where the editor scrolls the
+ * selected note's row while the sheet is open.
+ */
+export const SHEET_SYSTEM_ROOM = { px: 140, maxHeight: 'max-h-[calc(100%-8.75rem)]' } as const
+
 /** The host element; `null` while a host is mounting, `undefined` when there is no host above. */
 const SheetHostContext = createContext<HTMLElement | null | undefined>(undefined)
 
@@ -115,6 +122,11 @@ interface PopoverProps {
     /** Anchored only: keep the panel this many px inside the viewport's left and right edges. */
     viewportGutter?: number
     /**
+     * Sheet only: stop about one staff system ({@link SHEET_SYSTEM_ROOM}) short of the frame's
+     * top, so the note being fixed stays in view above the sheet while its tools are toggled.
+     */
+    leaveRoomAbove?: boolean
+    /**
      * The panel's closing row (Transpose's "More options" + Apply). A sheet pins it under its
      * scrolling body, so the commit button stays in view however long the body grows; an
      * anchored popover renders it last, inline.
@@ -142,6 +154,7 @@ export function Popover({
     manageFocus = false,
     variant = 'anchored',
     viewportGutter,
+    leaveRoomAbove = false,
     footer,
     children,
 }: PopoverProps) {
@@ -215,7 +228,7 @@ export function Popover({
                 ref={popRef}
                 role="dialog"
                 aria-label={ariaLabel}
-                className="popover-sheet-enter pointer-events-auto flex flex-col min-h-0 max-h-full rounded-xl bg-surface-container-lowest editorial-shadow"
+                className={`popover-sheet-enter pointer-events-auto flex flex-col min-h-0 ${leaveRoomAbove ? SHEET_SYSTEM_ROOM.maxHeight : 'max-h-full'} rounded-xl bg-surface-container-lowest editorial-shadow`}
                 onMouseDown={(e) => e.stopPropagation()}>
                 <div className="shrink-0 flex items-start gap-3 pl-4 pr-1.5 pt-1.5 pb-2">
                     <div className={`flex-1 min-w-0 flex flex-col gap-1 ${lead ? '' : 'pt-2.5'}`}>

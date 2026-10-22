@@ -8,6 +8,7 @@
 
 import { type AttributeClickEvent, type MeasureButtonsRect, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
 import type { Instrument, Note, Pitch } from '@mushee/notation/model'
+import { followScrollBehavior } from '@mushee/notation/lib/useScrollFollow'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
@@ -51,6 +52,15 @@ const UNDO_TOAST_MS = 6000
 const TOAST_GAP_PX = 12
 /** The engraved score's own <svg> inside the canvas — never a chrome icon's that sits after it. */
 const SCORE_SVG = 'svg[data-score-canvas]'
+/** The selection's staff band in the score (the first one of a run). */
+const SELECTION_BAND = `${SCORE_SVG} rect[data-selection-band]`
+/**
+ * Where the selection's staff band sits while the phone's More menu is open: 52px under the
+ * header, in the strip the menu leaves clear (8px frame gap + SHEET_SYSTEM_ROOM's 140px) — the
+ * staff mid-strip, with room for ledger lines either side, and its row's top below the 16px the
+ * score's own selection follow keeps, so the two never tug at each other.
+ */
+const REVEAL_BAND_TOP_PX = 52
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -213,6 +223,22 @@ export default function ScoreEditorPage() {
     }, [manipulator, openSelectionMenu])
     const selectionMenuOpen = selectionMenu !== null
     const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+    // Phones: while the More menu is open over a selection it stops one staff system short of
+    // the header (SHEET_SYSTEM_ROOM), and the selected note's row scrolls into that strip, so a
+    // note being fixed changes in view. A spacer under the score lets even the last row get
+    // there; it goes with the menu.
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+    const revealingSelection = isMobile && moreMenuOpen && !!activeNote
+    useEffect(() => {
+        if (!revealingSelection) return
+        const band = scoreAreaRef.current?.querySelector(SELECTION_BAND)
+        const scroller = scrollAreaRef.current
+        if (!band || !scroller) return
+        const offset = band.getBoundingClientRect().top - scroller.getBoundingClientRect().top - REVEAL_BAND_TOP_PX
+        if (Math.abs(offset) > 1) scroller.scrollBy({ top: offset, behavior: followScrollBehavior() })
+        // activeNote: a toggle replaces the note (and may move it) — follow it while the menu stays open.
+    }, [revealingSelection, activeNote])
     const emptyStateId = useId()
     const keyboardHelpId = useId()
     // Position is derived from the live selection (not the gesture point) every render, so
@@ -660,6 +686,10 @@ export default function ScoreEditorPage() {
                                 />
                             )}
                         </div>
+                        {/* Room to scroll any row up to the strip above the More menu (see revealingSelection). */}
+                        {revealingSelection && (
+                            <div aria-hidden data-export-exclude className="h-[calc(100dvh-var(--app-header-h,0px)-var(--dock-h,0px))]" />
+                        )}
                     </div>
                 </div>
                 <div ref={dockRef} className="relative shrink-0">
@@ -671,6 +701,7 @@ export default function ScoreEditorPage() {
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
+                        onMoreMenuOpenChange={setMoreMenuOpen}
                         hint={selectionTipUp ? null : undefined}
                         recording={
                             recordingStatus ? (
