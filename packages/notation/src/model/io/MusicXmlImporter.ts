@@ -56,9 +56,9 @@ const WARN_PARTS = (name: string, others: number) =>
 const WARN_VOICES = 'Solkey keeps one melody, so only the first line of this part came in.'
 const WARN_CHORDS = 'Solkey keeps one note at a time, so chords were reduced to their top note.'
 const WARN_GRACE = 'Grace and cue notes (small extra notes) were left out.'
-const WARN_SIMPLIFIED = 'Some note values were rewritten with the nearest supported ones.'
+const WARN_SIMPLIFIED = 'A few note lengths were rounded to ones Solkey can write.'
 const WARN_DROPPED = "Some notes couldn't be read and were left out."
-const WARN_SHORT = 'Notes shorter than a sixteenth were left out.'
+const WARN_SHORT = 'Very fast notes were left out.'
 const WARN_OVERFLOW = 'Some bars held more than their time signature allows; the overflow was trimmed.'
 const WARN_UNEVEN = "Some bars didn't add up, so rests were added to fill them."
 

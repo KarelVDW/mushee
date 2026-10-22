@@ -300,8 +300,8 @@ describe('MusicXmlImporter', () => {
             const { score, warnings } = load(xml)
             expect(measureNotes(score)).toEqual(['A4:h~start-stop', 'A4:8~stop', 'B4:8.', 'r:16', 'r:8'])
             expect(warnings).toEqual([
-                'Some note values were rewritten with the nearest supported ones.',
-                'Notes shorter than a sixteenth were left out.',
+                'A few note lengths were rounded to ones Solkey can write.',
+                'Very fast notes were left out.',
             ])
         })
 
