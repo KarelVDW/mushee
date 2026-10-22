@@ -511,7 +511,7 @@ test('imports a MusicXML file: confirms title and instrument, reports simplifica
     await expect(dialog.getByText('Instrument: Violin')).toBeVisible()
     const simplified = dialog.getByRole('status', { name: 'A few things were simplified' })
     await expect(simplified).toContainText('Only the first part (“Violin”) was imported; 1 other part was left out.')
-    await expect(simplified).toContainText('Some note values were rewritten with the nearest supported ones.')
+    await expect(simplified).toContainText('A few note lengths were rounded to ones Solkey can write.')
 
     // The picker waits behind 'Change', on the file's instrument, and an import carries no chord line.
     await dialog.getByRole('button', { name: 'Change' }).click()
