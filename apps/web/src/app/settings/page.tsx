@@ -65,8 +65,13 @@ export default function SettingsPage() {
         }
     }
 
-    // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan dialog.
+    // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan
+    // dialog. Dropped on the first tab switch, so coming back to the account tab doesn't reopen it.
     const [requestedPlan, setRequestedPlan] = useState<PlanTier['id'] | null>(null)
+    const switchTab = (next: Tab) => {
+        setTab(next)
+        setRequestedPlan(null)
+    }
 
     // Coming back from a successful Polar checkout, or from a pricing card: land on the account tab.
     useEffect(() => {
@@ -126,7 +131,7 @@ export default function SettingsPage() {
                 <PageHeader title="Settings" subtitle="Tweak your profile and account." />
 
                 <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 md:gap-8 items-start">
-                    <SideNav tab={tab} onTab={setTab} />
+                    <SideNav tab={tab} onTab={switchTab} />
                     <div className="flex flex-col gap-4">
                         {tab === 'profile' && (
                             <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
