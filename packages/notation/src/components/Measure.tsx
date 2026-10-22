@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, type PointerEvent, type ReactNode } from 'react'
 
 import type { Measure as MeasureModel } from '../model'
 import { Clef as ClefModel } from '../model/Clef'
@@ -52,6 +52,12 @@ interface MeasureProps {
      * so it never defeats the memo. Omit it and the glyphs render inert (read-only consumers).
      */
     onAttributeClick?: (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => void
+    /**
+     * A pointer that can hover (mouse, pen) entered an attribute glyph's hit box, or left it
+     * (`click` null) — so the host can name what a click would change. Same coordinates as
+     * {@link onAttributeClick}; only reported while that one is given.
+     */
+    onAttributeHover?: (measure: MeasureModel, click: AttributeClick | null, localX: number, localY: number) => void
 }
 
 interface HitBox {
@@ -61,9 +67,30 @@ interface HitBox {
     height: number
 }
 
+/**
+ * The hover tint of a clickable attribute glyph: its ink turns INTERACTION_BLUE (#1e90ff — a
+ * class needs the literal) with a 150ms fade, on pointers that can hover. It is a stylesheet
+ * rule rather than a fill attribute, so an exported snapshot never carries it.
+ */
+const ATTRIBUTE_HOVER_TINT =
+    '[&_*]:transition-colors [&_*]:duration-150 motion-reduce:[&_*]:transition-none group-hover/attribute:[&_path]:fill-[#1e90ff] group-hover/attribute:[&_text]:fill-[#1e90ff] group-hover/attribute:[&_line]:stroke-[#1e90ff]'
+
+/** Whether a pointer event comes from a pointer that hovers (mouse, pen) rather than a finger. */
+const hovers = (e: PointerEvent) => e.pointerType !== 'touch'
+
 /** Wraps an attribute glyph in a click target when a handler is provided — a transparent rect
- *  over the glyph's hit box makes thin glyphs comfortably clickable. */
-function ClickableGlyph({ hitBox, onClick, children }: { hitBox: HitBox; onClick?: () => void; children: ReactNode }) {
+ *  over the glyph's hit box makes thin glyphs comfortably clickable — that tints on hover. */
+function ClickableGlyph({
+    hitBox,
+    onClick,
+    onHover,
+    children,
+}: {
+    hitBox: HitBox
+    onClick?: () => void
+    onHover?: (hovered: boolean) => void
+    children: ReactNode
+}) {
     if (!onClick) return <>{children}</>
     return (
         <g
@@ -71,14 +98,26 @@ function ClickableGlyph({ hitBox, onClick, children }: { hitBox: HitBox; onClick
                 e.stopPropagation()
                 onClick()
             }}
-            className="cursor-pointer">
+            onPointerEnter={onHover && ((e) => hovers(e) && onHover(true))}
+            onPointerLeave={onHover && ((e) => hovers(e) && onHover(false))}
+            className="group/attribute cursor-pointer">
             <rect x={hitBox.x} y={hitBox.y} width={hitBox.width} height={hitBox.height} fill="transparent" />
-            {children}
+            <g className={ATTRIBUTE_HOVER_TINT}>{children}</g>
         </g>
     )
 }
 
-export const Measure = memo(function Measure({ measure, layout, selectedNoteIds, hoveredNoteId, onAttributeClick }: MeasureProps) {
+export const Measure = memo(function Measure({
+    measure,
+    layout,
+    selectedNoteIds,
+    hoveredNoteId,
+    onAttributeClick,
+    onAttributeHover,
+}: MeasureProps) {
+    /** The hover reporter for one glyph, or none when the glyphs are inert or nobody listens. */
+    const hoverFor = (click: AttributeClick, x: number, y: number) =>
+        onAttributeClick && onAttributeHover ? (hovered: boolean) => onAttributeHover(measure, hovered ? click : null, x, y) : undefined
     /** The leaf glyph for one drawn attribute, and what a click on it reports. */
     const attribute = (element: ClefModel | KeySignatureModel | TimeSignatureModel): { glyph: ReactNode; click: AttributeClick } => {
         if (element instanceof ClefModel) {
@@ -102,7 +141,8 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                     <g key={element instanceof TimeSignatureModel ? `time-${i}` : element.id} transform={`translate(${x}, 0)`}>
                         <ClickableGlyph
                             hitBox={{ x: 0, y: STAFF_BAND_Y, width, height: STAFF_BAND_HEIGHT }}
-                            onClick={onAttributeClick && (() => onAttributeClick(measure, click, x, Staff.TOP_Y))}>
+                            onClick={onAttributeClick && (() => onAttributeClick(measure, click, x, Staff.TOP_Y))}
+                            onHover={hoverFor(click, x, Staff.TOP_Y)}>
                             {glyph}
                         </ClickableGlyph>
                     </g>
@@ -156,6 +196,7 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
             {measure.tempos.map((tempo) => {
                 const { x, y } = layout.tempoLayoutFor(tempo)
                 const pulse = tempo.pulse
+                const click: AttributeClick = { kind: 'tempo', beatPosition: tempo.beatPosition, bpm: tempo.bpm }
                 return (
                     <g key={`tempo-${tempo.id}`} transform={`translate(${x}, 0)`}>
                         <ClickableGlyph
@@ -165,10 +206,8 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                                 width: beatUnitWidth(pulse) + TEMPO_TEXT_HIT_WIDTH,
                                 height: BEAT_UNIT_STEM_HEIGHT + 4,
                             }}
-                            onClick={
-                                onAttributeClick &&
-                                (() => onAttributeClick(measure, { kind: 'tempo', beatPosition: tempo.beatPosition, bpm: tempo.bpm }, x, y))
-                            }>
+                            onClick={onAttributeClick && (() => onAttributeClick(measure, click, x, y))}
+                            onHover={hoverFor(click, x, y)}>
                             <TempoMarking y={y} pulse={pulse} pulseBpm={tempo.pulseBpm} />
                         </ClickableGlyph>
                     </g>
