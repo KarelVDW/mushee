@@ -15,6 +15,15 @@ export function scorePassword(pw: string): number {
     return Math.min(s, 4)
 }
 
+/**
+ * The rule a new password must pass where we ask for one twice (reset, change):
+ * at least "OK" on the meter, and the confirmation matches. Signup shows no meter
+ * and doesn't apply it — whether it should is an open product decision.
+ */
+export function isAcceptablePassword(pw: string, confirm: string): boolean {
+    return scorePassword(pw) >= 2 && pw === confirm
+}
+
 /** Four-bar password-strength meter with its label, driven by {@link scorePassword}. */
 export function PasswordStrength({ password }: { password: string }) {
     const score = scorePassword(password)

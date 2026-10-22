@@ -106,10 +106,14 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                     </div>
 
                     <TextField label={labelEl} value={typed} onChange={setTyped} placeholder={PHRASE} autoFocus />
-                    <TextField label="Your password" value={pw} onChange={setPw} type="password" placeholder="••••••••••••" />
-                    {errorMessage && (
-                        <span className="font-body font-medium text-[12px] leading-[1.4] text-error -mt-2">{errorMessage}</span>
-                    )}
+                    <TextField
+                        label="Your password"
+                        value={pw}
+                        onChange={setPw}
+                        type="password"
+                        placeholder="••••••••••••"
+                        error={errorMessage}
+                    />
 
                     <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.75 accent-error" />

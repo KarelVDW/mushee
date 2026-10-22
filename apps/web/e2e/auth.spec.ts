@@ -95,6 +95,11 @@ test('reset password: the new-password stage validates strength and match', asyn
     await page.getByLabel('Confirm password').fill('correct-horse-battery')
     await expect(save).toBeEnabled()
 
+    // The one eye toggle reveals both fields.
+    await page.getByRole('button', { name: 'Show password' }).click()
+    await expect(page.getByLabel('New password')).toHaveAttribute('type', 'text')
+    await expect(page.getByLabel('Confirm password')).toHaveAttribute('type', 'text')
+
     // A mismatch disables saving again.
     await page.getByLabel('Confirm password').fill('different')
     await expect(save).toBeDisabled()

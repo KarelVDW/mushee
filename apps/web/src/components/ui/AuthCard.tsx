@@ -6,8 +6,8 @@ import { type FormEvent, type ReactNode } from 'react'
 import { Wordmark } from './Brand'
 import { PrimaryButton, TertiaryButton } from './Buttons'
 import { Alert } from './Feedback'
-import { Icon } from './Icon'
 import { TextField } from './Inputs'
+import { PasswordField } from './PasswordField'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -18,7 +18,6 @@ interface AuthCardProps {
     name?: string
     email: string
     password: string
-    showPassword: boolean
     loading?: boolean
     /** Blocks submission for a reason other than loading (e.g. a CAPTCHA still to be solved). */
     submitDisabled?: boolean
@@ -28,7 +27,6 @@ interface AuthCardProps {
     onNameChange?: (v: string) => void
     onEmailChange: (v: string) => void
     onPasswordChange: (v: string) => void
-    onToggleShowPassword: () => void
     onSubmit: (e: FormEvent) => void
 }
 
@@ -81,7 +79,6 @@ function FormPanel({
     name,
     email,
     password,
-    showPassword,
     loading,
     submitDisabled,
     beforeSubmit,
@@ -89,7 +86,6 @@ function FormPanel({
     onNameChange,
     onEmailChange,
     onPasswordChange,
-    onToggleShowPassword,
     onSubmit,
     isSignup,
 }: AuthCardProps & { isSignup: boolean }) {
@@ -107,23 +103,7 @@ function FormPanel({
                         )}
                         {isSignup && <TextField label="Your name" value={name ?? ''} onChange={onNameChange} placeholder="Anya Mokri" />}
                         <TextField label="Email" value={email} onChange={onEmailChange} placeholder="you@email.com" type="email" />
-                        <TextField
-                            label="Password"
-                            value={password}
-                            onChange={onPasswordChange}
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••••••"
-                            rightSlot={
-                                <button
-                                    type="button"
-                                    onClick={onToggleShowPassword}
-                                    aria-label="Show password"
-                                    aria-pressed={showPassword}
-                                    className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
-                                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-                                </button>
-                            }
-                        />
+                        <PasswordField label="Password" value={password} onChange={onPasswordChange} />
                         {!isSignup && (
                             <div className="flex justify-end -mt-2">
                                 <Link href="/reset-password" className="no-underline">

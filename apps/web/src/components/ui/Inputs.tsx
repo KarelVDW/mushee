@@ -7,7 +7,7 @@ import { Icon, type IconName } from './Icon'
 
 const LABEL_CLASS = `${EYEBROW_CLASS} cursor-text`
 
-interface TextFieldProps {
+export interface TextFieldProps {
     label?: ReactNode
     value: string
     onChange?: (v: string) => void
@@ -17,6 +17,8 @@ interface TextFieldProps {
     rightSlot?: ReactNode
     autoFocus?: boolean
     hint?: string
+    /** The field's inline error line (a mismatch, a rejected value), under the input. */
+    error?: ReactNode
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
     inputRef?: React.Ref<HTMLInputElement>
 }
@@ -37,6 +39,7 @@ export function TextField({
     rightSlot,
     autoFocus,
     hint,
+    error,
     onKeyDown,
     inputRef,
 }: TextFieldProps) {
@@ -73,6 +76,7 @@ export function TextField({
                 <div className="absolute bottom-0 left-1/2 right-1/2 peer-focus:left-0 peer-focus:right-0 h-0.5 bg-primary-container transition-[left,right] duration-300 ease-solkey" />
             </div>
             {hint && <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{hint}</span>}
+            {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
         </div>
     )
 }

@@ -76,9 +76,9 @@ export function VerifyStep({
                             onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
                             placeholder="••••••"
                             autoFocus
+                            error={otpError}
                         />
                     </div>
-                    {otpError && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{otpError}</span>}
                     <div className="flex gap-3 items-center flex-wrap">
                         <PrimaryButton disabled={!/^\d{6}$/.test(code) || verifying} onClick={() => void submitCode()}>
                             {verifying ? 'Verifying…' : 'Verify'}

@@ -9,10 +9,10 @@ import {
     AuthShell,
     Eyebrow,
     Icon,
+    isAcceptablePassword,
     ModalTitle,
-    PasswordStrength,
+    NewPasswordFields,
     PrimaryButton,
-    scorePassword,
     SubHeadline,
     TertiaryButton,
     TextField,
@@ -41,7 +41,6 @@ function PasswordResetPageInner() {
     const [email, setEmail] = useState('')
     const [pw, setPw] = useState('')
     const [pw2, setPw2] = useState('')
-    const [showPw, setShowPw] = useState(false)
     const [resent, setResent] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(
@@ -52,9 +51,7 @@ function PasswordResetPageInner() {
         if (errorFromUrl === 'INVALID_TOKEN') setStage('request')
     }, [errorFromUrl])
 
-    const pwScore = scorePassword(pw)
-    const pwMatch = pw.length > 0 && pw === pw2
-    const canSetNew = pwScore >= 2 && pwMatch && !!tokenFromUrl
+    const canSetNew = isAcceptablePassword(pw, pw2) && !!tokenFromUrl
     const stageIdx = STAGES.indexOf(stage)
 
     const onBackToSignIn = () => router.push('/login')
@@ -231,38 +228,14 @@ function PasswordResetPageInner() {
                                 <div className="flex flex-col gap-4 flex-1 justify-center">
                                     <ModalTitle>Set a new password.</ModalTitle>
                                     <SubHeadline>At least 8 characters, with a mix of letters and numbers.</SubHeadline>
-                                    <TextField
-                                        label="New password"
+                                    <NewPasswordFields
                                         value={pw}
                                         onChange={setPw}
-                                        type={showPw ? 'text' : 'password'}
-                                        placeholder="••••••••••••"
+                                        confirm={pw2}
+                                        onConfirmChange={setPw2}
+                                        confirmLabel="Confirm password"
                                         autoFocus
-                                        rightSlot={
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPw(!showPw)}
-                                                aria-label="Toggle password visibility"
-                                                className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
-                                                <Icon name={showPw ? 'eye-off' : 'eye'} size={18} />
-                                            </button>
-                                        }
                                     />
-                                    <div className="-mt-2">
-                                        <PasswordStrength password={pw} />
-                                    </div>
-                                    <TextField
-                                        label="Confirm password"
-                                        value={pw2}
-                                        onChange={setPw2}
-                                        type={showPw ? 'text' : 'password'}
-                                        placeholder="••••••••••••"
-                                    />
-                                    {pw2.length > 0 && !pwMatch && (
-                                        <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
-                                            Passwords don&apos;t match yet.
-                                        </span>
-                                    )}
                                 </div>
                                 <div className="flex flex-col gap-3.5 pt-2">
                                     <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!canSetNew || submitting}>

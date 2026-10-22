@@ -15,7 +15,6 @@ export default function SignupPage() {
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     // Signup CAPTCHA (when a site key is configured): the token is single-use, so a
@@ -73,7 +72,6 @@ export default function SignupPage() {
                 name={name}
                 email={email}
                 password={password}
-                showPassword={showPassword}
                 error={error}
                 loading={loading}
                 submitDisabled={!!TURNSTILE_SITE_KEY && !captchaToken}
@@ -83,7 +81,6 @@ export default function SignupPage() {
                 onNameChange={setName}
                 onEmailChange={setEmail}
                 onPasswordChange={setPassword}
-                onToggleShowPassword={() => setShowPassword((v) => !v)}
                 onSubmit={handleSubmit}
             />
         </AuthShell>

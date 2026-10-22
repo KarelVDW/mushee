@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-import { DialogPanel, Icon, PasswordStrength, PrimaryButton, scorePassword, TertiaryButton, TextField } from '@/components/ui'
+import { DialogPanel, Icon, isAcceptablePassword, NewPasswordFields, PasswordField, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { changePassword } from '@/lib/auth-client'
 
 interface ChangePasswordDialogProps {
@@ -20,10 +20,8 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
     const [submitting, setSubmitting] = useState(false)
     const [saved, setSaved] = useState(false)
 
-    const pwScore = scorePassword(next)
-    const pwMatch = next.length > 0 && next === confirm
     const sameAsCurrent = next.length > 0 && next === current
-    const canSubmit = !submitting && current.length > 0 && pwScore >= 2 && pwMatch && !sameAsCurrent
+    const canSubmit = !submitting && current.length > 0 && isAcceptablePassword(next, confirm) && !sameAsCurrent
 
     const submit = async () => {
         if (!canSubmit) return
@@ -43,16 +41,6 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
         }
         setSaved(true)
     }
-
-    const eye = (
-        <button
-            type="button"
-            onClick={() => setShowPw(!showPw)}
-            aria-label="Toggle password visibility"
-            className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
-            <Icon name={showPw ? 'eye-off' : 'eye'} size={18} />
-        </button>
-    )
 
     return (
         <DialogPanel
@@ -83,42 +71,18 @@ export function ChangePasswordDialog({ onCancel, onSuccess }: ChangePasswordDial
                 </div>
             ) : (
                 <div className="flex flex-col gap-4 pb-4">
-                    <TextField
-                        label="Current password"
-                        value={current}
-                        onChange={setCurrent}
-                        type={showPw ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                        autoFocus
-                    />
-                    <TextField
-                        label="New password"
+                    {/* One eye button (on New password) reveals all three fields. */}
+                    <PasswordField label="Current password" value={current} onChange={setCurrent} shown={showPw} autoFocus />
+                    <NewPasswordFields
                         value={next}
                         onChange={setNext}
-                        type={showPw ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                        rightSlot={eye}
+                        confirm={confirm}
+                        onConfirmChange={setConfirm}
+                        confirmLabel="Confirm new password"
+                        shown={showPw}
+                        onToggleShown={() => setShowPw(!showPw)}
+                        confirmError={sameAsCurrent ? 'Pick something different from your current password.' : undefined}
                     />
-                    <div className="-mt-2">
-                        <PasswordStrength password={next} />
-                    </div>
-                    <TextField
-                        label="Confirm new password"
-                        value={confirm}
-                        onChange={setConfirm}
-                        type={showPw ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                    />
-                    {confirm.length > 0 && !pwMatch && (
-                        <span className="font-body font-medium text-[12px] leading-[1.4] text-error -mt-2">
-                            Passwords don&apos;t match yet.
-                        </span>
-                    )}
-                    {sameAsCurrent && (
-                        <span className="font-body font-medium text-[12px] leading-[1.4] text-error -mt-2">
-                            Pick something different from your current password.
-                        </span>
-                    )}
                     {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
                     <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
                         Forgot your current password?{' '}

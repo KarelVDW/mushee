@@ -19,7 +19,6 @@ export default function LoginPage() {
     const router = useRouter()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
@@ -67,12 +66,10 @@ export default function LoginPage() {
                 mode="signin"
                 email={email}
                 password={password}
-                showPassword={showPassword}
                 error={error}
                 loading={loading}
                 onEmailChange={setEmail}
                 onPasswordChange={setPassword}
-                onToggleShowPassword={() => setShowPassword((v) => !v)}
                 onSubmit={handleSubmit}
             />
             {pendingDeletion && (
