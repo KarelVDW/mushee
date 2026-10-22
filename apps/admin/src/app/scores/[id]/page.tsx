@@ -1,11 +1,11 @@
 'use client'
 
+import { Alert, Eyebrow, Pill, TertiaryButton } from '@mushee/ui'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { EngravedScore } from '@/components/EngravedScore'
-import { Alert, Eyebrow, Pill, TertiaryButton } from '@/components/ui'
 import { type AdminScoreRecording, recordingAudioUrl } from '@/lib/api'
 import { formatDateTime, formatSeconds } from '@/lib/format'
 import { useRevokeShare, useScore } from '@/lib/queries'

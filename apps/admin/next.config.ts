@@ -1,12 +1,11 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-    // The score model + notation renderer ship as TypeScript source; this app
-    // compiles them along with its own code.
-    transpilePackages: ['@mushee/notation'],
-    // eslint-disable-next-line @typescript-eslint/require-await -- Next's API is async
-    async headers() {
-        return [
+    // The workspace packages (score model + notation renderer, shared UI kit)
+    // ship as TypeScript source; this app compiles them along with its own code.
+    transpilePackages: ['@mushee/notation', '@mushee/ui'],
+    headers() {
+        return Promise.resolve([
             {
                 source: '/:path*',
                 headers: [
@@ -19,7 +18,7 @@ const nextConfig: NextConfig = {
                     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
                 ],
             },
-        ]
+        ])
     },
 }
 

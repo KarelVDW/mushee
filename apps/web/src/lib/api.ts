@@ -1,79 +1,15 @@
 import type { ScorePatch, StoredScoreDocument } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
+import { requestJson } from '@mushee/ui/http'
 
 import { API_URL, API_WS_URL } from './env'
 import type { StoredShortcuts } from './Keybindings'
 
-/** The server responded, but with an error status. */
-export class ApiError extends Error {
-    constructor(
-        readonly status: number,
-        message: string,
-        /** Machine-readable refusal code some endpoints attach (e.g. 'score-limit'). */
-        readonly code?: string,
-    ) {
-        super(message)
-        this.name = 'ApiError'
-    }
+export { ApiError, NetworkError } from '@mushee/ui/http'
 
-    /** Client errors (bad request, not found, …) are final — retrying won't change the answer. */
-    get isClientError(): boolean {
-        return this.status >= 400 && this.status < 500
-    }
-
-    /** The plan's score cap refused a new score (a create or a copy) — an upgrade prompt, not a failure. */
-    get isScoreLimit(): boolean {
-        return this.code === 'score-limit'
-    }
-}
-
-/** The server could not be reached at all (down, offline, DNS, CORS). */
-export class NetworkError extends Error {
-    constructor(cause?: unknown) {
-        super('Could not reach the server', { cause })
-        this.name = 'NetworkError'
-    }
-}
-
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    let res: Response
-    try {
-        res = await fetch(`${API_URL}${path}`, {
-            ...init,
-            credentials: 'include',
-            headers: {
-                // Only claim a JSON body when there is one — the server rejects
-                // body-less requests (DELETE) that carry a content-type.
-                ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-                ...init?.headers,
-            },
-        })
-    } catch (err) {
-        throw new NetworkError(err)
-    }
-
-    if (!res.ok) {
-        // Prefer the server's message when it sends one ({ message } or { error }).
-        let message = `API error: ${res.status} ${res.statusText}`
-        let code: string | undefined
-        try {
-            const body: unknown = await res.clone().json()
-            if (body && typeof body === 'object') {
-                const detail = (body as { message?: unknown; error?: unknown }).message ?? (body as { error?: unknown }).error
-                if (typeof detail === 'string' && detail) message = detail
-                const bodyCode = (body as { code?: unknown }).code
-                if (typeof bodyCode === 'string' && bodyCode) code = bodyCode
-            }
-        } catch {
-            // Non-JSON error body — keep the status-line message.
-        }
-        throw new ApiError(res.status, message, code)
-    }
-
-    // Void endpoints (e.g. DELETE) respond with an empty body — parsing it as
-    // JSON would throw even though the request succeeded.
-    const text = await res.text()
-    return (text ? JSON.parse(text) : undefined) as T
+/** A call to the Solkey API, with the session cookie (see @mushee/ui/http for the error model). */
+export function api<T>(path: string, init?: RequestInit): Promise<T> {
+    return requestJson<T>(`${API_URL}${path}`, { ...init, credentials: 'include' })
 }
 
 export interface ScoreMeta {

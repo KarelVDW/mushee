@@ -1,11 +1,12 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
+import { Alert, Chip, Eyebrow, PrimaryButton, TextArea, TextField } from '@mushee/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import { Card } from '@/components/Card'
 import { ScoreView } from '@/components/ScoreView'
-import { Alert, Card, Chip, Eyebrow, PrimaryButton, TextArea, TextField } from '@/components/ui'
 import { errorText } from '@/lib/api'
 import { melodyToScore, playbackInstrument } from '@/lib/buildScore'
 import { generateClips, type GeneratorParams, REGISTER_PRESETS } from '@/lib/generator'

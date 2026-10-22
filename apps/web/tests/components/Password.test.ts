@@ -1,8 +1,8 @@
+import { TextField } from '@mushee/ui'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { TextField } from '@/components/ui/Inputs'
 import { isAcceptablePassword, scorePassword } from '@/components/ui/Password'
 import { NewPasswordFields, PasswordField } from '@/components/ui/PasswordField'
 

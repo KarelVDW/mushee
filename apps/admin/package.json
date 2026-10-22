@@ -6,12 +6,13 @@
         "dev": "next dev --turbopack -p 3500",
         "build": "next build",
         "start": "next start -p 3500",
-        "type-check": "tsc --noEmit",
+        "type-check": "next typegen && tsc --noEmit",
         "test": "vitest run",
         "test:watch": "vitest"
     },
     "dependencies": {
         "@mushee/notation": "workspace:^",
+        "@mushee/ui": "workspace:^",
         "@tanstack/react-query": "^5.101.0",
         "next": "16.1.6",
         "react": "19.2.3",

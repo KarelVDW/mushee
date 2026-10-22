@@ -1,9 +1,8 @@
 'use client'
 
+import { Icon, TextField, type TextFieldProps } from '@mushee/ui'
 import { useState } from 'react'
 
-import { Icon } from './Icon'
-import { TextField, type TextFieldProps } from './Inputs'
 import { PasswordStrength } from './Password'
 
 const MASK_PLACEHOLDER = '••••••••••••'

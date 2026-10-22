@@ -1,69 +1,23 @@
-/** The server responded, but with an error status. */
-export class ApiError extends Error {
-    constructor(
-        readonly status: number,
-        message: string,
-    ) {
-        super(message)
-        this.name = 'ApiError'
-    }
+import { ApiError, requestJson } from '@mushee/ui/http'
 
-    /** Client errors (bad request, not found, …) are final — retrying won't change the answer. */
-    get isClientError(): boolean {
-        return this.status >= 400 && this.status < 500
-    }
-}
-
-/** The server could not be reached at all (down, offline, DNS). */
-export class NetworkError extends Error {
-    constructor(cause?: unknown) {
-        super('Could not reach the server', { cause })
-        this.name = 'NetworkError'
-    }
-}
+export { ApiError, NetworkError } from '@mushee/ui/http'
 
 /**
  * Same-origin fetch wrapper: every data call goes to this app's /api routes,
  * which hold the session check and the server-side hop to the real API.
  */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    let res: Response
     try {
-        res = await fetch(path, {
-            ...init,
-            headers: {
-                ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-                ...init?.headers,
-            },
-        })
+        return await requestJson<T>(path, init)
     } catch (err) {
-        throw new NetworkError(err)
-    }
-
-    // An expired console session answers 401 on any data route — go back to
-    // the login screen (returning here afterwards, as the page gate does)
-    // instead of surfacing errors on every widget.
-    if (res.status === 401 && path.startsWith('/api/admin') && typeof window !== 'undefined') {
-        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`)
-    }
-
-    if (!res.ok) {
-        let message = `API error: ${res.status} ${res.statusText}`
-        try {
-            const body: unknown = await res.clone().json()
-            if (body && typeof body === 'object') {
-                const { message: bodyMessage, error } = body as { message?: unknown; error?: unknown }
-                const detail = bodyMessage ?? error
-                if (typeof detail === 'string' && detail) message = detail
-            }
-        } catch {
-            // Non-JSON error body — keep the status-line message.
+        // An expired console session answers 401 on any data route — go back to
+        // the login screen (returning here afterwards, as the page gate does)
+        // instead of surfacing errors on every widget.
+        if (err instanceof ApiError && err.status === 401 && path.startsWith('/api/admin') && typeof window !== 'undefined') {
+            window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`)
         }
-        throw new ApiError(res.status, message)
+        throw err
     }
-
-    const text = await res.text()
-    return (text ? JSON.parse(text) : undefined) as T
 }
 
 // ── Session ──────────────────────────────────────────────────────────────────

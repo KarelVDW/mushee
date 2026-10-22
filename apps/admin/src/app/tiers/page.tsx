@@ -1,7 +1,8 @@
 'use client'
 
+import { Alert, Pill } from '@mushee/ui'
+
 import { AdminShell, PageHeading } from '@/components/AdminShell'
-import { Alert, Pill } from '@/components/ui'
 import { formatCount, formatSeconds } from '@/lib/format'
 import { useTiers } from '@/lib/queries'
 

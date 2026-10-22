@@ -1,10 +1,10 @@
 'use client'
 
+import { Alert } from '@mushee/ui'
 import Link from 'next/link'
 
 import { AdminShell, PageHeading } from '@/components/AdminShell'
 import { BarList, DailyBars, StatTile } from '@/components/charts'
-import { Alert } from '@/components/ui'
 import { formatCount, formatSeconds, plural } from '@/lib/format'
 import { useStats } from '@/lib/queries'
 

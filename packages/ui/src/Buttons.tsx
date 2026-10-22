@@ -230,8 +230,8 @@ interface CloseButtonProps {
 
 /**
  * The bare × that dismisses a toast, banner or dialog. Plain CSS only — no
- * opacity-modified colours, transforms or shadows — because BrowserSupportBanner
- * renders it on the browsers below the CSS floor.
+ * opacity-modified colours, transforms or shadows — because the web app's
+ * BrowserSupportBanner renders it on the browsers below the CSS floor.
  */
 export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: CloseButtonProps) {
     return (
@@ -250,8 +250,7 @@ export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: Close
     )
 }
 
-// Unused by the web app (so not in its barrel) but kept: the admin/eval kits use it,
-// and this file is the copy the shared kit is extracted from.
+// Not in the web app's barrel (it never renders one); the eval workbench does.
 interface ToggleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     active?: boolean
     tone?: 'cyan' | 'rec'

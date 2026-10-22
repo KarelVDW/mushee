@@ -1,7 +1,8 @@
 'use client'
 
+import { Alert, Pill, PrimaryButton, TertiaryButton } from '@mushee/ui'
+
 import { AdminShell, PageHeading } from '@/components/AdminShell'
-import { Alert, Pill, PrimaryButton, TertiaryButton } from '@/components/ui'
 import type { BetaSignup } from '@/lib/api'
 import { formatDate } from '@/lib/format'
 import { useApproveBetaSignup, useBetaSignups, useRevokeBetaSignup } from '@/lib/queries'

@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui/Buttons'
+import { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from '../src/Buttons'
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el)
 

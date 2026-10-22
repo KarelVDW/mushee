@@ -6,7 +6,11 @@ import type { RecordingSummary } from '@/lib/api'
 
 const { showToast, mutate } = vi.hoisted(() => ({ showToast: vi.fn(), mutate: vi.fn() }))
 
-vi.mock('@/components/ui/Toast', () => ({ showToast, Toaster: () => null }))
+vi.mock('@mushee/ui', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@mushee/ui')>()),
+    showToast,
+    Toaster: () => null,
+}))
 vi.mock('@/lib/analytics', () => ({ track: vi.fn() }))
 vi.mock('@/lib/queries', () => ({ useDeleteRecording: () => ({ isPending: false, mutate }) }))
 

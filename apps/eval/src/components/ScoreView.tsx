@@ -2,7 +2,7 @@
 
 import { ScoreView as NotationScoreView } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
-import { Component, type ReactNode } from 'react'
+import { RenderBoundary } from '@mushee/ui'
 
 /**
  * Read-only engraving of a Score with the product's renderer. A score this app
@@ -18,16 +18,4 @@ export function ScoreView({ score }: { score: Score }) {
             </div>
         </RenderBoundary>
     )
-}
-
-class RenderBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-    state = { failed: false }
-
-    static getDerivedStateFromError() {
-        return { failed: true }
-    }
-
-    render() {
-        return this.state.failed ? this.props.fallback : this.props.children
-    }
 }

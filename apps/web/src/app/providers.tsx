@@ -1,44 +1,14 @@
 'use client'
 
-import { MutationCache, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { createQueryClient } from '@mushee/ui/queryClient'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { AnalyticsIdentitySync } from '@/components/AnalyticsIdentitySync'
 import { BrowserSupportBanner } from '@/components/BrowserSupportBanner'
 import { CookieConsent } from '@/components/CookieConsent'
-import { showToast, Toaster } from '@/components/ui'
-import { ApiError, NetworkError } from '@/lib/api'
+import { Toaster } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
-
-function toastMessage(error: unknown, fallback: string): string {
-    if (error instanceof NetworkError) return "Can't reach the server — check your connection."
-    if (error instanceof ApiError) return error.message
-    return fallback
-}
-
-function makeQueryClient() {
-    return new QueryClient({
-        defaultOptions: {
-            queries: {
-                staleTime: 30_000,
-                retry: (failureCount, error) => {
-                    // 4xx answers are final; retry only transient failures (network, 5xx).
-                    if (error instanceof ApiError && error.isClientError) return false
-                    return failureCount < 2
-                },
-            },
-        },
-        mutationCache: new MutationCache({
-            onError: (error, _variables, _context, mutation) => {
-                // Mutations whose UI renders the error inline opt out of the toast.
-                if (mutation.meta?.silentError) return
-                // A mutation's own message ("Could not delete the score…") reads better
-                // than the generic network/API phrasing, so it wins when provided.
-                showToast(mutation.meta?.errorMessage ?? toastMessage(error, 'Something went wrong. Please try again.'))
-            },
-        }),
-    })
-}
 
 /**
  * The query cache belongs to one signed-in user. Query keys carry no user id, so
@@ -63,7 +33,7 @@ export function SessionCacheScope() {
 
 export function Providers({ children }: { children: ReactNode }) {
     // useState ensures one client per browser session, stable across re-renders.
-    const [queryClient] = useState(makeQueryClient)
+    const [queryClient] = useState(createQueryClient)
 
     return (
         <QueryClientProvider client={queryClient}>

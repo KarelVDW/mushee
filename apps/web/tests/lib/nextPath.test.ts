@@ -23,4 +23,10 @@ describe('withNext', () => {
         // Only the bare library is implied; a filtered library view is a real destination.
         expect(withNext('/login', `${LIBRARY_PATH}?q=bach`)).toBe('/login?next=%2Fscores%3Fq%3Dbach')
     })
+
+    // The guard itself is fuzzed in @mushee/ui; this pins the wrappers' round trip.
+    it('round-trips through nextPathFrom', () => {
+        for (const next of ['/s/abc', '/scores?q=a b&c=1', '/x#f', '/a%2Fb', '/a%5Cb', '/@x:y', '/pricing?plan=studio+'])
+            expect(nextPathFrom(withNext('/signup', next).replace('/signup', ''))).toBe(next)
+    })
 })

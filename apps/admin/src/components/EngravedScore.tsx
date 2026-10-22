@@ -3,7 +3,8 @@
 import { ScoreView } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { Component, type ReactNode, useMemo } from 'react'
+import { RenderBoundary } from '@mushee/ui'
+import { useMemo } from 'react'
 
 import type { ScoreDocument } from '@/lib/api'
 
@@ -49,16 +50,4 @@ function Fallback({ document, reason }: { document: ScoreDocument; reason: strin
             <ScorePreview document={document} />
         </div>
     )
-}
-
-class RenderBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-    state = { failed: false }
-
-    static getDerivedStateFromError() {
-        return { failed: true }
-    }
-
-    render() {
-        return this.state.failed ? this.props.fallback : this.props.children
-    }
 }

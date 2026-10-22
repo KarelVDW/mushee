@@ -1,8 +1,8 @@
 'use client'
 
+import { Eyebrow } from '@mushee/ui'
 import { useState } from 'react'
 
-import { Eyebrow } from '@/components/ui'
 import { formatCount, formatDayTick } from '@/lib/format'
 
 /**
