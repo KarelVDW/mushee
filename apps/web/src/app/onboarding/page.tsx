@@ -273,27 +273,32 @@ export default function OnboardingPage() {
                 />
             )}
 
+            {/*
+             * Phones stack the footer: the primary full width on top (its price-bearing label wraps
+             * rather than run past the card), the payment note under it, Back last. From sm up,
+             * Back sits left and the primary right, the note under the primary.
+             */}
             {!done && (showBack || showContinue) && (
-                <div className="flex flex-col gap-2 pt-3">
-                    <div className="flex justify-between items-center gap-4">
-                        {showBack ? (
+                <div className="grid grid-cols-1 gap-2 pt-3 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4">
+                    {showBack && (
+                        <div className="order-last flex justify-center sm:order-0 sm:col-start-1 sm:row-start-1 sm:justify-start">
                             <TertiaryButton onClick={back}>
                                 <span className="inline-flex items-center gap-1.5">
                                     <Icon name="arrow-left" size={13} />
                                     Back
                                 </span>
                             </TertiaryButton>
-                        ) : (
-                            <span />
-                        )}
-                        {showContinue && (
+                        </div>
+                    )}
+                    {showContinue && (
+                        <div className="flex flex-col sm:col-start-2 sm:row-start-1 sm:items-end">
                             <PrimaryButton icon="arrow-right" emphasis="pop" onClick={next} disabled={startCheckout.isPending}>
-                                {ctaLabel}
+                                <span className="whitespace-normal text-center leading-tight">{ctaLabel}</span>
                             </PrimaryButton>
-                        )}
-                    </div>
+                        </div>
+                    )}
                     {paidChoice && (
-                        <p className="m-0 self-end text-right font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                        <p className="m-0 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant sm:col-start-2 sm:text-right">
                             You&apos;ll confirm on the next page. Cancel any time.
                         </p>
                     )}
