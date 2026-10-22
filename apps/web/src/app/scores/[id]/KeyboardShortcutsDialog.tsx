@@ -127,15 +127,17 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
     // map here: the convention is character-based (⌘A is the key that *types* A, whatever
     // its physical position), so the label is the character itself.
     if (command.fixed) {
+        // A key the command reaches by name (the Menu key, Escape for a take) is a keycap of its own.
+        const namedKey = command.alternateKey ?? command.preemptKey
         return (
             <div className="flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
                 <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
                 <span className="inline-flex items-center gap-1.5">
                     {shortcut && <ShortcutKeys shortcut={shortcut} layout={null} isMac={keybindings.isMac} />}
-                    {command.alternateKey && (
+                    {namedKey && (
                         <>
-                            <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">or</span>
-                            <Keycap>{command.alternateKey.label}</Keycap>
+                            {shortcut && <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">or</span>}
+                            <Keycap>{namedKey.label}</Keycap>
                         </>
                     )}
                 </span>

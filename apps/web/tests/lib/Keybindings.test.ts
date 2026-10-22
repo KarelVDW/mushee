@@ -329,7 +329,11 @@ describe('Editor command defaults', () => {
         const defaults = EDITOR_COMMANDS.map((command) => command.defaultShortcut).filter(
             (shortcut): shortcut is string => shortcut !== null,
         )
-        expect(defaults.length).toBe(EDITOR_COMMANDS.length)
+        // The one command without a default reaches its key by name instead (Escape stopping a take).
+        const byName = EDITOR_COMMANDS.filter((command) => command.defaultShortcut === null)
+        expect(byName.map((command) => command.id)).toEqual(['stop-recording'])
+        expect(byName[0].preemptKey).toEqual({ key: 'Escape', label: 'Esc' })
+        expect(defaults.length).toBe(EDITOR_COMMANDS.length - byName.length)
         // `Mod` canonicalises differently per platform, so a Meta+… default could collide with a
         // Mod+… one on a Mac only.
         for (const isMac of [false, true]) {
@@ -386,7 +390,7 @@ describe('Editor command defaults', () => {
     })
 
     it('lists the commands in plain words, the everyday groups first, with no "Toggle …" labels', () => {
-        expect(EDITOR_COMMAND_GROUPS[0]).toBe('Edit notes')
+        expect(EDITOR_COMMAND_GROUPS.slice(0, 2)).toEqual(['Playback', 'Edit notes'])
         expect(new Set(EDITOR_COMMANDS.map((command) => command.group))).toEqual(new Set(EDITOR_COMMAND_GROUPS))
         const label = (id: string) => EDITOR_COMMANDS.find((command) => command.id === id)?.label
         expect(label('raise-pitch')).toBe('Higher')
@@ -399,6 +403,25 @@ describe('Editor command defaults', () => {
         expect(label('transpose')).toBe('Transpose…')
         expect(label('collapse-selection')).toBe('Select just this note')
         expect(EDITOR_COMMANDS.filter((command) => command.label.startsWith('Toggle'))).toEqual([])
+    })
+
+    it('plays on Space (fixed), from the start on ⇧Space and records on ⇧R (both rebindable)', () => {
+        const keybindings = new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-playback', isMac: false })
+        expect(keybindings.resolve(keydown({ code: 'Space', key: ' ' }))?.id).toBe('play-pause')
+        expect(keybindings.resolve(keydown({ code: 'Space', key: ' ', shiftKey: true }))?.id).toBe('play-from-start')
+        expect(keybindings.resolve(keydown({ code: 'KeyR', key: 'R', shiftKey: true }))?.id).toBe('record')
+        // Plain R is still the rest toggle.
+        expect(keybindings.resolve(keydown({ code: 'KeyR', key: 'r' }))?.id).toBe('toggle-rest')
+        // Space is the media-player convention: no other command can take it, and it can't move.
+        expect(keybindings.rebind('play-pause', recorded({ code: 'KeyP', key: 'p' })).ok).toBe(false)
+        expect(keybindings.rebind('toggle-rest', recorded({ code: 'Space', key: ' ' }))).toMatchObject({
+            ok: false,
+            reservedBy: { id: 'play-pause' },
+        })
+        expect(keybindings.rebind('record', recorded({ code: 'KeyJ', key: 'j' })).ok).toBe(true)
+        expect(keybindings.resolve(keydown({ code: 'KeyJ', key: 'j' }))?.id).toBe('record')
+        // Escape keeps collapsing the selection: stopping a take claims it by name, ahead of the binding.
+        expect(keybindings.resolve(keydown({ code: 'Escape', key: 'Escape' }))?.id).toBe('collapse-selection')
     })
 
     it('on a Mac the fixed clipboard shortcuts resolve by typed character and the plain letters still reach the pickers', () => {
