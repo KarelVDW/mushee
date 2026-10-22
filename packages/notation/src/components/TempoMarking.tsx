@@ -35,7 +35,7 @@ export const TempoMarking = memo(function TempoMarking({ y, pulse, pulseBpm }: T
                 fontWeight={600}
                 dominantBaseline="central"
                 fill={NOTATION_INK}
-                style={{ userSelect: 'none' }}>
+                className="select-none">
                 = {pulseBpm}
             </text>
         </>

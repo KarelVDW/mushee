@@ -22,7 +22,7 @@ export function MeasureButton({
                 e.stopPropagation()
                 if (!disabled) onClick()
             }}
-            style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+            className={disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
             opacity={disabled ? 0.3 : 1}>
             <rect
                 x={x}
@@ -43,7 +43,7 @@ export function MeasureButton({
                 fontFamily="system-ui, sans-serif"
                 fontWeight={500}
                 fill={MEASURE_BUTTON_LABEL}
-                style={{ userSelect: 'none' }}>
+                className="select-none">
                 {label}
             </text>
         </g>

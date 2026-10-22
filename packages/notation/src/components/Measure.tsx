@@ -73,7 +73,7 @@ function ClickableGlyph({ hitBox, onClick, children }: { hitBox: HitBox; onClick
                 e.stopPropagation()
                 onClick()
             }}
-            style={{ cursor: 'pointer' }}>
+            className="cursor-pointer">
             <rect x={hitBox.x} y={hitBox.y} width={hitBox.width} height={hitBox.height} fill="transparent" />
             {children}
         </g>

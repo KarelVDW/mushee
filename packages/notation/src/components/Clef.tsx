@@ -1,6 +1,7 @@
 import { memo } from 'react'
 
 import type { ClefLayout } from '../model/layout/ClefLayout'
+import { NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 export const Clef = memo(function Clef({ layout }: { layout: ClefLayout }) {
@@ -17,7 +18,8 @@ export const Clef = memo(function Clef({ layout }: { layout: ClefLayout }) {
                     fontWeight={600}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    style={{ userSelect: 'none' }}>
+                    fill={NOTATION_INK}
+                    className="select-none">
                     {octave.text}
                 </text>
             )}
