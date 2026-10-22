@@ -5,7 +5,7 @@ import type { MidiPlayer } from './MidiPlayer'
 import { type Tickable, Ticker } from './Ticker'
 
 /** Where and when one note of the pass sits: times in seconds, positions in quarter beats. */
-export interface TimelineEntry {
+interface TimelineEntry {
     /** Onset in seconds on the pass's clock (`MidiPlayer.currentTime`). */
     startTime: number
     /** Seconds from onset to the note's written end (a tie chain's held sound is not included). */
@@ -32,7 +32,8 @@ export interface TimelineEntry {
 export class ScoreScheduler implements Tickable {
     private score: Score | null = null
     private startNote: Note | null = null
-    readonly entries: TimelineEntry[] = []
+    /** Every note walked so far this pass, in onset order. */
+    private readonly entries: TimelineEntry[] = []
 
     private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
     private measureIdx = 0
@@ -56,9 +57,28 @@ export class ScoreScheduler implements Tickable {
         this.startNote = startNote
     }
 
-    /** Time at which the last note ends, or -1 if still scheduling. */
-    get endTime(): number {
-        return this._done ? this.nextNoteTime : -1
+    /**
+     * Where the pass is at `elapsed` seconds on its clock: the measure of the
+     * latest note that has begun and the beat interpolated through it (held at
+     * its end until the next onset). Null before the first onset.
+     */
+    positionAt(elapsed: number): { measureIndex: number; beat: number } | null {
+        let current: TimelineEntry | null = null
+        for (let i = this.entries.length - 1; i >= 0; i--) {
+            if (this.entries[i].startTime <= elapsed) {
+                current = this.entries[i]
+                break
+            }
+        }
+        if (!current) return null
+
+        const progress = Math.min(1, (elapsed - current.startTime) / current.duration)
+        return { measureIndex: current.measureIndex, beat: current.beat + current.beatSpan * progress }
+    }
+
+    /** Whether the pass has played out by `elapsed`: every note is scheduled and the last one has ended. */
+    hasFinishedAt(elapsed: number): boolean {
+        return this._done && elapsed >= this.nextNoteTime
     }
 
     reset() {

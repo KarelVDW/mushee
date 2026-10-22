@@ -1,5 +1,5 @@
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
-import type { ScoreScheduler, TimelineEntry } from '@mushee/playback/ScoreScheduler'
+import type { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 
 interface PlaybackPosition {
@@ -11,9 +11,9 @@ export class CursorManager implements Tickable {
     private midiPlayer: Pick<MidiPlayer, 'currentTime'>
     private cursorEl: SVGRectElement | null = null
     private resolvePosition: ((pos: PlaybackPosition) => { x: number; rowY: number } | null) | null = null
-    private scheduler: ScoreScheduler
+    private scheduler: Pick<ScoreScheduler, 'positionAt' | 'hasFinishedAt'>
 
-    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime'>, scheduler: ScoreScheduler) {
+    constructor(midiPlayer: Pick<MidiPlayer, 'currentTime'>, scheduler: Pick<ScoreScheduler, 'positionAt' | 'hasFinishedAt'>) {
         this.midiPlayer = midiPlayer
         this.scheduler = scheduler
     }
@@ -31,7 +31,7 @@ export class CursorManager implements Tickable {
         const elapsed = this.midiPlayer.currentTime
         this.updateCursor(elapsed)
 
-        if (this.scheduler.endTime >= 0 && elapsed >= this.scheduler.endTime) {
+        if (this.scheduler.hasFinishedAt(elapsed)) {
             this.hideCursor()
             return true
         }
@@ -40,7 +40,7 @@ export class CursorManager implements Tickable {
     }
 
     private updateCursor(elapsed: number) {
-        const pos = this.getPositionAtTime(elapsed)
+        const pos = this.scheduler.positionAt(elapsed)
         if (pos && this.cursorEl && this.resolvePosition) {
             const resolved = this.resolvePosition(pos)
             if (resolved) {
@@ -49,22 +49,5 @@ export class CursorManager implements Tickable {
                 this.cursorEl.setAttribute('display', '')
             }
         }
-    }
-
-    private getPositionAtTime(elapsed: number): PlaybackPosition | null {
-        const entries = this.scheduler.entries
-        let current: TimelineEntry | null = null
-        for (let i = entries.length - 1; i >= 0; i--) {
-            if (entries[i].startTime <= elapsed) {
-                current = entries[i]
-                break
-            }
-        }
-        if (!current) return null
-
-        const progress = Math.min(1, (elapsed - current.startTime) / current.duration)
-        const beat = current.beat + current.beatSpan * progress
-
-        return { measureIndex: current.measureIndex, beat }
     }
 }
