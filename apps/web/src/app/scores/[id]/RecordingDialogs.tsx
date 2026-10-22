@@ -1,21 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 
 import { DialogPanel, Icon, type IconName, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
-import { BETA_MODE, CHEAPEST_PACK } from '@/lib/plans'
+import { BETA_MODE, CHEAPEST_PACK, type PlanTier } from '@/lib/plans'
 import { usePlanCatalogue } from '@/lib/queries'
-import { formatRecordingTime } from '@/lib/recordingTime'
 import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
-/** The red-tinted icon row that opens a recording dialog's body: what is blocked, then the reassurance or next step. */
+import { settingsTabPath } from '../../settings/settingsTabs'
+import { MicFailure, RecordingLimitCopy } from './RecordingCopy'
+
+/** The neutral icon row in a recording dialog's body: what is in the way, then the next step. Never red — none of these is an error. */
 function DialogCallout({ icon, title, body }: { icon: IconName; title: string; body: string }) {
     return (
         <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
-            <span className="w-11 h-11 rounded-full shrink-0 bg-error-container text-on-error-container inline-flex items-center justify-center">
+            <span className="w-11 h-11 rounded-full shrink-0 bg-surface-container text-on-surface-variant inline-flex items-center justify-center">
                 <Icon name={icon} size={20} />
             </span>
             <div className="flex flex-col gap-0.5">
@@ -28,52 +30,54 @@ function DialogCallout({ icon, title, body }: { icon: IconName; title: string; b
 
 interface RecordingLimitDialogProps {
     info: RecordingLimitInfo
-    onUpgrade: () => void
+    /** Called with the next tier's id, to open Settings on the plan tab with that tier picked. */
+    onUpgrade: (planId: PlanTier['id']) => void
     onClose: () => void
 }
 
 /**
- * Daily-limit-reached dialog (design: design/ui_kits/web/Editor.jsx →
- * LimitReachedDialog). Tier-aware: every capped tier sees an upgrade CTA;
- * the secondary action acknowledges the cap.
+ * The day's recording is used up. A normal moment, not an error: it says what the allowance
+ * was (in words, never a clock), that everything recorded is in the score, and when recording
+ * is back in the viewer's own time; one quiet line that nothing is ever charged; and — only
+ * where the catalogue has a next tier — what that tier gives, behind a flat button.
  */
 export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimitDialogProps) {
     const currency = useDisplayCurrency()
-
-    const nextPlanName = usePlanCatalogue().nextAfter(info.planId)?.name
+    // Off the ladder (the beta plan) or at its top, there is no next tier to offer.
+    const next = usePlanCatalogue().nextAfter(info.planId)
+    const copy = new RecordingLimitCopy({
+        limitSeconds: info.limitSeconds,
+        usedSeconds: info.usedSeconds,
+        next: next && { name: next.name, dailySeconds: next.dailyRecordingSeconds },
+        resetsAt: info.resetsAt,
+    })
 
     return (
         <DialogPanel
-            title={`You've used today's ${formatRecordingTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
-            subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
+            title={copy.title}
+            subtitle={copy.subtitle}
             onClose={onClose}
             width={480}
             footer={
                 <>
                     <TertiaryButton onClick={onClose}>OK, I&apos;ll wait</TertiaryButton>
-                    {nextPlanName && (
-                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
-                            Upgrade to {nextPlanName}
+                    {next && (
+                        <PrimaryButton icon="arrow-right" onClick={() => onUpgrade(next.id)}>
+                            Upgrade to {next.name}
                         </PrimaryButton>
                     )}
                 </>
             }>
-            <div className="flex flex-col gap-3.5 pb-2">
-                <DialogCallout
-                    icon="mic-off"
-                    title="Recording paused until tomorrow"
-                    body="We stop capture the moment your daily budget runs out — no surprise charges, ever."
-                />
-                {nextPlanName && (
-                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                        Upgrading to <strong className="text-on-surface">{nextPlanName}</strong> lifts the cap immediately.
-                    </span>
-                )}
+            <div className="flex flex-col gap-2.5 pb-2">
+                <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                    {RecordingLimitCopy.NO_SURPRISES}
+                </span>
+                {copy.upgrade && <span className="font-body font-normal text-[13px] leading-normal text-on-surface">{copy.upgrade}</span>}
                 {!BETA_MODE && (
                     <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
                         Just need to finish this one?{' '}
-                        <Link href="/settings" className="text-primary underline">
-                            One-time minute packs
+                        <Link href={`${settingsTabPath('plan')}&packs=1`} className="text-primary underline">
+                            Minute packs
                         </Link>{' '}
                         start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
                     </span>
@@ -83,110 +87,95 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     )
 }
 
-/**
- * Looping storyboard of the Control Center → Mic Mode → Wide Spectrum flow.
- * Three schematic phases crossfade on a shared 9s loop (keyframes in
- * globals.css); under prefers-reduced-motion they stack as a static list.
- */
-function WideSpectrumWalkthrough() {
-    const phases = [
-        {
-            delay: '0s',
-            caption: 'Swipe down from the top-right corner',
-            scene: (
-                <div className="relative w-20 h-24 rounded-[10px] bg-surface-container-lowest tonal-layer-glow">
-                    <div className="absolute top-1.5 right-3 h-13 w-0.5 rounded-full bg-primary/30" />
-                    <div
-                        className="mic-guide-swipe absolute top-1 right-2 w-4 h-4 rounded-full bg-primary"
-                        style={{ '--phase-delay': '0s' } as CSSProperties}
-                    />
-                </div>
-            ),
-        },
-        {
-            delay: '3s',
-            caption: 'Tap Mic Mode',
-            scene: (
-                <div
-                    className="mic-guide-tap flex items-center gap-2.5 bg-surface-container-lowest tonal-layer-glow rounded-[10px] px-4 py-3"
-                    style={{ '--phase-delay': '3s' } as CSSProperties}>
-                    <span className="w-8 h-8 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center shrink-0">
-                        <Icon name="mic" size={16} />
-                    </span>
-                    <span className="font-body font-semibold text-[13px] text-on-surface">Mic Mode</span>
-                </div>
-            ),
-        },
-        {
-            delay: '6s',
-            caption: 'Choose Wide Spectrum',
-            scene: (
-                <div className="flex flex-col gap-1 w-44">
-                    {['Standard', 'Voice Isolation'].map((mode) => (
-                        <span key={mode} className="font-body text-[12px] text-on-surface-variant rounded-sm px-3 py-1.5">
-                            {mode}
-                        </span>
-                    ))}
-                    <span className="flex items-center justify-between bg-primary-soft text-on-primary-soft rounded-sm px-3 py-1.5">
-                        <span className="font-body font-semibold text-[12px]">Wide Spectrum</span>
-                        <span className="mic-guide-pop inline-flex">
-                            <Icon name="check" size={14} />
-                        </span>
-                    </span>
-                </div>
-            ),
-        },
-    ]
+/** One step of the Wide Spectrum walkthrough: its number, a small schematic, and what to do. */
+function WalkthroughStep({ number, scene, children }: { number: number; scene: ReactNode; children: ReactNode }) {
     return (
-        <div className="mic-guide-stage relative h-[150px] flex rounded-[10px] bg-surface-container-low" aria-hidden="true">
-            {phases.map((phase) => (
-                <div
-                    key={phase.delay}
-                    className="mic-guide-phase absolute inset-0 flex flex-col items-center justify-center gap-3"
-                    style={{ '--phase-delay': phase.delay } as CSSProperties}>
-                    {phase.scene}
-                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{phase.caption}</span>
-                </div>
-            ))}
-        </div>
+        <li className="flex items-center gap-3.5 rounded-[10px] bg-surface-container-low px-3.5 py-3">
+            <span className="font-mono font-medium text-[13px] leading-none text-primary w-3 shrink-0">{number}</span>
+            <span aria-hidden className="w-20 shrink-0 inline-flex justify-center">
+                {scene}
+            </span>
+            <span className="font-body font-normal text-[15px] leading-snug text-on-surface">{children}</span>
+        </li>
+    )
+}
+
+/** The three steps of Control Center → Mic Mode → Wide Spectrum, all visible at once. */
+function WideSpectrumSteps() {
+    return (
+        <ol className="list-none m-0 p-0 flex flex-col gap-2">
+            <WalkthroughStep
+                number={1}
+                scene={
+                    <span className="relative w-12 h-14 rounded-md bg-surface-container-lowest tonal-layer-glow">
+                        <span className="absolute top-1.5 right-2 h-8 w-0.5 rounded-full bg-primary/30" />
+                        <span className="absolute top-1 right-1 w-3 h-3 rounded-full bg-primary" />
+                    </span>
+                }>
+                Swipe down from the top-right corner to open Control Center.
+            </WalkthroughStep>
+            <WalkthroughStep
+                number={2}
+                scene={
+                    <span className="inline-flex items-center gap-1.5 bg-surface-container-lowest tonal-layer-glow rounded-md px-2 py-1.5">
+                        <span className="w-5 h-5 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                            <Icon name="mic" size={11} />
+                        </span>
+                        <span className="font-body font-semibold text-[10px] text-on-surface whitespace-nowrap">Mic Mode</span>
+                    </span>
+                }>
+                Tap Mic Mode.
+            </WalkthroughStep>
+            <WalkthroughStep
+                number={3}
+                scene={
+                    <span className="inline-flex items-center gap-1 bg-primary-soft text-on-primary-soft rounded-sm px-1.5 py-1">
+                        <span className="font-body font-semibold text-[10px] whitespace-nowrap">Wide Spectrum</span>
+                        <Icon name="check" size={10} />
+                    </span>
+                }>
+                Choose Wide Spectrum, then come back here.
+            </WalkthroughStep>
+        </ol>
     )
 }
 
 interface MicModeGuideDialogProps {
     /** Confirms the setting and starts the take the user asked for. */
     onConfirm: () => void
-    /** Backs out without confirming — the guide returns on the next attempt. */
+    /** Starts the take without confirming — the guide stays away for this visit and returns on the next. */
+    onSkip: () => void
+    /** Backs out without confirming — no take, and the guide returns on the next attempt. */
     onClose: () => void
 }
 
 /**
- * Shown once per device, the first time an iPhone user hits record: iOS
- * voice processing erases whistling and instrument tones unless the user
- * sets Control Center's Mic Mode to Wide Spectrum, and no web (or native)
- * API can do it for them — see src/lib/micMode.ts. The tile only exists in
- * Control Center while capture is live, so useRecording holds a warm-up mic
- * stream open for this dialog's lifetime: the steps are performable right
- * now, which is what lets the confirm button attest the setting instead of
- * a bare "OK".
+ * Shown the first time an iPhone user hits record: iOS voice processing erases whistling and
+ * instrument tones unless the user sets Control Center's Mic Mode to Wide Spectrum, and no
+ * web (or native) API can do it for them — see src/lib/micMode.ts. The tile only exists in
+ * Control Center while capture is live, so useRecording holds a warm-up mic stream open for
+ * this dialog's lifetime: the steps are performable right now, which is what lets the confirm
+ * button attest the setting. "Record without it" is the honest way past it.
  */
-export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogProps) {
+export function MicModeGuideDialog({ onConfirm, onSkip, onClose }: MicModeGuideDialogProps) {
     return (
         <DialogPanel
-            title="iPhone user"
-            subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+            title="One quick iPhone setting"
+            subtitle="iPhones tune the mic for phone calls, which can hide whistling and instruments. Switch it to Wide Spectrum once and you're set."
             onClose={onClose}
             width={480}
             footer={
-                <PrimaryButton icon="mic" onClick={onConfirm}>
-                    I&apos;ve set Wide Spectrum — record
-                </PrimaryButton>
+                <>
+                    <TertiaryButton onClick={onSkip}>Record without it</TertiaryButton>
+                    <PrimaryButton icon="mic" onClick={onConfirm}>
+                        Done — start recording
+                    </PrimaryButton>
+                </>
             }>
-            <div className="flex flex-col gap-3.5 pb-2">
-                <WideSpectrumWalkthrough />
+            <div className="flex flex-col gap-3 pb-2">
+                <WideSpectrumSteps />
                 <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                    Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes before
-                    Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it now, come back,
-                    and your iPhone remembers the choice for this browser.
+                    Your mic is on, so Mic Mode is in Control Center right now. Set it, come back here, and your iPhone remembers.
                 </span>
             </div>
         </DialogPanel>
@@ -198,24 +187,60 @@ interface ConcurrentRecordingDialogProps {
 }
 
 /**
- * Shown when the gateway refuses a recording because the account already has
- * one in flight — one recording at a time is a hard rule.
+ * Shown when the gateway refuses a recording because the account already has one in flight —
+ * one recording at a time is a hard rule. The refused take is taken back out, so the score is
+ * exactly as it was; a recording in a tab just closed frees itself after about 20 seconds.
  */
 export function ConcurrentRecordingDialog({ onClose }: ConcurrentRecordingDialogProps) {
     return (
         <DialogPanel
             title="One recording at a time."
-            subtitle="Your account already has a recording running — maybe in another tab, or on another device."
+            subtitle="You're already recording somewhere else — another tab, or another device."
             onClose={onClose}
             width={480}
             footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
             <div className="flex flex-col gap-3.5 pb-2">
                 <DialogCallout
                     icon="mic"
-                    title="The mic is busy somewhere else"
-                    body="Finish or stop that session first, then hit record here. Nothing in this score was changed."
+                    title="Your mic is busy elsewhere"
+                    body="Stop that recording, then press record here. Just closed it? Give it about 20 seconds and try again. Nothing in this score changed."
                 />
             </div>
+        </DialogPanel>
+    )
+}
+
+interface MicBlockedDialogProps {
+    /** Press Record again. */
+    onRetry: () => void
+    onClose: () => void
+}
+
+/**
+ * The browser refused the microphone. Instead of a dead Record button, one plain fix in the
+ * user's own browser: where its microphone permission lives, then Try again.
+ */
+export function MicBlockedDialog({ onRetry, onClose }: MicBlockedDialogProps) {
+    const step = typeof navigator === 'undefined' ? null : MicFailure.permissionStep(navigator.userAgent)
+    return (
+        <DialogPanel
+            title="Solkey can't hear you yet"
+            subtitle="Your browser is blocking the microphone for this site. Allow it, then try again."
+            onClose={onClose}
+            width={440}
+            footer={
+                <>
+                    <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
+                    <PrimaryButton icon="mic" onClick={onRetry}>
+                        Try again
+                    </PrimaryButton>
+                </>
+            }>
+            {step && (
+                <div className="pb-2">
+                    <span className="font-body font-normal text-[14px] leading-normal text-on-surface">{step}</span>
+                </div>
+            )}
         </DialogPanel>
     )
 }

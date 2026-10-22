@@ -22,6 +22,11 @@ export interface RecordingLimitInfo {
     /** Daily budget in seconds; `null` on unlimited tiers (never sent in practice). */
     limitSeconds: number | null
     usedSeconds: number
+    /**
+     * When the allowance comes back (ISO timestamp), if the gateway sends one. Without it the
+     * client shows the next midnight UTC — the API's reset — in the viewer's own time.
+     */
+    resetsAt?: string
 }
 
 /** Reasons the gateway refuses a recording connection. */
@@ -203,6 +208,7 @@ export class TranscriptionSocket {
             planName?: string
             limitSeconds?: number | null
             usedSeconds?: number
+            resetsAt?: unknown
             ok?: boolean
         }
         if (payload.type === 'score-update' && payload.measures) {
@@ -218,6 +224,7 @@ export class TranscriptionSocket {
                 planName: payload.planName ?? '',
                 limitSeconds: payload.limitSeconds ?? null,
                 usedSeconds: payload.usedSeconds ?? 0,
+                ...(typeof payload.resetsAt === 'string' ? { resetsAt: payload.resetsAt } : {}),
             })
         } else if (payload.type === 'recording-error' && payload.code) {
             this.handlers.onRecordingError(payload.code)
