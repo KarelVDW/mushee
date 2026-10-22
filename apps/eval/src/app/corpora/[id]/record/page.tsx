@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ScoreView } from '@/components/ScoreView'
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@/components/ui'
-import type { TranscriptionDto } from '@/lib/api'
+import { errorText, type TranscriptionDto } from '@/lib/api'
 import { melodyToScore, playbackInstrument } from '@/lib/buildScore'
 import { melodyDurationSec, withCountIn } from '@/lib/melody'
 import { useCorpus, useTranscribe, useUploadTake } from '@/lib/queries'
@@ -86,7 +86,7 @@ function RecordFlow() {
                 <Spinner /> Loading corpus…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {errorText(detail.error)}</Alert>
     if (!clips || !clip || !corpus || !built) return <Alert>This corpus has no clips.</Alert>
 
     const clipIndex = clips.findIndex((c) => c.id === clip.id)
@@ -119,16 +119,16 @@ function RecordFlow() {
                                     setFlow({ step: 'transcribing' })
                                     transcribe.mutate(clip.id, {
                                         onSuccess: ({ transcription }) => setFlow({ step: 'done', transcription }),
-                                        onError: (err) => setFlow({ step: 'error', message: `transcription failed: ${String(err)}` }),
+                                        onError: (err) => setFlow({ step: 'error', message: `transcription failed: ${errorText(err)}` }),
                                     })
                                 },
-                                onError: (err) => setFlow({ step: 'error', message: `upload failed: ${String(err)}` }),
+                                onError: (err) => setFlow({ step: 'error', message: `upload failed: ${errorText(err)}` }),
                             },
                         )
                     },
                 }),
             )
-            .catch((err) => setFlow({ step: 'error', message: `mic failed: ${String(err)}` }))
+            .catch((err) => setFlow({ step: 'error', message: `mic failed: ${errorText(err)}` }))
     }
 
     const cancelTake = () => {

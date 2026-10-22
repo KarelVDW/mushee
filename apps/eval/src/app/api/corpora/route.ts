@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { errorText } from '@/lib/api'
 import { generateClips, type GeneratorParams } from '@/lib/generator'
 import { createCorpus, getCorpus, listCorpora } from '@/server/repo'
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     try {
         clips = generateClips(body.params)
     } catch (err) {
-        return NextResponse.json({ error: String(err) }, { status: 400 })
+        return NextResponse.json({ error: errorText(err) }, { status: 400 })
     }
 
     await createCorpus(

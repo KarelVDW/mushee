@@ -9,7 +9,7 @@ import { MetricsPanel } from '@/components/MetricsPanel'
 import { NotesCompare } from '@/components/NotesCompare'
 import { ScoreView } from '@/components/ScoreView'
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, ToggleButton } from '@/components/ui'
-import { clipAudioUrl } from '@/lib/api'
+import { clipAudioUrl, errorText } from '@/lib/api'
 import { melodyToScore, mxmlMeasuresToScore, playbackInstrument } from '@/lib/buildScore'
 import { melodyToTruth } from '@/lib/melody'
 import { useClip, useTranscribe } from '@/lib/queries'
@@ -41,7 +41,7 @@ export default function ClipDetailPage() {
                 <Spinner /> Loading clip…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load clip: {String(detail.error)}</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load clip: {errorText(detail.error)}</Alert>
 
     const { clip, corpus, transcription, prevClipId, nextClipId, clipIndex, clipTotal } = detail.data
 
@@ -132,7 +132,7 @@ export default function ClipDetailPage() {
                         </PrimaryButton>
                     </div>
                 </div>
-                {transcribe.isError && <Alert>{String(transcribe.error)}</Alert>}
+                {transcribe.isError && <Alert>{errorText(transcribe.error)}</Alert>}
                 {clip.status !== 'recorded' && (
                     <p className="font-body text-[13px] text-on-surface-variant m-0">
                         Record this clip first, then the pipeline runs on it.

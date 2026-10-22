@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner } from '@/components/ui'
-import type { RunDto } from '@/lib/api'
+import { errorText, type RunDto } from '@/lib/api'
 import { useCorpora, useRuns, useStartRun } from '@/lib/queries'
 
 export default function CorporaPage() {
@@ -27,9 +27,9 @@ export default function CorporaPage() {
                 </div>
             </div>
 
-            {startRun.isError && <Alert>{String(startRun.error)}</Alert>}
+            {startRun.isError && <Alert>{errorText(startRun.error)}</Alert>}
 
-            {corpora.isError && <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {String(corpora.error)}</Alert>}
+            {corpora.isError && <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {errorText(corpora.error)}</Alert>}
             {corpora.isPending && (
                 <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
                     <Spinner /> Loading corpora…

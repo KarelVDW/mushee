@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 
 import { Alert, Card, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner, TertiaryButton } from '@/components/ui'
+import { errorText } from '@/lib/api'
 import { melodyDurationSec, melodyNoteCount } from '@/lib/melody'
 import { useCorpus, useDeleteCorpus, useStartRun } from '@/lib/queries'
 
@@ -20,7 +21,7 @@ export default function CorpusDetailPage() {
                 <Spinner /> Loading corpus…
             </div>
         )
-    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {String(detail.error)}</Alert>
+    if (detail.isError) return <Alert onRetry={() => void detail.refetch()}>Couldn&apos;t load corpus: {errorText(detail.error)}</Alert>
 
     const { corpus, clips, metricsByClip } = detail.data
     const firstPending = clips.find((clip) => clip.status === 'pending')
@@ -64,7 +65,7 @@ export default function CorpusDetailPage() {
                 </div>
             </div>
 
-            {startRun.isError && <Alert>{String(startRun.error)}</Alert>}
+            {startRun.isError && <Alert>{errorText(startRun.error)}</Alert>}
             {startRun.isSuccess && (
                 <Card>
                     <Eyebrow>Harness result</Eyebrow>
