@@ -1,10 +1,9 @@
 import { BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
-import type { KeySignature } from '@mushee/notation/model/KeySignature'
 import { BarlineLayout } from '@mushee/notation/model/layout/BarlineLayout'
 import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
-import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
+import { type MeasureFlags, MeasureMetrics } from '@mushee/notation/model/layout/MeasureMetrics'
 import { Measure } from '@mushee/notation/model/Measure'
 import type { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
@@ -354,29 +353,30 @@ describe('MeasureLayout', () => {
     })
 
     describe('explicit-context guards (direct construction)', () => {
-        function bareContext(): MeasureLayoutContext {
+        /** A context whose metrics were measured for `measuredFor` — not necessarily the measure being laid out. */
+        function contextFrom(measuredFor: Measure, flags?: Partial<MeasureFlags>): MeasureLayoutContext {
             return {
+                metrics: new MeasureMetrics(measuredFor, undefined),
                 x: 0,
                 width: 300,
-                showsClef: false,
-                showsKeySignature: false,
-                showsTimeSignature: false,
-                noteWidths: new Map<Note, NoteWidth>(),
-                keyWidths: new Map<KeySignature, KeySignatureWidth>(),
+                flags: { showsClef: false, showsKeySignature: false, showsTimeSignature: false, ...flags },
                 reuseSignature: 'direct-test',
             }
         }
 
-        it('throws when a note width is missing from the context', () => {
+        it('throws when the metrics carry no width for one of its notes', () => {
             const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
             m.addNotes([rest('q')])
-            expect(() => new MeasureLayout(m, bareContext())).toThrow('Note width missing from layout context')
+            const other = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
+            expect(() => new MeasureLayout(m, contextFrom(other))).toThrow('Note width missing from measure metrics')
         })
 
-        it('throws when a drawn key signature width is missing from the context', () => {
+        it('throws when the metrics carry no width for its drawn leading key', () => {
             const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
-            const context = { ...bareContext(), showsKeySignature: true }
-            expect(() => new MeasureLayout(m, context)).toThrow('Key signature width missing from layout context')
+            const other = new Measure(new Score(), 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
+            expect(() => new MeasureLayout(m, contextFrom(other, { showsKeySignature: true }))).toThrow(
+                'Key signature width missing from measure metrics',
+            )
         })
     })
 })

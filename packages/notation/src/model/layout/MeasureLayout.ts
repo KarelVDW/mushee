@@ -11,7 +11,7 @@ import { BarlineLayout } from './BarlineLayout'
 import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
-import type { KeySignatureWidth } from './KeySignatureWidth'
+import type { MeasureFlags, MeasureMetrics } from './MeasureMetrics'
 import { NoteLayout } from './NoteLayout'
 import type { NoteWidth } from './NoteWidth'
 import type { PhysicalWidth } from './PhysicalWidth'
@@ -30,16 +30,13 @@ export interface MeasureAttribute {
 }
 
 export interface MeasureLayoutContext {
+    /** The measure's widths and drawn forms, derived once per rebuild. */
+    metrics: MeasureMetrics
     /** x of this measure within its row (row-local). */
     x: number
     width: number
-    showsClef: boolean
-    showsKeySignature: boolean
-    showsTimeSignature: boolean
-    /** Width per note, carrying its drawn accidental (resolved by DisplayedAccidentals). */
-    noteWidths: Map<Note, NoteWidth>
-    /** Contextual width per drawn key signature (leading + mid-measure). */
-    keyWidths: Map<KeySignature, KeySignatureWidth>
+    /** Which leading attributes this measure is asked to show (diff-based, plus row-start forcing). */
+    flags: MeasureFlags
     /** Input signature for reuse comparison across ScoreLayout rebuilds. */
     reuseSignature: string
 }
@@ -76,22 +73,15 @@ export class MeasureLayout {
     ) {
         this.measureX = context.x
         this.measureWidth = context.width
-        this.showsClef = context.showsClef
-        this.showsTimeSignature = context.showsTimeSignature
+        const { metrics, flags } = context
+        this.showsClef = flags.showsClef
+        this.showsKeySignature = flags.showsKeySignature && metrics.leadingKeyAccidentals.length > 0
+        this.showsTimeSignature = flags.showsTimeSignature
         this.reuseSignature = context.reuseSignature
 
-        const keyWidthOf = (key: KeySignature): KeySignatureWidth => {
-            const width = context.keyWidths.get(key)
-            if (!width) throw new Error('Key signature width missing from layout context')
-            return width
-        }
         const widthOf = (el: MeasureElement): PhysicalWidth => {
-            if (el instanceof KeySignature) return keyWidthOf(el)
-            if (el instanceof Note) {
-                const width = context.noteWidths.get(el)
-                if (!width) throw new Error('Note width missing from layout context')
-                return width
-            }
+            if (el instanceof KeySignature) return metrics.keyWidthOf(el)
+            if (el instanceof Note) return metrics.noteWidthOf(el)
             // Clefs and time signatures are context-free: their width rides on their shared layout.
             return el.layout.width
         }
@@ -99,10 +89,9 @@ export class MeasureLayout {
         // --- Element order: leading context, then notes merged with mid-measure changes by beat
         // (at equal beats: clefs before keys before the note). ---
         const leading: Array<Clef | KeySignature | TimeSignature> = []
-        if (context.showsClef) leading.push(measure.clef)
-        this.showsKeySignature = context.showsKeySignature && keyWidthOf(measure.keySignature).drawnAccidentals.length > 0
+        if (this.showsClef) leading.push(measure.clef)
         if (this.showsKeySignature) leading.push(measure.keySignature)
-        if (context.showsTimeSignature) leading.push(measure.timeSignature)
+        if (this.showsTimeSignature) leading.push(measure.timeSignature)
 
         const mids: Array<{ el: Clef | KeySignature; beat: number; precedence: number }> = [
             ...measure.midMeasureClefs.map((clef) => ({ el: clef, beat: clef.beatPosition, precedence: 0 })),
@@ -171,7 +160,7 @@ export class MeasureLayout {
         }
 
         // --- Key signature layouts (leading + mid-measure) ---
-        for (const [key, width] of context.keyWidths) {
+        for (const [key, width] of metrics.keyWidths) {
             const clef = measure.clefAtOrBefore(key.beatPosition)
             this._keyLayouts.set(key, new KeySignatureLayout({ clef, width }))
         }
