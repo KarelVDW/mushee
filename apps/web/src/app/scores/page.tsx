@@ -197,6 +197,12 @@ export default function ScoresPage() {
 
     // The phone's search field waits for a library worth searching.
     const phoneSearch = (libraryCount ?? 0) > PHONE_SEARCH_FROM || search !== ''
+    // The phone's quiet import link: beside the search field when there is one, else on the title's row.
+    const phoneImport = (
+        <span className="md:hidden">
+            <TertiaryButton onClick={openImport}>{readingFile ? 'Reading file…' : 'Import a file'}</TertiaryButton>
+        </span>
+    )
 
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
@@ -206,15 +212,16 @@ export default function ScoresPage() {
                 <PageHeader
                     title="Your scores"
                     subtitle={allowance?.line && <AllowanceLine allowance={allowance} />}
+                    titleAction={!emptyLibrary && !phoneSearch && phoneImport}
                     right={
                         !emptyLibrary && (
-                            <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className={`flex items-center gap-3 w-full md:w-auto ${phoneSearch ? '' : 'max-md:hidden'}`}>
                                 <span className="max-md:hidden">
                                     <SecondaryButton onClick={openImport} disabled={readingFile}>
                                         {readingFile ? 'Reading file…' : 'Import file'}
                                     </SecondaryButton>
                                 </span>
-                                <div className={`flex-1 md:flex-none md:w-64 ${phoneSearch ? '' : 'max-md:hidden'}`}>
+                                <div className="flex-1 md:flex-none md:w-64">
                                     <TextField
                                         value={search}
                                         onChange={setSearch}
@@ -226,9 +233,7 @@ export default function ScoresPage() {
                                         enterKeyHint="search"
                                     />
                                 </div>
-                                <span className="md:hidden ml-auto">
-                                    <TertiaryButton onClick={openImport}>{readingFile ? 'Reading file…' : 'Import a file'}</TertiaryButton>
-                                </span>
+                                {phoneSearch && phoneImport}
                             </div>
                         )
                     }

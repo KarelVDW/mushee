@@ -556,6 +556,17 @@ test.describe('on a phone-sized screen', () => {
         await expect(page.getByRole('button', { name: 'Import a file' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Import file' })).toHaveCount(0)
         await expect(page.getByRole('textbox', { name: 'Search your scores' })).toHaveCount(0)
+        // The lone import link shares the title's row, so the list starts right under the heading.
+        const heading = await page.getByRole('heading', { name: 'Your scores' }).boundingBox()
+        const importLink = await page.getByRole('button', { name: 'Import a file' }).boundingBox()
+        const firstCard = await page
+            .getByRole('row')
+            .filter({ has: page.getByRole('button', { name: MOCK_TITLE, exact: true }) })
+            .boundingBox()
+        if (!heading || !importLink || !firstCard) throw new Error('library header or first card not laid out')
+        expect(importLink.y).toBeLessThan(heading.y + heading.height)
+        expect(importLink.y + importLink.height).toBeGreaterThan(heading.y)
+        expect(firstCard.y - (heading.y + heading.height)).toBeLessThan(50)
         // The column headers stay for screen readers only (a clipped 1px box) once the rows are cards.
         const headerRow = page.getByRole('row').filter({ has: page.getByRole('columnheader', { name: 'Title' }) })
         await expect(headerRow).toHaveCount(1)
@@ -566,5 +577,11 @@ test.describe('on a phone-sized screen', () => {
         await seedLibrary(page, 6)
         await page.goto('/scores')
         await expect(page.getByRole('textbox', { name: 'Search your scores' })).toBeVisible()
+        // The import link moves beside the field, and only one copy of it shows.
+        await expect(page.getByRole('button', { name: 'Import a file' })).toHaveCount(1)
+        const field = await page.getByRole('textbox', { name: 'Search your scores' }).boundingBox()
+        const importLink = await page.getByRole('button', { name: 'Import a file' }).boundingBox()
+        if (!field || !importLink) throw new Error('search row not laid out')
+        expect(importLink.x).toBeGreaterThan(field.x + field.width - 1)
     })
 })
