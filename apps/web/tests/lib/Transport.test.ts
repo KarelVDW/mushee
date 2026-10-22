@@ -1,5 +1,6 @@
 import { Instrument, type Score } from '@mushee/notation/model'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { makeScore, pitched, rest } from '@mushee/notation/testing'
+import { Metronome } from '@mushee/playback/Metronome'
 import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -54,6 +55,8 @@ function fakePlayer() {
         pause: vi.fn(),
         resume: vi.fn(),
         dispose: vi.fn(),
+        loadInstruments: vi.fn(() => Promise.resolve()),
+        preview: vi.fn(),
         schedule: vi.fn((note: ScheduledNote) => {
             scheduled.push(note)
         }),
@@ -311,6 +314,33 @@ describe('Transport', () => {
         transport.stop() // the user bails while the permission prompt is open
         releaseMic(fakeStream())
         await expect(pending).resolves.toBeNull()
+    })
+
+    it('prepare loads the instrument with the metronome click, or alone when the page never clicks', async () => {
+        const { player, raw } = fakePlayer()
+        const transport = new Transport(player)
+
+        await transport.prepare(Instrument.Flute)
+        expect(raw.loadInstruments).toHaveBeenLastCalledWith([Instrument.Flute, Metronome.INSTRUMENT])
+        await transport.prepare(Instrument.Flute, { metronome: false })
+        expect(raw.loadInstruments).toHaveBeenLastCalledWith([Instrument.Flute])
+    })
+
+    it('preview sounds a note at its instrument\'s sounding pitch, and a rest not at all', () => {
+        const { player, raw } = fakePlayer()
+        const transport = new Transport(player)
+        const score = scoreWithNotes()
+        // Clarinet sounds a major second below written pitch; seedInstrument keeps the written C.
+        score.seedInstrument(Instrument.Clarinet)
+        const note = score.measures[0].notes[0]
+        if (!note.pitch) throw new Error('expected a pitched note')
+
+        transport.preview(score, note)
+        expect(raw.preview).toHaveBeenCalledWith(note.pitch.toMidi() + Instrument.Clarinet.chromaticTranspose, 0.75, Instrument.Clarinet)
+
+        raw.preview.mockClear()
+        transport.preview(score, rest())
+        expect(raw.preview).not.toHaveBeenCalled()
     })
 
     it('dispose stops everything and releases the player', () => {

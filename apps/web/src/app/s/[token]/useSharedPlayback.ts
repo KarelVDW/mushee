@@ -1,6 +1,6 @@
 'use client'
 
-import { Instrument, type Score } from '@mushee/notation/model'
+import type { Score } from '@mushee/notation/model'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Transport } from '@/lib/Transport'
@@ -27,13 +27,14 @@ export function useSharedPlayback(score: Score | null) {
         }
     }, [])
 
-    // Samples for the score's instrument; a failed download plays degraded rather than never.
+    // Samples for the score's instrument only — this page never clicks a metronome.
+    // A failed download plays degraded rather than never.
     useEffect(() => {
         if (!score) return
-        const player = transportRef.current?.midiPlayer
-        if (!player) return
-        void player
-            .loadInstruments([score.instrument, Instrument.Woodblock])
+        const transport = transportRef.current
+        if (!transport) return
+        void transport
+            .prepare(score.instrument, { metronome: false })
             .catch(() => {})
             .then(() => setReady(true))
     }, [score])

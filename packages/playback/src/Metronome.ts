@@ -21,6 +21,9 @@ const EPSILON = 1e-6
  * notes ScoreScheduler plays whatever tempo markings sit between them.
  */
 export class Metronome implements Tickable {
+    /** The click's sound; load it alongside a score's instrument before a pass that clicks. */
+    static readonly INSTRUMENT = Instrument.Woodblock
+
     private score: Score | null = null
     private startMeasureIndex = 0
     private startBeat = 0
@@ -74,7 +77,7 @@ export class Metronome implements Tickable {
                 startTime: click.time,
                 duration: CLICK_DURATION,
                 midi: click.beat < EPSILON ? ACCENT_MIDI : CLICK_MIDI,
-                instrument: Instrument.Woodblock,
+                instrument: Metronome.INSTRUMENT,
             })
             this.beat = click.beat + click.pulse
         }

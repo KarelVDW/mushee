@@ -10,7 +10,7 @@
  * so the saved wav starts at beat 0.
  */
 
-import { Instrument, type Score } from '@mushee/notation/model'
+import type { Instrument, Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
@@ -58,7 +58,7 @@ export class EvalPlayer {
 
     /** Pre-fetch samples so replay/click start without a download hiccup. */
     async prepare(instrument: Instrument): Promise<void> {
-        await this.midiPlayer.loadInstruments([instrument, Instrument.Woodblock])
+        await this.midiPlayer.loadInstruments([instrument, Metronome.INSTRUMENT])
     }
 
     playScore(score: Score, options: { metronome: boolean; onFinish?: () => void }): void {

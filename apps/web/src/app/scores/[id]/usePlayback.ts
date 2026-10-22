@@ -1,6 +1,6 @@
 'use client'
 
-import { Instrument, type Note, type Score } from '@mushee/notation/model'
+import type { Note, Score } from '@mushee/notation/model'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Transport } from '@/lib/Transport'
@@ -38,7 +38,7 @@ export function usePlayback({
         }
     }, [])
 
-    // Lazy-load only the instruments the score needs (its own + woodblock for the metronome click).
+    // Lazy-load only the samples the score needs (its own instrument + the metronome click).
     // Re-runs when the score's selected instrument changes — the picker mutates `score.instrument`
     // in place, but the manipulator's onScoreChange re-render re-evaluates `score?.instrument.id`.
     // `instrumentsReady` gates the editor's initial render: scheduling a note whose samples are
@@ -48,10 +48,10 @@ export function usePlayback({
     // mid-session must not flash the page back to its loading screen.
     useEffect(() => {
         if (!score) return
-        const player = transportRef.current?.midiPlayer
-        if (!player) return
-        void player
-            .loadInstruments([score.instrument, Instrument.Woodblock])
+        const transport = transportRef.current
+        if (!transport) return
+        void transport
+            .prepare(score.instrument)
             .catch(() => {})
             .then(() => setInstrumentsReady(true))
     }, [score, score?.instrument.id])
@@ -69,9 +69,9 @@ export function usePlayback({
     useEffect(() => {
         if (!activeNote) return
         stopAll()
-        const player = transportRef.current?.midiPlayer
-        if (!activeNote.pitch || !player || !score || manipulator.selectedNotes.length > 1) return
-        player.preview(score.instrument.soundingMidi(activeNote.pitch), 0.75, score.instrument)
+        const transport = transportRef.current
+        if (!activeNote.pitch || !transport || !score || manipulator.selectedNotes.length > 1) return
+        transport.preview(score, activeNote)
     }, [activeNote, stopAll, score, manipulator])
 
     // Sync the metronome toggle to the transport. Recording is unaffected — a

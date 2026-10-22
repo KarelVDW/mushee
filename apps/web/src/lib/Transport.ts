@@ -1,4 +1,4 @@
-import type { Note, Score } from '@mushee/notation/model'
+import type { Instrument, Note, Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
@@ -9,6 +9,9 @@ import { PlaybackCursor } from './PlaybackCursor'
 import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
+
+/** How long a selected note's preview sounds, in seconds. */
+const PREVIEW_SECONDS = 0.75
 
 export interface PlayScoreOptions {
     score: Score
@@ -35,7 +38,7 @@ export interface PlayScoreOptions {
  * score's existing notes, and playback can never touch the mic.
  */
 export class Transport {
-    readonly midiPlayer: MidiPlayer
+    private readonly midiPlayer: MidiPlayer
     private readonly ticker = new Ticker()
     private readonly scheduler: ScoreScheduler
     private readonly metronome: Metronome
@@ -63,6 +66,22 @@ export class Transport {
 
     get isRecording(): boolean {
         return this.recorder.state !== 'idle'
+    }
+
+    /**
+     * Pre-fetch the samples a pass needs: `instrument`'s, plus the metronome
+     * click's unless `metronome` is false (a page that never clicks). Scheduling
+     * a note whose samples are still downloading is a silent skip, so callers
+     * gate playback on this.
+     */
+    async prepare(instrument: Instrument, { metronome = true }: { metronome?: boolean } = {}): Promise<void> {
+        await this.midiPlayer.loadInstruments(metronome ? [instrument, Metronome.INSTRUMENT] : [instrument])
+    }
+
+    /** Sound `note` of `score` briefly — at the pitch the score's instrument sounds it — cutting off any earlier preview. */
+    preview(score: Score, note: Note): void {
+        if (!note.pitch) return
+        this.midiPlayer.preview(score.instrument.soundingMidi(note.pitch), PREVIEW_SECONDS, score.instrument)
     }
 
     /** Play the score from `startNote` (or the top). Stops whatever ran before. */
