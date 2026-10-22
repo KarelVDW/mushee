@@ -33,7 +33,7 @@ test('editor shows a full-page error while the server is down', async ({ page, a
     await page.route(API_PATTERN, refuse)
 
     await page.goto('/scores/e2e-score-1')
-    await expect(page.getByRole('heading', { name: "Can't reach the server" })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: "Can't connect right now" })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
 })
 

@@ -517,8 +517,8 @@ export default function ScoreEditorPage() {
         return (
             <ErrorScreen
                 tone="unreachable"
-                title="Can't reach the server"
-                message="Solkey isn't answering right now. We'll keep trying every few seconds — your score is safe."
+                title="Can't connect right now"
+                message="Check your internet connection. We'll keep trying every few seconds — your score is safe."
                 onRetry={() => void refetch()}
                 retrying={isFetching}
                 onBack={() => router.push('/scores')}
