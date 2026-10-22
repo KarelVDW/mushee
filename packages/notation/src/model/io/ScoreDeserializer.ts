@@ -7,7 +7,7 @@ import { Pitch } from '../Pitch'
 import { Score } from '../Score'
 import { TimeSignature } from '../TimeSignature'
 import type { BarlineType, ClefType } from '../types'
-import { BARLINE_TYPE, DURATION_TYPE, type MxmlMeasure, type MxmlNote, type ScorePartwise } from './MusicXml'
+import { BARLINE_TYPE, DURATION_TYPE, type MxmlMeasure, type MxmlNote, type MxmlScorePart, type ScorePartwise } from './MusicXml'
 
 /** Default staff line per clef sign when MusicXML omits <line>. */
 const DEFAULT_CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 }
@@ -18,17 +18,7 @@ export class ScoreDeserializer {
     toScore(onChange?: () => void): Score {
         const score = new Score(onChange)
         const scorePart = this.input.partList?.scoreParts?.[0]
-        if (scorePart) {
-            // The instrument name is the identity: many instruments share one General MIDI program
-            // (bass clarinet and clarinet, French horn and horn in C), so resolving by program first
-            // would swap the instrument — and its transposition — on every reload. The program only
-            // decides for foreign files whose part name we don't know.
-            const program = scorePart.midiInstrument?.midiProgram
-            const instrumentName = scorePart.scoreInstrument?.instrumentName ?? scorePart.partName
-            const named = instrumentName ? Instrument.findByDisplayName(instrumentName) : undefined
-            const resolved = named ?? (program !== undefined ? Instrument.byGmProgram(program - 1) : Instrument.Piano)
-            score.seedInstrument(resolved)
-        }
+        if (scorePart) score.seedInstrument(ScoreDeserializer.instrumentOf(scorePart))
         const part = this.input.parts[0]
         if (!part) return score
 
@@ -110,35 +100,11 @@ export class ScoreDeserializer {
                 leadingKeyExplicit: leadingKeyFifths !== undefined,
             })
             if (notes.length > 0) measure.addNotes(notes)
-            for (const { noteIndex, bpm } of tempos) {
-                const note = notes[noteIndex]
-                /* v8 ignore else -- defensive: a tempo is only recorded with the index of a note pushed right after it, so `note` is always defined */
-                if (note) measure.addTempo(measure.beatOffsetOf(note), bpm)
-            }
-            for (const { noteIndex, type } of clefChanges) {
-                const note = notes[noteIndex]
-                if (note) measure.addClef(measure.beatOffsetOf(note), type)
-                else {
-                    // A clef in trailing <attributes> (after the last note) applies to nothing in this measure
-                    // but carries forward — anchor it just past the last note so it becomes lastClef.
-                    /* v8 ignore else -- defensive: a clef change is only recorded when notes exist, and notes never shrink, so notes.length > 0 always holds here */
-                    if (notes.length > 0) {
-                        const lastNote = notes[notes.length - 1]
-                        measure.addClef(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, type)
-                    }
-                }
-            }
-            for (const { noteIndex, fifths, mode } of keyChanges) {
-                const note = notes[noteIndex]
-                if (note) measure.addKeySignature(measure.beatOffsetOf(note), fifths, mode)
-                else {
-                    /* v8 ignore else -- defensive: a key change is only recorded when notes exist, and notes never shrink, so notes.length > 0 always holds here */
-                    if (notes.length > 0) {
-                        const lastNote = notes[notes.length - 1]
-                        measure.addKeySignature(measure.beatOffsetOf(lastNote) + lastNote.duration.effectiveBeats, fifths, mode)
-                    }
-                }
-            }
+            // Each change anchors at the note that followed it; trailing attributes anchor at the bar end so they carry forward.
+            const beatAt = (i: number) => (notes[i] ? measure.beatOffsetOf(notes[i]) : measure.beats)
+            for (const { noteIndex, bpm } of tempos) measure.addTempo(beatAt(noteIndex), bpm)
+            for (const { noteIndex, type } of clefChanges) measure.addClef(beatAt(noteIndex), type)
+            for (const { noteIndex, fifths, mode } of keyChanges) measure.addKeySignature(beatAt(noteIndex), fifths, mode)
             score.appendMeasure(measure)
         }
         return score
@@ -159,6 +125,17 @@ export class ScoreDeserializer {
     }
 
     // --- MusicXML ↔ Internal type conversions ---
+
+    private static instrumentOf(part: MxmlScorePart): Instrument {
+        // The instrument name is the identity: many instruments share one General MIDI program
+        // (bass clarinet and clarinet, French horn and horn in C), so resolving by program first
+        // would swap the instrument — and its transposition — on every reload. The program only
+        // decides for foreign files whose part name we don't know.
+        const program = part.midiInstrument?.midiProgram
+        const instrumentName = part.scoreInstrument?.instrumentName ?? part.partName
+        const named = instrumentName ? Instrument.findByDisplayName(instrumentName) : undefined
+        return named ?? (program !== undefined ? Instrument.byGmProgram(program - 1) : Instrument.Piano)
+    }
 
     private static mxmlNoteToNote(entry: MxmlNote): Note {
         const pitch = entry.pitch
