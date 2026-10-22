@@ -98,7 +98,7 @@ kubectl rollout restart deploy api -n mushee
 kubectl rollout status  deploy api -n mushee --timeout=5m
 ```
 
-The inference services hold no secrets; leave them alone.
+The inference service holds no secrets; leave it alone.
 
 ## 5. Verify before you burn the old credentials
 

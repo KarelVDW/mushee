@@ -1,6 +1,6 @@
-# Build the three backend images, push them to Artifact Registry with the git
-# SHA as an immutable tag, and roll the matching overlay. Pushes to the
-# `production` branch deploy the production overlay (namespace mushee).
+# Build the two backend images (api, crepe-inference), push them to Artifact
+# Registry with the git SHA as an immutable tag, and roll the matching overlay.
+# Pushes to the `production` branch deploy the production overlay (namespace mushee).
 # Staging is opt-in: run this workflow manually (workflow_dispatch, defaults
 # to the staging overlay) only when a change actually needs a staging pass —
 # an always-on staging copy costs real money on Autopilot (billed per pod

@@ -1,5 +1,5 @@
-# NestJS API. Runs in remote-inference mode: it points at the two per-model
-# services and does no inference itself, so its event loop stays free. DB/auth
+# NestJS API. Runs in remote-inference mode: the CREPE forward pass runs in the
+# crepe-inference service, not here, so the API's event loop stays free. DB/auth
 # secrets come from existing Secrets/ConfigMaps (referenced below as a stub).
 apiVersion: apps/v1
 kind: Deployment
@@ -75,7 +75,7 @@ spec:
           targetPort: 3000
           name: http
 ---
-# Scale on CPU like the inference services, but scale DOWN reluctantly:
+# Scale on CPU like the inference service, but scale DOWN reluctantly:
 # terminating an API pod ends its live recording takes (they drain cleanly on
 # SIGTERM, but the user's take still stops), so require 15 min of sustained
 # low load before shedding a replica.

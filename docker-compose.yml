@@ -19,8 +19,8 @@ services:
             timeout: 3s
             retries: 30
 
-    # The three service images are tagged with the same names the k8s manifests
-    # reference, so `docker compose build` also produces the deployable images.
+    # Both built images are tagged with the same names the k8s manifests reference,
+    # so `docker compose build` also produces the deployable images.
     crepe-inference:
         image: mushee/crepe-inference:latest
         build:
@@ -63,11 +63,12 @@ services:
             # TRUST_PROXY is deliberately unset: unlike k8s there is no ingress in
             # front of this container, so client IPs arrive directly.
             BETA_MODE: 'false'
-            # Admin console (apps/admin, host-run on :3500) — same local-only dummy
-            # as the console's default; real deployments generate their own.
+            # Admin console (apps/admin, host-run on :3500): to sign in against this
+            # stack, set ADMIN_SECRET to this value and API_URL=http://localhost:3000
+            # in apps/admin/.env.development. Real deployments generate their own.
             ADMIN_SECRET: local-admin-secret-not-for-prod
             ADMIN_APP_URL: http://localhost:3500
-            # Forward passes go to the per-model services; the API does no inference.
+            # Forward passes go to the CREPE service.
             CREPE_INFERENCE_URL: crepe-inference:50051
             # Volume-backed local blob storage (scores + recording archives). Real
             # deployments set STORAGE_DRIVER=gcs and GCS_BUCKET instead.

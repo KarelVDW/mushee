@@ -51,7 +51,7 @@ apps/api/scripts/fixtures/eval-synth/
 # scripts/eval/lib/variantCache.ts).
 apps/api/scripts/fixtures/eval-cache/
 apps/api/scripts/fixtures/eval-cache-variant/
-# Python gRPC stubs are generated, not committed: at image build (Dockerfiles'
+# Python gRPC stubs are generated, not committed: at image build (the Dockerfile's
 # proto stage) or on the host via packages/inference-proto/generate-python.sh
 apps/inference-*/inference_pb2.py
 apps/inference-*/inference_pb2_grpc.py

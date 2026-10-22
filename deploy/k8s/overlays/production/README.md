@@ -3,7 +3,7 @@
 GCP project: **sheemu-prod** (number 940791749471, billing 019C30-EAE17A-A82095,
 account info@solkey.io). Region: **europe-west1** (EU, matching the EU-hosted
 PostHog/DB posture). Web app deploys separately on Vercel — this overlay covers
-the API + the two inference services only.
+the API + the CREPE inference service only.
 
 Provisioned 2026-07-09: Artifact Registry repo `mushee`, global static IP
 `mushee-api-ip` = **34.117.52.77** (point the `api.solkey.io` A record at it),
