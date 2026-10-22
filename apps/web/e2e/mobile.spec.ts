@@ -526,11 +526,18 @@ test('a picker opened from More puts Back at the top, level with Close, above it
     const sheet = await openMore(page)
     await sheet.getByRole('button', { name: /^Clef:/ }).tap()
     const clef = page.getByRole('dialog', { name: 'Select clef' })
-    const back = await clef.getByRole('button', { name: 'Back' }).boundingBox()
-    const close = await clef.getByRole('button', { name: 'Close' }).boundingBox()
-    const title = await clef.getByRole('heading', { name: 'Clef' }).boundingBox()
-    expect((back?.y ?? Infinity) + (back?.height ?? 0)).toBeLessThanOrEqual((title?.y ?? 0) + 1)
-    expect(Math.abs((back?.y ?? 0) - (close?.y ?? Infinity))).toBeLessThan(4)
+    await expect(clef.getByRole('button', { name: 'Back' })).toBeVisible()
+    // All three in one frame: the sheet rises as it opens.
+    const { back, close, title } = await clef.evaluate((sheet) => {
+        const top = (el: Element | null) => el?.getBoundingClientRect() ?? { top: NaN, bottom: NaN }
+        const buttons = [...sheet.querySelectorAll('button')]
+        const back = top(buttons.find((b) => b.textContent?.trim() === 'Back') ?? null)
+        const close = top(sheet.querySelector('button[aria-label="Close"]'))
+        const title = top(sheet.querySelector('h2'))
+        return { back: { top: back.top, bottom: back.bottom }, close: { top: close.top }, title: { top: title.top } }
+    })
+    expect(back.bottom).toBeLessThanOrEqual(title.top + 1)
+    expect(Math.abs(back.top - close.top)).toBeLessThan(4)
     // The expander reads as one: a chevron rides with its label.
     await expect(clef.getByRole('button', { name: 'More clefs' }).locator('svg')).toHaveCount(1)
 })
@@ -541,20 +548,24 @@ test('the key sheet reads flats → C → sharps in three rows, none wrapping a 
     const sheet = await openMore(page)
     await sheet.getByRole('button', { name: /^Key:/ }).tap()
     const grid = page.getByRole('dialog', { name: 'Select key signature' }).getByRole('group', { name: 'Key signature' })
-    const rowOf = async (names: string[]) =>
-        new Set(
-            await Promise.all(
-                names.map(async (name) => Math.round((await grid.getByRole('button', { name, exact: true }).boundingBox())?.y ?? -1)),
+    await expect(grid.getByRole('button')).toHaveCount(15)
+    // Every tile's top in one frame: the sheet rises as it opens, so tiles read one by one would drift.
+    const tops = new Map(
+        await grid
+            .getByRole('button')
+            .evaluateAll((els) =>
+                els.map((el) => [el.getAttribute('aria-label') ?? '', Math.round(el.getBoundingClientRect().top)] as const),
             ),
-        )
-    const flats = await rowOf(['C♭ major', 'G♭ major', 'D♭ major', 'A♭ major', 'E♭ major', 'B♭ major', 'F major'])
-    const sharps = await rowOf(['G major', 'D major', 'A major', 'E major', 'B major', 'F♯ major', 'C♯ major'])
+    )
+    const rowOf = (names: string[]) => new Set(names.map((name) => tops.get(name)))
+    const flats = rowOf(['C♭ major', 'G♭ major', 'D♭ major', 'A♭ major', 'E♭ major', 'B♭ major', 'F major'])
+    const sharps = rowOf(['G major', 'D major', 'A major', 'E major', 'B major', 'F♯ major', 'C♯ major'])
     expect(flats.size).toBe(1)
     expect(sharps.size).toBe(1)
     // C sits alone in the middle, between the two.
-    const c = await grid.getByRole('button', { name: 'C major', exact: true }).boundingBox()
-    expect(c?.y ?? 0).toBeGreaterThan([...flats][0])
-    expect(c?.y ?? Infinity).toBeLessThan([...sharps][0])
+    const c = tops.get('C major') ?? 0
+    expect(c).toBeGreaterThan([...flats][0] ?? Infinity)
+    expect(c).toBeLessThan([...sharps][0] ?? -Infinity)
 })
 
 test('the first tap on a note teaches where its actions are, once', async ({ page }) => {
