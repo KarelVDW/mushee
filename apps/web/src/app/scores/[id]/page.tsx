@@ -7,7 +7,7 @@
  */
 
 import { type AttributeClickEvent, type ScoreHighlight, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
-import { type Accidental, type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
+import { Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -23,19 +23,7 @@ import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
-import {
-    CHANGE_PITCH,
-    LOWER_PITCH,
-    MOVE_NEXT,
-    MOVE_PREVIOUS,
-    RAISE_PITCH,
-    SET_ACCIDENTAL,
-    SET_DURATION,
-    TOGGLE_DOT,
-    TOGGLE_REST,
-    TOGGLE_TIE,
-    TOGGLE_TUPLET,
-} from './actions'
+import { CHANGE_PITCH, LOWER_PITCH, MOVE_NEXT, MOVE_PREVIOUS, RAISE_PITCH } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { HistoryTools } from './HistoryTools'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
@@ -119,48 +107,14 @@ export default function ScoreEditorPage() {
         manipulator.attach(s, (score) => saveToApi({ score }))
     }, [loaded, manipulator, saveToApi])
 
-    // Listeners are thin: each maps a dock callback or mouse event to a manipulator
-    // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
-    // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
+    // The score view's listeners are thin: each maps a mouse/touch event to a manipulator
+    // dispatch, and stays referentially stable because ScoreView is memoized. The actions live
+    // in ./actions; the manipulator owns selection, autosave and re-rendering. The dock and the
+    // header tools dispatch to the manipulator themselves, and keyboard input is bound directly
+    // to manipulator.handleKeyDown.
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
     const handleSelectionStart = useCallback((note: Note) => manipulator.select(note), [manipulator])
     const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
-    const handleAccidentalChange = useCallback((acc: Accidental | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
-    const handleDurationChange = useCallback((duration: DurationType) => manipulator.run(SET_DURATION, duration), [manipulator])
-    const handleDotToggle = useCallback(() => manipulator.run(TOGGLE_DOT), [manipulator])
-    const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
-    const handleTieToggle = useCallback(() => manipulator.run(TOGGLE_TIE), [manipulator])
-    const handleRestToggle = useCallback(() => manipulator.run(TOGGLE_REST), [manipulator])
-    // The dock's measure-context edits apply at the active note's position (mid-measure for
-    // clef / key / tempo), through the same setters as the in-score glyph popovers.
-    const handleTempoSet = useCallback(
-        (bpm: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setTempoAt(at.measureIndex, at.beat, bpm)
-        },
-        [manipulator],
-    )
-    const handleClefSet = useCallback(
-        (type: ClefType) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setClefAt(at.measureIndex, type, at.beat)
-        },
-        [manipulator],
-    )
-    const handleKeySet = useCallback(
-        (fifths: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setKeyAt(at.measureIndex, fifths, at.beat)
-        },
-        [manipulator],
-    )
-    const handleTimeSet = useCallback(
-        (beatAmount: number, beatType: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
-        },
-        [manipulator],
-    )
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
 
@@ -508,32 +462,7 @@ export default function ScoreEditorPage() {
             <div className="relative shrink-0">
                 {isMobile && renderAttributePopover(COMPACT_POPOVER_SHEET)}
                 <NoteToolDock
-                    accidental={activeNote?.pitch?.accidental}
-                    duration={activeNote?.duration.type}
-                    accidentalDisabled={activeNote?.isRest ?? true}
-                    onAccidentalChange={handleAccidentalChange}
-                    onDurationChange={handleDurationChange}
-                    dotted={(activeNote?.duration.dots ?? 0) > 0}
-                    onDotToggle={handleDotToggle}
-                    tuplet={activeNote?.inTuplet ?? false}
-                    tupletDisabled={!activeNote || (!activeNote.inTuplet && !activeNote.duration.tripletDivision())}
-                    onTupletToggle={handleTupletToggle}
-                    tie={activeNote?.tiesForward ?? false}
-                    onTieToggle={handleTieToggle}
-                    rest={activeNote?.isRest ?? false}
-                    onRestToggle={handleRestToggle}
-                    bpm={score.bpmAt(activeNote)}
-                    onTempoSet={handleTempoSet}
-                    clef={activeNote?.clef.type ?? 'treble'}
-                    onClefSet={handleClefSet}
-                    keyFifths={activeNote?.keySignature.fifths ?? 0}
-                    onKeySet={handleKeySet}
-                    time={{
-                        beatAmount: activeNote?.measure.timeSignature.beatAmount ?? 4,
-                        beatType: activeNote?.measure.timeSignature.beatType ?? 4,
-                    }}
-                    onTimeSet={handleTimeSet}
-                    selectionDisabled={!activeNote}
+                    manipulator={manipulator}
                     compact={isMobile}
                     settingsExtras={
                         isMobile ? (

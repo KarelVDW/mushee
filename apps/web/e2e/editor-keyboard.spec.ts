@@ -56,6 +56,12 @@ test('R toggles the selected note to a rest and back', async ({ page }) => {
 
 test('T toggles a tie on the selected note', async ({ page }) => {
     const tieToggle = page.getByRole('button', { name: 'Tie', exact: true })
+    // A tie binds only into the same pitch: C5 → D5 can't tie, so lower D5 onto C5 and step back.
+    await expect(tieToggle).toBeDisabled()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowLeft')
+    await expect(tieToggle).toBeEnabled()
     await expect(tieToggle).toHaveAttribute('aria-pressed', 'false')
 
     const patch = waitForAutosave(page)

@@ -4,13 +4,16 @@ import { BeatUnitIcon, ClefIcon, Glyph, KeySignatureIcon, TimeSignatureIcon } fr
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
 import { type Accidental, CLEF_DEFS, type ClefType, Duration, type DurationType, TimeSignature } from '@mushee/notation/model'
-import { type ReactNode, type RefObject, useMemo, useRef, useState } from 'react'
+import { type ReactNode, type RefObject, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, Segmented, ToolGroup } from '@/components/ui'
+
+import { SET_ACCIDENTAL, SET_DURATION, TOGGLE_DOT, TOGGLE_REST, TOGGLE_TIE, TOGGLE_TUPLET } from './actions'
+import type { ScoreManipulator } from './ScoreManipulator'
 
 const ACCIDENTALS: { label: string; value: Accidental | undefined }[] = [
     { label: '♮', value: undefined },
@@ -76,33 +79,15 @@ function TupletIcon() {
         </svg>
     )
 }
+
 // --- Note tool-dock (docked along the editor's bottom edge) ---
 
+/** The meter the (then disabled) time and tempo chips show while nothing is selected. */
+const COMMON_TIME = new TimeSignature(4, 4)
+
 interface NoteToolDockProps {
-    accidental: Accidental | undefined
-    duration: DurationType | undefined
-    accidentalDisabled: boolean
-    onAccidentalChange: (accidental: Accidental | undefined) => void
-    onDurationChange: (duration: DurationType) => void
-    dotted: boolean
-    onDotToggle: () => void
-    tuplet: boolean
-    tupletDisabled: boolean
-    onTupletToggle: () => void
-    tie: boolean
-    onTieToggle: () => void
-    rest: boolean
-    onRestToggle: () => void
-    bpm: number
-    onTempoSet: (bpm: number) => void
-    clef: ClefType
-    onClefSet: (clef: ClefType) => void
-    keyFifths: number
-    onKeySet: (fifths: number) => void
-    time: { beatAmount: number; beatType: number }
-    onTimeSet: (beatAmount: number, beatType: number) => void
-    selectionDisabled: boolean
-    /** Tighter group spacing so the tool rows fit a phone. */
+    manipulator: ScoreManipulator
+    /** Tighter group spacing so the tool rows fit a phone, and popovers open as dock-wide sheets. */
     compact?: boolean
     /** Extra chips at the end of the score-settings well (mobile: the pitch tools and the metronome, which the header and action row have no room for). */
     settingsExtras?: ReactNode
@@ -119,41 +104,46 @@ interface NoteToolDockProps {
  * the Segmented track) so it lifts off the dock's tone — no dividers — and the
  * clef/key/tempo popovers open upward, away from the dock. New tool groups wrap onto
  * additional rows instead of overflowing.
+ *
+ * The dock reads the active note's state straight off the manipulator (it subscribes itself)
+ * and dispatches every edit to it directly; which chips are enabled follows the model's rules.
  */
-export function NoteToolDock({
-    accidental,
-    duration,
-    accidentalDisabled,
-    onAccidentalChange,
-    onDurationChange,
-    dotted,
-    onDotToggle,
-    tuplet,
-    tupletDisabled,
-    onTupletToggle,
-    tie,
-    onTieToggle,
-    rest,
-    onRestToggle,
-    bpm,
-    onTempoSet,
-    clef,
-    onClefSet,
-    keyFifths,
-    onKeySet,
-    time,
-    onTimeSet,
-    selectionDisabled,
-    compact = false,
-    settingsExtras,
-    trailingGroup,
-    footer,
-}: NoteToolDockProps) {
-    // The tempo chip and popover write the tempo in the meter's felt beat (♩. = 60 in 6/8).
-    const timeSignature = useMemo(() => new TimeSignature(time.beatAmount, time.beatType), [time.beatAmount, time.beatType])
+export function NoteToolDock({ manipulator, compact = false, settingsExtras, trailingGroup, footer }: NoteToolDockProps) {
+    useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
+    const score = manipulator.score
+    if (!score) return null
+    const note = manipulator.selectedNote
+
+    const duration = note?.duration.type
+    const clef = note?.clef.type ?? 'treble'
+    const keyFifths = note?.keySignature.fifths ?? 0
+    const bpm = score.bpmAt(note)
+    // The meter at the selection: the tempo chip and popover write the tempo in its felt beat (♩. = 60 in 6/8).
+    const timeSignature = note?.measure.timeSignature ?? COMMON_TIME
     const pulse = timeSignature.pulse
     const pulseBpm = Math.round(timeSignature.pulseBpmOf(bpm))
     const pulseUnit = pulse.beats === 1 ? '' : `${pulse.name.replace(' ', '-')} `
+    // TOGGLE_TIE's own rule: it unties a tied note, and ties one only where the tie can bind.
+    const canTie = manipulator.selectedNotes.some((n) => n.tiesForward || score.canTieForward(n))
+
+    // Measure-context edits apply at the active note's position (mid-measure for clef / key /
+    // tempo), through the same setters as the in-score glyph popovers.
+    const setClef = (type: ClefType) => {
+        const at = manipulator.activePosition
+        if (at) manipulator.setClefAt(at.measureIndex, type, at.beat)
+    }
+    const setKey = (fifths: number) => {
+        const at = manipulator.activePosition
+        if (at) manipulator.setKeyAt(at.measureIndex, fifths, at.beat)
+    }
+    const setTime = (beatAmount: number, beatType: number) => {
+        const at = manipulator.activePosition
+        if (at) manipulator.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
+    }
+    const setTempo = (value: number) => {
+        const at = manipulator.activePosition
+        if (at) manipulator.setTempoAt(at.measureIndex, at.beat, value)
+    }
 
     return (
         <div className="shrink-0 z-20 px-3 sm:px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
@@ -164,36 +154,51 @@ export function NoteToolDock({
                 <Segmented
                     ariaLabel="Note duration"
                     value={duration}
-                    onChange={(v) => v && onDurationChange(v)}
+                    onChange={(v) => v && manipulator.run(SET_DURATION, v)}
                     options={DURATIONS.map((d) => ({ value: d, label: <DurationIcon dur={d} /> }))}
                 />
                 <ToolGroup ariaLabel="Note modifiers">
-                    <ChipToggle plain active={dotted} onClick={onDotToggle} ariaLabel="Dotted" disabled={duration === '16'}>
+                    <ChipToggle
+                        plain
+                        active={(note?.duration.dots ?? 0) > 0}
+                        onClick={() => manipulator.run(TOGGLE_DOT)}
+                        ariaLabel="Dotted"
+                        disabled={!note || !Duration.canDot(note.duration.type)}>
                         ·
                     </ChipToggle>
-                    <ChipToggle plain active={tuplet} onClick={onTupletToggle} disabled={tupletDisabled} ariaLabel="Triplet">
+                    <ChipToggle
+                        plain
+                        active={note?.inTuplet ?? false}
+                        onClick={() => manipulator.run(TOGGLE_TUPLET)}
+                        disabled={!note?.canToggleTuplet}
+                        ariaLabel="Triplet">
                         <TupletIcon />
                     </ChipToggle>
-                    <ChipToggle plain active={rest} onClick={onRestToggle} ariaLabel="Rest">
+                    <ChipToggle plain active={note?.isRest ?? false} onClick={() => manipulator.run(TOGGLE_REST)} ariaLabel="Rest">
                         <svg width={9} height={16} viewBox="0 0 16 30">
                             <Glyph name="restQuarter" x={1} y={20} fill="currentColor" />
                         </svg>
                     </ChipToggle>
-                    <ChipToggle plain active={tie} onClick={onTieToggle} disabled={accidentalDisabled} ariaLabel="Tie">
+                    <ChipToggle
+                        plain
+                        active={note?.tiesForward ?? false}
+                        onClick={() => manipulator.run(TOGGLE_TIE)}
+                        disabled={!canTie}
+                        ariaLabel="Tie">
                         <TieIcon />
                     </ChipToggle>
                 </ToolGroup>
                 <Segmented
                     ariaLabel="Accidental"
-                    value={accidental}
-                    onChange={onAccidentalChange}
+                    value={note?.pitch?.accidental}
+                    onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
                 <ToolGroup ariaLabel="Score settings">
                     <PopoverChip
                         plain
                         compact={compact}
-                        disabled={selectionDisabled}
+                        disabled={!note}
                         ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}
                         chip={<ClefIcon type={clef} size={26} />}>
                         {({ anchorRef, className, close }) => (
@@ -202,7 +207,7 @@ export function NoteToolDock({
                                 anchorRef={anchorRef}
                                 className={className}
                                 onSelect={(type) => {
-                                    onClefSet(type)
+                                    setClef(type)
                                     close()
                                 }}
                                 onDismiss={close}
@@ -212,7 +217,7 @@ export function NoteToolDock({
                     <PopoverChip
                         plain
                         compact={compact}
-                        disabled={selectionDisabled}
+                        disabled={!note}
                         ariaLabel={`Key signature: ${keySignatureLabel(keyFifths)}`}
                         chip={keyFifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureIcon fifths={keyFifths} size={24} />}>
                         {({ anchorRef, className, close }) => (
@@ -221,7 +226,7 @@ export function NoteToolDock({
                                 anchorRef={anchorRef}
                                 className={className}
                                 onSelect={(value) => {
-                                    onKeySet(value)
+                                    setKey(value)
                                     close()
                                 }}
                                 onDismiss={close}
@@ -231,16 +236,16 @@ export function NoteToolDock({
                     <PopoverChip
                         plain
                         compact={compact}
-                        disabled={selectionDisabled}
-                        ariaLabel={`Time signature: ${time.beatAmount}/${time.beatType}`}
-                        chip={<TimeSignatureIcon beatAmount={time.beatAmount} beatType={time.beatType} size={22} />}>
+                        disabled={!note}
+                        ariaLabel={`Time signature: ${timeSignature.beatAmount}/${timeSignature.beatType}`}
+                        chip={<TimeSignatureIcon beatAmount={timeSignature.beatAmount} beatType={timeSignature.beatType} size={22} />}>
                         {({ anchorRef, className, close }) => (
                             <TimeSignaturePopover
-                                active={time}
+                                active={timeSignature}
                                 anchorRef={anchorRef}
                                 className={className}
                                 onSelect={(beatAmount, beatType) => {
-                                    onTimeSet(beatAmount, beatType)
+                                    setTime(beatAmount, beatType)
                                     close()
                                 }}
                                 onDismiss={close}
@@ -250,7 +255,7 @@ export function NoteToolDock({
                     <PopoverChip
                         plain
                         compact={compact}
-                        disabled={selectionDisabled}
+                        disabled={!note}
                         ariaLabel={`Tempo: ${pulseBpm} ${pulseUnit}bpm`}
                         chip={
                             <span className="inline-flex items-center gap-1">
@@ -264,7 +269,7 @@ export function NoteToolDock({
                                 anchorRef={anchorRef}
                                 className={className}
                                 onSubmit={(value) => {
-                                    onTempoSet(value)
+                                    setTempo(value)
                                     close()
                                 }}
                                 onDismiss={close}

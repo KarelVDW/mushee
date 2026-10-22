@@ -69,6 +69,20 @@ test('turning the share link on after an edit keeps the edit and the incremental
 })
 
 test('dotted, triplet, and tie dock toggles edit the selected note', async ({ page }) => {
+    // Tying is offered only where a tie can bind: the first note (C5) can't tie into D5.
+    const tie = page.getByRole('button', { name: 'Tie', exact: true })
+    await expect(tie).toBeDisabled()
+    // Lower the second note onto C5 and step back: now the first note has a note to tie into.
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowLeft')
+    await expect(tie).toBeEnabled()
+    await tie.click()
+    await expect(tie).toHaveAttribute('aria-pressed', 'true')
+    await tie.click()
+    await expect(tie).toHaveAttribute('aria-pressed', 'false')
+
     const dotted = page.getByRole('button', { name: 'Dotted' })
     const patchDot = waitForAutosave(page)
     await dotted.click()
@@ -82,12 +96,6 @@ test('dotted, triplet, and tie dock toggles edit the selected note', async ({ pa
     await expect(triplet).toHaveAttribute('aria-pressed', 'true')
     await triplet.click()
     await expect(triplet).toHaveAttribute('aria-pressed', 'false')
-
-    const tie = page.getByRole('button', { name: 'Tie', exact: true })
-    await tie.click()
-    await expect(tie).toHaveAttribute('aria-pressed', 'true')
-    await tie.click()
-    await expect(tie).toHaveAttribute('aria-pressed', 'false')
 })
 
 test('the accidental segmented control sets flat, sharp, and natural', async ({ page }) => {
