@@ -2,7 +2,7 @@
 
 import { BeatUnitIcon } from '@mushee/notation/components'
 import type { TimeSignature } from '@mushee/notation/model'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
 import { Popover, PrimaryButton } from '@/components/ui'
@@ -15,10 +15,14 @@ interface TempoPopoverProps {
     /** Receives the chosen tempo converted back to quarter-note bpm. */
     onSubmit: (bpm: number) => void
     onDismiss: () => void
-    /** Extra positioning/layout classes (e.g. `right-0 top-full`). */
+    /** Extra positioning/layout classes (e.g. `right-0 top-full`); ignored by a sheet, which its host positions. */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
     anchorRef?: { current: HTMLElement | null }
+    /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
+    variant?: 'anchored' | 'sheet'
+    /** Rendered above the controls — the More sheet's Back link. */
+    lead?: ReactNode
 }
 
 const MIN_BPM = 20
@@ -34,12 +38,27 @@ function beatsPerBarLabel(timeSignature: TimeSignature): string {
     return `${COUNT_WORDS[count] ?? count} per bar in ${timeSignature.beatAmount}/${timeSignature.beatType}`
 }
 
-export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, className, anchorRef }: TempoPopoverProps) {
+/** The tap pad's corner readout: what to do until a tempo emerges, then where it came from. */
+export function tapReadout(tappedBpm: number | null, taps: number): string {
+    return tappedBpm === null ? 'Tap at least twice' : `${tappedBpm} bpm from ${taps} taps`
+}
+
+export function TempoPopover({
+    initialBpm,
+    timeSignature,
+    onSubmit,
+    onDismiss,
+    className,
+    anchorRef,
+    variant = 'anchored',
+    lead,
+}: TempoPopoverProps) {
     const inputRef = useRef<HTMLInputElement>(null)
     const [taps, setTaps] = useState<number[]>([])
     const [draft, setDraft] = useState(String(Math.round(timeSignature.pulseBpmOf(initialBpm))))
     const [pulse, setPulse] = useState(0)
     const beat = timeSignature.pulse
+    const sheet = variant === 'sheet'
 
     // Taps are one per felt beat — a dotted quarter in 6/8 — so the tapped bpm is already in the written unit.
     const tappedBpm = useMemo(() => {
@@ -81,36 +100,39 @@ export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, c
         if (tappedBpm) setDraft(String(tappedBpm))
     }, [tappedBpm])
 
+    const readout = (
+        <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">{tapReadout(tappedBpm, taps.length)}</span>
+    )
+
     return (
         <Popover
             ariaLabel="Set tempo"
             title="Tempo"
+            hint="How fast the beat goes — 60 is slow, 120 is lively."
             onDismiss={onDismiss}
             onKeyDown={handleKey}
             anchorRef={anchorRef}
-            className={`w-90 gap-3${className ? ` ${className}` : ''}`}
-            headerRight={
-                <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
-                    {taps.length < 2 ? 'Tap 2+ times' : `${tappedBpm} bpm · ${taps.length} taps`}
-                </span>
-            }>
+            variant={variant}
+            className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
+            // A sheet's heading row is narrow on a phone: there the readout rides in the tap pad instead.
+            headerRight={sheet ? undefined : readout}>
+            {lead}
             <button
                 type="button"
                 onClick={handleTap}
-                className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft">
+                className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft focus-ring">
                 <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
                     <span
                         className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-solkey"
                         style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
                     />
                     Tap along
+                    {sheet && <span className="ml-auto normal-case tracking-normal">{readout}</span>}
                 </span>
                 <span className="font-body font-medium text-[15px] leading-[1.3]">
-                    Click or tap the spacebar on{' '}
-                    <span className="whitespace-nowrap">
-                        every <BeatUnitIcon duration={beat} size={17} color="currentColor" />
-                    </span>
-                    <span className="sr-only">{beat.name} beat</span>
+                    {/* Phones have no spacebar: each pointer gets the instruction it can follow. */}
+                    <span className="pointer-coarse:hidden">Click here or press the spacebar on every beat</span>
+                    <span className="hidden pointer-coarse:inline">Tap here on every beat</span>
                     {(timeSignature.isCompound || timeSignature.beatType !== 4) && (
                         <span className="block text-on-surface-variant">{beatsPerBarLabel(timeSignature)}</span>
                     )}
@@ -122,8 +144,9 @@ export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, c
                     inputRef={inputRef}
                     value={draft}
                     onChange={setDraft}
-                    ariaLabel="BPM"
+                    ariaLabel="Tempo (bpm)"
                     unit="bpm"
+                    unitDescription="beats per minute"
                     min={MIN_BPM}
                     max={MAX_BPM}
                     size="md"
@@ -135,7 +158,7 @@ export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, c
                         </>
                     }
                 />
-                <PrimaryButton onClick={commit}>Set</PrimaryButton>
+                <PrimaryButton onClick={commit}>Set tempo</PrimaryButton>
             </div>
         </Popover>
     )
