@@ -1,7 +1,7 @@
 'use client'
 
 import { ClefIcon } from '@mushee/notation/components'
-import { CLEF_DEFS, type ClefType } from '@mushee/notation/model'
+import { CLEF_DEFS, type ClefType, type Instrument } from '@mushee/notation/model'
 import { type ReactNode, useState } from 'react'
 
 import { Popover, PopoverOption, TertiaryButton } from '@/components/ui'
@@ -33,6 +33,8 @@ const CLEF_FAMILIES: ClefType[] = [
 
 interface ClefPopoverProps {
     active: ClefType
+    /** The score's instrument: its usual clef ({@link Instrument.defaultClef}) joins the first tier when it is neither treble nor bass (Alto for a viola). */
+    instrument?: Instrument
     onSelect: (type: ClefType) => void
     onDismiss: () => void
     /** Extra positioning/layout classes (e.g. `right-0 top-full`); ignored by a sheet, which its host positions. */
@@ -46,16 +48,29 @@ interface ClefPopoverProps {
 }
 
 /**
- * The clef picker: Treble and Bass as labelled rows first — plus the clef in use, when it is
- * neither, so it never hides — and every other clef behind "More clefs", each captioned with
- * its name. A clef is listed once, so its "Set … clef" name is unique in the panel.
+ * The clef picker: Treble and Bass as labelled rows first — plus the instrument's usual clef and
+ * the clef in use, when either is neither, so the viola's Alto is one tap away and the clef in
+ * use never hides — and every other clef behind "More clefs", each captioned with its name. A
+ * clef is listed once, so its "Set … clef" name is unique in the panel.
  */
-export function ClefPopover({ active, onSelect, onDismiss, className, anchorRef, variant = 'anchored', lead }: ClefPopoverProps) {
+export function ClefPopover({
+    active,
+    instrument,
+    onSelect,
+    onDismiss,
+    className,
+    anchorRef,
+    variant = 'anchored',
+    lead,
+}: ClefPopoverProps) {
     const [expanded, setExpanded] = useState(false)
     const sheet = variant === 'sheet'
-    const activeIsMain = MAIN_CLEFS.some((clef) => clef.type === active)
-    const leading = activeIsMain ? MAIN_CLEFS : [...MAIN_CLEFS, { type: active }]
-    const rest = CLEF_FAMILIES.filter((type) => type !== active)
+    const leading = [...MAIN_CLEFS]
+    if (instrument && !leading.some((clef) => clef.type === instrument.defaultClef)) {
+        leading.push({ type: instrument.defaultClef, hint: `Usual for ${instrument.displayName.toLowerCase()}` })
+    }
+    if (!leading.some((clef) => clef.type === active)) leading.push({ type: active })
+    const rest = CLEF_FAMILIES.filter((type) => !leading.some((clef) => clef.type === type))
 
     return (
         <Popover

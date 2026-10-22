@@ -298,6 +298,7 @@ export function NoteToolDock({
                                 {({ anchorRef, className, close }) => (
                                     <ClefPopover
                                         active={settings.clef}
+                                        instrument={score.instrument}
                                         anchorRef={anchorRef}
                                         className={className}
                                         onSelect={(type) => {

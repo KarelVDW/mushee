@@ -97,6 +97,7 @@ function AttributePopoverPanel({
                 <ClefPopover
                     variant={variant}
                     active={event.clef}
+                    instrument={manipulator.score?.instrument}
                     className={className}
                     onSelect={(type) => {
                         manipulator.setClefAt(event.measureIndex, type)

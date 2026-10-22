@@ -1,3 +1,4 @@
+import { type ClefType, Instrument } from '@mushee/notation/model'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -28,8 +29,10 @@ describe('tapReadout', () => {
 })
 
 describe('ClefPopover', () => {
-    const render = (active: Parameters<typeof ClefPopover>[0]['active']) =>
-        renderToStaticMarkup(createElement(ClefPopover, { active, onSelect: noop, onDismiss: noop }))
+    const render = (active: ClefType, instrument?: Instrument) =>
+        renderToStaticMarkup(createElement(ClefPopover, { active, instrument, onSelect: noop, onDismiss: noop }))
+    /** The first tier's clefs, in order: the labelled rows before 'More clefs'. */
+    const firstTier = (markup: string) => [...markup.matchAll(/aria-label="Set ([^"]+) clef"/g)].map((match) => match[1])
 
     it('leads with Treble and Bass, explained, and keeps the rest behind More clefs', () => {
         const markup = render('treble')
@@ -44,6 +47,22 @@ describe('ClefPopover', () => {
     it('keeps the clef in use in view, listed once', () => {
         const markup = render('alto')
         expect(markup.match(/Set Alto clef/g)).toHaveLength(1)
+    })
+
+    it("offers the instrument's usual clef in the first tier: a viola's Alto, captioned", () => {
+        const markup = render('treble', Instrument.Viola)
+        expect(firstTier(markup)).toEqual(['Treble', 'Bass', 'Alto'])
+        expect(markup).toContain('Usual for viola')
+    })
+
+    it('lists the usual clef and the clef in use once each, Treble and Bass first', () => {
+        // A viola written in alto clef: Alto once, not twice.
+        expect(firstTier(render('alto', Instrument.Viola))).toEqual(['Treble', 'Bass', 'Alto'])
+        // A viola part switched to tenor clef keeps both in view.
+        expect(firstTier(render('tenor', Instrument.Viola))).toEqual(['Treble', 'Bass', 'Alto', 'Tenor'])
+        // A cello's usual clef is bass, already in the tier: nothing extra.
+        expect(firstTier(render('treble', Instrument.Cello))).toEqual(['Treble', 'Bass'])
+        expect(firstTier(render('bass', Instrument.Violin))).toEqual(['Treble', 'Bass'])
     })
 })
 

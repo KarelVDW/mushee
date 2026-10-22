@@ -251,6 +251,7 @@ export function MoreToolsSheet({
                         variant="sheet"
                         lead={lead}
                         active={settings.clef}
+                        instrument={score.instrument}
                         anchorRef={anchorRef}
                         onSelect={(type) => {
                             manipulator.changeClef(type)
