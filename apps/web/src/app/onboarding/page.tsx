@@ -1,229 +1,301 @@
 'use client'
 
+import { Instrument, Score } from '@mushee/notation/model'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { defaultScoreTitle } from '@/app/scores/NewScoreDialog'
 import { FunnelShell } from '@/components/FunnelShell'
-import { Icon, PrimaryButton, StepProgress, TertiaryButton } from '@/components/ui'
+import { Icon, PrimaryButton, showToast, StepProgress, TertiaryButton } from '@/components/ui'
+import { AuthPrefill } from '@/components/ui/AuthCard'
 import { setUserProperties, track } from '@/lib/analytics'
-import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
+import { ApiError, type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { nextPathFrom } from '@/lib/nextPath'
-import { BETA_MODE, isPaidTier, type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout, useUpdateProfile } from '@/lib/queries'
+import { formatMoney } from '@/lib/currency'
+import { LIBRARY_PATH, nextPathFrom } from '@/lib/nextPath'
+import { BETA_MODE, isPaidTier, type PlanCatalogue, type PlanTier, requestedPlanFrom } from '@/lib/plans'
+import { useBetaGate, useCreateScore, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout } from '@/lib/queries'
+import { formatAllowance } from '@/lib/recordingTime'
+import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
-import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES, type StepName } from './onboarding-data'
-import {
-    BackgroundStep,
-    BetaPlanStep,
-    DoneStep,
-    GoalStep,
-    InstrumentsStep,
-    type MicState,
-    MicStep,
-    NameStep,
-    PlanStep,
-    SourceStep,
-    VerifyStep,
-} from './OnboardingSteps'
+import { onboardingSteps } from './onboarding-data'
+import { AboutStep, type DoneDestination, DoneStep, InstrumentsStep, type MicState, MicStep, PlanStep, VerifyStep } from './OnboardingSteps'
+
+/** The done screen's plan line: the plan the account is on, in words. Paid picks leave for checkout, so this is the free plan or the beta's. */
+function planLineFor(plans: PlanCatalogue): string {
+    if (BETA_MODE) return `You're on ${plans.beta.name} — free during the beta.`
+    const free = plans.byId('free')
+    if (!free) return "You're on the free plan."
+    const recording = free.dailyRecordingSeconds === null ? '' : `, with ${formatAllowance(free.dailyRecordingSeconds)} of recording a day`
+    return `You're on ${free.name} — free${recording}.`
+}
 
 export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
-    const updateProfile = useUpdateProfile()
     const startCheckout = useStartCheckout()
+    const createScore = useCreateScore()
+    const signOut = useSignOut()
     const plans = usePlanCatalogue()
+    const currency = useDisplayCurrency()
     const { data: session, refetch } = useSession()
     const sessionEmail = session?.user?.email ?? null
+    const sessionName = session?.user?.name ?? ''
     const verified = session?.user?.emailVerified ?? false
     const userEmail = sessionEmail ?? 'your inbox'
     // During the closed beta, unapproved users end up on the waiting page. The
     // server decides (not BETA_MODE), and AuthGate shares this query.
     const { awaitingApproval } = useBetaGate({ enabled: !!session?.user })
 
+    // From the URL (see the mount effect below): a paid pricing card's ?plan=, and ?next=.
+    const [requestedPlan, setRequestedPlan] = useState<PlanTier['id'] | null>(null)
+    const [nextPath, setNextPath] = useState(LIBRARY_PATH)
+
+    const steps = onboardingSteps(requestedPlan)
     const [step, setStep] = useState(0)
     // Steps are addressed by name; the index only orders them.
-    const stepName = STEP_NAMES[step]
+    const stepName = steps[Math.min(step, steps.length - 1)]
+    const isLastStep = step >= steps.length - 1
 
-    // Mic permission state lives here (not in MicStep): canAdvance reads it,
-    // and it must survive navigating away from the step and back.
+    // Mic permission state lives here (not in MicStep): the footer reads it, and it
+    // must survive navigating away from the step and back.
     const [micState, setMicState] = useState<MicState>('idle')
+    const [micGuideOpen, setMicGuideOpen] = useState(false)
 
-    // The preference answers, 'name' through 'plan'
-    const [name, setName] = useState(session?.user?.name ?? '')
+    // The answers. Every one is optional.
+    const [instruments, setInstruments] = useState<Instrument[]>([])
     const [background, setBackground] = useState<string | null>(null)
     const [goal, setGoal] = useState<string | null>(null)
-    const [instruments, setInstruments] = useState<string[]>([])
     const [source, setSource] = useState<string | null>(null)
     const [sourceDetail, setSourceDetail] = useState('')
-    const [tier, setTier] = useState<PlanTier['id']>('pro')
+    // Nothing paid is ever chosen for the visitor: the free plan, unless ?plan= asked for a tier.
+    const [tier, setTier] = useState<PlanTier['id']>('free')
     const [billing, setBilling] = useState<BillingInterval>('monthly')
     const [done, setDone] = useState(false)
-
-    // The session can still be loading at mount (a reload on /onboarding) — seed the
-    // name step from it once it resolves, so the field isn't left empty and blocking.
-    const sessionName = session?.user?.name
+    // Read after mount: the page prerenders, where there is no URL to read. A visitor who came
+    // from a paid pricing card (signup forwards its ?plan=) gets the plan step with that tier
+    // chosen; one heading somewhere specific (?next=, a shared score) goes back there at the end.
     useEffect(() => {
-        if (sessionName !== undefined) setName(sessionName)
-    }, [sessionName])
-
-    // A visitor who came from a pricing card (signup forwards its ?plan=) finds that tier
-    // preselected. Read after mount: the page prerenders, where there is no URL to read.
-    useEffect(() => {
-        const requested = requestedPlanFrom(window.location.search)
+        const search = window.location.search
+        const requested = requestedPlanFrom(search)
+        setRequestedPlan(requested)
         if (requested) setTier(requested)
+        setNextPath(nextPathFrom(search))
     }, [])
 
-    const canAdvance = (() => {
-        switch (stepName) {
-            case 'verify':
-                return verified
-            case 'mic':
-                // Denied still advances: the editor works fine without a mic
-                // (recording asks again later), and a desktop user with no
-                // microphone must not be walled out of the rest of onboarding.
-                return micState === 'granted' || micState === 'denied'
-            case 'name':
-                return name.trim().length > 0
-            case 'background':
-                return !!background
-            case 'goal':
-                return !!goal
-            case 'instruments':
-                return instruments.length > 0
-            case 'source':
-                // Optional, as the step tells the user: without a pick nothing is saved.
-                return true
-            case 'plan':
-                return true
-        }
-    })()
+    // Each step (and the done screen) opens with focus on its heading, so a screen reader
+    // reads the new question first. Not on arrival: the code field takes focus then.
+    const titleRef = useRef<HTMLHeadingElement>(null)
+    const screen = done ? 'done' : stepName
+    const focusedScreen = useRef(screen)
+    useEffect(() => {
+        if (focusedScreen.current === screen) return
+        focusedScreen.current = screen
+        titleRef.current?.focus()
+    }, [screen])
 
-    const patchForStep = (s: StepName): OnboardingPatch | null => {
-        switch (s) {
-            case 'background':
-                return background ? { background } : null
-            case 'goal':
-                return goal ? { goal } : null
+    const patchFor = (name: typeof stepName): OnboardingPatch | null => {
+        switch (name) {
             case 'instruments':
-                return { instruments }
-            case 'source':
-                return source ? { source, sourceDetail: sourceDetail.trim() } : null
-            case 'plan':
-                return { completedAt: new Date().toISOString() }
+                // Instrument display names, the strings Instrument.findByDisplayName resolves.
+                return { instruments: instruments.map((i) => i.displayName) }
+            case 'about': {
+                const answers: OnboardingPatch = {
+                    ...(background ? { background } : {}),
+                    ...(goal ? { goal } : {}),
+                    ...(source ? { source, sourceDetail: sourceDetail.trim() } : {}),
+                }
+                return Object.keys(answers).length > 0 ? answers : null
+            }
             default:
                 return null
         }
     }
 
     const next = () => {
-        const patch = patchForStep(stepName)
+        const answers = patchFor(stepName)
+        // The last step, whichever it is, records that onboarding is complete.
+        const patch = isLastStep ? { ...answers, completedAt: new Date().toISOString() } : answers
         // Persistence is best-effort and never blocks progress; a failure
         // surfaces as a toast through the global mutation error handler.
         if (patch) patchMutation.mutate(patch)
-        // The name is the account's display name (Settings edits the same field), not an
-        // onboarding answer, so it is saved on the user rather than in the patch.
-        if (stepName === 'name' && name.trim() !== sessionName) updateProfile.mutate(name.trim())
         track('onboarding_step_completed', {
             step: stepName,
-            ...(stepName === 'mic' ? { mic_permission: micState } : {}),
+            ...(stepName === 'mic' ? { mic_permission: micState === 'idle' || micState === 'requesting' ? 'skipped' : micState } : {}),
+            // The survey used to be three steps of its own; its answers ride on this one event now.
+            ...(stepName === 'about' ? { background, goal, source, source_detail_provided: sourceDetail.trim().length > 0 } : {}),
         })
-        if (step === STEP_COUNT - 1) {
-            // Categorical answers only — sourceDetail and name are free text
-            // (the friend placeholder invites a person's name) and never
-            // leave the database.
-            const played = instruments.filter((i) => i !== NO_INSTRUMENT_OPTION)
-            track('onboarding_completed', {
-                tier: BETA_MODE ? 'beta' : tier,
-                background,
-                goal,
-                source,
-                instruments: played,
-                instrument_count: played.length,
-                plays_instrument: played.length > 0,
-                source_detail_provided: sourceDetail.trim().length > 0,
-            })
-            setUserProperties({
-                background,
-                goal,
-                source,
-                instrument_count: played.length,
-                plays_instrument: played.length > 0,
-                onboarding_completed_at: new Date().toISOString(),
-            })
-            // Paid pick → straight into Polar checkout; on failure (or beta
-            // mode, where plans can't be bought) fall through to the done screen.
-            if (!BETA_MODE && isPaidTier(tier)) {
-                startCheckout.mutate({ tierId: tier, interval: billing }, { onError: () => setDone(true) })
-                return
-            }
-            setDone(true)
+        if (!isLastStep) {
+            setStep((s) => Math.min(s + 1, steps.length - 1))
             return
         }
-        setStep((s) => Math.min(s + 1, STEP_COUNT - 1))
+        // Categorical answers only — sourceDetail and the name are free text and never leave the database.
+        const played = instruments.map((i) => i.displayName)
+        // Singing is not playing: an empty pick or the voice alone means no instrument.
+        const playsInstrument = instruments.some((i) => i !== Instrument.VoiceLead)
+        track('onboarding_completed', {
+            tier: BETA_MODE ? 'beta' : tier,
+            background,
+            goal,
+            source,
+            instruments: played,
+            instrument_count: played.length,
+            plays_instrument: playsInstrument,
+            source_detail_provided: sourceDetail.trim().length > 0,
+        })
+        setUserProperties({
+            background,
+            goal,
+            source,
+            instrument_count: played.length,
+            plays_instrument: playsInstrument,
+            onboarding_completed_at: new Date().toISOString(),
+        })
+        // Paid pick → straight into Polar checkout; on failure fall through to the done screen.
+        if (!BETA_MODE && isPaidTier(tier)) {
+            startCheckout.mutate({ tierId: tier, interval: billing }, { onError: () => setDone(true) })
+            return
+        }
+        setDone(true)
     }
     const back = () => setStep((s) => Math.max(s - 1, 0))
     // Where onboarding lets out: the waiting room while approval is pending, else wherever the
     // visitor was heading before signup (a shared score they want to keep) — the library by default.
-    const leave = () => router.push(awaitingApproval ? '/beta' : nextPathFrom(window.location.search))
+    const leave = () => router.push(awaitingApproval ? '/beta' : nextPath)
     const skip = () => {
         track('onboarding_skipped', { step: stepName })
         leave()
     }
+    // A mistyped email: back to signup, the name already filled in.
+    const startOver = () => {
+        track('onboarding_start_over')
+        AuthPrefill.offer({ name: sessionName })
+        void signOut('/signup')
+    }
+
+    // The usual end: a new score on the first instrument picked, open and ready to record.
+    const destination: DoneDestination = awaitingApproval ? 'beta' : nextPath !== LIBRARY_PATH ? 'next' : 'first-melody'
+    const recordFirstMelody = () => {
+        const score = Score.blank(instruments[0] ?? Instrument.VoiceLead)
+        createScore.mutate(
+            { title: defaultScoreTitle(true), score: new ScoreSerializer(score).toInput() },
+            {
+                onSuccess: (created) => router.push(`/scores/${created.id}?first=1`),
+                onError: (err) => {
+                    // A full library (an older account onboarding again): the library's limit dialog explains.
+                    if (err instanceof ApiError && err.isScoreLimit) router.push('/scores?new=1')
+                    else showToast("Couldn't create your score. Please try again.")
+                },
+            },
+        )
+    }
+
+    // The plan step's button says what happens next, the price in it for a paid plan.
+    const chosenPlan = plans.byId(tier)
+    const paidChoice = stepName === 'plan' && !!chosenPlan && isPaidTier(tier)
+    const ctaLabel =
+        stepName !== 'plan' || !chosenPlan
+            ? 'Continue'
+            : paidChoice
+              ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
+              : 'Start free'
+    // The verify step moves on by itself; the mic step's own buttons lead until the browser has answered.
+    const showContinue = stepName !== 'verify' && (stepName !== 'mic' || (micState === 'granted' && !micGuideOpen) || micState === 'denied')
+    // Nothing to go back to on the step after verify: a verified email has nothing to redo.
+    const showBack = step >= 2
 
     return (
-        <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip for now</TertiaryButton>}>
-            {!done && <StepProgress step={step} total={STEP_COUNT} />}
+        <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip setup</TertiaryButton>}>
+            {!done && <StepProgress step={step} total={steps.length} />}
 
             {!done && stepName === 'verify' && (
-                <VerifyStep userEmail={userEmail} sessionEmail={sessionEmail} verified={verified} onVerified={refetch} />
+                <VerifyStep
+                    titleRef={titleRef}
+                    userEmail={userEmail}
+                    sessionEmail={sessionEmail}
+                    verified={verified}
+                    onVerified={refetch}
+                    onAdvance={next}
+                    onStartOver={startOver}
+                />
             )}
 
-            {!done && stepName === 'mic' && <MicStep micState={micState} setMicState={setMicState} />}
+            {!done && stepName === 'instruments' && <InstrumentsStep titleRef={titleRef} value={instruments} onChange={setInstruments} />}
 
-            {!done && stepName === 'name' && <NameStep value={name} onChange={setName} />}
-
-            {!done && stepName === 'background' && <BackgroundStep value={background} onChange={setBackground} />}
-
-            {!done && stepName === 'goal' && <GoalStep value={goal} onChange={setGoal} />}
-
-            {!done && stepName === 'instruments' && <InstrumentsStep value={instruments} onChange={setInstruments} />}
-
-            {!done && stepName === 'source' && (
-                <SourceStep source={source} onSourceChange={setSource} sourceDetail={sourceDetail} onSourceDetailChange={setSourceDetail} />
+            {!done && stepName === 'mic' && (
+                <MicStep
+                    titleRef={titleRef}
+                    micState={micState}
+                    setMicState={setMicState}
+                    onGuideOpenChange={setMicGuideOpen}
+                    onAdvance={next}
+                />
             )}
 
-            {!done && stepName === 'plan' && !BETA_MODE && (
-                <PlanStep plans={plans.sellable} billing={billing} onBillingChange={setBilling} tier={tier} onTierChange={setTier} />
+            {!done && stepName === 'about' && (
+                <AboutStep
+                    titleRef={titleRef}
+                    background={background}
+                    onBackgroundChange={setBackground}
+                    goal={goal}
+                    onGoalChange={setGoal}
+                    source={source}
+                    onSourceChange={setSource}
+                    sourceDetail={sourceDetail}
+                    onSourceDetailChange={setSourceDetail}
+                />
             )}
 
-            {!done && stepName === 'plan' && BETA_MODE && <BetaPlanStep betaPlan={plans.beta} awaitingApproval={awaitingApproval} />}
+            {!done && stepName === 'plan' && (
+                <PlanStep
+                    titleRef={titleRef}
+                    plans={plans.sellable}
+                    freePlan={plans.byId('free') ?? plans.sellable[0]}
+                    billing={billing}
+                    onBillingChange={setBilling}
+                    tier={tier}
+                    onTierChange={setTier}
+                />
+            )}
 
             {done && (
                 <DoneStep
-                    name={name}
-                    awaitingApproval={awaitingApproval}
+                    titleRef={titleRef}
+                    name={sessionName}
+                    destination={destination}
                     betaPlanName={plans.beta.name}
-                    planName={BETA_MODE ? plans.beta.name : plans.byId(tier)?.name}
+                    planLine={destination === 'beta' ? null : planLineFor(plans)}
+                    creating={createScore.isPending || createScore.isSuccess}
+                    onRecordFirstMelody={recordFirstMelody}
                     onFinish={leave}
                 />
             )}
 
-            {!done && (
-                <div className="flex justify-between items-center pt-3">
-                    {step > 0 ? (
-                        <TertiaryButton onClick={back}>
-                            <span className="inline-flex items-center gap-1.5">
-                                <Icon name="arrow-left" size={13} />
-                                Back
-                            </span>
-                        </TertiaryButton>
-                    ) : (
-                        <span />
+            {!done && (showBack || showContinue) && (
+                <div className="flex flex-col gap-2 pt-3">
+                    <div className="flex justify-between items-center gap-4">
+                        {showBack ? (
+                            <TertiaryButton onClick={back}>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Icon name="arrow-left" size={13} />
+                                    Back
+                                </span>
+                            </TertiaryButton>
+                        ) : (
+                            <span />
+                        )}
+                        {showContinue && (
+                            <PrimaryButton icon="arrow-right" emphasis="pop" onClick={next} disabled={startCheckout.isPending}>
+                                {ctaLabel}
+                            </PrimaryButton>
+                        )}
+                    </div>
+                    {paidChoice && (
+                        <p className="m-0 self-end text-right font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            You&apos;ll confirm on the next page. Cancel any time.
+                        </p>
                     )}
-                    <PrimaryButton disabled={!canAdvance} icon="arrow-right" emphasis="pop" onClick={next}>
-                        {step === STEP_COUNT - 1 ? 'Finish' : 'Continue'}
-                    </PrimaryButton>
                 </div>
             )}
         </FunnelShell>
