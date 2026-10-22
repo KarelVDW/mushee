@@ -47,7 +47,7 @@ import {
     TOGGLE_TUPLET,
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
-import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
+import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls, type TransportControlsProps } from './EditorControls'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingsMenu } from './RecordingsMenu'
@@ -297,7 +297,7 @@ export default function ScoreEditorPage() {
         return { x: anchor.x * scale, y: anchor.y * scale }
     })()
 
-    const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
+    const { transportRef, playbackCursorRef, playbackState, metronome, toggleMetronome, stopAll, handlePlayToggle, instrumentsReady } =
         usePlayback({
             score,
             activeNote,
@@ -318,7 +318,7 @@ export default function ScoreEditorPage() {
         recordingState,
         recordingHalt,
         dismissRecordingHalt,
-        handleRecordToggle,
+        toggleRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
         dismissMicModeGuide,
@@ -333,9 +333,19 @@ export default function ScoreEditorPage() {
         saveToApi,
     })
 
-    // A take records into the selected note's measure, so Record needs one to start — the
-    // take itself clears the selection, which must not lock its own stop button.
-    const recordDisabled = recordingState === 'idle' && !activeNote
+    // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
+    // the two can't drift. A take records into the selected note's measure, so Record needs
+    // one to start — the take itself clears the selection, which must not lock its own stop.
+    const transport: TransportControlsProps = {
+        playbackState,
+        onPlayToggle: handlePlayToggle,
+        onStop: stopAll,
+        recordingState,
+        onRecordToggle: toggleRecording,
+        recordDisabled: recordingState === 'idle' && !activeNote,
+        metronome,
+        onMetronomeToggle: toggleMetronome,
+    }
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
@@ -424,18 +434,7 @@ export default function ScoreEditorPage() {
                         <Icon name="sliders-horizontal" size={11} />
                     </button>
                 </div>
-                {!isMobile && (
-                    <TransportControls
-                        playbackState={playbackState}
-                        onPlayToggle={handlePlayToggle}
-                        onStop={stopAll}
-                        recordingState={recordingState}
-                        onRecordToggle={() => void handleRecordToggle()}
-                        recordDisabled={recordDisabled}
-                        metronome={metronome}
-                        onMetronomeToggle={() => setMetronome((m) => !m)}
-                    />
-                )}
+                {!isMobile && <TransportControls {...transport} />}
                 <div className="flex items-center gap-2 shrink-0 sm:flex-1 justify-end">
                     {/* Undo/redo sit in the header, not the tool dock: the dock's tools edit the
                         selection, while history travel is a document-level (meta) operation —
@@ -597,7 +596,7 @@ export default function ScoreEditorPage() {
                               }
                             : undefined
                     }
-                    metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
+                    metronome={isMobile ? { active: metronome, onToggle: toggleMetronome } : undefined}
                     history={
                         isMobile
                             ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
@@ -606,16 +605,7 @@ export default function ScoreEditorPage() {
                     footer={
                         isMobile ? (
                             <MobileEditorActions
-                                transport={{
-                                    playbackState,
-                                    onPlayToggle: handlePlayToggle,
-                                    onStop: stopAll,
-                                    recordingState,
-                                    onRecordToggle: () => void handleRecordToggle(),
-                                    recordDisabled,
-                                    metronome,
-                                    onMetronomeToggle: () => setMetronome((m) => !m),
-                                }}
+                                transport={transport}
                                 onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
                                 onNext={() => manipulator.run(MOVE_NEXT)}
                                 onPitchUp={() => manipulator.run(RAISE_PITCH)}

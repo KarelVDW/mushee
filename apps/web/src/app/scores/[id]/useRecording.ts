@@ -241,6 +241,9 @@ export function useRecording({
         void handleRecordToggle()
     }, [handleRecordToggle, releaseMicWarmup])
 
+    /** The Record button: stop a running take, or start one at the selected note. */
+    const toggleRecording = useCallback(() => void handleRecordToggle(), [handleRecordToggle])
+
     /** Backing out (Escape / scrim / ✕): no take, and the guide returns next time. */
     const dismissMicModeGuide = useCallback(() => {
         releaseMicWarmup()
@@ -252,7 +255,7 @@ export function useRecording({
         recordingState,
         recordingHalt,
         dismissRecordingHalt,
-        handleRecordToggle,
+        toggleRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
         dismissMicModeGuide,
