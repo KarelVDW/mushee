@@ -87,7 +87,7 @@
         <script type="text/babel" src="Buttons.jsx"></script>
         <script type="text/babel" src="Inputs.jsx"></script>
         <script type="text/babel" src="Chrome.jsx"></script>
-        <script type="text/babel" src="CreateScoreDialog.jsx"></script>
+        <script type="text/babel" src="NewScoreDialog.jsx"></script>
         <script type="text/babel" src="Library.jsx"></script>
         <script type="text/babel" src="Editor.jsx"></script>
         <script type="text/babel" src="Auth.jsx"></script>
@@ -210,7 +210,7 @@
                             </>
                         )}
 
-                        {createOpen && <CreateScoreDialog onCancel={() => setCreateOpen(false)} onCreate={handleCreate} />}
+                        {createOpen && <NewScoreDialog onCancel={() => setCreateOpen(false)} onCreate={handleCreate} />}
 
                         <div className={screen === 'editor' ? 'kit-tabs raised' : 'kit-tabs'}>
                             {[

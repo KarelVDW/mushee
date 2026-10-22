@@ -75,7 +75,7 @@ function InstrumentPicker({ value, onChange }) {
     )
 }
 
-function CreateScoreDialog({ onCancel, onCreate }) {
+function NewScoreDialog({ onCancel, onCreate }) {
     const [title, setTitle] = useState('')
     const [instrument, setInstrument] = useState('Piano')
     const canSubmit = title.trim().length > 0
@@ -103,4 +103,4 @@ function CreateScoreDialog({ onCancel, onCreate }) {
     )
 }
 
-Object.assign(window, { CreateScoreDialog, InstrumentPicker })
+Object.assign(window, { NewScoreDialog, InstrumentPicker })
