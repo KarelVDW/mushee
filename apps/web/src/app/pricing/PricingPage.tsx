@@ -24,12 +24,12 @@ export function PricingPage() {
                 <div className="max-w-190 mx-auto text-center flex flex-col gap-4 items-center">
                     <Eyebrow className="text-primary">Pricing</Eyebrow>
                     <h1 className="font-display font-bold text-[40px] sm:text-[56px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
-                        Simple plans,
+                        Simple plans.
                         <br />
-                        <em className="font-serif font-normal">priced by the minute you record.</em>
+                        <em className="font-serif font-normal">Free to start.</em>
                     </h1>
                     <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                        Every plan has the whole editor. You only pay for how much you can record each day — and you can start for free.
+                        Every plan has the whole editor. Plans differ only in how much you can record each day.
                     </p>
                 </div>
             </header>

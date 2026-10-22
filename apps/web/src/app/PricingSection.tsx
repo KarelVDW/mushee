@@ -2,10 +2,24 @@
 
 import { useState } from 'react'
 
+import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Badge, Eyebrow, Icon } from '@/components/ui'
+import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { useSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { CHEAPEST_PACK, CREDIT_PACKS, PLAN_TIERS, planFeatures, type PlanTier, recordingBudgetLabel } from '@/lib/plans'
+import {
+    CHEAPEST_PACK,
+    CREDIT_PACKS,
+    isPlanTierId,
+    PLAN_TIERS,
+    planBudgetHint,
+    planCtaLabel,
+    planFeatures,
+    type PlanTier,
+    recordingBudgetLabel,
+    withPlan,
+} from '@/lib/plans'
+import { useBillingState } from '@/lib/queries'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 interface PricingProps {
@@ -20,6 +34,8 @@ interface PricingProps {
  * packs teaser — shared by the landing page (#pricing) and the /pricing route.
  * Renders straight from the static plan catalogue so both pages work without
  * the API; in-app surfaces use the DB-driven `usePlanCatalogue()` instead.
+ * A signed-in visitor's own plan is marked once their billing state resolves
+ * (see TierCards); until then, and for everyone else, the cards are static.
  */
 export function Pricing({ ctaLocation, intro = true }: PricingProps) {
     const currency = useDisplayCurrency()
@@ -30,24 +46,16 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
                     <div className="mb-12 text-center">
                         <Eyebrow className="text-primary">Pricing</Eyebrow>
                         <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
-                            Pay for recording time, nothing else.
+                            Free to start. Pay only for more recording time.
                         </h2>
                         <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                            Every plan gets the full editor, live audio-to-notation, and playback. The plans differ in how much you can
-                            record per day — and Sketch holds up to five scores.
+                            Every plan gets the full editor, recording that writes the notes for you, and playback. The plans differ in how
+                            much you can record each day — and Sketch holds up to five scores.
                         </p>
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
-                    {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
-                        <PricingCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} />
-                    ))}
-                </div>
-
-                {PLAN_TIERS.filter((tier) => tier.professional).map((tier) => (
-                    <ProfessionalCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} />
-                ))}
+                <TierCards currency={currency} ctaLocation={ctaLocation} />
 
                 <PacksTeaser currency={currency} />
 
@@ -75,25 +83,117 @@ export function BetaPricing() {
                     Free while the beta runs.
                 </h2>
                 <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
-                    Every beta account gets the same plan: the full editor, live audio-to-notation, playback, and 30 minutes of recording
-                    per day — no card, no charge. Paid plans arrive at launch.
+                    Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30
+                    minutes of recording a day — no card, no charge. Paid plans arrive at launch.
                 </p>
             </div>
         </section>
     )
 }
 
+interface TierCardsProps {
+    currency: Currency
+    ctaLocation: string
+}
+
+/**
+ * The tier ladder. Signed out it is the same for everyone; signed in, the visitor's billing
+ * state marks their own plan (see AccountTierCards). The marketing pages must work without
+ * the API, so the billing query only runs for a session, and any state short of a resolved
+ * plan (loading, an error, a tier off the ladder) keeps the static cards.
+ */
+function TierCards(props: TierCardsProps) {
+    const { data: session } = useSession()
+    return session?.user ? <AccountTierCards {...props} /> : <TierLadder {...props} currentTierId={null} />
+}
+
+function AccountTierCards(props: TierCardsProps) {
+    const { data: billing } = useBillingState()
+    const currentTierId = billing && isPlanTierId(billing.tierId) ? billing.tierId : null
+    return <TierLadder {...props} currentTierId={currentTierId} />
+}
+
+interface TierLadderProps extends TierCardsProps {
+    /** The signed-in visitor's own tier, once known; null renders the cards for a stranger. */
+    currentTierId: PlanTier['id'] | null
+}
+
+function TierLadder({ currency, ctaLocation, currentTierId }: TierLadderProps) {
+    return (
+        <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-100 md:max-w-none mx-auto w-full">
+                {PLAN_TIERS.filter((tier) => !tier.professional).map((tier) => (
+                    <PricingCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} currentTierId={currentTierId} />
+                ))}
+            </div>
+
+            {PLAN_TIERS.filter((tier) => tier.professional).map((tier) => (
+                <ProfessionalCard key={tier.id} tier={tier} currency={currency} ctaLocation={ctaLocation} currentTierId={currentTierId} />
+            ))}
+        </>
+    )
+}
+
+interface CardProps {
+    tier: PlanTier
+    currency: Currency
+    ctaLocation: string
+    currentTierId: PlanTier['id'] | null
+}
+
+/**
+ * A tier card's button. For a stranger: "Start free" / "Choose {plan}" into signup (or, for a
+ * signed-in visitor whose plan isn't known yet, the plan dialog). Once the visitor's plan is
+ * known: "Your plan" on their own card, to the plan tab, and "Switch to {plan}" on the others,
+ * to the plan tab's Change plan with that tier selected.
+ */
+function PlanCardCta({
+    tier,
+    ctaLocation,
+    currentTierId,
+    primary,
+    fullWidth = false,
+}: CardProps & { primary: boolean; fullWidth?: boolean }) {
+    if (currentTierId === null) {
+        return (
+            <GetStartedButton location={ctaLocation} plan={tier.id} variant={primary ? 'primary' : 'secondary'} fullWidth={fullWidth}>
+                {planCtaLabel(tier)}
+            </GetStartedButton>
+        )
+    }
+    if (tier.id === currentTierId) {
+        return (
+            <SecondaryButton href={settingsTabPath('plan')} fullWidth={fullWidth}>
+                Your plan
+            </SecondaryButton>
+        )
+    }
+    const href = withPlan(settingsTabPath('plan'), tier.id)
+    const label = `Switch to ${tier.name}`
+    return primary ? (
+        <PrimaryButton href={href} fullWidth={fullWidth}>
+            {label}
+        </PrimaryButton>
+    ) : (
+        <SecondaryButton href={href} fullWidth={fullWidth}>
+            {label}
+        </SecondaryButton>
+    )
+}
+
 /** The professional tier: present enough to anchor the ladder, slim enough
  *  not to compete with the consumer cards. */
-function ProfessionalCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency: Currency; ctaLocation: string }) {
+function ProfessionalCard(props: CardProps) {
+    const { tier, currency, currentTierId } = props
     return (
         <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
             <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
                 <Icon name={tier.icon} size={18} />
             </span>
             <div className="flex flex-col gap-0.5 flex-1 min-w-50">
-                <span className="font-headline font-semibold text-[16px] leading-[1.2] text-on-surface">
+                <span className="inline-flex flex-wrap items-center gap-2 font-headline font-semibold text-[16px] leading-[1.2] text-on-surface">
                     {tier.name} — {tier.tagline.toLowerCase()}
+                    {tier.id === currentTierId && <Badge tone="neutral">Your plan</Badge>}
                 </span>
                 <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                     {recordingBudgetLabel(tier.dailyRecordingSeconds)} · everything in Studio · direct support from the maker
@@ -107,7 +207,7 @@ function ProfessionalCard({ tier, currency, ctaLocation }: { tier: PlanTier; cur
                     / month · {formatMoney(tier.priceYearly, currency)}/yr
                 </span>
             </div>
-            <GetStartedButton location={ctaLocation} plan={tier.id} variant="secondary">{`Go ${tier.name}`}</GetStartedButton>
+            <PlanCardCta {...props} primary={false} />
         </div>
     )
 }
@@ -149,9 +249,13 @@ function PacksTeaser({ currency }: { currency: Currency }) {
     )
 }
 
-function PricingCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency: Currency; ctaLocation: string }) {
+function PricingCard(props: CardProps) {
+    const { tier, currency, currentTierId } = props
     const emphasis = tier.popular === true
-    const cta = tier.priceMonthly === 0 ? 'Start sketching' : `Go ${tier.name}`
+    const current = tier.id === currentTierId
+    const [budget, ...features] = planFeatures(tier)
+    const budgetHint = planBudgetHint(tier)
+    const quiet = emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'
     return (
         <div
             className={[
@@ -160,37 +264,54 @@ function PricingCard({ tier, currency, ctaLocation }: { tier: PlanTier; currency
                     ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)'
                     : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
             ].join(' ')}>
-            <div className="flex justify-between items-start">
-                <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
-                {emphasis && <Badge tone="secondary">Best value</Badge>}
+            <div className="flex justify-between items-start gap-3">
+                <div className="flex flex-col gap-1.5">
+                    <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
+                    <span className={`font-body font-normal text-[13px] leading-[1.3] ${quiet}`}>{tier.tagline}</span>
+                </div>
+                {/* The visitor's own plan wins the corner; "Best value" stays on the popular card otherwise. */}
+                {current ? <Badge tone="neutral">Your plan</Badge> : emphasis && <Badge tone="secondary">Best value</Badge>}
             </div>
             <div className="flex items-baseline gap-1.5">
                 <span className="font-display font-bold text-[40px] tracking-[-0.03em]">
                     {tier.priceMonthly === 0 ? 'Free' : formatMoney(tier.priceMonthly, currency)}
                 </span>
-                <span
-                    className={[
-                        'font-body font-medium text-[13px] leading-none',
-                        emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant',
-                    ].join(' ')}>
+                <span className={`font-body font-medium text-[13px] leading-none ${quiet}`}>
                     {tier.priceMonthly === 0 ? 'forever' : `/ month · ${formatMoney(tier.priceYearly, currency)}/yr`}
                 </span>
             </div>
             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
-                {planFeatures(tier).map((f) => (
-                    <li key={f} className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
-                        <span className={emphasis ? 'text-primary-container' : 'text-primary'}>
-                            <Icon name="check" size={16} />
-                        </span>
-                        <span>{f}</span>
-                    </li>
+                <FeatureLine emphasis={emphasis} hint={budgetHint}>
+                    {budget}
+                </FeatureLine>
+                {features.map((f) => (
+                    <FeatureLine key={f} emphasis={emphasis}>
+                        {f}
+                    </FeatureLine>
                 ))}
             </ul>
             <div className="mt-auto pt-2">
-                <GetStartedButton location={ctaLocation} plan={tier.id} variant={emphasis ? 'primary' : 'secondary'} fullWidth>
-                    {cta}
-                </GetStartedButton>
+                <PlanCardCta {...props} primary={emphasis} fullWidth />
             </div>
         </div>
+    )
+}
+
+/** One checked line of a tier card, with an optional 12px picture of what it means (the free budget's). */
+function FeatureLine({ emphasis, hint, children }: { emphasis: boolean; hint?: string | null; children: string }) {
+    return (
+        <li className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
+            <span className={emphasis ? 'text-primary-container' : 'text-primary'}>
+                <Icon name="check" size={16} />
+            </span>
+            <span className="flex flex-col gap-0.5">
+                <span>{children}</span>
+                {hint && (
+                    <span className={`text-[12px] leading-[1.4] ${emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'}`}>
+                        {hint}
+                    </span>
+                )}
+            </span>
+        </li>
     )
 }
