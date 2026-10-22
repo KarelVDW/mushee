@@ -174,17 +174,17 @@ export const ScoreView = memo(function ScoreView({
             const svg = svgRef.current
             const container = containerRef.current
             if (!svg || !container || !onAttributeClick) return
-            const layout = score.layout
-            const row = layout.rowFor(measure)
+            const current = score.layout
+            const row = current.rowFor(measure)
             const svgRect = svg.getBoundingClientRect()
             const containerRect = container.getBoundingClientRect()
             const svgX = row.getMeasureX(measure) + localX
-            const svgY = layout.getYForRow(row) + localY
+            const svgY = current.getYForRow(row) + localY
             onAttributeClick({
                 ...click,
                 measureIndex: score.getIndexForMeasure(measure),
-                x: svgRect.left + svgX * (svgRect.width / layout.scoreWidth) - containerRect.left,
-                y: svgRect.top + svgY * (svgRect.height / layout.totalHeight) - containerRect.top,
+                x: svgRect.left + svgX * (svgRect.width / current.scoreWidth) - containerRect.left,
+                y: svgRect.top + svgY * (svgRect.height / current.totalHeight) - containerRect.top,
             })
         },
         [score, onAttributeClick],
