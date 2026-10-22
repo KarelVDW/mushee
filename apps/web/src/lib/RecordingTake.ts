@@ -32,6 +32,8 @@ export class RecordingTake {
 
     /** Where the next measure the take needs goes. */
     private nextMeasureIndex: number
+    /** The measures the take added, by identity — they stay the take's even if bars move around them. */
+    private added: Measure[] = []
     /**
      * Octaves the take's transcribed notes are shifted by to sit on {@link clef}'s staff.
      * Decided once, from the first update that carries pitches, then locked for the take —
@@ -56,17 +58,21 @@ export class RecordingTake {
      * marking, so the count-off and click run at the bpm the cursor sat in.
      */
     begin(): void {
-        this.score.addMeasureAdoptingTempo(this.nextMeasureIndex++).complete()
+        const measure = this.score.addMeasureAdoptingTempo(this.nextMeasureIndex++)
+        measure.complete()
+        this.added.push(measure)
     }
 
     /** Add the next measure as the cursor is about to run off the last one. */
     appendMeasure(): void {
-        this.score.addMeasure(this.nextMeasureIndex++).complete()
+        const measure = this.score.addMeasure(this.nextMeasureIndex++)
+        measure.complete()
+        this.added.push(measure)
     }
 
-    /** The measures the take added, in order (empty before {@link begin}). */
+    /** The measures the take added that are still in the score, in order (empty before {@link begin}). */
     get measures(): Measure[] {
-        return this.score.measures.slice(this.startIndex, this.nextMeasureIndex)
+        return this.added.filter((measure) => this.score.measures.includes(measure))
     }
 
     /** Whether any of the take's measures holds a pitched note — false for a take that heard nothing. */
@@ -81,9 +87,11 @@ export class RecordingTake {
      * one empty bar added after it first (part of the take, so one Undo takes both away).
      */
     noteAfter(): Note | null {
-        if (this.nextMeasureIndex === this.startIndex) return null
-        if (!this.score.measures[this.nextMeasureIndex]) this.score.addMeasure(this.nextMeasureIndex).complete()
-        return this.score.measures[this.nextMeasureIndex]?.firstNote ?? null
+        const last = this.measures.at(-1)
+        if (!last) return null
+        const index = last.index + 1
+        if (!this.score.measures[index]) this.score.addMeasure(index).complete()
+        return this.score.measures[index]?.firstNote ?? null
     }
 
     /**
@@ -96,6 +104,7 @@ export class RecordingTake {
         const measures = this.measures
         if (measures.length === 0 || this.wrotePitchedNotes) return false
         this.score.removeMeasures(measures)
+        this.added = []
         this.nextMeasureIndex = this.startIndex
         return true
     }

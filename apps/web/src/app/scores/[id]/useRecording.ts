@@ -129,10 +129,11 @@ export function useRecording({
         (take: RecordingTake) => {
             const measures = take.measures
             const first = measures[0]
-            if (!first) return
+            const last = measures[measures.length - 1]
+            if (!first || !last) return
             const copy = new TakeSummaryCopy({
-                firstBar: take.startIndex + 1,
-                lastBar: take.startIndex + measures.length,
+                firstBar: first.index + 1,
+                lastBar: last.index + 1,
                 wrotePitchedNotes: take.wrotePitchedNotes,
                 touch,
                 iPhone: isIPhone(),
@@ -209,10 +210,13 @@ export function useRecording({
         // last transcription updates — history travel stays locked for all of it.
         const releaseHistory = manipulator.lockHistory()
 
-        /** The take never got going (or wrote nothing it was refused for): put score and selection back. */
+        /**
+         * The take never got going (or was cut off before it wrote a note): put the score and the
+         * selection back — the selection only while no newer take has started meanwhile.
+         */
         const abandon = () => {
             if (take.discardIfEmpty()) saveToApi({ score })
-            manipulator.select(before?.isAttached ? before : null, { quiet: true })
+            if (!transport.isRecording) manipulator.select(before?.isAttached ? before : null, { quiet: true })
         }
         /** The bar after the take, quietly selected — Record, the dock and the phone's nudges work at once. */
         const carryOn = () => {
@@ -223,17 +227,16 @@ export function useRecording({
         /** Once nothing more can reach the score: what follows this take. */
         const finish = () => {
             void refreshBilling()
-            if (end === 'refused') return abandon()
-            if (end === 'limit' && take.discardIfEmpty()) {
-                saveToApi({ score })
-                return manipulator.select(before?.isAttached ? before : null, { quiet: true })
-            }
-            carryOn()
             if (end === 'connection-lost') {
                 showToast('The connection dropped, so recording stopped. Your notes so far are saved — press record to carry on.')
-            } else if (end === 'stopped') {
-                summarize(take)
             }
+            // Refused, or cut off (limit, a dropped connection) before a single note: nothing to keep.
+            if (end === 'refused' || (end !== 'stopped' && !take.wrotePitchedNotes)) return abandon()
+            // Record was pressed again before this take finished draining: the new take owns the
+            // selection and the strip now, so this one only leaves its notes behind.
+            if (transport.isRecording) return
+            carryOn()
+            if (end === 'stopped') summarize(take)
         }
 
         manipulator.select(null)
@@ -344,22 +347,15 @@ export function useRecording({
             reportMicFailure(err)
             return
         }
-        // Stopped while the permission prompt was still open: the take never ran.
-        if (!transport.isRecording && !drained) {
+        // Stopped while the permission prompt was still open (it drained before it ever counted
+        // in): the take never ran.
+        if (drained || !transport.isRecording) {
             releaseHistory()
             setStatus(null)
             abandon()
             return
         }
         started = true
-        if (drained) {
-            // It drained before it ever counted in (stopped during the permission prompt).
-            if (end === 'stopped' && !take.wrotePitchedNotes) {
-                setStatus(null)
-                abandon()
-            } else finish()
-            return
-        }
 
         // Carry what the browser actually honored for the mic: the constraints
         // request raw audio, but devices that force voice processing back on are

@@ -181,6 +181,21 @@ describe('RecordingTake', () => {
             expect(take.discardIfEmpty()).toBe(false)
         })
 
+        it('keeps its own bars when bars are added before it, and carries on after them', () => {
+            const score = makeScore(2)
+            const displaced = score.measures[1]
+            const take = new RecordingTake(score, 1, clef('treble'))
+            take.begin()
+            const own = score.measures[1]
+            // Another take (Record pressed again during this one's drain) inserts at bar 1.
+            score.addMeasure(0).complete()
+            expect(take.measures).toEqual([own])
+            expect(take.noteAfter()).toBe(displaced.firstNote)
+            expect(take.discardIfEmpty()).toBe(true)
+            expect(score.measures.includes(own)).toBe(false)
+            expect(score.measures).toHaveLength(3)
+        })
+
         it('keeps a take that wrote notes', () => {
             const score = makeScore(1)
             const take = new RecordingTake(score, 0, clef('treble'))
