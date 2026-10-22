@@ -118,8 +118,10 @@ export const Score = memo(function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
-    // The hover-to-pitch preview: a detached clone of the selected note at the hovered line, under its clef.
-    const [ghost, setGhost] = useState<{ note: Note; clef: Clef } | null>(null)
+    // The hover-to-pitch preview: a detached clone of the selected note (`source`) at the hovered
+    // staff line, under its clef. `line` is that rendered line — the detached clone's own `line`
+    // ignores the clef — so a move along the same line can keep the ghost as it is.
+    const [ghost, setGhost] = useState<{ source: Note; line: number; note: Note; clef: Clef } | null>(null)
     const ghostNote = ghost?.note ?? null
     const ghostLayout = useMemo(() => ghost && NoteLayout.preview(ghost.note, ghost.clef), [ghost])
     const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
@@ -276,7 +278,7 @@ export const Score = memo(function Score({
             if (!hit) {
                 gestures.pointerMove(e, null)
                 if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhost(null)
+                if (ghost) setGhost(null)
                 return
             }
             const { note, localY } = hit
@@ -287,7 +289,7 @@ export const Score = memo(function Score({
             // press note leaves the ghost intact so a press + release in place still commits a
             // pitch change (below).
             if (gestures.pressed()) {
-                if (gestures.dragged() && ghostNote) setGhost(null)
+                if (gestures.dragged() && ghost) setGhost(null)
                 return
             }
 
@@ -295,12 +297,21 @@ export const Score = memo(function Score({
             // touch the ghost would flash under every tap.
             if (e.pointerType !== 'mouse') return
             const hoverLine = Staff.noteLineForY(localY)
+            // Only the selected note previews, and never at its own pitch (nothing would change). A
+            // rest has no pitch, so it still previews — and commits — a note at its rest line.
+            const noOp = !!note.pitch && hoverLine === note.line
+            if (note !== selectedNote || noOp) {
+                if (ghost) setGhost(null)
+                return
+            }
+            // Same note, same line: the ghost already shows it — no rebuild per pointer move.
+            if (ghost && ghost.source === note && ghost.line === hoverLine) return
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
-            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhost(null)
-            else setGhost({ note: note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }), clef: note.clef })
+            const pitch = note.keySignature.spell(note.clef.pitchForLine(hoverLine))
+            setGhost({ source: note, line: hoverLine, note: note.clone({ pitch }), clef: note.clef })
         },
-        [resolveHit, gestures, hoveredNote, ghostNote, selectedNote],
+        [resolveHit, gestures, hoveredNote, ghost, selectedNote],
     )
 
     const handlePointerDown = useCallback(
