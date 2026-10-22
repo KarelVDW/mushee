@@ -43,7 +43,7 @@ export function useStats() {
 export function useUsers(search: string, page: number) {
     return useQuery({
         queryKey: adminKeys.users(search, page),
-        queryFn: () => listUsers({ search: search || undefined, page }),
+        queryFn: () => listUsers(search, page),
         placeholderData: keepPreviousData,
     })
 }
@@ -115,7 +115,7 @@ export function useRevokeShare(scoreId: string) {
 
 /** Who a filter reaches — refetched as the filter changes, kept while the next answer loads. */
 export function useAudience(filters: AudienceFilter) {
-    return useQuery({ queryKey: adminKeys.audience(filters), queryFn: () => getAudience(filters), placeholderData: (previous) => previous })
+    return useQuery({ queryKey: adminKeys.audience(filters), queryFn: () => getAudience(filters), placeholderData: keepPreviousData })
 }
 
 export function useAnnouncements() {
@@ -151,7 +151,7 @@ export function useAnnouncementPreview(subject: string, body: string) {
         queryKey: adminKeys.announcementPreview(subject, body),
         queryFn: () => previewAnnouncement({ subject, body }),
         enabled: subject.trim().length > 0 && body.trim().length > 0,
-        placeholderData: (previous) => previous,
+        placeholderData: keepPreviousData,
         staleTime: Infinity,
     })
 }

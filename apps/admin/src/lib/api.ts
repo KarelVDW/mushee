@@ -41,9 +41,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
 
     // An expired console session answers 401 on any data route — go back to
-    // the login screen instead of surfacing errors on every widget.
+    // the login screen (returning here afterwards, as the page gate does)
+    // instead of surfacing errors on every widget.
     if (res.status === 401 && path.startsWith('/api/admin') && typeof window !== 'undefined') {
-        window.location.assign('/login')
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`)
     }
 
     if (!res.ok) {
@@ -51,7 +52,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
         try {
             const body: unknown = await res.clone().json()
             if (body && typeof body === 'object') {
-                const detail = (body as { message?: unknown; error?: unknown }).message ?? (body as { error?: unknown }).error
+                const { message: bodyMessage, error } = body as { message?: unknown; error?: unknown }
+                const detail = bodyMessage ?? error
                 if (typeof detail === 'string' && detail) message = detail
             }
         } catch {
@@ -120,13 +122,10 @@ export interface AdminUserList {
     pageSize: number
 }
 
-export function listUsers(params: { search?: string; page?: number; pageSize?: number }): Promise<AdminUserList> {
-    const query = new URLSearchParams()
-    if (params.search) query.set('search', params.search)
-    if (params.page) query.set('page', String(params.page))
-    if (params.pageSize) query.set('pageSize', String(params.pageSize))
-    const suffix = query.size ? `?${query.toString()}` : ''
-    return api(`/api/admin/users${suffix}`)
+export function listUsers(search: string, page: number): Promise<AdminUserList> {
+    const query = new URLSearchParams({ page: String(page) })
+    if (search) query.set('search', search)
+    return api(`/api/admin/users?${query.toString()}`)
 }
 
 export interface AdminCreditState {
@@ -317,11 +316,11 @@ export function listBetaSignups(): Promise<BetaSignup[]> {
 }
 
 export function approveBetaSignup(userId: string): Promise<BetaSignup[]> {
-    return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/approve`, { method: 'POST', body: '{}' })
+    return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/approve`, { method: 'POST' })
 }
 
 export function revokeBetaSignup(userId: string): Promise<BetaSignup[]> {
-    return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/revoke`, { method: 'POST', body: '{}' })
+    return api(`/api/admin/beta/signups/${encodeURIComponent(userId)}/revoke`, { method: 'POST' })
 }
 
 // ── Audience + announcements ────────────────────────────────────────────────

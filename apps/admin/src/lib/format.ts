@@ -16,7 +16,7 @@ export function formatDateTime(value: string | null | undefined): string {
     })
 }
 
-/** 5025 → "1h 24m"; 90 → "1m 30s"; 0 → "0m". */
+/** 5025 → "1h 23m"; 90 → "1m 30s"; 0 → "0m". */
 export function formatSeconds(total: number | null | undefined): string {
     if (total == null) return '—'
     if (total === 0) return '0m'
@@ -30,6 +30,11 @@ export function formatSeconds(total: number | null | undefined): string {
 
 export function formatCount(value: number): string {
     return value.toLocaleString('en-US')
+}
+
+/** The word to print after a count: plural(1, 'account') → "account"; plural(3, 'person is', 'people are') → "people are". */
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+    return count === 1 ? singular : pluralForm
 }
 
 /** "Jul 14" style tick label for the timeseries days. */

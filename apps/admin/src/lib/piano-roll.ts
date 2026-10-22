@@ -1,3 +1,5 @@
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+
 import type { ScoreDocument, ScoreEntry } from './api'
 
 /**
@@ -26,8 +28,6 @@ export interface PianoRoll {
     maxMidi: number
     partCount: number
 }
-
-const STEP_SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
 /** MusicXML default when no <attributes><divisions> was emitted yet. */
 const DEFAULT_DIVISIONS = 12
@@ -83,7 +83,9 @@ export function buildPianoRoll(document: ScoreDocument): PianoRoll {
 function midiOf(entry: ScoreEntry): number {
     const pitch = entry.pitch
     if (!pitch) return 0
-    return (pitch.octave + 1) * 12 + (STEP_SEMITONES[pitch.step] ?? 0) + (pitch.alter ?? 0)
+    // The wire type keeps `step` a plain string; Pitch.toMidi already tolerates an
+    // unknown step from unvalidated stored JSON.
+    return new Pitch({ name: pitch.step as PitchStep, alter: pitch.alter, octave: pitch.octave }).toMidi()
 }
 
 function isTieStop(entry: ScoreEntry): boolean {

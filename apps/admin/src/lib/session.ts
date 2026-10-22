@@ -26,7 +26,23 @@ export async function verifySessionToken(token: string | undefined, secret: stri
     if (!expiry || !mac) return false
     const expiresAt = Number(expiry)
     if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return false
-    return constantTimeEqual(await sign(expiry, secret), mac)
+    return secretMatches(mac, await sign(expiry, secret))
+}
+
+/** HMAC both sides with a throwaway key: equal-length digests make the final
+ *  comparison timing-independent of how much of the secret was guessed. */
+export async function secretMatches(provided: string, secret: string): Promise<boolean> {
+    const key = await crypto.subtle.generateKey({ name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const encoder = new TextEncoder()
+    const [macA, macB] = await Promise.all([
+        crypto.subtle.sign('HMAC', key, encoder.encode(provided)),
+        crypto.subtle.sign('HMAC', key, encoder.encode(secret)),
+    ])
+    const bytesA = new Uint8Array(macA)
+    const bytesB = new Uint8Array(macB)
+    let diff = 0
+    for (let i = 0; i < bytesA.length; i++) diff |= bytesA[i] ^ bytesB[i]
+    return diff === 0
 }
 
 async function sign(payload: string, secret: string): Promise<string> {
@@ -35,11 +51,4 @@ async function sign(payload: string, secret: string): Promise<string> {
     return Array.from(new Uint8Array(mac))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('')
-}
-
-function constantTimeEqual(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    let diff = 0
-    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-    return diff === 0
 }
