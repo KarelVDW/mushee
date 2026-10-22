@@ -51,7 +51,13 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
                 {/* The body scrolls when the content outgrows the panel (tall dialogs on phones) so the
                     header and footer stay put; -my-1/py-1 keeps focus rings at its edges unclipped. */}
                 <div className="px-7 -my-1 py-1 flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain">{children}</div>
-                {footer && <footer className="px-7 py-5 flex justify-end items-center gap-3">{footer}</footer>}
+                {/* One right-aligned row that wraps rather than spilling past the panel's edge; below
+                    `sm` the buttons stack full width, the primary (the last child) on top. */}
+                {footer && (
+                    <footer className="px-7 py-5 flex flex-wrap justify-end items-center gap-3 max-sm:flex-col-reverse max-sm:items-stretch">
+                        {footer}
+                    </footer>
+                )}
             </div>
         </Scrim>
     )
