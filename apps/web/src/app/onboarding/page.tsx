@@ -82,15 +82,17 @@ export default function OnboardingPage() {
         setNextPath(nextPathFrom(search))
     }, [])
 
-    // Each step (and the done screen) opens with focus on its heading, so a screen reader
-    // reads the new question first. Not on arrival: the code field takes focus then.
+    // Each step (and the done screen) opens at the top — the wordmark and 'Skip setup' in view,
+    // not wherever a long step's Continue left the page on a phone — with focus on its heading,
+    // so a screen reader reads the new question first. Not on arrival: the code field takes focus then.
     const titleRef = useRef<HTMLHeadingElement>(null)
     const screen = done ? 'done' : stepName
     const focusedScreen = useRef(screen)
     useEffect(() => {
         if (focusedScreen.current === screen) return
         focusedScreen.current = screen
-        titleRef.current?.focus()
+        window.scrollTo({ top: 0 })
+        titleRef.current?.focus({ preventScroll: true })
     }, [screen])
 
     const patchFor = (name: typeof stepName): OnboardingPatch | null => {

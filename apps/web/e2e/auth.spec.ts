@@ -388,6 +388,20 @@ test.describe('onboarding', () => {
         expect(await page.evaluate(() => window.localStorage.getItem('solkey:mic-mode-guide'))).not.toBeNull()
     })
 
+    test('each step opens at the top of the page, not where the last one was scrolled to', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 600 })
+        await page.goto('/onboarding')
+        await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeFocused()
+        await page.getByRole('button', { name: 'All instruments' }).click()
+        // Continue sits below the fold on a phone: reaching it scrolls the page down.
+        await page.getByRole('button', { name: 'Continue' }).scrollIntoViewIfNeeded()
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+        await page.getByRole('button', { name: 'Continue' }).click()
+
+        await expect(page.getByRole('heading', { name: 'Allow microphone access.' })).toBeFocused()
+        expect(await page.evaluate(() => window.scrollY)).toBe(0)
+    })
+
     test('a blocked mic leaves one next step: Continue, with Try again a quiet text button', async ({ page }) => {
         await page.addInitScript(() => {
             Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
