@@ -24,7 +24,7 @@ describe('withNext', () => {
         expect(withNext('/login', `${LIBRARY_PATH}?q=bach`)).toBe('/login?next=%2Fscores%3Fq%3Dbach')
     })
 
-    // The guard itself is fuzzed in @mushee/ui; this pins the wrappers' round trip.
+    // Hand-picked shapes; nextPath.fuzz.test.ts runs the wrappers over the guard's fuzz corpus.
     it('round-trips through nextPathFrom', () => {
         for (const next of ['/s/abc', '/scores?q=a b&c=1', '/x#f', '/a%2Fb', '/a%5Cb', '/@x:y', '/pricing?plan=studio+'])
             expect(nextPathFrom(withNext('/signup', next).replace('/signup', ''))).toBe(next)

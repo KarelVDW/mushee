@@ -9,6 +9,7 @@
         "./http": "./src/http.ts",
         "./nextPath": "./src/nextPath.ts",
         "./queryClient": "./src/queryClient.ts",
+        "./testing/nextPathFuzz": "./src/testing/nextPathFuzz.ts",
         "./theme.css": "./src/theme.css"
     },
     "scripts": {
