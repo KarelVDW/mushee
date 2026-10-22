@@ -1,17 +1,7 @@
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-    api,
-    createScore,
-    deleteScore,
-    getScore,
-    listScores,
-    loadScore,
-    patchOnboarding,
-    recordingSocketUrl,
-    updateScore,
-} from '@/lib/api'
+import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOnboarding, recordingSocketUrl, updateScore } from '@/lib/api'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 

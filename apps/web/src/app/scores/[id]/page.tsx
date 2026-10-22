@@ -630,11 +630,7 @@ export default function ScoreEditorPage() {
             {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
 
             {recordingHalt?.kind === 'limit' && (
-                <RecordingLimitDialog
-                    info={recordingHalt.info}
-                    onUpgrade={() => router.push('/settings')}
-                    onClose={dismissRecordingHalt}
-                />
+                <RecordingLimitDialog info={recordingHalt.info} onUpgrade={() => router.push('/settings')} onClose={dismissRecordingHalt} />
             )}
             {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
             {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}

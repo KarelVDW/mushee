@@ -1295,7 +1295,8 @@ describe('RecordingEngine', () => {
             const onDrained = vi.fn()
             const { options } = makeOptions({ onDrained })
             let resolvePrompt: (stream: unknown) => void = () => {}
-            getUserMedia.mockImplementationOnce(() => new Promise((resolve) => (resolvePrompt = resolve)))
+            const pendingGetUserMedia = vi.fn(() => new Promise((resolve) => (resolvePrompt = resolve)))
+            vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: pendingGetUserMedia } })
 
             const started = engine.start(options)
             engine.stop()

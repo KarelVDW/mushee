@@ -36,7 +36,10 @@ export function SharedScorePage({ token }: { token: string }) {
     const stored = shared.data?.document
     const partwise = stored && !('raw' in stored) ? stored : null
     const unreadable = stored !== undefined && partwise === null
-    const score = useMemo<Score | null>(() => (partwise ? new ScoreDeserializer(partwise).toScore(() => bump((n) => n + 1)) : null), [partwise])
+    const score = useMemo<Score | null>(
+        () => (partwise ? new ScoreDeserializer(partwise).toScore(() => bump((n) => n + 1)) : null),
+        [partwise],
+    )
 
     // One view event per resolved link — the growth loop's top-of-funnel number.
     useEffect(() => {
