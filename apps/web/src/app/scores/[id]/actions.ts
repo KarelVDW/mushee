@@ -21,6 +21,8 @@ interface ScoreActionBase {
     id: string
     /** Human-readable name (the shortcuts dialog's default row label). */
     label: string
+    /** The action moves a note's pitch — the edit the dock's first-selection hint teaches (ScoreManipulator.moveNoteHint). */
+    movesPitch?: boolean
 }
 
 /** An action on the active note alone. Returns the note to select next. */
@@ -64,7 +66,8 @@ export const MOVE_NEXT: ScoreAction = {
 
 export const RAISE_PITCH: ScoreAction = {
     id: 'raise-pitch',
-    label: 'Raise pitch',
+    label: 'Higher',
+    movesPitch: true,
     executeBulk: (score, notes) =>
         score.replace(
             notes,
@@ -74,7 +77,8 @@ export const RAISE_PITCH: ScoreAction = {
 
 export const LOWER_PITCH: ScoreAction = {
     id: 'lower-pitch',
-    label: 'Lower pitch',
+    label: 'Lower',
+    movesPitch: true,
     executeBulk: (score, notes) =>
         score.replace(
             notes,
@@ -114,6 +118,7 @@ export const REMOVE_NOTE: ScoreAction = {
 export const CHANGE_PITCH: ScoreAction<Pitch> = {
     id: 'change-pitch',
     label: 'Change pitch',
+    movesPitch: true,
     execute: (score, note, pitch) => {
         const [newNote] = score.replace([note], [note.clone({ pitch })])
         return newNote
@@ -141,7 +146,7 @@ export const SET_ACCIDENTAL: ScoreAction<Accidental | undefined> = {
  */
 export const MINIMIZE_ACCIDENTALS: ScoreAction<PitchScope> = {
     id: 'minimize-accidentals',
-    label: 'Minimize accidentals',
+    label: 'Simplify sharps and flats',
     executeBulk: (score, notes, scope) => {
         if (scope === 'selection') return score.minimizeAccidentals(notes)
         const all = score.measures.flatMap((measure) => measure.notes)
@@ -162,19 +167,19 @@ export const SET_DURATION: ScoreAction<DurationType> = {
 
 export const TOGGLE_DOT: ScoreAction = {
     id: 'toggle-dot',
-    label: 'Toggle dotted',
+    label: 'Dotted on/off',
     execute: (score, note) => score.setDuration(note, { dots: note.duration.dots > 0 ? 0 : 1 }) ?? note,
 }
 
 export const TOGGLE_TUPLET: ScoreAction = {
     id: 'toggle-tuplet',
-    label: 'Toggle triplet',
+    label: 'Triplet on/off',
     execute: (score, note) => score.toggleTuplet(note) ?? note,
 }
 
 export const TOGGLE_TIE: ScoreAction = {
     id: 'toggle-tie',
-    label: 'Toggle tie',
+    label: 'Tie on/off',
     // Tying on is offered only where a tie can bind (Score.canTieForward) — a tie into a rest or
     // another pitch would be a dangling mark. Untying is always allowed.
     executeBulk: (score, notes) =>
@@ -190,7 +195,7 @@ export const TOGGLE_TIE: ScoreAction = {
 /** A rest becomes a note on the middle line of the clef in effect there; a note becomes a rest. */
 export const TOGGLE_REST: ScoreAction = {
     id: 'toggle-rest',
-    label: 'Toggle rest',
+    label: 'Rest on/off',
     executeBulk: (score, notes) =>
         score.replace(
             notes,

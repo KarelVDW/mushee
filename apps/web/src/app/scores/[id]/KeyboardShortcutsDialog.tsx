@@ -65,7 +65,7 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
     return (
         <DialogPanel
             title="Keyboard shortcuts"
-            subtitle="Click a shortcut to record a new one. Keys follow your keyboard layout."
+            subtitle="Click a shortcut to change it. Keys follow your keyboard layout."
             onClose={onClose}
             width={620}
             footer={
@@ -130,7 +130,15 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
         return (
             <div className="flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
                 <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
-                {shortcut && <ShortcutKeys shortcut={shortcut} layout={null} isMac={keybindings.isMac} />}
+                <span className="inline-flex items-center gap-1.5">
+                    {shortcut && <ShortcutKeys shortcut={shortcut} layout={null} isMac={keybindings.isMac} />}
+                    {command.alternateKey && (
+                        <>
+                            <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">or</span>
+                            <Keycap>{command.alternateKey.label}</Keycap>
+                        </>
+                    )}
+                </span>
             </div>
         )
     }
@@ -163,7 +171,7 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
                     className="bg-transparent border-0 p-0 cursor-pointer">
                     {editing ? (
                         <span className="inline-flex items-center font-label font-semibold text-[11px] leading-none uppercase tracking-[0.04em] text-on-surface bg-primary-container/40 rounded-sm px-2 py-1.5 animate-pulse">
-                            Press a key…
+                            Press the new keys…
                         </span>
                     ) : shortcut ? (
                         <ShortcutKeys shortcut={shortcut} layout={layout} isMac={keybindings.isMac} />
@@ -188,11 +196,17 @@ function ShortcutKeys({ shortcut, layout, isMac }: { shortcut: Shortcut; layout:
                             +
                         </span>
                     )}
-                    <kbd className="inline-flex items-center justify-center font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1.5 min-w-6">
-                        {part}
-                    </kbd>
+                    <Keycap>{part}</Keycap>
                 </Fragment>
             ))}
         </span>
+    )
+}
+
+function Keycap({ children }: { children: string }) {
+    return (
+        <kbd className="inline-flex items-center justify-center font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1.5 min-w-6">
+            {children}
+        </kbd>
     )
 }

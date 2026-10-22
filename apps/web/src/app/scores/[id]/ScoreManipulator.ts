@@ -1,4 +1,4 @@
-import type { ClefType, Instrument, Interval, Measure, Note, Score } from '@mushee/notation/model'
+import type { Accidental, ClefType, DurationType, Instrument, Interval, KeySignature, Measure, Note, Score } from '@mushee/notation/model'
 import { TimeSignature } from '@mushee/notation/model'
 
 import type { PitchScope } from '@/components/editor/pitchScope'
@@ -7,6 +7,22 @@ import { Keybindings } from '@/lib/Keybindings'
 import { type ActionArgs, MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type SelectionAddress } from './ManipulationHistoryManager'
+import { MOVE_NOTE_HINT_KEY, OneTimeHint } from './OneTimeHint'
+
+/** A spot in the score: a measure and a beat offset inside it. */
+export interface ScorePosition {
+    measureIndex: number
+    beat: number
+}
+
+/** The score-level settings in effect at one position (see {@link ScoreManipulator.settings}). */
+export interface ScoreSettings {
+    clef: ClefType
+    key: KeySignature
+    timeSignature: TimeSignature
+    /** Quarter-note bpm, as the model keeps it. */
+    bpm: number
+}
 
 /** Guard so a malformed anchor/focus pair can never spin the range walk forever. */
 const MAX_RANGE = 100_000
@@ -53,9 +69,15 @@ export class ScoreManipulator {
     private readonly history = new ManipulationHistoryManager()
     /** Outstanding {@link lockHistory} holds; history travel refuses while any is held. */
     private lockCount = 0
+    /** The measure the selection was in when it was last cleared (a take starting), for {@link settingsPosition}. */
+    private clearedFromMeasure: number | null = null
 
-    /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
-    constructor(readonly keybindings: Keybindings<EditorCommand> = new Keybindings(EDITOR_COMMANDS)) {}
+    constructor(
+        /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
+        readonly keybindings: Keybindings<EditorCommand> = new Keybindings(EDITOR_COMMANDS),
+        /** The dock's first-selection hint; the first pitch edit marks it seen. */
+        readonly moveNoteHint: OneTimeHint = new OneTimeHint(MOVE_NOTE_HINT_KEY),
+    ) {}
 
     // --- External store (for useSyncExternalStore) ---
 
@@ -102,10 +124,107 @@ export class ScoreManipulator {
      * Where the active note sits — its measure index and beat offset — for the measure-context
      * setters below, so a dock clef/key/tempo change lands mid-measure at the active note.
      */
-    get activePosition(): { measureIndex: number; beat: number } | null {
+    get activePosition(): ScorePosition | null {
         const note = this._selectedNote
         const at = this.addressOf(note)
         return note && at ? { measureIndex: at.measureIndex, beat: note.measure.beatOffsetOf(note) } : null
+    }
+
+    /**
+     * Where the dock's clef / key / time / tempo chips read their values and apply a change: the
+     * active note's position. With nothing selected it is the opening of bar 1 — the score's
+     * real opening values, never a made-up default — except while a recording holds the history
+     * (a take clears the selection as it starts): then it is the opening of the bar the take
+     * started in. Null only without a score.
+     */
+    get settingsPosition(): ScorePosition | null {
+        const active = this.activePosition
+        if (active) return active
+        const score = this._score
+        if (!score || score.measures.length === 0) return null
+        const takeStart = this.lockCount > 0 ? this.clearedFromMeasure : null
+        return { measureIndex: takeStart === null ? 0 : Math.min(takeStart, score.measures.length - 1), beat: 0 }
+    }
+
+    /** The clef, key, meter and tempo in effect at {@link settingsPosition} — what the dock's score chips show. */
+    get settings(): ScoreSettings | null {
+        const score = this._score
+        const at = this.settingsPosition
+        const measure = at && score?.measures[at.measureIndex]
+        if (!score || !at || !measure) return null
+        return {
+            clef: measure.clefAtOrBefore(at.beat).type,
+            key: measure.keyAtOrBefore(at.beat),
+            timeSignature: measure.timeSignature,
+            bpm: score.bpmAtBeat(measure, at.beat),
+        }
+    }
+
+    /** Change the clef at {@link settingsPosition} (the dock's clef chip). */
+    changeClef(type: ClefType): void {
+        const at = this.settingsPosition
+        if (at) this.setClefAt(at.measureIndex, type, at.beat)
+    }
+
+    /** Change the key signature at {@link settingsPosition} (the dock's key chip). */
+    changeKey(fifths: number): void {
+        const at = this.settingsPosition
+        if (at) this.setKeyAt(at.measureIndex, fifths, at.beat)
+    }
+
+    /** Change the meter of the measure at {@link settingsPosition} (the dock's time chip). */
+    changeTimeSignature(beatAmount: number, beatType: number): void {
+        const at = this.settingsPosition
+        if (at) this.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
+    }
+
+    /** Set the tempo at {@link settingsPosition}, in quarter-note bpm (the dock's tempo chip). */
+    changeTempo(bpm: number): void {
+        const at = this.settingsPosition
+        if (at) this.setTempoAt(at.measureIndex, at.beat, bpm)
+    }
+
+    /** Whether a run of several notes is selected (not just the one note the cursor is on). */
+    get isRangeSelected(): boolean {
+        return this._selectedNotes.length > 1
+    }
+
+    /**
+     * What every selected note has in common, read through `read` — or null when the notes
+     * differ (a mixed run) or nothing is selected. `undefined` is a real shared value (no
+     * accidental), distinct from null.
+     */
+    private sharedBySelection<T>(read: (note: Note) => T): T | null {
+        const [first, ...rest] = this._selectedNotes
+        if (!first) return null
+        const value = read(first)
+        return rest.every((note) => read(note) === value) ? value : null
+    }
+
+    /** Whether Tie would do anything: TOGGLE_TIE unties a tied note, and ties one only where the tie can bind. */
+    get canTie(): boolean {
+        const score = this._score
+        return !!score && this._selectedNotes.some((note) => note.tiesForward || score.canTieForward(note))
+    }
+
+    /** The note length every selected note shares, or null for a mixed run (no length option pressed). */
+    get selectionDuration(): DurationType | null {
+        return this.sharedBySelection((note) => note.duration.type)
+    }
+
+    /** Whether every selected note is dotted. */
+    get selectionDotted(): boolean {
+        return this.sharedBySelection((note) => note.duration.dots > 0) === true
+    }
+
+    /** Whether every selected note sits in a triplet. */
+    get selectionInTuplet(): boolean {
+        return this.sharedBySelection((note) => note.inTuplet) === true
+    }
+
+    /** The accidental every selected note shares (`undefined` = none), or null for a mixed run. */
+    get selectionAccidental(): Accidental | undefined | null {
+        return this.sharedBySelection((note) => note.pitch?.accidental)
     }
 
     /** Bind a freshly loaded score and its (debounced) autosave, selecting the first note. */
@@ -121,6 +240,9 @@ export class ScoreManipulator {
 
     /** Collapse the selection onto a single note (or clear it). The note becomes anchor + focus. */
     select(note: Note | null): void {
+        // Clearing remembers where the selection was — a take clears it as it starts, and the
+        // dock keeps showing that bar's settings (see settingsPosition).
+        this.clearedFromMeasure = note ? null : (this.addressOf(this._selectedNote)?.measureIndex ?? this.clearedFromMeasure)
         this.setSingle(note)
         this.emit()
     }
@@ -204,6 +326,8 @@ export class ScoreManipulator {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected) return
+        // The first pitch edit retires the dock's how-to-move-a-note hint (before the commit's emit re-renders).
+        if (action.movesPitch) this.moveNoteHint.markSeen()
         this.commit(() => this.execute(action, this._selectedNotes, selected, ...args))
     }
 
@@ -283,9 +407,26 @@ export class ScoreManipulator {
         if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
             return
         }
-        const command = this.keybindings.resolve(e)
+        // A key no shortcut can be recorded on (the Menu key) reaches its command by name.
+        const command = this.keybindings.resolve(e) ?? this.keybindings.commands.find((c) => c.alternateKey?.key === e.key) ?? null
         if (!command || command.run(this) === false) return
         e.preventDefault()
+    }
+
+    /**
+     * Opens the selection actions (copy / paste / delete) over the selection — registered by
+     * the page, which owns the popover, like {@link onTransposeRequest}.
+     */
+    onSelectionMenuRequest?: () => void
+
+    /**
+     * Ask for the selection actions from the keyboard (Shift+F10, the Menu key). Declined —
+     * left to the browser — with nothing selected or no editor listening.
+     */
+    requestSelectionMenu(): boolean {
+        if (!this._selectedNote || !this.onSelectionMenuRequest) return false
+        this.onSelectionMenuRequest()
+        return true
     }
 
     // --- Clipboard ---
