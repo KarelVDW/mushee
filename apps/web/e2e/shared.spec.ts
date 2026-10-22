@@ -10,8 +10,9 @@ test('a valid share link renders the score read-only with its title, export and 
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(MOCK_TITLE)
-    // The tab is named after the score once the token resolves (the server-rendered title is generic
-    // in this hermetic run: the mock API only exists inside the browser).
+    // The tab is named after the score once the token resolves, and that is its final title: the
+    // server's is generic in this hermetic run (the mock API only exists inside the browser), and it
+    // may stream in — into the body, rewritten again by hydration — after the score's name is set.
     await expect(page).toHaveTitle(`${MOCK_TITLE} — Solkey`)
     const score = page.getByTestId('shared-score')
     await expect(score.locator('svg').first()).toBeVisible()

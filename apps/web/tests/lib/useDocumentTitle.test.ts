@@ -63,6 +63,31 @@ describe('useDocumentTitle', () => {
         expect(document.title).toBe('Morning song — Solkey')
     })
 
+    it('holds when the metadata title sits in the body and hydration puts the server’s text back', async () => {
+        // Next can stream the metadata into the body, and only that title is there.
+        document.head.querySelectorAll('title').forEach((element) => element.remove())
+        const streamed = document.createElement('title')
+        streamed.textContent = 'Shared score — Solkey'
+        document.body.append(streamed)
+        act(() => root.render(createElement(Titled, { title: 'Morning song — Solkey' })))
+        expect(document.title).toBe('Morning song — Solkey')
+        // Hydration rewrites its text node in place…
+        const text = streamed.firstChild
+        if (text) text.nodeValue = 'Shared score — Solkey'
+        await settle()
+        expect(document.title).toBe('Morning song — Solkey')
+        // …or a client render swaps a fresh one in further down the body.
+        streamed.remove()
+        const wrapper = document.createElement('div')
+        const fresh = document.createElement('title')
+        fresh.textContent = 'Shared score — Solkey'
+        wrapper.append(fresh)
+        document.body.append(wrapper)
+        await settle()
+        expect(document.title).toBe('Morning song — Solkey')
+        wrapper.remove()
+    })
+
     it('puts the tab back on the way out while it still reads this title', () => {
         act(() => root.render(createElement(Titled, { title: 'Morning song — Solkey' })))
         act(() => root.unmount())

@@ -18,6 +18,7 @@ import { useSession } from '@/lib/auth-client'
 import { LIBRARY_PATH, withNext } from '@/lib/nextPath'
 import { BETA_MODE, withPlan } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { useTransport } from '@/lib/useTransport'
 
 /**
@@ -51,11 +52,10 @@ export function SharedScorePage({ token }: { token: string }) {
         if (shared.data) track('shared_score_viewed', { authed })
     }, [shared.data, authed])
 
-    // The server may not have reached the API when it rendered the <title> (generateMetadata
-    // falls back to a generic one); once the token resolves here, the tab carries the score's name.
-    useEffect(() => {
-        if (shared.data?.title) document.title = `${shared.data.title} — Solkey`
-    }, [shared.data?.title])
+    // The server names the tab when it reaches the API (generateMetadata); when it couldn't, its
+    // generic title is streamed in — possibly after the token resolved here. The hook keeps the
+    // score's name on top either way, so the tab's final title is the score's.
+    useDocumentTitle(shared.data?.title ? `${shared.data.title} — Solkey` : null)
 
     // A signed-in visitor can take the shared score home as an editable copy of their own.
     // A copy counts against the plan's score cap like any create, so a refusal gets the
