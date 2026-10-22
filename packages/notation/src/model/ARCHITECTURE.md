@@ -183,6 +183,14 @@ into measures, and there is no re-entrancy to guard against.
   explicit vs inherited leading item); its writes replace the array, never mutate it.
 - Keep dead members out: if a method has no production caller, delete it (tests alone don't
   justify keeping API surface).
+- Display names are user copy, and copy changes: `Instrument.displayName`,
+  `KeySignature.displayName` / `readingsOf` and `TimeSignature.plainName` may be reworded in any
+  copy pass, so nothing may use them as identity. An instrument's identity is its `id` (never
+  changes; the API keys transcription profiles on it), a key's is (fifths, mode), a meter's is
+  (beatAmount, beatType). Saved MusicXML and onboarding answers carry the instrument's display
+  name, so loading resolves it through `Instrument.findByDisplayName`, which also matches
+  `legacyNames`: renaming an instrument means moving its old name into `legacyNames`, or saved
+  scores reload as another instrument.
 - Importing the model from an app: top-level classes, constants and types come from the
   `@mushee/notation/model` barrel; deep paths are only for `io/`, `util/` and `layout/` modules.
   Two deliberate exceptions: `packages/playback` deep-imports the classes it needs so it never
