@@ -10,7 +10,7 @@ import type { ScoreManipulator } from './ScoreManipulator'
  * Undo / redo. History travel is a document-level (meta) operation, not a selection edit, so
  * on desktop the pair sits in the header with the other score-level chrome, each naming its
  * ⌘Z / ⇧⌘Z in a tooltip. Phones have no ⌘Z and no header room (`compact`): Undo leads the
- * dock's tool row as a 40px round button, and Redo lives in the More sheet.
+ * dock's tool row as a 40px round button, and Redo leads the More sheet's "Whole score" rows.
  */
 export function HistoryTools({ manipulator, compact = false }: { manipulator: ScoreManipulator; compact?: boolean }) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)

@@ -326,6 +326,21 @@ test('with a note selected the More sheet leaves its row in view, even from the 
     expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
 })
 
+test('one Undo too many is taken back from the top of the More sheet’s Whole score rows', async ({ page }) => {
+    await page.getByRole('button', { name: 'Higher', exact: true }).tap()
+    await page.getByRole('button', { name: 'Undo' }).tap()
+    const sheet = await openMore(page)
+    const redo = sheet.getByRole('button', { name: 'Redo' })
+    // In reach without scrolling, first under "Whole score".
+    await expect(redo).toBeInViewport({ ratio: 1 })
+    const clef = await sheet.getByRole('button', { name: /^Clef:/ }).boundingBox()
+    expect((await redo.boundingBox())?.y ?? Infinity).toBeLessThan(clef?.y ?? 0)
+    const patch = waitForAutosave(page)
+    await redo.tap()
+    await patch
+    await expect(sheet).toHaveCount(0)
+})
+
 test('the More sheet toggles note tools and the metronome', async ({ page }) => {
     const sheet = await openMore(page)
     const rest = sheet.getByRole('button', { name: 'Rest', exact: true })

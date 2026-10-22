@@ -199,8 +199,8 @@ interface MoreToolsSheetProps {
  * The phone dock's "More" tile and the sheet it opens: everything that isn't Undo or a note
  * length, each with a text label and its current value. "This note" holds the note tools
  * (Dotted, Triplet, Rest, Tie and Sharp or flat, each captioned in plain words); "Whole score"
- * the clef / key / time / tempo pickers, Transpose, Simplify sharps and flats, the metronome
- * and Redo. A picker swaps in for the menu with a Back link — sheets never stack — and a pick
+ * Redo first (in reach without scrolling), then the clef / key / time / tempo pickers,
+ * Transpose, Simplify sharps and flats and the metronome. A picker swaps in for the menu with a Back link — sheets never stack — and a pick
  * shows its fill for a beat before the sheet closes. With a note selected the menu stops about
  * one staff system short of the header (scrolling inside), so the note being fixed stays in
  * view while its tiles keep the sheet open.
@@ -470,6 +470,20 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
             <section aria-label="Whole score" className="flex flex-col gap-1">
                 <Eyebrow>Whole score</Eyebrow>
                 <div className="flex flex-col -mx-2">
+                    {/* First, in reach without scrolling: one Undo too many after fixing notes is
+                        taken back from here (Undo itself leads the tool row). */}
+                    <SheetRow
+                        label="Redo"
+                        ariaLabel="Redo"
+                        icon="redo"
+                        hint={manipulator.canRedo ? 'Bring back what Undo took away.' : 'Nothing to redo yet.'}
+                        disabled={!manipulator.canRedo}
+                        action
+                        onClick={() => {
+                            manipulator.redo()
+                            onClose()
+                        }}
+                    />
                     <SheetRow
                         label="Clef"
                         ariaLabel={words.clefLabel}
@@ -533,17 +547,6 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                             hint="A steady click while playing and recording."
                         />
                     </div>
-                    <SheetRow
-                        label="Redo"
-                        ariaLabel="Redo"
-                        icon="redo"
-                        disabled={!manipulator.canRedo}
-                        action
-                        onClick={() => {
-                            manipulator.redo()
-                            onClose()
-                        }}
-                    />
                 </div>
             </section>
         </Popover>
