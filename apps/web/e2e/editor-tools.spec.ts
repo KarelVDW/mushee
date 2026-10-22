@@ -433,9 +433,28 @@ test('the in-score plus and minus targets add and remove a measure', async ({ pa
     }).toPass({ timeout: 5000 })
 })
 
-test('transport: stop is disabled at rest and play is disabled while nothing can sound', async ({ page }) => {
-    // Idle: nothing is playing or recording, so Stop has nothing to stop.
-    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled()
-    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeEnabled()
+test('transport: Stop is hidden at rest and shows while something plays; Record is the largest', async ({ page }) => {
+    // Idle: nothing is playing or recording, so there is no Stop to press (its slot stays, so nothing shifts).
+    const stop = page.getByRole('button', { name: 'Stop', exact: true })
+    await expect(stop).toBeHidden()
+    const play = page.getByRole('button', { name: 'Play' })
+    await expect(play).toBeEnabled()
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await expect(record).toBeEnabled()
+    expect((await record.boundingBox())?.width ?? 0).toBeGreaterThan((await play.boundingBox())?.width ?? Infinity)
+
+    await play.click()
+    await expect(stop).toBeVisible()
+    await stop.click()
+    await expect(stop).toBeHidden()
+})
+
+test('transport: the metronome has its own glyph and a pressed state, and says what it does', async ({ page }) => {
+    const metronome = page.getByRole('button', { name: 'Metronome' })
+    await expect(metronome).toHaveAttribute('aria-pressed', 'false')
+    // Hovering names it and says it only governs playback (a take always counts in and clicks).
+    await metronome.hover()
+    await expect(page.getByText('clicks during playback').filter({ visible: true })).toBeVisible()
+    await metronome.click()
+    await expect(metronome).toHaveAttribute('aria-pressed', 'true')
 })

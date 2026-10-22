@@ -24,6 +24,17 @@ export interface ScoreSettings {
     bpm: number
 }
 
+/**
+ * What the keyboard asks of the transport (see {@link ScoreManipulator.requestTransport}):
+ * play / pause — or stop a running take — (Space), play from the top (⇧Space), start or stop
+ * a take (⇧R), and stop a running take only (Escape).
+ */
+export type TransportRequest = 'toggle' | 'from-start' | 'record' | 'stop-recording'
+
+/** Controls a key press activates natively — Space presses a focused button, toggles a switch. */
+const NATIVELY_ACTIVATED =
+    'button, a[href], select, summary, [role="button"], [role="switch"], [role="option"], [role="checkbox"], [role="tab"]'
+
 /** Guard so a malformed anchor/focus pair can never spin the range walk forever. */
 const MAX_RANGE = 100_000
 
@@ -71,6 +82,10 @@ export class ScoreManipulator {
     private lockCount = 0
     /** The measure the selection was in when it was last cleared (a take starting), for {@link settingsPosition}. */
     private clearedFromMeasure: number | null = null
+    /** Whether the current selection was made quietly (see {@link select}). */
+    private _quietSelection = false
+    /** Bumped by every committed edit that changed the score and every undo / redo (see {@link editCount}). */
+    private _editCount = 0
 
     constructor(
         /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
@@ -252,13 +267,24 @@ export class ScoreManipulator {
 
     // --- Selection ---
 
-    /** Collapse the selection onto a single note (or clear it). The note becomes anchor + focus. */
-    select(note: Note | null): void {
+    /**
+     * Collapse the selection onto a single note (or clear it). The note becomes anchor + focus.
+     * A `quiet` selection is one the editor made for the user rather than one they asked for —
+     * the bar after a finished take — so it neither previews the note's pitch nor stops what is
+     * playing (see {@link selectionIsQuiet}).
+     */
+    select(note: Note | null, { quiet = false }: { quiet?: boolean } = {}): void {
         // Clearing remembers where the selection was — a take clears it as it starts, and the
         // dock keeps showing that bar's settings (see settingsPosition).
         this.clearedFromMeasure = note ? null : (this.addressOf(this._selectedNote)?.measureIndex ?? this.clearedFromMeasure)
         this.setSingle(note)
+        this._quietSelection = quiet && note !== null
         this.emit()
+    }
+
+    /** Whether the current selection was made by a quiet {@link select}: no preview, no stopping playback. */
+    get selectionIsQuiet(): boolean {
+        return this._quietSelection
     }
 
     /** Extend the selection so it spans from the current anchor to `focus` (drag / shift-click). */
@@ -294,12 +320,14 @@ export class ScoreManipulator {
     }
 
     private setSingle(note: Note | null): void {
+        this._quietSelection = false
         this._anchorNote = note
         this._selectedNote = note
         this._selectedNotes = note ? [note] : []
     }
 
     private setRange(anchor: Note, focus: Note): void {
+        this._quietSelection = false
         this._anchorNote = anchor
         this._selectedNote = focus
         this._selectedNotes = this.notesBetween(anchor, focus)
@@ -399,9 +427,21 @@ export class ScoreManipulator {
     private commit(mutate: () => void): void {
         const score = this._score
         if (!score) return
+        const version = score.version
         this.manipulate(mutate)
+        // Navigation runs through here too, but changes nothing: only a real change counts.
+        if (score.version !== version) this._editCount++
         this.save(score)
         this.emit()
+    }
+
+    /**
+     * How many edits (and undo / redo steps) this editor has run. A surface tied to "the latest
+     * step" — the after-take summary, whose Undo must only ever take the take back — compares it
+     * to tell when another step has come along.
+     */
+    get editCount(): number {
+        return this._editCount
     }
 
     /** Run one mutation as an undoable step (no-ops — navigation actions — register nothing). */
@@ -421,10 +461,44 @@ export class ScoreManipulator {
         if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
             return
         }
+        // A key a fixed command claims first (Escape stopping a take) gets its say before the
+        // key's own binding; declined, the key carries on to that binding.
+        const unmodified = !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+        const first = unmodified ? this.keybindings.commands.find((c) => c.preemptKey?.key === e.key) : undefined
+        if (first && first.run(this) !== false) {
+            e.preventDefault()
+            return
+        }
         // A key no shortcut can be recorded on (the Menu key) reaches its command by name.
         const command = this.keybindings.resolve(e) ?? this.keybindings.commands.find((c) => c.alternateKey?.key === e.key) ?? null
-        if (!command || command.run(this) === false) return
+        if (!command) return
+        // Space on a focused button presses the button, as the browser intends.
+        if (command.yieldsToControls && target instanceof Element && target.closest(NATIVELY_ACTIVATED)) return
+        if (command.run(this) === false) return
         e.preventDefault()
+    }
+
+    /**
+     * The transport, reached from the keyboard — registered by the page, which owns playback
+     * and recording, like {@link onTransposeRequest}. Returns whether it acted; unset (editor
+     * not mounted) every request is declined.
+     */
+    onTransportRequest?: (request: TransportRequest) => boolean
+
+    /** Ask the page's transport to act (the Playback shortcuts). Declined — left to the browser — when it can't. */
+    requestTransport(request: TransportRequest): boolean {
+        return this.onTransportRequest?.(request) ?? false
+    }
+
+    /**
+     * The editor's one polite live region (contract C11), registered by EditorAnnouncer: what
+     * a screen reader hears about the recording, and (W4) about selection and edits.
+     */
+    onAnnounce?: (text: string) => void
+
+    /** Say `text` through the editor's live region (debounced there, so a burst reads as its last line). */
+    announce(text: string): void {
+        this.onAnnounce?.(text)
     }
 
     /**
@@ -668,6 +742,7 @@ export class ScoreManipulator {
                 ? this.history.undo(score, address, this.onScoreChange)
                 : this.history.redo(score, address, this.onScoreChange)
         if (!restored) return false
+        this._editCount++
         this.adopt(restored, score)
         return true
     }

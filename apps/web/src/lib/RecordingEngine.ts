@@ -62,6 +62,15 @@ export interface RecordingOptions {
     cursorEl: SVGRectElement
     wsUrl: string
     onStateChange: (state: RecordingState) => void
+    /**
+     * Fired on every count-off click, from the same clock the clicks and the cursor's beat
+     * pulse run on: `beatIndex` counts 0…`total` − 1 through the count-off bar's felt pulses
+     * (`TimeSignature.pulse`), so 4/4 counts four, 3/4 three and 6/8 two. Drives the
+     * recording strip's beat dots; the UI never polls for it.
+     */
+    onCountoffBeat?: (beatIndex: number, total: number) => void
+    /** Fired once, the moment the count-off ends and capture begins (beat 1 of the take). */
+    onCaptureStart?: () => void
     /** Fired when the cursor is about to run off the last available measure. */
     onNeedNewMeasure: () => void
     /** Fired ~30×/s with a mic amplitude sample anchored to a score position. */
@@ -116,6 +125,10 @@ export class RecordingEngine implements Tickable {
     private bpm = Score.DEFAULT_BPM
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
+    /** How many felt pulses the count-off bar clicks (4 in 4/4, 2 in 6/8). */
+    private countoffPulses = 1
+    /** The count-off click last reported through {@link RecordingOptions.onCountoffBeat}; -1 before the first. */
+    private lastCountoffBeat = -1
     private countoffEndTime = 0
     /** The take's first measure; the recording's beat 0 is its downbeat. */
     private startMeasure: Measure | null = null
@@ -212,6 +225,8 @@ export class RecordingEngine implements Tickable {
         }
 
         this.countoffEndTime = (beatsPerMeasure * 60) / this.bpm
+        this.countoffPulses = Math.max(1, Math.round(beatsPerMeasure / this.pulseBeats))
+        this.lastCountoffBeat = -1
         this.lastNewMeasureTriggeredFor = null
 
         this.meter = new WaveformMeter(stream)
@@ -306,8 +321,10 @@ export class RecordingEngine implements Tickable {
                 // The moving cursor is its own beat feedback from here on.
                 this.cursor.setOpacity(null)
                 this.startCapture()
+                this.options.onCaptureStart?.()
             } else {
                 this.pulseCursor(elapsed)
+                this.reportCountoffBeat(elapsed)
             }
             return false
         }
@@ -452,6 +469,18 @@ export class RecordingEngine implements Tickable {
     private static pickMimeType(): string | null {
         if (typeof MediaRecorder.isTypeSupported !== 'function') return null
         return MIME_TYPE_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null
+    }
+
+    /**
+     * Report the count-off click `elapsed` falls on, once per click — read off the clock the
+     * clicks are scheduled on (like {@link pulseCursor}), so the strip's count can't drift
+     * from what the user hears.
+     */
+    private reportCountoffBeat(elapsed: number): void {
+        const beat = Math.min(this.countoffPulses - 1, Math.max(0, Math.floor((elapsed * this.bpm) / 60 / this.pulseBeats)))
+        if (beat === this.lastCountoffBeat) return
+        this.lastCountoffBeat = beat
+        this.options?.onCountoffBeat?.(beat, this.countoffPulses)
     }
 
     /**

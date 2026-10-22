@@ -30,9 +30,10 @@ export function usePlayback({
     // The Note holds written pitch; the instrument gives the pitch it sounds at.
     // Skipped while a range is selected, so dragging across notes doesn't chatter.
     // A cleared selection changes nothing — the recording flow deselects as it
-    // starts, and stopping here would kill the take it is setting up.
+    // starts, and stopping here would kill the take it is setting up. A quiet
+    // selection (the editor's own, after a take) neither stops nor previews.
     useEffect(() => {
-        if (!activeNote) return
+        if (!activeNote || manipulator.selectionIsQuiet) return
         stopAll()
         const transport = transportRef.current
         if (!activeNote.pitch || !transport || !score || manipulator.selectedNotes.length > 1) return
@@ -48,6 +49,19 @@ export function usePlayback({
     // Launching from a stop begins at the selected note (falling back to the top of the
     // score when nothing is selected); pause/resume keep their place instead.
     const handlePlayToggle = useCallback(() => toggle(activeNote), [toggle, activeNote])
+    /**
+     * Play from `note` (null = the top of the score) — "Hear it back" after a take, and ⇧Space:
+     * always a fresh pass from there, never a pause or a resume of the pass that was running.
+     * Ignored while a take records, which only its own stop may end.
+     */
+    const playFrom = useCallback(
+        (note: Note | null) => {
+            if (transportRef.current?.isRecording) return
+            stopAll()
+            toggle(note)
+        },
+        [transportRef, stopAll, toggle],
+    )
     const toggleMetronome = useCallback(() => setMetronome((on) => !on), [])
 
     return {
@@ -58,6 +72,7 @@ export function usePlayback({
         toggleMetronome,
         stopAll,
         handlePlayToggle,
+        playFrom,
         instrumentsReady: ready,
     }
 }

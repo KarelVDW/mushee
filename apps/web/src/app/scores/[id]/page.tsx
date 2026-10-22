@@ -14,21 +14,26 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ErrorScreen, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
+import { ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
+import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
+import { settingsTabPath } from '../../settings/settingsTabs'
 import { CHANGE_PITCH, LOWER_PITCH, MOVE_NEXT, MOVE_PREVIOUS, RAISE_PITCH } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
+import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
+import { EditorAnnouncer } from './EditorAnnouncer'
 import { EditorHeader } from './EditorHeader'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { NoteToolDock } from './NoteToolDock'
 import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
-import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { ConcurrentRecordingDialog, MicBlockedDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
+import { RecordingStrip } from './RecordingStrip'
 import { AttributeHoverTip, ScoreAttributePopover } from './ScoreAttributePopover'
 import { ScoreManipulator } from './ScoreManipulator'
-import { MobileEditorActions, type TransportControlsProps } from './TransportControls'
+import { MobileEditorActions, RECORD_BUTTON_SELECTOR, RecordButton, type TransportControlsProps } from './TransportControls'
 import { useAccountKeybindings } from './useAccountKeybindings'
 import { usePitchHighlight } from './usePitchHighlight'
 import { usePlayback } from './usePlayback'
@@ -37,6 +42,8 @@ import { useScoreAutosave } from './useScoreAutosave'
 
 /** How long the phone's tap-again-for-actions tip stays up (the info toast's own default). */
 const SELECTION_TIP_MS = 6000
+/** The gap between the top of the dock and the toast stack above it. */
+const TOAST_GAP_PX = 12
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -189,12 +196,21 @@ export default function ScoreEditorPage() {
         return { x: anchor.x * scale, y: anchor.y * scale }
     })()
 
-    const { transportRef, playbackCursorRef, playbackState, metronome, toggleMetronome, stopAll, handlePlayToggle, instrumentsReady } =
-        usePlayback({
-            score,
-            activeNote,
-            manipulator,
-        })
+    const {
+        transportRef,
+        playbackCursorRef,
+        playbackState,
+        metronome,
+        toggleMetronome,
+        stopAll,
+        handlePlayToggle,
+        playFrom,
+        instrumentsReady,
+    } = usePlayback({
+        score,
+        activeNote,
+        manipulator,
+    })
 
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
@@ -208,11 +224,14 @@ export default function ScoreEditorPage() {
     const {
         waveformStore,
         recordingState,
+        recordingStatus,
         recordingHalt,
         dismissRecordingHalt,
         toggleRecording,
+        retryRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
+        skipMicModeGuide,
         dismissMicModeGuide,
     } = useRecording({
         id,
@@ -223,21 +242,54 @@ export default function ScoreEditorPage() {
         playbackCursorRef,
         stopAll,
         saveToApi,
+        playFrom,
+        touch: isMobile,
     })
+    const taking = recordingState !== 'idle'
 
     // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
-    // the two can't drift. A take records into the selected note's measure, so Record needs
-    // one to start — the take itself clears the selection, which must not lock its own stop.
+    // the two can't drift. Record never waits for a selection: with nothing selected a take
+    // carries on after the music. Its tooltips name the live Playback keys.
+    const keybindings = manipulator.keybindings
+    useSyncExternalStore(keybindings.subscribe, keybindings.getSnapshot, keybindings.getSnapshot)
     const transport: TransportControlsProps = {
         playbackState,
         onPlayToggle: handlePlayToggle,
         onStop: stopAll,
         recordingState,
         onRecordToggle: toggleRecording,
-        recordDisabled: recordingState === 'idle' && !activeNote,
         metronome,
         onMetronomeToggle: toggleMetronome,
+        shortcuts: { playPause: keybindings.shortcutFor(PLAY_PAUSE_COMMAND), record: keybindings.shortcutFor(RECORD_COMMAND) },
     }
+
+    // The Playback shortcuts reach the transport through the manipulator (Space, ⇧Space, ⇧R,
+    // Escape for a take); each declines — leaving the key to the browser — when it can't act.
+    useEffect(() => {
+        manipulator.onTransportRequest = (request) => {
+            if (!score) return false
+            switch (request) {
+                case 'toggle':
+                    if (taking) stopAll()
+                    else handlePlayToggle()
+                    return true
+                case 'from-start':
+                    if (taking) return false
+                    playFrom(null)
+                    return true
+                case 'record':
+                    toggleRecording()
+                    return true
+                case 'stop-recording':
+                    if (!taking) return false
+                    stopAll()
+                    return true
+            }
+        }
+        return () => {
+            manipulator.onTransportRequest = undefined
+        }
+    }, [manipulator, score, taking, stopAll, handlePlayToggle, playFrom, toggleRecording])
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
@@ -253,9 +305,35 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
+    // A take swaps the dock's contents: the strip replaces the tools (and, on phones, the footer's
+    // Record with the strip's record-as-stop), and the take's end swaps them back. Focus on a
+    // control that went (or just turned disabled, like Play mid-take) would drop to <body>, out
+    // of reach of the editor's keys — so the record button in the dock takes it (phones), or else
+    // the editor itself, where Space and Escape still stop the take. Only focus the swap lost (or
+    // that sits on the editor itself) moves; an open dialog keeps its own. Declared after the
+    // listener effect above, which focuses the editor when the Mic Mode guide closes on the take
+    // it starts.
+    const dockRef = useRef<HTMLDivElement>(null)
+    const stripUp = recordingStatus !== null
+    const stripWasUp = useRef(stripUp)
+    useEffect(() => {
+        if (stripWasUp.current === stripUp) return
+        stripWasUp.current = stripUp
+        const editor = containerRef.current
+        const focused = document.activeElement
+        const lost =
+            !focused || focused === document.body || focused === editor || (focused instanceof HTMLButtonElement && focused.disabled)
+        if (dialogOpen || !editor || !lost) return
+        const recordButton = dockRef.current?.querySelector<HTMLElement>(RECORD_BUTTON_SELECTOR)
+        // Without scrolling: the phone dock's rows are still animating to their new height inside a clipped frame.
+        if (recordButton) recordButton.focus({ preventScroll: true })
+        else focusWithoutTooltip(editor)
+    }, [stripUp, dialogOpen])
+
     // Phone sheets live between the header and the dock (Popover's sheet frame reads
     // --app-header-h / --dock-h): measured, and re-measured whenever either bar changes size.
-    const dockRef = useRef<HTMLDivElement>(null)
+    // Toasts rise above the dock the same way (--toast-bottom, read by the app-wide Toaster on
+    // the root element), so no toast ever covers the record button or a tool.
     const editorReady = !!score && instrumentsReady
     useEffect(() => {
         const root = containerRef.current
@@ -265,12 +343,16 @@ export default function ScoreEditorPage() {
         const measure = () => {
             root.style.setProperty('--app-header-h', `${header.offsetHeight}px`)
             root.style.setProperty('--dock-h', `${dock.offsetHeight}px`)
+            document.documentElement.style.setProperty('--toast-bottom', `${dock.offsetHeight + TOAST_GAP_PX}px`)
         }
         measure()
         const observer = new ResizeObserver(measure)
         observer.observe(header)
         observer.observe(dock)
-        return () => observer.disconnect()
+        return () => {
+            observer.disconnect()
+            document.documentElement.style.removeProperty('--toast-bottom')
+        }
     }, [editorReady])
 
     if (loadError || unreadable) {
@@ -352,6 +434,9 @@ export default function ScoreEditorPage() {
                             <ScoreView
                                 score={score}
                                 layoutId={score.layout.id}
+                                // View-only while a take runs: a stray tap can't select a note (which
+                                // would end the take) or open a popover; scrolling stays native.
+                                interactive={!taking}
                                 selectedNote={activeNote}
                                 selectedNotes={manipulator.selectedNotes}
                                 highlight={pitchHighlight}
@@ -416,6 +501,14 @@ export default function ScoreEditorPage() {
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
                         hint={selectionTipUp ? null : undefined}
+                        recording={
+                            recordingStatus ? (
+                                <>
+                                    <RecordingStrip status={recordingStatus} touch={isMobile} />
+                                    {isMobile && <RecordButton {...transport} large />}
+                                </>
+                            ) : undefined
+                        }
                         footer={
                             isMobile ? (
                                 <MobileEditorActions
@@ -444,13 +537,17 @@ export default function ScoreEditorPage() {
                 {recordingHalt?.kind === 'limit' && (
                     <RecordingLimitDialog
                         info={recordingHalt.info}
-                        onUpgrade={() => router.push('/settings')}
+                        onUpgrade={(planId) => router.push(withPlan(settingsTabPath('plan'), planId))}
                         onClose={dismissRecordingHalt}
                     />
                 )}
                 {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
-                {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
+                {recordingHalt?.kind === 'mic-blocked' && <MicBlockedDialog onRetry={retryRecording} onClose={dismissRecordingHalt} />}
+                {micModeGuideOpen && (
+                    <MicModeGuideDialog onConfirm={confirmMicModeGuide} onSkip={skipMicModeGuide} onClose={dismissMicModeGuide} />
+                )}
             </PopoverSheetHost>
+            <EditorAnnouncer manipulator={manipulator} />
         </div>
     )
 }

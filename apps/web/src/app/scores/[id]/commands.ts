@@ -18,8 +18,9 @@ import {
 } from './actions'
 import type { ScoreManipulator } from './ScoreManipulator'
 
-/** Display groups for the shortcuts dialog, in presentation order — the everyday edits first. */
+/** Display groups for the shortcuts dialog, in presentation order — playing and recording first, then the everyday edits. */
 export const EDITOR_COMMAND_GROUPS = [
+    'Playback',
     'Edit notes',
     'Note length',
     'Sharp or flat',
@@ -48,6 +49,17 @@ export interface EditorCommand extends BindableCommand {
      * shortcuts dialog shows it.
      */
     alternateKey?: { key: string; label: string }
+    /**
+     * An unmodified key ({@link KeyboardEvent.key}) this fixed command claims before any binding
+     * is looked up: Escape stops a running take before it collapses a selection. When the
+     * command declines, the key goes on to whatever it is bound to. `label` is its keycap.
+     */
+    preemptKey?: { key: string; label: string }
+    /**
+     * Declined while a control that the key activates natively has focus (a button, link or
+     * switch): Space on a focused button presses that button, never the transport.
+     */
+    yieldsToControls?: boolean
     /** Perform the command. Return `false` when it didn't apply, leaving the keystroke to the browser. */
     run: (manipulator: ScoreManipulator) => boolean | void
 }
@@ -111,11 +123,59 @@ const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
 /** Id of the command that opens the selection actions (copy / paste / delete) from the keyboard. */
 export const SELECTION_MENU_COMMAND = 'selection-menu'
 
+/** Ids of the transport commands, for the transport's tooltips (which name their live keys). */
+export const PLAY_PAUSE_COMMAND = 'play-pause'
+export const RECORD_COMMAND = 'record'
+
+/**
+ * Play / record: the transport from the keyboard. Each asks the page through
+ * {@link ScoreManipulator.requestTransport} (the transport is view state the manipulator
+ * doesn't own) and is declined — left to the browser — when the page can't act on it.
+ * Space is fixed (the media-player convention); Escape stopping a take is fixed too, and gets
+ * its say before Escape's own binding.
+ */
+const PLAYBACK_COMMANDS: readonly EditorCommand[] = [
+    {
+        id: PLAY_PAUSE_COMMAND,
+        label: 'Play or pause (also stops a recording)',
+        group: 'Playback',
+        defaultShortcut: 'Space',
+        fixed: true,
+        yieldsToControls: true,
+        run: (manipulator) => manipulator.requestTransport('toggle'),
+    },
+    {
+        id: 'play-from-start',
+        label: 'Play from the start',
+        group: 'Playback',
+        defaultShortcut: 'Shift+Space',
+        yieldsToControls: true,
+        run: (manipulator) => manipulator.requestTransport('from-start'),
+    },
+    {
+        id: RECORD_COMMAND,
+        label: 'Record or stop recording',
+        group: 'Playback',
+        defaultShortcut: 'Shift+KeyR',
+        run: (manipulator) => manipulator.requestTransport('record'),
+    },
+    {
+        id: 'stop-recording',
+        label: 'Stop recording',
+        group: 'Playback',
+        defaultShortcut: null,
+        preemptKey: { key: 'Escape', label: 'Esc' },
+        fixed: true,
+        run: (manipulator) => manipulator.requestTransport('stop-recording'),
+    },
+]
+
 /**
  * Every keyboard-triggerable command, in dialog order. Default shortcuts name physical keys
  * ({@link KeyboardEvent.code}), so they sit on the same key position on every keyboard layout.
  */
 export const EDITOR_COMMANDS: readonly EditorCommand[] = [
+    ...PLAYBACK_COMMANDS,
     fromAction(RAISE_PITCH, { group: 'Edit notes', shortcut: 'ArrowUp' }),
     fromAction(LOWER_PITCH, { group: 'Edit notes', shortcut: 'ArrowDown' }),
     {

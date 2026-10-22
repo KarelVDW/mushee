@@ -2,7 +2,7 @@
 
 import { BeatUnitIcon, ClefIcon } from '@mushee/notation/components'
 import type { Accidental, DurationType } from '@mushee/notation/model'
-import { type ReactNode, useSyncExternalStore } from 'react'
+import { type ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -66,8 +66,43 @@ interface NoteToolDockProps {
      * dock's own first-selection hint; null keeps the slot empty.
      */
     hint?: ReactNode
+    /**
+     * While a take runs: the recording strip, in place of the hint line and every tool row
+     * (contract C10). On phones it carries the record-as-stop button beside it, and the page
+     * drops the footer for the take, so the dock shrinks to that one row.
+     */
+    recording?: ReactNode
     /** Extra dock row rendered below the tools (the mobile action row). */
     footer?: ReactNode
+}
+
+/** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
+const RING_SLACK_PX = 4
+
+/**
+ * The phone dock's rows, with their height animated (200ms; at once under reduced motion) as
+ * they change — the tool rows folding away into the recording strip when a take starts, and
+ * back. Only on phones: the desktop dock's anchored popovers must never be clipped.
+ */
+function AnimatedHeight({ children }: { children: ReactNode }) {
+    const inner = useRef<HTMLDivElement>(null)
+    const [height, setHeight] = useState<number | null>(null)
+    useLayoutEffect(() => {
+        const el = inner.current
+        if (!el) return
+        const measure = () => setHeight(el.offsetHeight)
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+    return (
+        <div
+            className="-m-1 p-1 overflow-hidden transition-[height] duration-200 ease-solkey motion-reduce:transition-none"
+            style={height === null ? undefined : { height: height + 2 * RING_SLACK_PX }}>
+            <div ref={inner}>{children}</div>
+        </div>
+    )
 }
 
 /**
@@ -93,6 +128,7 @@ export function NoteToolDock({
     onTransposeOpenChange,
     onTransposeAim,
     hint,
+    recording,
     footer,
 }: NoteToolDockProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
@@ -139,190 +175,211 @@ export function NoteToolDock({
                 aria-hidden
                 className="pointer-events-none absolute inset-0 -z-10 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow"
             />
-            {line && (
-                <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
-                    {line}
-                </p>
-            )}
             {compact ? (
-                <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center gap-x-2">
-                    <HistoryTools manipulator={manipulator} compact />
-                    {durations}
-                    <MoreToolsSheet
-                        manipulator={manipulator}
-                        metronome={metronome}
-                        onMetronomeToggle={onMetronomeToggle}
-                        transposeOpen={transposeOpen}
-                        onTransposeOpenChange={onTransposeOpenChange}
-                        onTransposeAim={onTransposeAim}
-                    />
-                </div>
+                <AnimatedHeight>
+                    {recording ? (
+                        <div className="flex items-center gap-2">{recording}</div>
+                    ) : (
+                        <>
+                            {line && (
+                                <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
+                                    {line}
+                                </p>
+                            )}
+                            <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center gap-x-2">
+                                <HistoryTools manipulator={manipulator} compact />
+                                {durations}
+                                <MoreToolsSheet
+                                    manipulator={manipulator}
+                                    metronome={metronome}
+                                    onMetronomeToggle={onMetronomeToggle}
+                                    transposeOpen={transposeOpen}
+                                    onTransposeOpenChange={onTransposeOpenChange}
+                                    onTransposeAim={onTransposeAim}
+                                />
+                            </div>
+                            {footer}
+                        </>
+                    )}
+                </AnimatedHeight>
+            ) : recording ? (
+                <div className="flex justify-center">{recording}</div>
             ) : (
-                <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center flex-wrap gap-y-2 gap-x-6">
-                    <ToolGroup ariaLabel="Pitch">
-                        {(
-                            [
-                                { label: 'Higher', icon: 'chevron-up', action: RAISE_PITCH },
-                                { label: 'Lower', icon: 'chevron-down', action: LOWER_PITCH },
-                            ] as const
-                        ).map(({ label, icon, action }) => (
-                            <ChipToggle
-                                key={label}
-                                plain
-                                ariaLabel={label}
-                                disabled={tools.pitch.disabled}
-                                disabledReason={tools.pitch.reason}
-                                shortcut={shortcut(action.id)}
-                                onClick={() => manipulator.run(action)}>
-                                {/* 22px content in the chip's 7px padding: a 36px button. */}
-                                <span className="inline-flex items-center gap-1 h-5.5">
-                                    <Icon name={icon} size={14} />
-                                    {label}
-                                </span>
-                            </ChipToggle>
-                        ))}
-                    </ToolGroup>
-                    {/* Length: the five values and Dotted share one well; the Segmented's own track is
-                        flattened into it, so Dotted (a toggle, not a sixth value) sits beside them. */}
+                <>
+                    {line && (
+                        <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
+                            {line}
+                        </p>
+                    )}
                     <div
                         role="group"
-                        aria-label="Note length"
-                        className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow *:[[role=group]]:p-0! *:[[role=group]]:bg-transparent! *:[[role=group]]:shadow-none!">
-                        {durations}
+                        aria-label="Note tools"
+                        className="mx-auto flex items-center justify-center flex-wrap gap-y-2 gap-x-6">
+                        <ToolGroup ariaLabel="Pitch">
+                            {(
+                                [
+                                    { label: 'Higher', icon: 'chevron-up', action: RAISE_PITCH },
+                                    { label: 'Lower', icon: 'chevron-down', action: LOWER_PITCH },
+                                ] as const
+                            ).map(({ label, icon, action }) => (
+                                <ChipToggle
+                                    key={label}
+                                    plain
+                                    ariaLabel={label}
+                                    disabled={tools.pitch.disabled}
+                                    disabledReason={tools.pitch.reason}
+                                    shortcut={shortcut(action.id)}
+                                    onClick={() => manipulator.run(action)}>
+                                    {/* 22px content in the chip's 7px padding: a 36px button. */}
+                                    <span className="inline-flex items-center gap-1 h-5.5">
+                                        <Icon name={icon} size={14} />
+                                        {label}
+                                    </span>
+                                </ChipToggle>
+                            ))}
+                        </ToolGroup>
+                        {/* Length: the five values and Dotted share one well; the Segmented's own track is
+                            flattened into it, so Dotted (a toggle, not a sixth value) sits beside them. */}
+                        <div
+                            role="group"
+                            aria-label="Note length"
+                            className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow *:[[role=group]]:p-0! *:[[role=group]]:bg-transparent! *:[[role=group]]:shadow-none!">
+                            {durations}
+                            <ChipToggle
+                                plain
+                                ariaLabel="Dotted"
+                                active={tools.dotted.active}
+                                disabled={tools.dotted.disabled}
+                                disabledReason={tools.dotted.reason}
+                                hint="one and a half times as long"
+                                shortcut={shortcut(TOGGLE_DOT.id)}
+                                onClick={() => manipulator.run(TOGGLE_DOT)}>
+                                <span className="inline-flex -my-1">
+                                    <DottedIcon />
+                                </span>
+                            </ChipToggle>
+                        </div>
+                        <Segmented
+                            ariaLabel="Sharp or flat"
+                            value={tools.accidental.value}
+                            disabled={tools.accidental.disabled}
+                            disabledReason={tools.accidental.reason}
+                            onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
+                            options={ACCIDENTALS.map((a) => ({
+                                value: a.value,
+                                label: a.glyph,
+                                ariaLabel: a.name,
+                                hint: a.hint,
+                                shortcut: shortcut(a.command),
+                            }))}
+                        />
                         <ChipToggle
-                            plain
-                            ariaLabel="Dotted"
-                            active={tools.dotted.active}
-                            disabled={tools.dotted.disabled}
-                            disabledReason={tools.dotted.reason}
-                            hint="one and a half times as long"
-                            shortcut={shortcut(TOGGLE_DOT.id)}
-                            onClick={() => manipulator.run(TOGGLE_DOT)}>
-                            <span className="inline-flex -my-1">
-                                <DottedIcon />
+                            ariaLabel="Rest"
+                            active={tools.rest.active}
+                            disabled={tools.rest.disabled}
+                            disabledReason={tools.rest.reason}
+                            hint="turn this note into silence"
+                            shortcut={shortcut(TOGGLE_REST.id)}
+                            onClick={() => manipulator.run(TOGGLE_REST)}>
+                            <span className="inline-flex items-center gap-1.5">
+                                <RestIcon height={12} />
+                                Rest
                             </span>
                         </ChipToggle>
+                        <MoreNoteTools manipulator={manipulator} />
+                        <ToolGroup ariaLabel="Score settings">
+                            <PopoverChip
+                                plain
+                                ariaLabel={words.clefLabel}
+                                disabled={tools.scoreSettings.disabled}
+                                disabledReason={tools.scoreSettings.reason}
+                                tooltip={`${words.clef} clef`}
+                                chip={<ClefIcon type={settings.clef} size={22} />}>
+                                {({ anchorRef, className, close }) => (
+                                    <ClefPopover
+                                        active={settings.clef}
+                                        anchorRef={anchorRef}
+                                        className={className}
+                                        onSelect={(type) => {
+                                            manipulator.changeClef(type)
+                                            close()
+                                        }}
+                                        onDismiss={close}
+                                    />
+                                )}
+                            </PopoverChip>
+                            <PopoverChip
+                                plain
+                                ariaLabel={words.keyLabel}
+                                disabled={tools.scoreSettings.disabled}
+                                disabledReason={tools.scoreSettings.reason}
+                                hint="sharps or flats used throughout"
+                                chip={<span className="font-label font-semibold text-[13px]">{words.key}</span>}>
+                                {({ anchorRef, className, close }) => (
+                                    <KeySignaturePopover
+                                        active={settings.key.fifths}
+                                        anchorRef={anchorRef}
+                                        className={className}
+                                        onSelect={(fifths) => {
+                                            manipulator.changeKey(fifths)
+                                            close()
+                                        }}
+                                        onDismiss={close}
+                                    />
+                                )}
+                            </PopoverChip>
+                            <PopoverChip
+                                plain
+                                ariaLabel={words.timeLabel}
+                                disabled={tools.scoreSettings.disabled}
+                                disabledReason={tools.scoreSettings.reason}
+                                hint={new MeterWords(settings.timeSignature).perBar}
+                                chip={<span className="font-mono font-medium text-[13px]">{words.time}</span>}>
+                                {({ anchorRef, className, close }) => (
+                                    <TimeSignaturePopover
+                                        active={settings.timeSignature}
+                                        anchorRef={anchorRef}
+                                        className={className}
+                                        onSelect={(beatAmount, beatType) => {
+                                            manipulator.changeTimeSignature(beatAmount, beatType)
+                                            close()
+                                        }}
+                                        onDismiss={close}
+                                    />
+                                )}
+                            </PopoverChip>
+                            <PopoverChip
+                                plain
+                                ariaLabel={words.tempoLabel}
+                                disabled={tools.scoreSettings.disabled}
+                                disabledReason={tools.scoreSettings.reason}
+                                hint="how fast it plays"
+                                chip={
+                                    <span className="inline-flex items-center gap-1">
+                                        {/* A compound meter's beat is not a quarter: the chip says which note it counts. */}
+                                        {!words.pulseIsQuarter && <BeatUnitIcon duration={words.pulse} size={16} />}
+                                        <span className="font-mono font-medium">{words.pulseBpm}</span> bpm
+                                    </span>
+                                }>
+                                {({ anchorRef, className, close }) => (
+                                    <TempoPopover
+                                        initialBpm={settings.bpm}
+                                        timeSignature={settings.timeSignature}
+                                        anchorRef={anchorRef}
+                                        className={className}
+                                        onSubmit={(value) => {
+                                            manipulator.changeTempo(value)
+                                            close()
+                                        }}
+                                        onDismiss={close}
+                                    />
+                                )}
+                            </PopoverChip>
+                        </ToolGroup>
                     </div>
-                    <Segmented
-                        ariaLabel="Sharp or flat"
-                        value={tools.accidental.value}
-                        disabled={tools.accidental.disabled}
-                        disabledReason={tools.accidental.reason}
-                        onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
-                        options={ACCIDENTALS.map((a) => ({
-                            value: a.value,
-                            label: a.glyph,
-                            ariaLabel: a.name,
-                            hint: a.hint,
-                            shortcut: shortcut(a.command),
-                        }))}
-                    />
-                    <ChipToggle
-                        ariaLabel="Rest"
-                        active={tools.rest.active}
-                        disabled={tools.rest.disabled}
-                        disabledReason={tools.rest.reason}
-                        hint="turn this note into silence"
-                        shortcut={shortcut(TOGGLE_REST.id)}
-                        onClick={() => manipulator.run(TOGGLE_REST)}>
-                        <span className="inline-flex items-center gap-1.5">
-                            <RestIcon height={12} />
-                            Rest
-                        </span>
-                    </ChipToggle>
-                    <MoreNoteTools manipulator={manipulator} />
-                    <ToolGroup ariaLabel="Score settings">
-                        <PopoverChip
-                            plain
-                            ariaLabel={words.clefLabel}
-                            disabled={tools.scoreSettings.disabled}
-                            disabledReason={tools.scoreSettings.reason}
-                            tooltip={`${words.clef} clef`}
-                            chip={<ClefIcon type={settings.clef} size={22} />}>
-                            {({ anchorRef, className, close }) => (
-                                <ClefPopover
-                                    active={settings.clef}
-                                    anchorRef={anchorRef}
-                                    className={className}
-                                    onSelect={(type) => {
-                                        manipulator.changeClef(type)
-                                        close()
-                                    }}
-                                    onDismiss={close}
-                                />
-                            )}
-                        </PopoverChip>
-                        <PopoverChip
-                            plain
-                            ariaLabel={words.keyLabel}
-                            disabled={tools.scoreSettings.disabled}
-                            disabledReason={tools.scoreSettings.reason}
-                            hint="sharps or flats used throughout"
-                            chip={<span className="font-label font-semibold text-[13px]">{words.key}</span>}>
-                            {({ anchorRef, className, close }) => (
-                                <KeySignaturePopover
-                                    active={settings.key.fifths}
-                                    anchorRef={anchorRef}
-                                    className={className}
-                                    onSelect={(fifths) => {
-                                        manipulator.changeKey(fifths)
-                                        close()
-                                    }}
-                                    onDismiss={close}
-                                />
-                            )}
-                        </PopoverChip>
-                        <PopoverChip
-                            plain
-                            ariaLabel={words.timeLabel}
-                            disabled={tools.scoreSettings.disabled}
-                            disabledReason={tools.scoreSettings.reason}
-                            hint={new MeterWords(settings.timeSignature).perBar}
-                            chip={<span className="font-mono font-medium text-[13px]">{words.time}</span>}>
-                            {({ anchorRef, className, close }) => (
-                                <TimeSignaturePopover
-                                    active={settings.timeSignature}
-                                    anchorRef={anchorRef}
-                                    className={className}
-                                    onSelect={(beatAmount, beatType) => {
-                                        manipulator.changeTimeSignature(beatAmount, beatType)
-                                        close()
-                                    }}
-                                    onDismiss={close}
-                                />
-                            )}
-                        </PopoverChip>
-                        <PopoverChip
-                            plain
-                            ariaLabel={words.tempoLabel}
-                            disabled={tools.scoreSettings.disabled}
-                            disabledReason={tools.scoreSettings.reason}
-                            hint="how fast it plays"
-                            chip={
-                                <span className="inline-flex items-center gap-1">
-                                    {/* A compound meter's beat is not a quarter: the chip says which note it counts. */}
-                                    {!words.pulseIsQuarter && <BeatUnitIcon duration={words.pulse} size={16} />}
-                                    <span className="font-mono font-medium">{words.pulseBpm}</span> bpm
-                                </span>
-                            }>
-                            {({ anchorRef, className, close }) => (
-                                <TempoPopover
-                                    initialBpm={settings.bpm}
-                                    timeSignature={settings.timeSignature}
-                                    anchorRef={anchorRef}
-                                    className={className}
-                                    onSubmit={(value) => {
-                                        manipulator.changeTempo(value)
-                                        close()
-                                    }}
-                                    onDismiss={close}
-                                />
-                            )}
-                        </PopoverChip>
-                    </ToolGroup>
-                </div>
+                    {footer}
+                </>
             )}
-            {footer}
         </div>
     )
 }

@@ -2,7 +2,7 @@ import { Duration, Interval, Note, Pitch } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { MOVE_NEXT, RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
@@ -86,6 +86,50 @@ describe('ScoreManipulator selection', () => {
         manipulator.subscribe(() => calls++)
         manipulator.select(notes[1])
         expect(calls).toBe(1)
+    })
+})
+
+describe('ScoreManipulator quiet selection, edit count and announcements', () => {
+    it('a quiet select marks the selection until the next ordinary one', () => {
+        const { manipulator, notes } = setupPitched()
+        expect(manipulator.selectionIsQuiet).toBe(false)
+        manipulator.select(notes[2], { quiet: true })
+        expect(manipulator.selectedNote).toBe(notes[2])
+        expect(manipulator.selectionIsQuiet).toBe(true)
+        manipulator.select(notes[1])
+        expect(manipulator.selectionIsQuiet).toBe(false)
+        manipulator.select(notes[1], { quiet: true })
+        manipulator.extendSelectionTo(notes[3])
+        expect(manipulator.selectionIsQuiet).toBe(false)
+        // Clearing quietly is just clearing.
+        manipulator.select(null, { quiet: true })
+        expect(manipulator.selectionIsQuiet).toBe(false)
+    })
+
+    it('counts edits that change the score and history travel, not navigation', () => {
+        const { manipulator } = setupPitched()
+        expect(manipulator.editCount).toBe(0)
+        manipulator.run(MOVE_NEXT)
+        expect(manipulator.editCount).toBe(0)
+        manipulator.run(RAISE_PITCH)
+        expect(manipulator.editCount).toBe(1)
+        manipulator.undo()
+        expect(manipulator.editCount).toBe(2)
+        manipulator.redo()
+        expect(manipulator.editCount).toBe(3)
+        // Nothing to travel to: no count.
+        manipulator.redo()
+        expect(manipulator.editCount).toBe(3)
+    })
+
+    it('announces through the registered live region, and stays silent without one', () => {
+        const { manipulator } = setupPitched()
+        expect(() => manipulator.announce('Recording')).not.toThrow()
+        const said: string[] = []
+        manipulator.onAnnounce = (text) => said.push(text)
+        manipulator.announce('Count-in')
+        expect(said).toEqual(['Count-in'])
+        expect(manipulator.requestTransport('toggle')).toBe(false)
     })
 })
 
@@ -437,6 +481,76 @@ describe('ScoreManipulator keyboard dispatch', () => {
         expect(manipulator.selectedNote?.isRest).toBe(false)
         expect(press(manipulator, { code: 'KeyJ', key: 'j' })).toBe(true)
         expect(manipulator.selectedNote?.isRest).toBe(true)
+    })
+
+    it('hands Space, ⇧Space and ⇧R to the page transport, and leaves them to the browser without one', () => {
+        const { manipulator } = setupPitched()
+        expect(press(manipulator, { code: 'Space', key: ' ' })).toBe(false)
+        const requests: string[] = []
+        manipulator.onTransportRequest = (request) => {
+            requests.push(request)
+            return request !== 'from-start'
+        }
+        expect(press(manipulator, { code: 'Space', key: ' ' })).toBe(true)
+        expect(press(manipulator, { code: 'KeyR', key: 'R', shiftKey: true })).toBe(true)
+        // Declined by the page: the keystroke stays the browser's.
+        expect(press(manipulator, { code: 'Space', key: ' ', shiftKey: true })).toBe(false)
+        expect(requests).toEqual(['toggle', 'record', 'from-start'])
+    })
+
+    it('lets Space press a focused button instead of the transport', () => {
+        const { manipulator } = setupPitched()
+        const requests: string[] = []
+        manipulator.onTransportRequest = (request) => {
+            requests.push(request)
+            return true
+        }
+        for (const html of [
+            '<button>Undo</button>',
+            '<a href="/x">x</a>',
+            '<div role="switch" tabindex="0"></div>',
+            '<button><span>x</span></button>',
+        ]) {
+            const host = document.createElement('div')
+            host.innerHTML = html
+            const target = (host.querySelector('span') ?? host.firstElementChild) as HTMLElement
+            host.addEventListener('keydown', manipulator.handleKeyDown)
+            const event = new KeyboardEvent('keydown', { code: 'Space', key: ' ', cancelable: true, bubbles: true })
+            target.dispatchEvent(event)
+            expect(event.defaultPrevented, html).toBe(false)
+        }
+        expect(requests).toEqual([])
+        // ⇧R doesn't yield: no control takes it natively.
+        const host = document.createElement('div')
+        host.innerHTML = '<button>Undo</button>'
+        host.addEventListener('keydown', manipulator.handleKeyDown)
+        const event = new KeyboardEvent('keydown', { code: 'KeyR', key: 'R', shiftKey: true, cancelable: true, bubbles: true })
+        host.querySelector('button')?.dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(true)
+        expect(requests).toEqual(['record'])
+    })
+
+    it('Escape stops a running take first; with no take it collapses the selection as before', () => {
+        const { manipulator } = setupPitched()
+        let recording = true
+        manipulator.onTransportRequest = (request) => {
+            if (request !== 'stop-recording' || !recording) return false
+            recording = false
+            return true
+        }
+        press(manipulator, { code: 'ArrowRight', key: 'ArrowRight', shiftKey: true })
+        expect(manipulator.selectedNotes).toHaveLength(2)
+        // The take claims Escape ahead of the collapse binding.
+        expect(press(manipulator, { code: 'Escape', key: 'Escape' })).toBe(true)
+        expect(recording).toBe(false)
+        expect(manipulator.selectedNotes).toHaveLength(2)
+        // Nothing running: Escape reaches its own binding again.
+        expect(press(manipulator, { code: 'Escape', key: 'Escape' })).toBe(true)
+        expect(manipulator.selectedNotes).toHaveLength(1)
+        // A modified Escape is never the take's.
+        recording = true
+        expect(press(manipulator, { code: 'Escape', key: 'Escape', shiftKey: true })).toBe(false)
+        expect(recording).toBe(true)
     })
 
     it('leaves keys typed into form fields alone', () => {

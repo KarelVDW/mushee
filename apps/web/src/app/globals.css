@@ -10,8 +10,9 @@
 /* Live recording waveform bars (@mushee/notation's RecordingWaveform.tsx, which ships
    no CSS: it relies on these classes, keyframes and --waveform-burst, and only drops an
    exiting bar on its animationend — any app hosting it must carry this block; HeroDemo
-   reuses .waveform-bar). SVG rects: transform-box makes scaleY grow from each bar's own
-   center. */
+   reuses .waveform-bar). A bar rises in, then bursts into the note that replaced it — motion
+   that shows the sound turning into notes, with no idle sway. SVG rects: transform-box
+   makes scaleY grow from each bar's own center. */
 @keyframes waveform-bar-in {
     from {
         transform: scaleY(0);
@@ -20,15 +21,6 @@
     to {
         transform: scaleY(1);
         opacity: 0.55;
-    }
-}
-@keyframes waveform-bar-sway {
-    0%,
-    100% {
-        transform: scaleY(1);
-    }
-    50% {
-        transform: scaleY(0.78);
     }
 }
 /* Exit: grow to the full staff height (per-bar --waveform-burst factor), then fade —
@@ -43,25 +35,45 @@
         opacity: 0;
     }
 }
+@keyframes waveform-bar-fade-out {
+    to {
+        opacity: 0;
+    }
+}
 .waveform-bar {
     transform-box: fill-box;
     transform-origin: center;
     opacity: 0.55;
-    animation:
-        waveform-bar-in 200ms var(--ease-solkey),
-        waveform-bar-sway 1.4s ease-in-out 200ms infinite;
+    animation: waveform-bar-in 200ms var(--ease-solkey);
 }
 .waveform-bar-exit {
     animation: waveform-bar-out 450ms var(--ease-solkey) forwards;
 }
-/* Reduced motion: bars stand still at their resting opacity. The exit keeps a 1ms run, not
-   `none` — RecordingWaveform drops an exiting bar only on its animationend. */
+/* Reduced motion: bars appear without scaling and leave with a short opacity-only fade. The
+   exit stays a real animation, never `none` — RecordingWaveform drops an exiting bar only on
+   its animationend. */
 @media (prefers-reduced-motion: reduce) {
     .waveform-bar {
         animation: none;
     }
     .waveform-bar-exit {
-        animation: waveform-bar-out 1ms linear forwards;
+        animation: waveform-bar-fade-out 150ms linear forwards;
+    }
+}
+
+/* The recording strip's live dot (scores/[id]/RecordingStrip.tsx): a slow 1.2s breath while a
+   take records; steady under reduced motion. */
+@keyframes recording-dot-pulse {
+    50% {
+        opacity: 0.45;
+    }
+}
+.recording-dot {
+    animation: recording-dot-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .recording-dot {
+        animation: none;
     }
 }
 
@@ -89,111 +101,6 @@
     .tooltip-enter,
     .popover-sheet-enter {
         animation: none;
-    }
-}
-
-/* iPhone Mic Mode walkthrough (RecordingDialogs.tsx → MicModeGuideDialog).
-   Three phases share one 9s loop; each phase (and the motion inside it) offsets
-   its start with --phase-delay, so every animation below runs 9s and keeps its
-   action inside the first third of its own timeline. */
-@keyframes mic-guide-phase {
-    0%,
-    33.4%,
-    100% {
-        opacity: 0;
-    }
-    4%,
-    29% {
-        opacity: 1;
-    }
-}
-.mic-guide-phase {
-    opacity: 0;
-    animation: mic-guide-phase 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
-}
-/* Phase 1: the finger dot swipes down from the top-right corner. */
-@keyframes mic-guide-swipe {
-    0% {
-        transform: translateY(0);
-        opacity: 0;
-    }
-    6% {
-        opacity: 1;
-    }
-    18%,
-    26% {
-        transform: translateY(38px);
-        opacity: 1;
-    }
-    30%,
-    100% {
-        transform: translateY(38px);
-        opacity: 0;
-    }
-}
-.mic-guide-swipe {
-    animation: mic-guide-swipe 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
-}
-/* Phase 2: the Mic Mode tile takes a tap. */
-@keyframes mic-guide-tap {
-    0%,
-    10% {
-        transform: scale(1);
-    }
-    15% {
-        transform: scale(0.94);
-    }
-    20%,
-    100% {
-        transform: scale(1);
-    }
-}
-.mic-guide-tap {
-    animation: mic-guide-tap 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
-}
-/* Phase 3: the Wide Spectrum check pops in. */
-@keyframes mic-guide-pop {
-    0%,
-    10% {
-        transform: scale(0);
-        opacity: 0;
-    }
-    16% {
-        transform: scale(1.15);
-        opacity: 1;
-    }
-    21%,
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-.mic-guide-pop {
-    animation: mic-guide-pop 9s var(--ease-solkey) var(--phase-delay, 0s) infinite;
-}
-/* Reduced motion: the storyboard becomes a static step list. */
-@media (prefers-reduced-motion: reduce) {
-    .mic-guide-stage {
-        height: auto;
-        flex-direction: column;
-        gap: 0.875rem;
-    }
-    .mic-guide-phase,
-    .mic-guide-swipe,
-    .mic-guide-tap,
-    .mic-guide-pop {
-        animation: none;
-    }
-    .mic-guide-phase {
-        opacity: 1;
-        position: static;
-    }
-    .mic-guide-swipe {
-        opacity: 0;
-    }
-    .mic-guide-pop {
-        opacity: 1;
-        transform: none;
     }
 }
 

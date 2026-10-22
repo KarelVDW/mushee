@@ -166,6 +166,15 @@ describe('TranscriptionSocket', () => {
         message({ type: 'score-update', measures: { 0: { m: 1 } } })
         message({ type: 'recording-limit', planId: 'free', planName: 'Sketch', limitSeconds: 30, usedSeconds: 30 })
         message({ type: 'recording-limit' })
+        message({
+            type: 'recording-limit',
+            planId: 'pro',
+            planName: 'Songwriter',
+            limitSeconds: 1200,
+            usedSeconds: 1200,
+            resetsAt: '2026-10-23T00:00:00.000Z',
+        })
+        message({ type: 'recording-limit', planId: 'free', planName: 'Sketch', limitSeconds: 180, usedSeconds: 180, resetsAt: 7 })
         message({ type: 'recording-error', code: 'concurrent-recording' })
         message({ type: 'recording-health', ok: false })
         // Ignored: malformed, codeless, stateless, measure-less and unknown types.
@@ -181,6 +190,9 @@ describe('TranscriptionSocket', () => {
         expect(h.onLimitReached.mock.calls).toEqual([
             [{ planId: 'free', planName: 'Sketch', limitSeconds: 30, usedSeconds: 30 }],
             [{ planId: 'free', planName: '', limitSeconds: null, usedSeconds: 0 }],
+            // The reset moment rides along when the gateway sends one; anything but a string is ignored.
+            [{ planId: 'pro', planName: 'Songwriter', limitSeconds: 1200, usedSeconds: 1200, resetsAt: '2026-10-23T00:00:00.000Z' }],
+            [{ planId: 'free', planName: 'Sketch', limitSeconds: 180, usedSeconds: 180 }],
         ])
         expect(h.onRecordingError.mock.calls).toEqual([['concurrent-recording']])
         expect(h.onHealth.mock.calls).toEqual([[{ ok: false }]])

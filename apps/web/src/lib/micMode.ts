@@ -8,7 +8,8 @@
  * (verified against WebKit source + Apple docs, 2026-07). Only "Wide
  * Spectrum" leaves music unfiltered, and the user's choice persists per app.
  * So the one lever left to a web app is education: a full walkthrough dialog
- * on the device's first recording, then a light toast reminder on later ones.
+ * on the device's first recording, then one quiet line in the recording
+ * strip's count-in, at most once per browser session, on later ones.
  * One more wrinkle: the Mic Mode tile only exists in Control Center while an
  * app is actively capturing, so the guide dialog runs over a live warm-up mic
  * stream (opened by useRecording before the dialog shows) — otherwise the
@@ -16,10 +17,17 @@
  */
 
 const STORAGE_KEY = 'solkey:mic-mode-guide'
+/** sessionStorage: the reminder already showed in this browser session. */
+const REMINDER_KEY = 'solkey:mic-mode-reminded'
 
 /** In-memory fallback so private-mode users (localStorage writes throw) still
  *  see the invasive dialog at most once per session. */
 let confirmedThisSession = false
+/** "Record without it": the guide stays out of the way for the rest of this visit
+ *  (never persisted, so it comes back next time — the setting still matters). */
+let guideSnoozed = false
+/** In-memory twin of {@link REMINDER_KEY}, for when sessionStorage is unavailable. */
+let remindedThisSession = false
 
 /**
  * iPhones only: iPads have reported a desktop UA since iPadOS 13 and aren't
@@ -39,14 +47,41 @@ function hasConfirmed(): boolean {
     }
 }
 
-/** First recording on this device: block and show the Wide Spectrum walkthrough. */
+/** First recording on this device: block and show the Wide Spectrum walkthrough (unless snoozed for this visit). */
 export function needsMicModeGuide(): boolean {
-    return isIPhone() && !hasConfirmed()
+    return isIPhone() && !hasConfirmed() && !guideSnoozed
 }
 
-/** Later recordings: the guide was confirmed before, nudge with a toast instead. */
-export function needsMicModeReminder(): boolean {
-    return isIPhone() && hasConfirmed()
+/** "Record without it": skip the guide for the rest of this visit, without attesting the setting. */
+export function snoozeMicModeGuide(): void {
+    guideSnoozed = true
+}
+
+/**
+ * Whether this take's count-in should carry the Mic Mode reminder: on an iPhone whose user
+ * confirmed the guide before, once per browser session. Asking spends it — the next take in
+ * this session gets no reminder.
+ */
+export function takeMicModeReminder(): boolean {
+    if (!isIPhone() || !hasConfirmed() || remindedThisSession) return false
+    remindedThisSession = true
+    try {
+        if (window.sessionStorage.getItem(REMINDER_KEY) !== null) return false
+        window.sessionStorage.setItem(REMINDER_KEY, '1')
+    } catch {
+        // Storage unavailable — the in-memory flag above still keeps it to once per page.
+    }
+    return true
+}
+
+/** The reminder is moot this session (the user just walked through the guide): don't show it. */
+export function markMicModeReminded(): void {
+    remindedThisSession = true
+    try {
+        window.sessionStorage.setItem(REMINDER_KEY, '1')
+    } catch {
+        // Storage unavailable — the in-memory flag above still holds for this page.
+    }
 }
 
 export function markMicModeGuideConfirmed(): void {

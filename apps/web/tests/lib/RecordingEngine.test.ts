@@ -547,6 +547,60 @@ describe('RecordingEngine', () => {
         expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(1, 3)
     })
 
+    it('reports each count-off click once, four in 4/4, then capture start', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player, cursor)
+        const onCountoffBeat = vi.fn()
+        const onCaptureStart = vi.fn()
+        const { options } = makeOptions({ onCountoffBeat, onCaptureStart })
+        await engine.start(options)
+
+        // 90bpm => a quarter beat every 2/3s; ticks between clicks report nothing new.
+        for (const t of [0, 0.3, 2 / 3, 1, 4 / 3, 2, 2.5]) {
+            raw.currentTime = t
+            engine.tick()
+        }
+        expect(onCountoffBeat.mock.calls).toEqual([
+            [0, 4],
+            [1, 4],
+            [2, 4],
+            [3, 4],
+        ])
+        expect(onCaptureStart).not.toHaveBeenCalled()
+
+        // Past the 2.667s count-off: capture starts, once, and the count stops.
+        raw.currentTime = 3
+        engine.tick()
+        raw.currentTime = 3.2
+        engine.tick()
+        expect(onCaptureStart).toHaveBeenCalledTimes(1)
+        expect(onCountoffBeat).toHaveBeenCalledTimes(4)
+    })
+
+    it('counts the felt pulse in 6/8: two count-off clicks, not six', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player, cursor)
+        const score = new Score()
+        for (let i = 0; i < 2; i++) {
+            const measure = score.addMeasure()
+            if (i === 0) score.setTimeSignature(measure, new TimeSignature(6, 8))
+            measure.complete()
+        }
+        const onCountoffBeat = vi.fn()
+        const { options } = makeOptions({ score, onCountoffBeat })
+        await engine.start(options)
+
+        // 90 quarter-bpm => a dotted-quarter pulse lasts 1s; the 6/8 count-off bar lasts 2s.
+        for (const t of [0, 0.5, 1, 1.5, 1.9]) {
+            raw.currentTime = t
+            engine.tick()
+        }
+        expect(onCountoffBeat.mock.calls).toEqual([
+            [0, 2],
+            [1, 2],
+        ])
+    })
+
     it('clears the cursor pulse when a take is stopped during countoff', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player, cursor)

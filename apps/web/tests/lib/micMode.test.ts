@@ -18,6 +18,7 @@ const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.
 describe('micMode', () => {
     beforeEach(() => {
         window.localStorage.clear()
+        window.sessionStorage.clear()
     })
 
     afterEach(() => {
@@ -32,31 +33,55 @@ describe('micMode', () => {
         expect((await loadMicMode(MAC_UA)).isIPhone()).toBe(false)
     })
 
-    it('wants the guide on an iPhone until confirmed, then the reminder', async () => {
+    it('wants the guide on an iPhone until confirmed, then the reminder once per session', async () => {
         const micMode = await loadMicMode(IPHONE_UA)
         expect(micMode.needsMicModeGuide()).toBe(true)
-        expect(micMode.needsMicModeReminder()).toBe(false)
+        expect(micMode.takeMicModeReminder()).toBe(false)
 
         micMode.markMicModeGuideConfirmed()
         expect(micMode.needsMicModeGuide()).toBe(false)
-        expect(micMode.needsMicModeReminder()).toBe(true)
+        expect(micMode.takeMicModeReminder()).toBe(true)
+        // Spent: later takes in this session get no reminder.
+        expect(micMode.takeMicModeReminder()).toBe(false)
     })
 
-    it('persists confirmation across sessions via localStorage', async () => {
+    it('persists confirmation across visits via localStorage, the reminder per browser session', async () => {
         const first = await loadMicMode(IPHONE_UA)
         first.markMicModeGuideConfirmed()
+        expect(first.takeMicModeReminder()).toBe(true)
 
-        // Fresh module = new session; only localStorage carries the state over.
-        const second = await loadMicMode(IPHONE_UA)
-        expect(second.needsMicModeGuide()).toBe(false)
-        expect(second.needsMicModeReminder()).toBe(true)
+        // A reload in the same browser session: confirmed, and already reminded.
+        const reload = await loadMicMode(IPHONE_UA)
+        expect(reload.needsMicModeGuide()).toBe(false)
+        expect(reload.takeMicModeReminder()).toBe(false)
+
+        // A new browser session reminds once more.
+        window.sessionStorage.clear()
+        const next = await loadMicMode(IPHONE_UA)
+        expect(next.takeMicModeReminder()).toBe(true)
+    })
+
+    it('a walkthrough just done spends the reminder for the session', async () => {
+        const micMode = await loadMicMode(IPHONE_UA)
+        micMode.markMicModeGuideConfirmed()
+        micMode.markMicModeReminded()
+        expect(micMode.takeMicModeReminder()).toBe(false)
+    })
+
+    it('"Record without it" snoozes the guide for this visit only, without confirming', async () => {
+        const micMode = await loadMicMode(IPHONE_UA)
+        micMode.snoozeMicModeGuide()
+        expect(micMode.needsMicModeGuide()).toBe(false)
+        // Not an attestation: no reminder, and the guide is back on the next visit.
+        expect(micMode.takeMicModeReminder()).toBe(false)
+        expect((await loadMicMode(IPHONE_UA)).needsMicModeGuide()).toBe(true)
     })
 
     it('never wants guide or reminder off-iPhone', async () => {
         const micMode = await loadMicMode(ANDROID_UA)
         expect(micMode.needsMicModeGuide()).toBe(false)
         micMode.markMicModeGuideConfirmed()
-        expect(micMode.needsMicModeReminder()).toBe(false)
+        expect(micMode.takeMicModeReminder()).toBe(false)
     })
 
     it('falls back to a session flag when localStorage throws (private mode)', async () => {
@@ -70,9 +95,11 @@ describe('micMode', () => {
         try {
             expect(micMode.needsMicModeGuide()).toBe(true)
             expect(() => micMode.markMicModeGuideConfirmed()).not.toThrow()
-            // Same session: the in-memory flag suppresses a second dialog.
+            // Same session: the in-memory flag suppresses a second dialog, and the reminder still shows once.
             expect(micMode.needsMicModeGuide()).toBe(false)
-            expect(micMode.needsMicModeReminder()).toBe(true)
+            expect(micMode.takeMicModeReminder()).toBe(true)
+            expect(micMode.takeMicModeReminder()).toBe(false)
+            expect(() => micMode.markMicModeReminded()).not.toThrow()
         } finally {
             setItem.mockRestore()
             getItem.mockRestore()
