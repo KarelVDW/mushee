@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
+        "target": "ES2022",
         "module": "commonjs",
         "moduleResolution": "node",
         // Explicit: TypeScript's default lib would add the DOM types.
