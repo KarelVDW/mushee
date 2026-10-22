@@ -41,8 +41,3 @@ export const WAVEFORM_CYAN = '#00DBE9'
  * first sanctioned exception to the canvas colour ban. The landing-page demo reuses them.
  */
 export const WAVEFORM_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA] as const
-
-/** Add/remove-measure button chrome: face, outline and label. */
-export const MEASURE_BUTTON_FILL = 'white'
-export const MEASURE_BUTTON_STROKE = '#dbdddd'
-export const MEASURE_BUTTON_LABEL = '#5a5c5c'

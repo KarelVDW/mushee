@@ -15,7 +15,6 @@ import { INTERACTION_BLUE } from './constants'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { InputCursor } from './InputCursor'
 import { type AttributeClick, Measure } from './Measure'
-import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
 import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
@@ -69,24 +68,16 @@ interface ScoreViewProps {
      */
     onSelectionMenu?: (event: SelectionMenuEvent) => void
     onNoteChange?: (note: Note, newPitch: Pitch) => void
-    onAddMeasure?: () => void
-    onRemoveMeasure?: () => void
-    canRemoveMeasure?: boolean
     /**
-     * Draw the in-score + / − bar buttons (given their callbacks). Default true; a host that
-     * renders its own HTML buttons from {@link onMeasureButtonsLayout} turns them off.
-     */
-    showMeasureButtons?: boolean
-    /**
-     * Where the bar buttons go, in container pixels — reported whenever the layout or the
-     * container width moves (null while there is nowhere to put them), whether or not the
-     * in-score buttons are drawn, so a host can place its own controls there.
+     * Where a host's own add / remove-bar controls go — the final barline and the last row's
+     * staff, in container pixels — reported whenever the layout or the container width moves
+     * (null while there is nowhere to put them). The score draws no bar buttons itself: the
+     * editor renders real HTML buttons from this (MeasureControls), outside the <svg>.
      */
     onMeasureButtonsLayout?: (rect: MeasureButtonsRect | null) => void
     /**
-     * Whether the score takes pointer input. False (during a take): taps and clicks on notes,
-     * glyphs and the bar buttons do nothing, nothing hovers, the bar buttons are hidden, and
-     * native scrolling still works. Default true.
+     * Whether the score takes pointer input. False (during a take): taps and clicks on notes
+     * and glyphs do nothing, nothing hovers, and native scrolling still works. Default true.
      */
     interactive?: boolean
     /**
@@ -121,7 +112,7 @@ export interface MeasureButtonsRect {
     /** The last row's top and bottom staff lines. */
     staffTop: number
     staffBottom: number
-    /** The in-score + (add a bar) and − (remove the last bar) buttons. */
+    /** The two squares the layout reserves after the final barline (ScoreLayout.measureButtons): add above, remove below. */
     add: PixelSquare
     remove: PixelSquare
 }
@@ -150,10 +141,6 @@ export const ScoreView = memo(function ScoreView({
     onSelectionExtend,
     onSelectionMenu,
     onNoteChange,
-    onAddMeasure,
-    onRemoveMeasure,
-    canRemoveMeasure = true,
-    showMeasureButtons: drawMeasureButtons = true,
     onMeasureButtonsLayout,
     interactive = true,
     onAttributeClick,
@@ -192,7 +179,6 @@ export const ScoreView = memo(function ScoreView({
 
     // The current layout snapshot (rebuilt lazily by the model when the score changed)
     const layout = score.layout
-    const showMeasureButtons = drawMeasureButtons && interactive && !!(onAddMeasure || onRemoveMeasure)
     const rows = layout.rows
     const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
@@ -406,10 +392,6 @@ export const ScoreView = memo(function ScoreView({
         }
     }, [interactive, gestures, ghostNote, selectedNote, onNoteChange])
 
-    // Measure buttons (last row only), placed by the layout
-    const measureButtons = showMeasureButtons ? layout.measureButtons : null
-
-    const lastRowIndex = rows.length - 1
     // Hover reaches only the hovered note's own measure, so the other measures' memos hold. An
     // edit can detach the hovered note under a still pointer; then nothing is hovered.
     const hoveredMeasure = interactive && hoveredNote?.isAttached ? hoveredNote.measure : null
@@ -428,6 +410,8 @@ export const ScoreView = memo(function ScoreView({
             {svgMounted && (
                 <svg
                     ref={svgRef}
+                    // Marks the engraved score itself, for hosts that look it up among their own chrome icons.
+                    data-score-canvas=""
                     width={containerWidth}
                     height={scaledHeight}
                     viewBox={`0 0 ${layout.scoreWidth} ${totalHeight}`}
@@ -506,7 +490,7 @@ export const ScoreView = memo(function ScoreView({
                         )),
                     )}
 
-                    {rows.map((row, ri) => (
+                    {rows.map((row) => (
                         <g key={row.id} transform={`translate(0, ${layout.getYForRow(row)})`}>
                             {/* Pointer-transparent: the lines cross the clef, key and time hit boxes
                                 drawn below them, and a click right on a line must still reach those. */}
@@ -520,26 +504,6 @@ export const ScoreView = memo(function ScoreView({
                             {layout.tieSegmentsOn(row).map(({ tie, segment }) => (
                                 <Tie key={tie.note.id} segment={segment} direction={tie.direction} />
                             ))}
-
-                            {ri === lastRowIndex && measureButtons && onAddMeasure && (
-                                <MeasureButton
-                                    x={measureButtons.x}
-                                    y={measureButtons.addY}
-                                    size={measureButtons.size}
-                                    label="+"
-                                    onClick={onAddMeasure}
-                                />
-                            )}
-                            {ri === lastRowIndex && measureButtons && onRemoveMeasure && (
-                                <MeasureButton
-                                    x={measureButtons.x}
-                                    y={measureButtons.removeY}
-                                    size={measureButtons.size}
-                                    label="-"
-                                    onClick={onRemoveMeasure}
-                                    disabled={!canRemoveMeasure}
-                                />
-                            )}
                         </g>
                     ))}
                 </svg>
