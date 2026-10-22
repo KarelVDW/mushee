@@ -47,6 +47,11 @@ export class Score {
         () => new Map(this.measures.map((m, i) => [m, i])),
     )
 
+    private readonly _hasPitchedNotes = new Derived(
+        () => this._version,
+        () => this.measures.some((measure) => measure.notes.some((note) => !note.isRest)),
+    )
+
     /** BPM in effect entering each measure, indexed by measure position. */
     private readonly _tempoMap = new Derived(
         () => this._version,
@@ -227,6 +232,14 @@ export class Score {
 
     get lastMeasure(): Measure | null {
         return this.measures[this.measures.length - 1] ?? null
+    }
+
+    /**
+     * Whether any bar holds a pitched note. A new score — bars of rests only — has none: the
+     * editor's empty state shows exactly while this is false.
+     */
+    get hasPitchedNotes(): boolean {
+        return this._hasPitchedNotes.value
     }
 
     getIndexForMeasure(measure: Measure): number {

@@ -27,6 +27,36 @@ const writtenShape = (notes: Note[]) =>
     )
 
 describe('Score', () => {
+    describe('hasPitchedNotes', () => {
+        it('is false for a new score and for bars of rests only', () => {
+            expect(new Score().hasPitchedNotes).toBe(false)
+            expect(Score.blank(Instrument.Piano).hasPitchedNotes).toBe(false)
+            expect(makeScore(3).hasPitchedNotes).toBe(false)
+        })
+
+        it('turns true once any bar holds a pitched note, tied notes included', () => {
+            const score = makeScore(2)
+            fill(score, 1, [q(p('G', 4), 'start'), q(p('G', 4)), q(), q()])
+            expect(score.hasPitchedNotes).toBe(true)
+        })
+
+        it('turns false again when the notes are deleted back to rests', () => {
+            const score = makeScore(1)
+            fill(score, 0, [pitched('C', 5), q(), q(), q()])
+            expect(score.hasPitchedNotes).toBe(true)
+            fill(score, 0, [q(), q(), q(), q()])
+            expect(score.hasPitchedNotes).toBe(false)
+        })
+
+        it('turns false when the only bar with notes is removed', () => {
+            const score = makeScore(2)
+            fill(score, 1, [pitched('E', 4, 'h'), q(), q()])
+            expect(score.hasPitchedNotes).toBe(true)
+            score.removeLastMeasure()
+            expect(score.hasPitchedNotes).toBe(false)
+        })
+    })
+
     describe('version & onChange', () => {
         it('every score-level mutation bumps the version and fires onChange', () => {
             let calls = 0
