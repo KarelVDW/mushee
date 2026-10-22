@@ -18,8 +18,10 @@
         "build:web": "pnpm --filter @mushee/web build",
         "build:admin": "pnpm --filter @mushee/admin build",
         "build:eval": "pnpm --filter @mushee/eval build",
-        "lint": "eslint --fix",
+        "lint": "eslint .",
+        "lint:fix": "eslint --fix .",
         "format": "prettier --write .",
+        "format:check": "prettier --check .",
         "type-check": "pnpm -r type-check",
         "test": "pnpm -r --if-present test",
         "pgweb": "pgweb --host localhost --port 5632 --user mushee --pass mushee --db mushee --ssl disable --listen 8632"

@@ -33,12 +33,11 @@ jobs:
 
             # Whole repo: .prettierignore excludes vendored, generated and machine-written files.
             - name: Format check
-              run: pnpm exec prettier --check .
+              run: pnpm format:check
 
-            # Scoped to src: apps/api/scripts + generated proto files carry a large
-            # pre-existing lint baseline that is tracked separately.
+            # Whole repo, non-mutating (`eslint .`); `pnpm lint:fix` is the local autofix.
             - name: Lint
-              run: pnpm exec eslint apps/api/src apps/web/src
+              run: pnpm lint
 
             - name: Type-check
               run: pnpm type-check
