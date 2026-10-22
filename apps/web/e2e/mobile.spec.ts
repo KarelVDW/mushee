@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
+import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
 /**
  * Mobile editor e2e (mocked API), run by the `mobile-chromium` project at a
@@ -95,12 +95,7 @@ test('mobile chrome: transport in the dock, record button dominant, no overflow'
 test('Record is disabled with no note selected and enabled again after tapping one', async ({ page }) => {
     // Refuse the microphone: the take clears the selection as it starts, then fails to open
     // the mic — leaving the editor with no note selected (the only way to get there by hand).
-    await page.evaluate(() => {
-        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-            configurable: true,
-            value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
-        })
-    })
+    await denyMicrophone(page)
     const record = page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record' })
     await expect(record).toBeEnabled()
     await record.tap()

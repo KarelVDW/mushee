@@ -53,6 +53,13 @@ const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtu
     unknown
 >
 
+/**
+ * A stored document the API could not read as JSON (the raw MusicXML text of a file), served
+ * instead of SCORE_PARTWISE under the `rawDocument` option. Neither the editor nor the share
+ * page may deserialize it: an editor autosave would write the reconstruction back over it.
+ */
+const RAW_DOCUMENT = { raw: '<score-partwise/>' }
+
 /** Two archived takes on the mock score, one legacy row without audio, and an orphan take on a deleted score. */
 const TAKES = [
     {
@@ -121,7 +128,8 @@ function readJson(route: Route): Record<string, unknown> {
     }
 }
 
-async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
+async function installApiMocks(page: Page, mock: ApiMock, { rawDocument }: { rawDocument: boolean }): Promise<void> {
+    const storedDocument = rawDocument ? RAW_DOCUMENT : SCORE_PARTWISE
     // Deleted scores must stay gone: the app refetches the list after a delete,
     // and a stateless mock would resurrect the row.
     const deletedIds = new Set<string>()
@@ -181,7 +189,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
             ])
         }
 
-        if (/\/scores\/[^/]+\/load$/.test(path)) return json(SCORE_PARTWISE)
+        if (/\/scores\/[^/]+\/load$/.test(path)) return json(storedDocument)
 
         // Takes recorded into the mock score (newest first), replay and deletion.
         if (/\/recordings\/[^/]+\/audio$/.test(path)) return route.fulfill({ status: 404, headers: corsHeaders(route), body: '' })
@@ -211,7 +219,7 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
         const sharedMatch = path.match(/\/shared\/([^/]+)$/)
         if (sharedMatch) {
             if (sharedMatch[1] !== MOCK_SHARE_TOKEN) return json({ message: 'Score not found' }, 404)
-            return json({ id: MOCK_SCORE_ID, title: MOCK_TITLE, updatedAt: NOW, document: SCORE_PARTWISE })
+            return json({ id: MOCK_SCORE_ID, title: MOCK_TITLE, updatedAt: NOW, document: storedDocument })
         }
 
         const duplicateMatch = path.match(/\/scores\/([^/]+)\/duplicate$/)
@@ -270,6 +278,21 @@ export async function focusEditor(page: Page): Promise<Locator> {
     return editor
 }
 
+/**
+ * Refuse the microphone: every getUserMedia call rejects as a denied permission. The refusal
+ * goes on the prototype, not on navigator.mediaDevices: WebKit garbage-collects that wrapper
+ * and hands out a fresh one, dropping an own-property stub, so a take would reach the real
+ * permission request, which never settles under automation.
+ */
+export async function denyMicrophone(page: Page): Promise<void> {
+    await page.evaluate(() => {
+        Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+            configurable: true,
+            value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+        })
+    })
+}
+
 /** Keep an unauthed page (no apiMock) hermetic: the app origin passes, everything else is cut. */
 export async function stayLocal(page: Page): Promise<void> {
     await page.route(/^https?:\/\//, (route) => {
@@ -278,7 +301,10 @@ export async function stayLocal(page: Page): Promise<void> {
     })
 }
 
-export const test = base.extend<{ apiMock: ApiMock }>({
+export const test = base.extend<{ apiMock: ApiMock; rawDocument: boolean }>({
+    // `test.use({ rawDocument: true })`: the score's stored document (editor load and share
+    // link alike) is RAW_DOCUMENT instead of the engraveable fixture score.
+    rawDocument: [false, { option: true }],
     // Every navigation waits for React to hydrate before the test acts. Server-rendered
     // forms look ready before that, but a fill() into one is lost (state stays empty, the
     // submit stays disabled) — the flaky "button stays disabled" runs on a slow CI runner.
@@ -302,7 +328,7 @@ export const test = base.extend<{ apiMock: ApiMock }>({
         }
         await use(page)
     },
-    apiMock: async ({ page, context }, use) => {
+    apiMock: async ({ page, context, rawDocument }, use) => {
         const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [], shareToken: null }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
@@ -329,7 +355,7 @@ export const test = base.extend<{ apiMock: ApiMock }>({
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hide)
             else hide()
         })
-        await installApiMocks(page, mock)
+        await installApiMocks(page, mock, { rawDocument })
         await use(mock)
     },
 })

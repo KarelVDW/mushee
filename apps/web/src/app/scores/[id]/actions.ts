@@ -8,8 +8,9 @@ import type { PitchScope } from '@/components/editor/pitchScope'
  * Actions are pure intent: they delegate to the model's own mutators (`Score.replace`,
  * `setDuration`, `toggleTuplet`, …) and return the note(s) to select afterward.
  * They never touch React, autosave, or playback — the {@link ScoreManipulator} owns that
- * orchestration. Listeners (keyboard handlers, dock buttons) live in the page and
- * dispatch into the manipulator, which runs the matching action here.
+ * orchestration. Callers (the dock, the header tools, the score view's listeners and the
+ * keyboard commands in ./commands) dispatch into the manipulator, which runs the matching
+ * action here.
  *
  * An action comes in one of two shapes: `execute` acts on the active note alone (a
  * multi-note selection collapses onto it), while `executeBulk` receives the whole
@@ -18,7 +19,7 @@ import type { PitchScope } from '@/components/editor/pitchScope'
  */
 interface ScoreActionBase {
     id: string
-    /** Human-readable name (tooltips / future command palette). */
+    /** Human-readable name (the shortcuts dialog's default row label). */
     label: string
 }
 

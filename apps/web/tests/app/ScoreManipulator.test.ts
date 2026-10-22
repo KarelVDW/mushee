@@ -503,6 +503,15 @@ describe('ScoreManipulator in-score attribute setters', () => {
         manipulator.setKeyAt(at.measureIndex, 2, at.beat)
         expect(ids(manipulator.selectedNotes)).toEqual([notes[1].id, notes[2].id, notes[3].id])
     })
+
+    it('collapses a range selection onto the active note when the meter changes (rebarring)', () => {
+        const { manipulator, notes } = setupPitched()
+        manipulator.select(notes[0])
+        manipulator.extendSelectionTo(notes[1])
+        manipulator.setTimeSignatureAt(0, 3, 4)
+        expect(manipulator.score?.firstMeasure?.timeSignature.beatAmount).toBe(3)
+        expect(ids(manipulator.selectedNotes)).toEqual([notes[1].id])
+    })
 })
 
 describe('ScoreManipulator pitch operations (transpose / minimize accidentals)', () => {

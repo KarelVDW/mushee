@@ -9,7 +9,7 @@ import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 
-import { COMPACT_POPOVER_SHEET } from './NoteToolDock'
+import { COMPACT_POPOVER_SHEET } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Meter assumed for the in-score tempo popover when its measure is gone (the score reloaded underneath it). */
