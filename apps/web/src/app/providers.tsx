@@ -34,8 +34,7 @@ function makeQueryClient() {
                 if (mutation.meta?.silentError) return
                 // A mutation's own message ("Could not delete the score…") reads better
                 // than the generic network/API phrasing, so it wins when provided.
-                const metaMessage = mutation.meta?.errorMessage
-                showToast(typeof metaMessage === 'string' ? metaMessage : toastMessage(error, 'Something went wrong. Please try again.'))
+                showToast(mutation.meta?.errorMessage ?? toastMessage(error, 'Something went wrong. Please try again.'))
             },
         }),
     })
