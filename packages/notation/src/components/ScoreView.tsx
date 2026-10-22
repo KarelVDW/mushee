@@ -23,6 +23,10 @@ import { Tie } from './Tie'
 
 /** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
 const INPUT_CURSOR_GAP = 15
+/** The hover-to-pitch ghost: its notehead's opacity, and its letter label's on-screen size and gap (CSS px). */
+const GHOST_OPACITY = 0.5
+const GHOST_LABEL_PX = 11
+const GHOST_LABEL_GAP_PX = 6
 
 /**
  * Below this container width the layout reflows to the container instead of
@@ -315,6 +319,7 @@ export const ScoreView = memo(function ScoreView({
     const gestures = useSelectionGestures<Note>({
         targetId: (note) => note.id,
         isSelected: (note) => selectedIds.has(note.id),
+        isOnlySelected: (note) => selectedIds.size === 1 && selectedIds.has(note.id),
         onSelectionStart: interactive ? onSelectionStart : undefined,
         onSelectionExtend: interactive ? onSelectionExtend : undefined,
         onSelectionMenu: interactive && onSelectionMenu ? (gesture) => onSelectionMenu({ note: gesture.target }) : undefined,
@@ -377,6 +382,15 @@ export const ScoreView = memo(function ScoreView({
         [interactive, resolveHit, gestures],
     )
 
+    // A right-click reports the note under it, so the menu opens over that note or its selection.
+    const handleContextMenu = useCallback(
+        (e: React.MouseEvent<SVGSVGElement>) => {
+            const pointerType = 'pointerType' in e.nativeEvent ? (e.nativeEvent as PointerEvent).pointerType : undefined
+            gestures.contextMenu({ preventDefault: () => e.preventDefault(), pointerType }, resolveHit(e.clientX, e.clientY)?.note ?? null)
+        },
+        [gestures, resolveHit],
+    )
+
     const handlePointerLeave = useCallback(() => {
         setHoveredNote(null)
         setGhost(null)
@@ -399,6 +413,9 @@ export const ScoreView = memo(function ScoreView({
     // Hover reaches only the hovered note's own measure, so the other measures' memos hold. An
     // edit can detach the hovered note under a still pointer; then nothing is hovered.
     const hoveredMeasure = interactive && hoveredNote?.isAttached ? hoveredNote.measure : null
+    const hoveringSelected = interactive && !!onNoteChange && !!selectedNote && hoveredNote === selectedNote
+    // Layout units per CSS pixel: the svg renders the layout scaled to the container's width.
+    const unitsPerPx = containerWidth > 0 ? layout.scoreWidth / containerWidth : 1
 
     return (
         <div
@@ -418,11 +435,12 @@ export const ScoreView = memo(function ScoreView({
                     // pan-y: vertical touch gestures keep scrolling the page, while taps and
                     // horizontal drags reach the pointer handlers (select / drag-extend).
                     // touch-callout off: an iOS long-press must open the selection menu, not the OS callout.
-                    className="touch-pan-y [-webkit-touch-callout:none]"
+                    // The pointer cursor over the selected note's column says a click there changes it.
+                    className={`touch-pan-y [-webkit-touch-callout:none] ${hoveringSelected ? 'cursor-pointer' : ''}`}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerLeave={handlePointerLeave}
-                    onContextMenu={interactive ? gestures.contextMenu : undefined}
+                    onContextMenu={interactive ? handleContextMenu : undefined}
                     onClick={handleClick}>
                     {/* Pitch-operation emphasis — the lowest layer, a wash behind all ink */}
                     {highlight && <HighlightLayer key={highlight.id} score={score} highlight={highlight} />}
@@ -465,8 +483,20 @@ export const ScoreView = memo(function ScoreView({
                                         className="pointer-events-none"
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
-                                            <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
+                                            <g key={ghostNote.id}>
+                                                <g opacity={GHOST_OPACITY}>
+                                                    <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
+                                                </g>
+                                                {/* The note's name, for anyone who knows letters better than lines. */}
+                                                <text
+                                                    x={ghostLayout.noteRightX + GHOST_LABEL_GAP_PX * unitsPerPx}
+                                                    y={ghostLayout.noteY}
+                                                    fontSize={GHOST_LABEL_PX * unitsPerPx}
+                                                    dominantBaseline="central"
+                                                    fill={INTERACTION_BLUE}
+                                                    className="font-label font-medium select-none">
+                                                    {ghostNote.letterName}
+                                                </text>
                                             </g>
                                         )}
                                         <InputCursor x={inputCursorPos.x} y={inputCursorPos.y} />
