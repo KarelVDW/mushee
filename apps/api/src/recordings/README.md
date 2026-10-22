@@ -13,16 +13,19 @@ into two layers with a deliberate boundary between them.
   then the row).
 - `recording-sessions.service.ts` — the live-recording engine: owns the pitch
   model registry and profile resolver, and opens one session per take (slot
-  lock, credit check, pipeline); the gateway's only service.
+  lock, credit check, pipeline); the gateway's only recordings service (it
+  also injects `ScoresService` for the score-ownership check and `BetaService`
+  for the beta gate).
 - `recordings.service.ts` — the takes behind the controller (list, replay,
-  delete) and the account purge.
+  delete), the admin console's support replay (`audioForSupport`), and the
+  account purge's audio sweep (`deleteAudioForUser`).
 - `recording-credits.service.ts` / `recording-locks.service.ts` — credit
   accounting (the daily budget per tier plus purchased pack seconds) and the
   one-recording-per-user lock.
 - `recording-session.ts` — one live take: feeds the pipeline, meters credits
   while audio streams, enforces the hard caps, and persists the `Recording` row.
 - `dto/recording-meta.dto.ts` — validation for the client's `meta` frame (the
-  socket bypasses Nest's ValidationPipe).
+  socket bypasses Nest's ValidationPipe; the gateway drops each failing field).
 - `recording-archiver.ts` — archives raw session audio and the debug bundle
   through the `StorageService`, and owns the take-folder layout (`folderFor`);
   implements the pipeline's `PipelineArchive` port, so the dependency runs

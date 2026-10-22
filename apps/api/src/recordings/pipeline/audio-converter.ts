@@ -88,7 +88,10 @@ export class AudioConverter {
      * (`VoiceDecodeOptions.reonsetCost`/`accentBonus`) and is a null with a broadband
      * envelope — see those docstrings before trying it again.
      *
-     * Public so the eval harness can replay the shipped cleanup instead of a copy.
+     * Public so the eval harness can replay the shipped cleanup instead of keeping
+     * a copy. The script adoption is still pending (Phase 1 kept scripts/ out of
+     * scope): scripts/eval/lib/decodeCached.ts `cleanupAsProduction` still
+     * hand-copies it, and its voice branch lacks adaptiveFloorFraction/seamFillBeats.
      */
     static cleanupFor(hasNativeOnsets: boolean, profile?: PipelineProfile): NoteExtractorOptions {
         if (hasNativeOnsets) return {}

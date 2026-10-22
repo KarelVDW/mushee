@@ -634,7 +634,7 @@ export class RecordingPipeline {
      *    emitted as one.
      *  - **Bars containing nothing at all.** A bar the performer rested through has no
      *    onset to key off, so it was never emitted and the score simply had a hole
-     *    where a bar of rest belonged. `buildMeasure` already renders it correctly (a
+     *    where a bar of rest belonged. `buildMeasures` already renders it correctly (a
      *    whole rest) once asked, so the watermark below makes sure it is asked.
      */
     private affectedMeasures(newNotes: PendingNote[]): number[] {
@@ -698,7 +698,7 @@ export class RecordingPipeline {
      * The take's debug bundle as of now: the pitch plot, every bar of the emitted
      * score and the session metadata. Pure assembly — writing it is the archive's job.
      */
-    debugBundle(): DebugBundle {
+    private debugBundle(): DebugBundle {
         let plotSvg: string | undefined
         if (this.lastDuration > 0 || this.lastRawNotes.length) {
             plotSvg = new RecordingDebugRenderer().render({

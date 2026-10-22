@@ -64,7 +64,7 @@ export class GcsStorageProvider implements StorageProvider {
         await this.bucket.file(key).delete({ ignoreNotFound: true })
     }
 
-    async deletePrefix(folder: string): Promise<void> {
+    async deleteFolder(folder: string): Promise<void> {
         // A raw string prefix would let `recordings/u1` delete `recordings/u10/…`
         // too; the trailing slash confines it to the folder, like Local's rm.
         await this.bucket.deleteFiles({ prefix: `${storageFolder(folder)}/` })

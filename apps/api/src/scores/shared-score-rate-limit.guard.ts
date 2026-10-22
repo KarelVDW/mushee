@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
-import { positiveIntSetting } from '../common/env'
+import { positiveIntSetting } from '../config/env'
 
 /** Requests per IP per window on the public share endpoint (default 30/min);
  *  tighter than the global limiter, which keys per-user and allows 120/min. */

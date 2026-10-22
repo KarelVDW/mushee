@@ -43,11 +43,6 @@ export class RecordingLocksService {
         if (!rows.length) return null
         return new RecordingLock(userId, token, this.repo)
     }
-
-    /** Drop the user's slot row regardless of holder (account purge). */
-    async deleteAllForUser(userId: string): Promise<void> {
-        await this.repo.delete({ userId })
-    }
 }
 
 /**

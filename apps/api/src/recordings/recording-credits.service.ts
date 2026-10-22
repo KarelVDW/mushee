@@ -107,12 +107,6 @@ export class RecordingCreditsService {
         await this.drawPackSeconds(userId, seconds, manager?.getRepository(CreditBalance))
     }
 
-    /** Remove all usage rows and the pack balance for a user (account purge). */
-    async deleteAllForUser(userId: string): Promise<void> {
-        await this.usageRepo.delete({ userId })
-        await this.balanceRepo.delete({ userId })
-    }
-
     /** Atomically draw up to `seconds` from the pack balance; returns what is
      *  left. Clamped at zero — the final tick may be only partly covered, the
      *  same one-tick overshoot the daily budget already tolerates. */

@@ -16,8 +16,9 @@ class TimeSignatureDto {
 /**
  * The fields of the client's `{ type: 'meta', ... }` text frame, validated like
  * every HTTP body is (the field docs live on `RecordingMeta`). The socket
- * bypasses Nest's ValidationPipe, so the gateway runs this itself and drops a
- * frame that fails it.
+ * bypasses Nest's ValidationPipe, so the gateway runs this itself and drops
+ * each field that fails it. The web client's side of this contract is
+ * `TranscriptionMeta` (apps/web/src/lib/TranscriptionSocket.ts).
  */
 export class RecordingMetaDto implements RecordingMeta {
     @IsOptional()

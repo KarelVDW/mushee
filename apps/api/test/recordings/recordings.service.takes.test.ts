@@ -4,8 +4,6 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Recording } from '../../src/recordings/entities/recording.entity'
-import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
-import type { RecordingLocksService } from '../../src/recordings/recording-locks.service'
 import { RecordingsService } from '../../src/recordings/recordings.service'
 import type { StorageService } from '../../src/storage/storage.service'
 
@@ -86,21 +84,16 @@ function makeService(storageOverrides: Partial<StorageService> = {}) {
         findOneBy: vi.fn(({ id }: { id: string }) => Promise.resolve(rows.find((r) => r.id === id) ?? null)),
         delete: vi.fn(() => Promise.resolve({ affected: 1 })),
     }
-    const deletePrefix = vi.fn(() => Promise.resolve())
+    const deleteFolder = vi.fn(() => Promise.resolve())
     const storage = {
         list: vi.fn((prefix: string) => Promise.resolve(OBJECTS[prefix] ?? [])),
         signedUrl: vi.fn(() => Promise.resolve(null as string | null)),
         createReadStream: vi.fn(() => 'stream' as never),
-        deletePrefix,
+        deleteFolder,
         ...storageOverrides,
     }
-    const service = new RecordingsService(
-        repo as never,
-        {} as RecordingCreditsService,
-        {} as RecordingLocksService,
-        storage as unknown as StorageService,
-    )
-    return { service, repo, storage, deletePrefix }
+    const service = new RecordingsService(repo as never, storage as unknown as StorageService)
+    return { service, repo, storage, deleteFolder }
 }
 
 describe('RecordingsService takes', () => {
@@ -188,20 +181,20 @@ describe('RecordingsService takes', () => {
     })
 
     it('deletes the audio folder before the row, and skips storage for audio-less rows', async () => {
-        const { service, repo, deletePrefix } = makeService()
+        const { service, repo, deleteFolder } = makeService()
         await service.remove('u1', 'r-old')
-        expect(deletePrefix).toHaveBeenCalledWith('recordings/u1/s1/r-old')
+        expect(deleteFolder).toHaveBeenCalledWith('recordings/u1/s1/r-old')
         expect(repo.delete).toHaveBeenCalledWith({ id: 'r-old' })
-        expect(deletePrefix.mock.invocationCallOrder[0]).toBeLessThan(repo.delete.mock.invocationCallOrder[0])
+        expect(deleteFolder.mock.invocationCallOrder[0]).toBeLessThan(repo.delete.mock.invocationCallOrder[0])
 
-        deletePrefix.mockClear()
+        deleteFolder.mockClear()
         await service.remove('u1', 'r-legacy')
-        expect(deletePrefix).not.toHaveBeenCalled()
+        expect(deleteFolder).not.toHaveBeenCalled()
         expect(repo.delete).toHaveBeenLastCalledWith({ id: 'r-legacy' })
     })
 
     it('does not delete the row when the audio delete fails (no orphaned audio)', async () => {
-        const { service, repo } = makeService({ deletePrefix: vi.fn(() => Promise.reject(new Error('bucket down'))) as never })
+        const { service, repo } = makeService({ deleteFolder: vi.fn(() => Promise.reject(new Error('bucket down'))) as never })
         await expect(service.remove('u1', 'r-old')).rejects.toThrow('bucket down')
         expect(repo.delete).not.toHaveBeenCalled()
     })

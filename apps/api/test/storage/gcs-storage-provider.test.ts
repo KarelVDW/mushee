@@ -28,8 +28,8 @@ describe('GcsStorageProvider folders', () => {
 
     it('deletes inside the folder only, so recordings/u1 cannot match recordings/u10', async () => {
         const { provider, bucket } = makeProvider()
-        await provider.deletePrefix('recordings/u1')
-        await provider.deletePrefix('recordings/u1/')
+        await provider.deleteFolder('recordings/u1')
+        await provider.deleteFolder('recordings/u1/')
         expect(bucket.deleteFiles).toHaveBeenNthCalledWith(1, { prefix: 'recordings/u1/' })
         expect(bucket.deleteFiles).toHaveBeenNthCalledWith(2, { prefix: 'recordings/u1/' })
     })
@@ -37,7 +37,7 @@ describe('GcsStorageProvider folders', () => {
     it('refuses an empty folder instead of listing or wiping the whole bucket', async () => {
         const { provider, bucket } = makeProvider()
         for (const folder of ['', '/', '//']) {
-            await expect(provider.deletePrefix(folder)).rejects.toThrow(/whole store/)
+            await expect(provider.deleteFolder(folder)).rejects.toThrow(/whole store/)
             await expect(provider.list(folder)).rejects.toThrow(/whole store/)
         }
         expect(bucket.deleteFiles).not.toHaveBeenCalled()

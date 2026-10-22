@@ -66,7 +66,12 @@ export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
     })
 }
 
-/** The cleanup set the clip's profile selects — mirrors `AudioConverter.cleanupFor`. */
+/**
+ * The cleanup set the clip's profile selects — a hand copy of
+ * `AudioConverter.cleanupFor`, not a call to it. Its voice branch omits the
+ * shipped `adaptiveFloorFraction: 0.3` and `seamFillBeats: 0.6`, so voice
+ * numbers measured through it are not the shipped cleanup (adoption pending).
+ */
 export function cleanupAsProduction(c: CachedClip): NoteExtractorOptions {
     // maxGridDivisor 4 everywhere: the MusicXML grid bottoms out at the 16th, so a
     // finer snap is re-rounded by the round-trip and only shows up as onset error.

@@ -174,12 +174,3 @@ describe('pack grants and revocations', () => {
         expect(state.pack).toBe(0)
     })
 })
-
-describe('deleteAllForUser', () => {
-    it('removes usage rows and the pack balance', async () => {
-        const { service, usageRepo, balanceRepo } = makeService(tier(600))
-        await service.deleteAllForUser('u1')
-        expect(usageRepo.delete).toHaveBeenCalledWith({ userId: 'u1' })
-        expect(balanceRepo.delete).toHaveBeenCalledWith({ userId: 'u1' })
-    })
-})

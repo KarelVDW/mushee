@@ -100,7 +100,12 @@ export class MxmlBuilder {
         return [first, Math.max(first, last)]
     }
 
-    /** One bar of the take written from `allNotes` — every note so far, not just this bar's. */
+    /**
+     * One bar of the take written from `allNotes` — every note so far, not just
+     * this bar's. The single-bar convenience the tests read bars through; the
+     * pipeline always builds via `buildMeasures`, which estimates the take's
+     * spelling once per batch instead of once per bar.
+     */
     buildMeasure(index: number, allNotes: PendingNote[]): MxmlMeasure {
         return this.writeMeasure(index, allNotes, this.spellingFor(allNotes))
     }
