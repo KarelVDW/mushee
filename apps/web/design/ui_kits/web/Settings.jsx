@@ -464,7 +464,7 @@ function ChangePlanDialog({ currentPlanId, currentBilling, onCancel, onChanged, 
                                 font: '400 13px/1.5 var(--font-body)',
                                 color: 'var(--color-on-surface-variant)',
                             }}>
-                            The switch takes effect right away; Polar prorates the difference on your next invoice.
+                            The switch takes effect right away, and you only pay the difference for the time left on your plan.
                         </div>
                     )}
                 </div>
@@ -1302,7 +1302,7 @@ function Settings({ user, onSave, onSignOut, recUsedSec = 0, onResetUsage, planI
                                     </a>
                                 </div>
                             </SettingsSection>
-                            <SettingsSection title="Sign out" subtitle="Log out of this browser.">
+                            <SettingsSection title="Sign out" subtitle="Sign out of Solkey on this browser.">
                                 <div>
                                     <TertiaryButton onClick={onSignOut}>Sign out</TertiaryButton>
                                 </div>

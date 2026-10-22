@@ -300,15 +300,15 @@ const GOALS = [
 
 // A representative slice of Instrument.selectableByCategory() (the shared model
 // list at packages/notation/src/model/Instrument.ts, imported app-side as
-// `@mushee/notation/model`). Picker order: Keyboard · Brass · Woodwinds · Voice ·
-// Strings · Folk & World, alphabetical within each group. NON_INSTRUMENT_OPTIONS
+// `@mushee/notation/model`). Picker order: Voice · Keyboard · Strings · Woodwinds ·
+// Brass · Folk & World, alphabetical within each group. NON_INSTRUMENT_OPTIONS
 // is the survey-only escape hatch appended after the real families.
 const INSTRUMENTS_BY_CATEGORY = [
+    ['Voice', ['Voice']],
     ['Keyboard', ['Piano']],
-    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
+    ['Strings', ['Bass Guitar', 'Cello', 'Double Bass', 'Guitar', 'Viola', 'Violin']],
     ['Woodwinds', ['Alto Saxophone', 'Bassoon', 'Clarinet', 'English Horn', 'Flute', 'Oboe', 'Piccolo', 'Recorder', 'Tenor Saxophone']],
-    ['Voice', ['Voice Lead']],
-    ['Strings', ['Bass Guitar', 'Cello', 'Contrabass', 'Guitar', 'Viola', 'Violin']],
+    ['Brass', ['Baritone Horn', 'Euphonium', 'French Horn', 'Trombone', 'Trumpet', 'Tuba']],
     ['Folk & World', ['Bagpipe', 'Erhu', 'Harmonica', 'Ocarina', 'Pan Flute', 'Tin Whistle']],
 ]
 const NON_INSTRUMENT_OPTIONS = ['Other', "I don't play (yet)"]

@@ -372,9 +372,9 @@ function LandingHero({ onSignIn, onGetStarted }) {
 /* ─────────── How it works ─────────── */
 function HowItWorks() {
     const steps = [
-        ['01', 'Press record', 'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.'],
-        ['02', 'Play or sing', 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.'],
-        ['03', 'Polish & keep', "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go."],
+        ['01', 'Press record', 'Open a new score and press record. Solkey counts you in, then listens — only while you record.'],
+        ['02', 'Sing or play the tune', 'Your voice or any instrument, one note at a time. Solkey writes the melody onto the staff, bar by bar, while you play.'],
+        ['03', 'Fix it and keep it', 'Tap a wrong note to fix it, change the key if you like, and hear it played back. Everything saves as you go.'],
     ]
     return (
         <section id="how" style={{ padding: '88px 32px' }}>
@@ -392,7 +392,7 @@ function HowItWorks() {
                             margin: '12px 0 0',
                             maxWidth: 640,
                         }}>
-                        From melody to sheet music in one take.
+                        From melody to sheet music in one go.
                     </h2>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
@@ -859,7 +859,7 @@ function FinalCTA({ onGetStarted }) {
                     }}>
                     That melody in your head?
                     <br />
-                    <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>It takes one take.</em>
+                    <em style={{ fontFamily: 'var(--font-serif)', fontWeight: 400 }}>One recording is all it takes.</em>
                 </h2>
                 <p style={{ font: '400 17px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0, maxWidth: 520 }}>
                     Free to start. No credit card. Your first recording is on the page in under a minute.
