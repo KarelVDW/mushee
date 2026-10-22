@@ -19,39 +19,33 @@ describe('LeadingTrack', () => {
         expect(track.list.leading?.label).toBe('lead')
     })
 
-    it('add stores an item as given, remove drops whatever sits at a beat', () => {
+    it('add stores an item as given', () => {
         const track = new LeadingTrack(item(0, 'lead'), false)
         track.add(item(2, 'mid'))
         expect(labels(track)).toEqual(['0:lead', '2:mid'])
         expect(track.leadingExplicit).toBe(false)
-        track.remove(2)
-        expect(labels(track)).toEqual(['0:lead'])
     })
 
     describe('set', () => {
         it('replaces the item at its beat; beat 0 marks the leading item explicit', () => {
             const track = new LeadingTrack(item(0, 'lead'), false)
-            track.set(item(0, 'new lead'), () => true)
+            track.set(item(0, 'new lead'), true) // the leading item is never redundant
             expect(labels(track)).toEqual(['0:new lead'])
             expect(track.leadingExplicit).toBe(true)
         })
 
-        it('drops a redundant mid-measure item, asking only after the old item at that beat is gone', () => {
+        it('drops a redundant mid-measure item together with the old item at that beat', () => {
             const track = new LeadingTrack(item(0, 'lead'), false)
             track.add(item(2, 'old'))
-            let seen: string[] = []
-            track.set(item(2, 'same as before'), () => {
-                seen = labels(track)
-                return true
-            })
-            expect(seen).toEqual(['0:lead'])
+            track.set(item(2, 'same as before'), true)
             expect(labels(track)).toEqual(['0:lead'])
             expect(track.leadingExplicit).toBe(false)
         })
 
-        it('keeps a mid-measure change without touching the leading state', () => {
+        it('keeps a mid-measure change, replacing the old item at that beat, without touching the leading state', () => {
             const track = new LeadingTrack(item(0, 'lead'), false)
-            track.set(item(2, 'change'), () => false)
+            track.add(item(2, 'old'))
+            track.set(item(2, 'change'), false)
             expect(labels(track)).toEqual(['0:lead', '2:change'])
             expect(track.leadingExplicit).toBe(false)
         })
@@ -104,8 +98,8 @@ describe('LeadingTrack', () => {
         const track = new LeadingTrack(item(0, 'lead'), false)
         const writes: Array<() => void> = [
             () => track.add(item(1, 'added')),
-            () => track.set(item(2, 'set'), () => false),
-            () => track.remove(1),
+            () => track.set(item(2, 'set'), false),
+            () => track.set(item(1, 'redundant'), true),
             () => track.map((i) => i),
             () => track.replaceLeadingInherited(inherited, () => false),
         ]

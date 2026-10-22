@@ -229,9 +229,8 @@ export class Measure {
         return this._clefs.list.last ?? this.clef
     }
 
-    /** The clef in effect just before `beatPosition` (ignoring any clef exactly at it). */
+    /** The clef in effect just before `beatPosition` (ignoring any clef exactly at it; the leading clef for beat 0). */
     private clefBefore(beatPosition: number): Clef {
-        /* v8 ignore next -- defensive: setClef only asks for a beat after 0, where the beat-0 clef is always found */
         return this._clefs.list.before(beatPosition) ?? this.clef
     }
 
@@ -261,7 +260,7 @@ export class Measure {
      * Note: carry-forward into later measures is a Score responsibility (`Score.setClef`).
      */
     setClef(beatPosition: number, type: ClefType) {
-        this._clefs.set(new Clef(this, beatPosition, type), () => this.clefBefore(beatPosition).type === type)
+        this._clefs.set(new Clef(this, beatPosition, type), this.clefBefore(beatPosition).type === type)
         this.touch()
     }
 
@@ -329,7 +328,7 @@ export class Measure {
      * Note: carry-forward into later measures is a Score responsibility (`Score.setKeySignature`).
      */
     setKeySignature(beatPosition: number, fifths: number, mode?: string) {
-        this._keys.set(new KeySignature(this, beatPosition, fifths, mode), () => this.keyBefore(beatPosition).sameKeyAs(fifths, mode))
+        this._keys.set(new KeySignature(this, beatPosition, fifths, mode), this.keyBefore(beatPosition).sameKeyAs(fifths, mode))
         this.touch()
     }
 

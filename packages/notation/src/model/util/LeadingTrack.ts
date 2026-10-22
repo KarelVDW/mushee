@@ -36,10 +36,6 @@ export class LeadingTrack<T extends BeatPositioned> {
         this._items = [...this._items, item]
     }
 
-    remove(beatPosition: number) {
-        this._items = this._items.filter((item) => item.beatPosition !== beatPosition)
-    }
-
     /** Rewrite every item in place of its old self; the leading state is kept. */
     map(rewrite: (item: T) => T) {
         this._items = this._items.map(rewrite)
@@ -47,13 +43,17 @@ export class LeadingTrack<T extends BeatPositioned> {
 
     /**
      * Add or replace the item at its beat; beat 0 marks the leading item explicit. A mid-measure
-     * item that `isRedundant` — asked once the old item at that beat is gone — judges equal to
-     * the one already in effect there is dropped instead, leaving the beat to its predecessor.
+     * item the caller judged `redundant` (equal to the one in effect before its beat) is dropped
+     * instead, along with whatever stood at that beat, leaving the beat to its predecessor. The
+     * leading item is never redundant: `redundant` is ignored at beat 0.
      */
-    set(item: T, isRedundant: () => boolean) {
-        this.remove(item.beatPosition)
-        if (item.beatPosition > 0 && isRedundant()) return
-        this._items = [...this._items, item]
+    set(item: T, redundant: boolean) {
+        const others = this._items.filter((existing) => existing.beatPosition !== item.beatPosition)
+        if (item.beatPosition > 0 && redundant) {
+            this._items = others
+            return
+        }
+        this._items = [...others, item]
         if (item.beatPosition === 0) this._leadingExplicit = true
     }
 
@@ -64,7 +64,9 @@ export class LeadingTrack<T extends BeatPositioned> {
 
     /**
      * Carry-forward: put `make()` in as the inherited leading item, unless the leading item is
-     * explicit or `isCurrent` says it already matches. Returns whether anything changed.
+     * explicit or `isCurrent` says it already matches. Returns whether anything changed. Both
+     * are callbacks because propagation runs this over every measure on every context edit:
+     * the item is only built, and the match only checked, where it can change.
      */
     replaceLeadingInherited(make: () => T, isCurrent: () => boolean): boolean {
         if (this._leadingExplicit || isCurrent()) return false
