@@ -12,9 +12,9 @@ import { NoteWidth } from './NoteWidth'
 
 /** Which leading attributes a measure draws. */
 export interface MeasureFlags {
-    showsClef: boolean
-    showsKeySignature: boolean
-    showsTimeSignature: boolean
+    readonly showsClef: boolean
+    readonly showsKeySignature: boolean
+    readonly showsTimeSignature: boolean
 }
 
 /**
