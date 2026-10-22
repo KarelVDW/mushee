@@ -6,7 +6,8 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 
 import type { PitchScope } from '@/app/scores/[id]/ScoreManipulator'
 import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
-import { Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
+import { UnitNumberField } from '@/components/editor/UnitNumberField'
+import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 
 type TransposeTab = 'interval' | 'key' | 'semitones'
 
@@ -308,9 +309,7 @@ export function TransposePopover({
 function LabeledRow({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex flex-col gap-1.5">
-            <span className="font-label font-semibold text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                {label}
-            </span>
+            <Eyebrow>{label}</Eyebrow>
             {children}
         </div>
     )
@@ -342,7 +341,7 @@ interface NumberStepperProps {
     grow?: boolean
 }
 
-/** A ± stepper around a numeric field, in the tempo popover's input style. */
+/** A ± stepper around a {@link UnitNumberField} (the tempo popover's field, one size down). */
 function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: NumberStepperProps) {
     // A local draft lets partial input ("-", "") sit in the field without committing; every
     // parseable value commits immediately and outside changes (the ± buttons) sync back in.
@@ -367,26 +366,21 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
     )
     return (
         <div className={`flex items-stretch gap-1 ${grow ? 'flex-1' : ''}`}>
-            <div className={`relative flex items-center px-3 rounded-sm bg-surface-container-low ${grow ? 'flex-1' : 'w-24'}`}>
-                <input
-                    type="number"
-                    min={min}
-                    max={max}
-                    value={draft}
-                    onChange={(e) => {
-                        setDraft(e.target.value)
-                        const n = parseInt(e.target.value, 10)
-                        if (!Number.isNaN(n)) onChange(clamp(n))
-                    }}
-                    onBlur={() => setDraft(String(value))}
-                    aria-label={ariaLabel}
-                    className="flex-1 min-w-0 w-8 py-2.5 bg-transparent border-0 outline-0 font-body font-medium text-[15px] leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="font-label font-medium text-[10px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                    {suffix}
-                </span>
-                <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
-            </div>
+            <UnitNumberField
+                value={draft}
+                onChange={(raw) => {
+                    setDraft(raw)
+                    const n = parseInt(raw, 10)
+                    if (!Number.isNaN(n)) onChange(clamp(n))
+                }}
+                onBlur={() => setDraft(String(value))}
+                ariaLabel={ariaLabel}
+                unit={suffix}
+                min={min}
+                max={max}
+                size="sm"
+                className={grow ? 'flex-1' : 'w-24'}
+            />
             {stepButton(-1)}
             {stepButton(1)}
         </div>
