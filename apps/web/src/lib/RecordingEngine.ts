@@ -1,4 +1,4 @@
-import { Score } from '@mushee/notation/model'
+import { type Measure, Score } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
@@ -159,6 +159,8 @@ export class RecordingEngine implements Tickable {
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
     private countoffEndTime = 0
+    /** The take's first measure; the recording's beat 0 is its downbeat. */
+    private startMeasure: Measure | null = null
     private lastNewMeasureTriggeredFor: number | null = null
     /** The take's score-derived `meta` fields, fixed at start() from the count-off measure. */
     private meta: TakeMeta | null = null
@@ -232,6 +234,7 @@ export class RecordingEngine implements Tickable {
         this.stream = stream
 
         const measure = options.score.measures[options.startMeasureIndex]
+        this.startMeasure = measure
         this.bpm = options.score.bpmAtBeat(measure, 0)
         const beatsPerMeasure = measure.maxBeats
         this.pulseBeats = measure.timeSignature.pulse.beats
@@ -357,6 +360,7 @@ export class RecordingEngine implements Tickable {
             this.paintCursor(this.options, '#3b82f6')
         }
         this.meta = null
+        this.startMeasure = null
 
         this._state = 'idle'
         const callback = this.options?.onStateChange
@@ -365,7 +369,7 @@ export class RecordingEngine implements Tickable {
     }
 
     tick(): boolean {
-        if (!this.options || this._state === 'idle') return true
+        if (!this.options || !this.startMeasure || this._state === 'idle') return true
 
         const elapsed = this.midiPlayer.currentTime
 
@@ -385,30 +389,21 @@ export class RecordingEngine implements Tickable {
         const recordingElapsed = elapsed - this.countoffEndTime
         const beatInRecording = (recordingElapsed * this.bpm) / 60
 
-        let remaining = beatInRecording
-        let measureIndex = this.options.startMeasureIndex
-
-        while (measureIndex < this.options.score.measures.length) {
-            const m = this.options.score.measures[measureIndex]
-            if (remaining < m.maxBeats) break
-            remaining -= m.maxBeats
-            measureIndex++
-        }
-
-        if (measureIndex >= this.options.score.measures.length) {
+        const pos = this.options.score.positionAfter(this.startMeasure, beatInRecording)
+        if (!pos) {
             this.options.onNeedNewMeasure()
             return false
         }
+        const measureIndex = pos.measure.index
 
-        this.moveCursor(this.options, measureIndex, remaining)
+        this.moveCursor(this.options, measureIndex, pos.beat)
 
-        const currentMeasure = this.options.score.measures[measureIndex]
-        if (remaining >= currentMeasure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
+        if (pos.beat >= pos.measure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
             this.lastNewMeasureTriggeredFor = measureIndex
             this.options.onNeedNewMeasure()
         }
 
-        this.sampleAmplitude(recordingElapsed, measureIndex, remaining)
+        this.sampleAmplitude(recordingElapsed, measureIndex, pos.beat)
 
         return false
     }
