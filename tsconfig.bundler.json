@@ -1,0 +1,17 @@
+{
+    // The Next apps and the packages they transpile: the bundler resolves and
+    // emits, tsc only type-checks.
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "target": "ES2017",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "noEmit": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "incremental": true,
+        // Nothing is emitted, but this keeps tsc reporting declaration errors
+        // (e.g. an exported type that cannot be named), as it always has here.
+        "declaration": true
+    }
+}

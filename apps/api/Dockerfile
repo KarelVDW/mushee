@@ -7,9 +7,9 @@ RUN corepack enable
 WORKDIR /repo
 
 # Manifests first for layer caching. Every workspace package.json must be present
-# for --frozen-lockfile, even ones we don't build. The root tsconfigs are needed
-# because apps/api/tsconfig.json extends ../../tsconfig.base.json (skipLibCheck etc.).
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+# for --frozen-lockfile, even ones we don't build. tsconfig.base.json is needed
+# because apps/api/tsconfig.json extends it (strict, skipLibCheck etc.).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/inference-proto/package.json packages/inference-proto/

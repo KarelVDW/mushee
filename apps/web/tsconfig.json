@@ -1,14 +1,7 @@
 {
-    "extends": "../../tsconfig.base.json",
+    "extends": "../../tsconfig.bundler.json",
     "compilerOptions": {
-        "target": "ES2017",
-        "lib": ["dom", "dom.iterable", "esnext"],
         "allowJs": true,
-        "noEmit": true,
-        "module": "esnext",
-        "moduleResolution": "bundler",
-        "jsx": "react-jsx",
-        "incremental": true,
         "plugins": [
             {
                 "name": "next"
