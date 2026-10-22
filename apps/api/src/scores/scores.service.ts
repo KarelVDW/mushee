@@ -258,7 +258,7 @@ export class ScoresService {
         // CASCADE), their audio does not. Delete it first, as RecordingsService.remove
         // does for one take — if storage fails, the score is still whole and its
         // takes' audio still reachable through it.
-        await this.storageService.deletePrefix(RecordingArchiver.folderFor(score.userId, score.id))
+        await this.storageService.deleteFolder(RecordingArchiver.folderFor(score.userId, score.id))
         await this.editCache.deleteByScoreId(score.id)
 
         if (score.storageKey) {

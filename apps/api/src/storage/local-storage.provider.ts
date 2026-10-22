@@ -82,7 +82,7 @@ export class LocalStorageProvider implements StorageProvider {
         }
     }
 
-    async deletePrefix(folder: string): Promise<void> {
+    async deleteFolder(folder: string): Promise<void> {
         await rm(this.folderPath(storageFolder(folder)), { recursive: true, force: true })
     }
 }

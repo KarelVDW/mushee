@@ -117,7 +117,7 @@ export class RecordingsService {
      */
     async remove(userId: string, id: string): Promise<void> {
         const recording = await this.findOwned(userId, id)
-        if (recording.storagePath) await this.storage.deletePrefix(recording.storagePath)
+        if (recording.storagePath) await this.storage.deleteFolder(recording.storagePath)
         await this.recordingRepo.delete({ id: recording.id })
     }
 
@@ -130,6 +130,6 @@ export class RecordingsService {
      * the user row goes, so a storage failure fails the purge with nothing dropped.
      */
     async deleteAudioForUser(userId: string): Promise<void> {
-        await this.storage.deletePrefix(RecordingArchiver.folderForUser(userId))
+        await this.storage.deleteFolder(RecordingArchiver.folderForUser(userId))
     }
 }

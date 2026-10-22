@@ -68,7 +68,7 @@ function makeService(t: SubscriptionTier, existingScores: number, cached: Record
         read: vi.fn(() => Promise.resolve('{"partList":{},"parts":[],"stored":true}')),
         write: vi.fn(() => Promise.resolve()),
         delete: vi.fn(() => Promise.resolve()),
-        deletePrefix: vi.fn(() => Promise.resolve()),
+        deleteFolder: vi.fn(() => Promise.resolve()),
     }
     const reporter = { capture: vi.fn() }
 
@@ -125,11 +125,11 @@ describe('remove', () => {
         const { service, scoreRepo, cache, storage } = makeService(tier(5), 1)
         await service.remove('u1', 'src')
         // The take rows go with the score row (FK cascade); their audio must not outlive it.
-        expect(storage.deletePrefix).toHaveBeenCalledWith('recordings/u1/src')
+        expect(storage.deleteFolder).toHaveBeenCalledWith('recordings/u1/src')
         expect(cache.deleteByScoreId).toHaveBeenCalledWith('src')
         expect(storage.delete).toHaveBeenCalledWith(SOURCE.storageKey)
         expect(scoreRepo.remove).toHaveBeenCalledWith(expect.objectContaining({ id: 'src' }))
-        const order = [storage.deletePrefix, cache.deleteByScoreId, storage.delete, scoreRepo.remove].map(
+        const order = [storage.deleteFolder, cache.deleteByScoreId, storage.delete, scoreRepo.remove].map(
             (fn) => fn.mock.invocationCallOrder[0],
         )
         expect(order).toEqual([...order].sort((a, b) => a - b))
@@ -137,7 +137,7 @@ describe('remove', () => {
 
     it('leaves the score untouched when the audio delete fails', async () => {
         const { service, scoreRepo, cache, storage } = makeService(tier(5), 1)
-        storage.deletePrefix.mockRejectedValueOnce(new Error('bucket down'))
+        storage.deleteFolder.mockRejectedValueOnce(new Error('bucket down'))
         await expect(service.remove('u1', 'src')).rejects.toThrow('bucket down')
         expect(cache.deleteByScoreId).not.toHaveBeenCalled()
         expect(storage.delete).not.toHaveBeenCalled()
@@ -147,7 +147,7 @@ describe('remove', () => {
     it('deletes every score’s take audio in an account purge', async () => {
         const { service, storage } = makeService(tier(5), 1)
         await service.removeAllForUser('u1')
-        expect(storage.deletePrefix).toHaveBeenCalledWith('recordings/u1/src')
+        expect(storage.deleteFolder).toHaveBeenCalledWith('recordings/u1/src')
     })
 })
 

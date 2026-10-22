@@ -38,11 +38,11 @@ describe('LocalStorageProvider', () => {
         await expect(provider.delete('nope/missing.bin')).resolves.toBeUndefined()
     })
 
-    it('deletes everything under a prefix', async () => {
+    it('deletes everything inside a folder', async () => {
         await provider.write('recordings/u1/s1/r1/audio.webm', 'x')
         await provider.write('recordings/u1/s2/r2/plot.svg', 'y')
         await provider.write('recordings/u2/s3/r3/audio.webm', 'z')
-        await provider.deletePrefix('recordings/u1/')
+        await provider.deleteFolder('recordings/u1/')
         await expect(provider.read('recordings/u1/s1/r1/audio.webm')).rejects.toThrow()
         await expect(provider.read('recordings/u2/s3/r3/audio.webm')).resolves.toBe('z')
     })
@@ -50,16 +50,16 @@ describe('LocalStorageProvider', () => {
     it('deletes a folder given without a trailing slash, never a sibling that shares the string prefix', async () => {
         await provider.write('recordings/u1/s1/r1/audio.webm', 'x')
         await provider.write('recordings/u10/s2/r2/audio.webm', 'y')
-        await provider.deletePrefix('recordings/u1')
+        await provider.deleteFolder('recordings/u1')
         await expect(provider.read('recordings/u1/s1/r1/audio.webm')).rejects.toThrow()
         await expect(provider.read('recordings/u10/s2/r2/audio.webm')).resolves.toBe('y')
-        await expect(provider.deletePrefix('recordings/nobody')).resolves.toBeUndefined()
+        await expect(provider.deleteFolder('recordings/nobody')).resolves.toBeUndefined()
     })
 
     it('refuses to list or delete the whole store', async () => {
         await provider.write('scores/u1/a.musicxml', '{}')
         for (const folder of ['', '/', '//', '.', 'scores/..']) {
-            await expect(provider.deletePrefix(folder)).rejects.toThrow(/whole store/)
+            await expect(provider.deleteFolder(folder)).rejects.toThrow(/whole store/)
             await expect(provider.list(folder)).rejects.toThrow(/whole store/)
         }
         await expect(provider.read('scores/u1/a.musicxml')).resolves.toBe('{}')

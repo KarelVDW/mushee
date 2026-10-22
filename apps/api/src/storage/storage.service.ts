@@ -77,8 +77,8 @@ export class StorageService implements StorageProvider {
         this.logger.log(`Deleted ${key} from storage`)
     }
 
-    async deletePrefix(folder: string): Promise<void> {
-        await this.provider.deletePrefix(folder)
+    async deleteFolder(folder: string): Promise<void> {
+        await this.provider.deleteFolder(folder)
         this.logger.log(`Deleted folder ${folder} from storage`)
     }
 }

@@ -57,7 +57,7 @@ export interface StorageProvider {
      * `recordings/u1` cannot take `recordings/u10` with it. An absent folder is
      * a no-op; an empty folder is refused (it would name the whole store).
      */
-    deletePrefix(folder: string): Promise<void>
+    deleteFolder(folder: string): Promise<void>
 }
 
 /**
