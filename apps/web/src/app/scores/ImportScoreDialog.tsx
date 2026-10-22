@@ -1,12 +1,11 @@
 'use client'
 
-import type { Instrument, Score } from '@mushee/notation/model'
-import { useEffect, useRef, useState } from 'react'
+import type { Score } from '@mushee/notation/model'
 
-import { DialogPanel, Eyebrow, Icon, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
+import { Eyebrow, Icon } from '@/components/ui'
 import type { ImportedScoreFile } from '@/lib/ScoreFileImporter'
 
-import { InstrumentPicker } from './InstrumentPicker'
+import { NewScoreDialog } from './NewScoreDialog'
 
 interface ImportScoreDialogProps {
     imported: ImportedScoreFile
@@ -20,18 +19,6 @@ interface ImportScoreDialogProps {
  * simplify — before the score is created.
  */
 export function ImportScoreDialog({ imported, onCancel, onCreate }: ImportScoreDialogProps) {
-    const [title, setTitle] = useState(imported.title)
-    const [instrument, setInstrument] = useState<Instrument>(imported.score.instrument)
-    const titleInputRef = useRef<HTMLInputElement>(null)
-
-    useEffect(() => {
-        // DialogPanel takes focus on mount; move focus on to the title field right after.
-        const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 0)
-        return () => clearTimeout(focusTimer)
-    }, [])
-
-    const trimmed = title.trim()
-    const canSubmit = trimmed.length > 0
     const { score, warnings } = imported
     const first = score.firstMeasure
     const bars = score.measures.length
@@ -39,39 +26,14 @@ export function ImportScoreDialog({ imported, onCancel, onCreate }: ImportScoreD
         .filter(Boolean)
         .join(' · ')
 
-    const submit = () => {
-        if (!canSubmit) return
-        // Switching instrument keeps the sounding music: the model rewrites written pitch for the new transposition.
-        if (instrument !== score.instrument) score.setInstrument(instrument)
-        onCreate(trimmed, score)
-    }
-
     return (
-        <DialogPanel
+        <NewScoreDialog
             title="Import score"
             subtitle={`${summary} read from the file. Check the title and lead instrument, then create the score.`}
-            onClose={onCancel}
-            width={620}
-            footer={
-                <>
-                    <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
-                    <PrimaryButton disabled={!canSubmit} onClick={submit}>
-                        Create score
-                    </PrimaryButton>
-                </>
-            }>
-            <div className="flex flex-col gap-4 flex-1 min-h-0 pb-3">
-                <TextField
-                    label="Title"
-                    value={title}
-                    onChange={setTitle}
-                    placeholder="Untitled composition"
-                    inputRef={titleInputRef}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && canSubmit) submit()
-                    }}
-                />
-                {warnings.length > 0 && (
+            initialTitle={imported.title}
+            initialInstrument={score.instrument}
+            notice={
+                warnings.length > 0 && (
                     <div
                         role="status"
                         aria-label="Adjusted on import"
@@ -90,11 +52,14 @@ export function ImportScoreDialog({ imported, onCancel, onCreate }: ImportScoreD
                             </ul>
                         </div>
                     </div>
-                )}
-                <div className="flex-1 min-h-0 flex flex-col">
-                    <InstrumentPicker value={instrument} onChange={setInstrument} />
-                </div>
-            </div>
-        </DialogPanel>
+                )
+            }
+            onCancel={onCancel}
+            onCreate={(title, instrument) => {
+                // Switching instrument keeps the sounding music: the model rewrites written pitch for the new transposition.
+                if (instrument !== score.instrument) score.setInstrument(instrument)
+                onCreate(title, score)
+            }}
+        />
     )
 }

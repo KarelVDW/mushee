@@ -27,8 +27,8 @@ import { useCreateScore, useDeleteScore, useDuplicateScore, useScores } from '@/
 import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
-import { CreateScoreDialog } from './CreateScoreDialog'
 import { ImportScoreDialog } from './ImportScoreDialog'
+import { NewScoreDialog } from './NewScoreDialog'
 import { ScoreLimitDialog } from './ScoreLimitDialog'
 
 function formatDate(iso: string): string {
@@ -212,14 +212,18 @@ export default function ScoresPage() {
                 )}
             </main>
 
-            <CreateScoreDialog
-                open={createDialogOpen}
-                onCancel={() => setCreateDialogOpen(false)}
-                onCreate={(title, instrument) => {
-                    setCreateDialogOpen(false)
-                    handleCreate(title, instrument)
-                }}
-            />
+            {createDialogOpen && (
+                <NewScoreDialog
+                    title="New score"
+                    subtitle="Give it a name and pick a lead instrument."
+                    initialInstrument={Instrument.Piano}
+                    onCancel={() => setCreateDialogOpen(false)}
+                    onCreate={(title, instrument) => {
+                        setCreateDialogOpen(false)
+                        handleCreate(title, instrument)
+                    }}
+                />
+            )}
 
             {importedFile && (
                 <ImportScoreDialog

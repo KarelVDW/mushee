@@ -1,36 +1,39 @@
 'use client'
 
-import { Instrument } from '@mushee/notation/model'
-import { useEffect, useRef, useState } from 'react'
+import type { Instrument } from '@mushee/notation/model'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { DialogPanel, PrimaryButton, TertiaryButton, TextField } from '@/components/ui'
 
 import { InstrumentPicker } from './InstrumentPicker'
 
-interface CreateScoreDialogProps {
-    open: boolean
+interface NewScoreDialogProps {
+    /** The dialog's heading — not the score's title, which the form collects. */
+    title: string
+    subtitle: string
+    initialTitle?: string
+    initialInstrument: Instrument
+    /** Shown between the title field and the instrument picker (e.g. what an import had to adjust). */
+    notice?: ReactNode
     onCancel: () => void
     onCreate: (title: string, instrument: Instrument) => void
 }
 
-export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialogProps) {
-    const [title, setTitle] = useState('')
-    const [instrument, setInstrument] = useState<Instrument>(Instrument.Piano)
+/**
+ * The form every new score goes through: a title and a lead instrument. Mount it
+ * only while it is open, so each opening starts from the initial values.
+ */
+export function NewScoreDialog({ title: heading, subtitle, initialTitle = '', initialInstrument, notice, onCancel, onCreate }: NewScoreDialogProps) {
+    const [title, setTitle] = useState(initialTitle)
+    const [instrument, setInstrument] = useState<Instrument>(initialInstrument)
     const titleInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        if (!open) {
-            setTitle('')
-            setInstrument(Instrument.Piano)
-            return
-        }
         // DialogPanel takes focus on mount; steal it back to the title field right
         // after, so typing can start immediately. (Escape is handled by the panel.)
         const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 0)
         return () => clearTimeout(focusTimer)
-    }, [open])
-
-    if (!open) return null
+    }, [])
 
     const trimmed = title.trim()
     const canSubmit = trimmed.length > 0
@@ -42,8 +45,8 @@ export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialo
 
     return (
         <DialogPanel
-            title="New score"
-            subtitle="Give it a name and pick a lead instrument."
+            title={heading}
+            subtitle={subtitle}
             onClose={onCancel}
             width={620}
             footer={
@@ -65,6 +68,7 @@ export function CreateScoreDialog({ open, onCancel, onCreate }: CreateScoreDialo
                         if (e.key === 'Enter' && canSubmit) submit()
                     }}
                 />
+                {notice}
                 <div className="flex-1 min-h-0 flex flex-col">
                     <InstrumentPicker value={instrument} onChange={setInstrument} />
                 </div>
