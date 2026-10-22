@@ -270,6 +270,21 @@ export async function focusEditor(page: Page): Promise<Locator> {
     return editor
 }
 
+/**
+ * Refuse the microphone: every getUserMedia call rejects as a denied permission. The refusal
+ * goes on the prototype, not on navigator.mediaDevices: WebKit garbage-collects that wrapper
+ * and hands out a fresh one, dropping an own-property stub, so a take would reach the real
+ * permission request, which never settles under automation.
+ */
+export async function denyMicrophone(page: Page): Promise<void> {
+    await page.evaluate(() => {
+        Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+            configurable: true,
+            value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+        })
+    })
+}
+
 /** Keep an unauthed page (no apiMock) hermetic: the app origin passes, everything else is cut. */
 export async function stayLocal(page: Page): Promise<void> {
     await page.route(/^https?:\/\//, (route) => {
