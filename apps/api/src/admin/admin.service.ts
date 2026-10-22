@@ -1,12 +1,10 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
-import type { Readable } from 'stream'
 import { DataSource } from 'typeorm'
 
 import { type AnnouncementRecipient, MailService } from '../mail/mail.service'
 import { RecordingCreditsService } from '../recordings/recording-credits.service'
 import { ScoresService } from '../scores/scores.service'
-import { StorageService } from '../storage/storage.service'
 import { AudienceFilterDto } from './dto/audience-filter.dto'
 import { SendAnnouncementDto } from './dto/send-announcement.dto'
 
@@ -62,20 +60,6 @@ export interface AdminCreditState {
     packSeconds: number
 }
 
-/** Either a bucket URL the browser can fetch directly, or the bytes to relay. */
-export type RecordingAudio = { url: string } | { stream: Readable; contentType: string }
-
-/** By archive extension — the write-side mapping lives in RecordingArchiver. */
-const AUDIO_CONTENT_TYPES: Record<string, string> = {
-    '.webm': 'audio/webm',
-    '.mp3': 'audio/mpeg',
-    '.ogg': 'audio/ogg',
-    '.wav': 'audio/wav',
-    '.flac': 'audio/flac',
-}
-
-const SIGNED_URL_TTL_SECONDS = 15 * 60
-
 /**
  * Read(-mostly) queries behind the admin console. The `user`, `session` and
  * `account` tables are owned by better-auth, so — like BetaService — this
@@ -99,7 +83,6 @@ export class AdminService {
         @InjectDataSource() private readonly dataSource: DataSource,
         private readonly scoresService: ScoresService,
         private readonly recordingCredits: RecordingCreditsService,
-        private readonly storage: StorageService,
         private readonly mail: MailService,
     ) {}
 
@@ -315,44 +298,6 @@ export class AdminService {
     async revokeShare(scoreId: string): Promise<{ shareToken: null }> {
         await this.scoresService.revokeShare(scoreId)
         return { shareToken: null }
-    }
-
-    /**
-     * The archived audio of a recording, for replay in the console. Prefers a
-     * time-limited URL straight to the bucket (the browser fetches it without
-     * the audio ever passing through the API); backends without URLs — and
-     * signing failures — fall back to streaming the object.
-     */
-    async recordingAudio(recordingId: string): Promise<RecordingAudio> {
-        const [recording]: Array<{ storagePath: string | null }> = await this.dataSource.query(
-            `SELECT "storagePath" FROM recordings WHERE id = $1`,
-            [recordingId],
-        )
-        if (!recording) throw new NotFoundException('Recording not found')
-        if (!recording.storagePath) {
-            throw new NotFoundException('No audio was archived for this recording')
-        }
-
-        // storagePath is the recording's base "directory"; the audio object's
-        // extension depends on what container the client sent (see
-        // RecordingArchiver.sniffContainer).
-        const keys = await this.storage.list(recording.storagePath)
-        const audioKey = keys.find((key) => key.split('/').pop()?.startsWith('audio.'))
-        if (!audioKey) {
-            throw new NotFoundException('The archived audio is missing from storage')
-        }
-        const extension = audioKey.slice(audioKey.lastIndexOf('.'))
-        const contentType = AUDIO_CONTENT_TYPES[extension] ?? 'application/octet-stream'
-
-        try {
-            const url = await this.storage.signedUrl(audioKey, SIGNED_URL_TTL_SECONDS)
-            if (url) return { url }
-        } catch (err) {
-            this.logger.warn(
-                `Signing audio URL for ${audioKey} failed, streaming instead: ${err instanceof Error ? err.message : String(err)}`,
-            )
-        }
-        return { stream: this.storage.createReadStream(audioKey), contentType }
     }
 
     // --- Audience + announcements ---

@@ -8,7 +8,6 @@ import { AdminService } from '../../src/admin/admin.service'
 import type { AnnouncementRecipient, MailService } from '../../src/mail/mail.service'
 import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { ScoresService } from '../../src/scores/scores.service'
-import type { StorageService } from '../../src/storage/storage.service'
 
 const balance = {
     tier: { id: 'free', name: 'Sketch', dailyRecordingCredits: 180 },
@@ -18,7 +17,7 @@ const balance = {
     exhausted: false,
 }
 
-function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Partial<ScoresService>; storage?: Partial<StorageService> }) {
+function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Partial<ScoresService> }) {
     const query =
         overrides?.query ??
         vi.fn((sql: string) => {
@@ -35,12 +34,6 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
         grantPackSeconds: vi.fn(() => Promise.resolve()),
         revokePackSeconds: vi.fn(() => Promise.resolve()),
     }
-    const storage = {
-        list: vi.fn(() => Promise.resolve([] as string[])),
-        signedUrl: vi.fn(() => Promise.resolve(null as string | null)),
-        createReadStream: vi.fn(() => 'fake-stream'),
-        ...overrides?.storage,
-    }
     const mail = {
         sendAnnouncement: vi.fn((recipients: unknown[]) =>
             Promise.resolve({
@@ -55,10 +48,9 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
         { query } as unknown as DataSource,
         scoresService as unknown as ScoresService,
         recordingCredits as unknown as RecordingCreditsService,
-        storage as unknown as StorageService,
         mail as unknown as MailService,
     )
-    return { service, query, scoresService, recordingCredits, storage, mail }
+    return { service, query, scoresService, recordingCredits, mail }
 }
 
 describe('AdminService.listUsers', () => {
@@ -203,65 +195,6 @@ describe('AdminService.getScore', () => {
         })
         const result = await service.getScore(score.id)
         expect(result.recordings).toBe(rows)
-    })
-})
-
-describe('AdminService.recordingAudio', () => {
-    const RECORDING_ID = 'f6a7b0d0-0000-4000-8000-000000000002'
-    const withRecording = (storagePath: string | null) =>
-        vi.fn((sql: string) => Promise.resolve(sql.includes('FROM recordings') ? [{ storagePath }] : []))
-
-    it('404s for unknown recordings and for recordings without archived audio', async () => {
-        const { service } = makeService()
-        await expect(service.recordingAudio(RECORDING_ID)).rejects.toBeInstanceOf(NotFoundException)
-
-        const { service: noAudio } = makeService({ query: withRecording(null) })
-        await expect(noAudio.recordingAudio(RECORDING_ID)).rejects.toBeInstanceOf(NotFoundException)
-    })
-
-    it('404s when the base path holds no audio object', async () => {
-        const { service } = makeService({
-            query: withRecording('recordings/u/s/r'),
-            storage: { list: vi.fn(() => Promise.resolve(['recordings/u/s/r/debug.json'])) },
-        })
-        await expect(service.recordingAudio(RECORDING_ID)).rejects.toBeInstanceOf(NotFoundException)
-    })
-
-    it('prefers a signed bucket URL', async () => {
-        const { service, storage } = makeService({
-            query: withRecording('recordings/u/s/r'),
-            storage: {
-                list: vi.fn(() => Promise.resolve(['recordings/u/s/r/audio.webm'])),
-                signedUrl: vi.fn(() => Promise.resolve('https://bucket/signed')),
-            },
-        })
-        await expect(service.recordingAudio(RECORDING_ID)).resolves.toEqual({ url: 'https://bucket/signed' })
-        expect(storage.createReadStream).not.toHaveBeenCalled()
-    })
-
-    it('streams with the right content type when the backend has no URLs', async () => {
-        const { service } = makeService({
-            query: withRecording('recordings/u/s/r'),
-            storage: { list: vi.fn(() => Promise.resolve(['recordings/u/s/r/audio.mp3'])) },
-        })
-        await expect(service.recordingAudio(RECORDING_ID)).resolves.toEqual({
-            stream: 'fake-stream',
-            contentType: 'audio/mpeg',
-        })
-    })
-
-    it('falls back to streaming when signing fails', async () => {
-        const { service } = makeService({
-            query: withRecording('recordings/u/s/r'),
-            storage: {
-                list: vi.fn(() => Promise.resolve(['recordings/u/s/r/audio.webm'])),
-                signedUrl: vi.fn(() => Promise.reject(new Error('no signBlob permission'))),
-            },
-        })
-        await expect(service.recordingAudio(RECORDING_ID)).resolves.toEqual({
-            stream: 'fake-stream',
-            contentType: 'audio/webm',
-        })
     })
 })
 

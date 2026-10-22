@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
 
+import { RecordingsService } from '../recordings/recordings.service'
 import { AdminService } from './admin.service'
 import { AdminSecretGuard } from './admin-secret.guard'
 import { AdjustCreditsDto } from './dto/adjust-credits.dto'
@@ -15,7 +16,10 @@ import { SendAnnouncementDto } from './dto/send-announcement.dto'
 @Controller('admin')
 @UseGuards(AdminSecretGuard)
 export class AdminController {
-    constructor(private readonly adminService: AdminService) {}
+    constructor(
+        private readonly adminService: AdminService,
+        private readonly recordings: RecordingsService,
+    ) {}
 
     @Get('stats')
     stats() {
@@ -66,7 +70,7 @@ export class AdminController {
      *  has one, otherwise stream the archived audio. */
     @Get('recordings/:id/audio')
     async recordingAudio(@Param('id', ParseUUIDPipe) id: string, @Res() reply: FastifyReply) {
-        const audio = await this.adminService.recordingAudio(id)
+        const audio = await this.recordings.audioForSupport(id)
         if ('url' in audio) {
             return reply.redirect(audio.url, 302)
         }
