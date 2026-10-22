@@ -222,6 +222,11 @@ export interface BillingState {
         remainingSeconds: number | null
         /** Purchased one-time pack seconds; never expire. */
         packSeconds: number
+        /**
+         * When the daily budget refills (ISO timestamp). The API always sends it; an older
+         * API without it leaves the client on its fallback, the next midnight UTC.
+         */
+        resetsAt?: string
     }
 }
 

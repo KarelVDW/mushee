@@ -52,7 +52,7 @@ function makeService(opts: { row?: Record<string, unknown> | null } = {}) {
         upsert: vi.fn(() => Promise.resolve({})),
     }
     const credits = {
-        balance: vi.fn(() => Promise.resolve({ used: 60, remaining: 3540, packSeconds: 120 })),
+        balance: vi.fn(() => Promise.resolve({ used: 60, remaining: 3540, packSeconds: 120, resetsAt: '2026-07-15T00:00:00.000Z' })),
     }
     const service = new BillingService(subscriptions as unknown as SubscriptionsService, credits as unknown as RecordingCreditsService)
     return { service, subscriptions, credits }
@@ -113,7 +113,13 @@ describe('getState', () => {
             cancelAtPeriodEnd: true,
             billingConfigured: true,
             betaMode: false,
-            credits: { limitSeconds: 3600, usedSeconds: 60, remainingSeconds: 3540, packSeconds: 120 },
+            credits: {
+                limitSeconds: 3600,
+                usedSeconds: 60,
+                remainingSeconds: 3540,
+                packSeconds: 120,
+                resetsAt: '2026-07-15T00:00:00.000Z',
+            },
         })
     })
 

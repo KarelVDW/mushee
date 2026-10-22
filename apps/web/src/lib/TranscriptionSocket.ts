@@ -23,8 +23,9 @@ export interface RecordingLimitInfo {
     limitSeconds: number | null
     usedSeconds: number
     /**
-     * When the allowance comes back (ISO timestamp), if the gateway sends one. Without it the
-     * client shows the next midnight UTC — the API's reset — in the viewer's own time.
+     * When the allowance comes back (ISO timestamp). The gateway always sends it; from an
+     * older API without it the client shows the next midnight UTC — the API's reset — in the
+     * viewer's own time.
      */
     resetsAt?: string
 }

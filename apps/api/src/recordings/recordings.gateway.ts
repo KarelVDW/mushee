@@ -37,8 +37,8 @@ type RecordingServerFrame =
     | ({ type: 'recording-source' } & SourceResolution)
     /** Transcription down/back — the session stops metering credits while it is down. */
     | { type: 'recording-health'; ok: boolean }
-    /** The day's budget (and pack seconds) ran out, before or during the take. */
-    | { type: 'recording-limit'; planId: string; planName: string; limitSeconds: number | null; usedSeconds: number }
+    /** The day's budget (and pack seconds) ran out, before or during the take; `resetsAt` (ISO) is when it refills. */
+    | { type: 'recording-limit'; planId: string; planName: string; limitSeconds: number | null; usedSeconds: number; resetsAt: string }
     /** A hard session cap (duration/bytes) stopped the take. */
     | { type: 'recording-capped'; reason: SessionCapReason }
     /** The connection was refused; sent just before the 1008 close. */
@@ -291,6 +291,7 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
             planName: balance.tier.name,
             limitSeconds: balance.tier.dailyRecordingCredits,
             usedSeconds: balance.used,
+            resetsAt: balance.resetsAt,
         })
     }
 

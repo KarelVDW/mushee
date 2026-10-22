@@ -22,6 +22,11 @@ export interface RecordingCreditBalance {
     packSeconds: number
     /** No daily budget left AND no purchased seconds to fall back on. */
     exhausted: boolean
+    /**
+     * When the daily budget refills (ISO timestamp): the next midnight UTC, where
+     * the next day's usage row starts. Sent on unlimited tiers too.
+     */
+    resetsAt: string
 }
 
 /**
@@ -44,12 +49,10 @@ export class RecordingCreditsService {
 
     async balance(userId: string): Promise<RecordingCreditBalance> {
         const tier = await this.subscriptions.tierFor(userId)
-        const usage = await this.usageRepo.findOneBy({
-            userId,
-            day: this.today(),
-        })
+        const day = this.today()
+        const usage = await this.usageRepo.findOneBy({ userId, day })
         const packSeconds = await this.packSecondsOf(userId)
-        return this.toBalance(tier, usage?.creditsUsed ?? 0, packSeconds)
+        return this.toBalance(tier, usage?.creditsUsed ?? 0, packSeconds, day)
     }
 
     /**
@@ -61,13 +64,14 @@ export class RecordingCreditsService {
      */
     async spend(userId: string, credits: number): Promise<RecordingCreditBalance> {
         const tier = await this.subscriptions.tierFor(userId)
+        const day = this.today()
         const rows: Array<{ creditsUsed: number }> = await this.usageRepo.query(
             `INSERT INTO recording_usage ("userId", day, "creditsUsed")
        VALUES ($1, $2, $3)
        ON CONFLICT ("userId", day)
        DO UPDATE SET "creditsUsed" = recording_usage."creditsUsed" + EXCLUDED."creditsUsed"
        RETURNING "creditsUsed"`,
-            [userId, this.today(), credits],
+            [userId, day, credits],
         )
         const used = rows[0].creditsUsed
 
@@ -79,7 +83,7 @@ export class RecordingCreditsService {
             const overflow = Math.min(credits, used - limit)
             packSeconds = overflow > 0 ? await this.drawPackSeconds(userId, overflow) : await this.packSecondsOf(userId)
         }
-        return this.toBalance(tier, used, packSeconds)
+        return this.toBalance(tier, used, packSeconds, day)
     }
 
     /**
@@ -127,7 +131,7 @@ export class RecordingCreditsService {
         return row?.seconds ?? 0
     }
 
-    private toBalance(tier: SubscriptionTier, used: number, packSeconds: number): RecordingCreditBalance {
+    private toBalance(tier: SubscriptionTier, used: number, packSeconds: number, day: string): RecordingCreditBalance {
         const limit = tier.dailyRecordingCredits
         const remaining = limit === null ? null : Math.max(0, limit - used)
         return {
@@ -136,10 +140,19 @@ export class RecordingCreditsService {
             remaining,
             packSeconds,
             exhausted: remaining === 0 && packSeconds === 0,
+            resetsAt: this.resetAfter(day),
         }
     }
 
+    /** The UTC calendar day credits count against now ('2026-10-22'). */
     private today(): string {
         return new Date().toISOString().slice(0, 10)
+    }
+
+    /** When `day`'s budget refills: the following midnight UTC, the first moment of the next usage day. */
+    private resetAfter(day: string): string {
+        const next = new Date(`${day}T00:00:00.000Z`)
+        next.setUTCDate(next.getUTCDate() + 1)
+        return next.toISOString()
     }
 }

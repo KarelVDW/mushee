@@ -27,6 +27,8 @@ export interface BillingState {
         remainingSeconds: number | null
         /** Purchased one-time pack seconds; never expire. */
         packSeconds: number
+        /** When the daily budget refills (ISO timestamp, the next midnight UTC). */
+        resetsAt: string
     }
 }
 
@@ -65,6 +67,7 @@ export class BillingService {
                 usedSeconds: balance.used,
                 remainingSeconds: balance.remaining,
                 packSeconds: balance.packSeconds,
+                resetsAt: balance.resetsAt,
             },
         }
     }
