@@ -39,7 +39,8 @@ export interface TextFieldProps {
 
 // 14px on a mouse, 16px on touch: iOS Safari zooms the page into any focused field under
 // 16px. Never fix that by disabling pinch zoom (maximum-scale) — low-vision users need it.
-const FIELD_TEXT = 'text-on-surface font-body font-normal text-[14px] pointer-coarse:text-[16px] placeholder:text-on-surface-variant'
+// (The placeholder colour is set kit-wide in theme.css.)
+const FIELD_TEXT = 'text-on-surface font-body font-normal text-[14px] pointer-coarse:text-[16px]'
 
 // The focus stroke: 2px `primary` (the neon fill fails 3:1 on the input fill), grown from the centre.
 const FOCUS_STROKE =

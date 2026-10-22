@@ -55,11 +55,10 @@ describe('TextField', () => {
         expect(attr(input, 'aria-label')).toBe('Search your scores')
     })
 
-    it('renders 16px text on coarse pointers, a visible placeholder and a primary focus stroke', () => {
+    it('renders 16px text on coarse pointers and a primary focus stroke', () => {
         const markup = html(createElement(TextField, { value: '' }))
         expect(inputTag(markup)).toContain('pointer-coarse:text-[16px]')
         expect(inputTag(markup)).toContain('pointer-coarse:py-3.5')
-        expect(inputTag(markup)).toContain('placeholder:text-on-surface-variant')
         expect(markup).toContain('h-0.5 bg-primary transition-[left,right]')
     })
 

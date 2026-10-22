@@ -119,6 +119,15 @@ body {
     font-family: var(--font-body);
 }
 
+/* Placeholders in on-surface-variant (5.9:1 on the input fill), not Tailwind's 50% of the
+   text colour (about 2.8:1). In the base layer, so a utility can still override it. */
+@layer base {
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--color-on-surface-variant);
+    }
+}
+
 /* The keyboard focus contract (DESIGN.md): a 2px primary ring, 2px out, on
    :focus-visible only. An @utility rather than a plain class so it lands in
    Tailwind's utilities layer and composes with variants like any utility. */
