@@ -1436,6 +1436,57 @@ describe('Score', () => {
         })
     })
 
+    describe('secondsAt', () => {
+        it('runs at the default tempo before any marking', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.secondsAt(m0, 0)).toBe(0)
+            expect(score.secondsAt(m0, 3)).toBeCloseTo((3 * 60) / Score.DEFAULT_BPM)
+            expect(score.secondsAt(m1, 1)).toBeCloseTo((5 * 60) / Score.DEFAULT_BPM)
+        })
+
+        it('applies a marking at its exact beat, even in the middle of a note', () => {
+            const score = makeScore(1)
+            const m = fill(score, 0, [pitched('C', 4, 'h'), q(), q()])
+            m.setTempo(0, 60)
+            m.setTempo(1, 120) // inside the half note
+            expect(score.secondsAt(m, 1)).toBeCloseTo(1) // one beat at 60
+            expect(score.secondsAt(m, 2)).toBeCloseTo(1.5) // then half a second per beat
+            expect(score.secondsAt(m, 3.5)).toBeCloseTo(2.25)
+        })
+
+        it('carries the tempo across a measure boundary and times each measure at its meter', () => {
+            const score = new Score()
+            const m0 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
+            const m1 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(4, 4))).complete()
+            m0.setTempo(0, 60)
+            m0.setTempo(2, 120)
+            // 2 s for beats 0-2 at 60, 0.5 s for beat 2-3 at 120, then the next bar at 120.
+            expect(score.secondsAt(m1, 0)).toBeCloseTo(2.5)
+            expect(score.secondsAt(m1, 2)).toBeCloseTo(3.5)
+            expect(score.secondsAt(m0, 3)).toBeCloseTo(2.5) // the 3/4 bar ends after three beats
+        })
+
+        it('rolls a beat past the measure end into the following measures, and on past the last one', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            m1.setTempo(2, 180)
+            expect(score.secondsAt(m0, 5)).toBeCloseTo(score.secondsAt(m1, 1))
+            expect(score.secondsAt(m0, 4)).toBeCloseTo(score.secondsAt(m1, 0))
+            // Past the score's end the clock keeps running at the tempo it ends in.
+            expect(score.secondsAt(m1, 6) - score.secondsAt(m1, 4)).toBeCloseTo((2 * 60) / 180)
+            expect(score.secondsAt(m0, 10)).toBeCloseTo(score.secondsAt(m1, 6))
+        })
+
+        it('follows an edit: the measure starts are rebuilt off the version', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.secondsAt(m1, 0)).toBeCloseTo((4 * 60) / Score.DEFAULT_BPM)
+            score.setTempo(m0.firstNote, 120)
+            expect(score.secondsAt(m1, 0)).toBeCloseTo(2)
+        })
+    })
+
     describe('flushDirty instrument changes', () => {
         it('emits a partList when the instrument changed', () => {
             const score = makeScore(1)

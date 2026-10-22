@@ -426,6 +426,11 @@ export class Measure {
         return this._tempoList.atOrBefore(beatPosition)
     }
 
+    /** The tempo marking in effect just before `beatPosition` (ignoring one exactly at it), if any. */
+    tempoBefore(beatPosition: number): Tempo | undefined {
+        return this._tempoList.before(beatPosition)
+    }
+
     /** The last (highest-beat) tempo marking in this measure — the one that carries into the next measure. */
     get lastTempo(): Tempo | undefined {
         return this._tempoList.last

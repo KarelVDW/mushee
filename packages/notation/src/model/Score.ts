@@ -62,6 +62,20 @@ export class Score {
         },
     )
 
+    /** Seconds from the top of the score to the start of each measure, indexed by measure position. */
+    private readonly _measureStartSeconds = new Derived(
+        () => this._version,
+        () => {
+            const starts: number[] = []
+            let seconds = 0
+            this.measures.forEach((measure, index) => {
+                starts.push(seconds)
+                seconds += this.secondsInto(measure, index, measure.maxBeats)
+            })
+            return starts
+        },
+    )
+
     /** Tie connections: each tie-starting note mapped to the note it sustains into. */
     private readonly _tiePartners = new Derived(
         () => this._version,
@@ -593,6 +607,35 @@ export class Score {
         if (local) return local.bpm
         /* v8 ignore next -- defensive: tempoMap has one entry per measure index, so the lookup is always defined for an in-score measure */
         return this._tempoMap.value[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
+    }
+
+    /**
+     * Seconds from the top of the score to `beat` of `measure` — the one clock playback, the
+     * metronome and export share. Every marking takes effect at its exact beat (the default
+     * tempo before the first), each measure lasts its meter's length, and a `beat` past the
+     * measure's end rolls on into the measures after it (past the last one, at the tempo the
+     * score ends in).
+     */
+    secondsAt(measure: Measure, beat: number): number {
+        let index = this.getIndexForMeasure(measure)
+        let remaining = beat
+        while (index < this.measures.length - 1 && remaining >= this.measures[index].maxBeats) {
+            remaining -= this.measures[index].maxBeats
+            index++
+        }
+        return this._measureStartSeconds.value[index] + this.secondsInto(this.measures[index], index, remaining)
+    }
+
+    /** Seconds from the start of `measure` (at position `index`) to `beat` in it, integrated over its markings. */
+    private secondsInto(measure: Measure, index: number, beat: number): number {
+        let seconds = 0
+        let end = beat
+        // Walk back through the markings before `beat`: each one sounds from its beat to `end`.
+        for (let marking = measure.tempoBefore(end); marking; marking = measure.tempoBefore(end)) {
+            seconds += ((end - marking.beatPosition) * 60) / marking.bpm
+            end = marking.beatPosition
+        }
+        return seconds + (end * 60) / this._tempoMap.value[index]
     }
 
     /** The tempo (BPM) sounding at `note` ({@link bpmAtBeat} at its onset), or the default without a note. */
