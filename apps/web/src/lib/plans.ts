@@ -19,7 +19,7 @@
  * what's shown here (see lib/currency.ts).
  */
 
-import type { IconName } from '@/components/ui'
+import type { IconName } from '@mushee/ui'
 
 import type { BillingInterval, PackId, PaidTierId, Plan, TierId } from './api'
 import { type Currency, currencySymbol, formatMoney } from './currency'
