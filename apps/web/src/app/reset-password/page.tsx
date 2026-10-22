@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { type FormEvent, Suspense, useEffect, useState } from 'react'
+import { type FormEvent, Suspense, useState } from 'react'
 
 import {
     Alert,
@@ -19,8 +19,8 @@ import {
 } from '@/components/ui'
 import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
 
-type Stage = 'request' | 'sent' | 'set-new' | 'done'
-const STAGES: Stage[] = ['request', 'sent', 'set-new', 'done']
+const STAGES = ['request', 'sent', 'set-new', 'done'] as const
+type Stage = (typeof STAGES)[number]
 
 const STAGE_TAGLINE: Record<Stage, string> = {
     request: "We'll email you a link to set a new one. Takes a minute.",
@@ -43,7 +43,9 @@ function PasswordResetPageInner() {
     const tokenFromUrl = searchParams.get('token')
     const errorFromUrl = searchParams.get('error')
 
-    const [stage, setStage] = useState<Stage>(tokenFromUrl ? 'set-new' : 'request')
+    // better-auth lands here with ?token= to set a new password, or with ?error=INVALID_TOKEN
+    // for a dead link, which starts over at the request form.
+    const [stage, setStage] = useState<Stage>(tokenFromUrl && errorFromUrl !== 'INVALID_TOKEN' ? 'set-new' : 'request')
     const [email, setEmail] = useState('')
     const [pw, setPw] = useState('')
     const [pw2, setPw2] = useState('')
@@ -53,24 +55,15 @@ function PasswordResetPageInner() {
         errorFromUrl === 'INVALID_TOKEN' ? 'That reset link is invalid or has expired. Request a new one below.' : null,
     )
 
-    useEffect(() => {
-        if (errorFromUrl === 'INVALID_TOKEN') setStage('request')
-    }, [errorFromUrl])
-
     const canSetNew = isAcceptablePassword(pw, pw2) && !!tokenFromUrl
     const stageIdx = STAGES.indexOf(stage)
 
     const onBackToSignIn = () => router.push('/login')
 
-    function callbackUrl(): string {
-        if (typeof window === 'undefined') return '/reset-password'
-        return `${window.location.origin}/reset-password`
-    }
-
     async function doRequestReset(addr: string) {
         const { error } = await requestPasswordReset({
             email: addr,
-            redirectTo: callbackUrl(),
+            redirectTo: `${window.location.origin}/reset-password`,
         })
         if (error) {
             setError(error.message ?? 'Could not send reset email.')
