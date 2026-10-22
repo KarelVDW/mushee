@@ -4,8 +4,8 @@ import { ScoreView } from '@mushee/notation/components'
 import { Interval, type IntervalQuality, KeySignature, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { PitchScope } from '@/app/scores/[id]/ScoreManipulator'
 import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
+import type { PitchScope } from '@/components/editor/pitchScope'
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
 import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 

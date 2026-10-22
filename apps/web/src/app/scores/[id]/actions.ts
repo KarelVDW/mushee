@@ -1,6 +1,6 @@
 import { type Accidental, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
 
-import type { PitchScope } from './ScoreManipulator'
+import type { PitchScope } from '@/components/editor/pitchScope'
 
 /**
  * A single editing operation on the score, performed relative to the selection.
