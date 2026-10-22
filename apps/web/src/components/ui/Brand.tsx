@@ -26,7 +26,9 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
 // marketing + auth surfaces — see DESIGN.md §Voice.
 export function PageTitle({ children }: { children: ReactNode }) {
     return (
-        <h1 className="font-display font-bold text-[34px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">{children}</h1>
+        <h1 className="font-display font-bold text-[34px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
+            {children}
+        </h1>
     )
 }
 
