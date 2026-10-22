@@ -192,11 +192,7 @@ function RecordFlow() {
                         {mode === 'playing' ? 'Stop replay' : 'Replay expected'}
                     </SecondaryButton>
                     {mode !== 'recording' && (
-                        <PrimaryButton
-                            emphasis="pop"
-                            icon="mic"
-                            onClick={startTake}
-                            disabled={busy}>
+                        <PrimaryButton emphasis="pop" icon="mic" onClick={startTake} disabled={busy}>
                             {clip.status === 'recorded' ? 'Record new take' : 'Record'} (1 measure count-in)
                         </PrimaryButton>
                     )}

@@ -29,7 +29,9 @@ export default function CorporaPage() {
 
             {startRun.isError && <Alert>{errorText(startRun.error)}</Alert>}
 
-            {corpora.isError && <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {errorText(corpora.error)}</Alert>}
+            {corpora.isError && (
+                <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {errorText(corpora.error)}</Alert>
+            )}
             {corpora.isPending && (
                 <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
                     <Spinner /> Loading corpora…

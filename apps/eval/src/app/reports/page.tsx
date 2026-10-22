@@ -43,7 +43,9 @@ export default function ReportsPage() {
                 </p>
             </div>
 
-            {reports.isError && <Alert onRetry={() => void reports.refetch()}>Couldn&apos;t list reports: {errorText(reports.error)}</Alert>}
+            {reports.isError && (
+                <Alert onRetry={() => void reports.refetch()}>Couldn&apos;t list reports: {errorText(reports.error)}</Alert>
+            )}
             {reports.isPending && (
                 <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
                     <Spinner /> Scanning fixtures…
