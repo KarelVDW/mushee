@@ -1,7 +1,6 @@
 import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
-import { SignInLink } from '@/components/marketing/SignInLink'
 import { Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -42,13 +41,17 @@ function Hero() {
                     <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
                         Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
+                    {/* One action: the nav keeps the only "Sign in"; the line under it answers "is it free, do I install anything?". */}
                     <div className="flex gap-3 items-center mt-2 flex-wrap">
                         <GetStartedButton location="hero" size="lg" emphasis="pop" />
-                        <SignInLink>Already have an account?</SignInLink>
                     </div>
-                    {BETA_MODE && (
+                    {BETA_MODE ? (
                         <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
                             Free during the beta · 30 minutes of recording per day · approved personally, usually within a day.
+                        </p>
+                    ) : (
+                        <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0">
+                            Free to start — no card, nothing to install.
                         </p>
                     )}
                 </div>

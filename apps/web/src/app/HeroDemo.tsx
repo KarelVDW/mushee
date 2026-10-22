@@ -3,6 +3,9 @@
 import { Glyph, INTERACTION_BLUE, WAVEFORM_COLORS } from '@mushee/notation/components'
 import { useEffect, useState } from 'react'
 
+import { IconButton, SecondaryButton, Tooltip } from '@/components/ui'
+import { EXAMPLE_SHARE_TOKEN } from '@/lib/env'
+
 /**
  * The hero demo: an idealised loop of a real recording session in the Solkey
  * editor — the recording cursor sweeps the staff, live waveform bars (the
@@ -11,7 +14,10 @@ import { useEffect, useState } from 'react'
  * takes their place.
  * The melody is Frère Jacques (Broeder Jakob). Everything is driven by one
  * generated CSS timeline so the loop is smooth and cheap; the REC clock is the
- * only JS ticker. Respects prefers-reduced-motion by showing the finished sheet.
+ * only JS ticker. A caption says what is happening, and the loop (longer than
+ * 5 s) has a pause control (WCAG 2.2.2): paused — like prefers-reduced-motion —
+ * shows the finished sheet. When this environment has an example share, "Hear
+ * an example" opens it, so a visitor can hear a real score before signing up.
  */
 
 // --- The score: two measures of Frère Jacques in C, staff lines at y 55..95 ---
@@ -139,148 +145,185 @@ const loopAnim = (name: string): React.CSSProperties => ({
 })
 
 export function HeroDemo() {
-    // `animate` flips on after mount (and only without prefers-reduced-motion);
-    // until then the finished sheet shows, which is also the SSR/no-motion state.
-    const [animate, setAnimate] = useState(false)
+    // `motion` flips on after mount (and only without prefers-reduced-motion); until then the
+    // finished sheet shows, which is also the SSR, no-motion and paused state.
+    const [motion, setMotion] = useState(false)
+    const [paused, setPaused] = useState(false)
+    const animate = motion && !paused
     const [seconds, setSeconds] = useState(0)
 
     useEffect(() => {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-        setAnimate(true)
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setMotion(true)
+    }, [])
+
+    // The REC clock runs only while the loop does; playing again restarts both from the top.
+    useEffect(() => {
+        if (!animate) return
         const start = Date.now()
+        setSeconds(0)
         const timer = setInterval(() => setSeconds(Math.floor(((Date.now() - start) % LOOP_MS) / 1000)), 250)
         return () => clearInterval(timer)
-    }, [])
+    }, [animate])
+
+    const toggleLabel = paused ? 'Play demo' : 'Pause demo'
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 -rotate-[1.5deg]" aria-hidden>
-                {/* Editor chrome: window dots + live REC state / saved state */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-1.5">
-                        {[0, 1, 2].map((i) => (
-                            <span key={i} className="w-2.5 h-2.5 rounded-full bg-surface-container-high" />
-                        ))}
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="font-mono text-[12px] leading-none text-on-surface-variant">♩ = 110</span>
-                        <span className="relative">
-                            <span
-                                className="inline-flex items-center gap-1.5 bg-error-container/15 rounded-full px-2.5 py-1.5"
-                                style={animate ? loopAnim('demo-chip-rec') : { opacity: 0 }}>
-                                <span
-                                    className="w-2 h-2 rounded-full bg-error-container"
-                                    style={animate ? { animation: 'hero-rec-pulse 1.2s ease-in-out infinite' } : undefined}
-                                />
-                                <span className="font-label font-semibold text-[10px] leading-none tracking-[0.14em] uppercase text-on-surface">
-                                    Rec
-                                </span>
-                                <span className="font-mono text-[11px] leading-none text-on-surface-variant">
-                                    0:{String(seconds).padStart(2, '0')}
-                                </span>
-                            </span>
-                            <span
-                                className="absolute inset-y-0 right-0 inline-flex items-center gap-1.5 bg-primary-soft/60 rounded-full px-2.5 py-1.5 whitespace-nowrap"
-                                style={animate ? loopAnim('demo-chip-saved') : undefined}>
-                                <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}>
-                                    <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                                <span className="font-label font-semibold text-[10px] leading-none tracking-[0.14em] uppercase text-on-surface">
-                                    Saved
-                                </span>
-                            </span>
-                        </span>
-                    </div>
+            {/* The pause control is the card's sibling: an img's children are presentational, so it can't sit inside. */}
+            <div className="relative">
+                <div
+                    role="img"
+                    aria-label="Demo: a hummed melody turning into notes on a staff"
+                    className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 -rotate-[1.5deg]">
+                    <DemoCard animate={animate} seconds={seconds} />
                 </div>
-
-                {/* The staff: waveform lands under the cursor, notation follows about 1.5 s behind */}
-                <svg viewBox="0 0 640 165" width="100%">
-                    {[0, 1, 2, 3, 4].map((i) => (
-                        <line key={i} x1={16} x2={624} y1={55 + i * 10} y2={55 + i * 10} stroke="var(--color-on-surface)" strokeWidth={1} />
-                    ))}
-                    {/* Barlines: mid measure + final (thin + thick, like the editor) */}
-                    <line x1={344} x2={344} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1} />
-                    <line x1={617} x2={617} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1} />
-                    <line x1={622.5} x2={622.5} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={3} />
-                    <Glyph name="gClef" x={26} y={85} fill="var(--color-on-surface)" />
-                    <Glyph name="timeSig4" x={62} y={65} fill="var(--color-on-surface)" />
-                    <Glyph name="timeSig4" x={62} y={85} fill="var(--color-on-surface)" />
-
-                    {/* Live waveform bars — the editor's transient cyan/magenta layer */}
-                    {animate &&
-                        BARS.map((bar) => (
-                            <g key={bar.name} style={loopAnim(bar.name)} opacity={0}>
-                                <rect
-                                    className="waveform-bar"
-                                    x={bar.x}
-                                    y={75 - bar.h / 2}
-                                    width={3.5}
-                                    height={bar.h}
-                                    rx={1.4}
-                                    fill={bar.color}
-                                />
-                            </g>
-                        ))}
-
-                    {/* The engraved result, landing about 1.5 s (under three beats) after the sound */}
-                    {NOTES.map((note, i) => (
-                        <g key={note.x} style={animate ? loopAnim(`demo-note-${i}`) : undefined} opacity={animate ? 0 : 1}>
-                            {note.ledger && (
-                                <line
-                                    x1={note.x - 4}
-                                    x2={note.x + 14.5}
-                                    y1={105}
-                                    y2={105}
-                                    stroke="var(--color-on-surface)"
-                                    strokeWidth={1}
-                                />
-                            )}
-                            <Glyph
-                                name={note.beats === 2 ? 'noteheadHalf' : 'noteheadBlack'}
-                                x={note.x}
-                                y={note.cy}
-                                fill="var(--color-on-surface)"
+                {motion && (
+                    <div className="absolute bottom-4 right-5">
+                        <Tooltip label={toggleLabel}>
+                            <IconButton
+                                icon={paused ? 'play' : 'pause'}
+                                size={40}
+                                ariaLabel={toggleLabel}
+                                hoverTone="neutral"
+                                onClick={() => setPaused((p) => !p)}
                             />
-                            <line
-                                x1={note.x + 10.1}
-                                x2={note.x + 10.1}
-                                y1={note.cy - 1}
-                                y2={note.cy - 33}
-                                stroke="var(--color-on-surface)"
-                                strokeWidth={1.3}
-                            />
-                        </g>
-                    ))}
-
-                    {/* Recording cursor */}
-                    {animate && (
-                        <g style={loopAnim('demo-cursor')} opacity={0}>
-                            <line x1={0} x2={0} y1={42} y2={112} stroke={INTERACTION_BLUE} strokeWidth={2.5} />
-                            <circle cx={0} cy={42} r={3.5} fill={INTERACTION_BLUE} />
-                        </g>
-                    )}
-                </svg>
-
-                {/* Input level meter */}
-                <div className="flex items-end gap-0.75 h-6 mt-3" role="presentation">
-                    {WAVE_PATTERN.map((h, i) => (
-                        <span
-                            key={i}
-                            className="origin-bottom"
-                            style={{
-                                width: 4,
-                                height: h,
-                                ...(animate ? { ...loopAnim('demo-meter'), animationDelay: `${i * 30}ms` } : { transform: 'scaleY(0.18)' }),
-                            }}>
-                            <span
-                                className="block w-full h-full origin-bottom rounded-full bg-primary-container"
-                                style={animate ? { animation: `demo-meter-sway ${900 + (i % 5) * 120}ms ease-in-out infinite` } : undefined}
-                            />
-                        </span>
-                    ))}
-                </div>
+                        </Tooltip>
+                    </div>
+                )}
             </div>
+            <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                Someone humming Frère Jacques. Each note appears a moment after it&apos;s sung.
+            </p>
+            {EXAMPLE_SHARE_TOKEN && (
+                <div>
+                    <SecondaryButton href={`/s/${EXAMPLE_SHARE_TOKEN}`}>Hear an example</SecondaryButton>
+                </div>
+            )}
             <style>{TIMELINE_CSS}</style>
         </div>
+    )
+}
+
+/** The editor-like card the loop plays in: chrome chips, the staff, the input meter. */
+function DemoCard({ animate, seconds }: { animate: boolean; seconds: number }) {
+    return (
+        <>
+            {/* Editor chrome: window dots + live REC state / saved state */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                        <span key={i} className="w-2.5 h-2.5 rounded-full bg-surface-container-high" />
+                    ))}
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="relative">
+                        <span
+                            className="inline-flex items-center gap-1.5 bg-error-container/15 rounded-full px-2.5 py-1.5"
+                            style={animate ? loopAnim('demo-chip-rec') : { opacity: 0 }}>
+                            <span
+                                className="w-2 h-2 rounded-full bg-error-container"
+                                style={animate ? { animation: 'hero-rec-pulse 1.2s ease-in-out infinite' } : undefined}
+                            />
+                            <span className="font-label font-semibold text-[10px] leading-none tracking-[0.14em] uppercase text-on-surface">
+                                Rec
+                            </span>
+                            <span className="font-mono text-[11px] leading-none text-on-surface-variant">
+                                0:{String(seconds).padStart(2, '0')}
+                            </span>
+                        </span>
+                        <span
+                            className="absolute inset-y-0 right-0 inline-flex items-center gap-1.5 bg-primary-soft/60 rounded-full px-2.5 py-1.5 whitespace-nowrap"
+                            style={animate ? loopAnim('demo-chip-saved') : undefined}>
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}>
+                                <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                            <span className="font-label font-semibold text-[10px] leading-none tracking-[0.14em] uppercase text-on-surface">
+                                Saved
+                            </span>
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            {/* The staff: waveform lands under the cursor, notation follows about 1.5 s behind */}
+            <svg viewBox="0 0 640 165" width="100%">
+                {[0, 1, 2, 3, 4].map((i) => (
+                    <line key={i} x1={16} x2={624} y1={55 + i * 10} y2={55 + i * 10} stroke="var(--color-on-surface)" strokeWidth={1} />
+                ))}
+                {/* Barlines: mid measure + final (thin + thick, like the editor) */}
+                <line x1={344} x2={344} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1} />
+                <line x1={617} x2={617} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={1} />
+                <line x1={622.5} x2={622.5} y1={55} y2={95} stroke="var(--color-on-surface)" strokeWidth={3} />
+                <Glyph name="gClef" x={26} y={85} fill="var(--color-on-surface)" />
+                <Glyph name="timeSig4" x={62} y={65} fill="var(--color-on-surface)" />
+                <Glyph name="timeSig4" x={62} y={85} fill="var(--color-on-surface)" />
+
+                {/* Live waveform bars — the editor's transient cyan/magenta layer */}
+                {animate &&
+                    BARS.map((bar) => (
+                        <g key={bar.name} style={loopAnim(bar.name)} opacity={0}>
+                            <rect
+                                className="waveform-bar"
+                                x={bar.x}
+                                y={75 - bar.h / 2}
+                                width={3.5}
+                                height={bar.h}
+                                rx={1.4}
+                                fill={bar.color}
+                            />
+                        </g>
+                    ))}
+
+                {/* The engraved result, landing about 1.5 s (under three beats) after the sound */}
+                {NOTES.map((note, i) => (
+                    <g key={note.x} style={animate ? loopAnim(`demo-note-${i}`) : undefined} opacity={animate ? 0 : 1}>
+                        {note.ledger && (
+                            <line x1={note.x - 4} x2={note.x + 14.5} y1={105} y2={105} stroke="var(--color-on-surface)" strokeWidth={1} />
+                        )}
+                        <Glyph
+                            name={note.beats === 2 ? 'noteheadHalf' : 'noteheadBlack'}
+                            x={note.x}
+                            y={note.cy}
+                            fill="var(--color-on-surface)"
+                        />
+                        <line
+                            x1={note.x + 10.1}
+                            x2={note.x + 10.1}
+                            y1={note.cy - 1}
+                            y2={note.cy - 33}
+                            stroke="var(--color-on-surface)"
+                            strokeWidth={1.3}
+                        />
+                    </g>
+                ))}
+
+                {/* Recording cursor */}
+                {animate && (
+                    <g style={loopAnim('demo-cursor')} opacity={0}>
+                        <line x1={0} x2={0} y1={42} y2={112} stroke={INTERACTION_BLUE} strokeWidth={2.5} />
+                        <circle cx={0} cy={42} r={3.5} fill={INTERACTION_BLUE} />
+                    </g>
+                )}
+            </svg>
+
+            {/* Input level meter */}
+            <div className="flex items-end gap-0.75 h-6 mt-3" role="presentation">
+                {WAVE_PATTERN.map((h, i) => (
+                    <span
+                        key={i}
+                        className="origin-bottom"
+                        style={{
+                            width: 4,
+                            height: h,
+                            ...(animate ? { ...loopAnim('demo-meter'), animationDelay: `${i * 30}ms` } : { transform: 'scaleY(0.18)' }),
+                        }}>
+                        <span
+                            className="block w-full h-full origin-bottom rounded-full bg-primary-container"
+                            style={animate ? { animation: `demo-meter-sway ${900 + (i % 5) * 120}ms ease-in-out infinite` } : undefined}
+                        />
+                    </span>
+                ))}
+            </div>
+        </>
     )
 }

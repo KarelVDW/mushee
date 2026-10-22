@@ -24,3 +24,10 @@ export const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
 /** PostHog's ingestion host. EU cloud by default (GDPR: data stays in the EU). */
 export const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com'
+
+/**
+ * The share token of a Solkey-owned example score (Frère Jacques), which the landing page's
+ * "Hear an example" opens at /s/<token> so a visitor can hear a real score before signing up.
+ * Per environment (the demo seeder creates one locally); unset = no example link.
+ */
+export const EXAMPLE_SHARE_TOKEN = process.env.NEXT_PUBLIC_EXAMPLE_SHARE_TOKEN || undefined
