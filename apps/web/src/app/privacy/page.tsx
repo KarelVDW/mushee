@@ -16,7 +16,7 @@ const SHORT_VERSION = [
     'We only listen while you’re recording — never in the background.',
     'Your recordings are kept with your account and help us improve how Solkey hears music. You can ask us not to use them for that.',
     'Nothing is sold or shown to other people. A score is only public if you turn on its share link.',
-    'Session replays are off unless you say yes.',
+    'Screen replays are off unless you say yes.',
     'Delete your account any time from Settings. After a 7-day grace period your account, scores and recordings are permanently deleted.',
 ]
 

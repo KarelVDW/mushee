@@ -58,7 +58,8 @@ describe('CookieConsent', () => {
         render()
         const [phone, desktop] = [...(banner()?.querySelectorAll('p > span') ?? [])]
         expect(phone.className).toContain('sm:hidden')
-        expect(phone.textContent).toContain('Session replay is optional')
+        // The same name as the dialog's switch ("Screen replays to help us fix bugs") — one opt-in, one name.
+        expect(phone.textContent).toContain('Screen replays that help us fix bugs are up to you.')
         expect(desktop.className).toContain('max-sm:hidden')
         expect(desktop.textContent).toContain('counts visits without cookies')
         expect(desktop.textContent).toContain('linked to your account')
