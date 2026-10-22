@@ -678,6 +678,14 @@ test.describe('an empty score', () => {
         expect(await page.locator('.max-w-240 svg[data-score-canvas]').innerHTML()).not.toContain('Sing, hum')
     })
 
+    test('the selected rest gets no "To move a note" line — one instruction on the first screen', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Sing, hum or play your tune' })).toBeVisible()
+        await expect(page.getByText(/^To move a note/)).toHaveCount(0)
+        // It is only waiting for a real note: the first one placed brings it.
+        await page.getByRole('button', { name: 'Rest', exact: true }).click()
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toBeVisible()
+    })
+
     test('Start recording starts a take; once notes land the empty state is gone', async ({ page, browserName }) => {
         test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
         await mockRecording(page)

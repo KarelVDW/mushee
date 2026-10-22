@@ -103,6 +103,17 @@ export class NoteToolStates {
     }
 
     /**
+     * Whether the dock's first-selection hint ("To move a note, …", contract C10) is due: a
+     * pitched note is selected and the hint hasn't been retired yet. A selected rest — the
+     * first empty score's, say — leaves it pending, so it teaches the first time a real note
+     * is picked rather than competing with the empty state's "Start recording".
+     */
+    get moveNoteHint(): boolean {
+        const note = this.note
+        return !!note && !note.isRest && this.manipulator.moveNoteHint.pending
+    }
+
+    /**
      * The clef, key, time and tempo chips: on with or without a selection (they read and
      * change bar 1 then), but off while a recording writes into the score — they still show
      * its values (ScoreManipulator.settings).

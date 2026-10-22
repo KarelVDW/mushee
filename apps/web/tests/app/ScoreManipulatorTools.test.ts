@@ -266,6 +266,22 @@ describe('the move-a-note hint', () => {
         expect(new OneTimeHint(MOVE_NOTE_HINT_KEY).pending).toBe(false)
     })
 
+    it('teaches only on a pitched note: a selected rest leaves it pending for the first real note', () => {
+        const rests = makeScore(1)
+        const manipulator = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:tools', isMac: false }))
+        manipulator.attach(rests, () => undefined)
+        // An all-rest score (the first empty score) selects its first rest: no "To move a note" line.
+        expect(manipulator.selectedNote?.isRest).toBe(true)
+        expect(new NoteToolStates(manipulator).moveNoteHint).toBe(false)
+        expect(manipulator.moveNoteHint.pending).toBe(true)
+
+        const { manipulator: pitchedEditor } = setup()
+        expect(pitchedEditor.selectedNote?.isRest).toBe(false)
+        expect(new NoteToolStates(pitchedEditor).moveNoteHint).toBe(true)
+        pitchedEditor.select(null)
+        expect(new NoteToolStates(pitchedEditor).moveNoteHint).toBe(false)
+    })
+
     it('shows again next visit when storage is unavailable — and never throws', () => {
         vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
             throw new Error('blocked')

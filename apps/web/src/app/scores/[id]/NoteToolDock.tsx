@@ -142,8 +142,7 @@ export function NoteToolDock({
     const tools = new NoteToolStates(manipulator)
     const words = new ScoreSettingsWords(settings)
     const shortcut = (command: string) => keybindings.shortcutFor(command)
-    const ownHint =
-        manipulator.selectedNote && manipulator.moveNoteHint.pending ? compact ? <MoveNoteHintPhone /> : MOVE_NOTE_HINT_DESKTOP : null
+    const ownHint = tools.moveNoteHint ? compact ? <MoveNoteHintPhone /> : MOVE_NOTE_HINT_DESKTOP : null
     const line = hint === undefined ? ownHint : hint
 
     const duration = tools.duration
