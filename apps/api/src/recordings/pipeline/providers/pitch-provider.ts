@@ -109,12 +109,10 @@ export interface PitchProvider {
  * A provider that also exposes its frame-level measurement — the trajectory
  * `transcribe` segments, before any note decision. Both CREPE providers are one;
  * it is what lets the eval harness cache inference and sweep segmentation alone.
+ * (scripts/eval/lib/trackCache.ts still declares a local copy of this interface
+ * and its own `hasTrack` guard; adopting this one is a tracked follow-up.)
  */
 export interface TrajectoryProvider extends PitchProvider {
     /** Frame-level trajectory of `samples`, with the same session caching as `transcribe`; null on too little audio. */
     track(samples: Float32Array, session?: PitchSession): Promise<PitchTrack | null>
-}
-
-export function isTrajectoryProvider(provider: PitchProvider): provider is TrajectoryProvider {
-    return typeof (provider as Partial<TrajectoryProvider>).track === 'function'
 }
