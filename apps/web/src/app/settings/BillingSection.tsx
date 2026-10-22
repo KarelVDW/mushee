@@ -75,7 +75,8 @@ export function BillingSection({
 
     return (
         <SettingsSection title="Plan & billing" subtitle={copy.subtitle}>
-            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-md">
+            {/* On the card itself, not a tinted panel: the tonal "Change plan" capsule needs the white behind it. */}
+            <div className="flex items-center gap-4">
                 <span className="w-11 h-11 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                     <Icon name={isBeta ? BETA_PLAN.icon : plan.icon} size={20} />
                 </span>
