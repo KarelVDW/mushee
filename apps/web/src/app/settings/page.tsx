@@ -50,8 +50,19 @@ export default function SettingsPage() {
         if (sessionName !== undefined) setName(sessionName)
     }, [sessionName])
 
+    // Save only does something once the name has changed: the trimmed name differs from the
+    // one on file (the session's, or the last one saved here) and isn't empty.
+    const [savedName, setSavedName] = useState<string | null>(null)
+    const trimmedName = name.trim()
+    const canSaveProfile = !updateProfile.isPending && trimmedName !== '' && trimmedName !== (savedName ?? sessionName ?? '').trim()
     function handleSaveProfile() {
-        updateProfile.mutate(name.trim(), { onSuccess: () => showToast('Profile updated.', 'info') })
+        if (!canSaveProfile) return
+        updateProfile.mutate(trimmedName, {
+            onSuccess: () => {
+                setSavedName(trimmedName)
+                showToast('Profile updated.', 'info')
+            },
+        })
     }
 
     // What the URL asked the plan tab to open: a tier's plan dialog (?plan=, a pricing card or an
@@ -144,7 +155,16 @@ export default function SettingsPage() {
                                     <div className="flex items-center gap-4">
                                         <Avatar name={name || 'You'} size="lg" />
                                     </div>
-                                    <TextField label="Display name" value={name} onChange={setName} />
+                                    <TextField
+                                        label="Your name"
+                                        value={name}
+                                        onChange={setName}
+                                        autoComplete="name"
+                                        enterKeyHint="done"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveProfile()
+                                        }}
+                                    />
                                     <div className="flex flex-col gap-1.5">
                                         <Eyebrow>Email</Eyebrow>
                                         <span className="font-body font-normal text-[14px] leading-none text-on-surface py-1">
@@ -155,7 +175,7 @@ export default function SettingsPage() {
                                         </span>
                                     </div>
                                     <div className="flex justify-end">
-                                        <PrimaryButton onClick={handleSaveProfile} disabled={updateProfile.isPending || !name.trim()}>
+                                        <PrimaryButton onClick={handleSaveProfile} disabled={!canSaveProfile}>
                                             {updateProfile.isPending ? 'Saving…' : 'Save changes'}
                                         </PrimaryButton>
                                     </div>
