@@ -1,5 +1,6 @@
 'use client'
 
+import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
@@ -97,7 +98,7 @@ export function useScoreDocument(id: string) {
 export function useCreateScore() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ title, score }: { title: string; score: Record<string, unknown> }) => createScore(title, score),
+        mutationFn: ({ title, score }: { title: string; score: ScorePartwise }) => createScore(title, score),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
         // Callers render errors themselves: a score-limit refusal opens the
         // upgrade dialog; anything else gets its own toast.

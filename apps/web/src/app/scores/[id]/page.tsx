@@ -17,7 +17,6 @@ import {
     type Pitch,
     TimeSignature,
 } from '@mushee/notation/model'
-import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -41,10 +40,7 @@ import {
     MOVE_PREVIOUS,
     RAISE_PITCH,
     SET_ACCIDENTAL,
-    SET_CLEF,
     SET_DURATION,
-    SET_KEY,
-    SET_TEMPO,
     TOGGLE_DOT,
     TOGGLE_REST,
     TOGGLE_TIE,
@@ -113,17 +109,25 @@ export default function ScoreEditorPage() {
 
     // The query owns fetching; this effect turns the fetched document into the live, mutable
     // Score the manipulator works on, wiring its re-render hook and (debounced) autosave.
+    // It is keyed on the document alone, never on the whole query result: a share toggle
+    // rewrites the cached meta (keeping `document`'s reference), and re-running here would
+    // re-attach the load-time document over every edit made since. The title is seeded in
+    // the same effect for the same reason — once per load, not on every meta change.
+    // A raw (non-JSON) stored document is never deserialized: it takes the load-error path
+    // below, so an autosave can't write a reconstruction back over the stored MusicXML.
+    const loaded = scoreDocument?.document
+    const unreadable = loaded !== undefined && 'raw' in loaded
     useEffect(() => {
-        if (!scoreDocument) return
+        if (!scoreDocument || !loaded || 'raw' in loaded) return
         setTitle(scoreDocument.meta.title)
-        const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
+        const deserializer = new ScoreDeserializer(loaded)
         const s = deserializer.toScore(manipulator.onScoreChange)
         // The save callback takes the score as a parameter (not a closure over `s`):
         // undo/redo swap the manipulator's Score instance, and the autosave must follow.
         manipulator.attach(s, (score) => saveToApi({ score }))
-    }, [scoreDocument, manipulator, saveToApi])
+    }, [loaded, manipulator, saveToApi])
 
-    // Listeners are thin: each maps a control-bar callback or mouse event to a manipulator
+    // Listeners are thin: each maps a dock callback or mouse event to a manipulator
     // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
     // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
@@ -135,13 +139,33 @@ export default function ScoreEditorPage() {
     const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
     const handleTieToggle = useCallback(() => manipulator.run(TOGGLE_TIE), [manipulator])
     const handleRestToggle = useCallback(() => manipulator.run(TOGGLE_REST), [manipulator])
-    const handleTempoSet = useCallback((bpm: number) => manipulator.run(SET_TEMPO, bpm), [manipulator])
-    const handleClefSet = useCallback((type: ClefType) => manipulator.run(SET_CLEF, type), [manipulator])
-    const handleKeySet = useCallback((fifths: number) => manipulator.run(SET_KEY, fifths), [manipulator])
+    // The dock's measure-context edits apply at the active note's position (mid-measure for
+    // clef / key / tempo), through the same setters as the in-score glyph popovers.
+    const handleTempoSet = useCallback(
+        (bpm: number) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setTempoAt(at.measureIndex, at.beat, bpm)
+        },
+        [manipulator],
+    )
+    const handleClefSet = useCallback(
+        (type: ClefType) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setClefAt(at.measureIndex, type, at.beat)
+        },
+        [manipulator],
+    )
+    const handleKeySet = useCallback(
+        (fifths: number) => {
+            const at = manipulator.activePosition
+            if (at) manipulator.setKeyAt(at.measureIndex, fifths, at.beat)
+        },
+        [manipulator],
+    )
     const handleTimeSet = useCallback(
         (beatAmount: number, beatType: number) => {
-            const measure = manipulator.selectedNote?.measure
-            if (measure) manipulator.setTimeSignatureAt(measure.index, beatAmount, beatType)
+            const at = manipulator.activePosition
+            if (at) manipulator.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
         },
         [manipulator],
     )
@@ -293,7 +317,7 @@ export default function ScoreEditorPage() {
         waveformStore,
         recordingState,
         recordingHalt,
-        setRecordingHalt,
+        dismissRecordingHalt,
         handleRecordToggle,
         micModeGuideOpen,
         confirmMicModeGuide,
@@ -309,13 +333,6 @@ export default function ScoreEditorPage() {
         saveToApi,
     })
 
-    // A live take streams transcription into the score; undoing then would swap the Score
-    // instance out from under the transport's refs, so history travel is locked for the
-    // take's duration. The finished take folds into one undoable step (see the manager).
-    useEffect(() => {
-        manipulator.historyLocked = recordingState !== 'idle'
-    }, [manipulator, recordingState])
-
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
     // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
@@ -330,7 +347,7 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
-    if (loadError) {
+    if (loadError || unreadable) {
         const serverDown = loadError instanceof NetworkError
         const notFound = loadError instanceof ApiError && loadError.status === 404
         return (
@@ -613,13 +630,9 @@ export default function ScoreEditorPage() {
             {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
 
             {recordingHalt?.kind === 'limit' && (
-                <RecordingLimitDialog
-                    info={recordingHalt.info}
-                    onUpgrade={() => router.push('/settings')}
-                    onClose={() => setRecordingHalt(null)}
-                />
+                <RecordingLimitDialog info={recordingHalt.info} onUpgrade={() => router.push('/settings')} onClose={dismissRecordingHalt} />
             )}
-            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
+            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
             {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
         </div>
     )

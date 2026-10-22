@@ -5,7 +5,7 @@ import { track } from '@/lib/analytics'
 import { useShareScore, useUnshareScore } from '@/lib/queries'
 
 /** The public address of a shared score, on whatever host the app is served from. */
-export function shareLinkFor(token: string): string {
+function shareLinkFor(token: string): string {
     return `${window.location.origin}/s/${token}`
 }
 

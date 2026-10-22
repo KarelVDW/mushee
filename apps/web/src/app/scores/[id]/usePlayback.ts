@@ -1,16 +1,18 @@
 'use client'
 
 import type { Note, Score } from '@mushee/notation/model'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { Transport } from '@/lib/Transport'
+import { useTransport } from '@/lib/useTransport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /**
- * Playback/transport state for the editor: owns the Transport's lifecycle, the playback
- * cursor element, lazy instrument loading, note preview on selection, and the metronome
- * toggle. Exposes `stopAll` for anything (like recording) that must halt playback first.
+ * Playback for the editor: the shared {@link useTransport} binding (with the metronome
+ * click's samples), plus note preview on selection and the metronome toggle. `instrumentsReady`
+ * gates the editor's initial render: the record button must not exist until the metronome
+ * click is guaranteed audible. Exposes `stopAll` for anything (like recording) that must halt
+ * playback first.
  */
 export function usePlayback({
     score,
@@ -21,45 +23,8 @@ export function usePlayback({
     activeNote: Note | null
     manipulator: ScoreManipulator
 }) {
-    const transportRef = useRef<Transport | null>(null)
-    const playbackCursorRef = useRef<SVGRectElement | null>(null)
-    const [playbackState, setPlaybackState] = useState<'stopped' | 'playing' | 'paused'>('stopped')
+    const { transportRef, playbackCursorRef, state: playbackState, ready, toggle, stop: stopAll } = useTransport(score, { metronome: true })
     const [metronome, setMetronome] = useState(false)
-    const [instrumentsReady, setInstrumentsReady] = useState(false)
-
-    // The Transport owns the shared clock and every playback/recording unit;
-    // this page only tells it which mode to enter.
-    useEffect(() => {
-        const transport = new Transport()
-        transportRef.current = transport
-        return () => {
-            transportRef.current = null
-            transport.dispose()
-        }
-    }, [])
-
-    // Lazy-load only the samples the score needs (its own instrument + the metronome click).
-    // Re-runs when the score's selected instrument changes — the picker mutates `score.instrument`
-    // in place, but the manipulator's onScoreChange re-render re-evaluates `score?.instrument.id`.
-    // `instrumentsReady` gates the editor's initial render: scheduling a note whose samples are
-    // still downloading is a silent skip (smplr drops it), so the record button must not exist
-    // until the metronome click is guaranteed audible. It flips once and stays true — a failed
-    // download plays degraded rather than bricking the editor, and swapping instruments
-    // mid-session must not flash the page back to its loading screen.
-    useEffect(() => {
-        if (!score) return
-        const transport = transportRef.current
-        if (!transport) return
-        void transport
-            .prepare(score.instrument)
-            .catch(() => {})
-            .then(() => setInstrumentsReady(true))
-    }, [score, score?.instrument.id])
-
-    const stopAll = useCallback(() => {
-        transportRef.current?.stop()
-        setPlaybackState('stopped')
-    }, [])
 
     // Selecting a note stops any ongoing playback/recording and previews its pitch.
     // The Note holds written pitch; the instrument gives the pitch it sounds at.
@@ -80,36 +45,9 @@ export function usePlayback({
         transportRef.current?.setMetronomeEnabled(metronome)
     }, [metronome])
 
-    const handlePlayToggle = useCallback(() => {
-        if (!score) return
-        const transport = transportRef.current
-        if (!transport) return
+    // Launching from a stop begins at the selected note (falling back to the top of the
+    // score when nothing is selected); pause/resume keep their place instead.
+    const handlePlayToggle = useCallback(() => toggle(activeNote), [toggle, activeNote])
 
-        if (playbackState === 'playing') {
-            transport.pause()
-            setPlaybackState('paused')
-            return
-        }
-
-        if (playbackState === 'paused') {
-            transport.resume()
-            setPlaybackState('playing')
-            return
-        }
-
-        const cursorEl = playbackCursorRef.current
-        if (!cursorEl) return
-
-        // Launching from a stop begins at the selected note (falling back to the top of the
-        // score when nothing is selected); resume/pause above keep their place instead.
-        transport.playScore({
-            score,
-            startNote: activeNote,
-            cursorEl,
-            onFinish: () => setPlaybackState('stopped'),
-        })
-        setPlaybackState('playing')
-    }, [score, activeNote, playbackState])
-
-    return { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady }
+    return { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady: ready }
 }

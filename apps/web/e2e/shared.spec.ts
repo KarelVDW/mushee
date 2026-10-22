@@ -29,7 +29,7 @@ test('a valid share link renders the score read-only with its title, export and 
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
     await page.getByRole('button', { name: 'Stop' }).click()
     await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Library|Start free/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Open library|Start free/ })).toBeVisible()
 
     // Signed in (the mock session): the score can be saved as an editable copy of one's own.
     await page.getByRole('button', { name: 'Save a copy' }).click()
@@ -67,6 +67,6 @@ test('a visitor without an account is sent to signup with the score as the way b
         return route.continue()
     })
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
-    await page.getByRole('button', { name: 'Start free' }).click()
+    await page.getByRole('link', { name: 'Start free' }).click()
     await expect(page).toHaveURL(new RegExp(`/signup\\?next=${encodeURIComponent(`/s/${MOCK_SHARE_TOKEN}`).replace(/%/g, '%')}$`))
 })

@@ -1208,4 +1208,101 @@ describe('RecordingEngine', () => {
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
     })
+
+    describe('onDrained (once per take, when nothing more can reach the score)', () => {
+        /** A take that got as far as streaming into an open socket, with its onDrained spy. */
+        async function streamingTake() {
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const onDrained = vi.fn()
+            const { options } = makeOptions({ onDrained })
+            await engine.start(options)
+            raw.currentTime = 3
+            engine.tick()
+            socket().fire('open')
+            await Promise.resolve()
+            recorder().state = 'recording'
+            return { engine, onDrained }
+        }
+
+        it("fires on the close after the server's recording-complete, not before", async () => {
+            const { engine, onDrained } = await streamingTake()
+            engine.stop()
+            expect(onDrained).not.toHaveBeenCalled() // the server is still draining the tail
+
+            socket().fire('message', { data: JSON.stringify({ type: 'recording-complete' }) })
+            socket().fire('close')
+            socket().fire('close')
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+
+        it('fires when the server closes the socket without recording-complete', async () => {
+            const { engine, onDrained } = await streamingTake()
+            engine.stop()
+            socket().fire('close')
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+
+        it('fires from the drain timeout when the server never answers, and only once', async () => {
+            vi.useFakeTimers()
+            try {
+                const { engine, onDrained } = await streamingTake()
+                engine.stop()
+                vi.advanceTimersByTime(9_999)
+                expect(onDrained).not.toHaveBeenCalled()
+                vi.advanceTimersByTime(1)
+                expect(onDrained).toHaveBeenCalledTimes(1)
+                socket().fire('close') // the late close event of the timed-out socket
+                expect(onDrained).toHaveBeenCalledTimes(1)
+            } finally {
+                vi.useRealTimers()
+            }
+        })
+
+        it('fires right away when stop() finds the socket not open', async () => {
+            const { engine, onDrained } = await streamingTake()
+            socket().readyState = FakeWebSocket.CLOSED
+            engine.stop()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+
+        it('fires right away when stop() finds no socket (the connection was lost)', async () => {
+            const { engine, onDrained } = await streamingTake()
+            socket().fire('close') // dropped mid-take: the engine lets go of the socket
+            expect(onDrained).not.toHaveBeenCalled()
+            engine.stop()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+            engine.stop()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+
+        it('fires when start() fails', async () => {
+            const { player } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const onDrained = vi.fn()
+            const { options } = makeOptions({ onDrained })
+            getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'))
+
+            await expect(engine.start(options)).rejects.toThrow()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+            engine.stop()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+
+        it('fires when stop() wins the race with the permission prompt', async () => {
+            const { player } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const onDrained = vi.fn()
+            const { options } = makeOptions({ onDrained })
+            let resolvePrompt: (stream: unknown) => void = () => {}
+            const pendingGetUserMedia = vi.fn(() => new Promise((resolve) => (resolvePrompt = resolve)))
+            vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: pendingGetUserMedia } })
+
+            const started = engine.start(options)
+            engine.stop()
+            resolvePrompt(fakeStream())
+            await expect(started).resolves.toBeNull()
+            expect(onDrained).toHaveBeenCalledTimes(1)
+        })
+    })
 })

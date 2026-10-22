@@ -220,6 +220,27 @@ describe('Transport', () => {
         expect(transport.mode).toBe('stopped')
     })
 
+    it('reports every mode change, including a pass that plays out on its own', async () => {
+        const { player, raw } = fakePlayer()
+        const transport = new Transport(player)
+        const modes: string[] = []
+        transport.onModeChange = (mode) => modes.push(mode)
+
+        transport.playScore({ score: scoreWithNotes(1), startNote: null, cursorEl: svgRect() })
+        transport.pause()
+        transport.resume()
+        // Far past the score's end: the ticker finishes the pass without a stop().
+        raw.currentTime = 1000
+        fireFrame()
+        expect(transport.mode).toBe('stopped')
+        expect(modes).toEqual(['stopped', 'playing', 'paused', 'playing', 'stopped'])
+
+        modes.length = 0
+        await transport.record(recordingOptions(scoreWithNotes()))
+        transport.stop()
+        expect(modes).toEqual(['stopped', 'recording', 'stopped'])
+    })
+
     it('setMetronomeEnabled mid-playback joins without burst-scheduling elapsed clicks', () => {
         const { player, raw } = fakePlayer()
         const transport = new Transport(player)

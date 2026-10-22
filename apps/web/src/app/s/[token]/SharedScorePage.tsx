@@ -2,32 +2,20 @@
 
 import { ScoreView } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
-import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ExportMenu } from '@/components/ExportMenu'
-import {
-    Footer,
-    Icon,
-    IconButton,
-    PrimaryButton,
-    SecondaryButton,
-    showToast,
-    TertiaryButton,
-    TransportBtn,
-    Wordmark,
-} from '@/components/ui'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
+import { Footer, Icon, IconButton, SecondaryButton, showToast, TertiaryButton, TransportBtn, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { withNext } from '@/lib/nextPath'
-import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
-
-import { useSharedPlayback } from './useSharedPlayback'
+import { useTransport } from '@/lib/useTransport'
 
 /**
  * What a share link opens: the score, engraved read-only, with its title, an
@@ -42,12 +30,15 @@ export function SharedScorePage({ token }: { token: string }) {
     const scoreAreaRef = useRef<HTMLDivElement>(null)
 
     // The score is immutable here, but its layout reflows with the container width
-    // (ScoreView observes it and calls setLayoutWidth), so re-render on change.
+    // (ScoreView observes it and calls setLayoutWidth), so re-render on change. A raw
+    // (non-JSON) stored document can't be engraved; it shows the load-error state instead.
     const [, bump] = useState(0)
+    const stored = shared.data?.document
+    const partwise = stored && !('raw' in stored) ? stored : null
+    const unreadable = stored !== undefined && partwise === null
     const score = useMemo<Score | null>(
-        () =>
-            shared.data ? new ScoreDeserializer(shared.data.document as unknown as ScorePartwise).toScore(() => bump((n) => n + 1)) : null,
-        [shared.data],
+        () => (partwise ? new ScoreDeserializer(partwise).toScore(() => bump((n) => n + 1)) : null),
+        [partwise],
     )
 
     // One view event per resolved link — the growth loop's top-of-funnel number.
@@ -61,32 +52,31 @@ export function SharedScorePage({ token }: { token: string }) {
         if (shared.data?.title) document.title = `${shared.data.title} — Solkey`
     }, [shared.data?.title])
 
-    const onGetStarted = () => {
-        track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
-        // Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done.
-        router.push(authed ? '/scores' : withNext('/signup', `/s/${token}`))
-    }
-
     // A signed-in visitor can take the shared score home as an editable copy of their own.
+    // A copy counts against the plan's score cap like any create, so a refusal gets the
+    // library's upgrade dialog rather than a failure toast.
     const create = useCreateScore()
+    const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const saveCopy = () => {
-        if (!shared.data || create.isPending) return
+        if (!shared.data || !partwise || create.isPending) return
         create.mutate(
-            { title: shared.data.title, score: shared.data.document },
+            { title: shared.data.title, score: partwise },
             {
                 onSuccess: (created) => {
                     track('shared_score_copied')
                     router.push(`/scores/${created.id}`)
                 },
-                onError: (err) =>
-                    showToast(
-                        err instanceof ApiError && err.code === 'score-limit' ? err.message : 'Could not save a copy. Please try again.',
-                    ),
+                onError: (err) => {
+                    if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
+                    else showToast('Could not save a copy. Please try again.')
+                },
             },
         )
     }
     const notFound = shared.isError && shared.error instanceof ApiError && shared.error.isClientError
-    const playback = useSharedPlayback(score)
+    // The editor's transport binding, minus selection, recording and the metronome (so no
+    // click samples to fetch). There is no selected note, so playback starts at the top.
+    const playback = useTransport(score, { metronome: false })
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
@@ -107,7 +97,7 @@ export function SharedScorePage({ token }: { token: string }) {
                                 active={playback.state === 'playing'}
                                 onClick={() => {
                                     if (playback.state === 'stopped') track('shared_score_played')
-                                    playback.toggle()
+                                    playback.toggle(null)
                                 }}
                                 ariaLabel={playback.state === 'playing' ? 'Pause' : 'Play'}
                                 disabled={!playback.ready}>
@@ -133,9 +123,8 @@ export function SharedScorePage({ token }: { token: string }) {
                             </span>
                         </>
                     )}
-                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
-                        {authed ? 'Library' : 'Start free'}
-                    </PrimaryButton>
+                    {/* Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done. */}
+                    <GetStartedButton location="shared-score" next={`/s/${token}`} />
                 </div>
             </header>
 
@@ -146,7 +135,7 @@ export function SharedScorePage({ token }: { token: string }) {
                     </h1>
                 )}
                 {shared.isPending && <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />}
-                {shared.isError && (
+                {(shared.isError || unreadable) && (
                     <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
                         <h2 className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0">
                             {notFound ? 'This link doesn’t open anything.' : 'The score couldn’t be loaded.'}
@@ -176,6 +165,7 @@ export function SharedScorePage({ token }: { token: string }) {
             </main>
 
             <Footer width="marketing" />
+            {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
         </div>
     )
 }

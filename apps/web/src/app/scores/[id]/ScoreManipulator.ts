@@ -3,7 +3,7 @@ import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
 
-import { MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
+import { type ActionArgs, MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type SelectionAddress } from './ManipulationHistoryManager'
 
@@ -23,20 +23,22 @@ const MAX_RANGE = 100_000
  * monotonic version that bumps on any selection or score change. The page reads the live
  * `score` / `selectedNote` / `selectedNotes` off the instance after each notification.
  *
- * Score-wide structure (add/remove measure, set tempo at a position, change instrument) lives
- * in dedicated methods rather than the action array, because those operations don't act on a
- * single selected note.
+ * Score-wide structure (add/remove measure, change instrument) and measure-context edits
+ * (clef / key / meter / tempo at a position — the in-score glyph popovers and the dock alike)
+ * live in dedicated methods rather than as actions, because they act on a position rather
+ * than on the selected notes, and leave the selection as it is.
  *
- * Every mutation runs through {@link manipulate}, which registers it as one step with the
- * {@link ManipulationHistoryManager}; {@link undo}/{@link redo} travel that history by
+ * Every public mutator runs through {@link commit}, so each edit is tracked as one step with
+ * the {@link ManipulationHistoryManager}, autosaved, and announced; {@link undo}/{@link redo}
+ * travel that history by
  * swapping in a rebuilt Score (note identities change wholesale, so the selection is
  * re-resolved by position).
  */
 export class ScoreManipulator {
     private _score: Score | null = null
     // Selection is the contiguous run from `_anchorNote` (the fixed end, where a drag/shift
-    // started) to `_selectedNote` (the moving end — the "active" note used by the cursor, control
-    // bar, and preview). `_selectedNotes` is that run in score order, recomputed only on a
+    // started) to `_selectedNote` (the moving end — the "active" note used by the cursor, dock,
+    // and preview). `_selectedNotes` is that run in score order, recomputed only on a
     // selection change so its array reference stays stable for memoized rendering.
     private _anchorNote: Note | null = null
     private _selectedNote: Note | null = null
@@ -47,13 +49,9 @@ export class ScoreManipulator {
     private _version = 0
     private readonly listeners = new Set<() => void>()
     private save: (score: Score) => void = () => {}
-    readonly history = new ManipulationHistoryManager()
-    /**
-     * Set while a recording take is writing into the score (the page toggles it): history
-     * travel would swap the Score instance out from under the transport's live refs, so
-     * undo/redo refuse until the take ends — the take then becomes one undoable step itself.
-     */
-    historyLocked = false
+    private readonly history = new ManipulationHistoryManager()
+    /** Outstanding {@link lockHistory} holds; history travel refuses while any is held. */
+    private lockCount = 0
 
     /** The keyboard map — command defaults plus the user's persisted overrides — driving {@link handleKeyDown}. */
     constructor(readonly keybindings: Keybindings<EditorCommand> = new Keybindings(EDITOR_COMMANDS)) {}
@@ -79,7 +77,7 @@ export class ScoreManipulator {
         return this._score
     }
 
-    /** The active note: the moving end of the selection (cursor / control-bar / preview anchor). */
+    /** The active note: the moving end of the selection (cursor / dock / preview anchor). */
     get selectedNote(): Note | null {
         return this._selectedNote
     }
@@ -87,6 +85,16 @@ export class ScoreManipulator {
     /** Every selected note in score order (one entry for a single selection). Stable per selection. */
     get selectedNotes(): Note[] {
         return this._selectedNotes
+    }
+
+    /**
+     * Where the active note sits — its measure index and beat offset — for the measure-context
+     * setters below, so a dock clef/key/tempo change lands mid-measure at the active note.
+     */
+    get activePosition(): { measureIndex: number; beat: number } | null {
+        const note = this._selectedNote
+        const at = this.addressOf(note)
+        return note && at ? { measureIndex: at.measureIndex, beat: note.measure.beatOffsetOf(note) } : null
     }
 
     /** Bind a freshly loaded score and its (debounced) autosave, selecting the first note. */
@@ -178,21 +186,23 @@ export class ScoreManipulator {
     /**
      * Run an action against the selection, then autosave and re-render. A bulk action receives
      * every selected note and returns the notes to re-anchor the selection on; a single-note
-     * action acts on the active note alone.
+     * action acts on the active note alone. The argument is required exactly when the action
+     * takes one (see {@link ActionArgs}); `A` is inferred from the action alone.
      */
-    run(action: ScoreAction, arg?: unknown): void {
+    run<A>(action: ScoreAction<A>, ...args: ActionArgs<NoInfer<A>>): void {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected) return
-        this.manipulate(() => this.execute(action, this._selectedNotes, selected, arg))
-        this.save(score)
-        this.emit()
+        this.commit(() => this.execute(action, this._selectedNotes, selected, ...args))
     }
 
     /** Apply an action to `notes` (bulk) or to `active` alone, then re-anchor the selection on its results. */
-    private execute(action: ScoreAction, notes: Note[], active: Note, arg?: unknown): void {
+    private execute<A>(action: ScoreAction<A>, notes: Note[], active: Note, ...args: ActionArgs<A>): void {
         const score = this._score
         if (!score) return
+        // ActionArgs already proved the argument's presence at the call site; for a
+        // parameterless action this reads `undefined`, which is what `void` stands for.
+        const arg = args[0] as A
         const results = action.executeBulk ? action.executeBulk(score, notes, arg) : [action.execute(score, active, arg)]
         const first = results[0]
         const last = results[results.length - 1]
@@ -217,15 +227,13 @@ export class ScoreManipulator {
             this.run(REMOVE_NOTE)
             return
         }
-        this.manipulate(() => {
+        this.commit(() => {
             const landingIndex = removable[0].index
             const kept = this._selectedNotes.filter((note) => !removable.includes(note.measure))
             score.removeMeasures(removable)
             if (kept.length > 0) this.execute(REMOVE_NOTE, kept, kept[kept.length - 1])
             else this.setSingle(score.measures[landingIndex]?.firstNote ?? score.lastMeasure?.lastNote ?? null)
         })
-        this.save(score)
-        this.emit()
     }
 
     /** The measures every note of which is selected, in score order (the selection is contiguous). */
@@ -233,6 +241,18 @@ export class ScoreManipulator {
         const selected = new Set(this._selectedNotes)
         const measures = [...new Set(this._selectedNotes.map((note) => note.measure))]
         return measures.filter((measure) => measure.notes.every((note) => selected.has(note)))
+    }
+
+    /**
+     * The one path every public mutator takes: run `mutate` as an undoable step, autosave the
+     * score, and notify subscribers — so no edit can be tracked without being saved or announced.
+     */
+    private commit(mutate: () => void): void {
+        const score = this._score
+        if (!score) return
+        this.manipulate(mutate)
+        this.save(score)
+        this.emit()
     }
 
     /** Run one mutation as an undoable step (no-ops — navigation actions — register nothing). */
@@ -259,7 +279,7 @@ export class ScoreManipulator {
 
     // --- Clipboard ---
 
-    /** Whether {@link paste} would do anything (drives a future paste button's enabled state). */
+    /** Whether {@link paste} would do anything (drives the SelectionPopover's Paste enabled state). */
     get canPaste(): boolean {
         return this._clipboard.length > 0
     }
@@ -285,7 +305,7 @@ export class ScoreManipulator {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected || this._clipboard.length === 0) return
-        this.manipulate(() => {
+        this.commit(() => {
             const targets = this._selectedNotes.length > 0 ? this._selectedNotes : [selected]
             const pasted = score.replace(
                 targets,
@@ -295,8 +315,6 @@ export class ScoreManipulator {
             const last = pasted[pasted.length - 1]
             if (first && last) this.setRange(first, last)
         })
-        this.save(score)
-        this.emit()
     }
 
     // --- Structure (operate on the score as a whole, not the active note) ---
@@ -304,47 +322,47 @@ export class ScoreManipulator {
     addMeasure(): void {
         const score = this._score
         if (!score) return
-        this.manipulate(() => score.addMeasure().complete())
-        this.save(score)
+        this.commit(() => score.addMeasure().complete())
     }
 
     removeMeasure(): void {
         const score = this._score
         // A score always has at least one bar; the UI disables the control too, this keeps every path honest.
         if (!score || score.measures.length <= 1) return
-        this.manipulate(() => {
+        this.commit(() => {
             score.removeLastMeasure()
             this.setSingle(score.lastMeasure?.lastNote ?? null)
         })
-        this.save(score)
-        this.emit()
     }
 
-    /** Set a tempo at an explicit position (the in-score tempo marking popover). */
+    /** Set a tempo at an explicit position (the in-score tempo marking popover, or the dock at {@link activePosition}). */
     setTempoAt(measureIndex: number, beatPosition: number, bpm: number): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setTempo(measure.noteAtBeat(beatPosition), bpm))
-        this.save(score)
+        this.commit(() => score.setTempo(measure.noteAtBeat(beatPosition), bpm))
     }
 
-    /** Change the clef from the start of a measure (the in-score clef glyph popover). */
-    setClefAt(measureIndex: number, type: ClefType): void {
+    /**
+     * Change the clef at a position: from the start of a measure (the in-score clef glyph
+     * popover), or mid-measure at a beat (the dock, at {@link activePosition}).
+     */
+    setClefAt(measureIndex: number, type: ClefType, beat = 0): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setClef(measure.noteAtBeat(0), type))
-        this.save(score)
+        this.commit(() => score.setClef(measure.noteAtBeat(beat), type))
     }
 
-    /** Change the key signature from the start of a measure (the in-score key glyph popover). */
-    setKeyAt(measureIndex: number, fifths: number): void {
+    /**
+     * Change the key signature at a position: from the start of a measure (the in-score key
+     * glyph popover), or mid-measure at a beat (the dock, at {@link activePosition}).
+     */
+    setKeyAt(measureIndex: number, fifths: number, beat = 0): void {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setKeySignature(measure.noteAtBeat(0), fifths))
-        this.save(score)
+        this.commit(() => score.setKeySignature(measure.noteAtBeat(beat), fifths))
     }
 
     /** Change the time signature from a measure (the in-score glyph or dock popover). */
@@ -353,7 +371,7 @@ export class ScoreManipulator {
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
         const version = score.version
-        this.manipulate(() => {
+        this.commit(() => {
             score.setTimeSignature(measure, new TimeSignature(beatAmount, beatType))
             if (score.version === version) return // same meter — nothing changed
             // Rebarring may have replaced the selected note (split or merged across the new
@@ -362,9 +380,6 @@ export class ScoreManipulator {
             const survived = selected && score.measures.includes(selected.measure)
             this.setSingle(survived ? selected : (score.measures[Math.min(measureIndex, score.measures.length - 1)]?.firstNote ?? null))
         })
-        if (score.version === version) return
-        this.save(score)
-        this.emit()
     }
 
     /**
@@ -404,24 +419,18 @@ export class ScoreManipulator {
         const score = this._score
         if (!score) return
         const selectionScope = scope === 'selection' && this._selectedNotes.length > 0
-        this.manipulate(() => {
+        this.commit(() => {
             if (selectionScope) {
                 const result = score.transpose(interval, this._selectedNotes)
                 const first = result[0]
                 const last = result[result.length - 1]
                 if (first && last) this.setRange(first, last)
             } else {
-                const note = this._selectedNote
-                const measureIdx = note ? note.measure.index : null
-                const noteIdx = note ? note.measure.notes.indexOf(note) : null
+                const at = this.addressOf(this._selectedNote)
                 score.transpose(interval)
-                if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
-                    this.setSingle(score.measures[measureIdx]?.notes[noteIdx] ?? null)
-                }
+                if (at) this.setSingle(this.noteAt(at))
             }
         })
-        this.save(score)
-        this.emit()
         this.onPitchHighlight?.(selectionScope ? [...this._selectedNotes] : 'all')
     }
 
@@ -432,29 +441,43 @@ export class ScoreManipulator {
     setInstrument(instrument: Instrument): void {
         const score = this._score
         if (!score) return
-        this.manipulate(() => {
-            const note = this._selectedNote
-            const measureIdx = note ? note.measure.index : null
-            const noteIdx = note ? note.measure.notes.indexOf(note) : null
+        this.commit(() => {
+            const at = this.addressOf(this._selectedNote)
             score.setInstrument(instrument)
-            if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
-                this.setSingle(score.measures[measureIdx]?.notes[noteIdx] ?? null)
-            }
+            if (at) this.setSingle(this.noteAt(at))
         })
-        this.save(score)
-        this.emit()
     }
 
     // --- History (undo / redo) ---
 
+    /**
+     * Hold history travel off while a recording take writes into the score — from the take's
+     * start until its socket has drained the last transcription updates. Undoing meanwhile
+     * would swap the Score instance out from under the transport's live refs, and the late
+     * updates would land in a score the editor no longer shows. The take then becomes one
+     * undoable step itself. Returns the release; it is idempotent, and holds from overlapping
+     * takes count separately, so an earlier take's release never unlocks a later take.
+     */
+    lockHistory(): () => void {
+        this.lockCount++
+        this.emit()
+        let released = false
+        return () => {
+            if (released) return
+            released = true
+            this.lockCount--
+            this.emit()
+        }
+    }
+
     /** Whether a step back exists. False while a recording locks history travel. */
     get canUndo(): boolean {
-        return !this.historyLocked && this._score !== null && this.history.canUndo(this._score)
+        return this.lockCount === 0 && this._score !== null && this.history.canUndo(this._score)
     }
 
     /** Whether an undone step can be reapplied. False while a recording locks history travel. */
     get canRedo(): boolean {
-        return !this.historyLocked && this._score !== null && this.history.canRedo(this._score)
+        return this.lockCount === 0 && this._score !== null && this.history.canRedo(this._score)
     }
 
     /** Step back one manipulation (⌘Z). Returns whether anything was undone. */
@@ -469,7 +492,7 @@ export class ScoreManipulator {
 
     private travel(direction: 'undo' | 'redo'): boolean {
         const score = this._score
-        if (!score || this.historyLocked) return false
+        if (!score || this.lockCount > 0) return false
         const address = this.selectionAddress()
         const restored =
             direction === 'undo'

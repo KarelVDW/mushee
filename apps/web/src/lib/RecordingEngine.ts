@@ -90,6 +90,14 @@ export interface RecordingOptions {
      * waveform bars but never notes must not look like the user's fault.
      */
     onHealth?: (health: { ok: boolean }) => void
+    /**
+     * Fired exactly once per take, when nothing more can reach the score: the
+     * socket closed after stop() (the server's recording-complete, a server
+     * close, or the drain timeout), stop() found no open socket to drain, or
+     * start() failed or lost the race with stop(). Late {@link onScoreUpdate}s
+     * only ever arrive before it.
+     */
+    onDrained?: () => void
 }
 
 /**
@@ -124,6 +132,8 @@ export class RecordingEngine implements Tickable {
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
+    /** The running take's {@link RecordingOptions.onDrained}, fire-once; stop() hands it to the drain. */
+    private drained: (() => void) | null = null
 
     constructor(
         midiPlayer: Pick<MidiPlayer, 'currentTime'>,
@@ -151,6 +161,7 @@ export class RecordingEngine implements Tickable {
     async start(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         const token = ++this.lifecycle
         this.options = options
+        const drained = RecordingEngine.once(options.onDrained)
 
         // The mic declares the record session before it opens, so iOS routes output
         // correctly from the start; stop() ends it (including a stop() racing the prompt).
@@ -159,15 +170,18 @@ export class RecordingEngine implements Tickable {
             stream = await Microphone.open(MIC_CONSTRAINTS)
         } catch (err) {
             if (this.lifecycle === token) this.options = null
+            drained()
             throw err
         }
         if (this.lifecycle !== token) {
             // stop() ran while the permission prompt was open and already ended the
             // session; without this the stream is never stopped and the mic indicator stays lit.
             Microphone.stopTracks(stream)
+            drained() // the take never ran, so there is nothing to drain
             return null
         }
         this.stream = stream
+        this.drained = drained
 
         const measure = options.score.measures[options.startMeasureIndex]
         this.startMeasure = measure
@@ -236,15 +250,19 @@ export class RecordingEngine implements Tickable {
         socket?.retire()
         const recorder = this.mediaRecorder
         this.mediaRecorder = null
+        const drained = this.drained ?? (() => {})
+        this.drained = null
 
         // MediaRecorder.stop() flushes its final ≤100 ms chunk asynchronously
         // (the ondataavailable handler holds its own reference to the socket),
-        // so only end the socket once that flush has happened.
+        // so only end the socket once that flush has happened. The take has
+        // drained once the socket closes — or right away when there is none.
         let finished = false
         const finish = () => {
             if (finished) return
             finished = true
-            socket?.end()
+            if (socket) socket.end(drained)
+            else drained()
         }
         if (recorder && recorder.state !== 'inactive') {
             recorder.onstop = finish
@@ -414,6 +432,16 @@ export class RecordingEngine implements Tickable {
             socket.send(e.data)
         }
         this.mediaRecorder.start(CHUNK_MS)
+    }
+
+    /** `callback` wrapped so it runs at most once (a no-op when absent). */
+    private static once(callback: (() => void) | undefined): () => void {
+        let called = false
+        return () => {
+            if (called) return
+            called = true
+            callback?.()
+        }
     }
 
     /**

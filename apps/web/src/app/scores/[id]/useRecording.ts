@@ -2,22 +2,23 @@
 
 import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformStore'
 import type { Note, Score } from '@mushee/notation/model'
-import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useRouter } from 'next/navigation'
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
 import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
+import { recordingSocketUrl } from '@/lib/api'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
 import { Microphone, RecordingUnsupportedError } from '@/lib/Microphone'
 import type { RecordingState } from '@/lib/RecordingEngine'
+import { RecordingTake } from '@/lib/RecordingTake'
 import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import type { Transport } from '@/lib/Transport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
 
 // Why the recording was cut short (or refused) — drives which dialog shows.
-export type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
+type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' }
 
 /** Pick the toast for a mic that couldn't be opened — shared by the real take
  *  and the Mic Mode guide's warm-up stream. */
@@ -60,7 +61,8 @@ export function useRecording({
     // the waveform layer inside the score SVG, never this page.
     const [waveformStore] = useState(() => new RecordingWaveformStore())
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
-    const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
+    const [recordingHalt, setRecordingHalt] = useState<RecordingHalt | null>(null)
+    const dismissRecordingHalt = useCallback(() => setRecordingHalt(null), [])
     const [micModeGuideOpen, setMicModeGuideOpen] = useState(false)
     // The take started by confirming the guide skips the reminder toast — the
     // user just read the full walkthrough.
@@ -118,40 +120,31 @@ export function useRecording({
         // Stop any ongoing playback before beginning a recording session.
         stopAll()
 
-        let measureIndex = activeNote.measure.index
-        // The clef the take records into: transcribed notes are octave-normalized
-        // onto its staff. Decided once, from the first update's notes, then locked
-        // for the take — emitted measures are frozen, so re-deciding would leave
-        // earlier measures an octave apart.
-        const recordingClef = activeNote.clef
-        let octaveShift: number | null = null
+        // The take records into the cursor's measure and clef (see RecordingTake).
+        const take = new RecordingTake(score, activeNote.measure.index, activeNote.clef)
         let transcriptionDown = false
+        // The take writes into the score from here until its socket has drained the
+        // last transcription updates — history travel stays locked for all of it.
+        const releaseHistory = manipulator.lockHistory()
         manipulator.select(null)
         waveformStore.reset()
-        const startIndex = measureIndex
-        // The take's first measure displaces the cursor's measure and adopts its
-        // tempo marking, so the count-off and click run at the bpm the cursor sat in.
-        score.addMeasureAdoptingTempo(measureIndex++).complete()
+        take.begin()
         saveToApi({ score })
-
-        // Every recording belongs to a score; the gateway requires the id up front.
-        const wsUrl =
-            (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200').replace(/^http/, 'ws') +
-            `/recording?scoreId=${encodeURIComponent(id)}`
 
         let mic: MediaTrackSettings | null
         try {
             mic = await transport.record({
                 score,
-                startMeasureIndex: startIndex,
+                startMeasureIndex: take.startIndex,
                 cursorEl,
-                wsUrl,
+                wsUrl: recordingSocketUrl(id),
                 onStateChange: (state) => {
                     setRecordingState(state)
                     // The take ended: whatever bars are still waiting for their
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
+                onDrained: releaseHistory,
                 onHealth: ({ ok }) => {
                     // The server's transcription backend went away (or came back). Say so:
                     // waveform bars with no notes must read as "Solkey is having trouble",
@@ -175,39 +168,14 @@ export function useRecording({
                     })
                 },
                 onNeedNewMeasure: () => {
-                    score.addMeasure(measureIndex++).complete()
+                    take.appendMeasure()
                     saveToApi({ score })
                 },
                 onScoreUpdate: ({ measures }) => {
-                    for (const [key, mxmlMeasure] of Object.entries(measures)) {
-                        const absIndex = startIndex + Number(key)
-                        const measure = score.measures[absIndex]
-                        if (!measure?.firstNote) continue
-                        let notes = ScoreDeserializer.mxmlMeasureToNotes(mxmlMeasure)
-                        if (!notes.length) continue
-                        // Recorded audio's absolute octave is arbitrary relative to
-                        // the staff (whistling sits 1-2 octaves up); pull the take
-                        // onto the clef the user is writing in.
-                        if (octaveShift === null) {
-                            const pitches = notes.flatMap((n) => (n.pitch ? [n.pitch] : []))
-                            if (pitches.length) octaveShift = recordingClef.octavesToCenter(pitches)
-                        }
-                        if (octaveShift) {
-                            const shift = octaveShift
-                            notes = notes.map((n) => (n.pitch ? n.clone({ pitch: n.pitch.octaveShifted(shift) }) : n))
-                        }
-                        score.replace([measure.firstNote], notes)
-                        // The staff now shows real notes up to the end of the last
-                        // pitched note in this measure — their waveform bars have
-                        // done their job and can animate out.
-                        let beat = 0
-                        let coveredBeats = 0
-                        for (const note of notes) {
-                            const span = note.duration.effectiveBeats
-                            if (!note.isRest) coveredBeats = beat + span
-                            beat += span
-                        }
-                        if (coveredBeats > 0) waveformStore.clearCovered(absIndex, coveredBeats)
+                    // The staff now shows real notes over these stretches — their
+                    // waveform bars have done their job and can animate out.
+                    for (const { measureIndex, coveredBeats } of take.applyUpdate(measures)) {
+                        waveformStore.clearCovered(measureIndex, coveredBeats)
                     }
                     saveToApi({ score })
                 },
@@ -234,6 +202,7 @@ export function useRecording({
             console.error('Recording failed to start', err)
             showToast(micErrorToast(err))
             stopAll()
+            releaseHistory()
             return
         }
 
@@ -279,7 +248,7 @@ export function useRecording({
         waveformStore,
         recordingState,
         recordingHalt,
-        setRecordingHalt,
+        dismissRecordingHalt,
         handleRecordToggle,
         micModeGuideOpen,
         confirmMicModeGuide,

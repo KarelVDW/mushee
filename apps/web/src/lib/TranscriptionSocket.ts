@@ -138,20 +138,38 @@ export class TranscriptionSocket {
      * as `score-update`s before answering `recording-complete` and closing —
      * closing here would drop the notes from the final moments of every take.
      * A socket that isn't open (or can't send) is just closed.
+     *
+     * `onClosed` runs once the socket is done with the take — right away when
+     * it was just closed, otherwise on the close that follows the server's
+     * `recording-complete`, a server-side close, or the drain timeout.
      */
-    end(): void {
+    end(onClosed: () => void = () => {}): void {
         if (!this.isOpen) {
             this.ws.close()
+            onClosed()
             return
         }
         try {
             this.ws.send(JSON.stringify({ type: 'end' }))
         } catch {
             this.ws.close()
+            onClosed()
             return
         }
-        const fallback = setTimeout(() => this.ws.close(), DRAIN_TIMEOUT_MS)
-        this.ws.addEventListener('close', () => clearTimeout(fallback), { once: true })
+        let closed = false
+        const done = () => {
+            if (closed) return
+            closed = true
+            clearTimeout(fallback)
+            onClosed()
+        }
+        // The timeout reports the drain itself: a close the server never answers
+        // may not raise its close event for a while.
+        const fallback = setTimeout(() => {
+            this.ws.close()
+            done()
+        }, DRAIN_TIMEOUT_MS)
+        this.ws.addEventListener('close', done, { once: true })
     }
 
     close(): void {

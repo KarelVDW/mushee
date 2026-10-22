@@ -1,4 +1,4 @@
-import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
+import type { StoredScoreDocument } from '@mushee/notation/model'
 import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 
@@ -77,10 +77,10 @@ export class AccountExport {
     }
 
     /** The stored document rendered as MusicXML; undefined when it cannot be read as a score. */
-    private toMusicXml(title: string, document: Record<string, unknown>): string | undefined {
-        if (typeof document.raw === 'string') return document.raw
+    private toMusicXml(title: string, document: StoredScoreDocument): string | undefined {
+        if ('raw' in document) return document.raw
         try {
-            return new MusicXmlExporter(new ScoreDeserializer(document as unknown as ScorePartwise).toScore()).toXml(title)
+            return new MusicXmlExporter(new ScoreDeserializer(document).toScore()).toXml(title)
         } catch {
             return undefined
         }

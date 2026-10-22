@@ -19,8 +19,6 @@ export interface PlayScoreOptions {
     startNote: Note | null
     /** The score's cursor rect; the pass's PlaybackCursor draws into it. */
     cursorEl: SVGRectElement
-    /** Fired when the pass plays through to the end (not on stop()). */
-    onFinish?: () => void
 }
 
 /**
@@ -47,6 +45,13 @@ export class Transport {
 
     private _mode: TransportMode = 'stopped'
     private _metronomeEnabled = false
+
+    /**
+     * Fired on every mode write — play, pause, resume, record, stop, and a pass
+     * or take running out on its own — so a view can mirror {@link mode}
+     * instead of keeping a copy that could drift from it.
+     */
+    onModeChange?: (mode: TransportMode) => void
 
     constructor(midiPlayer: MidiPlayer = new MidiPlayer()) {
         this.midiPlayer = midiPlayer
@@ -98,11 +103,8 @@ export class Transport {
         if (this._metronomeEnabled) tickables.push(this.metronome)
 
         this.midiPlayer.start()
-        this._mode = 'playing'
-        this.ticker.play(tickables, () => {
-            this._mode = 'stopped'
-            options.onFinish?.()
-        })
+        this.setMode('playing')
+        this.ticker.play(tickables, () => this.setMode('stopped'))
     }
 
     /** Freeze the clock mid-playback; `resume` picks up where it left off. */
@@ -110,14 +112,14 @@ export class Transport {
         if (this._mode !== 'playing') return
         this.ticker.stop()
         this.midiPlayer.pause()
-        this._mode = 'paused'
+        this.setMode('paused')
     }
 
     resume(): void {
         if (this._mode !== 'paused') return
         this.midiPlayer.resume()
         this.ticker.resume()
-        this._mode = 'playing'
+        this.setMode('playing')
     }
 
     /**
@@ -145,10 +147,8 @@ export class Transport {
         this.metronome.cue(options.score, options.startMeasureIndex)
 
         this.midiPlayer.start()
-        this._mode = 'recording'
-        this.ticker.play([this.recorder, this.metronome], () => {
-            this._mode = 'stopped'
-        })
+        this.setMode('recording')
+        this.ticker.play([this.recorder, this.metronome], () => this.setMode('stopped'))
         return mic
     }
 
@@ -158,7 +158,7 @@ export class Transport {
         this.recorder.stop()
         this.midiPlayer.stop()
         this.cursor.hide()
-        this._mode = 'stopped'
+        this.setMode('stopped')
     }
 
     /**
@@ -181,5 +181,10 @@ export class Transport {
     dispose(): void {
         this.stop()
         this.midiPlayer.dispose()
+    }
+
+    private setMode(mode: TransportMode): void {
+        this._mode = mode
+        this.onModeChange?.(mode)
     }
 }
