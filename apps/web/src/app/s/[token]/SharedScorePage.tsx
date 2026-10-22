@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ExportMenu } from '@/components/ExportMenu'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
 import { Footer, Icon, IconButton, SecondaryButton, showToast, TertiaryButton, TransportBtn, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
@@ -49,7 +50,10 @@ export function SharedScorePage({ token }: { token: string }) {
     }, [shared.data?.title])
 
     // A signed-in visitor can take the shared score home as an editable copy of their own.
+    // A copy counts against the plan's score cap like any create, so a refusal gets the
+    // library's upgrade dialog rather than a failure toast.
     const create = useCreateScore()
+    const [limitDialogOpen, setLimitDialogOpen] = useState(false)
     const saveCopy = () => {
         if (!shared.data || !partwise || create.isPending) return
         create.mutate(
@@ -59,10 +63,10 @@ export function SharedScorePage({ token }: { token: string }) {
                     track('shared_score_copied')
                     router.push(`/scores/${created.id}`)
                 },
-                onError: (err) =>
-                    showToast(
-                        err instanceof ApiError && err.code === 'score-limit' ? err.message : 'Could not save a copy. Please try again.',
-                    ),
+                onError: (err) => {
+                    if (err instanceof ApiError && err.isScoreLimit) setLimitDialogOpen(true)
+                    else showToast('Could not save a copy. Please try again.')
+                },
             },
         )
     }
@@ -158,6 +162,7 @@ export function SharedScorePage({ token }: { token: string }) {
             </main>
 
             <Footer width="marketing" />
+            {limitDialogOpen && <ScoreLimitDialog onUpgrade={() => router.push('/settings')} onClose={() => setLimitDialogOpen(false)} />}
         </div>
     )
 }
