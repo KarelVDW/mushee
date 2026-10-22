@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 
-import { Icon } from '@/components/ui'
 import { formatRecordingTime } from '@/lib/recordingTime'
 
 import { type RecordingStatus, RecordingStripCopy, type StripHint } from './RecordingCopy'
@@ -41,10 +40,14 @@ function CountoffDots({ countoff }: { countoff: RecordingStatus['countoff'] }) {
 function HintLine({ hint }: { hint: StripHint }) {
     const quiet = 'font-body font-normal text-[13px] leading-tight text-on-surface-variant'
     if (hint.kind === 'stop') {
-        // The stop square on the record button, drawn inline so the line points at it.
+        // The record-as-stop button in miniature — a white rounded square on a red disc, as the
+        // live button draws it (RecordGlyph) — so the line points at that button, never at an
+        // outlined playback Stop.
         const glyph = (
-            <span className="inline-flex align-[-1px]">
-                <Icon name="square" size={12} />
+            <span className="inline-flex align-[-2px]">
+                <span aria-hidden className="inline-flex size-3.5 items-center justify-center rounded-full bg-error">
+                    <span className="size-1.25 rounded-[1.5px] bg-on-error" />
+                </span>
                 <span className="sr-only">the stop button</span>
             </span>
         )
