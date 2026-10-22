@@ -23,10 +23,10 @@ import {
 } from '@/components/ui'
 import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
-import { signOut, updateUser, useSession } from '@/lib/auth-client'
+import { updateUser, useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { billingKeys, useAllRecordings, useScores } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useScores, useSignOut } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -39,6 +39,7 @@ export default function SettingsPage() {
     const router = useRouter()
     const { data: session } = useSession()
     const queryClient = useQueryClient()
+    const signOut = useSignOut()
     const [tab, setTab] = useState<Tab>('profile')
 
     const [name, setName] = useState(session?.user?.name ?? '')
@@ -96,11 +97,6 @@ export default function SettingsPage() {
         }
     }, [queryClient])
 
-    async function handleSignOut() {
-        await signOut()
-        router.push('/login')
-    }
-
     const [exporting, setExporting] = useState(false)
     /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
     async function handleExport() {
@@ -125,7 +121,8 @@ export default function SettingsPage() {
 
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
-            <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
+            {/* ?new=1 has the library open its new-score dialog. */}
+            <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores?new=1')} />
 
             <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 sm:gap-8 w-full box-border">
                 <PageHeader title="Settings" subtitle="Tweak your profile and account." />
@@ -181,7 +178,7 @@ export default function SettingsPage() {
                                 </SettingsSection>
                                 <SettingsSection title="Sign out" subtitle="Log out of this browser.">
                                     <div>
-                                        <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
+                                        <TertiaryButton onClick={() => void signOut('/login')}>Sign out</TertiaryButton>
                                     </div>
                                 </SettingsSection>
                                 <SettingsSection
@@ -219,7 +216,7 @@ export default function SettingsPage() {
                     onCancel={() => setDeleteOpen(false)}
                     onConfirm={() => {
                         setDeleteOpen(false)
-                        void handleSignOut()
+                        void signOut('/login')
                     }}
                 />
             )}

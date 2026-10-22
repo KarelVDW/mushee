@@ -1,6 +1,7 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
 import {
@@ -40,6 +41,7 @@ import {
     unshareScore,
     updateScore,
 } from './api'
+import { signOut } from './auth-client'
 import type { StoredShortcuts } from './Keybindings'
 import { PlanCatalogue } from './plans'
 
@@ -259,6 +261,21 @@ export function useRequestAccountDeletion() {
         // The dialog shows wrong-password feedback inline; a toast would double up.
         meta: { silentError: true },
     })
+}
+
+/**
+ * Signs out, then leaves for `destination`. The signed-out user's cached queries go
+ * with the session (SessionCacheScope in app/providers.tsx), not here.
+ */
+export function useSignOut() {
+    const router = useRouter()
+    return useCallback(
+        async (destination: string) => {
+            await signOut()
+            router.push(destination)
+        },
+        [router],
+    )
 }
 
 export function useReactivateAccount() {
