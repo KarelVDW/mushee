@@ -1,4 +1,4 @@
-import { BEAT_EPSILON, type Duration } from '../Duration'
+import { BEAT_EPSILON } from '../Duration'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import { Tuplet } from '../Tuplet'
@@ -10,14 +10,11 @@ export class TupletFinder {
 
     constructor(measure: Measure) {
         let currentNotes: Note[] = []
-        // A member of the open group, standing for the ratio the group is written under.
-        let currentRatio: Duration | null = null
         let totalDuration = 0
         let maxBaseBeats = 0
         const flush = () => {
             if (currentNotes.length) this.tuplets.push(new Tuplet(measure, currentNotes))
             currentNotes = []
-            currentRatio = null
             totalDuration = 0
             maxBaseBeats = 0
         }
@@ -30,9 +27,8 @@ export class TupletFinder {
             }
 
             // Ratio changed — close the open group and start fresh
-            if (currentRatio && !currentRatio.sameRatioAs(note.duration)) flush()
+            if (currentNotes.length && !currentNotes[0].duration.sameRatioAs(note.duration)) flush()
 
-            currentRatio = note.duration
             // The group spans normalNotes of its base unit. The base isn't stored, so estimate
             // it as the largest undotted member value seen: never smaller than the true base,
             // so an over-estimate falls back to the trailing flush (still one group) instead of
