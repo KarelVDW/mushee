@@ -2,18 +2,26 @@
 
 ## 1. The normal release
 
-Deploys are branch-driven (`deploy.yml`): a push to `staging` deploys the
-staging overlay (api.staging.solkey.io, ns `mushee-staging`), a push to
-`production` deploys production. Vercel mirrors the same branches:
-`staging` → staging.solkey.io, `production` → solkey.io. `master` never
-deploys anywhere.
+Production deploys are branch-driven (`deploy.yml`): a push to `production`
+deploys the production overlay. Staging is opt-in: the Deploy workflow only
+deploys the staging overlay (api.staging.solkey.io, ns `mushee-staging`) when
+you run it by hand. Vercel mirrors the branches: `staging` →
+staging.solkey.io, `production` → solkey.io. `master` never deploys anywhere.
 
-1. Merge/push to `master` — CI (`ci.yml`) must be green (lint, type-check,
-   API + web unit tests incl. the model 100%-coverage gate, build, mocked e2e).
-2. Promote to staging: `git push origin master:staging`. The Deploy workflow
-   builds all three images SHA-tagged, applies `overlays/staging`, and waits
-   for the rollouts; Vercel builds the web in parallel. Smoke-test on
-   https://staging.solkey.io.
+1. Merge/push to `master` — CI (`ci.yml`) must be green (format check,
+   whole-repo lint, type-check, the unit tests of every workspace incl. the
+   notation model's 100%-coverage gate, build, mocked e2e).
+2. Promote to staging (when the change needs a staging pass): run Actions →
+   Deploy → Run workflow, environment `staging`, from `master`
+   (`gh workflow run deploy.yml --ref master -f environment=staging`). It
+   builds both images (api, crepe-inference) SHA-tagged, applies
+   `overlays/staging`, and waits for the rollouts. Push
+   `git push origin master:staging` only so Vercel builds the staging web.
+   Smoke-test on https://staging.solkey.io, then scale staging back to zero —
+   an idle staging copy bills 24/7 on Autopilot:
+    ```sh
+    kubectl scale deploy --all -n mushee-staging --replicas=0
+    ```
 3. Promote to production: `git push origin staging:production` (the exact
    commit you verified — never rebuild from a moved master).
 4. The web deploys **separately** on Vercel from the same branch push. There
