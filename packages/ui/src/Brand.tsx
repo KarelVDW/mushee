@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 
 interface WordmarkProps {
     size?: number
@@ -32,9 +32,28 @@ export function PageTitle({ children }: { children: ReactNode }) {
     )
 }
 
-export function ModalTitle({ children, id }: { children: ReactNode; id?: string }) {
+/**
+ * A dialog's or a flow step's title (h2 under the page's h1). Pass `tabIndex={-1}` and a
+ * `ref` to move focus to it when a multi-step flow changes step, so a screen reader reads
+ * the new question first; programmatic focus draws no ring.
+ */
+export function ModalTitle({
+    children,
+    id,
+    tabIndex,
+    ref,
+}: {
+    children: ReactNode
+    id?: string
+    tabIndex?: number
+    ref?: Ref<HTMLHeadingElement>
+}) {
     return (
-        <h2 id={id} className="font-display font-bold text-[26px] sm:text-[32px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0">
+        <h2
+            id={id}
+            ref={ref}
+            tabIndex={tabIndex}
+            className="font-display font-bold text-[26px] sm:text-[32px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0 outline-none">
             {children}
         </h2>
     )
