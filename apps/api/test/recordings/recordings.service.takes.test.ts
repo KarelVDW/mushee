@@ -4,8 +4,6 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Recording } from '../../src/recordings/entities/recording.entity'
-import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
-import type { RecordingLocksService } from '../../src/recordings/recording-locks.service'
 import { RecordingsService } from '../../src/recordings/recordings.service'
 import type { StorageService } from '../../src/storage/storage.service'
 
@@ -94,12 +92,7 @@ function makeService(storageOverrides: Partial<StorageService> = {}) {
         deletePrefix,
         ...storageOverrides,
     }
-    const service = new RecordingsService(
-        repo as never,
-        {} as RecordingCreditsService,
-        {} as RecordingLocksService,
-        storage as unknown as StorageService,
-    )
+    const service = new RecordingsService(repo as never, storage as unknown as StorageService)
     return { service, repo, storage, deletePrefix }
 }
 

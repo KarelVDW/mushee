@@ -95,12 +95,13 @@ export class AccountService {
                 const user = await ctx.internalAdapter.findUserById(userId)
 
                 await this.scoresService.removeAllForUser(userId)
-                await this.recordingsService.deleteAllForUser(userId)
+                await this.recordingsService.deleteAudioForUser(userId)
                 await this.billingService.deletePolarCustomer(userId)
 
-                // Subscriptions, onboarding, settings, credits and this
-                // account_deletions row go with the user row (ON DELETE CASCADE);
-                // only data with a footprint outside Postgres needs deleting above.
+                // Subscriptions, onboarding, settings, recording rows (takes,
+                // usage, pack balance, slot) and this account_deletions row go
+                // with the user row (ON DELETE CASCADE); only data with a
+                // footprint outside Postgres needs deleting above.
                 await ctx.internalAdapter.deleteUser(userId)
 
                 // The better-auth `verification` table (OTP codes, reset tokens) has

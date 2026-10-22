@@ -8,8 +8,6 @@ import { StorageService } from '../storage/storage.service'
 import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
 import { audioContentTypeFor, RecordingArchiver } from './recording-archiver'
-import { RecordingCreditsService } from './recording-credits.service'
-import { RecordingLocksService } from './recording-locks.service'
 
 /** A take as the owner sees it in the editor's takes list. */
 export interface RecordingSummary {
@@ -41,8 +39,6 @@ export class RecordingsService {
     constructor(
         @InjectRepository(Recording)
         private readonly recordingRepo: Repository<Recording>,
-        private readonly credits: RecordingCreditsService,
-        private readonly locks: RecordingLocksService,
         private readonly storage: StorageService,
     ) {}
 
@@ -126,16 +122,14 @@ export class RecordingsService {
     }
 
     /**
-     * Delete all recording data for a user (account purge): archived audio,
-     * sessions, usage, lock. The user-level folder locates the audio, not the
-     * rows: by now the purge has deleted the user's scores, and their take rows
-     * with them (FK cascade). Storage still goes first, so a storage failure
-     * fails the purge before anything else is dropped.
+     * Delete a user's archived audio (account purge) — the only recording data
+     * with a footprint outside Postgres. The rows (takes, usage, pack balance,
+     * the recording slot) all go with the user row (ON DELETE CASCADE). The
+     * user-level folder locates the audio, not the rows: by now the purge has
+     * deleted the user's scores, and their take rows with them. It runs before
+     * the user row goes, so a storage failure fails the purge with nothing dropped.
      */
-    async deleteAllForUser(userId: string): Promise<void> {
+    async deleteAudioForUser(userId: string): Promise<void> {
         await this.storage.deletePrefix(RecordingArchiver.folderForUser(userId))
-        await this.recordingRepo.delete({ userId })
-        await this.credits.deleteAllForUser(userId)
-        await this.locks.deleteAllForUser(userId)
     }
 }
