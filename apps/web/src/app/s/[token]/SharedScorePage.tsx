@@ -8,22 +8,11 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ExportMenu } from '@/components/ExportMenu'
-import {
-    Footer,
-    Icon,
-    IconButton,
-    PrimaryButton,
-    SecondaryButton,
-    showToast,
-    TertiaryButton,
-    TransportBtn,
-    Wordmark,
-} from '@/components/ui'
+import { GetStartedButton } from '@/components/marketing/GetStartedButton'
+import { Footer, Icon, IconButton, SecondaryButton, showToast, TertiaryButton, TransportBtn, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
-import { withNext } from '@/lib/nextPath'
-import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 import { useTransport } from '@/lib/useTransport'
 
@@ -58,12 +47,6 @@ export function SharedScorePage({ token }: { token: string }) {
     useEffect(() => {
         if (shared.data?.title) document.title = `${shared.data.title} — Solkey`
     }, [shared.data?.title])
-
-    const onGetStarted = () => {
-        track('landing_cta_clicked', { location: 'shared-score', beta: BETA_MODE })
-        // Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done.
-        router.push(authed ? '/scores' : withNext('/signup', `/s/${token}`))
-    }
 
     // A signed-in visitor can take the shared score home as an editable copy of their own.
     const create = useCreateScore()
@@ -133,9 +116,8 @@ export function SharedScorePage({ token }: { token: string }) {
                             </span>
                         </>
                     )}
-                    <PrimaryButton icon="arrow-right" onClick={onGetStarted}>
-                        {authed ? 'Library' : 'Start free'}
-                    </PrimaryButton>
+                    {/* Signing up from a shared score leads back to it (and its "Save a copy") once onboarding is done. */}
+                    <GetStartedButton location="shared-score" next={`/s/${token}`} />
                 </div>
             </header>
 
