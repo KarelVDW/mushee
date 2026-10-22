@@ -57,6 +57,16 @@ export interface AdminCreditState {
     packSeconds: number
 }
 
+export interface AdminTierRow {
+    id: string
+    name: string
+    dailyRecordingCredits: number | null
+    maxScores: number | null
+    sortOrder: number
+    sellable: boolean
+    userCount: number
+}
+
 /**
  * Read(-mostly) queries behind the admin console. The `user`, `session` and
  * `account` tables are owned by better-auth, so — like BetaService — this
@@ -88,14 +98,10 @@ export class AdminService {
            WHERE "createdAt" >= now() - interval '7 days') AS "newUsers7d"`,
         )
 
-        const tiers: AdminStats['tiers'] = await this.dataSource.query(
-            `SELECT t.id, t.name, count(u.id)::int AS "users"
-       FROM "user" u
-       LEFT JOIN user_subscriptions s ON s."userId" = u.id
-       JOIN subscription_tiers t ON t.id = COALESCE(s."tierId", 'free')
-       GROUP BY t.id, t.name, t."sortOrder"
-       ORDER BY t."sortOrder"`,
-        )
+        // The Tiers page's count, so the dashboard and that page cannot disagree.
+        const tiers: AdminStats['tiers'] = (await this.listTiers())
+            .filter((t) => t.userCount > 0)
+            .map((t) => ({ id: t.id, name: t.name, users: t.userCount }))
 
         const timeseries: AdminStats['timeseries'] = await this.dataSource.query(
             `SELECT to_char(d.day, 'YYYY-MM-DD') AS "day",
@@ -287,7 +293,8 @@ export class AdminService {
         return { shareToken: null }
     }
 
-    async listTiers(): Promise<Array<Record<string, unknown>>> {
+    /** Every tier in plan order with its user count (users without a subscription row count as free). */
+    async listTiers(): Promise<AdminTierRow[]> {
         return this.dataSource.query(
             `SELECT t.id, t.name, t."dailyRecordingCredits", t."maxScores", t."sortOrder", t.sellable,
               COALESCE(u.count, 0)::int AS "userCount"

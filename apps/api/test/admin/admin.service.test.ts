@@ -41,6 +41,30 @@ function makeService(overrides?: { query?: ReturnType<typeof vi.fn>; scores?: Pa
     return { service, query, scoresService, recordingCredits }
 }
 
+describe('AdminService.stats', () => {
+    it('reports users per plan from the Tiers page count, leaving out empty tiers', async () => {
+        const tierRows = [
+            { id: 'free', name: 'Sketch', dailyRecordingCredits: 180, maxScores: 3, sortOrder: 0, sellable: true, userCount: 12 },
+            { id: 'pro', name: 'Songwriter', dailyRecordingCredits: 1800, maxScores: null, sortOrder: 1, sellable: true, userCount: 0 },
+            { id: 'beta', name: 'Beta', dailyRecordingCredits: 1800, maxScores: null, sortOrder: 9, sellable: false, userCount: 4 },
+        ]
+        const query = vi.fn((sql: string) => {
+            if (sql.includes('FROM subscription_tiers t')) return Promise.resolve(tierRows)
+            if (sql.includes('generate_series')) return Promise.resolve([])
+            return Promise.resolve([{ users: 16 }])
+        })
+        const { service } = makeService({ query })
+
+        const { tiers } = await service.stats()
+
+        expect(tiers).toEqual([
+            { id: 'free', name: 'Sketch', users: 12 },
+            { id: 'beta', name: 'Beta', users: 4 },
+        ])
+        await expect(service.listTiers()).resolves.toBe(tierRows)
+    })
+})
+
 describe('AdminService.listUsers', () => {
     it('clamps page and pageSize and escapes LIKE wildcards', async () => {
         const query = vi.fn((sql: string) => Promise.resolve(sql.includes('count(*)::int AS total') ? [{ total: 0 }] : []))
