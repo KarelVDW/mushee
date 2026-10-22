@@ -1,9 +1,9 @@
 /**
- * JS mirror of the globals.css @theme colour tokens, for the contexts that can't
- * read the stylesheet: the viewport theme colour, the web manifest, the Open
- * Graph card (rendered by Satori) and the last-resort global error page (which
- * renders when the layout that imports globals.css has failed). Keep each value
- * in step with its `--color-*` token in globals.css.
+ * JS mirror of the shared theme's @theme colour tokens (packages/ui/src/theme.css),
+ * for the contexts that can't read the stylesheet: the viewport theme colour, the
+ * web manifest, the Open Graph card (rendered by Satori) and the last-resort
+ * global error page (which renders when the layout that imports globals.css has
+ * failed). Keep each value in step with its `--color-*` token in theme.css.
  */
 export const BRAND = {
     /** --color-surface: the canvas tone. */
