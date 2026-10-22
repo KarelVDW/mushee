@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'Solkey',
         short_name: 'Solkey',
-        description: 'The fastest way to get a melody on the page — live audio-to-notation sheet music editing.',
+        description: 'The fastest way to get a melody on the page. Sing or play, and Solkey writes the sheet music.',
         start_url: '/scores',
         display: 'standalone',
         background_color: BRAND.surface,

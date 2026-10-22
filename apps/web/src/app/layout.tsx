@@ -38,7 +38,7 @@ export const metadata: Metadata = {
         template: '%s — Solkey',
     },
     description:
-        'Solkey turns what you play or sing into sheet music, live. Record a melody, watch the notation appear, and polish it in a fast, keyboard-first editor.',
+        'Solkey turns what you play or sing into sheet music, live. Record a melody, watch the notation appear, and fix it in a simple editor.',
     applicationName: 'Solkey',
     keywords: [
         'sheet music editor',
