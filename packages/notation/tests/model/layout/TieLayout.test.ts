@@ -91,14 +91,14 @@ describe('TieLayout', () => {
         expect(seg.endY).toBe(endNoteOf(score, tie).layout.noteY + TIE_Y_SHIFT * tie.direction)
     })
 
-    it('curves upward (direction 1) for a stem-up note', () => {
+    it('bends below the notes (direction 1) for stem-up notes', () => {
         // C4 is at line 0 (< 3) → stem up → direction 1.
         const { tie } = sameRowTie('C', 4)
         expect(tie.note.stemDir).toBe('up')
         expect(tie.direction).toBe(1)
     })
 
-    it('curves downward (direction -1) for a stem-down note', () => {
+    it('bends above the notes (direction −1) for stem-down notes', () => {
         // A5 sits high (>= line 3) → stem down → direction -1.
         const { tie } = sameRowTie('A', 5)
         expect(tie.note.stemDir).toBe('down')
