@@ -5,7 +5,9 @@ import { expect, focusEditor, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELEC
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
  * API and auth session are intercepted (see fixtures.ts). Exercises rendering,
- * keyboard pitch editing + debounced autosave, the control bar, and exporting.
+ * keyboard pitch editing + debounced autosave, range selection and the
+ * clipboard, shortcut rebinding, the tool dock's popovers, the header's takes /
+ * share menus, and exporting.
  */
 
 test.beforeEach(async ({ page, apiMock }) => {
@@ -225,7 +227,7 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('clef and tempo popovers open from the control bar', async ({ page }) => {
+test('clef and tempo popovers open from the tool dock', async ({ page }) => {
     const clef = page.getByRole('button', { name: /^Clef:/ })
     await expect(clef).toHaveAttribute('aria-pressed', 'false')
     await clef.click()

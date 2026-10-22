@@ -9,9 +9,9 @@ import { CONSENT_VERSION } from '../src/lib/consent'
  * Shared Playwright fixtures for the mocked-API editor suite.
  *
  * Every backend call (scores REST + better-auth session) is intercepted with
- * `page.route` and answered locally, so the suite needs no API, Postgres, or
- * Mongo. External traffic (font CDNs, smplr soundfont samples) is aborted to
- * keep runs hermetic and offline-friendly.
+ * `page.route` and answered locally, so the suite needs no API or Postgres.
+ * External traffic (font CDNs, smplr soundfont samples) is aborted to keep runs
+ * hermetic and offline-friendly.
  */
 
 export const MOCK_SCORE_ID = 'e2e-score-1'
@@ -43,7 +43,10 @@ const SESSION = {
     },
 }
 
-// Generated from the real ScoreSerializer — see tests/_genfixture (throwaway).
+// The stored-score DTO the load endpoint serves: two 4/4 bars (C5 D5 E5 F5 | four quarter
+// rests), serialized by @mushee/notation's ScoreSerializer. It is maintained by hand — when the
+// stored format changes, re-serialize the same score, e.g.
+// `JSON.stringify(new ScoreSerializer(score).toInput())`, and keep the specs' note counts true.
 // Playwright runs with cwd = apps/web, so resolve the fixture from there.
 const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as Record<
     string,
