@@ -62,18 +62,16 @@ export function usePlayback({
     }, [])
 
     // Selecting a note stops any ongoing playback/recording and previews its pitch.
-    // The Note holds written pitch; convert to sounding before passing to the player.
+    // The Note holds written pitch; the instrument gives the pitch it sounds at.
     // Skipped while a range is selected, so dragging across notes doesn't chatter.
     // A cleared selection changes nothing — the recording flow deselects as it
     // starts, and stopping here would kill the take it is setting up.
     useEffect(() => {
         if (!activeNote) return
         stopAll()
-        const written = activeNote.pitch?.toMidi()
         const player = transportRef.current?.midiPlayer
-        if (written === undefined || !player || !score || manipulator.selectedNotes.length > 1) return
-        const sounding = written + score.instrument.chromaticTranspose
-        player.preview(sounding, 0.75, score.instrument)
+        if (!activeNote.pitch || !player || !score || manipulator.selectedNotes.length > 1) return
+        player.preview(score.instrument.soundingMidi(activeNote.pitch), 0.75, score.instrument)
     }, [activeNote, stopAll, score, manipulator])
 
     // Sync the metronome toggle to the transport. Recording is unaffected — a
