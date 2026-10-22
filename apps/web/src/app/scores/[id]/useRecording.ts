@@ -9,7 +9,8 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
-import { RecordingEngine, type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { Microphone, RecordingUnsupportedError } from '@/lib/Microphone'
+import type { RecordingLimitInfo, RecordingState } from '@/lib/RecordingEngine'
 import type { Transport } from '@/lib/Transport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
@@ -70,7 +71,7 @@ export function useRecording({
     const micWarmupPending = useRef(false)
 
     const releaseMicWarmup = useCallback(() => {
-        if (micWarmup.current) RecordingEngine.releaseStandaloneMic(micWarmup.current)
+        if (micWarmup.current) Microphone.release(micWarmup.current)
         micWarmup.current = null
     }, [])
 
@@ -97,7 +98,7 @@ export function useRecording({
             if (micWarmupPending.current || micWarmup.current) return
             micWarmupPending.current = true
             try {
-                micWarmup.current = await RecordingEngine.openStandaloneMic()
+                micWarmup.current = await Microphone.open({ audio: true })
             } catch (err) {
                 console.error('Mic warm-up for the Mic Mode guide failed', err)
                 showToast(micErrorToast(err))

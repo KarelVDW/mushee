@@ -2,7 +2,8 @@ import { Score, TimeSignature } from '@mushee/notation/model'
 import { makeScore } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { RecordingUnsupportedError } from '@/lib/Microphone'
+import { RecordingEngine, type RecordingOptions } from '@/lib/RecordingEngine'
 
 // Shape of the JSON `meta` frame the engine sends when streaming opens.
 interface MetaFrame {

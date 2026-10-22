@@ -3,6 +3,8 @@ import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
+import { Microphone } from './Microphone'
+
 const DEFAULT_BPM = 90
 const CHUNK_MS = 100
 
@@ -26,10 +28,12 @@ const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg
  * the raw signal — these are `ideal` hints, so browsers that can't honor them
  * still return a stream instead of throwing.
  */
-const MIC_CONSTRAINTS: MediaTrackConstraints = {
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
+const MIC_CONSTRAINTS: MediaStreamConstraints = {
+    audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+    },
 }
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
 /**
@@ -39,15 +43,6 @@ const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for renderin
  * against a server that never answers.
  */
 const DRAIN_TIMEOUT_MS = 10_000
-
-/**
- * WebKit's Audio Session API (Safari 16.4+, absent everywhere else). When a
- * page starts capturing, iOS yanks the OS audio session from "playback" to
- * play-and-record mid-flight, which can reroute output to the receiver
- * (earpiece) at a fraction of the volume — WebKit bug 218012. Declaring the
- * intent before the mic opens lets iOS pick the route up front.
- */
-type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
 /** Minimum waveform gain: RMS from a desktop mic rarely exceeds ~0.2, so ×10 fills the staff. */
 const WAVEFORM_GAIN = 10
 /**
@@ -101,19 +96,6 @@ export interface RecordingLimitInfo {
 
 /** Reasons the gateway refuses a recording connection. */
 export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
-
-/**
- * Thrown by {@link RecordingEngine.start} when the browser cannot capture audio
- * at all — no `mediaDevices` (ancient browser) or an insecure (non-HTTPS)
- * context, where the API is hidden. Distinct from a permission denial, which
- * surfaces as a `NotAllowedError` DOMException from `getUserMedia` itself.
- */
-export class RecordingUnsupportedError extends Error {
-    constructor() {
-        super('Audio capture is not available in this browser or context')
-        this.name = 'RecordingUnsupportedError'
-    }
-}
 
 export interface ResolveRecordingPosition {
     (measureIndex: number, beat: number): { x: number; rowY: number } | null
@@ -230,60 +212,28 @@ export class RecordingEngine implements Tickable {
     }
 
     /**
-     * Open a bare mic stream outside any recording session — the Mic Mode
-     * guide holds one so iOS keeps the Control Center tile visible while the
-     * user follows it. Declares play-and-record first: WebKit refuses
-     * getUserMedia outright (InvalidStateError) while the audio session sits
-     * in a playback-only category, which a note preview leaves behind.
-     */
-    static async openStandaloneMic(): Promise<MediaStream> {
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-            throw new RecordingUnsupportedError()
-        }
-        RecordingEngine.setAudioSessionType('play-and-record')
-        try {
-            return await navigator.mediaDevices.getUserMedia({ audio: true })
-        } catch (err) {
-            RecordingEngine.setAudioSessionType('auto')
-            throw err
-        }
-    }
-
-    /** Stop a standalone mic and hand the audio session back to the OS. */
-    static releaseStandaloneMic(stream: MediaStream): void {
-        stream.getTracks().forEach((t) => t.stop())
-        RecordingEngine.setAudioSessionType('auto')
-    }
-
-    /**
      * Begin a recording session. Caller is responsible for:
      *   1. inserting the empty count-off measure so `score.measures[startMeasureIndex]` is it
      *   2. inserting the first empty recording measure at `startMeasureIndex + 1`
      *   3. calling `midiPlayer.start()` and running the Ticker afterwards
      */
     async start(options: RecordingOptions): Promise<void> {
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-            throw new RecordingUnsupportedError()
-        }
         const token = ++this.lifecycle
         this.options = options
 
-        // Declared before the mic opens so iOS routes output correctly from the
-        // start; stop() restores 'auto' (including a stop() racing the prompt).
-        RecordingEngine.setAudioSessionType('play-and-record')
-
+        // The mic declares the record session before it opens, so iOS routes output
+        // correctly from the start; stop() ends it (including a stop() racing the prompt).
         let stream: MediaStream
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS })
+            stream = await Microphone.open(MIC_CONSTRAINTS)
         } catch (err) {
-            RecordingEngine.setAudioSessionType('auto')
             if (this.lifecycle === token) this.options = null
             throw err
         }
         if (this.lifecycle !== token) {
-            // stop() ran while the permission prompt was open; without this the
-            // stream is never stopped and the mic indicator stays lit.
-            stream.getTracks().forEach((t) => t.stop())
+            // stop() ran while the permission prompt was open and already ended the
+            // session; without this the stream is never stopped and the mic indicator stays lit.
+            Microphone.stopTracks(stream)
             return
         }
         this.stream = stream
@@ -351,7 +301,7 @@ export class RecordingEngine implements Tickable {
         // when nothing else is running yet — and return the audio session to
         // its default, since such a start() has already declared its intent.
         this.lifecycle++
-        RecordingEngine.setAudioSessionType('auto')
+        Microphone.endSession()
         if (this._state === 'idle') return
 
         this._micSettings = null
@@ -402,7 +352,7 @@ export class RecordingEngine implements Tickable {
             finish()
         }
 
-        this.stream?.getTracks().forEach((t) => t.stop())
+        if (this.stream) Microphone.stopTracks(this.stream)
         this.stream = null
 
         this.analyserCtx?.close().catch(() => {})
@@ -672,13 +622,6 @@ export class RecordingEngine implements Tickable {
             }
         }
         this.mediaRecorder.start(CHUNK_MS)
-    }
-
-    /** Hint the OS audio session via WebKit's API; no-op on other browsers. */
-    private static setAudioSessionType(type: 'play-and-record' | 'auto'): void {
-        if (typeof navigator === 'undefined') return
-        const session = (navigator as NavigatorWithAudioSession).audioSession
-        if (session) session.type = type
     }
 
     /**
