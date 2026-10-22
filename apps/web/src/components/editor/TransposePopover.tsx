@@ -302,7 +302,7 @@ export function TransposePopover({
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>
-                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" />
+                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" fluid={sheet} />
                 </>
             )}
 

@@ -18,33 +18,52 @@ const GRID_SIZES = {
     sm: { gap: 'gap-1', cell: 'w-10.5 h-12 px-1 py-1', glyph: 26, label: 'text-[11px]' },
 } as const
 
+/**
+ * A phone sheet's grid: seven fluid columns across the sheet (about 41px a cell at 360, 45px at
+ * 390), so the flats and the sharps each stay one row instead of wrapping a key onto a row of
+ * its own; the `sm` glyph, since a 32px seven-flat run wouldn't fit such a cell. C sits alone
+ * in the middle column of its row.
+ */
+const FLUID_GRID = {
+    row: 'grid grid-cols-7 gap-1 w-full',
+    cell: 'w-full min-w-0 h-12 px-0.5 py-1',
+    alone: 'col-start-4',
+    glyph: 26,
+} as const
+
 interface KeySignatureGridProps {
     /** The highlighted key's fifths, or null for none. */
     active: number | null
     onSelect: (fifths: number) => void
     size: keyof typeof GRID_SIZES
+    /** Fill the width in seven fluid columns (a phone sheet) instead of fixed cells in wrapping rows. */
+    fluid?: boolean
     /** The group's accessible name. */
     ariaLabel: string
 }
 
 /**
  * The fifteen drawable keys as a grid of signature glyphs, each named by its major key (the
- * hover title gives both readings, "D major · B minor"). The active key scrolls into view on
- * open, so a phone sheet that clips the grid still shows where the score is.
+ * hover title gives both readings, "D major · B minor"), read flats → C → sharps. The active
+ * key scrolls into view on open, so a phone sheet that clips the grid still shows where the
+ * score is.
  */
-export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySignatureGridProps) {
+export function KeySignatureGrid({ active, onSelect, size, fluid = false, ariaLabel }: KeySignatureGridProps) {
     const sizes = GRID_SIZES[size]
     const gridRef = useRef<HTMLDivElement>(null)
     useEffect(() => {
         gridRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest' })
         // Only on open: a pick closes the picker, and scrolling under the user's finger mid-browse would jump.
     }, [])
+    const rowClass = fluid ? FLUID_GRID.row : `flex flex-wrap justify-center ${sizes.gap}`
+    const glyph = fluid ? FLUID_GRID.glyph : sizes.glyph
     return (
         <div ref={gridRef} role="group" aria-label={ariaLabel} className="flex flex-col gap-1.5 items-center">
             {KEY_ROWS.map((row, i) => (
-                <div key={i} className={`flex flex-wrap justify-center ${sizes.gap}`}>
+                <div key={i} className={rowClass}>
                     {row.map((fifths) => {
                         const name = KeySignature.majorKeyName(fifths)
+                        const cell = fluid ? `${FLUID_GRID.cell}${row.length === 1 ? ` ${FLUID_GRID.alone}` : ''}` : sizes.cell
                         return (
                             <PopoverOption
                                 key={fifths}
@@ -52,9 +71,9 @@ export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySigna
                                 ariaLabel={`${name} major`}
                                 title={KeySignature.readingsOf(fifths)}
                                 onClick={() => onSelect(fifths)}
-                                className={`flex-col justify-end gap-0.5 ${sizes.cell}`}>
+                                className={`flex-col justify-end gap-0.5 ${cell}`}>
                                 <span className="flex flex-1 items-center">
-                                    <KeySignatureIcon fifths={fifths} size={sizes.glyph} />
+                                    <KeySignatureIcon fifths={fifths} size={glyph} />
                                 </span>
                                 <span className={`${sizes.label} leading-none font-medium`}>{name}</span>
                             </PopoverOption>
@@ -100,7 +119,7 @@ export function KeySignaturePopover({
             variant={variant}
             className={sheet ? 'gap-2' : `w-104 gap-2${className ? ` ${className}` : ''}`}>
             {lead}
-            <KeySignatureGrid ariaLabel="Key signature" active={active} onSelect={onSelect} size="md" />
+            <KeySignatureGrid ariaLabel="Key signature" active={active} onSelect={onSelect} size="md" fluid={sheet} />
         </Popover>
     )
 }

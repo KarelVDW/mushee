@@ -449,6 +449,28 @@ test('dock popovers open as sheets that stay on screen', async ({ page }) => {
     await expect(dialog).toHaveCount(0)
 })
 
+test('the key sheet reads flats → C → sharps in three rows, none wrapping a key onto a row of its own', async ({ page }) => {
+    // The narrowest phone we design for: seven fixed 48px cells would wrap here.
+    await page.setViewportSize({ width: 360, height: 780 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: /^Key:/ }).tap()
+    const grid = page.getByRole('dialog', { name: 'Select key signature' }).getByRole('group', { name: 'Key signature' })
+    const rowOf = async (names: string[]) =>
+        new Set(
+            await Promise.all(
+                names.map(async (name) => Math.round((await grid.getByRole('button', { name, exact: true }).boundingBox())?.y ?? -1)),
+            ),
+        )
+    const flats = await rowOf(['C♭ major', 'G♭ major', 'D♭ major', 'A♭ major', 'E♭ major', 'B♭ major', 'F major'])
+    const sharps = await rowOf(['G major', 'D major', 'A major', 'E major', 'B major', 'F♯ major', 'C♯ major'])
+    expect(flats.size).toBe(1)
+    expect(sharps.size).toBe(1)
+    // C sits alone in the middle, between the two.
+    const c = await grid.getByRole('button', { name: 'C major', exact: true }).boundingBox()
+    expect(c?.y ?? 0).toBeGreaterThan([...flats][0])
+    expect(c?.y ?? Infinity).toBeLessThan([...sharps][0])
+})
+
 test('the first tap on a note teaches where its actions are, once', async ({ page }) => {
     const svg = page.locator('.max-w-240 svg').first()
     const box = await svg.boundingBox()
