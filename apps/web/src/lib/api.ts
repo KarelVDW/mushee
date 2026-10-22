@@ -1,7 +1,7 @@
 import type { ScorePatch, StoredScoreDocument } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 
-import { API_URL } from './env'
+import { API_URL, API_WS_URL } from './env'
 import type { StoredShortcuts } from './Keybindings'
 
 /** The server responded, but with an error status. */
@@ -172,6 +172,11 @@ export function listRecordings(scoreId?: string): Promise<RecordingSummary[]> {
 
 export function deleteRecording(id: string): Promise<void> {
     return api(`/recordings/${id}`, { method: 'DELETE' })
+}
+
+/** The transcription gateway's socket for a take; every recording belongs to a score, and the gateway requires its id up front. */
+export function recordingSocketUrl(scoreId: string): string {
+    return `${API_WS_URL}/recording?scoreId=${encodeURIComponent(scoreId)}`
 }
 
 /** Where a media element fetches a take's audio; the session cookie rides along (same-site). */

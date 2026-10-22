@@ -1,7 +1,17 @@
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { api, createScore, deleteScore, getScore, listScores, loadScore, patchOnboarding, updateScore } from '@/lib/api'
+import {
+    api,
+    createScore,
+    deleteScore,
+    getScore,
+    listScores,
+    loadScore,
+    patchOnboarding,
+    recordingSocketUrl,
+    updateScore,
+} from '@/lib/api'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
 
@@ -83,6 +93,10 @@ describe('api', () => {
         fetchMock.mockResolvedValue(okResponse({ id: '7' }))
         await getScore('7')
         expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/scores/7`)
+    })
+
+    it("recordingSocketUrl() addresses the gateway on the API origin's WebSocket scheme, scoped to the score", () => {
+        expect(recordingSocketUrl('a b/c')).toBe(`${BASE.replace(/^http/, 'ws')}/recording?scoreId=a%20b%2Fc`)
     })
 
     it('loadScore() requests /scores/:id/load', async () => {
