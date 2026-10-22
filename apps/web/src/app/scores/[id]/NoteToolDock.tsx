@@ -234,16 +234,16 @@ export function NoteToolDock({
                     <ToolGroup ariaLabel="Score settings">
                         <PopoverChip
                             plain
-                            compact={false}
                             ariaLabel={words.clefLabel}
+                            disabled={tools.scoreSettings.disabled}
+                            disabledReason={tools.scoreSettings.reason}
                             tooltip={`${words.clef} clef`}
                             chip={<ClefIcon type={settings.clef} size={22} />}>
-                            {({ anchorRef, className, variant, close }) => (
+                            {({ anchorRef, className, close }) => (
                                 <ClefPopover
                                     active={settings.clef}
                                     anchorRef={anchorRef}
                                     className={className}
-                                    variant={variant}
                                     onSelect={(type) => {
                                         manipulator.changeClef(type)
                                         close()
@@ -254,16 +254,16 @@ export function NoteToolDock({
                         </PopoverChip>
                         <PopoverChip
                             plain
-                            compact={false}
                             ariaLabel={words.keyLabel}
+                            disabled={tools.scoreSettings.disabled}
+                            disabledReason={tools.scoreSettings.reason}
                             hint="sharps or flats used throughout"
                             chip={<span className="font-label font-semibold text-[13px]">{words.key}</span>}>
-                            {({ anchorRef, className, variant, close }) => (
+                            {({ anchorRef, className, close }) => (
                                 <KeySignaturePopover
                                     active={settings.key.fifths}
                                     anchorRef={anchorRef}
                                     className={className}
-                                    variant={variant}
                                     onSelect={(fifths) => {
                                         manipulator.changeKey(fifths)
                                         close()
@@ -274,16 +274,16 @@ export function NoteToolDock({
                         </PopoverChip>
                         <PopoverChip
                             plain
-                            compact={false}
                             ariaLabel={words.timeLabel}
+                            disabled={tools.scoreSettings.disabled}
+                            disabledReason={tools.scoreSettings.reason}
                             hint={new MeterWords(settings.timeSignature).perBar}
                             chip={<span className="font-mono font-medium text-[13px]">{words.time}</span>}>
-                            {({ anchorRef, className, variant, close }) => (
+                            {({ anchorRef, className, close }) => (
                                 <TimeSignaturePopover
                                     active={settings.timeSignature}
                                     anchorRef={anchorRef}
                                     className={className}
-                                    variant={variant}
                                     onSelect={(beatAmount, beatType) => {
                                         manipulator.changeTimeSignature(beatAmount, beatType)
                                         close()
@@ -294,8 +294,9 @@ export function NoteToolDock({
                         </PopoverChip>
                         <PopoverChip
                             plain
-                            compact={false}
                             ariaLabel={words.tempoLabel}
+                            disabled={tools.scoreSettings.disabled}
+                            disabledReason={tools.scoreSettings.reason}
                             hint="how fast it plays"
                             chip={
                                 <span className="inline-flex items-center gap-1">
@@ -304,13 +305,12 @@ export function NoteToolDock({
                                     <span className="font-mono font-medium">{words.pulseBpm}</span> bpm
                                 </span>
                             }>
-                            {({ anchorRef, className, variant, close }) => (
+                            {({ anchorRef, className, close }) => (
                                 <TempoPopover
                                     initialBpm={settings.bpm}
                                     timeSignature={settings.timeSignature}
                                     anchorRef={anchorRef}
                                     className={className}
-                                    variant={variant}
                                     onSubmit={(value) => {
                                         manipulator.changeTempo(value)
                                         close()

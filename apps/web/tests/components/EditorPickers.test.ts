@@ -12,17 +12,15 @@ import { transposeReadout } from '@/components/editor/TransposePopover'
 const noop = () => {}
 
 describe('KeyName', () => {
-    it('names major keys by their tonic, with the short form for tight chips', () => {
+    it('names major keys by their tonic', () => {
         expect(new KeyName(0).long).toBe('C major')
         expect(new KeyName(2).long).toBe('D major')
         expect(new KeyName(-3).long).toBe('E♭ major')
-        expect(new KeyName(-3).short).toBe('E♭')
         expect(new KeyName(6).long).toBe('F♯ major')
     })
 
     it('names a minor key by its own tonic, three fifths up', () => {
         expect(new KeyName(0, 'minor').long).toBe('A minor')
-        expect(new KeyName(0, 'minor').short).toBe('Am')
         expect(new KeyName(-3, 'minor').long).toBe('C minor')
         expect(new KeyName(5, 'minor').long).toBe('G♯ minor')
         expect(new KeyName(-7, 'minor').long).toBe('A♭ minor')

@@ -100,8 +100,11 @@ export function TempoPopover({
         if (tappedBpm) setDraft(String(tappedBpm))
     }, [tappedBpm])
 
+    // Announced as it changes (politely), and never part of the tap pad's name.
     const readout = (
-        <span className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">{tapReadout(tappedBpm, taps.length)}</span>
+        <span aria-live="polite" className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
+            {tapReadout(tappedBpm, taps.length)}
+        </span>
     )
 
     return (
@@ -114,30 +117,33 @@ export function TempoPopover({
             anchorRef={anchorRef}
             variant={variant}
             className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
-            // A sheet's heading row is narrow on a phone: there the readout rides in the tap pad instead.
+            // A sheet's heading row is narrow on a phone: there the readout sits in the tap pad's
+            // corner instead — laid over it, outside the button, so the pad's name stays put.
             headerRight={sheet ? undefined : readout}>
             {lead}
-            <button
-                type="button"
-                onClick={handleTap}
-                className="relative overflow-hidden flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft focus-ring">
-                <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
-                    <span
-                        className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-solkey"
-                        style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
-                    />
-                    Tap along
-                    {sheet && <span className="ml-auto normal-case tracking-normal">{readout}</span>}
-                </span>
-                <span className="font-body font-medium text-[15px] leading-[1.3]">
-                    {/* Phones have no spacebar: each pointer gets the instruction it can follow. */}
-                    <span className="pointer-coarse:hidden">Click here or press the spacebar on every beat</span>
-                    <span className="hidden pointer-coarse:inline">Tap here on every beat</span>
-                    {(timeSignature.isCompound || timeSignature.beatType !== 4) && (
-                        <span className="block text-on-surface-variant">{beatsPerBarLabel(timeSignature)}</span>
-                    )}
-                </span>
-            </button>
+            <div className="relative">
+                <button
+                    type="button"
+                    onClick={handleTap}
+                    className="relative overflow-hidden w-full flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft focus-ring">
+                    <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
+                        <span
+                            className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-solkey"
+                            style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
+                        />
+                        Tap along
+                    </span>
+                    <span className="font-body font-medium text-[15px] leading-[1.3]">
+                        {/* Phones have no spacebar: each pointer gets the instruction it can follow. */}
+                        <span className="pointer-coarse:hidden">Click here or press the spacebar on every beat</span>
+                        <span className="hidden pointer-coarse:inline">Tap here on every beat</span>
+                        {(timeSignature.isCompound || timeSignature.beatType !== 4) && (
+                            <span className="block text-on-surface-variant">{beatsPerBarLabel(timeSignature)}</span>
+                        )}
+                    </span>
+                </button>
+                {sheet && <span className="pointer-events-none absolute top-5.5 right-4 flex">{readout}</span>}
+            </div>
 
             <div className="flex items-stretch gap-2">
                 <UnitNumberField

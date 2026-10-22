@@ -35,6 +35,9 @@ import { usePlayback } from './usePlayback'
 import { useRecording } from './useRecording'
 import { useScoreAutosave } from './useScoreAutosave'
 
+/** How long the phone's tap-again-for-actions tip stays up (the info toast's own default). */
+const SELECTION_TIP_MS = 6000
+
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
@@ -91,21 +94,31 @@ export default function ScoreEditorPage() {
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
 
     // Phones: the first time someone picks a note, one tip says where its actions are — gone
-    // after 6s, the next tap, or the actions opening. Once per device.
+    // after 6s, the next tap, or the actions opening. Once per device. While it is up, the
+    // dock's own first-run hint steps aside: one tip at a time.
     const [selectionTip] = useState(() => new OneTimeHint(SELECTION_TIP_KEY))
     const selectionTipToast = useRef<number | null>(null)
+    const [selectionTipUp, setSelectionTipUp] = useState(false)
     const dismissSelectionTip = useCallback(() => {
         if (selectionTipToast.current === null) return
         dismissToast(selectionTipToast.current)
         selectionTipToast.current = null
+        setSelectionTipUp(false)
     }, [])
     const showSelectionTip = useCallback(() => {
         if (!selectionTip.pending) return
         selectionTip.markSeen()
-        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { duration: 6000 })
+        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { duration: SELECTION_TIP_MS })
+        setSelectionTipUp(true)
         // The tap that selected the note is still in flight: listen from the next one on.
         setTimeout(() => document.addEventListener('pointerdown', dismissSelectionTip, { once: true }), 0)
     }, [selectionTip, dismissSelectionTip])
+    useEffect(() => {
+        if (!selectionTipUp) return
+        // The toast's own clock: the dock hint comes back as the tip times out.
+        const timer = setTimeout(() => setSelectionTipUp(false), SELECTION_TIP_MS)
+        return () => clearTimeout(timer)
+    }, [selectionTipUp])
     const handleSelectionStart = useCallback(
         (note: Note) => {
             manipulator.select(note)
@@ -402,6 +415,7 @@ export default function ScoreEditorPage() {
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
+                        hint={selectionTipUp ? null : undefined}
                         footer={
                             isMobile ? (
                                 <MobileEditorActions

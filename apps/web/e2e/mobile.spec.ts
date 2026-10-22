@@ -338,11 +338,24 @@ test('the first tap on a note teaches where its actions are, once', async ({ pag
     const svg = page.locator('.max-w-240 svg').first()
     const box = await svg.boundingBox()
     expect(box).not.toBeNull()
-    await page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * 0.7, (box?.y ?? 0) + 65)
+    const tapAt = (fraction: number) => page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * fraction, (box?.y ?? 0) + 65)
+    const band = svg.locator(SELECTION_BANDS).first()
+    const moveHint = page.getByText(/^To move a note/)
+    await expect(moveHint).toBeVisible()
+
+    await tapAt(0.7)
     const tip = page.getByRole('status').filter({ hasText: 'Tap the note again to copy or delete it.' })
     await expect(tip).toBeVisible()
-    // The next tap anywhere clears it.
-    await page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * 0.3, (box?.y ?? 0) + 65)
+    // One tip at a time: the dock's own hint steps aside while this one is up.
+    await expect(moveHint).toHaveCount(0)
+
+    // The next tap anywhere clears it, and the dock's hint comes back.
+    const before = await band.boundingBox()
+    await tapAt(0.3)
+    await expect(tip).toHaveCount(0)
+    await expect(moveHint).toBeVisible()
+    // That tap picked another note — and taught once means it stays gone.
+    await expect.poll(async () => (await band.boundingBox())?.x).not.toBe(before?.x)
     await expect(tip).toHaveCount(0)
 })
 

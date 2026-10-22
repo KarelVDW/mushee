@@ -135,14 +135,14 @@ export class ScoreManipulator {
      * active note's position. With nothing selected it is the opening of bar 1 — the score's
      * real opening values, never a made-up default — except while a recording holds the history
      * (a take clears the selection as it starts): then it is the opening of the bar the take
-     * started in. Null only without a score.
+     * started in, shown but not changed (see {@link historyLocked}). Null only without a score.
      */
     get settingsPosition(): ScorePosition | null {
         const active = this.activePosition
         if (active) return active
         const score = this._score
         if (!score || score.measures.length === 0) return null
-        const takeStart = this.lockCount > 0 ? this.clearedFromMeasure : null
+        const takeStart = this.historyLocked ? this.clearedFromMeasure : null
         return { measureIndex: takeStart === null ? 0 : Math.min(takeStart, score.measures.length - 1), beat: 0 }
     }
 
@@ -160,27 +160,41 @@ export class ScoreManipulator {
         }
     }
 
-    /** Change the clef at {@link settingsPosition} (the dock's clef chip). */
+    /**
+     * Whether a recording holds the history ({@link lockHistory}) — it is writing notes into
+     * the score. The dock's clef / key / time / tempo chips keep showing their values meanwhile,
+     * but stay off: a change would land in the bars the recording is still filling.
+     */
+    get historyLocked(): boolean {
+        return this.lockCount > 0
+    }
+
+    /** Where the dock's chips may change the score's settings: {@link settingsPosition}, unless a recording holds the history. */
+    private get editableSettingsPosition(): ScorePosition | null {
+        return this.historyLocked ? null : this.settingsPosition
+    }
+
+    /** Change the clef at {@link settingsPosition} (the dock's clef chip). Declined while a recording runs. */
     changeClef(type: ClefType): void {
-        const at = this.settingsPosition
+        const at = this.editableSettingsPosition
         if (at) this.setClefAt(at.measureIndex, type, at.beat)
     }
 
-    /** Change the key signature at {@link settingsPosition} (the dock's key chip). */
+    /** Change the key signature at {@link settingsPosition} (the dock's key chip). Declined while a recording runs. */
     changeKey(fifths: number): void {
-        const at = this.settingsPosition
+        const at = this.editableSettingsPosition
         if (at) this.setKeyAt(at.measureIndex, fifths, at.beat)
     }
 
-    /** Change the meter of the measure at {@link settingsPosition} (the dock's time chip). */
+    /** Change the meter of the measure at {@link settingsPosition} (the dock's time chip). Declined while a recording runs. */
     changeTimeSignature(beatAmount: number, beatType: number): void {
-        const at = this.settingsPosition
+        const at = this.editableSettingsPosition
         if (at) this.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
     }
 
-    /** Set the tempo at {@link settingsPosition}, in quarter-note bpm (the dock's tempo chip). */
+    /** Set the tempo at {@link settingsPosition}, in quarter-note bpm (the dock's tempo chip). Declined while a recording runs. */
     changeTempo(bpm: number): void {
-        const at = this.settingsPosition
+        const at = this.editableSettingsPosition
         if (at) this.setTempoAt(at.measureIndex, at.beat, bpm)
     }
 

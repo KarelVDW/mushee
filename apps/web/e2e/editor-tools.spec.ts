@@ -385,7 +385,7 @@ test('shortcuts dialog: a binding can be removed and defaults restored', async (
     const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(dialog).toBeVisible()
 
-    // Remove the "Toggle rest" binding entirely.
+    // Remove the "Rest on/off" binding entirely.
     await dialog.getByRole('button', { name: 'Remove shortcut for Rest on/off' }).click()
     await expect(dialog.getByRole('button', { name: 'Restore defaults' })).toBeVisible()
     await page.getByRole('button', { name: 'Done' }).click()

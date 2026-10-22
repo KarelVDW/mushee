@@ -39,7 +39,6 @@ export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, 
 
     return (
         <PopoverChip
-            compact={false}
             ariaLabel="Transpose"
             tooltip="Move the whole song higher or lower"
             shortcut={keybindings.shortcutFor('transpose')}

@@ -7,16 +7,11 @@ import { ChipToggle, type TooltipShortcut } from '@/components/ui'
 /** Where a dock popover opens on desktop: upward, right-aligned to its chip, clear of the dock. */
 export const DOCK_POPOVER_POSITION = 'right-0 bottom-[calc(100%+0.75rem)]'
 
-/** How a chip's popover is placed: anchored next to it, or (phones) as the sheet above the dock. */
-export type PopoverVariant = 'anchored' | 'sheet'
-
 interface PopoverChipProps {
     ariaLabel: string
     disabled?: boolean
     /** Why it is off: keeps the chip focusable, and its tooltip says this instead. */
     disabledReason?: string
-    /** Phone layout: the popover opens as the sheet above the dock (Popover's `sheet` variant) instead of anchoring. */
-    compact: boolean
     /** Transparent at rest, for a chip inside a ToolGroup well (see ChipToggle). */
     plain?: boolean
     /** The chip's face. */
@@ -34,14 +29,9 @@ interface PopoverChipProps {
     onOpenChange?: (open: boolean) => void
     /**
      * The popover, mounted only while open: anchor it at `anchorRef`, position it with
-     * `className` (anchored only), render it as `variant`, dismiss with `close`.
+     * `className`, dismiss with `close`.
      */
-    children: (popover: {
-        anchorRef: RefObject<HTMLDivElement | null>
-        className: string
-        variant: PopoverVariant
-        close: () => void
-    }) => ReactNode
+    children: (popover: { anchorRef: RefObject<HTMLDivElement | null>; className: string; close: () => void }) => ReactNode
 }
 
 /**
@@ -55,7 +45,6 @@ export function PopoverChip({
     ariaLabel,
     disabled,
     disabledReason,
-    compact,
     plain = false,
     chip,
     tooltip,
@@ -75,7 +64,6 @@ export function PopoverChip({
         onOpenChange?.(next)
     }
     const close = () => setOpen(false)
-    const variant: PopoverVariant = compact ? 'sheet' : 'anchored'
 
     return (
         <div ref={anchorRef} className="relative">
@@ -93,7 +81,7 @@ export function PopoverChip({
                 tooltipSide={tooltipSide}>
                 {chip}
             </ChipToggle>
-            {open && children({ anchorRef, className: className ?? DOCK_POPOVER_POSITION, variant, close })}
+            {open && children({ anchorRef, className: className ?? DOCK_POPOVER_POSITION, close })}
         </div>
     )
 }

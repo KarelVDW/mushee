@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { RAISE_PITCH, SET_ACCIDENTAL, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS, LENGTH_NEEDS_ONE_NOTE } from '@/app/scores/[id]/commands'
-import { NEEDS_A_NOTE, NoteToolStates, ScoreSettingsWords, TIE_NEEDS_SAME_PITCH } from '@/app/scores/[id]/NoteToolParts'
+import {
+    NEEDS_A_NOTE,
+    NoteToolStates,
+    ScoreSettingsWords,
+    STOP_RECORDING_FIRST,
+    TIE_NEEDS_SAME_PITCH,
+} from '@/app/scores/[id]/NoteToolParts'
 import { MOVE_NOTE_HINT_KEY, OneTimeHint } from '@/app/scores/[id]/OneTimeHint'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings } from '@/lib/Keybindings'
@@ -69,6 +75,36 @@ describe('ScoreManipulator settings position', () => {
         expect(manipulator.settings?.timeSignature).toMatchObject({ beatAmount: 6, beatType: 8 })
         release()
         expect(manipulator.settingsPosition).toEqual({ measureIndex: 0, beat: 0 })
+    })
+
+    it('shows but never changes the settings while a take holds the history', () => {
+        const { manipulator, score } = setup(undefined, 2)
+        manipulator.setTempoAt(0, 0, 100)
+        manipulator.select(score.measures[1].firstNote)
+        const release = manipulator.lockHistory()
+        manipulator.select(null)
+        expect(manipulator.historyLocked).toBe(true)
+        const version = score.version
+        // The take is still writing into bar 2: every dock change is declined.
+        manipulator.changeClef('bass')
+        manipulator.changeKey(2)
+        manipulator.changeTimeSignature(3, 4)
+        manipulator.changeTempo(72)
+        expect(score.version).toBe(version)
+        expect(score.measures[1].clef.type).toBe('treble')
+        expect(manipulator.settings).toMatchObject({ clef: 'treble', bpm: 100, timeSignature: { beatAmount: 4, beatType: 4 } })
+        // …a note picked mid-take included.
+        manipulator.select(score.measures[1].firstNote)
+        manipulator.changeKey(2)
+        expect(score.version).toBe(version)
+        // The chips say why they are off.
+        expect(new NoteToolStates(manipulator).scoreSettings).toEqual({ active: false, disabled: true, reason: STOP_RECORDING_FIRST })
+
+        release()
+        expect(manipulator.historyLocked).toBe(false)
+        expect(new NoteToolStates(manipulator).scoreSettings).toEqual({ active: false, disabled: false })
+        manipulator.changeKey(2)
+        expect(score.measures[1].keySignature.fifths).toBe(2)
     })
 
     it('is null without a score', () => {

@@ -168,11 +168,14 @@ function ToolRow({ icon, label, hint, shortcut, state, toggle = false, onClick }
 /** What the More sheet's body shows: its menu, or one picker swapped in (sheets never stack). */
 type SheetView = 'menu' | 'clef' | 'key' | 'time' | 'tempo'
 
-/** The sharp-or-flat picker's options on the sheet, each glyph captioned in words. */
-const SHEET_ACCIDENTALS: { value: Accidental | undefined; glyph: string; caption: string }[] = [
-    { value: 'b', glyph: '♭', caption: 'Flat' },
-    { value: undefined, glyph: '♮', caption: 'None' },
-    { value: '#', glyph: '♯', caption: 'Sharp' },
+/**
+ * The sharp-or-flat picker's options on the sheet, each glyph captioned in words — None first.
+ * The natural's name keeps its caption and the word the dock and shortcuts use: "None (natural)".
+ */
+const SHEET_ACCIDENTALS: { value: Accidental | undefined; glyph: string; caption: string; name: string }[] = [
+    { value: undefined, glyph: '♮', caption: 'None', name: 'None (natural)' },
+    { value: 'b', glyph: '♭', caption: 'Flat', name: 'Flat' },
+    { value: '#', glyph: '♯', caption: 'Sharp', name: 'Sharp' },
 ]
 
 interface MoreToolsSheetProps {
@@ -369,6 +372,8 @@ interface MoreToolsMenuProps {
 function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeToggle, onOpen, onTranspose, onClose }: MoreToolsMenuProps) {
     const tools = new NoteToolStates(manipulator)
     const accidental = tools.accidental
+    // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
+    const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
 
     return (
@@ -418,9 +423,9 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         disabled={accidental.disabled}
                         disabledReason={accidental.reason}
                         onChange={(value) => manipulator.run(SET_ACCIDENTAL, value)}
-                        options={SHEET_ACCIDENTALS.map(({ value, glyph, caption }) => ({
+                        options={SHEET_ACCIDENTALS.map(({ value, glyph, caption, name }) => ({
                             value,
-                            ariaLabel: caption,
+                            ariaLabel: name,
                             label: (
                                 <span className="flex flex-col items-center gap-1">
                                     <span className="text-[16px] leading-none">{glyph}</span>
@@ -435,17 +440,35 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
             <section aria-label="Whole score" className="flex flex-col gap-1">
                 <Eyebrow>Whole score</Eyebrow>
                 <div className="flex flex-col -mx-2">
-                    <SheetRow label="Clef" ariaLabel={words.clefLabel} value={words.clef} onClick={() => onOpen('clef')} />
-                    <SheetRow label="Key" ariaLabel={words.keyLabel} value={words.key} onClick={() => onOpen('key')} />
+                    <SheetRow
+                        label="Clef"
+                        ariaLabel={words.clefLabel}
+                        value={words.clef}
+                        hint={settingsState.reason}
+                        disabled={settingsState.disabled}
+                        onClick={() => onOpen('clef')}
+                    />
+                    <SheetRow
+                        label="Key"
+                        ariaLabel={words.keyLabel}
+                        value={words.key}
+                        hint={settingsState.reason}
+                        disabled={settingsState.disabled}
+                        onClick={() => onOpen('key')}
+                    />
                     <SheetRow
                         label="Time"
                         ariaLabel={words.timeLabel}
                         value={<span className="font-mono">{words.time}</span>}
+                        hint={settingsState.reason}
+                        disabled={settingsState.disabled}
                         onClick={() => onOpen('time')}
                     />
                     <SheetRow
                         label="Tempo"
                         ariaLabel={words.tempoLabel}
+                        hint={settingsState.reason}
+                        disabled={settingsState.disabled}
                         value={
                             <span className="inline-flex items-center gap-1">
                                 <BeatUnitIcon duration={words.pulse} size={15} />

@@ -13,9 +13,9 @@ const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5,
 const RELATIVE_MINOR_FIFTHS = 3
 
 /**
- * How a key is named for people — "D major", "A minor", or the short "D", "Am" — from a
- * signature's fifths and mode. A minor key names its own tonic, the relative minor three fifths
- * up the circle. The words the key chip, its tooltip and the transpose readout share.
+ * How a key is named for people — "D major", "A minor" — from a signature's fifths and mode.
+ * A minor key names its own tonic, the relative minor three fifths up the circle. The words
+ * the key chip, its tooltip and the transpose readout share.
  */
 export class KeyName {
     constructor(
@@ -40,11 +40,6 @@ export class KeyName {
     /** "D major", "A minor". */
     get long(): string {
         return `${this.tonic} ${this.isMinor ? 'minor' : 'major'}`
-    }
-
-    /** "D", "Am" — for tight chips. */
-    get short(): string {
-        return this.isMinor ? `${this.tonic}m` : this.tonic
     }
 
     /** Both keys the signature can stand for: "D major · B minor". */

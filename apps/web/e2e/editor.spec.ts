@@ -233,7 +233,7 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
     const nextNote = page.getByRole('button', { name: 'Change shortcut for Select next note' })
     await expect(nextNote).toContainText('→')
 
-    // Record J as the new shortcut for "Toggle rest" (default: R).
+    // Set J as the new shortcut for "Rest on/off" (default: R).
     await page.getByRole('button', { name: 'Change shortcut for Rest on/off' }).click()
     await expect(page.getByText('Press the new keys…')).toBeVisible()
     await page.keyboard.press('j')
@@ -323,6 +323,23 @@ test('Shift+F10 opens the selection actions from the keyboard, and Escape hands 
     const toolbar = page.getByRole('toolbar', { name: 'Selection actions' })
     await expect(toolbar).toBeVisible()
     await expect(toolbar.getByRole('button', { name: 'Copy' })).toBeFocused()
+
+    // A toolbar like any other: the arrows move between its actions (one tab stop), and they
+    // never reach the editor — the selection stays put under the bar.
+    const band = await page.locator(SELECTION_BANDS).first().boundingBox()
+    await page.keyboard.press('ArrowRight')
+    await expect(toolbar.getByRole('button', { name: 'Delete' })).toBeFocused()
+    await expect(toolbar.getByRole('button', { name: 'Delete' })).toHaveAttribute('tabindex', '0')
+    await expect(toolbar.getByRole('button', { name: 'Copy' })).toHaveAttribute('tabindex', '-1')
+    await page.keyboard.press('End')
+    await expect(toolbar.getByRole('button', { name: 'Select all' })).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(toolbar.getByRole('button', { name: 'Copy' })).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(toolbar.getByRole('button', { name: 'Select all' })).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(toolbar.getByRole('button', { name: 'Copy' })).toBeFocused()
+    expect(await page.locator(SELECTION_BANDS).first().boundingBox()).toEqual(band)
 
     await page.keyboard.press('Escape')
     await expect(toolbar).toHaveCount(0)

@@ -20,6 +20,8 @@ import type { ScoreManipulator, ScoreSettings } from './ScoreManipulator'
 export const NEEDS_A_NOTE = 'Select a note first'
 /** Why Tie is off: a tie only binds into the next note at the same pitch (Score.canTieForward). */
 export const TIE_NEEDS_SAME_PITCH = 'Tie needs the next note to be the same pitch.'
+/** Why the clef / key / time / tempo chips are off: a recording is still writing into the score. */
+export const STOP_RECORDING_FIRST = 'Stop recording to change this'
 
 /** The note values the length picker offers, longest first. */
 export const DURATION_TYPES: readonly DurationType[] = ['w', 'h', 'q', '8', '16']
@@ -100,6 +102,17 @@ export class NoteToolStates {
     /** Higher / Lower and Simplify sharps and flats: anything selected will do. */
     get pitch(): ToolState {
         return this.needsNote() ?? { active: false, disabled: false }
+    }
+
+    /**
+     * The clef, key, time and tempo chips: on with or without a selection (they read and
+     * change bar 1 then), but off while a recording writes into the score — they still show
+     * its values (ScoreManipulator.settings).
+     */
+    get scoreSettings(): ToolState {
+        return this.manipulator.historyLocked
+            ? { active: false, disabled: true, reason: STOP_RECORDING_FIRST }
+            : { active: false, disabled: false }
     }
 }
 
