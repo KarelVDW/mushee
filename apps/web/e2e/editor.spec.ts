@@ -82,14 +82,17 @@ test('editing a note pitch with the keyboard triggers a debounced autosave', asy
 })
 
 test('changing duration and toggling rest autosave the change', async ({ page }) => {
-    // Switch the selected note to a 16th (last of w,h,q,8,16).
+    // The length picker holds exactly the five note values, each named.
     const durations = page.getByRole('group', { name: 'Note duration' }).getByRole('button')
+    await expect(durations).toHaveCount(5)
+    const sixteenth = page.getByRole('button', { name: 'Sixteenth note' })
     const patchDuration = waitForAutosave(page)
-    await durations.nth(4).click()
+    await sixteenth.click()
     await patchDuration
+    await expect(sixteenth).toHaveAttribute('aria-pressed', 'true')
 
     // Toggle the active note to a rest.
-    const restToggle = page.getByRole('button', { name: 'Rest' })
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
     const patchRest = waitForAutosave(page)
     await restToggle.click()
     await patchRest
@@ -216,11 +219,11 @@ test('clipboard shortcuts are fixed: listed, not rebindable, and reserved from o
     }
 
     // Recording a reserved keystroke for another command is refused with an explanation.
-    await page.getByRole('button', { name: 'Change shortcut for Toggle rest' }).click()
-    await expect(page.getByText('Press a key…')).toBeVisible()
+    await page.getByRole('button', { name: 'Change shortcut for Rest on/off' }).click()
+    await expect(page.getByText('Press the new keys…')).toBeVisible()
     await page.keyboard.press('ControlOrMeta+c')
     await expect(page.getByText(/reserved for “Copy selection”/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Change shortcut for Toggle rest' })).toContainText('R')
+    await expect(page.getByRole('button', { name: 'Change shortcut for Rest on/off' })).toContainText('R')
 })
 
 test('keyboard shortcuts dialog lists bindings and rebinding persists across a reload', async ({ page }) => {
@@ -231,10 +234,10 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
     await expect(nextNote).toContainText('→')
 
     // Record J as the new shortcut for "Toggle rest" (default: R).
-    await page.getByRole('button', { name: 'Change shortcut for Toggle rest' }).click()
-    await expect(page.getByText('Press a key…')).toBeVisible()
+    await page.getByRole('button', { name: 'Change shortcut for Rest on/off' }).click()
+    await expect(page.getByText('Press the new keys…')).toBeVisible()
     await page.keyboard.press('j')
-    const restBinding = page.getByRole('button', { name: 'Change shortcut for Toggle rest' })
+    const restBinding = page.getByRole('button', { name: 'Change shortcut for Rest on/off' })
     await expect(restBinding).toContainText('J')
     await page.getByRole('button', { name: 'Done' }).click()
 
@@ -258,15 +261,83 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
 })
 
 test('clef and tempo popovers open from the tool dock', async ({ page }) => {
+    // The score chips are menu triggers: they report their popover as expanded, not pressed.
     const clef = page.getByRole('button', { name: /^Clef:/ })
-    await expect(clef).toHaveAttribute('aria-pressed', 'false')
+    await expect(clef).toHaveAttribute('aria-haspopup', 'dialog')
+    await expect(clef).toHaveAttribute('aria-expanded', 'false')
     await clef.click()
-    await expect(clef).toHaveAttribute('aria-pressed', 'true')
+    await expect(clef).toHaveAttribute('aria-expanded', 'true')
     await page.keyboard.press('Escape')
 
     const tempo = page.getByRole('button', { name: /bpm$/ })
+    await expect(tempo).toHaveText('120 bpm')
     await tempo.click()
-    await expect(tempo).toHaveAttribute('aria-pressed', 'true')
+    await expect(tempo).toHaveAttribute('aria-expanded', 'true')
+})
+
+test('the score chips say their values in words', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Clef: Treble' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Key: C major' })).toHaveText('C major')
+    await expect(page.getByRole('button', { name: 'Time signature: 4/4' })).toHaveText('4/4')
+    await expect(page.getByRole('button', { name: 'Tempo: 120 bpm' })).toHaveText('120 bpm')
+})
+
+test('the dock teaches moving a note until the first pitch edit', async ({ page }) => {
+    const hint = page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')
+    await expect(hint).toBeVisible()
+
+    // Higher / Lower are the mouse twins of ↑ ↓; the first pitch edit retires the hint for good.
+    const patch = waitForAutosave(page)
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await patch
+    await expect(hint).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    await expect(hint).toHaveCount(0)
+})
+
+test('hovering a dock control names it, with its hint and live shortcut', async ({ page }) => {
+    await page.getByRole('button', { name: 'Quarter note' }).hover()
+    // The tooltip card is decorative (the hidden role=tooltip text describes the control).
+    await expect(page.getByText('1 beat', { exact: true })).toBeVisible()
+    await expect(page.locator('kbd').filter({ hasText: /^Q$/ })).toBeVisible()
+})
+
+test('right-clicking a note opens the selection actions; Delete clears it', async ({ page }) => {
+    const band = await page.locator(SELECTION_BANDS).first().boundingBox()
+    if (!band) throw new Error('expected the auto-selected note')
+    await page.mouse.click(band.x + band.width / 2, band.y + band.height / 2, { button: 'right' })
+    const toolbar = page.getByRole('toolbar', { name: 'Selection actions' })
+    await expect(toolbar).toBeVisible()
+
+    const patch = waitForAutosave(page)
+    await toolbar.getByRole('button', { name: 'Delete' }).click()
+    await patch
+    await expect(toolbar).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Rest', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Shift+F10 opens the selection actions from the keyboard, and Escape hands focus back', async ({ page }) => {
+    const editor = await focusEditor(page)
+    await page.keyboard.press('Shift+F10')
+    const toolbar = page.getByRole('toolbar', { name: 'Selection actions' })
+    await expect(toolbar).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Copy' })).toBeFocused()
+
+    await page.keyboard.press('Escape')
+    await expect(toolbar).toHaveCount(0)
+    await expect(editor).toBeFocused()
+})
+
+test('a quick second click on the selected note still moves it', async ({ page }) => {
+    const band = await page.locator(SELECTION_BANDS).first().boundingBox()
+    if (!band) throw new Error('expected the auto-selected note')
+    // Hover the selected note's column a few lines up: the ghost previews, the click commits it.
+    await page.mouse.move(band.x + band.width / 2, band.y + 4)
+    const patch = waitForAutosave(page)
+    await page.mouse.click(band.x + band.width / 2, band.y + 4)
+    await patch
+    await expect(page.getByRole('toolbar', { name: 'Selection actions' })).toHaveCount(0)
 })
 
 test('exports MusicXML and MIDI as downloads', async ({ page }) => {
