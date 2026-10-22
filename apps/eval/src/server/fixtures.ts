@@ -16,6 +16,11 @@ import { melodyNoteCount, melodyToTruth } from '@/lib/melody'
 import { REAL_ROOT } from './paths'
 import type { Clip, Corpus } from './repo'
 
+// The harness's discovery contract, read by apps/api/scripts/eval/lib/realCorpus.ts.
+const WAV_SUFFIX = '__real.wav'
+const TRUTH_SUFFIX = '.truth.json'
+const MANIFEST_FILE = 'dataset.json'
+
 export function corpusDir(corpus: Pick<Corpus, 'id' | 'tier'>): string {
     return join(REAL_ROOT, corpus.tier, corpus.id)
 }
@@ -34,7 +39,11 @@ export function pipelineInstrumentId(kind: string, instrumentId: string | null):
 }
 
 export function clipWavPath(corpus: Pick<Corpus, 'id' | 'tier'>, clipName: string): string {
-    return join(corpusDir(corpus), `${clipName}__real.wav`)
+    return join(corpusDir(corpus), `${clipName}${WAV_SUFFIX}`)
+}
+
+function clipTruthPath(corpus: Pick<Corpus, 'id' | 'tier'>, clipName: string): string {
+    return join(corpusDir(corpus), `${clipName}${TRUTH_SUFFIX}`)
 }
 
 function writeDatasetJson(corpus: Corpus, recordedClips: Clip[]): void {
@@ -52,15 +61,14 @@ function writeDatasetJson(corpus: Corpus, recordedClips: Clip[]): void {
         clips: recordedClips.length,
         totalNotes: recordedClips.reduce((sum, clip) => sum + melodyNoteCount(clip.melody), 0),
     }
-    writeFileSync(join(dir, 'dataset.json'), JSON.stringify(manifest, null, 2) + '\n')
+    writeFileSync(join(dir, MANIFEST_FILE), JSON.stringify(manifest, null, 2) + '\n')
 }
 
 /** Persist one recorded take: wav + derived truth, then refresh the manifest. */
 export function saveClipRecording(corpus: Corpus, clip: Clip, allClips: Clip[], wav: Buffer): void {
-    const dir = corpusDir(corpus)
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(corpusDir(corpus), { recursive: true })
     writeFileSync(clipWavPath(corpus, clip.name), wav)
-    writeFileSync(join(dir, `${clip.name}.truth.json`), JSON.stringify(melodyToTruth(clip.melody), null, 2) + '\n')
+    writeFileSync(clipTruthPath(corpus, clip.name), JSON.stringify(melodyToTruth(clip.melody), null, 2) + '\n')
     const recorded = allClips.filter((c) => c.status === 'recorded' || c.id === clip.id)
     writeDatasetJson(corpus, recorded)
 }
@@ -70,7 +78,7 @@ export function deleteCorpusFixtures(corpus: Pick<Corpus, 'id' | 'tier'>): void 
     // Refuse to remove anything that isn't shaped like one of our datasets.
     if (!existsSync(dir)) return
     const entries = readdirSync(dir)
-    const foreign = entries.filter((f) => !f.endsWith('__real.wav') && !f.endsWith('.truth.json') && f !== 'dataset.json')
+    const foreign = entries.filter((f) => !f.endsWith(WAV_SUFFIX) && !f.endsWith(TRUTH_SUFFIX) && f !== MANIFEST_FILE)
     if (foreign.length) throw new Error(`refusing to delete ${dir}: unexpected files ${foreign.join(', ')}`)
     rmSync(dir, { recursive: true })
 }
