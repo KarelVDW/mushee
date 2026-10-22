@@ -25,8 +25,7 @@ import { useSession } from '@/lib/auth-client'
 import { withNext } from '@/lib/nextPath'
 import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
-
-import { useSharedPlayback } from './useSharedPlayback'
+import { useTransport } from '@/lib/useTransport'
 
 /**
  * What a share link opens: the score, engraved read-only, with its title, an
@@ -85,7 +84,9 @@ export function SharedScorePage({ token }: { token: string }) {
         )
     }
     const notFound = shared.isError && shared.error instanceof ApiError && shared.error.isClientError
-    const playback = useSharedPlayback(score)
+    // The editor's transport binding, minus selection, recording and the metronome (so no
+    // click samples to fetch). There is no selected note, so playback starts at the top.
+    const playback = useTransport(score, { metronome: false })
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
@@ -106,7 +107,7 @@ export function SharedScorePage({ token }: { token: string }) {
                                 active={playback.state === 'playing'}
                                 onClick={() => {
                                     if (playback.state === 'stopped') track('shared_score_played')
-                                    playback.toggle()
+                                    playback.toggle(null)
                                 }}
                                 ariaLabel={playback.state === 'playing' ? 'Pause' : 'Play'}
                                 disabled={!playback.ready}>
