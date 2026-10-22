@@ -36,14 +36,14 @@ export function MetricsPanel({ metrics }: MetricsPanelProps) {
     const seg = (metrics.seg ?? {}) as Record<string, unknown>
     const timing = (metrics.timing ?? {}) as Record<string, unknown>
 
-    const pct = (v: number | null) => (v === null ? '—' : v.toFixed(2))
+    const fixed2 = (v: number | null) => (v === null ? '—' : v.toFixed(2))
     const segLine = (['missed', 'spurious', 'split', 'merged'] as const).map((k) => `${k} ${num(seg[k]) ?? 0}`).join(' · ')
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Tile label="Note F1 (COnP@0.1)" value={pct(f1)} detail={`precision ${pct(precision)} · recall ${pct(recall)}`} />
-            <Tile label="Chroma F1" value={pct(chromaF1)} detail={`octave errors ${pct(octaveErrorRate)}`} />
-            <Tile label="Onset F1 (COn)" value={pct(num(onsetOnly.f1))} detail={`recall ${pct(num(onsetOnly.recall))}`} />
+            <Tile label="Note F1 (COnP@0.1)" value={fixed2(f1)} detail={`precision ${fixed2(precision)} · recall ${fixed2(recall)}`} />
+            <Tile label="Chroma F1" value={fixed2(chromaF1)} detail={`octave errors ${fixed2(octaveErrorRate)}`} />
+            <Tile label="Onset F1 (COn)" value={fixed2(num(onsetOnly.f1))} detail={`recall ${fixed2(num(onsetOnly.recall))}`} />
             <Tile
                 label="Segmentation"
                 value={String(num(seg.clean) ?? '—')}

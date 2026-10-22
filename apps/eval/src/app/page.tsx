@@ -107,7 +107,6 @@ function LatestRun({ runs }: { runs?: RunDto[] }) {
     const latest = runs?.[0]
     if (!latest) return null
     const scenarios = latest.summary.perScenario.filter((s) => s.clips > 0)
-    const max = Math.max(0.001, ...scenarios.map((s) => s.f1))
     return (
         <Card>
             <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -126,11 +125,9 @@ function LatestRun({ runs }: { runs?: RunDto[] }) {
                             {s.scenario}
                             {!s.pooled && <span className="text-outline"> †</span>}
                         </span>
+                        {/* Absolute 0–1 scale, the same one the Reports page draws F1 on. */}
                         <div className="h-4 flex items-center">
-                            <div
-                                className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5"
-                                style={{ width: `${Math.max(1, (s.f1 / max) * 100)}%` }}
-                            />
+                            <div className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5" style={{ width: `${Math.max(1, s.f1 * 100)}%` }} />
                         </div>
                         <span className="font-mono text-[13px] leading-none text-on-surface-variant text-right">{s.f1.toFixed(2)}</span>
                     </div>
