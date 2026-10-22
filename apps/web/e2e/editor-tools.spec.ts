@@ -26,6 +26,19 @@ test('renaming the score in the header autosaves the new title', async ({ page, 
     await expect.poll(() => apiMock.patches.some((b) => b.title === 'Renamed by e2e'), { timeout: 8000 }).toBe(true)
 })
 
+test('a score edit inside the autosave window does not drop a pending rename', async ({ page, apiMock }) => {
+    await page.getByRole('textbox', { name: 'Score title' }).fill('Renamed then edited')
+    // Well inside the 2 s debounce: the edit's save must carry the title along, not replace it.
+    await page.locator('div[tabindex="0"]').first().focus()
+    await page.keyboard.press('ArrowUp')
+
+    await expect
+        .poll(() => apiMock.patches.some((b) => b.title === 'Renamed then edited' && Boolean(b.measures ?? b.allMeasures)), {
+            timeout: 8000,
+        })
+        .toBe(true)
+})
+
 test('turning the share link on after an edit keeps the edit and the incremental autosave', async ({ page }) => {
     const editor = page.locator('div[tabindex="0"]').first()
     const scoreSvg = page.locator('.max-w-240 svg').first()
