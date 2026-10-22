@@ -23,6 +23,7 @@ import type { IconName } from '@mushee/ui'
 
 import type { BillingInterval, PackId, PaidTierId, Plan, TierId } from './api'
 import { type Currency, currencySymbol, formatMoney } from './currency'
+import { formatAllowance } from './recordingTime'
 
 export interface PlanTier {
     /** Every tier but 'beta', which is assigned rather than picked (see BETA_PLAN). */
@@ -36,7 +37,7 @@ export interface PlanTier {
     dailyRecordingSeconds: number | null
     /** Static fallback for the score cap (null = no cap); the API value wins in-app. */
     maxScores: number | null
-    /** Marketing feature lines, excluding the recording budget and score cap (derived). */
+    /** Feature lines in plain words, excluding the recording budget and score cap (derived). */
     features: string[]
     popular?: boolean
     /** Professional tiers render as a slim secondary card, not in the main grid. */
@@ -53,7 +54,7 @@ export const PLAN_TIERS: PlanTier[] = [
         priceYearly: 0,
         dailyRecordingSeconds: 180,
         maxScores: 5,
-        features: ['Live audio-to-notation', 'Full editor & playback'],
+        features: ['Sing or play, see the notes', 'Fix notes and hear them back'],
     },
     {
         id: 'pro',
@@ -82,7 +83,7 @@ export const PLAN_TIERS: PlanTier[] = [
         id: 'arranger',
         name: 'Arranger',
         icon: 'crown',
-        tagline: 'For transcription as a job',
+        tagline: 'For transcribing every day',
         priceMonthly: 49,
         priceYearly: 490,
         dailyRecordingSeconds: 28800,
@@ -271,13 +272,36 @@ export class PlanCatalogue {
     }
 }
 
-/** Human line for a daily recording budget in seconds; null = unlimited. */
+/**
+ * Human line for a daily recording budget in seconds, the allowance in words
+ * ("3 minutes of recording a day", "3 hours of recording a day"); null = no cap,
+ * which is still never called "unlimited" (the pricing house rule).
+ */
 export function recordingBudgetLabel(seconds: number | null): string {
-    if (seconds === null) return 'Unlimited recording'
-    if (seconds < 60) return `${seconds} sec of recording / day`
-    if (seconds < 3600) return `${Math.round(seconds / 60)} min of recording / day`
-    const hours = seconds / 3600
-    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h of recording / day`
+    if (seconds === null) return 'No daily recording limit'
+    return `${formatAllowance(seconds)} of recording a day`
+}
+
+/** The length of one recording the budget hint measures in — a verse or a chorus. */
+const HINT_RECORDING_SECONDS = 30
+const SMALL_COUNTS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+
+/**
+ * A picture of how much a small budget is ("Enough for about six 30-second
+ * recordings."), shown under the free tier's budget line only — paid budgets are
+ * big enough not to need one. Derived from the plan's budget, so a re-tuned free
+ * tier stays truthful; null for every other tier and for a budget under one recording.
+ */
+export function planBudgetHint(plan: Pick<PlanTier, 'id' | 'dailyRecordingSeconds'>): string | null {
+    if (plan.id !== 'free' || plan.dailyRecordingSeconds === null) return null
+    const count = Math.floor(plan.dailyRecordingSeconds / HINT_RECORDING_SECONDS)
+    if (count < 1) return null
+    return `Enough for about ${SMALL_COUNTS[count] ?? count} ${HINT_RECORDING_SECONDS}-second recording${count === 1 ? '' : 's'}.`
+}
+
+/** What a plan card's button says: "Start free" for the free tier, "Choose {plan}" for a paid one. */
+export function planCtaLabel(plan: Pick<PlanTier, 'name' | 'priceMonthly'>): string {
+    return plan.priceMonthly === 0 ? 'Start free' : `Choose ${plan.name}`
 }
 
 /** Human line for a score cap; null = no cap. */
