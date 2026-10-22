@@ -18,12 +18,9 @@ import { TEMPO_TEXT_HIT_WIDTH, TempoMarking } from './TempoMarking'
 import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
 
-const CURSOR_COLOR = INTERACTION_BLUE
-
 // Selection highlight band: a soft, rounded blue strip behind selected noteheads. Its height
 // spans the staff (matching the playback cursor); adjacent selected notes' bands abut into a
 // continuous run because each spans the full gap to the next note.
-const SELECTION_FILL = INTERACTION_BLUE_BAND
 const SELECTION_BAND_Y = Staff.TOP_Y - 6
 const SELECTION_BAND_HEIGHT = Staff.HEIGHT + 12
 
@@ -133,14 +130,14 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                                 width={bandWidth}
                                 height={SELECTION_BAND_HEIGHT}
                                 rx={3}
-                                fill={SELECTION_FILL}
+                                fill={INTERACTION_BLUE_BAND}
                             />
                         )}
                         <NoteGroup
                             layout={noteLayout}
                             stem={beam?.getStem(note) ?? noteLayout.stem}
                             beamed={!!beam}
-                            color={isSelected || isHovered ? CURSOR_COLOR : undefined}
+                            color={isSelected || isHovered ? INTERACTION_BLUE : undefined}
                         />
                     </g>
                 )

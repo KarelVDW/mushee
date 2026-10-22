@@ -11,8 +11,8 @@ import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
 import { Barline } from './Barline'
 import { INTERACTION_BLUE } from './constants'
-import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
+import { InputCursor } from './InputCursor'
 import { type AttributeClick, Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
@@ -20,8 +20,8 @@ import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { Tie } from './Tie'
 
-/** Vertical offset from the reference Y to the teardrop tip */
-const CURSOR_Y_OFFSET = 15
+/** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
+const INPUT_CURSOR_GAP = 15
 
 /**
  * Below this container width the layout reflows to the container instead of
@@ -53,6 +53,7 @@ interface ScoreProps {
      */
     layoutId: string
     height?: number
+    /** The active note: the moving end of the selection, see ScoreManipulator._selectedNote. */
     selectedNote?: Note | null
     /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
     selectedNotes?: Note[]
@@ -143,15 +144,15 @@ export const Score = memo(function Score({
     const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
 
-    // Cursor indicator position (row-local coordinates)
-    const cursorPos = useMemo(() => {
+    // Input-cursor position: note-local x, row-local y
+    const inputCursorPos = useMemo(() => {
         if (!selectedNote) return null
         const x = selectedNote.layout.noteX + selectedNote.layout.width.noteHeadWidth / 2
         let lowestY = selectedNote.layout.noteY
         const stem = selectedNote.layout.stem
         if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
         const bottomStaffY = Staff.TOP_Y + Staff.HEIGHT
-        const y = Math.max(bottomStaffY, lowestY) + CURSOR_Y_OFFSET
+        const y = Math.max(bottomStaffY, lowestY) + INPUT_CURSOR_GAP
         return { x, y }
     }, [selectedNote, selectedNote?.layout.id])
 
@@ -335,7 +336,7 @@ export const Score = memo(function Score({
 
     return (
         <div ref={containerRef} className="relative select-none">
-            {containerWidth > 0 && totalHeight > 0 && score.layout && (
+            {containerWidth > 0 && totalHeight > 0 && (
                 <svg
                     ref={svgRef}
                     width={containerWidth}
@@ -358,7 +359,8 @@ export const Score = memo(function Score({
                         sample-rate updates never re-render the score itself */}
                     {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}
 
-                    {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
+                    {/* Playback cursor — the host's transport writes its x, transform and display
+                        straight through the ref, outside React (the scroll-follow observes those writes) */}
                     <rect
                         ref={playbackCursorRef}
                         data-export-exclude
@@ -383,7 +385,7 @@ export const Score = memo(function Score({
 
                                 {/* Pointer-transparent: the overlay paints above the measure's tempo
                                     markings, whose clicks must still reach them through a ghost. */}
-                                {selectedNote && selectedNote.measure === measure && cursorPos && (
+                                {selectedNote && selectedNote.measure === measure && inputCursorPos && (
                                     <g
                                         key={`cursor-${selectedNote.id}`}
                                         data-export-exclude
@@ -394,7 +396,7 @@ export const Score = memo(function Score({
                                                 <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
                                             </g>
                                         )}
-                                        <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
+                                        <InputCursor x={inputCursorPos.x} y={inputCursorPos.y} />
                                     </g>
                                 )}
                             </g>
