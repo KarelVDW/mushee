@@ -5,6 +5,9 @@ import { Resizer, type Sizeable } from './Resizer'
 import { Staff } from './Staff'
 import type { LayoutLine } from './types'
 
+/** A last row this short would look absurd stretched across the page, so it keeps natural widths. */
+const MAX_UNSTRETCHED_LAST_ROW = 2
+
 export interface RowLayoutContext {
     index: number
     isLastRow: boolean
@@ -17,8 +20,8 @@ export interface RowLayoutContext {
 
 /**
  * One staff line of the score: the measures packed onto it and their resolved
- * x/width. A trailing, not-yet-full last row keeps measures at their natural
- * width instead of stretching them across the page.
+ * x/width. A last row of at most two measures keeps them at their natural width
+ * (budget / MAX_MEASURES_PER_ROW) instead of stretching them across the page.
  */
 export class RowLayout {
     readonly id = crypto.randomUUID()
@@ -40,7 +43,7 @@ export class RowLayout {
         this._scoreWidth = context.scoreWidth
 
         const totalWidth = RowLayout.availableWidth(context.scoreWidth, context.isLastRow)
-        const allowIncompleteRow = context.isLastRow && context.measures.length <= 2
+        const allowIncompleteRow = context.isLastRow && context.measures.length <= MAX_UNSTRETCHED_LAST_ROW
         const defaultMeasureWidth = totalWidth / (allowIncompleteRow ? MAX_MEASURES_PER_ROW : context.measures.length)
         const sizeables: Array<Sizeable & { measure: Measure }> = context.measures.map((measure) => ({
             measure,
