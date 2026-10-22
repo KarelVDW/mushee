@@ -29,6 +29,7 @@ export default function ClipDetailPage() {
         return {
             instrument,
             expectedScore: melodyToScore(clip.melody, instrument),
+            expectedNotes: melodyToTruth(clip.melody).notes,
             derivedScore: transcription?.measures
                 ? mxmlMeasuresToScore(transcription.measures as Record<number, MxmlMeasure>, corpus.bpm, corpus.beatsPerMeasure, instrument)
                 : null,
@@ -153,7 +154,7 @@ export default function ClipDetailPage() {
                     <div className="flex flex-col gap-5">
                         {transcription.metrics && <MetricsPanel metrics={transcription.metrics} />}
                         {built?.derivedScore && <ScoreView score={built.derivedScore} />}
-                        <NotesCompare expected={melodyToTruth(clip.melody).notes} derived={transcription.notes} />
+                        {built && <NotesCompare expected={built.expectedNotes} derived={transcription.notes} />}
                     </div>
                 )}
             </Card>
