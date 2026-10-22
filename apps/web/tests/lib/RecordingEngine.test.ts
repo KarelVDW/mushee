@@ -1005,20 +1005,37 @@ describe('RecordingEngine', () => {
         expect(cursorEl.getAttribute('fill')).toBe('#ef4444')
     })
 
-    it('findActiveTempo picks the latest tempo when a measure has several (sort comparator)', async () => {
+    it('counts off at the tempo sounding on the count-off downbeat, not a later marking in that bar', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
         const score = makeScore(4)
-        // Two tempos in the count-off measure; the later (beat 2 => 240bpm) wins.
+        // Two tempos in the count-off measure: the one at beat 0 (60bpm) is in effect at the downbeat.
         score.measures[1].setTempo(0, 60)
         score.measures[1].addTempo(2, 240)
         const { options, onStateChange } = makeOptions({ score, startMeasureIndex: 1 })
         await engine.start(options)
-        // 240bpm, 4 beats => countoff = 4*60/240 = 1s.
-        raw.currentTime = 0.9
+        // 60bpm, 4 beats => countoff = 4*60/60 = 4s.
+        raw.currentTime = 3.9
         engine.tick()
         expect(engine.state).toBe('countoff')
-        raw.currentTime = 1.1
+        raw.currentTime = 4.1
+        engine.tick()
+        expect(onStateChange).toHaveBeenLastCalledWith('recording')
+    })
+
+    it('a marking later in the count-off bar does not override the tempo carried into it', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player)
+        const score = makeScore(4)
+        score.measures[0].setTempo(0, 120)
+        score.measures[1].setTempo(2, 240)
+        const { options, onStateChange } = makeOptions({ score, startMeasureIndex: 1 })
+        await engine.start(options)
+        // The carried-in 120bpm holds at the downbeat => countoff = 4*60/120 = 2s.
+        raw.currentTime = 1.9
+        engine.tick()
+        expect(engine.state).toBe('countoff')
+        raw.currentTime = 2.1
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
     })

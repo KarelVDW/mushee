@@ -1,11 +1,10 @@
-import type { Score } from '@mushee/notation/model'
+import { Score } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
 import { Microphone } from './Microphone'
 
-const DEFAULT_BPM = 90
 const CHUNK_MS = 100
 
 /**
@@ -156,7 +155,7 @@ export class RecordingEngine implements Tickable {
     private options: RecordingOptions | null = null
 
     private midiPlayer: Pick<MidiPlayer, 'currentTime'>
-    private bpm = DEFAULT_BPM
+    private bpm = Score.DEFAULT_BPM
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
     private countoffEndTime = 0
@@ -233,8 +232,7 @@ export class RecordingEngine implements Tickable {
         this.stream = stream
 
         const measure = options.score.measures[options.startMeasureIndex]
-        const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
-        this.bpm = tempo?.bpm ?? DEFAULT_BPM
+        this.bpm = options.score.bpmAtBeat(measure, 0)
         const beatsPerMeasure = measure.maxBeats
         this.pulseBeats = measure.timeSignature.pulse.beats
         this.meta = {
@@ -625,14 +623,6 @@ export class RecordingEngine implements Tickable {
     private static pickMimeType(): string | null {
         if (typeof MediaRecorder.isTypeSupported !== 'function') return null
         return MIME_TYPE_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null
-    }
-
-    private findActiveTempo(score: Score, measureIndex: number) {
-        for (let i = measureIndex; i >= 0; i--) {
-            const tempos = [...score.measures[i].tempos].sort((a, b) => b.beatPosition - a.beatPosition)
-            if (tempos.length > 0) return tempos[0]
-        }
-        return null
     }
 
     /**
