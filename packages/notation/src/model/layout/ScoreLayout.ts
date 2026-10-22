@@ -88,7 +88,9 @@ export class ScoreLayout {
             }
             const previousLayout = previous?._measureLayouts.get(m.measure)
             const layout =
-                previousLayout?.signature === MeasureLayout.signatureFor(m.measure, context) ? previousLayout : new MeasureLayout(m.measure, context)
+                previousLayout?.signature === MeasureLayout.signatureFor(m.measure, context)
+                    ? previousLayout
+                    : new MeasureLayout(m.measure, context)
             this._measureLayouts.set(m.measure, layout)
         })
 

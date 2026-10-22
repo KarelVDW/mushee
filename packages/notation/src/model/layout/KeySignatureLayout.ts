@@ -28,7 +28,11 @@ export class KeySignatureLayout {
         if (key.fifths !== 0) return KeySignature.accidentalsForFifths(key.fifths)
         const precedingFifths =
             key.beatPosition > 0 ? key.measure.keyBefore(key.beatPosition).fifths : (key.measure.getPrevious()?.lastKey.fifths ?? 0)
-        return KeySignature.accidentalsForFifths(precedingFifths).map((a) => ({ glyphName: 'accidentalNatural', name: a.name, octave: a.octave }))
+        return KeySignature.accidentalsForFifths(precedingFifths).map((a) => ({
+            glyphName: 'accidentalNatural',
+            name: a.name,
+            octave: a.octave,
+        }))
     }
 
     constructor(context: { clef: Clef; width: KeySignatureWidth }) {

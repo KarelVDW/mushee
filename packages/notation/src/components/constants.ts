@@ -33,4 +33,3 @@ export const WAVEFORM_CYAN = '#00DBE9'
 export const MEASURE_BUTTON_FILL = 'white'
 export const MEASURE_BUTTON_STROKE = '#dbdddd'
 export const MEASURE_BUTTON_LABEL = '#5a5c5c'
-

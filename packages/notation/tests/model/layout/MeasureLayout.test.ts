@@ -5,7 +5,6 @@ import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWid
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
 import { type MeasureFlags, MeasureMetrics } from '@mushee/notation/model/layout/MeasureMetrics'
 import { Measure } from '@mushee/notation/model/Measure'
-import type { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { makeScore, pitched, rest, triplet } from '@mushee/notation/testing'

@@ -1196,7 +1196,11 @@ describe('Score', () => {
             it('draws no naturals when the key carries forward unchanged', () => {
                 const score = makeScore(2)
                 score.setKeySignature(score.measures[0].firstNote, 1) // G major, carries into measure 1
-                expect(KeySignatureLayout.drawnAccidentalsFor(score.measures[1].keySignature).every((a) => a.glyphName !== 'accidentalNatural')).toBe(true)
+                expect(
+                    KeySignatureLayout.drawnAccidentalsFor(score.measures[1].keySignature).every(
+                        (a) => a.glyphName !== 'accidentalNatural',
+                    ),
+                ).toBe(true)
             })
 
             it('draws naturals for a mid-measure change back to C major', () => {

@@ -43,7 +43,11 @@ describe('MeasureMetrics', () => {
     describe('base flags (diff against the previous measure)', () => {
         it('the first measure shows everything', () => {
             const m = makeScore(1).measures[0]
-            expect(new MeasureMetrics(m, undefined).baseFlags).toEqual({ showsClef: true, showsKeySignature: true, showsTimeSignature: true })
+            expect(new MeasureMetrics(m, undefined).baseFlags).toEqual({
+                showsClef: true,
+                showsKeySignature: true,
+                showsTimeSignature: true,
+            })
         })
 
         it('an unchanged measure shows nothing; a changed clef, key or meter shows', () => {
@@ -65,7 +69,10 @@ describe('MeasureMetrics', () => {
             const metrics = new MeasureMetrics(m, undefined)
             expect(metrics.minimalWidth(NONE, 0)).toBe(metrics.fixedWidth)
             expect(metrics.minimalWidth({ showsClef: true, showsKeySignature: true, showsTimeSignature: true }, 0)).toBeCloseTo(
-                metrics.fixedWidth + m.clef.layout.width.total + metrics.keyWidthOf(m.keySignature).total + m.timeSignature.layout.width.total,
+                metrics.fixedWidth +
+                    m.clef.layout.width.total +
+                    metrics.keyWidthOf(m.keySignature).total +
+                    m.timeSignature.layout.width.total,
             )
         })
 
