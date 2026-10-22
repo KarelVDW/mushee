@@ -11,13 +11,10 @@ function rest(duration: number): ScoreEntry {
     return { _type: 'note', rest: {}, duration }
 }
 
-function doc(measures: ScoreEntry[][], partCount = 1): ScoreDocument {
+function doc(measures: ScoreEntry[][]): ScoreDocument {
     return {
         partList: { scoreParts: [{ id: 'P1', partName: 'Piano' }] },
-        parts: Array.from({ length: partCount }, (_, p) => ({
-            id: `P${p + 1}`,
-            measures: measures.map((entries, i) => ({ number: String(i + 1), entries })),
-        })),
+        parts: [{ id: 'P1', measures: measures.map((entries, i) => ({ number: String(i + 1), entries })) }],
     }
 }
 
@@ -62,7 +59,7 @@ describe('buildPianoRoll', () => {
         expect(roll.measureStarts).toEqual([0, 4, 8])
     })
 
-    it('handles empty and raw documents gracefully', () => {
+    it('handles documents without parts', () => {
         expect(buildPianoRoll({}).notes).toEqual([])
         expect(buildPianoRoll({ parts: [] }).end).toBe(0)
     })

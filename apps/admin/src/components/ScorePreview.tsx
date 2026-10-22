@@ -9,12 +9,15 @@ import { buildPianoRoll, pitchLabel } from '@/lib/piano-roll'
  * Read-only piano-roll rendering of a score document. Honors the Sanctuary
  * rule: a white canvas with notation-ink marks and no brand color — this is
  * the user's music, not console chrome. Gridlines stay recessive; each note
- * carries a native tooltip with pitch and beat.
+ * carries a native tooltip with pitch, position and length.
  */
 
 const QUARTER_WIDTH = 26
 const ROW_HEIGHT = 8
 const PADDING = 16
+
+/** At most two decimals, trailing zeros dropped: 1.50 → "1.5", 2.00 → "2". */
+const trim = (n: number) => n.toFixed(2).replace(/\.?0+$/, '')
 
 export function ScorePreview({ document }: { document: ScoreDocument }) {
     if (typeof document.raw === 'string') {
@@ -39,6 +42,13 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
 
     const x = (quarters: number) => PADDING + quarters * QUARTER_WIDTH
     const y = (midi: number) => PADDING + (top - midi) * ROW_HEIGHT
+
+    // Bars come from the first part's measure starts; beats count quarter
+    // notes from the barline, the same unit as the time axis.
+    const onset = (start: number) => {
+        const bar = roll.measureStarts.findLastIndex((measureStart) => measureStart <= start + 1e-6)
+        return bar < 0 ? `quarter ${trim(start + 1)}` : `bar ${bar + 1}, beat ${trim(start - roll.measureStarts[bar] + 1)}`
+    }
 
     // Label every C in range; those octave lines anchor the pitch axis.
     const octaveLines = []
@@ -82,7 +92,7 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
                         height={ROW_HEIGHT - 2}
                         rx={2}
                         fill={NOTATION_INK}>
-                        <title>{`${pitchLabel(note.midi)} · beat ${(note.start + 1).toFixed(2).replace(/\.?0+$/, '')} · ${note.duration.toFixed(2).replace(/\.?0+$/, '')} quarters`}</title>
+                        <title>{`${pitchLabel(note.midi)} · ${onset(note.start)} · ${trim(note.duration)} quarters`}</title>
                     </rect>
                 ))}
             </svg>

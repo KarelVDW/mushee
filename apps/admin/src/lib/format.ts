@@ -16,7 +16,7 @@ export function formatDateTime(value: string | null | undefined): string {
     })
 }
 
-/** 5025 → "1h 24m"; 90 → "1m 30s"; 0 → "0m". */
+/** 5025 → "1h 23m"; 90 → "1m 30s"; 0 → "0m". */
 export function formatSeconds(total: number | null | undefined): string {
     if (total == null) return '—'
     if (total === 0) return '0m'
