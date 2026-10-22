@@ -600,7 +600,7 @@ test('the canvas is a named score editor that says the selected note and what an
     const canvas = page.getByRole('application', { name: `${MOCK_TITLE} — score` })
     await expect(canvas).toHaveAttribute('aria-roledescription', 'score editor')
     await expect(canvas).toHaveAccessibleDescription(
-        'Left and right arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button lists them all.',
+        'Left and right arrows move between notes. Up and down change the pitch. Press ? for all shortcuts.',
     )
     const live = page.locator('[aria-live="polite"]:not([role])')
     await focusEditor(page)

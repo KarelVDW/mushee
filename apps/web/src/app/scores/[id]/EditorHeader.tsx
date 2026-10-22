@@ -7,6 +7,7 @@ import type { PitchScope } from '@/components/editor/pitchScope'
 import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, Icon, Tooltip, Wordmark } from '@/components/ui'
 
+import { SHOW_SHORTCUTS_KEY } from './commands'
 import { HistoryTools } from './HistoryTools'
 import { PitchTools } from './PitchTools'
 import { RecordingsMenu } from './RecordingsMenu'
@@ -140,7 +141,12 @@ export function EditorHeader({
                 )}
                 {!compact && <HistoryTools manipulator={manipulator} />}
                 {!compact && (
-                    <ChipToggle active={shortcutsOpen} onClick={onOpenShortcuts} ariaLabel="Keyboard shortcuts">
+                    <ChipToggle
+                        active={shortcutsOpen}
+                        onClick={onOpenShortcuts}
+                        ariaLabel="Keyboard shortcuts"
+                        shortcut={[SHOW_SHORTCUTS_KEY.label]}
+                        tooltipSide="bottom">
                         <Icon name="keyboard" size={16} />
                     </ChipToggle>
                 )}

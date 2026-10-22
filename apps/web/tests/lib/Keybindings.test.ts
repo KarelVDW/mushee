@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EDITOR_COMMAND_GROUPS, EDITOR_COMMANDS, SELECTION_MENU_COMMAND } from '@/app/scores/[id]/commands'
+import { EDITOR_COMMAND_GROUPS, EDITOR_COMMANDS, SELECTION_MENU_COMMAND, SHOW_SHORTCUTS_COMMAND } from '@/app/scores/[id]/commands'
 import { type BindableCommand, Keybindings, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
 
 const COMMANDS: BindableCommand[] = [
@@ -329,10 +329,11 @@ describe('Editor command defaults', () => {
         const defaults = EDITOR_COMMANDS.map((command) => command.defaultShortcut).filter(
             (shortcut): shortcut is string => shortcut !== null,
         )
-        // The one command without a default reaches its key by name instead (Escape stopping a take).
+        // The commands without a default reach their key by name instead: Escape stopping a take, '?' for the shortcuts list.
         const byName = EDITOR_COMMANDS.filter((command) => command.defaultShortcut === null)
-        expect(byName.map((command) => command.id)).toEqual(['stop-recording'])
+        expect(byName.map((command) => command.id)).toEqual(['stop-recording', SHOW_SHORTCUTS_COMMAND])
         expect(byName[0].preemptKey).toEqual({ key: 'Escape', label: 'Esc' })
+        expect(byName[1].alternateKey).toEqual({ key: '?', label: '?' })
         expect(defaults.length).toBe(EDITOR_COMMANDS.length - byName.length)
         // `Mod` canonicalises differently per platform, so a Meta+… default could collide with a
         // Mod+… one on a Mac only.
@@ -387,6 +388,19 @@ describe('Editor command defaults', () => {
             key: 'ContextMenu',
             label: 'Menu',
         })
+    })
+
+    it("lists '?' for the shortcuts themselves: fixed, last, and with nothing stored for it", () => {
+        expect(EDITOR_COMMAND_GROUPS.at(-1)).toBe('Help')
+        const command = EDITOR_COMMANDS.find((candidate) => candidate.id === SHOW_SHORTCUTS_COMMAND)
+        expect(command).toMatchObject({ label: 'Show keyboard shortcuts', group: 'Help', fixed: true, defaultShortcut: null })
+        const keybindings = new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-help', isMac: false })
+        // Fixed: it can't be rebound, and nothing is persisted for it.
+        expect(keybindings.rebind(SHOW_SHORTCUTS_COMMAND, recorded({ code: 'KeyJ', key: 'j' })).ok).toBe(false)
+        keybindings.unbind(SHOW_SHORTCUTS_COMMAND)
+        expect(keybindings.toStored()).toBeNull()
+        // '?' is no physical binding, so every rebindable key stays free — Shift+Slash included.
+        expect(keybindings.resolve(keydown({ code: 'Slash', key: '?', shiftKey: true }))).toBeNull()
     })
 
     it('lists the commands in plain words, the everyday groups first, with no "Toggle …" labels', () => {

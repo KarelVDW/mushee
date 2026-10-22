@@ -18,7 +18,7 @@ import {
 } from './actions'
 import type { ScoreManipulator } from './ScoreManipulator'
 
-/** Display groups for the shortcuts dialog, in presentation order — playing and recording first, then the everyday edits. */
+/** Display groups for the shortcuts dialog, in presentation order — playing and recording first, then the everyday edits, and the way back to this list last. */
 export const EDITOR_COMMAND_GROUPS = [
     'Playback',
     'Edit notes',
@@ -28,6 +28,7 @@ export const EDITOR_COMMAND_GROUPS = [
     'Select',
     'Copy and paste',
     'Undo',
+    'Help',
 ] as const
 export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 
@@ -122,6 +123,10 @@ const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
 
 /** Id of the command that opens the selection actions (copy / paste / delete) from the keyboard. */
 export const SELECTION_MENU_COMMAND = 'selection-menu'
+
+/** Id of the command that opens the keyboard shortcuts list, and the key that does it — the header's shortcuts chip names it too. */
+export const SHOW_SHORTCUTS_COMMAND = 'show-shortcuts'
+export const SHOW_SHORTCUTS_KEY = { key: '?', label: '?' } as const
 
 /** Ids of the transport commands, for the transport's tooltips (which name their live keys). */
 export const PLAY_PAUSE_COMMAND = 'play-pause'
@@ -297,5 +302,18 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         defaultShortcut: 'Mod+Shift+KeyZ',
         fixed: true,
         run: (manipulator) => manipulator.redo(),
+    },
+    // '?' is the web's convention for "which keys are there?" (as the Menu key is for the
+    // selection actions): fixed, and reached by the character it types, so it is '?' on every
+    // layout — wherever the layout puts it, and whichever modifier types it there.
+    {
+        id: SHOW_SHORTCUTS_COMMAND,
+        label: 'Show keyboard shortcuts',
+        group: 'Help',
+        defaultShortcut: null,
+        alternateKey: SHOW_SHORTCUTS_KEY,
+        fixed: true,
+        // Opens the shortcuts dialog (view state); declined until the editor registers it (desktop only).
+        run: (manipulator) => (manipulator.onShortcutsRequest ? manipulator.onShortcutsRequest() : false),
     },
 ]

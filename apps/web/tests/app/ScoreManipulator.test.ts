@@ -967,7 +967,7 @@ describe('KeyboardHelpText', () => {
     it('says the default keys in words', () => {
         const { manipulator } = setupPitched()
         expect(KeyboardHelpText.of(manipulator.keybindings)).toBe(
-            'Left and right arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button lists them all.',
+            'Left and right arrows move between notes. Up and down change the pitch. Press ? for all shortcuts.',
         )
     })
 
@@ -977,10 +977,10 @@ describe('KeyboardHelpText', () => {
         keys.rebind(MOVE_NEXT.id, Shortcut.parse('KeyJ', false, 'j'))
         keys.rebind(LOWER_PITCH.id, Shortcut.parse('KeyK', false, 'k'))
         expect(KeyboardHelpText.of(keys)).toBe(
-            'Left arrow and J move between notes. Up arrow and K change the pitch. The Keyboard shortcuts button lists them all.',
+            'Left arrow and J move between notes. Up arrow and K change the pitch. Press ? for all shortcuts.',
         )
         keys.unbind(RAISE_PITCH.id)
-        expect(KeyboardHelpText.of(keys)).toBe('Left arrow and J move between notes. The Keyboard shortcuts button lists them all.')
+        expect(KeyboardHelpText.of(keys)).toBe('Left arrow and J move between notes. Press ? for all shortcuts.')
     })
 })
 

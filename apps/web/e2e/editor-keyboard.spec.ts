@@ -222,6 +222,23 @@ test('the shortcuts dialog opens with the Playback group', async ({ page }) => {
     await expect(dialog.getByRole('button', { name: 'Change shortcut for Play from the start' })).toContainText('Space')
 })
 
+test('? opens the shortcuts list, which lists ? itself; closing it hands the keys back to the score', async ({ page }) => {
+    await page.keyboard.press('?')
+    const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('Help', { exact: true })).toBeVisible()
+    await expect(dialog.getByText('Show keyboard shortcuts', { exact: true })).toBeVisible()
+    // Fixed: a plain '?' keycap, never rebindable.
+    await expect(dialog.getByRole('button', { name: 'Change shortcut for Show keyboard shortcuts' })).toHaveCount(0)
+    await expect(dialog.locator('kbd', { hasText: /^\?$/ })).toHaveCount(1)
+
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await expect(dialog).toHaveCount(0)
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('Shift+T opens the transpose popover; Escape closes it without touching the score', async ({ page, apiMock }) => {
     const before = apiMock.patches.length
     await page.keyboard.press('Shift+T')

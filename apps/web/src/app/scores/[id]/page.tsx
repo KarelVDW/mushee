@@ -159,6 +159,14 @@ export default function ScoreEditorPage() {
             manipulator.onTransposeRequest = undefined
         }
     }, [manipulator])
+    // '?' opens the shortcuts list the same way — on desktop, the only layout that offers it.
+    useEffect(() => {
+        if (isMobile) return
+        manipulator.onShortcutsRequest = () => setShortcutsOpen(true)
+        return () => {
+            manipulator.onShortcutsRequest = undefined
+        }
+    }, [manipulator, isMobile])
 
     // In-score attribute glyphs (tempo / clef / key / time): the ScoreView reports the click,
     // and ScoreAttributePopover opens the matching popover and applies the change. A mouse
